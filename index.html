@@ -329,7 +329,10 @@
     document.getElementById('resultArea').style.display = 'block';
 
   } catch (e) {
-    alert("AI 분석 실패");
+    console.error("🚩 상세 에러 로그:", e); // 이 줄이 범인을 찾아줍니다!
+    console.log("에러 이름:", e.name);
+    console.log("에러 메시지:", e.message);
+    alert("AI 분석 실패: " + e.message); // 어떤 에러인지 팝업으로도 띄웁니다.
   } finally {
     setLoad(false);
   }
