@@ -278,16 +278,6 @@
   }
 
   async function runAI() {
-    setLoad(true, "AI 분석 중...");
-    const pmt = `영수증 분석 JSON: date, vendor(치환:'논산농협'->'농협','광성탑마트'->'탑마트','홈플러스 논산점'->'홈플러스'), item, totalPrice, category.`;
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${API_KEY}`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ contents: [{ parts: [{ text: pmt }, { inline_data: { mime_type:"image/jpeg", data:b64 }}] }], generationConfig:{response_mime_type:"application/json"}})
-      });
-      const data = await res.json();
-      const list = JSON.parse(data.candidates[0].content.parts[0].text);
-      async function runAI() {
   setLoad(true, "AI 분석 중...");
 
   const pmt = `영수증 분석 JSON: date, vendor, item, totalPrice, category`;
