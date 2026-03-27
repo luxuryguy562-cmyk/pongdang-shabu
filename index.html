@@ -278,61 +278,56 @@
   }
 
   async function runAI() {
-  alert("함수 시작됨!"); // <--- 이 줄을 추가해보세요.
+  if (!b64) return alert("이미지를 먼저 업로드해주세요.");
   setLoad(true, "AI 분석 중...");
-
-  const pmt = `영수증 분석 JSON: date, vendor, item, totalPrice, category`;
 
   try {
     const res = await fetch("https://gemini-proxy.luxuryguy562.workers.dev", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: pmt },
-              {
-                inline_data: {
-                  mime_type: "image/jpeg",
-                  data: b64
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          response_mime_type: "application/json"
-        }
+        contents: [{
+          parts: [
+            { text: "영수증 분석 JSON: date, vendor, item, totalPrice, category" },
+            { inline_data: { mime_type: "image/jpeg", data: b64 } }
+          ]
+        }],
+        generationConfig: { response_mime_type: "application/json" }
       })
     });
 
     const data = await res.json();
+    console.log("📦 AI 전체 응답:", data); // 콘솔에서 전체 구조 확인용
 
-    const list = JSON.parse(data.candidates[0].content.parts[0].text);
+    // [중요] 에러 체크 로직 추가
+    if (data.error) {
+      throw new Error(`구글 API 에러: ${data.error.message}`);
+    }
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error("AI가 결과를 생성하지 못했습니다. (응답 없음)");
+    }
+
+    const rawText = data.candidates[0].content.parts[0].text;
+    const list = JSON.parse(rawText);
 
     let html = "";
     list.forEach((i, idx) => {
-  html += `<tr id="row-${idx}">
-    <td><button class="x-btn" onclick="openReasonSheet(${idx})">X</button></td>
-    <td><input type="text" class="c-v" value="${i.vendor}"></td>
-    <td><input type="text" class="c-i" value="${i.item}"></td>
-    <td><input type="number" class="c-p" value="${i.totalPrice}"></td>
-    <td><input type="text" class="c-c" value="${i.category}"></td>
-    <input type="hidden" class="c-d" value="${i.date || new Date().toISOString().split('T')[0]}"> 
-  </tr>`;
-});
+      html += `<tr id="row-${idx}">
+        <td><button class="x-btn" onclick="openReasonSheet(${idx})">X</button></td>
+        <td><input type="text" class="c-v" value="${i.vendor}"></td>
+        <td><input type="text" class="c-i" value="${i.item}"></td>
+        <td><input type="number" class="c-p" value="${i.totalPrice}"></td>
+        <td><input type="text" class="c-c" value="${i.category}"></td>
+        <input type="hidden" class="c-d" value="${i.date || new Date().toLocaleDateString('sv-SE')}">
+      </tr>`;
+    });
 
     document.getElementById('resTable').innerHTML = html;
     document.getElementById('resultArea').style.display = 'block';
 
   } catch (e) {
-    console.error("🚩 상세 에러 로그:", e); // 이 줄이 범인을 찾아줍니다!
-    console.log("에러 이름:", e.name);
-    console.log("에러 메시지:", e.message);
-    alert("AI 분석 실패: " + e.message); // 어떤 에러인지 팝업으로도 띄웁니다.
+    console.error("🚩 상세 에러:", e);
+    alert("분석 실패: " + e.message); // 이제 구체적인 실패 이유가 팝업에 뜹니다.
   } finally {
     setLoad(false);
   }
