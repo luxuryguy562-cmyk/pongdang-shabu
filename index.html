@@ -551,67 +551,73 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [5] 대시보드 ══ -->
 <div id="dashboardCont" class="container">
-  <div class="sub-tabs">
-    <button class="sub-tab active" onclick="dashTab('month',this)">월별 현황</button>
-    <button class="sub-tab" onclick="dashTab('vendor',this)">거래처 분석</button>
-    <button class="sub-tab" onclick="dashTab('fixed',this)">고정비 현황</button>
+  <!-- 월 네비게이션 -->
+  <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
+    <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(-1)">‹</button>
+    <span id="dashMonthLabel" style="flex:1;text-align:center;font-size:15px;font-weight:700;">-</span>
+    <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(1)">›</button>
   </div>
 
-  <!-- 월별 현황 -->
-  <div id="dashMonth">
-    <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
-      <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(-1)">‹</button>
-      <span id="dashMonthLabel" style="flex:1;text-align:center;font-size:15px;font-weight:700;">-</span>
-      <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(1)">›</button>
-    </div>
-    <!-- 매출 소스 선택 -->
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button id="saleSrcSettle" class="btn btn-primary btn-sm" style="flex:1;" onclick="switchSaleSource('settle')">📋 마감정산</button>
-      <button id="saleSrcUps" class="btn btn-secondary btn-sm" style="flex:1;" onclick="switchSaleSource('ups')">🏪 업솔루션</button>
-      <button class="btn btn-secondary btn-sm" onclick="manualCrawl()" id="crawlBtn" style="flex:0 0 auto;font-size:11px;">↓ 수집</button>
-    </div>
-    <div class="kpi-grid" id="dashKpi"></div>
-    <!-- 인건비 확정 입력 -->
-    <div class="card" id="laborConfirmCard" style="display:none;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <div class="card-title" style="margin-bottom:0;">인건비 확정 입력</div>
-        <span style="font-size:11px;color:var(--gray-600);">노무사 확정 후 입력</span>
-      </div>
-      <div style="background:var(--warn-light);border-radius:10px;padding:10px 12px;margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--warn);font-weight:700;">앱 자동 계산: <span id="laborAutoAmt">-</span>원</div>
-        <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">아래에 확정 금액 입력 시 대시보드에 확정값으로 표시됩니다</div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="number" id="laborConfirmInput" class="input-field" style="margin-bottom:0;flex:1;" placeholder="확정 인건비 (원)" inputmode="numeric">
-        <button class="btn btn-primary" style="padding:14px 16px;white-space:nowrap;" onclick="saveLaborConfirm()">저장</button>
-      </div>
-    </div>
-    <div class="card"><div class="card-title">매출 구성</div><div class="chart-container"><canvas id="salesChart"></canvas></div></div>
-    <div class="card"><div class="card-title">카테고리별 지출</div><div class="chart-container" style="height:260px;"><canvas id="expenseChart"></canvas></div></div>
-    <div class="card"><div class="card-title">일별 매출 추이</div><div class="chart-container"><canvas id="dailyChart"></canvas></div></div>
+  <!-- 매출 소스 선택 -->
+  <div style="display:flex;gap:8px;margin-bottom:14px;">
+    <button id="saleSrcSettle" class="btn btn-primary btn-sm" style="flex:1;" onclick="switchSaleSource('settle')">📋 마감정산</button>
+    <button id="saleSrcUps" class="btn btn-secondary btn-sm" style="flex:1;" onclick="switchSaleSource('ups')">🏪 업솔루션</button>
+    <button class="btn btn-secondary btn-sm" onclick="manualCrawl()" id="crawlBtn" style="flex:0 0 auto;font-size:11px;">↓ 수집</button>
   </div>
 
-  <!-- 거래처 분석 -->
-  <div id="dashVendor" style="display:none;">
-    <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
-      <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(-1,'v')">‹</button>
-      <span id="dashVMonthLabel" style="flex:1;text-align:center;font-size:15px;font-weight:700;">-</span>
-      <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(1,'v')">›</button>
+  <!-- ① 매출 섹션 -->
+  <div class="card">
+    <div class="card-title">매출</div>
+    <div id="dashSalesTable"></div>
+    <div id="dashSalesTotal" style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:2px solid var(--text);margin-top:4px;">
+      <span style="font-size:15px;font-weight:800;">매출 합계</span>
+      <span style="font-size:18px;font-weight:900;color:var(--blue);" id="dashSalesTotalAmt">0원</span>
     </div>
-    <div class="card"><div class="card-title">거래처별 지출 비중</div><div class="chart-container"><canvas id="vendorPieChart"></canvas></div></div>
-    <div class="card"><div class="card-title">거래처 상세</div><div id="vendorDetailList"></div></div>
   </div>
 
-  <!-- 고정비 현황 -->
-  <div id="dashFixed" style="display:none;">
-    <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
-      <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(-1,'f')">‹</button>
-      <span id="dashFMonthLabel" style="flex:1;text-align:center;font-size:15px;font-weight:700;">-</span>
-      <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(1,'f')">›</button>
+  <!-- ② 지출 섹션 (대분류 아코디언) -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="card-title" style="margin-bottom:0;">지출</div>
+      <span style="font-size:13px;font-weight:700;color:var(--gray-600);" id="dashExpPct">0%</span>
     </div>
-    <div class="card" id="fixedDashCard">
-      <div class="card-title">고정비 일할 현황</div>
-      <div id="fixedDashData"></div>
+    <div id="dashExpAccordion"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:2px solid var(--text);margin-top:4px;">
+      <span style="font-size:15px;font-weight:800;">지출 합계</span>
+      <span style="font-size:18px;font-weight:900;color:var(--danger);" id="dashExpTotalAmt">0원</span>
+    </div>
+  </div>
+
+  <!-- ③ 수익 / 마감예상 -->
+  <div class="card">
+    <div class="card-title">수익 요약</div>
+    <div id="dashProfitSummary"></div>
+  </div>
+
+  <!-- ④ 마감예상 (월말 예측) -->
+  <div class="card">
+    <div class="card-title">마감 예상</div>
+    <div id="dashForecast"></div>
+  </div>
+
+  <!-- ⑤ 차트 -->
+  <div class="card"><div class="card-title">매출 구성</div><div class="chart-container"><canvas id="salesChart"></canvas></div></div>
+  <div class="card"><div class="card-title">카테고리별 지출</div><div class="chart-container" style="height:260px;"><canvas id="expenseChart"></canvas></div></div>
+  <div class="card"><div class="card-title">일별 매출 추이</div><div class="chart-container"><canvas id="dailyChart"></canvas></div></div>
+
+  <!-- ⑥ 인건비 확정 -->
+  <div class="card" id="laborConfirmCard" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:0;">인건비 확정 입력</div>
+      <span style="font-size:11px;color:var(--gray-600);">노무사 확정 후 입력</span>
+    </div>
+    <div style="background:var(--warn-light);border-radius:10px;padding:10px 12px;margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--warn);font-weight:700;">앱 자동 계산: <span id="laborAutoAmt">-</span>원</div>
+      <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">아래에 확정 금액 입력 시 대시보드에 확정값으로 표시됩니다</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="number" id="laborConfirmInput" class="input-field" style="margin-bottom:0;flex:1;" placeholder="확정 인건비 (원)" inputmode="numeric">
+      <button class="btn btn-primary" style="padding:14px 16px;white-space:nowrap;" onclick="saveLaborConfirm()">저장</button>
     </div>
   </div>
 </div>
@@ -806,6 +812,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div id="settleItemConfig"></div>
     <button class="btn btn-primary btn-full" onclick="saveSettleItems()">항목 저장</button>
+  </div>
+
+  <!-- 로열티 & 수수료 -->
+  <div class="card">
+    <div class="card-title">로열티 & 수수료</div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">로열티율</div><div class="setting-sub">매출 대비 % (0 = 없음)</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="si-royalty-rate" min="0" step="0.1" class="input-inline" style="width:70px;text-align:right;" placeholder="0">
+        <span style="font-size:13px;color:var(--gray-600);">%</span>
+      </div>
+    </div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">카드수수료율</div><div class="setting-sub">카드매출 대비 % (0 = 없음)</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="si-card-fee-rate" min="0" step="0.1" class="input-inline" style="width:70px;text-align:right;" placeholder="0">
+        <span style="font-size:13px;color:var(--gray-600);">%</span>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveWageSettings()">저장</button>
   </div>
 
   <!-- 지출 카테고리 -->
@@ -1106,7 +1132,6 @@ let settleItems = [
   {id:'s7',name:'기타사용',role:'minus'},{id:'s8',name:'가게통장입금',role:'minus'},
 ];
 let dashMonthStr = new Date().toISOString().slice(0,7);
-let dashVMonthStr = dashMonthStr, dashFMonthStr = dashMonthStr;
 let fcMonthStr = dashMonthStr;
 let ganttDateStr = new Date().toISOString().split('T')[0];
 let schedEmpId = null;
@@ -1150,7 +1175,7 @@ function nav(tab, el) {
   const actions = {
     staff: loadEmployees,
     settings: loadAllSettings,
-    dashboard: () => loadDashboard('month'),
+    dashboard: loadDashboard,
     vendors: loadVendors,
     fixedcost: loadFixedCosts,
     attendance: initAttDate,
@@ -1911,155 +1936,226 @@ async function moveCardDate(dir){const d=new Date(cardDateStr);d.setDate(d.getDa
 // ══════════════════════════════════════════
 // 대시보드
 // ══════════════════════════════════════════
-function dashTab(tab,el){
-  document.querySelectorAll('#dashboardCont .sub-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
-  ['month','vendor','fixed'].forEach(t=>document.getElementById('dash'+t.charAt(0).toUpperCase()+t.slice(1)).style.display='none');
-  document.getElementById('dash'+tab.charAt(0).toUpperCase()+tab.slice(1)).style.display='block';
-  if(tab==='month')loadDashboard('month');
-  else if(tab==='vendor')loadDashboard('vendor');
-  else if(tab==='fixed')loadDashboard('fixed');
-}
-function moveDashMonth(dir,ctx='m'){
-  const ref={m:dashMonthStr,v:dashVMonthStr,f:dashFMonthStr};
-  const d=new Date(ref[ctx]+'-01');d.setMonth(d.getMonth()+dir);
-  const str=d.toISOString().slice(0,7);
-  if(ctx==='m')dashMonthStr=str;else if(ctx==='v')dashVMonthStr=str;else dashFMonthStr=str;
-  loadDashboard(ctx==='m'?'month':ctx==='v'?'vendor':'fixed');
+function moveDashMonth(dir){
+  const d=new Date(dashMonthStr+'-01');d.setMonth(d.getMonth()+dir);
+  dashMonthStr=d.toISOString().slice(0,7);
+  loadDashboard();
 }
 function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}}
-async function loadDashboard(section){
-  if(!currentStore){document.getElementById('dashKpi').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
+
+async function loadDashboard(){
+  if(!currentStore){document.getElementById('dashSalesTable').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
   setLoad(true,'데이터 조회 중...');
   try{
-    if(section==='month'){
-      document.getElementById('dashMonthLabel').innerText=dashMonthStr;
-      const ym=dashMonthStr;
-      const[y,m]=ym.split('-').map(Number);
-      const lastDay=new Date(y,m,0).getDate();
-      const start=ym+'-01', end=ym+'-'+lastDay;
+    const ym=dashMonthStr;
+    document.getElementById('dashMonthLabel').innerText=ym;
+    const[y,mo]=ym.split('-').map(Number);
+    const lastDay=new Date(y,mo,0).getDate();
+    const start=ym+'-01', end=ym+'-'+lastDay;
+    const today=new Date();
+    const passedDays=today.toISOString().slice(0,7)===ym?today.getDate():lastDay;
 
-      // ── 매출 집계 (소스 선택에 따라 다름)
-      let totalRevenue=0, settle=[], dailyMap={};
-      if(dashSaleSource==='ups'){
-        // 업솔루션 daily_sales 테이블
-        const{data:ds}=await sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',currentStore.id).gte('sale_date',start).lte('sale_date',end).order('sale_date');
-        (ds||[]).forEach(s=>{totalRevenue+=s.total_sales||0;dailyMap[s.sale_date?.slice(8)]=s.total_sales||0;});
-        // 매출 구성 (카드/현금)
-        const cardTotal=(ds||[]).reduce((a,s)=>a+(s.card_sales||0),0);
-        const cashTotal=(ds||[]).reduce((a,s)=>a+(s.cash_sales||0),0);
-        settle=ds||[];
-      } else {
-        // 마감정산 settlements
-        const{data:st}=await sb.from('settlements').select('settle_date,expected_total,actual_total,items_json').eq('store_id',currentStore.id).gte('settle_date',start).lte('settle_date',end).order('settle_date');
-        settle=st||[];
-        settle.forEach(s=>{totalRevenue+=s.expected_total||0;dailyMap[s.settle_date?.slice(8)]=(s.expected_total||0);});
-      }
+    // ══ 1. 매출 집계 ══
+    let salesBreakdown={};
+    let totalRevenue=0, dailyMap={};
 
-      // ── 카테고리별 지출 집계 (관리자 정의 카테고리 기반)
-      await loadExpCategories();
-      const expData=await calcExpenseByCategories(ym);
-      const totalCost=expData.reduce((a,e)=>a+e.amount,0);
-      const netProfit=totalRevenue-totalCost;
-      const margin=totalRevenue>0?Math.round(netProfit/totalRevenue*100):0;
-
-      // ── KPI
-      document.getElementById('dashKpi').innerHTML=`
-        <div class="kpi-card"><div class="kpi-label">매출 합계</div><div class="kpi-val">${fmt(Math.round(totalRevenue/10000))}만원</div><div class="kpi-sub">${dashSaleSource==='ups'?'업솔루션':'마감정산'} · ${Object.keys(dailyMap).length}일치</div></div>
-        <div class="kpi-card"><div class="kpi-label">총 지출</div><div class="kpi-val down">${fmt(Math.round(totalCost/10000))}만원</div><div class="kpi-sub">${expData.length}개 카테고리</div></div>
-        <div class="kpi-card"><div class="kpi-label">순수익</div><div class="kpi-val ${netProfit>=0?'up':'down'}">${fmt(Math.round(netProfit/10000))}만원</div><div class="kpi-sub">마진 ${margin}%</div></div>
-        <div class="kpi-card"><div class="kpi-label">인건비</div><div class="kpi-val down">${fmt(Math.round((expData.find(e=>e.source==='attendance')?.amount||0)/10000))}만원</div><div class="kpi-sub">${(expData.find(e=>e.source==='attendance')?.isConfirmed)?'✅ 확정':'⏳ 자동'}</div></div>`;
-
-      // ── 인건비 확정 입력 카드 표시
-      const laborCat=expData.find(e=>e.source==='attendance');
-      const laborCard=document.getElementById('laborConfirmCard');
-      const laborAutoEl=document.getElementById('laborAutoAmt');
-      if(laborCat&&laborCard){
-        laborCard.style.display='block';
-        if(laborAutoEl) laborAutoEl.innerText=fmt(laborAutoAmount);
-        const{data:confirmed}=await sb.from('expense_category_amounts').select('amount').eq('category_id',laborCat.id).eq('year_month',ym).maybeSingle();
-        const confirmInput=document.getElementById('laborConfirmInput');
-        if(confirmInput) confirmInput.value=confirmed?.amount||'';
-      }
-
-      // ── 매출 구성 도넛
-      destroyChart('salesChart');
-      const salesBreakdown={카드:0,현금:0,QR:0,기타:0};
-      if(dashSaleSource==='ups'){
-        const{data:ds}=await sb.from('daily_sales').select('card_sales,cash_sales,total_sales').eq('store_id',currentStore.id).gte('sale_date',start).lte('sale_date',end);
-        (ds||[]).forEach(s=>{salesBreakdown.카드+=s.card_sales||0;salesBreakdown.현금+=s.cash_sales||0;});
-        salesBreakdown.기타=totalRevenue-salesBreakdown.카드-salesBreakdown.현금;
-      } else {
-        settle.forEach(s=>{if(!s.items_json)return;Object.values(s.items_json).forEach(item=>{if(item.role!=='plus')return;const v=item.value||0;if(item.name.includes('카드'))salesBreakdown.카드+=v;else if(item.name.includes('현금'))salesBreakdown.현금+=v;else if(item.name.includes('QR'))salesBreakdown.QR+=v;else if(!item.name.includes('보고서')&&!item.name.includes('개시'))salesBreakdown.기타+=v;});});
-      }
-      const hasRevenue=Object.values(salesBreakdown).some(v=>v>0);
-      chartInstances.salesChart=new Chart(document.getElementById('salesChart'),{type:'doughnut',data:{labels:Object.keys(salesBreakdown),datasets:[{data:hasRevenue?Object.values(salesBreakdown):[1],backgroundColor:hasRevenue?['#0050FF','#05C072','#FF9500','#B0B8C1']:['#E5E8EB']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'},tooltip:{callbacks:{label:ctx=>hasRevenue?`${ctx.label}: ${fmt(ctx.raw)}원`:'데이터 없음'}}}}});
-
-      // ── 카테고리별 지출 막대 (관리자 정의 기반 — 0도 표시)
-      destroyChart('expenseChart');
-      const expLabels=expData.length?expData.map(e=>e.name):['카테고리 없음'];
-      const expValues=expData.length?expData.map(e=>e.amount):[0];
-      const expColors=expData.length?expData.map(e=>e.color):['#E5E8EB'];
-      chartInstances.expenseChart=new Chart(document.getElementById('expenseChart'),{type:'bar',data:{labels:expLabels,datasets:[{label:'지출',data:expValues,backgroundColor:expColors,borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${fmt(ctx.raw)}원`}}},scales:{x:{ticks:{callback:v=>v>=10000?Math.round(v/10000)+'만':v},beginAtZero:true}}}});
-      if(!expData.length){document.getElementById('expenseChart').parentElement.insertAdjacentHTML('beforeend','<p style="text-align:center;font-size:12px;color:var(--gray-400);margin-top:8px;">설정 → 지출 카테고리에서 항목을 추가하세요</p>');}
-
-      // ── 일별 매출 선 그래프
-      destroyChart('dailyChart');
-      const allDays=Array.from({length:lastDay},(_,i)=>String(i+1).padStart(2,'0'));
-      chartInstances.dailyChart=new Chart(document.getElementById('dailyChart'),{type:'line',data:{labels:allDays,datasets:[{label:'일별 매출',data:allDays.map(d=>dailyMap[d]||0),borderColor:'#0050FF',backgroundColor:'rgba(0,80,255,0.08)',tension:0.3,fill:true,pointRadius:3,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v>=10000?Math.round(v/10000)+'만':v},beginAtZero:true}}}});
-
-    } else if(section==='vendor'){
-      document.getElementById('dashVMonthLabel').innerText=dashVMonthStr;
-      const ym=dashVMonthStr;
-      const[y,m]=ym.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
-      const{data:orders}=await sb.from('vendor_orders').select('amount,vendors(name,category)').eq('store_id',currentStore.id).gte('order_date',ym+'-01').lte('order_date',ym+'-'+lastDay);
-      const vMap={};
-      (orders||[]).forEach(o=>{const vn=o.vendors?.name||'기타';vMap[vn]=(vMap[vn]||0)+(o.amount||0);});
-      const palette=['#0050FF','#05C072','#FF9500','#F04452','#7C3AED','#06B6D4','#F59E0B','#10B981','#EF4444','#8B5CF6'];
-      destroyChart('vendorPieChart');
-      const sorted=Object.entries(vMap).sort((a,b)=>b[1]-a[1]);
-      const hasData=sorted.length>0;
-      chartInstances.vendorPieChart=new Chart(document.getElementById('vendorPieChart'),{type:'pie',data:{labels:hasData?sorted.map(([k])=>k):['데이터 없음'],datasets:[{data:hasData?sorted.map(([,v])=>v):[1],backgroundColor:hasData?palette:['#E5E8EB']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11}}}}}});
-      const total=sorted.reduce((a,[,v])=>a+v,0);
-      document.getElementById('vendorDetailList').innerHTML=hasData
-        ?sorted.map(([name,amt],i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);"><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:50%;background:${palette[i%palette.length]};flex-shrink:0;"></div><span style="font-size:13px;font-weight:600;">${name}</span></div><div style="text-align:right;"><div style="font-size:13px;font-weight:700;">${fmt(amt)}원</div><div style="font-size:11px;color:var(--gray-600);">${total?Math.round(amt/total*100):'0'}%</div></div></div>`).join('')
-        :'<div class="empty-state"><p>이 달 주문내역이 없습니다<br><span style="font-size:11px;color:var(--gray-400);">거래처 탭에서 주문을 입력하거나 파일을 업로드하세요</span></p></div>';
-
-    } else if(section==='fixed'){
-      document.getElementById('dashFMonthLabel').innerText=dashFMonthStr;
-      const ym=dashFMonthStr;
-      const days=daysInMonth(ym);
-      const today=new Date();const todayStr=today.toISOString().split('T')[0];
-      const passedDays=todayStr.startsWith(ym)?today.getDate():days;
-      const{data:amounts}=await sb.from('fixed_cost_amounts').select('amount,fixed_costs(name,category,is_active)').eq('store_id',currentStore.id).eq('year_month',ym);
-      let totalMonthly=0,totalAccrued=0;
-      const rows=(amounts||[]).filter(a=>a.fixed_costs?.is_active!==false).map(a=>{const monthly=a.amount||0;const daily=Math.round(monthly/days);const accrued=daily*passedDays;totalMonthly+=monthly;totalAccrued+=accrued;return{name:a.fixed_costs?.name||'?',cat:a.fixed_costs?.category||'',monthly,daily,accrued};});
-      document.getElementById('fixedDashData').innerHTML=`
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
-          <div style="background:var(--blue-light);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:10px;color:var(--blue);font-weight:600;">월 고정비</div><div style="font-size:17px;font-weight:800;margin-top:4px;">${fmt(Math.round(totalMonthly/10000))}만원</div></div>
-          <div style="background:var(--gray-100);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:10px;color:var(--gray-600);font-weight:600;">일 평균</div><div style="font-size:17px;font-weight:800;margin-top:4px;">${fmt(Math.round(totalMonthly/days))}원</div></div>
-          <div style="background:var(--danger-light);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:10px;color:var(--danger);font-weight:600;">${passedDays}일 누적</div><div style="font-size:17px;font-weight:800;color:var(--danger);margin-top:4px;">${fmt(Math.round(totalAccrued/10000))}만원</div></div>
-        </div>
-        ${rows.length?`<table style="width:100%;border-collapse:collapse;font-size:12px;">
-          <thead><tr style="background:var(--gray-100);">
-            <th style="padding:8px 6px;text-align:left;font-weight:700;">항목</th>
-            <th style="padding:8px 6px;text-align:right;font-weight:700;">월 금액</th>
-            <th style="padding:8px 6px;text-align:right;font-weight:700;">일 금액</th>
-            <th style="padding:8px 6px;text-align:right;font-weight:700;">${passedDays}일 누적</th>
-          </tr></thead>
-          <tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--gray-100);">
-            <td style="padding:9px 6px;font-weight:600;">${r.name} <span style="font-size:10px;color:var(--gray-400);">${r.cat}</span></td>
-            <td style="padding:9px 6px;text-align:right;">${fmt(r.monthly)}</td>
-            <td style="padding:9px 6px;text-align:right;color:var(--gray-600);">${fmt(r.daily)}</td>
-            <td style="padding:9px 6px;text-align:right;font-weight:700;color:var(--danger);">${fmt(r.accrued)}</td>
-          </tr>`).join('')}</tbody>
-        </table>`:'<div class="empty-state"><p>이 달의 고정비 금액이 없습니다<br><span style="font-size:11px;color:var(--gray-400);">고정비 메뉴에서 월별 금액을 입력하세요</span></p></div>'}`;
+    if(dashSaleSource==='ups'){
+      const{data:ds}=await sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',currentStore.id).gte('sale_date',start).lte('sale_date',end).order('sale_date');
+      (ds||[]).forEach(s=>{totalRevenue+=s.total_sales||0;dailyMap[s.sale_date?.slice(8)]=s.total_sales||0;});
+      salesBreakdown={'카드':(ds||[]).reduce((a,s)=>a+(s.card_sales||0),0),'현금':(ds||[]).reduce((a,s)=>a+(s.cash_sales||0),0)};
+      salesBreakdown['기타']=totalRevenue-salesBreakdown['카드']-salesBreakdown['현금'];
+    } else {
+      const{data:st}=await sb.from('settlements').select('settle_date,expected_total,actual_total,items_json').eq('store_id',currentStore.id).gte('settle_date',start).lte('settle_date',end).order('settle_date');
+      (st||[]).forEach(s=>{
+        totalRevenue+=s.expected_total||0;
+        dailyMap[s.settle_date?.slice(8)]=(s.expected_total||0);
+        if(!s.items_json) return;
+        Object.values(s.items_json).forEach(item=>{
+          if(!item.name||item.role==='minus') return;
+          if(item.name.includes('보고서')||item.name.includes('개시')) return;
+          salesBreakdown[item.name]=(salesBreakdown[item.name]||0)+(item.value||0);
+        });
+      });
     }
+
+    // 매출 테이블 렌더
+    const pct=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1)+'%':'–';
+    const salesEntries=Object.entries(salesBreakdown).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+    document.getElementById('dashSalesTable').innerHTML=salesEntries.length
+      ?salesEntries.map(([name,amt])=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+          <span style="font-size:13px;font-weight:600;color:var(--gray-600);">${name}</span>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:13px;font-weight:700;">${fmt(amt)}원</span>
+            <span style="font-size:12px;font-weight:700;color:var(--blue);min-width:45px;text-align:right;">${pct(amt)}</span>
+          </div>
+        </div>`).join('')
+      :'<div class="empty-state" style="padding:16px;"><p>매출 데이터가 없습니다</p></div>';
+    document.getElementById('dashSalesTotalAmt').innerText=fmt(totalRevenue)+'원';
+
+    // ══ 2. 지출 집계 (카테고리 기반) ══
+    await loadExpCategories();
+    const expData=await calcExpenseByCategories(ym);
+
+    // 고정비 (예정/확정 포함)
+    const{data:fcAmounts}=await sb.from('fixed_cost_amounts')
+      .select('amount,estimated_amount,is_confirmed,fixed_costs(name,is_active,is_variable)')
+      .eq('store_id',currentStore.id).eq('year_month',ym);
+    const fixedTotal=(fcAmounts||[]).filter(a=>a.fixed_costs?.is_active!==false)
+      .reduce((a,r)=>a+(r.is_confirmed?r.amount:(r.estimated_amount||r.amount||0)),0);
+
+    // 대분류별 그룹핑
+    const expByGroup={};
+    expData.forEach(e=>{
+      // data_source를 대분류로 매핑
+      const groupMap={vendor_orders:'식자재',receipts:'식자재(직구/영수증)',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
+      const group=groupMap[e.source]||'기타';
+      if(!expByGroup[group])expByGroup[group]={items:[],total:0};
+      expByGroup[group].items.push(e);
+      expByGroup[group].total+=e.amount;
+    });
+    // 고정비를 별도 그룹으로 추가 (expense_categories의 fixed_costs 소스와 별개로 상세 표시)
+    if(fixedTotal>0&&!expByGroup['공과금/고정비']){
+      expByGroup['공과금/고정비']={items:[],total:0};
+    }
+    if(fcAmounts?.length){
+      const fcGroup=expByGroup['공과금/고정비']||(expByGroup['공과금/고정비']={items:[],total:0});
+      // expense_categories의 fixed_costs 합산은 이미 있으므로, 상세 항목만 표시용으로 추가
+      fcGroup.details=(fcAmounts||[]).filter(a=>a.fixed_costs?.is_active!==false).map(a=>({
+        name:a.fixed_costs?.name||'?',
+        amount:a.is_confirmed?a.amount:(a.estimated_amount||a.amount||0),
+        isVariable:a.fixed_costs?.is_variable||false,
+        isConfirmed:a.is_confirmed||false
+      }));
+    }
+
+    const totalCost=expData.reduce((a,e)=>a+e.amount,0);
+    const costPct=totalRevenue>0?(totalCost/totalRevenue*100).toFixed(1):'0';
+    document.getElementById('dashExpPct').innerText=costPct+'%';
+    document.getElementById('dashExpTotalAmt').innerText=fmt(totalCost)+'원';
+
+    // 아코디언 렌더
+    const groupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','기타/수동':'#7C3AED','마케팅':'#F59E0B'};
+    let accHtml='';
+    Object.entries(expByGroup).forEach(([group,data])=>{
+      const gPct=totalRevenue>0?(data.total/totalRevenue*100).toFixed(1):'0';
+      const color=groupColors[group]||'#4E5968';
+      let detailHtml='';
+      // 카테고리 항목
+      data.items.forEach(item=>{
+        const iPct=totalRevenue>0?(item.amount/totalRevenue*100).toFixed(1):'0';
+        detailHtml+=`<div style="display:flex;justify-content:space-between;padding:7px 0 7px 16px;border-bottom:1px solid var(--gray-100);">
+          <span style="font-size:12px;color:var(--gray-600);">${item.name}</span>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span style="font-size:12px;font-weight:600;">${fmt(item.amount)}원</span>
+            <span style="font-size:11px;color:var(--gray-400);min-width:40px;text-align:right;">${iPct}%</span>
+          </div>
+        </div>`;
+      });
+      // 고정비 상세 (예정/확정 표시)
+      if(data.details){
+        data.details.forEach(d=>{
+          const statusIcon=d.isVariable?(d.isConfirmed?'<span style="color:var(--success);font-size:10px;">확정</span>':'<span style="color:var(--gray-400);font-size:10px;">예정</span>'):'';
+          detailHtml+=`<div style="display:flex;justify-content:space-between;padding:7px 0 7px 16px;border-bottom:1px solid var(--gray-100);">
+            <span style="font-size:12px;color:${d.isVariable&&!d.isConfirmed?'var(--gray-400)':'var(--gray-600)'};">${d.name} ${statusIcon}</span>
+            <span style="font-size:12px;font-weight:600;${d.isVariable&&!d.isConfirmed?'color:var(--gray-400);font-style:italic;':''}">${fmt(d.amount)}원</span>
+          </div>`;
+        });
+      }
+      accHtml+=`
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 12px;background:var(--gray-100);border-radius:11px;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:${color};"></div>
+              <span style="font-size:13px;font-weight:700;">${group}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:13px;font-weight:800;">${fmt(data.total)}원</span>
+              <span style="font-size:12px;font-weight:700;color:${color};">${gPct}%</span>
+            </div>
+          </div>
+          <div style="display:none;">${detailHtml}</div>
+        </div>`;
+    });
+    document.getElementById('dashExpAccordion').innerHTML=accHtml||'<div class="empty-state" style="padding:16px;"><p>지출 카테고리를 설정에서 추가하세요</p></div>';
+
+    // ══ 3. 수익 요약 ══
+    const royaltyRate=parseFloat(settings.royalty_rate||0)/100;
+    const cardFeeRate=parseFloat(settings.card_fee_rate||0)/100;
+    const cardSales=salesBreakdown['카드']||Object.values(salesBreakdown).reduce((a,v)=>a+v,0)*0.9;
+    const royalty=Math.round(totalRevenue*royaltyRate);
+    const cardFee=Math.round(cardSales*cardFeeRate);
+    const netProfit=totalRevenue-totalCost-royalty-cardFee;
+
+    const profRow=(label,amt,color,note)=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+        <span style="font-size:13px;font-weight:600;color:var(--gray-600);">${label}${note?` <span style="font-size:10px;color:var(--gray-400);">${note}</span>`:''}</span>
+        <span style="font-size:14px;font-weight:700;color:${color};">${amt>=0?'':'-'}${fmt(Math.abs(amt))}원</span>
+      </div>`;
+    document.getElementById('dashProfitSummary').innerHTML=
+      profRow('매출 합계',totalRevenue,'var(--blue)',Object.keys(dailyMap).length+'일치')+
+      profRow('지출 합계',-totalCost,'var(--danger)',costPct+'%')+
+      (royaltyRate>0?profRow('로열티',-royalty,'var(--warn)',(royaltyRate*100).toFixed(1)+'%'):'')+
+      (cardFeeRate>0?profRow('카드수수료',-cardFee,'var(--warn)',(cardFeeRate*100).toFixed(1)+'%'):'')+
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:2px solid var(--text);margin-top:4px;">
+        <span style="font-size:15px;font-weight:800;">순수익</span>
+        <span style="font-size:18px;font-weight:900;color:${netProfit>=0?'var(--success)':'var(--danger)'};">${netProfit>=0?'':'-'}${fmt(Math.abs(netProfit))}원</span>
+      </div>`;
+
+    // ══ 4. 마감 예상 ══
+    if(passedDays>0&&passedDays<lastDay){
+      const estRevenue=Math.round(totalRevenue/passedDays*lastDay);
+      const estCost=Math.round(totalCost/passedDays*lastDay);
+      const estRoyalty=Math.round(estRevenue*royaltyRate);
+      const estCardFee=Math.round((estRevenue*0.9)*cardFeeRate);
+      const estProfit=estRevenue-estCost-estRoyalty-estCardFee;
+      document.getElementById('dashForecast').innerHTML=`
+        <div style="background:var(--gray-100);border-radius:12px;padding:14px;margin-bottom:10px;">
+          <div style="font-size:11px;color:var(--gray-600);font-weight:600;margin-bottom:8px;">${passedDays}일 경과 / ${lastDay}일 기준 예측</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><div style="font-size:11px;color:var(--gray-400);">매출 예상</div><div style="font-size:17px;font-weight:800;color:var(--blue);">${fmt(Math.round(estRevenue/10000))}만원</div></div>
+            <div><div style="font-size:11px;color:var(--gray-400);">지출 예상</div><div style="font-size:17px;font-weight:800;color:var(--danger);">${fmt(Math.round(estCost/10000))}만원</div></div>
+            <div style="grid-column:span 2;text-align:center;padding-top:8px;border-top:1px solid var(--gray-200);">
+              <div style="font-size:11px;color:var(--gray-400);">수익 예상</div>
+              <div style="font-size:22px;font-weight:900;color:${estProfit>=0?'var(--success)':'var(--danger)'};">${estProfit>=0?'':'-'}${fmt(Math.abs(Math.round(estProfit/10000)))}만원</div>
+            </div>
+          </div>
+        </div>`;
+    } else {
+      document.getElementById('dashForecast').innerHTML=passedDays>=lastDay
+        ?'<div style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px;">월 마감 완료</div>'
+        :'<div style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px;">데이터가 쌓이면 예측이 표시됩니다</div>';
+    }
+
+    // ══ 5. 인건비 확정 카드 ══
+    const laborCat=expData.find(e=>e.source==='attendance');
+    const laborCard=document.getElementById('laborConfirmCard');
+    if(laborCat&&laborCard){
+      laborCard.style.display='block';
+      const el=document.getElementById('laborAutoAmt');if(el) el.innerText=fmt(laborAutoAmount);
+      const{data:confirmed}=await sb.from('expense_category_amounts').select('amount').eq('category_id',laborCat.id).eq('year_month',ym).maybeSingle();
+      const inp=document.getElementById('laborConfirmInput');if(inp) inp.value=confirmed?.amount||'';
+    } else if(laborCard) laborCard.style.display='none';
+
+    // ══ 6. 차트 ══
+    destroyChart('salesChart');
+    const sLabels=Object.keys(salesBreakdown);
+    const sValues=Object.values(salesBreakdown);
+    const hasRev=sValues.some(v=>v>0);
+    const sColors=['#0050FF','#05C072','#FF9500','#F04452','#7C3AED','#06B6D4','#F59E0B','#10B981'];
+    chartInstances.salesChart=new Chart(document.getElementById('salesChart'),{type:'doughnut',data:{labels:hasRev?sLabels:['데이터 없음'],datasets:[{data:hasRev?sValues:[1],backgroundColor:hasRev?sColors.slice(0,sLabels.length):['#E5E8EB']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'},tooltip:{callbacks:{label:ctx=>hasRev?`${ctx.label}: ${fmt(ctx.raw)}원 (${pct(ctx.raw)})`:'데이터 없음'}}}}});
+
+    destroyChart('expenseChart');
+    const eLabels=expData.length?expData.map(e=>e.name):['카테고리 없음'];
+    const eValues=expData.length?expData.map(e=>e.amount):[0];
+    const eColors=expData.length?expData.map(e=>e.color):['#E5E8EB'];
+    chartInstances.expenseChart=new Chart(document.getElementById('expenseChart'),{type:'bar',data:{labels:eLabels,datasets:[{label:'지출',data:eValues,backgroundColor:eColors,borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${fmt(ctx.raw)}원`}}},scales:{x:{ticks:{callback:v=>v>=10000?Math.round(v/10000)+'만':v},beginAtZero:true}}}});
+
+    destroyChart('dailyChart');
+    const allDays=Array.from({length:lastDay},(_,i)=>String(i+1).padStart(2,'0'));
+    chartInstances.dailyChart=new Chart(document.getElementById('dailyChart'),{type:'line',data:{labels:allDays,datasets:[{label:'일별 매출',data:allDays.map(d=>dailyMap[d]||0),borderColor:'#0050FF',backgroundColor:'rgba(0,80,255,0.08)',tension:0.3,fill:true,pointRadius:3,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v>=10000?Math.round(v/10000)+'만':v},beginAtZero:true}}}});
+
   }catch(e){console.error('대시보드 오류:',e);}finally{setLoad(false);}
-}
-async function calcFixedCostForMonth(ym){
-  if(!currentStore) return 0;
-  const{data}=await sb.from('fixed_cost_amounts').select('amount').eq('store_id',currentStore.id).eq('year_month',ym);
-  return(data||[]).reduce((a,r)=>a+(r.amount||0),0);
 }
 
 // ══════════════════════════════════════════
@@ -2341,6 +2437,9 @@ async function loadAllSettings(){
   const nsEl=document.getElementById('si-night-start');if(nsEl)nsEl.value=settings.night_extra_start||'';
   const neEl=document.getElementById('si-night-end');if(neEl)neEl.value=settings.night_extra_end||'';
   const naEl=document.getElementById('si-night-amount');if(naEl)naEl.value=settings.night_extra_amount||0;
+  // 로열티 & 수수료
+  const rrEl=document.getElementById('si-royalty-rate');if(rrEl)rrEl.value=settings.royalty_rate||0;
+  const cfEl=document.getElementById('si-card-fee-rate');if(cfEl)cfEl.value=settings.card_fee_rate||0;
   // 특별수당
   await loadSpecialWages();
   // 정산 항목
@@ -2411,7 +2510,9 @@ async function saveWageSettings(){
   const nightStart=document.getElementById('si-night-start').value||null;
   const nightEnd=document.getElementById('si-night-end').value||null;
   const nightAmt=parseInt(document.getElementById('si-night-amount').value)||0;
-  const payload={store_id:currentStore.id,auto_rest_min:autoRest,weekend_extra:weekendExtra,night_extra_start:nightStart,night_extra_end:nightEnd,night_extra_amount:nightAmt};
+  const royaltyRate=parseFloat(document.getElementById('si-royalty-rate').value)||0;
+  const cardFeeRate=parseFloat(document.getElementById('si-card-fee-rate').value)||0;
+  const payload={store_id:currentStore.id,auto_rest_min:autoRest,weekend_extra:weekendExtra,night_extra_start:nightStart,night_extra_end:nightEnd,night_extra_amount:nightAmt,royalty_rate:royaltyRate,card_fee_rate:cardFeeRate};
   const{error}=await sb.from('store_settings').upsert(payload,{onConflict:'store_id'});
   // 특별수당 저장
   await saveSpecialWages();
