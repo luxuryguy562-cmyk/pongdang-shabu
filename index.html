@@ -957,20 +957,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="card">
     <div class="card-title">매출 연동 (업솔루션)</div>
     <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">업솔루션 일매출내역을 자동으로 가져옵니다.</p>
+    <div class="card-sub-title">업솔루션 계정</div>
+    <input id="si-ups-id" class="input-field" placeholder="업솔루션 아이디" type="text">
+    <input id="si-ups-pw" class="input-field" placeholder="업솔루션 비밀번호" type="password">
+    <div class="card-sub-title">크롤러 서버</div>
     <div class="setting-row" style="cursor:default;">
-      <div><div class="setting-label">크롤러 서버</div><div class="setting-sub">Cloudflare Workers URL</div></div>
+      <div><div class="setting-label">Workers URL</div><div class="setting-sub">Cloudflare Workers</div></div>
       <div class="setting-val" id="sv-crawler-url" onclick="openSettingEdit('crawler_url','크롤러 URL','')">미설정</div>
     </div>
     <div class="setting-row" style="cursor:default;">
-      <div><div class="setting-label">크롤러 시크릿</div><div class="setting-sub">인증 토큰</div></div>
+      <div><div class="setting-label">시크릿</div><div class="setting-sub">인증 토큰</div></div>
       <div class="setting-val" id="sv-crawler-secret" onclick="openSettingEdit('crawler_secret','크롤러 시크릿','')">미설정</div>
     </div>
-    <div class="setting-row" style="cursor:default;">
-      <div><div class="setting-label">매장 코드</div><div class="setting-sub">업솔루션 매장 코드</div></div>
-      <div class="setting-val" id="sv-ups-store-code" onclick="openSettingEdit('ups_store_code','매장 코드','')">미설정</div>
-    </div>
-    <button class="btn btn-success btn-full" onclick="testCrawler()">🔗 연동 테스트</button>
-    <button class="btn btn-primary btn-full" onclick="saveBasicSettings()">저장</button>
+    <button class="btn btn-success btn-full" onclick="testCrawlerLogin()">🔗 로그인 테스트</button>
+    <button class="btn btn-primary btn-full" onclick="saveUpsSettings()">저장</button>
   </div>
 </div>
 
@@ -2711,7 +2711,8 @@ async function loadAllSettings(){
   // 크롤러 설정 표시
   const cuEl=document.getElementById('sv-crawler-url');if(cuEl)cuEl.innerText=settings.crawler_url||'미설정';
   const csEl=document.getElementById('sv-crawler-secret');if(csEl)csEl.innerText=settings.crawler_secret?'설정됨 ✅':'미설정';
-  const scEl=document.getElementById('sv-ups-store-code');if(scEl)scEl.innerText=settings.ups_store_code||'미설정';
+  const uidEl=document.getElementById('si-ups-id');if(uidEl)uidEl.value=settings.ups_id||'';
+  const upwEl=document.getElementById('si-ups-pw');if(upwEl)upwEl.value=settings.ups_pw||'';
 }
 function openSettingEdit(key,label,suffix){
   document.getElementById('settingEditTitle').innerText=label+' 변경';
@@ -3091,33 +3092,31 @@ async function manualCrawl(){
   }catch(e){setLoad(false);alert('수집 실패: '+e.message);}
 }
 
-async function testCrawler(){
-  // settings에서 가져오거나, 없으면 sv-crawler-url 표시값 사용
-  let crawlerUrl = settings.crawler_url || document.getElementById('sv-crawler-url')?.innerText;
-  if(!crawlerUrl || crawlerUrl==='미설정'){
-    crawlerUrl = prompt('크롤러 URL을 입력하세요:', 'https://upsolution-crawler.luxuryguy562.workers.dev');
-    if(!crawlerUrl) return;
-    settings.crawler_url = crawlerUrl;
-  }
-  let secret = settings.crawler_secret || '';
-  setLoad(true,'연결 테스트 중...');
+async function testCrawlerLogin(){
+  if(!guardStore()) return;
+  const crawlerUrl=settings.crawler_url||'https://upsolution-crawler.luxuryguy562.workers.dev';
+  const secret=settings.crawler_secret||'';
+  setLoad(true,'로그인 테스트 중...');
   try{
-    const res=await fetch(crawlerUrl, {
+    const res=await fetch(`${crawlerUrl}/test-login?store_id=${currentStore.id}`,{
       headers:{'Authorization':'Bearer '+secret}
     });
-    if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();
     setLoad(false);
-    if(data.status==='ok'){
-      const eps = Array.isArray(data.endpoints) ? data.endpoints.join('\n') : '연결 성공';
-      alert('✅ 크롤러 연결 성공!\n\n'+eps);
-    } else {
-      alert('응답: '+JSON.stringify(data,null,2));
-    }
-  }catch(e){
-    setLoad(false);
-    alert('연결 실패: '+e.message+'\n\nWorkers URL을 확인하세요:\nhttps://upsolution-crawler.luxuryguy562.workers.dev');
-  }
+    if(data.success) alert('✅ 업솔루션 로그인 성공!');
+    else alert('❌ '+( data.error||'로그인 실패'));
+  }catch(e){setLoad(false);alert('연결 실패: '+e.message);}
+}
+async function saveUpsSettings(){
+  if(!guardStore()) return;
+  const upsId=document.getElementById('si-ups-id').value.trim();
+  const upsPw=document.getElementById('si-ups-pw').value.trim();
+  setLoad(true,'저장 중...');
+  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,ups_id:upsId||null,ups_pw:upsPw||null},{onConflict:'store_id'});
+  setLoad(false);
+  if(error) return alert('저장 실패: '+error.message);
+  settings.ups_id=upsId;settings.ups_pw=upsPw;
+  alert('업솔루션 계정 저장 완료!');
 }
 
 async function saveLaborConfirm(){
