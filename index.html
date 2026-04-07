@@ -683,7 +683,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <span id="dashMonthLabel" style="flex:1;text-align:center;font-size:16px;font-weight:800;">-</span>
     <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(1)">›</button>
   </div>
-  <div style="display:flex;gap:6px;margin-bottom:14px;">
+  <div class="manager-only" style="display:flex;gap:6px;margin-bottom:14px;">
     <button id="saleSrcSettle" class="btn btn-primary btn-sm" style="flex:1;font-size:11px;" onclick="switchSaleSource('settle')">📋 마감정산</button>
     <button id="saleSrcUps" class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;" onclick="switchSaleSource('ups')">🏪 업솔루션</button>
     <button class="btn btn-secondary btn-sm" onclick="manualCrawl()" id="crawlBtn" style="flex:0 0 auto;font-size:10px;">↓</button>
@@ -972,8 +972,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
   </div>
 
-  <!-- 업솔루션 연동 -->
-  <div class="card">
+  <!-- 업솔루션 연동 (관리자만) -->
+  <div class="card manager-only">
     <div class="card-title">매출 연동 (업솔루션)</div>
     <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">업솔루션 일매출내역을 자동으로 가져옵니다.</p>
     <div class="card-sub-title">업솔루션 계정</div>
