@@ -958,8 +958,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="card-title">매출 연동 (업솔루션)</div>
     <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">업솔루션 일매출내역을 자동으로 가져옵니다.</p>
     <div class="card-sub-title">업솔루션 계정</div>
-    <input id="si-ups-id" class="input-field" placeholder="업솔루션 아이디" type="text">
-    <input id="si-ups-pw" class="input-field" placeholder="업솔루션 비밀번호" type="password">
+    <input id="si-ups-store-code" class="input-field" placeholder="Store ID (매장코드)" type="text">
+    <input id="si-ups-id" class="input-field" placeholder="User ID" type="text">
+    <input id="si-ups-pw" class="input-field" placeholder="Password" type="password">
     <div class="card-sub-title">크롤러 서버</div>
     <div class="setting-row" style="cursor:default;">
       <div><div class="setting-label">Workers URL</div><div class="setting-sub">Cloudflare Workers</div></div>
@@ -2711,6 +2712,7 @@ async function loadAllSettings(){
   // 크롤러 설정 표시
   const cuEl=document.getElementById('sv-crawler-url');if(cuEl)cuEl.innerText=settings.crawler_url||'미설정';
   const csEl=document.getElementById('sv-crawler-secret');if(csEl)csEl.innerText=settings.crawler_secret?'설정됨 ✅':'미설정';
+  const uscEl=document.getElementById('si-ups-store-code');if(uscEl)uscEl.value=settings.ups_store_code||'';
   const uidEl=document.getElementById('si-ups-id');if(uidEl)uidEl.value=settings.ups_id||'';
   const upwEl=document.getElementById('si-ups-pw');if(upwEl)upwEl.value=settings.ups_pw||'';
 }
@@ -3109,13 +3111,14 @@ async function testCrawlerLogin(){
 }
 async function saveUpsSettings(){
   if(!guardStore()) return;
+  const upsStoreCode=document.getElementById('si-ups-store-code').value.trim();
   const upsId=document.getElementById('si-ups-id').value.trim();
   const upsPw=document.getElementById('si-ups-pw').value.trim();
   setLoad(true,'저장 중...');
-  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,ups_id:upsId||null,ups_pw:upsPw||null},{onConflict:'store_id'});
+  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,ups_store_code:upsStoreCode||null,ups_id:upsId||null,ups_pw:upsPw||null},{onConflict:'store_id'});
   setLoad(false);
   if(error) return alert('저장 실패: '+error.message);
-  settings.ups_id=upsId;settings.ups_pw=upsPw;
+  settings.ups_store_code=upsStoreCode;settings.ups_id=upsId;settings.ups_pw=upsPw;
   alert('업솔루션 계정 저장 완료!');
 }
 

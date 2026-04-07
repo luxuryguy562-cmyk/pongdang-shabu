@@ -34,9 +34,9 @@ export default {
         const storeId = url.searchParams.get('store_id');
         if (!storeId) return resp({ error: 'store_id 필요' }, 400);
         const creds = await getStoreCredentials(env, storeId);
-        if (!creds) return resp({ error: '매장 설정에 업솔루션 ID/PW가 없습니다. 앱 설정에서 입력하세요.' }, 400);
-        const cookie = await loginUpsolution(creds.id, creds.pw);
-        if (!cookie) return resp({ error: '로그인 실패 - ID/PW를 확인하세요' }, 401);
+        if (!creds) return resp({ error: '매장 설정에 업솔루션 계정이 없습니다. 앱 설정에서 Store ID, User ID, Password를 입력하세요.' }, 400);
+        const cookie = await loginUpsolution(creds.storeCode, creds.id, creds.pw);
+        if (!cookie) return resp({ error: '로그인 실패 - Store ID/User ID/Password를 확인하세요' }, 401);
         return resp({ success: true, message: '로그인 성공' });
       }
 
@@ -45,8 +45,8 @@ export default {
         const storeId = url.searchParams.get('store_id');
         if (!storeId) return resp({ error: 'store_id 필요' }, 400);
         const creds = await getStoreCredentials(env, storeId);
-        if (!creds) return resp({ error: '업솔루션 ID/PW 미설정' }, 400);
-        const cookie = await loginUpsolution(creds.id, creds.pw);
+        if (!creds) return resp({ error: '업솔루션 계정 미설정' }, 400);
+        const cookie = await loginUpsolution(creds.storeCode, creds.id, creds.pw);
         if (!cookie) return resp({ error: '업솔루션 로그인 실패' }, 401);
         const result = await fetchSales(cookie, date);
         if (result.error) return resp(result, 500);
@@ -59,8 +59,8 @@ export default {
         const storeId = url.searchParams.get('store_id');
         if (!storeId) return resp({ error: 'store_id 필요' }, 400);
         const creds = await getStoreCredentials(env, storeId);
-        if (!creds) return resp({ error: '업솔루션 ID/PW 미설정' }, 400);
-        const cookie = await loginUpsolution(creds.id, creds.pw);
+        if (!creds) return resp({ error: '업솔루션 계정 미설정' }, 400);
+        const cookie = await loginUpsolution(creds.storeCode, creds.id, creds.pw);
         if (!cookie) return resp({ error: '업솔루션 로그인 실패' }, 401);
         const [y, m] = ym.split('-').map(Number);
         const lastDay = new Date(y, m, 0).getDate();
@@ -89,7 +89,7 @@ export default {
     const date = todayKST();
     for (const s of stores) {
       try {
-        const cookie = await loginUpsolution(s.ups_id, s.ups_pw);
+        const cookie = await loginUpsolution(s.ups_store_code || '', s.ups_id, s.ups_pw);
         if (!cookie) continue;
         const result = await fetchSales(cookie, date);
         if (result.total > 0) await upsertSales(env, s.store_id, date, result);
@@ -101,26 +101,31 @@ export default {
 // ── Supabase에서 매장별 ID/PW 조회 ──
 async function getStoreCredentials(env, storeId) {
   const res = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${storeId}&select=ups_id,ups_pw`,
+    `${env.SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${storeId}&select=ups_store_code,ups_id,ups_pw`,
     { headers: { apikey: env.SUPABASE_KEY, Authorization: `Bearer ${env.SUPABASE_KEY}` } }
   );
   const data = await res.json();
   if (!data?.[0]?.ups_id || !data?.[0]?.ups_pw) return null;
-  return { id: data[0].ups_id, pw: data[0].ups_pw };
+  return { storeCode: data[0].ups_store_code || '', id: data[0].ups_id, pw: data[0].ups_pw };
 }
 
 async function getAllStoresWithCredentials(env) {
   const res = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/store_settings?ups_id=not.is.null&ups_pw=not.is.null&select=store_id,ups_id,ups_pw`,
+    `${env.SUPABASE_URL}/rest/v1/store_settings?ups_id=not.is.null&ups_pw=not.is.null&select=store_id,ups_store_code,ups_id,ups_pw`,
     { headers: { apikey: env.SUPABASE_KEY, Authorization: `Bearer ${env.SUPABASE_KEY}` } }
   );
   return await res.json() || [];
 }
 
 // ── 업솔루션 자동 로그인 ──
-async function loginUpsolution(id, pw) {
+async function loginUpsolution(storeCode, id, pw) {
   if (!id || !pw) return null;
   try {
+    const bodyParts = [];
+    if (storeCode) bodyParts.push(`StoreId=${encodeURIComponent(storeCode)}`);
+    bodyParts.push(`UserId=${encodeURIComponent(id)}`);
+    bodyParts.push(`Password=${encodeURIComponent(pw)}`);
+    bodyParts.push('RememberMe=true');
     const res = await fetch(`${BASE}/Account/Login`, {
       method: 'POST',
       headers: {
@@ -128,7 +133,7 @@ async function loginUpsolution(id, pw) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         Referer: `${BASE}/Account/Login`,
       },
-      body: `UserId=${encodeURIComponent(id)}&Password=${encodeURIComponent(pw)}&RememberMe=true`,
+      body: bodyParts.join('&'),
       redirect: 'manual',
     });
     const rawCookies = res.headers.get('Set-Cookie') || '';
