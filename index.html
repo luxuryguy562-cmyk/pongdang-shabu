@@ -186,20 +186,23 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .gantt-day-label .day-count{font-size:10px;color:var(--gray-400);}
 
 /* ─ 대시보드 */
-.kpi-table{width:100%;}
-.kpi-tr{display:flex;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray-100);}
-.kpi-tr:last-child{border-bottom:none;}
-.kpi-tr.kpi-highlight{background:var(--blue-light);margin:0 -16px;padding:11px 16px;border-radius:12px;border-bottom:none;margin-bottom:2px;}
-.kpi-tr.kpi-highlight-green{background:var(--success-light);margin:0 -16px;padding:11px 16px;border-radius:12px;border-bottom:none;margin-top:2px;}
-.kpi-td{flex:1;}
-.kpi-td:nth-child(2){text-align:center;}
-.kpi-td:nth-child(3){text-align:right;flex:0 0 auto;min-width:70px;}
-.kpi-label{font-size:10px;color:var(--gray-400);font-weight:600;margin-bottom:2px;}
-.kpi-val{font-size:16px;font-weight:800;color:var(--text);}
-.kpi-val.blue{color:var(--blue);}
-.kpi-val.red{color:var(--danger);}
-.kpi-val.green{color:var(--success);}
-.kpi-val.sm{font-size:13px;font-weight:700;color:var(--gray-600);}
+.kpi-section{padding:14px 0;border-bottom:1px solid var(--gray-100);}
+.kpi-section:last-child{border-bottom:none;}
+.kpi-section-label{font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px;}
+.kpi-big{font-size:22px;font-weight:900;letter-spacing:-0.5px;}
+.kpi-big.blue{color:var(--blue);}
+.kpi-big.red{color:var(--danger);}
+.kpi-big.green{color:var(--success);}
+.kpi-est{font-size:11px;color:var(--gray-400);font-weight:600;margin-top:4px;}
+.kpi-est span{color:var(--gray-600);font-weight:700;}
+.kpi-row2{display:flex;gap:8px;align-items:flex-start;}
+.kpi-row2>div{flex:1;}
+.kpi-mid{font-size:14px;font-weight:800;}
+.kpi-mid.red{color:var(--danger);}
+.kpi-small-label{font-size:10px;color:var(--gray-400);font-weight:600;margin-bottom:2px;}
+.kpi-bottom3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;}
+.kpi-bottom3 .kb-val{font-size:15px;font-weight:800;color:var(--text);}
+.kpi-bottom3 .kb-label{font-size:10px;color:var(--gray-400);font-weight:600;margin-top:2px;}
 .kpi-delta{font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px;}
 .kpi-delta.up{color:var(--success);}
 .kpi-delta.down{color:var(--danger);}
@@ -2252,10 +2255,8 @@ async function loadDashboard(){
     const estCardSales=isCurrent&&passedDays>0?Math.round(cardSales/passedDays*lastDay):cardSales;
     const estRoyalty=Math.round(estRevenue*royaltyRate);
     const estCardFee=Math.round(estCardSales*cardFeeRate);
-    const avgPrice=receiptCount>0?Math.round(totalRevenue/receiptCount):0;
-    const prevAvgPrice=(prevSettleRes.data||[]).length>0?Math.round(prevRevenue/(prevSettleRes.data||[]).length):0;
 
-    // ══ 수식: 지출 합계에 로열티/수수료 포함 ══
+    // ══ 수식: 지출에 로열티/수수료 포함 ══
     const totalCostFull=totalCost+royalty+cardFee;
     const estTotalCostFull=estTotalCost+estRoyalty+estCardFee;
     const netProfitFinal=totalRevenue-totalCostFull;
@@ -2265,31 +2266,79 @@ async function loadDashboard(){
     const estReserveFinal=Math.max(0,Math.round(estNetProfitFinal*reserveRate)+reserveFixed);
     const estNetAfterReserveFinal=estNetProfitFinal-estReserveFinal;
 
-    // ══ KPI 렌더 (행 기반) ══
-    const kpiR=(label,cur,est,delta,cls='',highlight='')=>`
-      <div class="kpi-tr${highlight?' '+highlight:''}">
-        <div class="kpi-td"><div class="kpi-label">${label}</div><div class="kpi-val ${cls}">${cur}</div></div>
-        <div class="kpi-td"><div class="kpi-label">마감예상</div><div class="kpi-val sm">${est}</div></div>
-        <div class="kpi-td">${delta}</div>
-      </div>`;
+    // 영수당 평균 = 매출/영수건수, 일평균매출 = 매출/경과일수
+    const avgPerReceipt=receiptCount>0?Math.round(totalRevenue/receiptCount):0;
+    const dailyAvgSales=passedDays>0?Math.round(totalRevenue/passedDays):0;
+    const prevReceiptCount=(prevSettleRes.data||[]).length;
+    const prevAvgPerReceipt=prevReceiptCount>0?Math.round(prevRevenue/prevReceiptCount):0;
+    const prevDailyAvg=prevLastDay>0?Math.round(prevRevenue/prevLastDay):0;
+
+    // ══ KPI 렌더 (토스 스타일) ══
     const royaltyLabel=royaltyRate>0?`로열티 ${fmt(royalty)}원`:'';
-    const cardFeeLabel=cardFeeRate>0?`카드수수료 ${fmt(cardFee)}원`:'';
+    const cardFeeLabel=cardFeeRate>0?`수수료 ${fmt(cardFee)}원`:'';
     const feeNote=[royaltyLabel,cardFeeLabel].filter(Boolean).join(' · ');
-    document.getElementById('dashKpiGrid').innerHTML=`<div class="kpi-table">
-      ${kpiR('누적매출',fmt(totalRevenue)+'원',fmt(estRevenue)+'원',deltaHtml(totalRevenue,prevRevenue),'blue','kpi-highlight')}
-      ${kpiR('누적지출',fmt(totalCostFull)+'원',fmt(estTotalCostFull)+'원',deltaHtml(totalCostFull,prevFcTotal),'red','')}
-      ${feeNote?`<div style="padding:0 0 8px 4px;font-size:10px;color:var(--gray-400);display:flex;align-items:center;gap:4px;">
-        └ ${feeNote} <button onclick="toggleTooltip('feeHelp')" style="width:14px;height:14px;border-radius:50%;border:1px solid var(--gray-400);background:none;color:var(--gray-400);font-size:8px;font-weight:800;cursor:pointer;padding:0;">?</button>
+
+    document.getElementById('dashKpiGrid').innerHTML=`
+      <!-- 매출 -->
+      <div class="kpi-section">
+        <div class="kpi-section-label">이번 달 매출</div>
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <span class="kpi-big blue">${fmt(totalRevenue)}원</span>
+          ${deltaHtml(totalRevenue,prevRevenue)}
+        </div>
+        ${isCurrent?`<div class="kpi-est">마감예상 <span>${fmt(estRevenue)}원</span></div>`:''}
       </div>
-      <div id="feeHelp" style="display:none;padding:4px 8px 8px;font-size:10px;color:var(--blue);background:var(--blue-light);border-radius:8px;margin-bottom:6px;">현재 매출 기준 자동 적용 · 로열티 ${(royaltyRate*100).toFixed(1)}% · 카드수수료 ${(cardFeeRate*100).toFixed(1)}%</div>`:''}
-      ${kpiR('예비비',fmt(reserveFinal)+'원',fmt(estReserveFinal)+'원','','')}
-      ${kpiR('순수익',fmt(netAfterReserveFinal)+'원',fmt(estNetAfterReserveFinal)+'원',deltaHtml(netAfterReserveFinal,prevRevenue-prevFcTotal),netAfterReserveFinal>=0?'green':'red','kpi-highlight-green')}
-      <div class="kpi-tr">
-        <div class="kpi-td"><div class="kpi-label">누적영수건수</div><div class="kpi-val">${receiptCount}일</div>${deltaHtml(receiptCount,(prevSettleRes.data||[]).length)}</div>
-        <div class="kpi-td" style="text-align:right;"><div class="kpi-label">일평균매출</div><div class="kpi-val sm">${fmt(avgPrice)}원</div>${deltaHtml(avgPrice,prevAvgPrice)}</div>
-        <div class="kpi-td"></div>
+
+      <!-- 지출 + 예비비 -->
+      <div class="kpi-section">
+        <div class="kpi-row2">
+          <div>
+            <div class="kpi-section-label">지출</div>
+            <div class="kpi-mid red">${fmt(totalCostFull)}원</div>
+          </div>
+          <div>
+            <div class="kpi-section-label">예비비</div>
+            <div class="kpi-mid">${fmt(reserveFinal)}원</div>
+          </div>
+        </div>
+        ${feeNote?`<div style="margin-top:6px;font-size:10px;color:var(--gray-400);display:flex;align-items:center;gap:4px;">
+          └ ${feeNote}
+          <button onclick="toggleTooltip('feeHelp')" style="width:14px;height:14px;border-radius:50%;border:1px solid var(--gray-400);background:none;color:var(--gray-400);font-size:8px;font-weight:800;cursor:pointer;padding:0;">?</button>
+        </div>
+        <div id="feeHelp" style="display:none;padding:6px 10px;font-size:10px;color:var(--blue);background:var(--blue-light);border-radius:8px;margin-top:4px;">현매출 기준 자동 적용 · 로열티 ${(royaltyRate*100).toFixed(1)}% · 카드수수료 ${(cardFeeRate*100).toFixed(1)}%</div>`:''}
       </div>
-    </div>`;
+
+      <!-- 순수익 -->
+      <div class="kpi-section" style="background:${netAfterReserveFinal>=0?'var(--success-light)':'var(--danger-light)'};margin:0 -16px;padding:14px 16px;border-radius:14px;border-bottom:none;">
+        <div class="kpi-section-label">순수익</div>
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <span class="kpi-big ${netAfterReserveFinal>=0?'green':'red'}">${netAfterReserveFinal>=0?'':'-'}${fmt(Math.abs(netAfterReserveFinal))}원</span>
+          ${deltaHtml(netAfterReserveFinal,prevRevenue-prevFcTotal)}
+        </div>
+        ${isCurrent?`<div class="kpi-est">마감예상 <span>${fmt(estNetAfterReserveFinal)}원</span></div>`:''}
+      </div>
+
+      <!-- 하단 3칸 -->
+      <div class="kpi-section" style="border-bottom:none;">
+        <div class="kpi-bottom3">
+          <div>
+            <div class="kb-val">${fmt(receiptCount)}건</div>
+            <div class="kb-label">영수건수</div>
+            ${deltaHtml(receiptCount,prevReceiptCount)}
+          </div>
+          <div>
+            <div class="kb-val">${fmt(avgPerReceipt)}원</div>
+            <div class="kb-label">영수당평균</div>
+            ${deltaHtml(avgPerReceipt,prevAvgPerReceipt)}
+          </div>
+          <div>
+            <div class="kb-val">${fmt(dailyAvgSales)}원</div>
+            <div class="kb-label">일평균매출</div>
+            ${deltaHtml(dailyAvgSales,prevDailyAvg)}
+          </div>
+        </div>
+      </div>
+    `;
 
     // ══ 지출 비중 ══
     const costPct=totalRevenue>0?(totalCost/totalRevenue*100).toFixed(1):'0';
