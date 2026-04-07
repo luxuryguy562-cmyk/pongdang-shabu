@@ -63,6 +63,23 @@ export default {
         return resp({ success: true, year_month: ym, saved_days: result.length, total: result.reduce((a, r) => a + r.total, 0) });
       }
 
+      if (path === '/debug') {
+        const storeId = url.searchParams.get('store_id');
+        if (!storeId) return resp({ error: 'store_id 필요' }, 400);
+        const creds = await getStoreCredentials(env, storeId);
+        if (!creds) return resp({ error: '계정 미설정' }, 400);
+        const cookie = await login(creds.storeCode, creds.id, creds.pw);
+        if (!cookie) return resp({ error: '로그인 실패', creds_found: true }, 401);
+        const date = '20260404';
+        const apiUrl = `${BASE}/SalesReport/GetDailySalesList?FR_DATE=${date}&TO_DATE=${date}&STORE_CODE=${encodeURIComponent(creds.id)}&POS_ID=&STORE_GROUP_CODE=`;
+        const res2 = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { Cookie: cookie, 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded', Referer: BASE, 'User-Agent': 'Mozilla/5.0' },
+        });
+        const text = await res2.text();
+        return resp({ cookie_length: cookie.length, cookie_preview: cookie.slice(0, 100), api_url: apiUrl, status: res2.status, redirected: res2.redirected, response_url: res2.url, response_length: text.length, response_preview: text.slice(0, 500) });
+      }
+
       return resp({ error: '잘못된 경로' }, 404);
     } catch (e) {
       return resp({ error: e.message }, 500);
