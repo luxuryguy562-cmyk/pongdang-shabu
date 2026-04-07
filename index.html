@@ -186,18 +186,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .gantt-day-label .day-count{font-size:10px;color:var(--gray-400);}
 
 /* ─ 대시보드 */
-.kpi-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100);}
-.kpi-row:last-child{border-bottom:none;}
-.kpi-row.highlight{background:var(--blue-light);margin:0 -16px;padding:10px 16px;border-radius:12px;border-bottom:none;margin-bottom:4px;}
-.kpi-row.highlight-green{background:var(--success-light);margin:0 -16px;padding:10px 16px;border-radius:12px;border-bottom:none;margin-bottom:4px;}
-.kpi-left{display:flex;flex-direction:column;gap:2px;}
-.kpi-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
-.kpi-label{font-size:10px;color:var(--gray-400);font-weight:600;letter-spacing:0.3px;}
-.kpi-val{font-size:16px;font-weight:800;color:var(--text);}
+.kpi-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.kpi-card2{background:var(--gray-100);border-radius:14px;padding:14px 12px;}
+.kpi-card2.accent-blue{background:var(--blue-light);}
+.kpi-card2.accent-green{background:var(--success-light);}
+.kpi-card2.accent-red{background:var(--danger-light);}
+.kpi-card2.span2{grid-column:span 2;}
+.kpi-label{font-size:10px;color:var(--gray-400);font-weight:600;letter-spacing:0.3px;margin-bottom:4px;}
+.kpi-val{font-size:18px;font-weight:800;color:var(--text);line-height:1.2;}
 .kpi-val.blue{color:var(--blue);}
 .kpi-val.red{color:var(--danger);}
 .kpi-val.green{color:var(--success);}
-.kpi-val.sm{font-size:13px;}
+.kpi-val.sm{font-size:14px;}
+.kpi-sub2{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.kpi-est{font-size:10px;color:var(--gray-400);font-weight:600;}
 .kpi-delta{font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px;}
 .kpi-delta.up{color:var(--success);}
 .kpi-delta.down{color:var(--danger);}
@@ -2259,23 +2261,24 @@ async function loadDashboard(){
     const avgPrice=receiptCount>0?Math.round(totalRevenue/receiptCount):0;
     const prevAvgPrice=(prevSettleRes.data||[]).length>0?Math.round(prevRevenue/(prevSettleRes.data||[]).length):0;
 
-    // ══ KPI 그리드 렌더 ══
-    const kpiRow=(l1,v1,l2,v2,opts={})=>{
-      const cls=opts.highlight?` ${opts.highlight}`:'';
-      return `<div class="kpi-row${cls}">
-        <div class="kpi-left"><div class="kpi-label">${l1}</div><div class="kpi-val ${opts.c1||''}">${v1}</div>${opts.d1||''}</div>
-        <div class="kpi-right"><div class="kpi-label">${l2}</div><div class="kpi-val ${opts.c2||'sm'}">${v2}</div>${opts.d2||''}</div>
+    // ══ KPI 그리드 렌더 (카드형) ══
+    const kpiCard=(label,value,est,delta,accent='',cls='')=>`
+      <div class="kpi-card2${accent?' '+accent:''}">
+        <div class="kpi-label">${label}</div>
+        <div class="kpi-val ${cls}">${value}</div>
+        <div class="kpi-sub2">
+          ${est?`<span class="kpi-est">예상 ${est}</span>`:''}
+          ${delta||''}
+        </div>
       </div>`;
-    };
-    document.getElementById('dashKpiGrid').innerHTML=
-      kpiRow('누적 매출',fmt(totalRevenue)+'원','마감 예상',fmt(estRevenue)+'원',{c1:'blue',c2:'sm blue',d1:deltaHtml(totalRevenue,prevRevenue),highlight:'highlight'})+
-      kpiRow('누적 지출',fmt(totalCost)+'원','예상 지출',fmt(estTotalCost)+'원',{c1:'red',c2:'sm red',d1:deltaHtml(totalCost,prevFcTotal)})+
-      kpiRow('예비비',fmt(reserve)+'원','마감 예비비',fmt(estReserve)+'원',{c1:'',c2:'sm'})+
-      kpiRow('순수익',fmt(netAfterReserve)+'원','예상 순수익',fmt(estNetAfterReserve)+'원',{c1:netAfterReserve>=0?'green':'red',c2:estNetAfterReserve>=0?'sm green':'sm red',d1:deltaHtml(netAfterReserve,prevRevenue-prevFcTotal),highlight:'highlight-green'})+
-      `<div class="kpi-row">
-        <div class="kpi-left"><div class="kpi-label">영업일수</div><div class="kpi-val">${receiptCount}일</div>${deltaHtml(receiptCount,(prevSettleRes.data||[]).length)}</div>
-        <div class="kpi-right"><div class="kpi-label">일평균 매출</div><div class="kpi-val sm">${fmt(avgPrice)}원</div>${deltaHtml(avgPrice,prevAvgPrice)}</div>
-      </div>`;
+    document.getElementById('dashKpiGrid').innerHTML=`<div class="kpi-grid2">
+      ${kpiCard('누적 매출',fmt(totalRevenue)+'원',fmt(estRevenue)+'원',deltaHtml(totalRevenue,prevRevenue),'accent-blue','blue')}
+      ${kpiCard('누적 지출',fmt(totalCost)+'원',fmt(estTotalCost)+'원',deltaHtml(totalCost,prevFcTotal),'accent-red','red')}
+      ${kpiCard('예비비',fmt(reserve)+'원',fmt(estReserve)+'원','','')}
+      ${kpiCard('순수익 (출금가능)',fmt(netAfterReserve)+'원',fmt(estNetAfterReserve)+'원',deltaHtml(netAfterReserve,prevRevenue-prevFcTotal),'accent-green',netAfterReserve>=0?'green':'red')}
+      ${kpiCard('영업일수',receiptCount+'일','',deltaHtml(receiptCount,(prevSettleRes.data||[]).length),'')}
+      ${kpiCard('일평균 매출',fmt(avgPrice)+'원','',deltaHtml(avgPrice,prevAvgPrice),'')}
+    </div>`;
 
     // ══ 지출 비중 ══
     const costPct=totalRevenue>0?(totalCost/totalRevenue*100).toFixed(1):'0';
@@ -2303,16 +2306,18 @@ async function loadDashboard(){
       });
     }
 
+    // 색상 매핑 (차트와 아코디언 통일)
+    const groupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','기타/수동':'#7C3AED','마케팅':'#F59E0B'};
+
     // 원형 차트
     destroyChart('expPieChart');
     const pieEntries=Object.entries(expByGroup).filter(([,d])=>d.total>0).sort((a,b)=>b[1].total-a[1].total);
-    const pieColors=['#05C072','#0050FF','#FF9500','#F04452','#7C3AED','#F59E0B','#06B6D4','#10B981'];
     if(pieEntries.length){
-      chartInstances.expPieChart=new Chart(document.getElementById('expPieChart'),{type:'doughnut',data:{labels:pieEntries.map(([g])=>g),datasets:[{data:pieEntries.map(([,d])=>d.total),backgroundColor:pieColors.slice(0,pieEntries.length)}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.raw)}원 (${totalCost>0?(ctx.raw/totalCost*100).toFixed(1):'0'}%)`}}}}});
+      const pieClrs=pieEntries.map(([g])=>groupColors[g]||'#4E5968');
+      chartInstances.expPieChart=new Chart(document.getElementById('expPieChart'),{type:'doughnut',data:{labels:pieEntries.map(([g])=>g),datasets:[{data:pieEntries.map(([,d])=>d.total),backgroundColor:pieClrs}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,color:'#4E5968'}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.raw)}원 (${totalCost>0?(ctx.raw/totalCost*100).toFixed(1):'0'}%)`}}}}});
     }
 
     // 아코디언
-    const groupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','기타/수동':'#7C3AED','마케팅':'#F59E0B'};
     let accHtml='';
     Object.entries(expByGroup).forEach(([group,data])=>{
       const gPct=totalRevenue>0?(data.total/totalRevenue*100).toFixed(1):'0';
