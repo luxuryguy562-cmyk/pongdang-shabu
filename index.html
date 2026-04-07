@@ -684,11 +684,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <button onclick="toggleTooltip('expHelp')" style="width:20px;height:20px;border-radius:50%;border:1.5px solid var(--gray-400);background:none;color:var(--gray-400);font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;">?</button>
       </div>
     </div>
-    <div id="expHelp" style="display:none;background:var(--blue-light);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--blue);line-height:1.6;">
+    <div id="expHelp" style="display:none;background:var(--blue-light);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--blue);line-height:1.7;">
       <b>지출 계산 방식</b><br>
       • 고정비: 월 총액 ÷ 일수 × 경과일 (일할계산)<br>
       • 세금: 월 총액 그대로<br>
-      • 식자재/인건비/기타: 실제 발생액 합산
+      • 식자재/인건비/기타: 실제 발생액 합산<br>
+      • 로열티/수수료: 현재 매출 기준 자동 계산 (설정 비율 적용)
     </div>
     <!-- 원형 차트 -->
     <div class="chart-container" style="height:200px;margin-bottom:12px;"><canvas id="expPieChart"></canvas></div>
@@ -2274,10 +2275,6 @@ async function loadDashboard(){
     const prevDailyAvg=prevLastDay>0?Math.round(prevRevenue/prevLastDay):0;
 
     // ══ KPI 렌더 (토스 스타일) ══
-    const royaltyLabel=royaltyRate>0?`로열티 ${fmt(royalty)}원`:'';
-    const cardFeeLabel=cardFeeRate>0?`수수료 ${fmt(cardFee)}원`:'';
-    const feeNote=[royaltyLabel,cardFeeLabel].filter(Boolean).join(' · ');
-
     document.getElementById('dashKpiGrid').innerHTML=`
       <!-- 매출 -->
       <div class="kpi-section">
@@ -2301,11 +2298,6 @@ async function loadDashboard(){
             <div class="kpi-mid">${fmt(reserveFinal)}원</div>
           </div>
         </div>
-        ${feeNote?`<div style="margin-top:6px;font-size:10px;color:var(--gray-400);display:flex;align-items:center;gap:4px;">
-          └ ${feeNote}
-          <button onclick="toggleTooltip('feeHelp')" style="width:14px;height:14px;border-radius:50%;border:1px solid var(--gray-400);background:none;color:var(--gray-400);font-size:8px;font-weight:800;cursor:pointer;padding:0;">?</button>
-        </div>
-        <div id="feeHelp" style="display:none;padding:6px 10px;font-size:10px;color:var(--blue);background:var(--blue-light);border-radius:8px;margin-top:4px;">현매출 기준 자동 적용 · 로열티 ${(royaltyRate*100).toFixed(1)}% · 카드수수료 ${(cardFeeRate*100).toFixed(1)}%</div>`:''}
       </div>
 
       <!-- 순수익 -->
@@ -2366,8 +2358,16 @@ async function loadDashboard(){
       });
     }
 
+    // 로열티/수수료 → 지출 그룹에 자동 추가
+    if(royalty>0||cardFee>0){
+      const feeItems=[];
+      if(royalty>0) feeItems.push({id:'_royalty',name:`로열티 (${(royaltyRate*100).toFixed(1)}%)`,color:'#EF4444',source:'auto',amount:royalty});
+      if(cardFee>0) feeItems.push({id:'_cardfee',name:`카드수수료 (${(cardFeeRate*100).toFixed(1)}%)`,color:'#EF4444',source:'auto',amount:cardFee});
+      expByGroup['로열티/수수료']={items:feeItems,total:royalty+cardFee};
+    }
+
     // 색상 매핑 (차트와 아코디언 통일)
-    const groupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','기타/수동':'#7C3AED','마케팅':'#F59E0B'};
+    const groupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','기타/수동':'#7C3AED','마케팅':'#F59E0B','로열티/수수료':'#EF4444'};
 
     // 원형 차트
     destroyChart('expPieChart');
