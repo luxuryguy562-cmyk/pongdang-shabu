@@ -567,10 +567,29 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
-    <!-- ① 매출확인 (POS 장표 기준) -->
+    <!-- ① POS 마감 사진 촬영 -->
+    <div class="card">
+      <div class="card-title">POS 마감 장표</div>
+      <p style="font-size:11px;color:var(--gray-400);margin:-8px 0 12px;">사진을 찍으면 AI가 자동으로 매출을 인식합니다</p>
+      <img id="posPreview" style="width:100%;display:none;border-radius:12px;margin-bottom:12px;">
+      <div id="posUploadGroup" class="action-group" style="margin-top:0;">
+        <label class="btn btn-primary" style="flex:1;padding:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+          📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePosImg(this)">
+        </label>
+        <label class="btn btn-secondary" style="flex:1;padding:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+          🖼 업로드<input type="file" accept="image/*" style="display:none" onchange="handlePosImg(this)">
+        </label>
+      </div>
+      <div id="posAiGroup" style="display:none;" class="action-group">
+        <button class="btn btn-primary" style="flex:4;padding:14px;font-size:13px;" onclick="runPosAI()">✨ AI 인식</button>
+        <button class="btn btn-secondary" style="flex:1;padding:14px;" onclick="resetPosImg()">취소</button>
+      </div>
+    </div>
+
+    <!-- ② 매출확인 (POS 장표 기준) -->
     <div class="card">
       <div class="card-title">오늘의 매출은 얼마인가요?</div>
-      <p style="font-size:11px;color:var(--gray-400);margin:-8px 0 12px;">포스기(POS) 장표 금액을 그대로 입력하세요</p>
+      <p style="font-size:11px;color:var(--gray-400);margin:-8px 0 12px;">포스기 장표를 직접 입력하거나, 위에서 사진으로 인식하세요</p>
       <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
       <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
       <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
@@ -1986,6 +2005,76 @@ function renderGanttFiltered(){
 // ══════════════════════════════════════════
 // ── 마감정산 로직 ──
 function onSInput(el){const raw=el.value.replace(/,/g,'');if(/^\d*$/.test(raw))el.value=raw?parseInt(raw).toLocaleString():'';recalcSettle2();}
+
+// ── POS 마감 사진 AI 인식 ──
+let posB64='';
+function handlePosImg(input){
+  if(!input.files[0]) return;
+  const fr=new FileReader();
+  fr.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const cvs=document.createElement('canvas');
+      let w=img.width,h=img.height;if(w>1200){h*=1200/w;w=1200;}
+      cvs.width=w;cvs.height=h;cvs.getContext('2d').drawImage(img,0,0,w,h);
+      posB64=cvs.toDataURL('image/jpeg',0.8).split(',')[1];
+      document.getElementById('posPreview').src=cvs.toDataURL('image/jpeg');
+      document.getElementById('posPreview').style.display='block';
+      document.getElementById('posUploadGroup').style.display='none';
+      document.getElementById('posAiGroup').style.display='flex';
+    };
+    img.src=e.target.result;
+  };
+  fr.readAsDataURL(input.files[0]);
+}
+function resetPosImg(){
+  posB64='';
+  document.getElementById('posPreview').style.display='none';
+  document.getElementById('posUploadGroup').style.display='flex';
+  document.getElementById('posAiGroup').style.display='none';
+}
+async function runPosAI(){
+  if(!posB64) return alert('사진을 먼저 촬영하세요.');
+  setLoad(true,'POS 장표 인식 중...');
+  try{
+    const res=await fetch(GEMINI_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[
+        {text:`이 POS 마감 장표 사진에서 매출 항목을 추출해주세요.
+다음 필드를 가진 JSON 객체로 응답해주세요 (숫자만, 없으면 0):
+{
+  "cash": 현금 금액,
+  "cash_receipt": 현금영수증 금액,
+  "card": 신용카드/카드 금액,
+  "other": 기타결제 금액,
+  "total": 합계/총매출 금액,
+  "receipt_count": 전표수/영수건수,
+  "customer_count": 손님수/고객수
+}
+반드시 순수 JSON만 출력하세요.`},
+        {inline_data:{mime_type:'image/jpeg',data:posB64}}
+      ]}],generationConfig:{response_mime_type:'application/json'}})
+    });
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const raw=data.candidates[0].content.parts[0].text;
+    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    // 인식된 값을 마감정산 필드에 채움
+    const fill=(id,val)=>{const el=document.getElementById(id);if(el&&val)el.value=parseInt(val).toLocaleString();};
+    fill('siPosCash',parsed.cash);
+    fill('siPosCashReceipt',parsed.cash_receipt);
+    fill('siPosCard',parsed.card);
+    fill('siPosEtc',parsed.other);
+    recalcSettle2();
+
+    // 인식 결과 안내
+    const total=parseInt(parsed.total)||0;
+    alert(`✅ POS 매출 인식 완료!\n\n합계: ${fmt(total)}원\n카드: ${fmt(parseInt(parsed.card)||0)}원\n현금: ${fmt(parseInt(parsed.cash)||0)}원\n\n아래 입력값을 확인하고 수정하세요.`);
+    resetPosImg();
+  }catch(e){
+    alert('인식 실패: '+e.message);
+  }finally{setLoad(false);}
+}
 function gv(id){return unFmt(document.getElementById(id)?.value||'0');}
 
 function recalcSettle2(){
