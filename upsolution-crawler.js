@@ -26,7 +26,7 @@ export default {
         if (!storeId) return resp({ error: 'store_id 필요' }, 400);
         const creds = await getStoreCredentials(env, storeId);
         if (!creds) return resp({ error: 'Store Code/User ID/Password를 앱 설정에서 입력하세요' }, 400);
-        const cookie = await login(creds.id, creds.pw);
+        const cookie = await login(creds.storeCode, creds.id, creds.pw);
         if (!cookie) return resp({ error: '로그인 실패 - ID/PW 확인' }, 401);
         return resp({ success: true, message: '로그인 성공', store_code: creds.storeCode });
       }
@@ -37,9 +37,9 @@ export default {
         if (!storeId) return resp({ error: 'store_id 필요' }, 400);
         const creds = await getStoreCredentials(env, storeId);
         if (!creds) return resp({ error: '계정 미설정' }, 400);
-        const cookie = await login(creds.id, creds.pw);
+        const cookie = await login(creds.storeCode, creds.id, creds.pw);
         if (!cookie) return resp({ error: '로그인 실패' }, 401);
-        const result = await fetchDailySales(cookie, creds.storeCode, date, date);
+        const result = await fetchDailySales(cookie, creds.id, date, date);
         if (result.length > 0) {
           for (const r of result) await upsertSales(env, storeId, r);
         }
@@ -52,13 +52,13 @@ export default {
         if (!storeId) return resp({ error: 'store_id 필요' }, 400);
         const creds = await getStoreCredentials(env, storeId);
         if (!creds) return resp({ error: '계정 미설정' }, 400);
-        const cookie = await login(creds.id, creds.pw);
+        const cookie = await login(creds.storeCode, creds.id, creds.pw);
         if (!cookie) return resp({ error: '로그인 실패' }, 401);
         const [y, m] = ym.split('-').map(Number);
         const lastDay = new Date(y, m, 0).getDate();
         const frDate = ym.replace('-', '') + '01';
         const toDate = ym.replace('-', '') + String(lastDay).padStart(2, '0');
-        const result = await fetchDailySales(cookie, creds.storeCode, frDate, toDate);
+        const result = await fetchDailySales(cookie, creds.id, frDate, toDate);
         for (const r of result) await upsertSales(env, storeId, r);
         return resp({ success: true, year_month: ym, saved_days: result.length, total: result.reduce((a, r) => a + r.total, 0) });
       }
@@ -73,10 +73,10 @@ export default {
     const stores = await getAllStores(env);
     for (const s of stores) {
       try {
-        const cookie = await login(s.ups_id, s.ups_pw);
+        const cookie = await login(s.ups_store_code || '', s.ups_id, s.ups_pw);
         if (!cookie) continue;
         const date = todayKST().replace(/-/g, '');
-        const result = await fetchDailySales(cookie, s.ups_store_code, date, date);
+        const result = await fetchDailySales(cookie, s.ups_id, date, date);
         for (const r of result) await upsertSales(env, s.store_id, r);
       } catch (e) { console.error(s.store_id, e.message); }
     }
@@ -103,13 +103,13 @@ async function getAllStores(env) {
 }
 
 // ── 업솔루션 로그인 ──
-async function login(id, pw) {
+async function login(storeCode, id, pw) {
   if (!id || !pw) return null;
   try {
     const res = await fetch(`${BASE}/Account/Login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0', Referer: `${BASE}/Account/Login` },
-      body: `UserId=${encodeURIComponent(id)}&Password=${encodeURIComponent(pw)}&RememberMe=true`,
+      body: `CompanyCode=${encodeURIComponent(storeCode)}&loginID=${encodeURIComponent(id)}&passWord=${encodeURIComponent(pw)}&rememberMe=true`,
       redirect: 'manual',
     });
     const raw = res.headers.get('Set-Cookie') || '';
