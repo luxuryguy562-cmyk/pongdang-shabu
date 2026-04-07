@@ -231,6 +231,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .my-info-row:last-child{border-bottom:none;}
 .store-item{display:flex;align-items:center;gap:12px;padding:16px;background:var(--gray-100);border-radius:14px;margin-bottom:9px;cursor:pointer;}
 .store-dot{width:9px;height:9px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+.pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--gray-200);transition:.15s;}
+.pin-dot.filled{background:var(--blue);border-color:var(--blue);}
+.pin-btn{width:100%;aspect-ratio:1;border:none;border-radius:50%;background:var(--gray-100);font-size:22px;font-weight:700;cursor:pointer;transition:.1s;}
+.pin-btn:active{background:var(--blue);color:#fff;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
 
 /* ─ 햄버거 버튼 */
 .hamburger-btn{width:36px;height:36px;background:var(--gray-100);border:none;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0;}
@@ -250,6 +255,35 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 </style>
 </head>
 <body>
+
+<!-- PIN 로그인 화면 -->
+<div id="loginOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+  <div style="text-align:center;margin-bottom:30px;">
+    <div style="font-size:28px;font-weight:900;color:var(--blue);">퐁당샤브</div>
+    <div style="font-size:13px;color:var(--gray-600);margin-top:6px;" id="loginStoreName">매장을 먼저 선택하세요</div>
+  </div>
+  <!-- 직원 선택 -->
+  <div id="loginEmpList" style="width:100%;max-width:360px;max-height:300px;overflow-y:auto;margin-bottom:20px;"></div>
+  <!-- PIN 입력 -->
+  <div id="loginPinArea" style="display:none;width:100%;max-width:300px;text-align:center;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:12px;" id="loginEmpName">-</div>
+    <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px;">
+      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto;">
+      <button class="pin-btn" onclick="pinInput(1)">1</button><button class="pin-btn" onclick="pinInput(2)">2</button><button class="pin-btn" onclick="pinInput(3)">3</button>
+      <button class="pin-btn" onclick="pinInput(4)">4</button><button class="pin-btn" onclick="pinInput(5)">5</button><button class="pin-btn" onclick="pinInput(6)">6</button>
+      <button class="pin-btn" onclick="pinInput(7)">7</button><button class="pin-btn" onclick="pinInput(8)">8</button><button class="pin-btn" onclick="pinInput(9)">9</button>
+      <button class="pin-btn" onclick="loginBack()" style="font-size:13px;">← 뒤로</button><button class="pin-btn" onclick="pinInput(0)">0</button><button class="pin-btn" onclick="pinDelete()">⌫</button>
+    </div>
+    <div id="loginMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;"></div>
+  </div>
+  <!-- 개발모드 / 매장선택 -->
+  <div style="margin-top:20px;display:flex;gap:10px;">
+    <button class="btn btn-secondary" style="padding:12px 16px;font-size:13px;" onclick="openStoreSheet()">매장 선택</button>
+    <button class="btn btn-secondary" style="padding:12px 16px;font-size:13px;color:var(--gray-400);" onclick="devLogin()">개발모드</button>
+  </div>
+</div>
 
 <!-- 헤더 -->
 <div class="header">
@@ -955,6 +989,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <input id="empWageInput" class="input-field" placeholder="시급 (기본: 10030)" type="number" inputmode="numeric">
   <p class="card-sub-title">근무 설정</p>
   <div id="empRoleChips" class="role-chips-wrap"></div>
+  <input id="empPinInput" class="input-field" placeholder="PIN (4자리 숫자)" type="text" inputmode="numeric" maxlength="4">
   <input id="empCapsIdInput" class="input-field" placeholder="캡스 사용자ID" type="text">
   <input id="empHireDateInput" class="input-field" placeholder="입사일 (예: 2024-01-01)" type="text" inputmode="numeric">
   <input type="hidden" id="editEmpId">
@@ -1461,11 +1496,22 @@ async function checkIn(){
   if(!guardStore()) return;
   const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
   if(!empId) return alert('직원을 선택하거나 로그인하세요.');
+  // WiFi IP 검증
+  setLoad(true,'위치 확인 중...');
+  const ipCheck=await checkIPForAttendance();
+  setLoad(false);
+  if(!ipCheck.ok){
+    if(isManager){
+      if(!confirm(ipCheck.msg+'\n\n관리자 권한으로 출근 처리하시겠습니까?')) return;
+    } else {
+      alert(ipCheck.msg+'\n\n매장 WiFi에 연결된 상태에서 다시 시도하세요.');return;
+    }
+  }
   const now=new Date();const today=now.toISOString().split('T')[0];
   const{data:exist}=await sb.from('attendance_logs').select('id,app_in').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
   if(exist?.app_in){alert('이미 출근 처리됐습니다.\n출근: '+new Date(exist.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}));return;}
   setLoad(true,'출근 처리 중...');
-  const{error}=await sb.from('attendance_logs').insert({store_id:currentStore.id,employee_id:empId,work_date:today,app_in:now.toISOString(),caps_match_status:'앱전용'});
+  const{error}=await sb.from('attendance_logs').insert({store_id:currentStore.id,employee_id:empId,work_date:today,app_in:now.toISOString(),caps_match_status:'앱전용',check_in_ip:ipCheck.ip||null});
   setLoad(false);
   if(error) return alert('출근 처리 실패: '+error.message);
   await loadTodayRecord();
@@ -1474,6 +1520,17 @@ async function checkOut(){
   if(!guardStore()) return;
   const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
   if(!empId) return alert('직원을 선택하거나 로그인하세요.');
+  // WiFi IP 검증
+  setLoad(true,'위치 확인 중...');
+  const ipCheck=await checkIPForAttendance();
+  setLoad(false);
+  if(!ipCheck.ok){
+    if(isManager){
+      if(!confirm(ipCheck.msg+'\n\n관리자 권한으로 퇴근 처리하시겠습니까?')) return;
+    } else {
+      alert(ipCheck.msg+'\n\n매장 WiFi에 연결된 상태에서 다시 시도하세요.');return;
+    }
+  }
   const now=new Date();const today=now.toISOString().split('T')[0];
   const{data:record}=await sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
   if(!record?.app_in){alert('출근 기록이 없습니다.');return;}
@@ -1481,7 +1538,7 @@ async function checkOut(){
   const appIn=new Date(record.app_in);
   const w=await calcWageData(empId, appIn, now, today, null);
   setLoad(true,'퇴근 처리 중...');
-  const{error}=await sb.from('attendance_logs').update({app_out:now.toISOString(),rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage}).eq('id',record.id);
+  const{error}=await sb.from('attendance_logs').update({app_out:now.toISOString(),rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage,check_out_ip:ipCheck.ip||null}).eq('id',record.id);
   setLoad(false);
   if(error) return alert('퇴근 처리 실패: '+error.message);
   await loadTodayRecord();
@@ -2438,13 +2495,14 @@ function renderEmpList(){
       </div>
     </div>`).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
 }
-async function openAddEmpSheet(){if(!guardStore())return;document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empBirthInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';selectedRoleName='';await renderRoleChips('');openSheet('addEmpSheet');}
-async function openEditEmpSheet(id){const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empBirthInput').value=e.birth_date||'';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');openSheet('addEmpSheet');}
+async function openAddEmpSheet(){if(!guardStore())return;document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empBirthInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';selectedRoleName='';await renderRoleChips('');openSheet('addEmpSheet');}
+async function openEditEmpSheet(id){const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empBirthInput').value=e.birth_date||'';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');openSheet('addEmpSheet');}
 async function renderRoleChips(sel){await loadRoles(false);const wrap=document.getElementById('empRoleChips');if(!wrap)return;wrap.innerHTML=roles.length?roles.map(r=>`<span class="role-chip${r.name===sel?' selected':''}" onclick="selectRoleChip('${r.name}',this)">${r.name}</span>`).join(''):'<p style="font-size:12px;color:var(--gray-400);">직급 관리 탭에서 직급을 먼저 추가하세요</p>';}
 function selectRoleChip(name,el){selectedRoleName=selectedRoleName===name?'':name;document.querySelectorAll('#empRoleChips .role-chip').forEach(c=>c.classList.remove('selected'));if(selectedRoleName)el.classList.add('selected');}
 async function saveEmployee(){
   if(!guardStore())return;const name=document.getElementById('empNameInput').value.trim();if(!name)return alert('이름을 입력하세요.');
-  const payload={store_id:currentStore.id,name,birth_date:document.getElementById('empBirthInput').value.trim()||null,phone:document.getElementById('empPhoneInput').value.trim()||null,address:document.getElementById('empAddressInput').value.trim()||null,bank_name:document.getElementById('empBankInput').value.trim()||null,account_number:document.getElementById('empAccountInput').value.trim()||null,base_wage:parseInt(document.getElementById('empWageInput').value)||10030,caps_id:document.getElementById('empCapsIdInput').value.trim()||null,hire_date:document.getElementById('empHireDateInput').value.trim()||null,role:selectedRoleName||null};
+  const pinVal=document.getElementById('empPinInput').value.trim()||null;
+  const payload={store_id:currentStore.id,name,birth_date:document.getElementById('empBirthInput').value.trim()||null,phone:document.getElementById('empPhoneInput').value.trim()||null,address:document.getElementById('empAddressInput').value.trim()||null,bank_name:document.getElementById('empBankInput').value.trim()||null,account_number:document.getElementById('empAccountInput').value.trim()||null,base_wage:parseInt(document.getElementById('empWageInput').value)||10030,pin:pinVal,caps_id:document.getElementById('empCapsIdInput').value.trim()||null,hire_date:document.getElementById('empHireDateInput').value.trim()||null,role:selectedRoleName||null};
   setLoad(true,'저장 중...');const eid=document.getElementById('editEmpId').value;
   const{error}=eid?await sb.from('employees').update(payload).eq('id',eid):await sb.from('employees').insert(payload);
   setLoad(false);if(error)return alert('저장 실패: '+error.message);closeAllSheets();await loadEmployees();
@@ -3057,20 +3115,142 @@ async function calcExpenseByCategories(ym){
   return result;
 }
 
-document.addEventListener('DOMContentLoaded', async()=>{
-  initAttDate();recalcSettle2();
-  isOwner=true;isManager=true;
-  document.getElementById('headerUser').innerText='개발모드';
-  applyPermissionUI();
-  initSchedDate();
+// ══════════════════════════════════════════
+// PIN 로그인
+// ══════════════════════════════════════════
+let loginSelectedEmp=null, pinBuffer='';
 
-  const saved=sessionStorage.getItem('pd_store');
-  if(saved){
-    const s=JSON.parse(saved);currentStore=s;
+function showLoginScreen(){
+  document.getElementById('loginOverlay').style.display='flex';
+  document.getElementById('loginPinArea').style.display='none';
+  document.getElementById('loginEmpList').innerHTML='';
+  loginSelectedEmp=null;pinBuffer='';
+  if(currentStore){
+    document.getElementById('loginStoreName').innerText=currentStore.name;
+    renderLoginEmpList();
+  } else {
+    document.getElementById('loginStoreName').innerText='매장을 먼저 선택하세요';
+  }
+}
+async function renderLoginEmpList(){
+  if(!currentStore) return;
+  await loadEmployees();
+  const active=employees.filter(e=>e.is_active);
+  document.getElementById('loginEmpList').innerHTML=active.length
+    ?active.map(e=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--white);border-radius:14px;margin-bottom:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.04);" onclick="selectLoginEmp('${e.id}')">
+        <div class="emp-avatar">${e.name?.charAt(0)||'?'}</div>
+        <div><div style="font-size:15px;font-weight:700;">${e.name}</div><div style="font-size:12px;color:var(--gray-600);">${e.role||''}</div></div>
+      </div>`).join('')
+    :'<div style="text-align:center;color:var(--gray-400);padding:20px;">등록된 직원이 없습니다</div>';
+}
+function selectLoginEmp(id){
+  loginSelectedEmp=employees.find(e=>e.id===id);
+  if(!loginSelectedEmp) return;
+  // PIN이 없으면 바로 로그인
+  if(!loginSelectedEmp.pin){
+    completeLogin(loginSelectedEmp);
+    return;
+  }
+  document.getElementById('loginEmpList').style.display='none';
+  document.getElementById('loginPinArea').style.display='block';
+  document.getElementById('loginEmpName').innerText=loginSelectedEmp.name;
+  document.getElementById('loginMsg').innerText='';
+  pinBuffer='';updatePinDots();
+}
+function pinInput(n){
+  if(pinBuffer.length>=4) return;
+  pinBuffer+=n;updatePinDots();
+  if(pinBuffer.length===4) checkPin();
+}
+function pinDelete(){pinBuffer=pinBuffer.slice(0,-1);updatePinDots();}
+function loginBack(){
+  document.getElementById('loginPinArea').style.display='none';
+  document.getElementById('loginEmpList').style.display='block';
+  pinBuffer='';loginSelectedEmp=null;
+}
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('pd'+i);
+    if(d) d.className='pin-dot'+(i<pinBuffer.length?' filled':'');
+  }
+}
+function checkPin(){
+  if(!loginSelectedEmp) return;
+  if(pinBuffer===loginSelectedEmp.pin){
+    completeLogin(loginSelectedEmp);
+  } else {
+    document.getElementById('loginMsg').innerText='PIN이 일치하지 않습니다';
+    pinBuffer='';updatePinDots();
+    // 흔들림 효과
+    const area=document.getElementById('loginPinArea');
+    area.style.animation='shake 0.3s';
+    setTimeout(()=>area.style.animation='',300);
+  }
+}
+function devLogin(){
+  isManager=true;isOwner=true;currentEmp=null;
+  document.getElementById('headerUser').innerText='개발모드';
+  document.getElementById('loginOverlay').style.display='none';
+  applyPermissionUI();
+}
+function completeLogin(emp){
+  currentEmp=emp;
+  isManager=emp.is_manager||emp.role==='팀장'||emp.role==='점장';
+  isOwner=emp.is_manager||false;
+  document.getElementById('headerUser').innerText=emp.name;
+  document.getElementById('loginOverlay').style.display='none';
+  sessionStorage.setItem('pd_emp',emp.id);
+  applyPermissionUI();
+}
+function doLogout(){
+  if(!confirm('로그아웃?')) return;
+  currentEmp=null;isManager=false;isOwner=false;
+  sessionStorage.removeItem('pd_emp');
+  showLoginScreen();
+}
+
+// ══════════════════════════════════════════
+// WiFi IP 기반 출퇴근 검증
+// ══════════════════════════════════════════
+async function getPublicIP(){
+  try{
+    const res=await fetch('https://api.ipify.org?format=json');
+    const data=await res.json();
+    return data.ip||'';
+  }catch(e){console.error('IP 조회 실패:',e);return '';}
+}
+async function checkIPForAttendance(){
+  const targetIP=settings.target_ip;
+  if(!targetIP) return {ok:true,ip:'',msg:'IP 검증 미설정'};
+  const ip=await getPublicIP();
+  if(!ip) return {ok:false,ip:'',msg:'IP를 확인할 수 없습니다. 인터넷 연결을 확인하세요.'};
+  if(ip===targetIP) return {ok:true,ip,msg:'매장 WiFi 확인됨'};
+  return {ok:false,ip,msg:`매장 WiFi가 아닙니다.\n현재 IP: ${ip}\n매장 IP: ${targetIP}`};
+}
+
+// ══════════════════════════════════════════
+// 초기화
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async()=>{
+  initAttDate();recalcSettle2();initSchedDate();
+
+  // 매장 복원
+  const savedStore=sessionStorage.getItem('pd_store');
+  if(savedStore){
+    const s=JSON.parse(savedStore);currentStore=s;
     document.getElementById('headerStore').innerText=s.name;
-    await Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories(),loadExpCategories()]);
+    await Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]);
     recalcSettle2();
   }
+
+  // 로그인 복원 또는 로그인 화면 표시
+  const savedEmp=sessionStorage.getItem('pd_emp');
+  if(savedEmp&&currentStore){
+    const emp=employees.find(e=>e.id===savedEmp);
+    if(emp){completeLogin(emp);return;}
+  }
+  showLoginScreen();
 });
 </script>
 </body>
