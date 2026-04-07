@@ -171,16 +171,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .fixedcost-item.inactive{opacity:.4;}
 
 /* ─ 근무계획 간트 */
-.gantt-wrap{overflow-x:auto;margin-top:10px;}
 .gantt-header{display:flex;border-bottom:2px solid var(--gray-200);}
-.gantt-emp-col{min-width:70px;font-size:11px;font-weight:700;color:var(--gray-600);padding:6px 8px;flex-shrink:0;}
-.gantt-hour{flex:1;font-size:10px;text-align:center;color:var(--gray-400);padding:4px 0;min-width:28px;}
-.gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--gray-100);min-height:36px;}
-.gantt-name{min-width:70px;font-size:12px;font-weight:700;padding:4px 8px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.gantt-bar-area{flex:1;position:relative;height:28px;display:flex;min-width:420px;}
-.gantt-bg-col{flex:1;border-left:1px solid var(--gray-100);min-width:28px;}
-.gantt-bar{position:absolute;height:20px;top:4px;border-radius:4px;background:var(--blue);opacity:.8;}
+.gantt-emp-col{min-width:44px;width:44px;font-size:9px;font-weight:700;color:var(--gray-600);padding:3px 2px;flex-shrink:0;text-align:center;}
+.gantt-hour{flex:1;font-size:8px;text-align:center;color:var(--gray-400);padding:3px 0;}
+.gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--gray-100);min-height:22px;}
+.gantt-name{min-width:44px;width:44px;font-size:10px;font-weight:700;padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
+.gantt-bar-area{flex:1;position:relative;height:18px;display:flex;}
+.gantt-bg-col{flex:1;border-left:1px solid var(--gray-100);}
+.gantt-bar{position:absolute;height:14px;top:2px;border-radius:3px;background:var(--blue);opacity:.85;display:flex;align-items:center;overflow:hidden;}
 .gantt-bar.confirmed{background:var(--success);}
+.gantt-day-section{margin-bottom:10px;}
+.gantt-day-label{font-size:12px;font-weight:700;color:var(--text);padding:6px 4px 4px;display:flex;justify-content:space-between;align-items:center;}
+.gantt-day-label .day-date{color:var(--gray-600);font-weight:600;}
+.gantt-day-label .day-count{font-size:10px;color:var(--gray-400);}
 
 /* ─ 대시보드 */
 .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
@@ -522,11 +525,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <button class="btn btn-secondary btn-sm" onclick="moveGanttWeek(1)">다음주 ›</button>
       </div>
       <!-- 요일 탭 -->
-      <div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;" id="ganttDayTabs"></div>
-      <!-- 시간대별 인원수 -->
-      <div id="ganttHourSummary" style="margin-bottom:10px;"></div>
+      <div style="display:flex;gap:3px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;" id="ganttDayTabs"></div>
       <!-- 간트 차트 -->
-      <div class="gantt-wrap"><div id="ganttChart"></div></div>
+      <div id="ganttChart"></div>
     </div>
   </div>
 </div>
@@ -1892,73 +1893,74 @@ function moveGanttWeek(dir){
   ganttWeekStart=d.toISOString().split('T')[0];
   renderGanttWeek();
 }
+const GANTT_START=9,GANTT_END=22,GANTT_SPAN=GANTT_END-GANTT_START;
+const ganttHours=Array.from({length:GANTT_SPAN},(_,i)=>i+GANTT_START);
+
 async function renderGanttWeek(){
   if(!currentStore){document.getElementById('ganttChart').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
   if(!ganttWeekStart) ganttWeekStart=getWeekStart(new Date().toISOString().split('T')[0]);
   const days=getWeekDays(ganttWeekStart);
   const endDate=days[6].date;
-  // 주 라벨
+  const todayStr=new Date().toISOString().split('T')[0];
   document.getElementById('ganttWeekLabel').innerText=`${days[0].label} ~ ${days[6].label}`;
-  // 요일 탭
-  if(!ganttSelectedDay||ganttSelectedDay<days[0].date||ganttSelectedDay>endDate) ganttSelectedDay=days[0].date;
-  document.getElementById('ganttDayTabs').innerHTML=days.map(d=>{
-    const isToday=d.date===new Date().toISOString().split('T')[0];
+  // 요일 탭 (전체 + 7일)
+  if(!ganttSelectedDay) ganttSelectedDay='all';
+  let tabsHtml=`<button class="sub-tab${ganttSelectedDay==='all'?' active':''}" style="flex:0 0 auto;padding:6px 10px;font-size:10px;" onclick="ganttSelectedDay='all';renderGanttFiltered()">전체</button>`;
+  days.forEach(d=>{
+    const isToday=d.date===todayStr;
     const isSel=d.date===ganttSelectedDay;
-    return `<button class="sub-tab${isSel?' active':''}" style="flex:0 0 auto;padding:7px 10px;font-size:11px;${isToday&&!isSel?'border:2px solid var(--blue);':''}" onclick="ganttSelectedDay='${d.date}';renderGanttDay()">${d.label}</button>`;
-  }).join('');
-  // 주간 데이터 한번에 로드
+    tabsHtml+=`<button class="sub-tab${isSel?' active':''}" style="flex:0 0 auto;padding:6px 8px;font-size:10px;${isToday&&!isSel?'border-bottom:2px solid var(--blue);':''}" onclick="ganttSelectedDay='${d.date}';renderGanttFiltered()">${d.label}</button>`;
+  });
+  document.getElementById('ganttDayTabs').innerHTML=tabsHtml;
+  // 주간 데이터 로드
   const{data}=await sb.from('work_schedules').select('*,employees(name)').eq('store_id',currentStore.id).gte('work_date',days[0].date).lte('work_date',endDate).not('employee_id','is',null).order('wish_start');
   window._ganttWeekData=data||[];
-  renderGanttDay();
+  window._ganttWeekDays=days;
+  renderGanttFiltered();
 }
-function renderGanttDay(){
-  const data=(window._ganttWeekData||[]).filter(r=>r.work_date===ganttSelectedDay);
-  // 요일탭 active 갱신
-  document.querySelectorAll('#ganttDayTabs .sub-tab').forEach(b=>{b.classList.toggle('active',b.textContent.includes(ganttSelectedDay.slice(5).replace('-','/')));});
-  // 실제로는 onclick에서 정확히 매칭하므로 위의 방식 대신 간단하게:
-  document.querySelectorAll('#ganttDayTabs button').forEach(b=>b.className=b.className.replace(' active',''));
-  document.querySelectorAll('#ganttDayTabs button').forEach(b=>{if(b.getAttribute('onclick')?.includes(ganttSelectedDay))b.classList.add('active');});
-
-  const hours=Array.from({length:16},(_,i)=>i+8);
-  // 시간대별 인원수 계산
-  const hourCount=hours.map(h=>{
-    return data.filter(r=>{const s=parseHour(r.wish_start),e=parseHour(r.wish_end);return s!=null&&e!=null&&s<=h&&e>h;}).length;
+function renderGanttFiltered(){
+  const days=window._ganttWeekDays||[];
+  const allData=window._ganttWeekData||[];
+  const todayStr=new Date().toISOString().split('T')[0];
+  // 탭 active
+  document.querySelectorAll('#ganttDayTabs button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#ganttDayTabs button').forEach(b=>{
+    const oc=b.getAttribute('onclick')||'';
+    if(ganttSelectedDay==='all'&&oc.includes("'all'")) b.classList.add('active');
+    else if(oc.includes("'"+ganttSelectedDay+"'")) b.classList.add('active');
   });
-  const maxCount=Math.max(...hourCount,1);
-  document.getElementById('ganttHourSummary').innerHTML=`
-    <div style="display:flex;align-items:flex-end;gap:2px;height:40px;padding:0 70px 0 0;">
-      <div style="min-width:70px;font-size:10px;color:var(--gray-400);text-align:center;">인원</div>
-      ${hours.map((h,i)=>{
-        const cnt=hourCount[i];
-        const pct=cnt/maxCount*100;
-        const color=cnt===0?'var(--gray-200)':cnt<=1?'var(--success)':cnt<=2?'var(--blue)':'var(--warn)';
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
-          <div style="font-size:9px;font-weight:700;color:${color};">${cnt||''}</div>
-          <div style="width:100%;height:${Math.max(4,pct*0.3)}px;background:${color};border-radius:2px;"></div>
-        </div>`;
-      }).join('')}
-    </div>`;
-  // 간트 차트
-  let html=`<div class="gantt-header"><div class="gantt-emp-col">직원</div>${hours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
-  if(!data.length){
-    html+='<div class="empty-state" style="padding:20px;"><p>이 날의 근무계획이 없습니다</p></div>';
-  } else {
-    data.forEach(row=>{
-      const empName=row.employees?.name||'-';
-      const startH=parseHour(row.wish_start),endH=parseHour(row.wish_end);
-      const bgCols=hours.map(()=>`<div class="gantt-bg-col"></div>`).join('');
-      let bar='';
-      if(startH!=null&&endH!=null&&endH>startH){
-        const span=16;
-        const left=Math.max(0,(startH-8)/span*100);
-        const width=Math.min(100-left,(endH-startH)/span*100);
-        const label=`${String(Math.floor(startH)).padStart(2,'0')}:00~${String(Math.floor(endH)).padStart(2,'0')}:00`;
-        const isConfirmed=row.status==='확정';
-        bar=`<div class="gantt-bar${isConfirmed?' confirmed':''}" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;"><span style="font-size:10px;color:#fff;padding:0 4px;white-space:nowrap;">${label}</span></div>`;
-      }
-      html+=`<div class="gantt-row"><div class="gantt-name">${empName}</div><div class="gantt-bar-area">${bgCols}${bar}</div></div>`;
-    });
-  }
+  const showDays=ganttSelectedDay==='all'?days:days.filter(d=>d.date===ganttSelectedDay);
+  const bgCols=ganttHours.map(()=>`<div class="gantt-bg-col"></div>`).join('');
+  let html='';
+  showDays.forEach(day=>{
+    const dayData=allData.filter(r=>r.work_date===day.date);
+    const isToday=day.date===todayStr;
+    html+=`<div class="gantt-day-section">
+      <div class="gantt-day-label" style="${isToday?'color:var(--blue);':''}">
+        <span>${day.label}${isToday?' (오늘)':''}</span>
+        <span class="day-count">${dayData.length}명</span>
+      </div>
+      <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
+    if(!dayData.length){
+      html+=`<div style="padding:8px;text-align:center;font-size:11px;color:var(--gray-400);">등록된 근무 없음</div>`;
+    } else {
+      dayData.forEach(row=>{
+        const name=row.employees?.name||'-';
+        const sH=parseHour(row.wish_start),eH=parseHour(row.wish_end);
+        let bar='';
+        if(sH!=null&&eH!=null&&eH>sH){
+          const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
+          const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
+          const sLabel=String(Math.floor(sH)).padStart(2,'0')+':'+(sH%1?'30':'00');
+          const eLabel=String(Math.floor(eH)).padStart(2,'0')+':'+(eH%1?'30':'00');
+          const confirmed=row.status==='확정';
+          bar=`<div class="gantt-bar${confirmed?' confirmed':''}" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;"><span style="font-size:8px;color:#fff;padding:0 2px;white-space:nowrap;">${sLabel}~${eLabel}</span></div>`;
+        }
+        html+=`<div class="gantt-row"><div class="gantt-name">${name}</div><div class="gantt-bar-area">${bgCols}${bar}</div></div>`;
+      });
+    }
+    html+=`</div>`;
+  });
   document.getElementById('ganttChart').innerHTML=html;
 }
 
