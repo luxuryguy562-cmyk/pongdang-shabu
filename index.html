@@ -517,10 +517,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div id="schedGantt" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <button class="btn btn-secondary btn-sm" onclick="moveGanttDate(-1)">‹ 이전</button>
-        <span id="ganttDate" style="font-size:14px;font-weight:700;">-</span>
-        <button class="btn btn-secondary btn-sm" onclick="moveGanttDate(1)">다음 ›</button>
+        <button class="btn btn-secondary btn-sm" onclick="moveGanttWeek(-1)">‹ 이전주</button>
+        <span id="ganttWeekLabel" style="font-size:14px;font-weight:700;">-</span>
+        <button class="btn btn-secondary btn-sm" onclick="moveGanttWeek(1)">다음주 ›</button>
       </div>
+      <!-- 요일 탭 -->
+      <div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;" id="ganttDayTabs"></div>
+      <!-- 시간대별 인원수 -->
+      <div id="ganttHourSummary" style="margin-bottom:10px;"></div>
+      <!-- 간트 차트 -->
       <div class="gantt-wrap"><div id="ganttChart"></div></div>
     </div>
   </div>
@@ -1188,7 +1193,6 @@ let cardDateStr = new Date().toISOString().split('T')[0];
 let currentEmp = null, isManager = true, isOwner = true;
 let dashMonthStr = new Date().toISOString().slice(0,7);
 let fcMonthStr = dashMonthStr;
-let ganttDateStr = new Date().toISOString().split('T')[0];
 let schedEmpId = null;
 let fcAmountsEditing = {};
 let chartInstances = {};
@@ -1830,12 +1834,11 @@ function schedTab(tab,el){
   ['Input','Gantt','Confirm'].forEach(t=>{const el2=document.getElementById('sched'+t);if(el2)el2.style.display='none';});
   const target=document.getElementById('sched'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(target) target.style.display='block';
-  if(tab==='gantt') renderGantt();
+  if(tab==='gantt') renderGanttWeek();
 }
 function initSchedDate(){
-  const today=new Date().toISOString().split('T')[0];
-  ganttDateStr=today;
-  const el=document.getElementById('ganttDate');if(el)el.innerText=today;
+  ganttWeekStart=getWeekStart(new Date().toISOString().split('T')[0]);
+  ganttSelectedDay=new Date().toISOString().split('T')[0];
 }
 async function saveSchedule(){
   if(!guardStore()) return;
@@ -1856,57 +1859,108 @@ async function saveSchedule(){
   const{error}=await sb.from('work_schedules').upsert(payload,{onConflict:'store_id,employee_id,work_date'});
   setLoad(false);
   if(error) return alert('저장 실패: '+error.message);
-  ganttDateStr=date;
+  ganttWeekStart=getWeekStart(date);ganttSelectedDay=date;
   document.getElementById('vSchedMemo').value='';
   // 일정보기 탭으로 이동해서 바로 확인
   const ganttTab=document.querySelector('#scheduleCont .sub-tab[data-sub="gantt"]');
   if(ganttTab) schedTab('gantt',ganttTab);
-  else renderGantt();
+  else renderGanttWeek();
   alert('희망근무가 등록됐습니다! 일정보기로 이동합니다.');
 }
-async function renderGantt(){
-  if(!currentStore){ document.getElementById('ganttChart').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>'; return; }
-  document.getElementById('ganttDate').innerText=ganttDateStr;
-  const{data,error}=await sb.from('work_schedules').select('*,employees(name)').eq('store_id',currentStore.id).eq('work_date',ganttDateStr).not('employee_id','is',null).order('wish_start');
-  if(error){ console.error('근무계획 조회 오류:',error); }
-  const hours=Array.from({length:16},(_,i)=>i+8); // 8~23시
-  const parseHour = t => {
-    if(!t) return null;
-    // HH:MM 또는 HH:MM:SS
-    const parts = String(t).split(':');
-    return parts.length>=2 ? parseInt(parts[0]) + parseInt(parts[1])/60 : null;
-  };
-  let html=`
-    <div class="gantt-header">
-      <div class="gantt-emp-col">직원</div>
-      ${hours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}
+// 주간 간트 유틸
+function getWeekStart(dateStr){
+  const d=new Date(dateStr);
+  const day=d.getDay();// 0=일
+  const diff=day===0?-6:1-day;// 월요일 기준
+  d.setDate(d.getDate()+diff);
+  return d.toISOString().split('T')[0];
+}
+function getWeekDays(startStr){
+  const days=[];const d=new Date(startStr);
+  const dayNames=['일','월','화','수','목','금','토'];
+  for(let i=0;i<7;i++){
+    const s=new Date(d);s.setDate(d.getDate()+i);
+    days.push({date:s.toISOString().split('T')[0],label:`${s.getMonth()+1}/${s.getDate()}(${dayNames[s.getDay()]})`});
+  }
+  return days;
+}
+let ganttWeekStart='',ganttSelectedDay='';
+const parseHour=t=>{if(!t)return null;const p=String(t).split(':');return p.length>=2?parseInt(p[0])+parseInt(p[1])/60:null;};
+
+function moveGanttWeek(dir){
+  const d=new Date(ganttWeekStart);d.setDate(d.getDate()+dir*7);
+  ganttWeekStart=d.toISOString().split('T')[0];
+  renderGanttWeek();
+}
+async function renderGanttWeek(){
+  if(!currentStore){document.getElementById('ganttChart').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
+  if(!ganttWeekStart) ganttWeekStart=getWeekStart(new Date().toISOString().split('T')[0]);
+  const days=getWeekDays(ganttWeekStart);
+  const endDate=days[6].date;
+  // 주 라벨
+  document.getElementById('ganttWeekLabel').innerText=`${days[0].label} ~ ${days[6].label}`;
+  // 요일 탭
+  if(!ganttSelectedDay||ganttSelectedDay<days[0].date||ganttSelectedDay>endDate) ganttSelectedDay=days[0].date;
+  document.getElementById('ganttDayTabs').innerHTML=days.map(d=>{
+    const isToday=d.date===new Date().toISOString().split('T')[0];
+    const isSel=d.date===ganttSelectedDay;
+    return `<button class="sub-tab${isSel?' active':''}" style="flex:0 0 auto;padding:7px 10px;font-size:11px;${isToday&&!isSel?'border:2px solid var(--blue);':''}" onclick="ganttSelectedDay='${d.date}';renderGanttDay()">${d.label}</button>`;
+  }).join('');
+  // 주간 데이터 한번에 로드
+  const{data}=await sb.from('work_schedules').select('*,employees(name)').eq('store_id',currentStore.id).gte('work_date',days[0].date).lte('work_date',endDate).not('employee_id','is',null).order('wish_start');
+  window._ganttWeekData=data||[];
+  renderGanttDay();
+}
+function renderGanttDay(){
+  const data=(window._ganttWeekData||[]).filter(r=>r.work_date===ganttSelectedDay);
+  // 요일탭 active 갱신
+  document.querySelectorAll('#ganttDayTabs .sub-tab').forEach(b=>{b.classList.toggle('active',b.textContent.includes(ganttSelectedDay.slice(5).replace('-','/')));});
+  // 실제로는 onclick에서 정확히 매칭하므로 위의 방식 대신 간단하게:
+  document.querySelectorAll('#ganttDayTabs button').forEach(b=>b.className=b.className.replace(' active',''));
+  document.querySelectorAll('#ganttDayTabs button').forEach(b=>{if(b.getAttribute('onclick')?.includes(ganttSelectedDay))b.classList.add('active');});
+
+  const hours=Array.from({length:16},(_,i)=>i+8);
+  // 시간대별 인원수 계산
+  const hourCount=hours.map(h=>{
+    return data.filter(r=>{const s=parseHour(r.wish_start),e=parseHour(r.wish_end);return s!=null&&e!=null&&s<=h&&e>h;}).length;
+  });
+  const maxCount=Math.max(...hourCount,1);
+  document.getElementById('ganttHourSummary').innerHTML=`
+    <div style="display:flex;align-items:flex-end;gap:2px;height:40px;padding:0 70px 0 0;">
+      <div style="min-width:70px;font-size:10px;color:var(--gray-400);text-align:center;">인원</div>
+      ${hours.map((h,i)=>{
+        const cnt=hourCount[i];
+        const pct=cnt/maxCount*100;
+        const color=cnt===0?'var(--gray-200)':cnt<=1?'var(--success)':cnt<=2?'var(--blue)':'var(--warn)';
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <div style="font-size:9px;font-weight:700;color:${color};">${cnt||''}</div>
+          <div style="width:100%;height:${Math.max(4,pct*0.3)}px;background:${color};border-radius:2px;"></div>
+        </div>`;
+      }).join('')}
     </div>`;
-  if(!data?.length){
-    html+='<div class="empty-state" style="padding:20px;"><p>해당 날짜의 근무계획이 없습니다</p></div>';
+  // 간트 차트
+  let html=`<div class="gantt-header"><div class="gantt-emp-col">직원</div>${hours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
+  if(!data.length){
+    html+='<div class="empty-state" style="padding:20px;"><p>이 날의 근무계획이 없습니다</p></div>';
   } else {
     data.forEach(row=>{
       const empName=row.employees?.name||'-';
-      const startH=parseHour(row.wish_start);
-      const endH=parseHour(row.wish_end);
-      const bgCols=hours.map(h=>`<div class="gantt-bg-col"></div>`).join('');
+      const startH=parseHour(row.wish_start),endH=parseHour(row.wish_end);
+      const bgCols=hours.map(()=>`<div class="gantt-bg-col"></div>`).join('');
       let bar='';
-      if(startH!=null && endH!=null && endH>startH){
-        const totalSpan=16; // 8시~24시 = 16시간
-        const leftPct=Math.max(0,(startH-8)/totalSpan*100);
-        const widthPct=Math.min(100-leftPct,(endH-startH)/totalSpan*100);
+      if(startH!=null&&endH!=null&&endH>startH){
+        const span=16;
+        const left=Math.max(0,(startH-8)/span*100);
+        const width=Math.min(100-left,(endH-startH)/span*100);
         const label=`${String(Math.floor(startH)).padStart(2,'0')}:00~${String(Math.floor(endH)).padStart(2,'0')}:00`;
-        bar=`<div class="gantt-bar" style="left:${leftPct.toFixed(1)}%;width:${widthPct.toFixed(1)}%;"><span style="font-size:10px;color:#fff;padding:0 4px;white-space:nowrap;">${label}</span></div>`;
+        const isConfirmed=row.status==='확정';
+        bar=`<div class="gantt-bar${isConfirmed?' confirmed':''}" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;"><span style="font-size:10px;color:#fff;padding:0 4px;white-space:nowrap;">${label}</span></div>`;
       }
-      html+=`
-        <div class="gantt-row">
-          <div class="gantt-name">${empName}</div>
-          <div class="gantt-bar-area">${bgCols}${bar}</div>
-        </div>`;
+      html+=`<div class="gantt-row"><div class="gantt-name">${empName}</div><div class="gantt-bar-area">${bgCols}${bar}</div></div>`;
     });
   }
   document.getElementById('ganttChart').innerHTML=html;
 }
-function moveGanttDate(dir){const d=new Date(ganttDateStr);d.setDate(d.getDate()+dir);ganttDateStr=d.toISOString().split('T')[0];renderGantt();}
 
 // ══════════════════════════════════════════
 // 마감정산
@@ -3198,6 +3252,8 @@ function completeLogin(emp){
   currentEmp=emp;
   isManager=emp.is_manager||emp.role==='팀장'||emp.role==='점장';
   isOwner=emp.is_manager||false;
+  // 전역 상태 초기화 (이전 세션 잔여 방지)
+  selectedEmpId=null;schedEmpId=null;
   document.getElementById('headerUser').innerText=emp.name;
   document.getElementById('loginOverlay').style.display='none';
   sessionStorage.setItem('pd_emp',emp.id);
