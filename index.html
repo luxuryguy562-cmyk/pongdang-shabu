@@ -501,21 +501,66 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="sub-tab" onclick="settleTab('card',this)">일별 카드</button>
   </div>
   <div id="settleInput">
+    <!-- 영업개시보고서 (전일 마감금액 자동) -->
     <div class="card">
-      <div class="card-title">마감 정산</div>
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:12px;display:flex;gap:10px;">
-        <span><span class="si-role plus" style="font-size:10px;">+</span> 수입</span>
-        <span><span class="si-role minus" style="font-size:10px;">-</span> 지출</span>
-        <span><span class="si-role check" style="font-size:10px;">확</span> 확인용</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title" style="margin-bottom:0;">영업개시 보고서</div>
+        <span style="font-size:11px;color:var(--gray-400);" id="openingStatus">전일 마감금액</span>
       </div>
-      <div id="settleItems"></div>
-      <div class="add-item-btn" onclick="openAddSettleItem()">＋ 항목 추가</div>
-      <div class="settle-result">
-        <div class="sr-row"><span class="sr-label">장부 합계</span><span class="sr-val" id="calcBook">0원</span></div>
-        <div class="sr-row"><span class="sr-label">금고 합계</span><span class="sr-val" id="calcVault">0원</span></div>
-        <div class="sr-row" id="diffRow"><span class="sr-label">차액</span><span class="sr-val" id="calcDiff">-</span></div>
+      <div class="settle-item" style="margin-top:12px;">
+        <span class="si-role check" style="font-size:10px;">전</span>
+        <span class="si-label">전일 이월금</span>
+        <input type="text" class="s-input" id="siOpening" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()">
       </div>
     </div>
+
+    <!-- ① 매출확인 (POS 장표 기준) -->
+    <div class="card">
+      <div class="card-title">오늘의 매출은 얼마인가요?</div>
+      <p style="font-size:11px;color:var(--gray-400);margin:-8px 0 12px;">포스기(POS) 장표 금액을 그대로 입력하세요</p>
+      <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">기타결제</span><input type="text" class="s-input" id="siPosEtc" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--blue-light);border-radius:10px;margin-top:8px;">
+        <span style="font-size:13px;font-weight:700;color:var(--blue);">매출 합계</span>
+        <span style="font-size:15px;font-weight:800;color:var(--blue);" id="calcSalesTotal">0원</span>
+      </div>
+    </div>
+
+    <!-- ② 현금 상세내역 + 실시간 검증 -->
+    <div class="card">
+      <div class="card-title">현금 상세내역을 적어주세요</div>
+      <p style="font-size:11px;color:var(--gray-400);margin:-8px 0 12px;">실제로 받은 현금이 어떤 방식인지 구분</p>
+      <div class="settle-item"><span class="si-role plus">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-role plus">📱</span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-role plus">🏦</span><span class="si-label">계좌이체</span><input type="text" class="s-input" id="siCashTransfer" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div id="cashVerify" style="padding:10px 14px;border-radius:10px;margin-top:8px;background:var(--gray-100);">
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--gray-600);">POS (현금+현금영수증)</span><span style="font-weight:700;" id="cvPosSum">0원</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;">
+          <span style="color:var(--gray-600);">상세 (현금+QR+이체)</span><span style="font-weight:700;" id="cvDetailSum">0원</span>
+        </div>
+        <div style="text-align:center;margin-top:6px;font-size:13px;font-weight:800;" id="cvResult">-</div>
+      </div>
+    </div>
+
+    <!-- ③ 기타매출 -->
+    <div class="card">
+      <div class="card-title">기타매출은 얼마인가요?</div>
+      <div class="settle-item"><span class="si-role plus">🎰</span><span class="si-label">뽑기(대형)</span><input type="text" class="s-input" id="siDrawLarge" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-role plus">🎲</span><span class="si-label">뽑기(소형)</span><input type="text" class="s-input" id="siDrawSmall" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+    </div>
+
+    <!-- ④ 차감 사유 -->
+    <div class="card">
+      <div class="card-title">돈이 비는 사유는 어떻게 되나요?</div>
+      <div class="settle-item"><span class="si-role minus">-</span><span class="si-label">기타사용</span><input type="text" class="s-input" id="siDeductEtc" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-role minus">-</span><span class="si-label">통장입금</span><input type="text" class="s-input" id="siDeductBank" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+    </div>
+
+    <!-- ⑤ 금고 계수 -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div class="card-title" style="margin-bottom:0;">금고 계수</div>
@@ -532,7 +577,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <div class="vault-item"><label>10원</label><input type="number" data-unit="10" class="v-input" placeholder="0"></div>
       </div>
     </div>
-    <button class="btn btn-primary btn-full" style="margin-top:0;" onclick="finishSettlement()">📋 마감 저장하기</button>
+
+    <!-- 결과 -->
+    <div class="card">
+      <div class="settle-result">
+        <div class="sr-row"><span class="sr-label">장부 합계</span><span class="sr-val" id="calcBook">0원</span></div>
+        <div class="sr-row"><span class="sr-label">금고 합계</span><span class="sr-val" id="calcVault">0원</span></div>
+        <div class="sr-row" id="diffRow"><span class="sr-label">차액</span><span class="sr-val" id="calcDiff">-</span></div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-top:0;" onclick="finishSettlement2()">📋 마감 저장하기</button>
   </div>
   <div id="settleList" style="display:none;">
     <div class="card"><div class="card-title">정산 기록</div><div id="settleListData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div></div>
@@ -1183,7 +1237,7 @@ function nav(tab, el) {
     wage: loadWageSummary,
   };
   if (actions[tab]) actions[tab]();
-  if (tab === 'settle') renderSettleInputItems();
+  if (tab === 'settle') { recalcSettle2(); loadOpeningAmount(); }
   // 서브탭 전환
   if (subTab) {
     setTimeout(() => {
@@ -1261,7 +1315,7 @@ async function selectStore(id, name) {
   sessionStorage.setItem('pd_store', JSON.stringify({id,name}));
   closeAllSheets();
   await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), syncSettleItemsFromDB()]);
-  renderSettleInputItems();
+  recalcSettle2();
 }
 
 // ══════════════════════════════════════════
@@ -1844,26 +1898,73 @@ async function saveSettleItems(){
   setLoad(true,'항목 저장 중...');
   await sb.from('store_settings').upsert({store_id:currentStore.id,settle_items_json:settleItems},{onConflict:'store_id'});
   localStorage.setItem('pd_si_'+currentStore.id,JSON.stringify(settleItems));
-  setLoad(false);alert('항목 저장 완료!');renderSettleInputItems();renderSettleItemConfig();
+  setLoad(false);alert('항목 저장 완료!');recalcSettle2();renderSettleItemConfig();
 }
-function renderSettleInputItems(){
-  const c=document.getElementById('settleItems');if(!c) return;
-  const icon=r=>r==='plus'?'<span class="si-role plus">+</span>':r==='minus'?'<span class="si-role minus">-</span>':'<span class="si-role check">확</span>';
-  c.innerHTML=settleItems.map((item,i)=>`<div class="settle-item">${icon(item.role)}<span class="si-label">${item.name}</span><input type="text" class="si-input" data-idx="${i}" placeholder="0" inputmode="numeric" oninput="onSettleInput(this)"></div>`).join('');
-  recalcSettle();
-}
-function onSettleInput(el){const raw=el.value.replace(/,/g,'');if(/^\d*$/.test(raw))el.value=raw?parseInt(raw).toLocaleString():'';recalcSettle();}
-function recalcSettle(){
-  let book=0;
-  document.querySelectorAll('.si-input').forEach((el,i)=>{const item=settleItems[i];if(!item)return;const val=unFmt(el.value);if(item.role==='plus')book+=val;else if(item.role==='minus')book-=val;});
+// ── 새 마감정산 로직 ──
+function onSInput(el){const raw=el.value.replace(/,/g,'');if(/^\d*$/.test(raw))el.value=raw?parseInt(raw).toLocaleString():'';recalcSettle2();}
+function gv(id){return unFmt(document.getElementById(id)?.value||'0');}
+
+function recalcSettle2(){
+  const opening=gv('siOpening');
+  const posCash=gv('siPosCash'), posCR=gv('siPosCashReceipt'), posCard=gv('siPosCard'), posEtc=gv('siPosEtc');
+  const cashCash=gv('siCashCash'), cashQr=gv('siCashQr'), cashTr=gv('siCashTransfer');
+  const drawL=gv('siDrawLarge'), drawS=gv('siDrawSmall');
+  const deductEtc=gv('siDeductEtc'), deductBank=gv('siDeductBank');
+
+  // 매출합계
+  const salesTotal=posCash+posCR+posCard+posEtc+drawL+drawS;
+  document.getElementById('calcSalesTotal').innerText=fmt(salesTotal)+'원';
+
+  // 현금 검증: POS(현금+현금영수증) vs 상세(현금+QR+이체)
+  const posSum=posCash+posCR;
+  const detailSum=cashCash+cashQr+cashTr;
+  document.getElementById('cvPosSum').innerText=fmt(posSum)+'원';
+  document.getElementById('cvDetailSum').innerText=fmt(detailSum)+'원';
+  const cvEl=document.getElementById('cvResult');
+  const cvBox=document.getElementById('cashVerify');
+  if(posSum===0&&detailSum===0){
+    cvEl.innerText='-';cvBox.style.background='var(--gray-100)';
+  } else if(posSum===detailSum){
+    cvEl.innerText='✅ 일치';cvEl.style.color='var(--success)';cvBox.style.background='var(--success-light)';
+  } else {
+    const d=detailSum-posSum;
+    cvEl.innerText='❌ 차액 '+(d>0?'+':'')+fmt(d)+'원';cvEl.style.color='var(--danger)';cvBox.style.background='var(--danger-light)';
+  }
+
+  // 장부 합계 (금고에 있어야 할 금액)
+  const book=opening+cashCash+drawL+drawS-deductEtc-deductBank;
   document.getElementById('calcBook').innerText=fmt(book)+'원';
+
+  // 금고 합계
   let vault=0;document.querySelectorAll('.v-input').forEach(i=>vault+=parseInt(i.dataset.unit)*(parseInt(i.value)||0));
   document.getElementById('calcVault').innerText=fmt(vault)+'원';
+  document.getElementById('vaultTotal').innerText=fmt(vault)+'원';
+
+  // 차액
   const diff=vault-book;const diffEl=document.getElementById('calcDiff');
   diffEl.innerText=diff===0?'일치':(diff>0?'+':'')+fmt(diff)+'원';
   document.getElementById('diffRow').className='sr-row '+(diff===0?'diff-ok':'diff-bad');
 }
-document.addEventListener('input',e=>{if(e.target.classList.contains('v-input')){let t=0;document.querySelectorAll('.v-input').forEach(i=>t+=parseInt(i.dataset.unit)*(parseInt(i.value)||0));document.getElementById('vaultTotal').innerText=fmt(t)+'원';recalcSettle();}});
+document.addEventListener('input',e=>{if(e.target.classList.contains('v-input'))recalcSettle2();});
+
+// 영업개시보고서 자동 로드 (전일 마감금액)
+async function loadOpeningAmount(){
+  if(!currentStore) return;
+  const today=new Date();
+  const yesterday=new Date(today);yesterday.setDate(today.getDate()-1);
+  const yd=yesterday.toISOString().split('T')[0];
+  const{data}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
+  const el=document.getElementById('siOpening');
+  const statusEl=document.getElementById('openingStatus');
+  if(data?.actual_total!=null){
+    el.value=parseInt(data.actual_total).toLocaleString();
+    statusEl.innerText='전일('+yd+') 마감금액';
+    if(!isManager) el.readOnly=true;
+  } else {
+    statusEl.innerText='전일 마감 데이터 없음';
+  }
+  recalcSettle2();
+}
 function openAddSettleItem(idx=-1){
   document.getElementById('settleItemSheetTitle').innerText=idx>=0?'항목 편집':'항목 추가';
   document.getElementById('siEditIdx').value=idx;
@@ -1879,14 +1980,14 @@ function confirmSettleItem(){
   if(!name) return alert('항목명을 입력하세요.');if(!role) return alert('역할을 선택하세요.');
   const idx=parseInt(document.getElementById('siEditIdx').value);
   if(idx>=0)settleItems[idx]={...settleItems[idx],name,role};else settleItems.push({id:'s'+Date.now(),name,role});
-  closeAllSheets();renderSettleInputItems();renderSettleItemConfig();
+  closeAllSheets();recalcSettle2();renderSettleItemConfig();
 }
 function renderSettleItemConfig(){
   const c=document.getElementById('settleItemConfig');if(!c)return;
   const lbl=r=>r==='plus'?'수입 (+)':r==='minus'?'지출 (-)':'확인용';const cls=r=>r==='plus'?'badge-green':r==='minus'?'badge-red':'badge-blue';
   c.innerHTML=settleItems.map((item,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="flex:1;font-size:14px;font-weight:600;">${item.name}</span><span class="badge ${cls(item.role)}">${lbl(item.role)}</span><button class="btn btn-secondary btn-sm" onclick="openAddSettleItem(${i})">편집</button><button class="btn btn-danger btn-sm" onclick="deleteSettleItem(${i})">삭제</button></div>`).join('');
 }
-function deleteSettleItem(i){if(!confirm(`'${settleItems[i].name}' 항목을 삭제할까요?`))return;settleItems.splice(i,1);renderSettleInputItems();renderSettleItemConfig();}
+function deleteSettleItem(i){if(!confirm(`'${settleItems[i].name}' 항목을 삭제할까요?`))return;settleItems.splice(i,1);recalcSettle2();renderSettleItemConfig();}
 function settleTab(tab,el){
   document.querySelectorAll('#settleCont .sub-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
   document.getElementById('settleInput').style.display=tab==='input'?'block':'none';
@@ -1894,16 +1995,30 @@ function settleTab(tab,el){
   document.getElementById('settleCard').style.display=tab==='card'?'block':'none';
   if(tab==='list')loadSettleList();if(tab==='card')loadSettleCard(cardDateStr);
 }
-async function finishSettlement(){
+async function finishSettlement2(){
   if(!guardStore()) return;
-  const itemValues={};let book=0;
-  document.querySelectorAll('.si-input').forEach((el,i)=>{const item=settleItems[i];if(!item)return;const val=unFmt(el.value);itemValues[item.id]={name:item.name,role:item.role,value:val};if(item.role==='plus')book+=val;else if(item.role==='minus')book-=val;});
+  const items={
+    opening:gv('siOpening'),
+    pos_cash:gv('siPosCash'), pos_cash_receipt:gv('siPosCashReceipt'),
+    pos_card:gv('siPosCard'), pos_etc:gv('siPosEtc'),
+    cash_detail_cash:gv('siCashCash'), cash_detail_qr:gv('siCashQr'), cash_detail_transfer:gv('siCashTransfer'),
+    extra_draw_large:gv('siDrawLarge'), extra_draw_small:gv('siDrawSmall'),
+    deduct_etc:gv('siDeductEtc'), deduct_bank:gv('siDeductBank')
+  };
+  const book=items.opening+items.cash_detail_cash+items.extra_draw_large+items.extra_draw_small-items.deduct_etc-items.deduct_bank;
+  const salesTotal=items.pos_cash+items.pos_cash_receipt+items.pos_card+items.pos_etc+items.extra_draw_large+items.extra_draw_small;
   let vault=0;const vMap={};document.querySelectorAll('.v-input').forEach(i=>{const val=parseInt(i.value)||0;vMap[i.dataset.unit]=val;vault+=parseInt(i.dataset.unit)*val;});
   const diff=vault-book;const diffStatus=diff===0?'일치':`차액 ${diff>0?'+':''}${fmt(diff)}원`;
-  if(!confirm(`장부: ${fmt(book)}원\n금고: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
+  if(!confirm(`매출: ${fmt(salesTotal)}원\n장부: ${fmt(book)}원\n금고: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'마감 저장 중...');
   const today=new Date().toISOString().split('T')[0];
-  const{error}=await sb.from('settlements').upsert({store_id:currentStore.id,settle_date:today,items_json:itemValues,vault_json:vMap,actual_total:vault,expected_total:book,diff_amount:diff,diff_status:diffStatus},{onConflict:'store_id,settle_date'});
+  const{error}=await sb.from('settlements').upsert({
+    store_id:currentStore.id,settle_date:today,
+    items_json:items,vault_json:vMap,
+    actual_total:vault,expected_total:book,
+    diff_amount:diff,diff_status:diffStatus,
+    sales_total:salesTotal
+  },{onConflict:'store_id,settle_date'});
   setLoad(false);if(error) return alert('저장 실패: '+error.message);
   alert('마감 저장 완료!');location.reload();
 }
@@ -1965,16 +2080,25 @@ async function loadDashboard(){
       salesBreakdown={'카드':(ds||[]).reduce((a,s)=>a+(s.card_sales||0),0),'현금':(ds||[]).reduce((a,s)=>a+(s.cash_sales||0),0)};
       salesBreakdown['기타']=totalRevenue-salesBreakdown['카드']-salesBreakdown['현금'];
     } else {
-      const{data:st}=await sb.from('settlements').select('settle_date,expected_total,actual_total,items_json').eq('store_id',currentStore.id).gte('settle_date',start).lte('settle_date',end).order('settle_date');
+      const{data:st}=await sb.from('settlements').select('settle_date,expected_total,actual_total,items_json,sales_total').eq('store_id',currentStore.id).gte('settle_date',start).lte('settle_date',end).order('settle_date');
       (st||[]).forEach(s=>{
-        totalRevenue+=s.expected_total||0;
-        dailyMap[s.settle_date?.slice(8)]=(s.expected_total||0);
-        if(!s.items_json) return;
-        Object.values(s.items_json).forEach(item=>{
-          if(!item.name||item.role==='minus') return;
-          if(item.name.includes('보고서')||item.name.includes('개시')) return;
-          salesBreakdown[item.name]=(salesBreakdown[item.name]||0)+(item.value||0);
-        });
+        const j=s.items_json||{};
+        // 새 구조 (pos_card 등 키가 있는 경우)
+        if(j.pos_card!==undefined){
+          const daySales=(j.pos_cash||0)+(j.pos_cash_receipt||0)+(j.pos_card||0)+(j.pos_etc||0)+(j.extra_draw_large||0)+(j.extra_draw_small||0);
+          totalRevenue+=daySales;
+          dailyMap[s.settle_date?.slice(8)]=daySales;
+          salesBreakdown['신용카드']=(salesBreakdown['신용카드']||0)+(j.pos_card||0);
+          salesBreakdown['현금']=(salesBreakdown['현금']||0)+(j.pos_cash||0);
+          salesBreakdown['현금영수증']=(salesBreakdown['현금영수증']||0)+(j.pos_cash_receipt||0);
+          if(j.pos_etc) salesBreakdown['기타결제']=(salesBreakdown['기타결제']||0)+j.pos_etc;
+          if(j.extra_draw_large) salesBreakdown['뽑기(대형)']=(salesBreakdown['뽑기(대형)']||0)+j.extra_draw_large;
+          if(j.extra_draw_small) salesBreakdown['뽑기(소형)']=(salesBreakdown['뽑기(소형)']||0)+j.extra_draw_small;
+        } else {
+          // 구버전 호환 (settleItems 기반)
+          totalRevenue+=s.sales_total||s.expected_total||0;
+          dailyMap[s.settle_date?.slice(8)]=(s.sales_total||s.expected_total||0);
+        }
       });
     }
 
@@ -2082,7 +2206,7 @@ async function loadDashboard(){
     // ══ 3. 수익 요약 ══
     const royaltyRate=parseFloat(settings.royalty_rate||0)/100;
     const cardFeeRate=parseFloat(settings.card_fee_rate||0)/100;
-    const cardSales=salesBreakdown['카드']||Object.values(salesBreakdown).reduce((a,v)=>a+v,0)*0.9;
+    const cardSales=salesBreakdown['신용카드']||salesBreakdown['카드']||0;
     const royalty=Math.round(totalRevenue*royaltyRate);
     const cardFee=Math.round(cardSales*cardFeeRate);
     const netProfit=totalRevenue-totalCost-royalty-cardFee;
@@ -3003,7 +3127,7 @@ async function calcExpenseByCategories(ym){
 }
 
 document.addEventListener('DOMContentLoaded', async()=>{
-  initAttDate();renderSettleInputItems();
+  initAttDate();recalcSettle2();
   isOwner=true;isManager=true;
   document.getElementById('headerUser').innerText='개발모드';
   applyPermissionUI();
@@ -3014,7 +3138,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
     const s=JSON.parse(saved);currentStore=s;
     document.getElementById('headerStore').innerText=s.name;
     await Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),syncSettleItemsFromDB(),loadExpCategories()]);
-    renderSettleInputItems();
+    recalcSettle2();
   }
 });
 </script>
