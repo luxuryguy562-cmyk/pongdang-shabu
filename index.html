@@ -2073,7 +2073,7 @@ async function runPosAI(){
 
     // 인식 결과 안내
     const total=parseInt(parsed.total)||0;
-    alert(`✅ POS 매출 인식 완료!\n\n합계: ${fmt(total)}원\n카드: ${fmt(parseInt(parsed.card)||0)}원\n현금: ${fmt(parseInt(parsed.cash)||0)}원\n\n아래 입력값을 확인하고 수정하세요.`);
+    alert(`✅ POS 매출 인식 완료!\n\n합계: ${fmt(total)}원\n현금: ${fmt(parseInt(parsed.cash)||0)}원\n현금영수증: ${fmt(parseInt(parsed.cash_receipt)||0)}원\n신용카드: ${fmt(parseInt(parsed.card)||0)}원\n기타결제: ${fmt(parseInt(parsed.other)||0)}원\n\n아래 입력값을 확인하고 수정하세요.`);
     resetPosImg();
   }catch(e){
     alert('인식 실패: '+e.message);
@@ -3269,6 +3269,7 @@ let loginSelectedEmp=null, pinBuffer='';
 
 function showLoginScreen(){
   document.getElementById('loginOverlay').style.display='flex';
+  document.body.style.overflow='hidden';
   document.getElementById('loginPinArea').style.display='none';
   document.getElementById('loginEmpList').innerHTML='';
   loginSelectedEmp=null;pinBuffer='';
@@ -3339,6 +3340,7 @@ function devLogin(){
   isManager=true;isOwner=true;currentEmp=null;
   document.getElementById('headerUser').innerText='개발모드';
   document.getElementById('loginOverlay').style.display='none';
+  document.body.style.overflow='';
   applyPermissionUI();
 }
 function completeLogin(emp){
@@ -3349,6 +3351,7 @@ function completeLogin(emp){
   selectedEmpId=null;schedEmpId=null;
   document.getElementById('headerUser').innerText=emp.name;
   document.getElementById('loginOverlay').style.display='none';
+  document.body.style.overflow='';
   sessionStorage.setItem('pd_emp',emp.id);
   applyPermissionUI();
 }
