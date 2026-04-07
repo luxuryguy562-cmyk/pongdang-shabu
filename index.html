@@ -329,7 +329,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="side-group-body">
         <div class="side-item" onclick="closeSideMenu();nav('settings')">매장 기본정보</div>
         <div class="side-item" onclick="closeSideMenu();nav('settings')">수당 & 휴게</div>
-        <div class="side-item" onclick="closeSideMenu();nav('settings')">정산 항목</div>
       </div>
     </div>
 
@@ -858,16 +857,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="btn btn-primary btn-full" onclick="saveWageSettings()">수당 & 휴게 저장</button>
   </div>
 
-  <!-- 정산 항목 -->
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <div class="card-title" style="margin-bottom:0;">정산 항목</div>
-      <button class="btn btn-primary btn-sm" onclick="openAddSettleItem()">+ 추가</button>
-    </div>
-    <div id="settleItemConfig"></div>
-    <button class="btn btn-primary btn-full" onclick="saveSettleItems()">항목 저장</button>
-  </div>
-
   <!-- 로열티 & 수수료 -->
   <div class="card">
     <div class="card-title">로열티 & 수수료</div>
@@ -998,23 +987,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <p style="font-size:12px;color:var(--gray-600);margin-bottom:14px;" id="matchInfo"></p>
   <div id="matchEmpList"></div>
   <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="closeAllSheets()">취소</button>
-</div>
-
-<!-- 정산 항목 추가/편집 -->
-<div class="sheet" id="settleItemSheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-title" id="settleItemSheetTitle">항목 추가</div>
-  <input id="siNameInput" class="input-field" placeholder="항목명" type="text">
-  <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">역할 선택</p>
-  <div style="display:flex;gap:8px;margin-bottom:12px;">
-    <button id="roleBtn-plus" class="btn btn-secondary" style="flex:1;padding:12px;font-size:13px;" onclick="selectSiRole('plus')">➕ 수입</button>
-    <button id="roleBtn-minus" class="btn btn-secondary" style="flex:1;padding:12px;font-size:13px;" onclick="selectSiRole('minus')">➖ 지출</button>
-    <button id="roleBtn-check" class="btn btn-secondary" style="flex:1;padding:12px;font-size:13px;" onclick="selectSiRole('check')">📋 확인용</button>
-  </div>
-  <input type="hidden" id="siEditIdx" value="-1">
-  <input type="hidden" id="siRoleSelected" value="">
-  <button class="btn btn-primary btn-full" onclick="confirmSettleItem()">저장</button>
-  <button class="btn btn-secondary btn-full" onclick="closeAllSheets()">취소</button>
 </div>
 
 <!-- 거래처 추가/편집 -->
@@ -1179,12 +1151,6 @@ let datePickerCtx = '', timePickerCtx = '';
 let b64 = '', rowCount = 0, stagingData = [];
 let cardDateStr = new Date().toISOString().split('T')[0];
 let currentEmp = null, isManager = true, isOwner = true;
-let settleItems = [
-  {id:'s1',name:'영업개시 보고서',role:'plus'},{id:'s2',name:'현금 매출',role:'plus'},
-  {id:'s3',name:'QR 매출',role:'plus'},{id:'s4',name:'계좌이체 매출',role:'plus'},
-  {id:'s5',name:'뽑기(대형)',role:'plus'},{id:'s6',name:'뽑기(소형)',role:'plus'},
-  {id:'s7',name:'기타사용',role:'minus'},{id:'s8',name:'가게통장입금',role:'minus'},
-];
 let dashMonthStr = new Date().toISOString().slice(0,7);
 let fcMonthStr = dashMonthStr;
 let ganttDateStr = new Date().toISOString().split('T')[0];
@@ -1314,7 +1280,7 @@ async function selectStore(id, name) {
   document.getElementById('headerStore').innerText = name;
   sessionStorage.setItem('pd_store', JSON.stringify({id,name}));
   closeAllSheets();
-  await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), syncSettleItemsFromDB()]);
+  await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories()]);
   recalcSettle2();
 }
 
@@ -1888,19 +1854,7 @@ function moveGanttDate(dir){const d=new Date(ganttDateStr);d.setDate(d.getDate()
 // ══════════════════════════════════════════
 // 마감정산
 // ══════════════════════════════════════════
-async function syncSettleItemsFromDB(){
-  if(!currentStore) return;
-  const{data}=await sb.from('store_settings').select('settle_items_json').eq('store_id',currentStore.id).maybeSingle();
-  if(data?.settle_items_json){settleItems=data.settle_items_json;localStorage.setItem('pd_si_'+currentStore.id,JSON.stringify(settleItems));}
-}
-async function saveSettleItems(){
-  if(!guardStore()) return;
-  setLoad(true,'항목 저장 중...');
-  await sb.from('store_settings').upsert({store_id:currentStore.id,settle_items_json:settleItems},{onConflict:'store_id'});
-  localStorage.setItem('pd_si_'+currentStore.id,JSON.stringify(settleItems));
-  setLoad(false);alert('항목 저장 완료!');recalcSettle2();renderSettleItemConfig();
-}
-// ── 새 마감정산 로직 ──
+// ── 마감정산 로직 ──
 function onSInput(el){const raw=el.value.replace(/,/g,'');if(/^\d*$/.test(raw))el.value=raw?parseInt(raw).toLocaleString():'';recalcSettle2();}
 function gv(id){return unFmt(document.getElementById(id)?.value||'0');}
 
@@ -1965,29 +1919,6 @@ async function loadOpeningAmount(){
   }
   recalcSettle2();
 }
-function openAddSettleItem(idx=-1){
-  document.getElementById('settleItemSheetTitle').innerText=idx>=0?'항목 편집':'항목 추가';
-  document.getElementById('siEditIdx').value=idx;
-  document.getElementById('siNameInput').value=idx>=0?settleItems[idx].name:'';
-  const role=idx>=0?settleItems[idx].role:'';
-  document.getElementById('siRoleSelected').value=role;
-  ['plus','minus','check'].forEach(r=>{const btn=document.getElementById('roleBtn-'+r);btn.className='btn '+(r===role?'btn-primary':'btn-secondary');btn.style.cssText='flex:1;padding:12px;font-size:13px;';});
-  openSheet('settleItemSheet');
-}
-function selectSiRole(r){document.getElementById('siRoleSelected').value=r;['plus','minus','check'].forEach(x=>{document.getElementById('roleBtn-'+x).className='btn '+(x===r?'btn-primary':'btn-secondary');});}
-function confirmSettleItem(){
-  const name=document.getElementById('siNameInput').value.trim();const role=document.getElementById('siRoleSelected').value;
-  if(!name) return alert('항목명을 입력하세요.');if(!role) return alert('역할을 선택하세요.');
-  const idx=parseInt(document.getElementById('siEditIdx').value);
-  if(idx>=0)settleItems[idx]={...settleItems[idx],name,role};else settleItems.push({id:'s'+Date.now(),name,role});
-  closeAllSheets();recalcSettle2();renderSettleItemConfig();
-}
-function renderSettleItemConfig(){
-  const c=document.getElementById('settleItemConfig');if(!c)return;
-  const lbl=r=>r==='plus'?'수입 (+)':r==='minus'?'지출 (-)':'확인용';const cls=r=>r==='plus'?'badge-green':r==='minus'?'badge-red':'badge-blue';
-  c.innerHTML=settleItems.map((item,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="flex:1;font-size:14px;font-weight:600;">${item.name}</span><span class="badge ${cls(item.role)}">${lbl(item.role)}</span><button class="btn btn-secondary btn-sm" onclick="openAddSettleItem(${i})">편집</button><button class="btn btn-danger btn-sm" onclick="deleteSettleItem(${i})">삭제</button></div>`).join('');
-}
-function deleteSettleItem(i){if(!confirm(`'${settleItems[i].name}' 항목을 삭제할까요?`))return;settleItems.splice(i,1);recalcSettle2();renderSettleItemConfig();}
 function settleTab(tab,el){
   document.querySelectorAll('#settleCont .sub-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
   document.getElementById('settleInput').style.display=tab==='input'?'block':'none';
@@ -2567,7 +2498,7 @@ async function loadAllSettings(){
   // 특별수당
   await loadSpecialWages();
   // 정산 항목
-  renderSettleItemConfig();
+  // 정산 항목 설정 제거됨 (고정 구조로 변경)
   // 지출 카테고리
   await loadExpCategories();
   // 크롤러 설정 표시
@@ -3137,7 +3068,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   if(saved){
     const s=JSON.parse(saved);currentStore=s;
     document.getElementById('headerStore').innerText=s.name;
-    await Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),syncSettleItemsFromDB(),loadExpCategories()]);
+    await Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories(),loadExpCategories()]);
     recalcSettle2();
   }
 });
