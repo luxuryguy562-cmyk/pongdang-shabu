@@ -56,8 +56,8 @@
 | 규모 | 기준 | 경로 | 토큰 절약 |
 |------|------|------|-----------|
 | **소형** | 텍스트 수정, 색상 변경, 버그 1줄 수정 | planner → coder → deployer | reviewer/tester/designer 생략 |
-| **중형** | 기존 기능 개선, UI 추가, 쿼리 변경 | context_reader → planner → designer(UI있으면) → reviewer → coder → tester → deployer | 전체 경로 |
-| **대형** | 새 탭/모듈 추가, DB 스키마 변경 | context_reader → planner → designer → reviewer → **사장님 승인** → coder → tester → deployer | 전체 경로 + 승인 게이트 강화 |
+| **중형** | 기존 기능 개선, UI 추가, 쿼리 변경 | context_reader → advisor → planner → designer(UI있으면) → reviewer → coder → tester → deployer | 전체 경로 |
+| **대형** | 새 탭/모듈 추가, DB 스키마 변경 | context_reader → advisor → planner → designer → reviewer → **사장님 승인** → coder → tester → deployer | 전체 경로 + 승인 게이트 강화 |
 
 **규모 판단 기준:**
 - 변경 라인 10줄 이하 → 소형
@@ -78,25 +78,28 @@
   ① context_reader ─── 현황 보고서 작성
        │
        ▼
-  ② planner ────────── 계획서 작성
+  ② advisor ────────── 기술 추천 (더 좋은 방법 있으면 제안)
        │
-       ├─ UI 변경 있으면 ──→ ③ designer ── UI 설계 추가
+       ▼
+  ③ planner ────────── 계획서 작성 (advisor 추천 반영)
+       │
+       ├─ UI 변경 있으면 ──→ ④ designer ── UI 설계 추가
        │                          │
        ▼                          ▼
-  ④ reviewer ───────── 체크 (반려 가능 → ②로 복귀)
+  ⑤ reviewer ───────── 체크 (반려 가능 → ③으로 복귀)
        │
        ▼
   ⛔ 계획서 제출 ────── 사장님 확인 (여기서 멈춤)
        │
        │ "OK" 승인
        ▼
-  ⑤ coder ──────────── 코드 구현
+  ⑥ coder ──────────── 코드 구현
        │
        ▼
-  ⑥ tester ─────────── 검증 (실패 → ⑤로 반환)
+  ⑦ tester ─────────── 검증 (실패 → ⑥로 반환)
        │
        ▼
-  ⑦ deployer ──────── push & 배포 확인
+  ⑧ deployer ──────── push & 배포 확인
        │
        ▼
   사장님 결과 확인 🎉
@@ -291,6 +294,7 @@ pongdang-shabu/
 ├── CLAUDE.md              ← 헌법 (이 파일)
 ├── agents/
 │   ├── context_reader.md
+│   ├── advisor.md
 │   ├── planner.md
 │   ├── designer.md
 │   ├── reviewer.md
