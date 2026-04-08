@@ -921,6 +921,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </div>
       </div>
       <div id="explistBankData">
+        <!-- 엑셀 업로드 버튼 -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <label class="btn btn-purple" style="flex:1;padding:12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+            📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(this,'bank')">
+          </label>
+        </div>
         <div id="explistBankConnected" style="display:none;">
           <div style="display:flex;gap:6px;margin-bottom:12px;">
             <select id="explistBankAccSel" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" onchange="loadBankTransactions()">
@@ -960,6 +966,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </div>
       </div>
       <div id="explistCardData">
+        <!-- 엑셀 업로드 버튼 -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <label class="btn btn-purple" style="flex:1;padding:12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+            📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(this,'card')">
+          </label>
+        </div>
         <div id="explistCardConnected" style="display:none;">
           <div style="display:flex;gap:6px;margin-bottom:12px;">
             <select id="explistCardSel" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" onchange="loadCardTransactions()">
@@ -1146,6 +1158,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </select>
     <input id="mpMemo" class="input-field" placeholder="메모 (선택)" type="text">
     <button class="btn btn-primary btn-full" onclick="saveManualPayment()">저장</button>
+  </div>
+</div>
+
+<!-- 엑셀 업로드 결과 시트 -->
+<div class="sheet-overlay" id="excelUploadSheet" onclick="closeSheet('excelUploadSheet')">
+  <div class="sheet" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto;">
+    <div class="sheet-title" id="excelUploadTitle">엑셀 분석 결과</div>
+    <div id="excelUploadResult">
+      <div class="empty-state"><div class="empty-icon">📊</div><p>파일을 분석 중...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 확인 필요 건 리뷰 시트 -->
+<div class="sheet-overlay" id="excelReviewSheet" onclick="closeSheet('excelReviewSheet')">
+  <div class="sheet" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto;">
+    <div class="sheet-title">확인 필요 건</div>
+    <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">AI가 분류에 확신이 없는 건입니다. 확인 후 수정해주세요.</p>
+    <div id="excelReviewList"></div>
+    <button class="btn btn-primary btn-full" onclick="confirmReviewAndSave()">확인 완료 → 전체 저장</button>
   </div>
 </div>
 
@@ -1446,6 +1478,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <option value="마케팅">마케팅</option>
     <option value="세금">세금</option>
   </select>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <div style="flex:1;">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">자동이체 예정일</div>
+      <input id="fcExpectedDay" class="input-field" type="number" min="1" max="31" placeholder="예: 25 (매월 25일)" style="margin-bottom:0;">
+    </div>
+    <div style="flex:1;">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">유예일수</div>
+      <input id="fcToleranceDays" class="input-field" type="number" min="0" max="15" placeholder="3" value="3" style="margin-bottom:0;">
+    </div>
+  </div>
   <input type="hidden" id="editFcId">
   <div class="action-group">
     <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
@@ -2959,12 +3001,16 @@ function renderFcList(){
     </div>`).join(''):'<div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div>';
 }
 function openAddFcSheet(){if(!guardStore())return;document.getElementById('addFcTitle').innerText='고정비 추가';document.getElementById('fcNameInput').value='';document.getElementById('editFcId').value='';openSheet('addFcSheet');}
-function openEditFcSheet(id){const fc=fixedCosts.find(x=>x.id===id);if(!fc)return;document.getElementById('addFcTitle').innerText='고정비 편집';document.getElementById('fcNameInput').value=fc.name;document.getElementById('fcCatInput').value=fc.category||'고정비';document.getElementById('editFcId').value=fc.id;openSheet('addFcSheet');}
+function openEditFcSheet(id){const fc=fixedCosts.find(x=>x.id===id);if(!fc)return;document.getElementById('addFcTitle').innerText='고정비 편집';document.getElementById('fcNameInput').value=fc.name;document.getElementById('fcCatInput').value=fc.category||'고정비';document.getElementById('editFcId').value=fc.id;document.getElementById('fcExpectedDay').value=fc.expected_day||'';document.getElementById('fcToleranceDays').value=fc.tolerance_days||3;openSheet('addFcSheet');}
+function openAddFcSheet(){if(!guardStore())return;document.getElementById('addFcTitle').innerText='고정비 추가';document.getElementById('fcNameInput').value='';document.getElementById('fcCatInput').value='고정비';document.getElementById('editFcId').value='';document.getElementById('fcExpectedDay').value='';document.getElementById('fcToleranceDays').value='3';openSheet('addFcSheet');}
 async function saveFc(){
   if(!guardStore())return;const name=document.getElementById('fcNameInput').value.trim();if(!name)return toast('항목명을 입력하세요.','warn');
   const cat=document.getElementById('fcCatInput').value;const eid=document.getElementById('editFcId').value;
+  const expectedDay=parseInt(document.getElementById('fcExpectedDay').value)||null;
+  const toleranceDays=parseInt(document.getElementById('fcToleranceDays').value)||3;
   setLoad(true,'저장 중...');
-  const{error}=eid?await sb.from('fixed_costs').update({name,category:cat}).eq('id',eid):await sb.from('fixed_costs').insert({store_id:currentStore.id,name,category:cat,sort_order:fixedCosts.length});
+  const payload={name,category:cat,expected_day:expectedDay,tolerance_days:toleranceDays};
+  const{error}=eid?await sb.from('fixed_costs').update(payload).eq('id',eid):await sb.from('fixed_costs').insert({...payload,store_id:currentStore.id,sort_order:fixedCosts.length});
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadFixedCosts();
 }
 async function toggleFc(id,active){
@@ -3869,6 +3915,391 @@ async function checkIPForAttendance(){
   if(!ip) return {ok:false,ip:'',msg:'IP를 확인할 수 없습니다. 인터넷 연결을 확인하세요.'};
   if(ip===targetIP) return {ok:true,ip,msg:'매장 WiFi 확인됨'};
   return {ok:false,ip,msg:`매장 WiFi가 아닙니다.\n현재 IP: ${ip}\n매장 IP: ${targetIP}`};
+}
+
+// ══════════════════════════════════════════
+// 엑셀 업로드 + AI 분류
+// ══════════════════════════════════════════
+let excelParsedData=null;
+let excelUploadType='';
+
+const BANK_CLASSIFY_HINTS=`분류 규칙 (과거 학습 데이터):
+[매출 입금 패턴]
+- NH*, KB*, SHC*, 삼성200*, 741961*, 하나*, 롯데992*, 현321*, 우602* → 매출/카드결제
+- 개인이름 + 타행MB/타행FB/타행IB/OP이체/모바일 → 매출/송금결제
+- CD입금, *현금*, *현찰* → 매출/현금결제
+- 논산정산 → 매출/QR결제
+- 카카오페이정산, 토스_* → 매출/기타결제
+[물품대금]
+- 양두현*, 행복한정육*, *고기대금* → 물품대금/행복한정육점
+- *맛사랑*, 주식회사맛사랑 → 물품대금/맛사랑
+- 대봄야채* → 물품대금/대봄야채
+- *프레시원*, 씨제이프레시웨* → 물품대금/프레시원
+- (유)대명주류* → 물품대금/대명주류
+- 롯데칠성* → 물품대금/롯데칠성
+- 판다마라소스 → 물품대금/판다마라소스
+- 순창국제* → 물품대금/순창국제
+- 웰스토리* → 물품대금/웰스토리
+[인건비]
+- 급여*월* → 인건비 (소분류는 이름 뒤 직급 추정: 이송은→이송은, 탁성현→팀장)
+- 단기알바* → 인건비/단기알바
+- 직원복지*, 명절떡값* → 인건비/직원복지
+[고정비]
+- 한국전력공사 → 고정비/전기요금
+- 유림에퐁당 → 고정비/로열티
+- 코오롱정수기관 → 고정비/정수기
+- 본세무회계 → 고정비/세무기장료
+- 노무법인대유 → 고정비/노무기장료
+- DB손* → 고정비/화재보험
+- SK쉴더스* → 고정비/캡스
+- 비티원터치* → 고정비/테이블오더
+- KT073* → 고정비/매장인터넷
+- 한국캐피탈* → 고정비/음식물처리기
+- *월세*, 203호*, 204호* → 고정비/임대료
+- *관리비* → 고정비/관리비
+- 가스* → 고정비/가스요금
+- 세스코* → 고정비/세스코
+- 삼성ＯＡ → 고정비/프린터
+- 쿠팡와우* → 고정비/쿠팡와우멤버십
+[세금]
+- *부가*세*, 부가가치세* → 세금/부가가치세
+- *국민건강*, *건강보험* → 세금/건강보험
+- *국민연금* → 세금/연금보험
+- *고용보험* → 세금/고용보험
+- *산재보험* → 세금/산재보험
+- 등록면허세 → 세금/등록면허세
+[배당금]
+- 배당*탁병근 → 배당금/탁병근
+- 배당*김은성 → 배당금/김은성
+- 배당*탁성현 → 배당금/탁성현
+[카드대금 - 정산제외]
+- 롯데카드(주) → 카드대금/롯데카드
+- 신한카드* → 카드대금/신한카드
+[마케팅]
+- 논산맘정보통 → 마케팅/논산맘정보통
+- 이니시스-정기 → 마케팅/도도포인트
+[기타]
+- 쿠팡 (출금) → 식자재 또는 비품 (모호하면 기타/쿠팡)
+- *회식* 관련 음식점 → 기타/회식
+- *유지보수*, 수리, 교체 → 기타/유지보수
+- *간식* 관련 (카페, 치킨 등) → 기타/간식
+- 이송은 소액 입금 → 기타/기타 (어머님 개인결제 상계)
+
+특수 처리:
+1. 카드대금, 배당금, 개인결제(이송은 소액) → exclude_from_settlement: true
+2. 내용에 월 정보(XX월분, 202507 등) → attribution_month 추출, 출금월과 다르면 needs_review
+3. "정산체크제외"가 비고에 있으면 → exclude_from_settlement: true
+4. 분류 확신 낮으면 → confidence: "low", needs_review: true, review_reason 기재`;
+
+const CARD_CLASSIFY_HINTS=`분류 규칙 (과거 학습 데이터):
+[직구 - 직접구매, 품목별 분류는 영수증으로 별도]
+- 논산농협하나로마트* → 직구/직구상세
+- 쿠팡(쿠페이)*, 쿠팡(쿠페이)_쿠팡* → 직구/직구상세
+- 광성*탑마트, 광성(光成)탑마트 → 직구/직구상세
+- (주)다이소아성산업 → 직구/직구상세
+- 네이버파이낸셜㈜*_네이버 → 직구/직구상세
+- 에브리식자재마트* → 직구/직구상세
+- 홈플러스* → 직구/직구상세
+- 노브랜드* → 직구/직구상세
+- GS25* → 직구/직구상세
+- 나나약국 → 직구/직구상세
+- 인터넷상거래*주방아울렛 → 직구/직구상세
+- Temu.com* → 직구/직구상세
+[물품대금]
+- NICE(빌링)*(주)마켓보로 → 물품대금/맛사랑
+- 씨제이프레시웨이* → 물품대금/프레시원
+[고정비]
+- 에스케이쉴더스 → 고정비/캡스
+- DB손해보험 → 고정비/화재보험
+- KT인터넷*납부 → 고정비/매장인터넷
+- JB(주)(가스)* → 고정비/가스요금
+- 자동이체*코오롱정수* → 고정비/정수기
+- 유투브프리미엄*구글페이먼트* → 고정비/유튜브
+- (주)세스코 → 고정비/세스코
+- 효성에프엠에스* → 고정비/프린터
+- 쿠팡(와우*)* → 고정비/쿠팡와우멤버십
+[마케팅]
+- (주)이니시스(빌링)*주식회사플 → 마케팅/도도포인트
+[기타]
+- 버거킹*, 맘스터치*, 파리바게뜨*, 메가엠지씨*, 교촌*, 롯데리아* → 기타/간식
+- 함흥면옥, 취암반점, 아리랑*, 본죽*, 한솥도시락*, 또또꼬마김밥*, 써브웨이* → 기타/중식
+- 아주조명, 다수리철물* → 기타/유지보수
+- (주)이니시스*주식회사미 → 기타/기타 (구인공고)
+- 쿠팡(쿠페이) + "어머님","아버님","개인결제" 비고 → 기타/기타 (개인결제, exclude)
+
+특수 처리:
+1. 취소 건: 승인금액과 실청구 금액이 다르거나 취소 표시 → is_cancelled, 차감 금액 계산
+2. 부가세 분리 가능하면 supply_amount, vat_amount 저장
+3. 개인결제 → exclude_from_settlement: true
+4. 분류 확신 낮으면 → confidence: "low", needs_review: true`;
+
+async function handleExcelUpload(input, type){
+  if(!guardStore()||!input.files[0])return;
+  const file=input.files[0];
+  const ext=file.name.split('.').pop().toLowerCase();
+  excelUploadType=type;
+  setLoad(true,'엑셀 분석 중...');
+
+  try{
+    let csvText='';
+    if(['xlsx','xls'].includes(ext)){
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      csvText=XLSX.utils.sheet_to_csv(ws);
+    } else if(ext==='csv'){
+      csvText=await file.text();
+    } else {
+      toast('xlsx, xls, csv 파일만 지원됩니다.','warn');
+      setLoad(false);return;
+    }
+
+    // 최대 4000자 (Gemini 토큰 제한 고려)
+    const truncated=csvText.slice(0,8000);
+    const totalLines=csvText.split('\n').length-1;
+
+    const hints=type==='bank'?BANK_CLASSIFY_HINTS:CARD_CLASSIFY_HINTS;
+    const typeLabel=type==='bank'?'은행 계좌 입출금':'카드 결제';
+
+    const prompt=`다음은 ${typeLabel} 내역 엑셀 데이터(CSV)입니다.
+
+${hints}
+
+데이터:
+${truncated}
+
+위 데이터를 분석하여 JSON 배열로 변환해주세요.
+${type==='bank'?
+`필드: tx_date(YYYY-MM-DD), tx_time(HH:MM:SS), description(적요/내용), amount(입금은 양수, 출금은 음수), balance(잔액),
+category(대분류), sub_category(소분류), confidence(high/medium/low),
+needs_review(boolean), review_reason(사유 또는 null),
+exclude_from_settlement(boolean), attribution_month(YYYY-MM 또는 null)`
+:
+`필드: tx_date(YYYY-MM-DD), tx_time(HH:MM:SS), merchant_name(가맹점명), amount(결제금액, 음수로), supply_amount(공급가액), vat_amount(부가세),
+category(대분류), sub_category(소분류), confidence(high/medium/low),
+needs_review(boolean), review_reason(사유 또는 null),
+exclude_from_settlement(boolean), is_cancelled(boolean), original_amount(취소전 원금액 또는 null)`}
+
+순수 JSON 배열만 출력하세요.`;
+
+    const res=await fetch(GEMINI_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[{parts:[{text:prompt}]}],
+        generationConfig:{response_mime_type:'application/json'}
+      })
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    const parsed=JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim());
+
+    excelParsedData=parsed;
+    renderExcelPreview(parsed, type, totalLines);
+    openSheet('excelUploadSheet');
+  }catch(e){
+    toast('분석 실패: '+e.message,'error');
+  }finally{
+    setLoad(false);
+    input.value='';
+  }
+}
+
+function renderExcelPreview(items, type, totalLines){
+  const normal=items.filter(i=>!i.needs_review);
+  const review=items.filter(i=>i.needs_review);
+  const cancelled=items.filter(i=>i.is_cancelled);
+  const excluded=items.filter(i=>i.exclude_from_settlement);
+
+  // 중복 체크
+  const hashes=items.map(i=>{
+    const key=`${i.tx_date}|${i.tx_time||''}|${Math.abs(i.amount||0)}|${i.description||i.merchant_name||''}`;
+    return {hash:btoa(unescape(encodeURIComponent(key))).slice(0,32), item:i};
+  });
+
+  document.getElementById('excelUploadTitle').innerText=type==='bank'?'계좌내역 분석 결과':'카드내역 분석 결과';
+
+  let html=`
+    <div style="background:var(--success-light);border-radius:12px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:15px;font-weight:700;color:var(--success);margin-bottom:6px;">✅ ${items.length}건 분석 완료</div>
+      <div style="font-size:12px;color:var(--success);line-height:1.7;">
+        정상 분류: ${normal.length}건<br>
+        ${review.length>0?`⚠️ 확인 필요: ${review.length}건<br>`:''}
+        ${cancelled.length>0?`🔄 취소/환불: ${cancelled.length}건<br>`:''}
+        ${excluded.length>0?`🚫 정산 제외: ${excluded.length}건`:''}
+      </div>
+    </div>`;
+
+  // 미리보기 (최대 30건)
+  html+='<div style="max-height:350px;overflow-y:auto;">';
+  items.slice(0,30).forEach(i=>{
+    const isIn=(i.amount||0)>0;
+    const amt=Math.abs(i.amount||0);
+    const desc=i.description||i.merchant_name||'-';
+    const badge=i.needs_review?'<span class="badge badge-warn">확인</span>':
+                i.exclude_from_settlement?'<span class="badge badge-gray">제외</span>':
+                i.is_cancelled?'<span class="badge badge-red">취소</span>':'';
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:6px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${desc}</div>
+        <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">${i.tx_date} · ${i.category||'?'}/${i.sub_category||'?'} ${badge}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--${isIn?'success':'danger'});flex-shrink:0;margin-left:8px;">${isIn?'+':''}${fmt(i.amount||0)}원</div>
+    </div>`;
+  });
+  if(items.length>30) html+=`<div style="text-align:center;padding:10px;color:var(--gray-400);font-size:12px;">... 외 ${items.length-30}건</div>`;
+  html+='</div>';
+
+  // 버튼
+  if(review.length>0){
+    html+=`<button class="btn btn-warn btn-full" style="margin-top:8px;" onclick="openReviewItems()">⚠️ 확인 필요 ${review.length}건 검토하기</button>`;
+  }
+  html+=`<button class="btn btn-primary btn-full" onclick="saveExcelBatch()">📥 ${items.length}건 저장하기</button>`;
+
+  document.getElementById('excelUploadResult').innerHTML=html;
+}
+
+function openReviewItems(){
+  if(!excelParsedData)return;
+  const reviewItems=excelParsedData.filter(i=>i.needs_review);
+  let html='';
+  reviewItems.forEach((item,idx)=>{
+    const desc=item.description||item.merchant_name||'-';
+    const amt=Math.abs(item.amount||0);
+    const globalIdx=excelParsedData.indexOf(item);
+    html+=`<div style="background:var(--warn-light);border-radius:12px;padding:14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:14px;font-weight:700;">${desc}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--danger);">${fmt(item.amount||0)}원</div>
+      </div>
+      <div style="font-size:12px;color:var(--warn);margin-bottom:8px;">${item.review_reason||'분류 확신 낮음'}</div>
+      <div style="font-size:11px;color:var(--gray-600);margin-bottom:8px;">${item.tx_date} ${item.tx_time||''}</div>
+      <div style="display:flex;gap:6px;">
+        <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvCat${globalIdx}" onchange="updateReviewItem(${globalIdx})">
+          <option value="${item.category||''}">${item.category||'선택'}/${item.sub_category||'?'}</option>
+          <option value="물품대금">물품대금</option>
+          <option value="인건비">인건비</option>
+          <option value="고정비">고정비</option>
+          <option value="식자재">식자재</option>
+          <option value="비품">비품</option>
+          <option value="직구">직구</option>
+          <option value="기타">기타</option>
+          <option value="매출">매출</option>
+          <option value="세금">세금</option>
+          <option value="마케팅">마케팅</option>
+          <option value="카드대금">카드대금</option>
+          <option value="배당금">배당금</option>
+        </select>
+        <input class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" placeholder="소분류" id="rvSub${globalIdx}" value="${item.sub_category||''}">
+      </div>
+      ${item.attribution_month?`<div style="margin-top:6px;font-size:11px;color:var(--blue);">귀속월: ${item.attribution_month}</div>`:''}
+    </div>`;
+  });
+  document.getElementById('excelReviewList').innerHTML=html;
+  openSheet('excelReviewSheet');
+}
+
+function updateReviewItem(idx){
+  if(!excelParsedData||!excelParsedData[idx])return;
+  const cat=document.getElementById('rvCat'+idx)?.value;
+  const sub=document.getElementById('rvSub'+idx)?.value;
+  if(cat)excelParsedData[idx].category=cat;
+  if(sub)excelParsedData[idx].sub_category=sub;
+  excelParsedData[idx].needs_review=false;
+  excelParsedData[idx].confidence='high';
+}
+
+function confirmReviewAndSave(){
+  // 리뷰 건들 업데이트
+  if(excelParsedData){
+    excelParsedData.filter(i=>i.needs_review).forEach((item,_)=>{
+      const idx=excelParsedData.indexOf(item);
+      const cat=document.getElementById('rvCat'+idx)?.value;
+      const sub=document.getElementById('rvSub'+idx)?.value;
+      if(cat)item.category=cat;
+      if(sub)item.sub_category=sub;
+      item.needs_review=false;
+    });
+  }
+  closeSheet('excelReviewSheet');
+  saveExcelBatch();
+}
+
+async function saveExcelBatch(){
+  if(!guardStore()||!excelParsedData||!excelParsedData.length)return;
+  setLoad(true,`${excelParsedData.length}건 저장 중...`);
+
+  const batchId=new Date().toISOString().replace(/[-:T]/g,'').slice(0,14)+'_'+Math.random().toString(36).slice(2,8);
+  const type=excelUploadType;
+
+  try{
+    // 중복 체크용 해시 생성
+    const rows=excelParsedData.map(item=>{
+      const hashSrc=`${item.tx_date}|${item.tx_time||''}|${Math.abs(item.amount||0)}|${item.description||item.merchant_name||''}`;
+      const txHash=btoa(unescape(encodeURIComponent(hashSrc))).slice(0,40);
+
+      return {
+        store_id:currentStore.id,
+        tx_type:type,
+        tx_date:item.tx_date,
+        tx_time:item.tx_time||null,
+        description:type==='bank'?(item.description||null):null,
+        merchant_name:type==='card'?(item.merchant_name||null):null,
+        amount:item.amount||0,
+        balance:item.balance||null,
+        source:'excel_'+type,
+        sub_category:item.sub_category||null,
+        confidence:item.confidence||'high',
+        needs_review:item.needs_review||false,
+        review_reason:item.review_reason||null,
+        exclude_from_settlement:item.exclude_from_settlement||false,
+        attribution_month:item.attribution_month||null,
+        supply_amount:item.supply_amount||null,
+        vat_amount:item.vat_amount||null,
+        raw_description:item.description||item.merchant_name||null,
+        upload_batch_id:batchId,
+        tx_hash:txHash,
+        is_cancelled:item.is_cancelled||false,
+        original_amount:item.original_amount||null,
+        raw_data:item
+      };
+    });
+
+    // 중복 체크: 기존 해시와 비교
+    const hashes=rows.map(r=>r.tx_hash);
+    const{data:existing}=await sb.from('mydata_transactions').select('tx_hash').eq('store_id',currentStore.id).in('tx_hash',hashes.slice(0,100));
+    const existingSet=new Set((existing||[]).map(e=>e.tx_hash));
+    const newRows=rows.filter(r=>!existingSet.has(r.tx_hash));
+    const dupCount=rows.length-newRows.length;
+
+    if(newRows.length===0){
+      toast('모든 건이 이미 업로드되어 있습니다.','warn');
+      setLoad(false);return;
+    }
+
+    // 50건씩 나눠서 저장 (Supabase 제한)
+    for(let i=0;i<newRows.length;i+=50){
+      const chunk=newRows.slice(i,i+50);
+      const{error}=await sb.from('mydata_transactions').insert(chunk);
+      if(error)throw error;
+    }
+
+    let msg=`${newRows.length}건 저장 완료!`;
+    if(dupCount>0) msg+=` (중복 ${dupCount}건 제외)`;
+    toast(msg,'success');
+
+    closeSheet('excelUploadSheet');
+    excelParsedData=null;
+
+    // 리스트 새로고침
+    if(type==='bank') loadBankTransactions();
+    else loadCardTransactions();
+
+  }catch(e){
+    toast('저장 실패: '+(e.message||e),'error');
+  }finally{
+    setLoad(false);
+  }
 }
 
 // ══════════════════════════════════════════
