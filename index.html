@@ -93,25 +93,32 @@ tr.row-off{opacity:.35;filter:grayscale(1);}
 td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 .add-row-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-weight:700;font-size:13px;cursor:pointer;background:var(--blue-light);border-radius:10px;margin:8px 0;}
 
-/* ─ 마감정산 */
-.si-role{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
-.si-role.plus{background:#dcfce7;color:#16a34a;}
-.si-role.minus{background:#fee2e2;color:#dc2626;}
-.si-role.check{background:#dbeafe;color:#2563eb;}
-.settle-item{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:7px;}
-.settle-item .si-label{flex:1;font-size:13px;font-weight:600;}
-.settle-item .si-input{width:100px;border:none;background:#fff;border-radius:9px;padding:7px 9px;font-size:13px;font-weight:700;text-align:right;outline:none;}
-.settle-result{background:var(--blue-light);border-radius:14px;padding:16px;margin-top:4px;}
-.sr-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;}
-.sr-row .sr-label{font-size:13px;color:var(--gray-600);font-weight:600;}
-.sr-row .sr-val{font-size:15px;font-weight:800;color:var(--blue);}
+/* ─ 마감정산 (토스 스타일) */
+.settle-item{display:flex;align-items:center;padding:0;border-bottom:1px solid var(--gray-100);margin:0;}
+.settle-item:last-child{border-bottom:none;}
+.settle-item .si-icon{font-size:18px;width:36px;text-align:center;flex-shrink:0;}
+.settle-item .si-label{flex:1;font-size:14px;font-weight:500;color:var(--text);padding:16px 0;}
+.settle-item .s-input{border:none;background:transparent;font-size:18px;font-weight:700;text-align:right;outline:none;color:var(--text);width:130px;padding:16px 0;}
+.settle-item .s-input::placeholder{color:var(--gray-400);font-weight:400;}
+.settle-item .s-input:focus{color:var(--blue);}
+.settle-card-group{background:var(--white);border-radius:18px;padding:4px 16px;margin-bottom:12px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
+.settle-card-group .card-title{font-size:16px;font-weight:800;padding:16px 0 4px;margin:0;}
+.settle-card-group .card-sub{font-size:12px;color:var(--gray-400);margin:0 0 8px;padding:0;}
+.settle-summary{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-top:1px solid var(--gray-200);margin-top:4px;}
+.settle-summary .ss-label{font-size:14px;font-weight:700;color:var(--blue);}
+.settle-summary .ss-val{font-size:20px;font-weight:800;color:var(--blue);}
+.settle-result{background:var(--white);border-radius:18px;padding:20px;margin-top:0;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
+.sr-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100);}
+.sr-row:last-child{border-bottom:none;}
+.sr-row .sr-label{font-size:14px;color:var(--gray-600);font-weight:500;}
+.sr-row .sr-val{font-size:18px;font-weight:800;color:var(--text);}
 .sr-row.diff-ok .sr-val{color:var(--success);}
 .sr-row.diff-bad .sr-val{color:var(--danger);}
 .add-item-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;background:var(--blue-light);border-radius:11px;margin-bottom:8px;}
-.vault-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.vault-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--gray-100);border-radius:11px;}
+.vault-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.vault-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;}
 .vault-item label{font-size:13px;font-weight:600;color:var(--gray-600);}
-.vault-item input{width:55px;border:none;background:transparent;font-size:14px;font-weight:700;text-align:right;outline:none;}
+.vault-item input{width:50px;border:none;background:transparent;font-size:16px;font-weight:700;text-align:right;outline:none;color:var(--text);}
 
 /* ─ 정산 리스트/카드 */
 .settle-list-item{background:var(--gray-100);border-radius:13px;padding:13px 15px;margin-bottom:8px;cursor:pointer;}
@@ -171,18 +178,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .fixedcost-item.inactive{opacity:.4;}
 
 /* ─ 정산/검수 */
-.recon-row{display:flex;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:7px;gap:8px;cursor:pointer;}
+.recon-row{display:flex;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:7px;gap:6px;cursor:pointer;}
 .recon-row:active{opacity:.7;}
-.recon-row .rr-name{flex:1;font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.recon-row .rr-amt{font-size:12px;font-weight:700;text-align:right;min-width:65px;}
-.recon-row .rr-diff{font-size:12px;font-weight:700;min-width:55px;text-align:right;}
+.recon-row .rr-name{flex:2;font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.recon-row .rr-amt{flex:1.2;font-size:11px;font-weight:700;text-align:right;}
+.recon-row .rr-diff{flex:1;font-size:11px;font-weight:700;text-align:right;}
 .recon-row .rr-badge{flex-shrink:0;}
 .recon-total{display:flex;justify-content:space-between;align-items:center;padding:14px;border-top:2px solid var(--text);margin-top:8px;}
 .recon-total .rt-label{font-size:14px;font-weight:800;}
 .recon-total .rt-vals{text-align:right;}
 .recon-total .rt-val{font-size:14px;font-weight:800;}
-.recon-header{display:flex;padding:0 14px 8px;gap:8px;font-size:11px;font-weight:700;color:var(--gray-400);}
-.recon-header span:first-child{flex:1;}
+.recon-header{display:flex;padding:0 14px 8px;gap:6px;font-size:11px;font-weight:700;color:var(--gray-400);}
+.recon-header span:first-child{flex:2;}
 
 /* ─ 근무계획 간트 */
 .gantt-header{display:flex;border-bottom:2px solid var(--gray-200);}
@@ -599,25 +606,24 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="sub-tab" onclick="settleTab('card',this)">일별 카드</button>
   </div>
   <div id="settleInput">
-    <!-- 영업개시보고서 (전일 마감금액 자동) -->
-    <div class="card">
+    <!-- 영업개시보고서 -->
+    <div class="settle-card-group">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="card-title" style="margin-bottom:0;">영업개시 보고서</div>
+        <div class="card-title">영업개시</div>
         <span style="font-size:11px;color:var(--gray-400);" id="openingStatus">전일 마감금액</span>
       </div>
-      <div class="settle-item" style="margin-top:12px;">
-        <span class="si-role check" style="font-size:10px;">전</span>
-        <span class="si-label">전일 이월금</span>
+      <div class="settle-item">
+        <span class="si-icon">💰</span><span class="si-label">전일 이월금</span>
         <input type="text" class="s-input" id="siOpening" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()">
       </div>
     </div>
 
-    <!-- ① POS 마감 사진 촬영 -->
-    <div class="card">
+    <!-- POS 마감 사진 -->
+    <div class="settle-card-group">
       <div class="card-title">POS 마감 장표</div>
-      <p style="font-size:11px;color:var(--gray-400);margin:-8px 0 12px;">사진을 찍으면 AI가 자동으로 매출을 인식합니다</p>
+      <p class="card-sub">사진을 찍으면 AI가 자동으로 매출을 인식합니다</p>
       <img id="posPreview" style="width:100%;display:none;border-radius:12px;margin-bottom:12px;">
-      <div id="posUploadGroup" class="action-group" style="margin-top:0;">
+      <div id="posUploadGroup" class="action-group" style="margin-top:0;padding-bottom:12px;">
         <label class="btn btn-primary" style="flex:1;padding:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
           📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePosImg(this)">
         </label>
@@ -625,63 +631,64 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           🖼 업로드<input type="file" accept="image/*" style="display:none" onchange="handlePosImg(this)">
         </label>
       </div>
-      <div id="posAiGroup" style="display:none;" class="action-group">
+      <div id="posAiGroup" style="display:none;" class="action-group" style="padding-bottom:12px;">
         <button class="btn btn-primary" style="flex:4;padding:14px;font-size:13px;" onclick="runPosAI()">✨ AI 인식</button>
         <button class="btn btn-secondary" style="flex:1;padding:14px;" onclick="resetPosImg()">취소</button>
       </div>
     </div>
 
-    <!-- ② 매출확인 (POS 장표 기준) -->
-    <div class="card">
-      <div class="card-title">오늘의 매출은 얼마인가요?</div>
-      <p style="font-size:11px;color:var(--gray-400);margin:-8px 0 12px;">포스기 장표를 직접 입력하거나, 위에서 사진으로 인식하세요</p>
-      <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-role plus">₩</span><span class="si-label">기타결제</span><input type="text" class="s-input" id="siPosEtc" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--blue-light);border-radius:10px;margin-top:8px;">
-        <span style="font-size:13px;font-weight:700;color:var(--blue);">매출 합계</span>
-        <span style="font-size:15px;font-weight:800;color:var(--blue);" id="calcSalesTotal">0원</span>
+    <!-- 매출 입력 -->
+    <div class="settle-card-group">
+      <div class="card-title">매출</div>
+      <p class="card-sub">포스기 장표 기준으로 입력하세요</p>
+      <div class="settle-item"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">🧾</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">💳</span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">📲</span><span class="si-label">기타결제</span><input type="text" class="s-input" id="siPosEtc" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-summary">
+        <span class="ss-label">매출 합계</span>
+        <span class="ss-val" id="calcSalesTotal">0원</span>
       </div>
     </div>
 
-    <!-- ② 현금 상세내역 + 실시간 검증 -->
-    <div class="card">
-      <div class="card-title">현금 상세내역을 적어주세요</div>
-      <p style="font-size:11px;color:var(--gray-400);margin:-8px 0 12px;">실제로 받은 현금이 어떤 방식인지 구분</p>
-      <div class="settle-item"><span class="si-role plus">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-role plus">📱</span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-role plus">🏦</span><span class="si-label">계좌이체</span><input type="text" class="s-input" id="siCashTransfer" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div id="cashVerify" style="padding:10px 14px;border-radius:10px;margin-top:8px;background:var(--gray-100);">
+    <!-- 현금 상세 -->
+    <div class="settle-card-group">
+      <div class="card-title">현금 상세</div>
+      <p class="card-sub">실제 받은 현금의 방식을 구분해주세요</p>
+      <div class="settle-item"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">📱</span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">🏦</span><span class="si-label">계좌이체</span><input type="text" class="s-input" id="siCashTransfer" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div id="cashVerify" style="padding:12px 0;border-top:1px solid var(--gray-200);margin-top:4px;">
         <div style="display:flex;justify-content:space-between;font-size:12px;">
           <span style="color:var(--gray-600);">POS (현금+현금영수증)</span><span style="font-weight:700;" id="cvPosSum">0원</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;">
           <span style="color:var(--gray-600);">상세 (현금+QR+이체)</span><span style="font-weight:700;" id="cvDetailSum">0원</span>
         </div>
-        <div style="text-align:center;margin-top:6px;font-size:13px;font-weight:800;" id="cvResult">-</div>
+        <div style="text-align:center;margin-top:8px;font-size:13px;font-weight:800;" id="cvResult">-</div>
       </div>
     </div>
 
-    <!-- ③ 기타매출 -->
-    <div class="card">
-      <div class="card-title">기타매출은 얼마인가요?</div>
-      <div class="settle-item"><span class="si-role plus">🎰</span><span class="si-label">뽑기(대형)</span><input type="text" class="s-input" id="siDrawLarge" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-role plus">🎲</span><span class="si-label">뽑기(소형)</span><input type="text" class="s-input" id="siDrawSmall" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+    <!-- 기타매출 -->
+    <div class="settle-card-group">
+      <div class="card-title">기타매출</div>
+      <div class="settle-item"><span class="si-icon">🎰</span><span class="si-label">뽑기(대형)</span><input type="text" class="s-input" id="siDrawLarge" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">🎲</span><span class="si-label">뽑기(소형)</span><input type="text" class="s-input" id="siDrawSmall" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
     </div>
 
-    <!-- ④ 차감 사유 -->
-    <div class="card">
-      <div class="card-title">돈이 비는 사유는 어떻게 되나요?</div>
-      <div class="settle-item"><span class="si-role minus">-</span><span class="si-label">기타사용</span><input type="text" class="s-input" id="siDeductEtc" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-role minus">-</span><span class="si-label">통장입금</span><input type="text" class="s-input" id="siDeductBank" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+    <!-- 차감 -->
+    <div class="settle-card-group">
+      <div class="card-title">차감</div>
+      <p class="card-sub">금고에서 빠진 금액을 입력하세요</p>
+      <div class="settle-item"><span class="si-icon">📤</span><span class="si-label">기타사용</span><input type="text" class="s-input" id="siDeductEtc" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">🏧</span><span class="si-label">통장입금</span><input type="text" class="s-input" id="siDeductBank" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
     </div>
 
-    <!-- ⑤ 금고 계수 -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0;">금고 계수</div>
-        <span id="vaultTotal" style="font-size:17px;font-weight:800;color:var(--blue);">0원</span>
+    <!-- 금고 계수 -->
+    <div class="settle-card-group">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title">금고 계수</div>
+        <span id="vaultTotal" style="font-size:20px;font-weight:800;color:var(--blue);">0원</span>
       </div>
       <div class="vault-grid">
         <div class="vault-item"><label>50,000원</label><input type="number" data-unit="50000" class="v-input" placeholder="0"></div>
@@ -696,14 +703,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
 
     <!-- 결과 -->
-    <div class="card">
-      <div class="settle-result">
-        <div class="sr-row"><span class="sr-label">장부 합계</span><span class="sr-val" id="calcBook">0원</span></div>
-        <div class="sr-row"><span class="sr-label">금고 합계</span><span class="sr-val" id="calcVault">0원</span></div>
-        <div class="sr-row" id="diffRow"><span class="sr-label">차액</span><span class="sr-val" id="calcDiff">-</span></div>
-      </div>
+    <div class="settle-result">
+      <div class="sr-row"><span class="sr-label">장부 합계</span><span class="sr-val" id="calcBook">0원</span></div>
+      <div class="sr-row"><span class="sr-label">금고 합계</span><span class="sr-val" id="calcVault">0원</span></div>
+      <div class="sr-row" id="diffRow"><span class="sr-label">차액</span><span class="sr-val" id="calcDiff">-</span></div>
     </div>
-    <button class="btn btn-primary btn-full" style="margin-top:0;" onclick="finishSettlement2()">📋 마감 저장하기</button>
+    <button class="btn btn-primary btn-full" style="margin-top:8px;border-radius:16px;padding:18px;font-size:16px;" onclick="finishSettlement2()">마감 저장하기</button>
   </div>
   <div id="settleList" style="display:none;">
     <div class="card"><div class="card-title">정산 기록</div><div id="settleListData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div></div>
