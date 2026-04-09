@@ -3718,10 +3718,22 @@ async function calcExpenseByCategories(ym){
       } else if(cat.data_source==='manual'){
         const{data}=await sb.from('expense_category_amounts').select('amount').eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
         amount=data?.amount||0;
-      } else if(cat.data_source==='mydata'){
-        // mydata_transactions에서 category_id로 집계 (출금만, 정산제외 제외)
-        const{data}=await sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('exclude_from_settlement',false).gte('tx_date',start).lte('tx_date',end);
-        amount=(data||[]).reduce((a,r)=>a+Math.abs(r.amount||0),0);
+      }
+
+      // ─── mydata 보조: 기록 소스에 데이터 없으면 mydata_transactions로 보충 ───
+      // attribution_month(귀속월) 우선, 없으면 tx_date 기준
+      if(amount===0&&!isConfirmed){
+        const{data:mdByAttr}=await sb.from('mydata_transactions').select('amount')
+          .eq('store_id',sid).eq('category_id',cat.id)
+          .eq('exclude_from_settlement',false)
+          .eq('attribution_month',ym);
+        const{data:mdByDate}=await sb.from('mydata_transactions').select('amount')
+          .eq('store_id',sid).eq('category_id',cat.id)
+          .eq('exclude_from_settlement',false)
+          .is('attribution_month',null)
+          .gte('tx_date',start).lte('tx_date',end);
+        const mdTotal=[...(mdByAttr||[]),...(mdByDate||[])].reduce((a,r)=>a+Math.abs(r.amount||0),0);
+        if(mdTotal>0) amount=mdTotal;
       }
     }catch(e){console.error('지출 계산 오류('+cat.name+'):',e);}
     return{id:cat.id,name:cat.name,color:cat.color||'#0050FF',source:cat.data_source,amount,isConfirmed};
@@ -4196,16 +4208,38 @@ const CARD_RULES=[
   {p:/(아주조명|다수리철물)/,cat:'기타',sub:'유지보수'}
 ];
 
-// 적요로 분류
+// 적요로 분류 + 귀속월 자동 추출
 function classifyByKeyword(desc, type){
-  if(!desc) return {category:'미분류',sub_category:'',confidence:'low',needs_review:true,review_reason:'적요 없음',exclude_from_settlement:false};
+  if(!desc) return {category:'미분류',sub_category:'',confidence:'low',needs_review:true,review_reason:'적요 없음',exclude_from_settlement:false,attribution_month:null};
   const rules=type==='bank'?BANK_RULES:CARD_RULES;
+  let result=null;
   for(const r of rules){
     if(r.p.test(desc)){
-      return {category:r.cat,sub_category:r.sub,confidence:'high',needs_review:false,review_reason:null,exclude_from_settlement:!!r.exclude};
+      result={category:r.cat,sub_category:r.sub,confidence:'high',needs_review:false,review_reason:null,exclude_from_settlement:!!r.exclude};
+      break;
     }
   }
-  return {category:'미분류',sub_category:'',confidence:'low',needs_review:true,review_reason:'자동 분류 실패',exclude_from_settlement:false};
+  if(!result) result={category:'미분류',sub_category:'',confidence:'low',needs_review:true,review_reason:'자동 분류 실패',exclude_from_settlement:false};
+
+  // ─── 귀속월 자동 추출 ───
+  // "급여03월", "배당03월", "04월월세", "03월관리비" 등에서 월 추출
+  result.attribution_month=null;
+  const mMatch=desc.match(/(\d{2})월/);
+  if(mMatch){
+    const mon=parseInt(mMatch[1]);
+    if(mon>=1&&mon<=12){
+      // 올해 기준 귀속월 (연도는 현재 연도 사용)
+      const curYear=new Date().getFullYear();
+      result.attribution_month=`${curYear}-${String(mon).padStart(2,'0')}`;
+    }
+  }
+  // "202603" 같은 패턴
+  const ymMatch=desc.match(/(20\d{2})(\d{2})/);
+  if(ymMatch&&!result.attribution_month){
+    const yr=parseInt(ymMatch[1]),mo=parseInt(ymMatch[2]);
+    if(mo>=1&&mo<=12) result.attribution_month=`${yr}-${String(mo).padStart(2,'0')}`;
+  }
+  return result;
 }
 
 // ─── 엑셀 파싱 공통: 파일 → rows 배열 ───
