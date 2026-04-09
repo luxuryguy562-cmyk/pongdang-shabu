@@ -639,7 +639,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
     <!-- 매출 입력 -->
     <div class="settle-card-group">
-      <div class="card-title">매출</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title" style="margin-bottom:0;">매출</div>
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer;font-size:11px;padding:6px 10px;">
+          📎 엑셀<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleSalesUpload(this)">
+        </label>
+      </div>
       <p class="card-sub">포스기 장표 기준으로 입력하세요</p>
       <div class="settle-item"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
       <div class="settle-item"><span class="si-icon">🧾</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
@@ -2448,6 +2453,56 @@ async function runPosAI(){
 }
 function gv(id){return unFmt(document.getElementById(id)?.value||'0');}
 
+// ─── 매출 엑셀 업로드 ───
+async function handleSalesUpload(input){
+  if(!guardStore()||!input.files[0])return;
+  setLoad(true,'매출 엑셀 분석 중...');
+  try{
+    const rows=await parseExcelFile(input.files[0]);
+    if(!rows.length) throw new Error('데이터가 없습니다.');
+    const headers=Object.keys(rows[0]);
+    const colMap=matchColumns(headers,'sales');
+
+    // 날짜 컬럼 있으면 오늘 날짜와 일치하는 행 찾기, 없으면 첫 행 사용
+    let targetRow=rows[0];
+    const today=new Date().toISOString().split('T')[0];
+    if(colMap.settle_date!=null){
+      const todayRow=rows.find(row=>{
+        const vals=Object.values(row);
+        return parseDate(String(vals[colMap.settle_date]||''))===today;
+      });
+      if(todayRow) targetRow=todayRow;
+      else {
+        // 가장 최근 날짜 행 사용
+        const sorted=[...rows].sort((a,b)=>{
+          const da=parseDate(String(Object.values(a)[colMap.settle_date]||''))||'';
+          const db=parseDate(String(Object.values(b)[colMap.settle_date]||''))||'';
+          return db.localeCompare(da);
+        });
+        targetRow=sorted[0];
+      }
+    }
+
+    const vals=Object.values(targetRow);
+    const getVal=idx=>idx!=null?parseNum(String(vals[idx]||'')):0;
+    const fill=(id,val)=>{const el=document.getElementById(id);if(el&&val)el.value=parseInt(val).toLocaleString();};
+
+    // 매출 필드 채우기
+    fill('siPosCash',getVal(colMap.pos_cash));
+    fill('siPosCashReceipt',getVal(colMap.pos_cash_receipt));
+    fill('siPosCard',getVal(colMap.pos_card));
+    fill('siPosEtc',getVal(colMap.pos_etc));
+    fill('siDrawLarge',getVal(colMap.draw_large));
+    fill('siDrawSmall',getVal(colMap.draw_small));
+    recalcSettle2();
+
+    const dateStr=colMap.settle_date!=null?parseDate(String(vals[colMap.settle_date]||''))||'':'';
+    toast(`매출 데이터 입력 완료!${dateStr?' ('+dateStr+')':''}`,'success');
+  }catch(e){
+    toast('매출 엑셀 실패: '+e.message,'error');
+  }finally{setLoad(false);input.value='';}
+}
+
 function recalcSettle2(){
   const opening=gv('siOpening');
   const posCash=gv('siPosCash'), posCR=gv('siPosCashReceipt'), posCard=gv('siPosCard'), posEtc=gv('siPosEtc');
@@ -2956,27 +3011,35 @@ async function saveOrder(){
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();loadVendorOrders();
 }
 
-// 거래처 파일 업로드 + AI 파싱
+// 거래처 파일 업로드 (컬럼 매칭)
 async function handleVendorUpload(input){
   if(!guardStore()||!input.files[0])return;
   const vendorId=document.getElementById('uploadVendorSel').value;if(!vendorId)return toast('거래처를 먼저 선택하세요.','warn');
   const file=input.files[0];const ext=file.name.split('.').pop().toLowerCase();
+  if(!['xlsx','xls','csv'].includes(ext)) return toast('xlsx, xls, csv 파일만 지원됩니다.','warn');
   setLoad(true,'파일 분석 중...');
   try{
-    let text='';
-    if(['xlsx','xls'].includes(ext)){
-      const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];text=XLSX.utils.sheet_to_csv(ws);
-    } else if(ext==='csv'){
-      text=await file.text();
-    } else {
-      // PDF나 이미지 → base64로 AI에 전달
-      const fr=new FileReader();
-      text=await new Promise(res=>{fr.onload=e=>{res(e.target.result.split(',')[1]);};fr.readAsDataURL(file);});
-    }
-    const vendor=vendors.find(v=>v.id===vendorId);
-    const prompt=`다음은 거래처 '${vendor?.name||''}' 주문/거래내역입니다. 각 항목을 JSON 배열로 변환해줘. 필드: order_date(YYYY-MM-DD), item(품목명), amount(총금액 숫자), quantity(수량 숫자 또는 null), memo(비고). 순수 JSON만 출력:\n\n${text.slice(0,3000)}`;
-    const list=await callGemini([{text:prompt}]);
+    const rows=await parseExcelFile(file);
+    if(!rows.length) throw new Error('데이터가 없습니다.');
+    const headers=Object.keys(rows[0]);
+    const colMap=matchColumns(headers,'vendor');
+    if(!colMap.amount) throw new Error('금액 컬럼을 찾을 수 없습니다. (금액, 합계 등)');
+
+    const list=rows.map(row=>{
+      const vals=Object.values(row);
+      const getVal=idx=>idx!=null?String(vals[idx]||'').trim():'';
+      const amount=parseNum(getVal(colMap.amount));
+      if(!amount) return null;
+      return {
+        order_date:parseDate(getVal(colMap.order_date))||new Date().toISOString().split('T')[0],
+        item:getVal(colMap.item)||null,
+        amount,
+        quantity:colMap.quantity!=null?parseNum(getVal(colMap.quantity))||null:null,
+        memo:getVal(colMap.memo)||null
+      };
+    }).filter(Boolean);
+
+    if(!list.length) throw new Error('유효한 거래 내역이 없습니다.');
     // 전역변수에 저장 (XSS 방지)
     window._vendorUploadList=list;
     window._vendorUploadVendorId=vendorId;
@@ -2989,7 +3052,7 @@ async function handleVendorUpload(input){
         ${list.slice(0,20).map(r=>`<div style="background:var(--gray-100);border-radius:10px;padding:10px 12px;margin-bottom:7px;display:flex;justify-content:space-between;"><div><div style="font-size:13px;font-weight:600;">${r.item||'-'}</div><div style="font-size:11px;color:var(--gray-600);">${r.order_date}</div></div><span style="font-size:13px;font-weight:700;">${fmt(r.amount)}원</span></div>`).join('')}
       </div>
       <button class="btn btn-primary btn-full" onclick="saveVendorUpload(window._vendorUploadList, window._vendorUploadVendorId)">📥 ${list.length}건 저장하기</button>`;
-  }catch(e){toast('파싱 실패: '+e.message,'error');}finally{setLoad(false);}
+  }catch(e){toast('파싱 실패: '+e.message,'error');}finally{setLoad(false);input.value='';}
 }
 async function saveVendorUpload(list, vendorId){
   if(!guardStore())return;setLoad(true,'저장 중...');
@@ -3940,174 +4003,289 @@ async function checkIPForAttendance(){
 }
 
 // ══════════════════════════════════════════
-// 엑셀 업로드 + AI 분류
+// 엑셀 업로드 + 컬럼 매칭 분류
 // ══════════════════════════════════════════
 let excelParsedData=null;
 let excelUploadType='';
 
-const BANK_CLASSIFY_HINTS=`분류 규칙 (과거 학습 데이터):
-[매출 입금 패턴]
-- NH*, KB*, SHC*, 삼성200*, 741961*, 하나*, 롯데992*, 현321*, 우602* → 매출/카드결제
-- 개인이름 + 타행MB/타행FB/타행IB/OP이체/모바일 → 매출/송금결제
-- CD입금, *현금*, *현찰* → 매출/현금결제
-- 논산정산 → 매출/QR결제
-- 카카오페이정산, 토스_* → 매출/기타결제
-[물품대금]
-- 양두현*, 행복한정육*, *고기대금* → 물품대금/행복한정육점
-- *맛사랑*, 주식회사맛사랑 → 물품대금/맛사랑
-- 대봄야채* → 물품대금/대봄야채
-- *프레시원*, 씨제이프레시웨* → 물품대금/프레시원
-- (유)대명주류* → 물품대금/대명주류
-- 롯데칠성* → 물품대금/롯데칠성
-- 판다마라소스 → 물품대금/판다마라소스
-- 순창국제* → 물품대금/순창국제
-- 웰스토리* → 물품대금/웰스토리
-[인건비]
-- 급여*월* → 인건비 (소분류는 이름 뒤 직급 추정: 이송은→이송은, 탁성현→팀장)
-- 단기알바* → 인건비/단기알바
-- 직원복지*, 명절떡값* → 인건비/직원복지
-[고정비]
-- 한국전력공사 → 고정비/전기요금
-- 유림에퐁당 → 고정비/로열티
-- 코오롱정수기관 → 고정비/정수기
-- 본세무회계 → 고정비/세무기장료
-- 노무법인대유 → 고정비/노무기장료
-- DB손* → 고정비/화재보험
-- SK쉴더스* → 고정비/캡스
-- 비티원터치* → 고정비/테이블오더
-- KT073* → 고정비/매장인터넷
-- 한국캐피탈* → 고정비/음식물처리기
-- *월세*, 203호*, 204호* → 고정비/임대료
-- *관리비* → 고정비/관리비
-- 가스* → 고정비/가스요금
-- 세스코* → 고정비/세스코
-- 삼성ＯＡ → 고정비/프린터
-- 쿠팡와우* → 고정비/쿠팡와우멤버십
-[세금]
-- *부가*세*, 부가가치세* → 세금/부가가치세
-- *국민건강*, *건강보험* → 세금/건강보험
-- *국민연금* → 세금/연금보험
-- *고용보험* → 세금/고용보험
-- *산재보험* → 세금/산재보험
-- 등록면허세 → 세금/등록면허세
-[배당금]
-- 배당*탁병근 → 배당금/탁병근
-- 배당*김은성 → 배당금/김은성
-- 배당*탁성현 → 배당금/탁성현
-[카드대금 - 정산제외]
-- 롯데카드(주) → 카드대금/롯데카드
-- 신한카드* → 카드대금/신한카드
-[마케팅]
-- 논산맘정보통 → 마케팅/논산맘정보통
-- 이니시스-정기 → 마케팅/도도포인트
-[기타]
-- 쿠팡 (출금) → 식자재 또는 비품 (모호하면 기타/쿠팡)
-- *회식* 관련 음식점 → 기타/회식
-- *유지보수*, 수리, 교체 → 기타/유지보수
-- *간식* 관련 (카페, 치킨 등) → 기타/간식
-- 이송은 소액 입금 → 기타/기타 (어머님 개인결제 상계)
+// ─── 컬럼 자동 매칭 엔진 ───
+const COL_PATTERNS={
+  bank:{
+    tx_date:['거래일','거래일자','일자','날짜','거래날짜','처리일'],
+    tx_time:['거래시간','시간','시각','처리시간'],
+    deposit:['입금','입금액','찾은금액','입금(원)','입금금액','대변'],
+    withdraw:['출금','출금액','맡긴금액','출금(원)','출금금액','지급','차변'],
+    balance:['잔액','잔고','잔액(원)','예금잔액'],
+    description:['적요','내용','거래내용','비고','메모','거래처','적요내용','거래상세','통장메모','받는분']
+  },
+  card:{
+    tx_date:['이용일','거래일','승인일','이용일자','매출일','결제일','거래일자'],
+    tx_time:['이용시간','거래시간','승인시간'],
+    merchant:['가맹점','가맹점명','이용가맹점','이용처','상호명','가맹점(은행)명'],
+    amount:['이용금액','결제금액','승인금액','이용금액(원)','매출금액','금액'],
+    supply:['공급가','공급가액','공급금액'],
+    vat:['부가세','세액','부가세액'],
+    status:['상태','승인구분','매입상태','거래구분','승인/취소'],
+    description:['비고','메모','적요','내용']
+  },
+  vendor:{
+    order_date:['날짜','일자','주문일','거래일','납품일','발주일','거래일자'],
+    item:['품목','품명','상품명','품목명','상품','제품명','거래내역','내역'],
+    amount:['금액','합계','총금액','매입액','단가','공급가액','결제금액'],
+    quantity:['수량','개수','건수','단위'],
+    memo:['비고','메모','참고','설명','적요']
+  },
+  sales:{
+    settle_date:['날짜','일자','정산일','매출일','영업일'],
+    pos_cash:['현금'],
+    pos_cash_receipt:['현금영수증'],
+    pos_card:['카드','신용카드','카드매출'],
+    pos_etc:['기타결제','기타','배달','온라인'],
+    draw_large:['뽑기대','뽑기(대)','뽑기대형'],
+    draw_small:['뽑기소','뽑기(소)','뽑기소형']
+  }
+};
 
-특수 처리:
-1. 카드대금, 배당금, 개인결제(이송은 소액) → exclude_from_settlement: true
-2. 내용에 월 정보(XX월분, 202507 등) → attribution_month 추출, 출금월과 다르면 needs_review
-3. "정산체크제외"가 비고에 있으면 → exclude_from_settlement: true
-4. 분류 확신 낮으면 → confidence: "low", needs_review: true, review_reason 기재`;
+// 헤더 행에서 컬럼 매칭
+function matchColumns(headers, type){
+  const patterns=COL_PATTERNS[type];
+  if(!patterns) return {};
+  const map={};
+  const normalizedHeaders=headers.map(h=>String(h||'').replace(/\s+/g,'').toLowerCase());
+  for(const[field, keywords] of Object.entries(patterns)){
+    for(let ci=0;ci<normalizedHeaders.length;ci++){
+      const nh=normalizedHeaders[ci];
+      if(!nh) continue;
+      for(const kw of keywords){
+        if(nh.includes(kw.toLowerCase().replace(/\s+/g,''))){
+          if(!map[field]) map[field]=ci;
+          break;
+        }
+      }
+    }
+  }
+  return map;
+}
 
-const CARD_CLASSIFY_HINTS=`분류 규칙 (과거 학습 데이터):
-[직구 - 직접구매, 품목별 분류는 영수증으로 별도]
-- 논산농협하나로마트* → 직구/직구상세
-- 쿠팡(쿠페이)*, 쿠팡(쿠페이)_쿠팡* → 직구/직구상세
-- 광성*탑마트, 광성(光成)탑마트 → 직구/직구상세
-- (주)다이소아성산업 → 직구/직구상세
-- 네이버파이낸셜㈜*_네이버 → 직구/직구상세
-- 에브리식자재마트* → 직구/직구상세
-- 홈플러스* → 직구/직구상세
-- 노브랜드* → 직구/직구상세
-- GS25* → 직구/직구상세
-- 나나약국 → 직구/직구상세
-- 인터넷상거래*주방아울렛 → 직구/직구상세
-- Temu.com* → 직구/직구상세
-[물품대금]
-- NICE(빌링)*(주)마켓보로 → 물품대금/맛사랑
-- 씨제이프레시웨이* → 물품대금/프레시원
-[고정비]
-- 에스케이쉴더스 → 고정비/캡스
-- DB손해보험 → 고정비/화재보험
-- KT인터넷*납부 → 고정비/매장인터넷
-- JB(주)(가스)* → 고정비/가스요금
-- 자동이체*코오롱정수* → 고정비/정수기
-- 유투브프리미엄*구글페이먼트* → 고정비/유튜브
-- (주)세스코 → 고정비/세스코
-- 효성에프엠에스* → 고정비/프린터
-- 쿠팡(와우*)* → 고정비/쿠팡와우멤버십
-[마케팅]
-- (주)이니시스(빌링)*주식회사플 → 마케팅/도도포인트
-[기타]
-- 버거킹*, 맘스터치*, 파리바게뜨*, 메가엠지씨*, 교촌*, 롯데리아* → 기타/간식
-- 함흥면옥, 취암반점, 아리랑*, 본죽*, 한솥도시락*, 또또꼬마김밥*, 써브웨이* → 기타/중식
-- 아주조명, 다수리철물* → 기타/유지보수
-- (주)이니시스*주식회사미 → 기타/기타 (구인공고)
-- 쿠팡(쿠페이) + "어머님","아버님","개인결제" 비고 → 기타/기타 (개인결제, exclude)
+// ─── 키워드 기반 자동 분류 (은행) ───
+const BANK_RULES=[
+  // 매출
+  {p:/^(NH|KB|SHC|삼성200|741961|하나|롯데992|현321|우602)/,cat:'매출',sub:'카드결제'},
+  {p:/(타행MB|타행FB|타행IB|OP이체|모바일)/,cat:'매출',sub:'송금결제'},
+  {p:/(CD입금|현금|현찰)/,cat:'매출',sub:'현금결제'},
+  {p:/논산정산/,cat:'매출',sub:'QR결제'},
+  {p:/(카카오페이정산|토스_)/,cat:'매출',sub:'기타결제'},
+  // 물품대금
+  {p:/(양두현|행복한정육|고기대금)/,cat:'물품대금',sub:'행복한정육점'},
+  {p:/(맛사랑|주식회사맛사랑)/,cat:'물품대금',sub:'맛사랑'},
+  {p:/대봄야채/,cat:'물품대금',sub:'대봄야채'},
+  {p:/(프레시원|씨제이프레시웨)/,cat:'물품대금',sub:'프레시원'},
+  {p:/대명주류/,cat:'물품대금',sub:'대명주류'},
+  {p:/롯데칠성/,cat:'물품대금',sub:'롯데칠성'},
+  {p:/판다마라소스/,cat:'물품대금',sub:'판다마라소스'},
+  {p:/순창국제/,cat:'물품대금',sub:'순창국제'},
+  {p:/웰스토리/,cat:'물품대금',sub:'웰스토리'},
+  // 인건비
+  {p:/급여.*월/,cat:'인건비',sub:'급여'},
+  {p:/단기알바/,cat:'인건비',sub:'단기알바'},
+  {p:/(직원복지|명절떡값)/,cat:'인건비',sub:'직원복지'},
+  // 고정비
+  {p:/한국전력/,cat:'고정비',sub:'전기요금'},
+  {p:/유림에퐁당/,cat:'고정비',sub:'로열티'},
+  {p:/코오롱정수/,cat:'고정비',sub:'정수기'},
+  {p:/본세무회계/,cat:'고정비',sub:'세무기장료'},
+  {p:/노무법인대유/,cat:'고정비',sub:'노무기장료'},
+  {p:/DB손/,cat:'고정비',sub:'화재보험'},
+  {p:/SK쉴더스/,cat:'고정비',sub:'캡스'},
+  {p:/비티원터치/,cat:'고정비',sub:'테이블오더'},
+  {p:/KT073/,cat:'고정비',sub:'매장인터넷'},
+  {p:/한국캐피탈/,cat:'고정비',sub:'음식물처리기'},
+  {p:/(월세|203호|204호)/,cat:'고정비',sub:'임대료'},
+  {p:/관리비/,cat:'고정비',sub:'관리비'},
+  {p:/가스/,cat:'고정비',sub:'가스요금'},
+  {p:/세스코/,cat:'고정비',sub:'세스코'},
+  {p:/삼성ＯＡ/,cat:'고정비',sub:'프린터'},
+  {p:/쿠팡와우/,cat:'고정비',sub:'쿠팡와우멤버십'},
+  // 세금
+  {p:/(부가.*세|부가가치세)/,cat:'세금',sub:'부가가치세'},
+  {p:/(국민건강|건강보험)/,cat:'세금',sub:'건강보험'},
+  {p:/국민연금/,cat:'세금',sub:'연금보험'},
+  {p:/고용보험/,cat:'세금',sub:'고용보험'},
+  {p:/산재보험/,cat:'세금',sub:'산재보험'},
+  {p:/등록면허세/,cat:'세금',sub:'등록면허세'},
+  // 배당금
+  {p:/배당.*탁병근/,cat:'배당금',sub:'탁병근',exclude:true},
+  {p:/배당.*김은성/,cat:'배당금',sub:'김은성',exclude:true},
+  {p:/배당.*탁성현/,cat:'배당금',sub:'탁성현',exclude:true},
+  // 카드대금
+  {p:/롯데카드\(주\)/,cat:'카드대금',sub:'롯데카드',exclude:true},
+  {p:/신한카드/,cat:'카드대금',sub:'신한카드',exclude:true},
+  // 마케팅
+  {p:/논산맘정보통/,cat:'마케팅',sub:'논산맘정보통'},
+  {p:/이니시스.*정기/,cat:'마케팅',sub:'도도포인트'}
+];
 
-특수 처리:
-1. 취소 건: 승인금액과 실청구 금액이 다르거나 취소 표시 → is_cancelled, 차감 금액 계산
-2. 부가세 분리 가능하면 supply_amount, vat_amount 저장
-3. 개인결제 → exclude_from_settlement: true
-4. 분류 확신 낮으면 → confidence: "low", needs_review: true`;
+// ─── 키워드 기반 자동 분류 (카드) ───
+const CARD_RULES=[
+  // 직구
+  {p:/(논산농협|하나로마트)/,cat:'직구',sub:'직구상세'},
+  {p:/쿠팡/,cat:'직구',sub:'직구상세'},
+  {p:/(광성|탑마트)/,cat:'직구',sub:'직구상세'},
+  {p:/다이소/,cat:'직구',sub:'직구상세'},
+  {p:/네이버파이낸셜/,cat:'직구',sub:'직구상세'},
+  {p:/에브리식자재/,cat:'직구',sub:'직구상세'},
+  {p:/홈플러스/,cat:'직구',sub:'직구상세'},
+  {p:/노브랜드/,cat:'직구',sub:'직구상세'},
+  {p:/GS25/,cat:'직구',sub:'직구상세'},
+  {p:/나나약국/,cat:'직구',sub:'직구상세'},
+  {p:/주방아울렛/,cat:'직구',sub:'직구상세'},
+  {p:/Temu/i,cat:'직구',sub:'직구상세'},
+  // 물품대금
+  {p:/(마켓보로|맛사랑)/,cat:'물품대금',sub:'맛사랑'},
+  {p:/(씨제이프레시|프레시원)/,cat:'물품대금',sub:'프레시원'},
+  // 고정비
+  {p:/(에스케이쉴더스|SK쉴더스)/,cat:'고정비',sub:'캡스'},
+  {p:/DB손해보험/,cat:'고정비',sub:'화재보험'},
+  {p:/KT.*인터넷/,cat:'고정비',sub:'매장인터넷'},
+  {p:/JB.*가스/,cat:'고정비',sub:'가스요금'},
+  {p:/코오롱정수/,cat:'고정비',sub:'정수기'},
+  {p:/유투브프리미엄/,cat:'고정비',sub:'유튜브'},
+  {p:/세스코/,cat:'고정비',sub:'세스코'},
+  {p:/효성에프엠에스/,cat:'고정비',sub:'프린터'},
+  {p:/쿠팡.*와우/,cat:'고정비',sub:'쿠팡와우멤버십'},
+  // 마케팅
+  {p:/이니시스.*빌링.*플/,cat:'마케팅',sub:'도도포인트'},
+  // 기타
+  {p:/(버거킹|맘스터치|파리바게뜨|메가엠지씨|교촌|롯데리아)/,cat:'기타',sub:'간식'},
+  {p:/(함흥면옥|취암반점|아리랑|본죽|한솥|꼬마김밥|써브웨이)/,cat:'기타',sub:'중식'},
+  {p:/(아주조명|다수리철물)/,cat:'기타',sub:'유지보수'}
+];
+
+// 적요로 분류
+function classifyByKeyword(desc, type){
+  if(!desc) return {category:'미분류',sub_category:'',confidence:'low',needs_review:true,review_reason:'적요 없음',exclude_from_settlement:false};
+  const rules=type==='bank'?BANK_RULES:CARD_RULES;
+  for(const r of rules){
+    if(r.p.test(desc)){
+      return {category:r.cat,sub_category:r.sub,confidence:'high',needs_review:false,review_reason:null,exclude_from_settlement:!!r.exclude};
+    }
+  }
+  return {category:'미분류',sub_category:'',confidence:'low',needs_review:true,review_reason:'자동 분류 실패',exclude_from_settlement:false};
+}
+
+// ─── 엑셀 파싱 공통: 파일 → rows 배열 ───
+async function parseExcelFile(file){
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(['xlsx','xls'].includes(ext)){
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(ws,{defval:''});
+  } else if(ext==='csv'){
+    const text=await file.text();
+    const lines=text.split('\n').filter(l=>l.trim());
+    if(lines.length<2) return [];
+    const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+    return lines.slice(1).map(line=>{
+      const vals=line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+      const obj={};headers.forEach((h,i)=>obj[h]=vals[i]||'');return obj;
+    });
+  }
+  throw new Error('xlsx, xls, csv 파일만 지원됩니다.');
+}
+
+// 숫자 파싱 (쉼표, 공백, 원 등 제거)
+function parseNum(v){
+  if(v==null||v==='') return 0;
+  if(typeof v==='number') return v;
+  return parseInt(String(v).replace(/[,\s원₩\-\.]/g,''))||0;
+}
+
+// 날짜 파싱 (다양한 형식 대응)
+function parseDate(v){
+  if(!v) return null;
+  const s=String(v).trim();
+  // YYYY-MM-DD 이미 있으면 그대로
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // YYYY.MM.DD 또는 YYYY/MM/DD
+  const m1=s.match(/^(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/);
+  if(m1) return `${m1[1]}-${m1[2].padStart(2,'0')}-${m1[3].padStart(2,'0')}`;
+  // MM-DD-YYYY 또는 DD/MM/YYYY 형태 (한국은 보통 아님, 패스)
+  // 엑셀 시리얼넘버 (숫자형)
+  if(typeof v==='number'&&v>40000&&v<60000){
+    const d=new Date((v-25569)*86400000);
+    return d.toISOString().split('T')[0];
+  }
+  // Date 객체 시도
+  const d=new Date(s);
+  if(!isNaN(d)) return d.toISOString().split('T')[0];
+  return null;
+}
 
 async function handleExcelUpload(input, type){
   if(!guardStore()||!input.files[0])return;
   const file=input.files[0];
-  const ext=file.name.split('.').pop().toLowerCase();
   excelUploadType=type;
   setLoad(true,'엑셀 분석 중...');
 
   try{
-    let csvText='';
-    if(['xlsx','xls'].includes(ext)){
-      const buf=await file.arrayBuffer();
-      const wb=XLSX.read(buf,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      csvText=XLSX.utils.sheet_to_csv(ws);
-    } else if(ext==='csv'){
-      csvText=await file.text();
-    } else {
-      toast('xlsx, xls, csv 파일만 지원됩니다.','warn');
-      setLoad(false);return;
-    }
+    const rows=await parseExcelFile(file);
+    if(!rows.length) throw new Error('데이터가 없습니다.');
+    const headers=Object.keys(rows[0]);
+    const colMap=matchColumns(headers, type);
 
-    // 최대 4000자 (Gemini 토큰 제한 고려)
-    const truncated=csvText.slice(0,8000);
-    const totalLines=csvText.split('\n').length-1;
+    // 필수 컬럼 확인
+    if(type==='bank'&&!colMap.tx_date) throw new Error('날짜 컬럼을 찾을 수 없습니다. (거래일, 일자 등)');
+    if(type==='bank'&&!colMap.deposit&&!colMap.withdraw) throw new Error('입금/출금 컬럼을 찾을 수 없습니다.');
+    if(type==='card'&&!colMap.tx_date) throw new Error('날짜 컬럼을 찾을 수 없습니다. (이용일, 승인일 등)');
+    if(type==='card'&&!colMap.amount) throw new Error('금액 컬럼을 찾을 수 없습니다. (이용금액, 결제금액 등)');
 
-    const hints=type==='bank'?BANK_CLASSIFY_HINTS:CARD_CLASSIFY_HINTS;
-    const typeLabel=type==='bank'?'은행 계좌 입출금':'카드 결제';
+    const parsed=rows.map(row=>{
+      const vals=Object.values(row);
+      const getVal=idx=>idx!=null?String(vals[idx]||'').trim():'';
 
-    const prompt=`다음은 ${typeLabel} 내역 엑셀 데이터(CSV)입니다.
+      if(type==='bank'){
+        const desc=getVal(colMap.description);
+        const dep=parseNum(getVal(colMap.deposit));
+        const wth=parseNum(getVal(colMap.withdraw));
+        const amount=dep>0?dep:(wth>0?-wth:0);
+        if(amount===0) return null; // 금액 없는 행 건너뛰기
+        const cls=classifyByKeyword(desc,'bank');
+        return {
+          tx_date:parseDate(getVal(colMap.tx_date)),
+          tx_time:getVal(colMap.tx_time)||null,
+          description:desc||null,
+          amount,
+          balance:colMap.balance!=null?parseNum(getVal(colMap.balance)):null,
+          ...cls
+        };
+      } else {
+        // 카드
+        const merchant=getVal(colMap.merchant)||getVal(colMap.description);
+        let amount=-Math.abs(parseNum(getVal(colMap.amount)));
+        if(amount===0) return null;
+        const statusVal=getVal(colMap.status);
+        const isCancelled=/(취소|승인취소|매입취소)/.test(statusVal);
+        if(isCancelled) amount=Math.abs(amount); // 취소 건은 양수
+        const cls=classifyByKeyword(merchant,'card');
+        return {
+          tx_date:parseDate(getVal(colMap.tx_date)),
+          tx_time:getVal(colMap.tx_time)||null,
+          merchant_name:merchant||null,
+          amount,
+          supply_amount:colMap.supply!=null?parseNum(getVal(colMap.supply)):null,
+          vat_amount:colMap.vat!=null?parseNum(getVal(colMap.vat)):null,
+          is_cancelled:isCancelled,
+          original_amount:isCancelled?-Math.abs(parseNum(getVal(colMap.amount))):null,
+          ...cls
+        };
+      }
+    }).filter(r=>r&&r.tx_date); // null 및 날짜 없는 행 제거
 
-${hints}
-
-데이터:
-${truncated}
-
-위 데이터를 분석하여 JSON 배열로 변환해주세요.
-${type==='bank'?
-`필드: tx_date(YYYY-MM-DD), tx_time(HH:MM:SS), description(적요/내용), amount(입금은 양수, 출금은 음수), balance(잔액),
-category(대분류), sub_category(소분류), confidence(high/medium/low),
-needs_review(boolean), review_reason(사유 또는 null),
-exclude_from_settlement(boolean), attribution_month(YYYY-MM 또는 null)`
-:
-`필드: tx_date(YYYY-MM-DD), tx_time(HH:MM:SS), merchant_name(가맹점명), amount(결제금액, 음수로), supply_amount(공급가액), vat_amount(부가세),
-category(대분류), sub_category(소분류), confidence(high/medium/low),
-needs_review(boolean), review_reason(사유 또는 null),
-exclude_from_settlement(boolean), is_cancelled(boolean), original_amount(취소전 원금액 또는 null)`}
-
-순수 JSON 배열만 출력하세요.`;
-
-    const parsed=await callGemini([{text:prompt}], 60);
+    if(!parsed.length) throw new Error('유효한 거래 내역이 없습니다. 엑셀 형식을 확인해주세요.');
 
     excelParsedData=parsed;
-    renderExcelPreview(parsed, type, totalLines);
+    renderExcelPreview(parsed, type, parsed.length);
     openSheet('excelUploadSheet');
   }catch(e){
     toast('분석 실패: '+e.message,'error');
