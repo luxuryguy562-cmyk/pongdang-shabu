@@ -1155,8 +1155,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 </div>
 
 <!-- 수동 출금 입력 시트 -->
-<div class="sheet-overlay" id="manualPaymentSheet" onclick="closeSheet('manualPaymentSheet')">
-  <div class="sheet" onclick="event.stopPropagation()">
+<div class="sheet-overlay" id="manualPaymentSheet">
+  <div class="sheet">
     <div class="sheet-title">수동 출금 입력</div>
     <input type="hidden" id="mpCategoryId">
     <input type="hidden" id="mpSubKey">
@@ -1175,8 +1175,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 </div>
 
 <!-- 엑셀 업로드 결과 시트 -->
-<div class="sheet-overlay" id="excelUploadSheet" onclick="closeSheet('excelUploadSheet')">
-  <div class="sheet" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto;">
+<div class="sheet-overlay" id="excelUploadSheet">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
     <div class="sheet-title" id="excelUploadTitle">엑셀 분석 결과</div>
     <div id="excelUploadResult">
       <div class="empty-state"><div class="empty-icon">📊</div><p>파일을 분석 중...</p></div>
@@ -1185,8 +1185,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 </div>
 
 <!-- 확인 필요 건 리뷰 시트 -->
-<div class="sheet-overlay" id="excelReviewSheet" onclick="closeSheet('excelReviewSheet')">
-  <div class="sheet" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto;">
+<div class="sheet-overlay" id="excelReviewSheet">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
     <div class="sheet-title">확인 필요 건</div>
     <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">AI가 분류에 확신이 없는 건입니다. 확인 후 수정해주세요.</p>
     <div id="excelReviewList"></div>
@@ -4967,6 +4967,13 @@ document.addEventListener('DOMContentLoaded', async()=>{
   bindFile('capsFileInput',inp=>handleCapsUpload(inp));
   bindFile('salesFileInput',inp=>handleSalesUpload(inp));
   bindFile('vendorFileInput',inp=>handleVendorUpload(inp));
+
+  // ─── sheet-overlay 배경 클릭 닫기 (inline onclick CSP 차단 대응) ───
+  document.querySelectorAll('.sheet-overlay').forEach(overlay=>{
+    overlay.addEventListener('click',function(e){
+      if(e.target===this) closeSheet(this.id);
+    });
+  });
 
   // 로그인 복원 또는 로그인 화면 표시
   const savedEmp=localStorage.getItem('pd_emp');
