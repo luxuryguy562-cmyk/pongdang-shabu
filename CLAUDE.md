@@ -229,6 +229,9 @@ to: [다음 에이전트]
 | 새 테이블 생성 | CREATE SQL + DROP SQL + 승인 |
 | 기존 컬럼 변경/삭제 | 마이그레이션 SQL + 롤백 SQL + 승인 |
 
+**⚠️ DB 변경 시 `docs/db_schema.md` 즉시 업데이트 필수.**
+테이블/컬럼 추가·변경·삭제 후 스키마 문서를 동기화하지 않으면 다음 세션에서 혼란 발생.
+
 ---
 
 ## 제9조. 계획서 양식
@@ -302,8 +305,9 @@ pongdang-shabu/
 │   ├── tester.md
 │   └── deployer.md
 ├── docs/
-│   ├── db_schema.md       ← Supabase 테이블 구조
-│   ├── work_log.md        ← 작업 진행 로그
+│   ├── db_schema.md       ← Supabase 테이블 구조 (유일한 스키마 진실)
+│   ├── plan.md            ← 전체 시스템 설계 + 구현 현황 (유일한 계획 진실)
+│   ├── work_log.md        ← 세션별 작업 요약
 │   ├── dev_lessons.md     ← 개발 교훈/반성 (같은 실수 방지)
 │   └── business_rules.md  ← 사장님 비즈니스 규칙/변수
 ├── index.html             ← 앱 본체
