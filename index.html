@@ -4059,9 +4059,9 @@ function openTxFilter(type){
   popup.id='txFilterPopup';
   popup.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:999;display:flex;align-items:end;justify-content:center;';
   const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px;';
+  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px;max-height:80vh;display:flex;flex-direction:column;';
 
-  let html='<div style="font-size:15px;font-weight:800;margin-bottom:16px;">필터</div>';
+  let html='<div style="font-size:15px;font-weight:800;margin-bottom:16px;">필터</div><div style="overflow-y:auto;flex:1;">';
 
   // ── 유형 (계좌만) ──
   if(type==='bank'){
@@ -4085,18 +4085,16 @@ function openTxFilter(type){
     <input type="date" id="txFilterTo" value="${defEnd}" style="flex:1;padding:10px;border:1px solid var(--gray-200);border-radius:10px;font-size:13px;">
   </div>`;
 
-  // ── 분류 선택 (칩 토글) ──
-  html+='<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">분류</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:16px;">';
-  cats.forEach(c=>{
-    const on=!filter.cats||filter.cats.has(c);
-    const label=c||'미분류';
-    const cnt=data.filter(r=>(r.category||'')===c).length;
-    html+=`<div class="txCatChip" data-val="${c}" style="padding:7px 12px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:${on?700:400};background:${on?'var(--blue)':'var(--gray-100)'};color:${on?'#fff':'var(--gray-600)'};">${label} ${cnt}</div>`;
-  });
-  html+='</div>';
+  // ── 분류 선택 (바텀시트) ──
+  const catLabel=filter.cats?[...filter.cats].join(', '):'전체';
+  html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">분류</div>
+  <div id="txFilterCatBtn" style="padding:12px 14px;background:var(--gray-100);border-radius:10px;cursor:pointer;font-size:13px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+    <span id="txFilterCatLabel">${catLabel}</span><span style="color:var(--gray-400);">▼</span>
+  </div>
+  </div>`;
 
-  // ── 버튼 ──
-  html+=`<div style="display:flex;gap:8px;">
+  // ── 버튼 (스크롤 밖 — 항상 보임) ──
+  html+=`<div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--gray-100);margin-top:8px;flex-shrink:0;">
     <button class="btn btn-secondary" id="txFilterReset" style="flex:1;padding:12px;">초기화</button>
     <button class="btn btn-primary" id="txFilterApply" style="flex:1;padding:12px;">적용</button>
   </div>`;
@@ -4113,33 +4111,71 @@ function openTxFilter(type){
       chip.style.background=colors[chip.dataset.val];chip.style.color='#fff';
     });
   });
-  // 분류 칩 토글
-  box.querySelectorAll('.txCatChip').forEach(chip=>{
-    chip.addEventListener('click',()=>{
-      const on=chip.style.background==='var(--gray-100)'||chip.style.fontWeight!=='700';
-      chip.style.background=on?'var(--blue)':'var(--gray-100)';
-      chip.style.color=on?'#fff':'var(--gray-600)';
-      chip.style.fontWeight=on?'700':'400';
+  // 분류 바텀시트 열기
+  let selectedCats=filter.cats?new Set(filter.cats):null; // null=전체
+  box.querySelector('#txFilterCatBtn').addEventListener('click',()=>{
+    let catSheet=document.getElementById('txCatSheet');
+    if(catSheet)catSheet.remove();
+    catSheet=document.createElement('div');
+    catSheet.id='txCatSheet';
+    catSheet.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:end;justify-content:center;';
+    const catBox=document.createElement('div');
+    catBox.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px;';
+    let catHtml='<div style="font-size:15px;font-weight:800;margin-bottom:14px;">분류 선택</div>';
+    catHtml+=`<div style="padding:10px 0;border-bottom:1px solid var(--gray-100);font-size:13px;font-weight:700;cursor:pointer;" id="catSheetAll">
+      <span style="display:inline-block;width:22px;text-align:center;">${!selectedCats?'✓':''}</span> 전체 (${data.length}건)
+    </div>`;
+    cats.forEach(c=>{
+      const cnt=data.filter(r=>(r.category||'')===c).length;
+      const on=!selectedCats||selectedCats.has(c);
+      catHtml+=`<div class="catSheetItem" data-val="${c}" style="padding:10px 0;border-bottom:1px solid var(--gray-100);font-size:13px;cursor:pointer;">
+        <span class="catSheetCheck" style="display:inline-block;width:22px;text-align:center;color:var(--blue);">${on?'✓':''}</span> ${c||'미분류'} <span style="color:var(--gray-400);">(${cnt})</span>
+      </div>`;
     });
+    catHtml+='<button class="btn btn-primary btn-full" id="catSheetDone" style="margin-top:14px;padding:12px;">선택 완료</button>';
+    catBox.innerHTML=catHtml;
+    catSheet.appendChild(catBox);
+    document.body.appendChild(catSheet);
+    // 전체 토글
+    catBox.querySelector('#catSheetAll').addEventListener('click',()=>{
+      selectedCats=null;
+      catBox.querySelector('#catSheetAll span').textContent='✓';
+      catBox.querySelectorAll('.catSheetItem .catSheetCheck').forEach(s=>s.textContent='✓');
+    });
+    // 개별 토글
+    catBox.querySelectorAll('.catSheetItem').forEach(item=>{
+      item.addEventListener('click',()=>{
+        const v=item.dataset.val;
+        if(!selectedCats)selectedCats=new Set(cats);
+        if(selectedCats.has(v))selectedCats.delete(v);else selectedCats.add(v);
+        item.querySelector('.catSheetCheck').textContent=selectedCats.has(v)?'✓':'';
+        // 전체 체크 업데이트
+        const allOn=selectedCats.size===cats.length;
+        if(allOn)selectedCats=null;
+        catBox.querySelector('#catSheetAll span').textContent=(!selectedCats)?'✓':'';
+      });
+    });
+    catBox.querySelector('#catSheetDone').addEventListener('click',()=>{
+      const label=selectedCats?[...selectedCats].join(', '):'전체';
+      box.querySelector('#txFilterCatLabel').textContent=label;
+      catSheet.remove();
+    });
+    catSheet.addEventListener('click',e=>{if(e.target===catSheet){catSheet.remove();}});
   });
 
   box.querySelector('#txFilterReset').addEventListener('click',()=>{
-    if(type==='bank')bankFilter={dates:null,cats:null,direction:'all',dateFrom:null,dateTo:null};
-    else cardFilter={dates:null,cats:null,dateFrom:null,dateTo:null};
+    if(type==='bank')bankFilter={dateFrom:null,dateTo:null,cats:null,direction:'all'};
+    else cardFilter={dateFrom:null,dateTo:null,cats:null};
     popup.remove();
     if(type==='bank')renderBankTxTable();else renderCardTxTable();
   });
   box.querySelector('#txFilterApply').addEventListener('click',()=>{
     const f=type==='bank'?bankFilter:cardFilter;
-    // 날짜 범위
     const from=box.querySelector('#txFilterFrom').value;
     const to=box.querySelector('#txFilterTo').value;
-    if(from===ym+'-01'&&to===ym+'-'+String(lastDay).padStart(2,'0')){f.dateFrom=null;f.dateTo=null;f.dates=null;}
-    else{f.dateFrom=from;f.dateTo=to;f.dates=null;}
-    // 분류
-    const selCats=[...box.querySelectorAll('.txCatChip')].filter(c=>c.style.fontWeight==='700').map(c=>c.dataset.val);
-    f.cats=selCats.length===cats.length||selCats.length===0?null:new Set(selCats);
-    // 유형
+    if(from===ym+'-01'&&to===ym+'-'+String(lastDay).padStart(2,'0')){f.dateFrom=null;f.dateTo=null;}
+    else{f.dateFrom=from;f.dateTo=to;}
+    f.cats=selectedCats?new Set(selectedCats):null;
     if(type==='bank'){
       const dirChip=[...box.querySelectorAll('.txDirChip')].find(c=>c.style.color==='rgb(255, 255, 255)');
       f.direction=dirChip?dirChip.dataset.val:'all';
