@@ -240,6 +240,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* ─ 오버레이/시트 */
 .overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.42);display:none;z-index:6000;}
 .sheet{position:fixed;bottom:-100%;left:0;width:100%;background:#fff;border-radius:26px 26px 0 0;padding:24px 20px 40px;z-index:6001;transition:bottom .3s cubic-bezier(0.2,.8,.4,1);max-height:90vh;overflow-y:auto;}
+.sheet-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:6000;align-items:flex-end;justify-content:center;}
+.sheet-overlay .sheet{position:relative;bottom:0;width:100%;z-index:6001;transform:translateY(100%);transition:transform .3s cubic-bezier(0.2,.8,.4,1);}
+.sheet-overlay .sheet.show{transform:translateY(0);}
 .sheet.show{bottom:0;}
 .sheet-handle{width:38px;height:4px;background:var(--gray-200);border-radius:2px;margin:-6px auto 18px;}
 .sheet-title{font-size:17px;font-weight:700;margin-bottom:16px;}
@@ -1670,9 +1673,34 @@ function nav(tab, el) {
     }, 50);
   }
 }
-function openSheet(id) { document.getElementById('overlay').style.display='block'; document.getElementById(id).classList.add('show'); }
-function closeSheet(id) { document.getElementById(id)?.classList.remove('show'); setTimeout(()=>{if(!document.querySelector('.sheet-overlay.show'))document.getElementById('overlay').style.display='none';},300); }
-function closeAllSheets() { document.querySelectorAll('.sheet-overlay').forEach(s=>s.classList.remove('show')); setTimeout(()=>document.getElementById('overlay').style.display='none',300); }
+function openSheet(id) {
+  document.getElementById('overlay').style.display='block';
+  const el=document.getElementById(id);
+  if(el.classList.contains('sheet-overlay')){
+    el.style.display='flex';
+    const inner=el.querySelector('.sheet');if(inner)inner.classList.add('show');
+  } else {
+    el.classList.add('show');
+  }
+}
+function closeSheet(id) {
+  const el=document.getElementById(id);if(!el)return;
+  if(el.classList.contains('sheet-overlay')){
+    const inner=el.querySelector('.sheet');if(inner)inner.classList.remove('show');
+    setTimeout(()=>{el.style.display='none';},300);
+  } else {
+    el.classList.remove('show');
+  }
+  setTimeout(()=>{
+    const anyOpen=document.querySelector('.sheet.show');
+    if(!anyOpen) document.getElementById('overlay').style.display='none';
+  },350);
+}
+function closeAllSheets() {
+  document.querySelectorAll('.sheet.show').forEach(s=>s.classList.remove('show'));
+  document.querySelectorAll('.sheet-overlay').forEach(s=>{s.style.display='none';const inner=s.querySelector('.sheet');if(inner)inner.classList.remove('show');});
+  setTimeout(()=>document.getElementById('overlay').style.display='none',300);
+}
 const fmt = n => (n||0).toLocaleString();
 const unFmt = s => parseInt((s||'0').replace(/,/g,''))||0;
 const guardStore = () => { if(!currentStore){toast('매장을 먼저 선택하세요.','warn');openStoreSheet();return false;}return true; };
