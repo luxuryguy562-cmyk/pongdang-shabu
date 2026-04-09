@@ -4960,14 +4960,6 @@ document.addEventListener('DOMContentLoaded', async()=>{
     recalcSettle2();
   }
 
-  // 로그인 복원 또는 로그인 화면 표시
-  const savedEmp=localStorage.getItem('pd_emp');
-  if(savedEmp&&currentStore){
-    const emp=employees.find(e=>e.id===savedEmp);
-    if(emp){completeLogin(emp);return;}
-  }
-  showLoginScreen();
-
   // ─── 파일 업로드 이벤트 바인딩 (inline onchange CSP 차단 대응) ───
   const bindFile=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',function(){fn(this);});};
   bindFile('bankExcelInput',inp=>handleExcelUpload(inp,'bank'));
@@ -4975,6 +4967,14 @@ document.addEventListener('DOMContentLoaded', async()=>{
   bindFile('capsFileInput',inp=>handleCapsUpload(inp));
   bindFile('salesFileInput',inp=>handleSalesUpload(inp));
   bindFile('vendorFileInput',inp=>handleVendorUpload(inp));
+
+  // 로그인 복원 또는 로그인 화면 표시
+  const savedEmp=localStorage.getItem('pd_emp');
+  if(savedEmp&&currentStore){
+    const emp=employees.find(e=>e.id===savedEmp);
+    if(emp){completeLogin(emp);return;}
+  }
+  showLoginScreen();
 });
 </script>
 </body>
