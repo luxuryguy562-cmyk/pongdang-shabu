@@ -143,7 +143,76 @@ stores (매장)
 - CAPS 지문인식 파일 파싱 후 임시 저장 테이블
 - stagingData 배열을 bulk insert
 
+### mydata_accounts
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | 계좌/카드 ID |
+| store_id (FK→stores) | 매장 |
+| account_type | 'bank' / 'card' |
+| bank_name | 은행/카드사명 |
+| account_number | 계좌/카드번호 |
+
+### mydata_transactions
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | 거래 ID |
+| store_id (FK→stores) | 매장 |
+| account_id | 계좌/카드 ID |
+| tx_type | 'bank' / 'card' |
+| tx_date, tx_time | 거래 일시 |
+| description | 적요+내용 (은행) |
+| merchant_name | 가맹점명 (카드) |
+| amount (int) | 금액 (입금 양수, 출금 음수) |
+| balance (int) | 잔액 |
+| source | 'excel_bank' / 'excel_card' |
+| **category** | 분류명 문자열 (물품대금, 인건비 등) |
+| **category_id (FK→expense_categories)** | 카테고리 FK |
+| sub_category | 소분류 |
+| confidence | 'high' / 'medium' / 'low' |
+| needs_review (bool) | 확인 필요 여부 |
+| review_reason | 확인 필요 사유 |
+| exclude_from_settlement (bool) | 정산 제외 (카드대금, 배당 등) |
+| attribution_month | 귀속월 (YYYY-MM, 출금월과 다를 수 있음) |
+| supply_amount, vat_amount | 공급가/부가세 |
+| raw_description | 원본 적요 |
+| upload_batch_id | 업로드 배치 ID |
+| tx_hash | 중복 방지 해시 (UNIQUE) |
+| is_cancelled (bool) | 취소 건 |
+| original_amount | 취소 전 원금액 |
+| raw_data (jsonb) | 원본 데이터 전체 |
+
+### reconciliation
+| 컬럼 | 용도 |
+|------|------|
+| store_id (FK→stores) | 매장 |
+| year_month | 정산월 (YYYY-MM) |
+| category_id (FK→expense_categories) | 지출 카테고리 |
+| sub_key | 하위 항목 키 (vendor_id, employee_id 등) |
+| sub_label | 하위 항목명 |
+| recorded_total | 기록 금액 |
+| actual_total | 실제 출금 |
+| diff_amount | 차이 |
+| status | 'pending' / 'matched' / 'overpaid' / 'underpaid' |
+| confirmed_by, confirmed_at | 확인자/일시 |
+| memo | 메모 |
+- UNIQUE(store_id, year_month, sub_key)
+
+### vendor_diffs
+| 컬럼 | 용도 |
+|------|------|
+| store_id (FK→stores) | 매장 |
+| vendor_id (FK→vendors) | 거래처 |
+| year_month | 정산월 |
+| expected_amount | 기록 금액 |
+| actual_amount | 실제 출금 |
+| diff_amount | 차이 |
+| status | 'pending' / 'resolved' |
+| resolved_at | 해결일 |
+| memo | 메모 |
+
 ## 주의사항
 - **RLS 비활성**: anon key로 직접 접근 가능
 - **store_id 필수**: 모든 쿼리에 빠뜨리면 타 매장 데이터 노출
 - **role 문자열 연결**: employees.role = roles.name (FK 아님), 직급명 변경 시 employees도 업데이트 필요
+- **category_id FK**: mydata_transactions.category_id → expense_categories.id. CAT_NAME_MAP으로 매핑 (→ business_rules.md)
+- **DB 변경 시**: 이 파일 즉시 업데이트할 것 (→ dev_lessons.md #7)
