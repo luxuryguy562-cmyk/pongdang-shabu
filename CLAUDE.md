@@ -303,7 +303,9 @@ pongdang-shabu/
 │   └── deployer.md
 ├── docs/
 │   ├── db_schema.md       ← Supabase 테이블 구조
-│   └── work_log.md        ← 작업 진행 로그
+│   ├── work_log.md        ← 작업 진행 로그
+│   ├── dev_lessons.md     ← 개발 교훈/반성 (같은 실수 방지)
+│   └── business_rules.md  ← 사장님 비즈니스 규칙/변수
 ├── index.html             ← 앱 본체
 ├── manifest.json
 ├── icon-192.png
