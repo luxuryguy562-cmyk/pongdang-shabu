@@ -3899,8 +3899,8 @@ async function disconnectMyData(id){
 let bankTxData=[],cardTxData=[];
 let bankSortCol=null,bankSortAsc=true,cardSortCol=null,cardSortAsc=true;
 // 필터 상태: {dates:Set|null, cats:Set|null, direction:'all'|'in'|'out'}
-let bankFilter={dates:null,cats:null,direction:'all'};
-let cardFilter={dates:null,cats:null};
+let bankFilter={dateFrom:null,dateTo:null,cats:null,direction:'all'};
+let cardFilter={dateFrom:null,dateTo:null,cats:null};
 
 // 적요 코드 제거 — 실제 내용만 표시
 const STRIP_PREFIXES=/^(타행PC|타행MB|타행FB|타행IB|OP이체|FB자금|BZ뱅크|모바일|CD입금|현금|현찰|급여|배당|이체|인터넷|자기앞수표|자동이체|CMS출금|CMS입금|당좌수표|기타입금|기타출금|타행이체|전자금융|ATM|온라인|창구|폰뱅킹|스마트폰)\s*/;
@@ -3914,19 +3914,22 @@ async function loadBankTransactions(){
   const ym=explistBankMonth;const[y,m]=ym.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
   const{data}=await sb.from('mydata_transactions').select('*').eq('store_id',currentStore.id).eq('tx_type','bank').gte('tx_date',ym+'-01').lte('tx_date',ym+'-'+lastDay).order('tx_date',{ascending:false});
   bankTxData=data||[];
-  bankFilter={dates:null,cats:null,direction:'all'};bankSortCol=null;bankSortAsc=true;
+  bankFilter={dateFrom:null,dateTo:null,cats:null,direction:'all'};bankSortCol=null;bankSortAsc=true;
   renderBankTxTable();
 }
 
 function renderBankTxTable(){
   let rows=bankTxData;
   // 필터 적용
-  if(bankFilter.dates)rows=rows.filter(r=>bankFilter.dates.has(r.tx_date||''));
+  if(bankFilter.dateFrom||bankFilter.dateTo){
+    const from=bankFilter.dateFrom||'0000';const to=bankFilter.dateTo||'9999';
+    rows=rows.filter(r=>r.tx_date>=from&&r.tx_date<=to);
+  }
   if(bankFilter.cats)rows=rows.filter(r=>bankFilter.cats.has(r.category||''));
   if(bankFilter.direction==='in')rows=rows.filter(r=>r.amount>0);
   if(bankFilter.direction==='out')rows=rows.filter(r=>r.amount<0);
   // 필터 뱃지
-  const hasFilter=bankFilter.dates||bankFilter.cats||bankFilter.direction!=='all';
+  const hasFilter=bankFilter.dateFrom||bankFilter.dateTo||bankFilter.cats||bankFilter.direction!=='all';
   const badge=document.getElementById('bankFilterBadge');
   if(badge){badge.style.display=hasFilter?'block':'none';}
   // 정렬
@@ -3967,16 +3970,19 @@ async function loadCardTransactions(){
   const ym=explistCardMonth;const[y,m]=ym.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
   const{data}=await sb.from('mydata_transactions').select('*').eq('store_id',currentStore.id).eq('tx_type','card').gte('tx_date',ym+'-01').lte('tx_date',ym+'-'+lastDay).order('tx_date',{ascending:false});
   cardTxData=data||[];
-  cardFilter={dates:null,cats:null};cardSortCol=null;cardSortAsc=true;
+  cardFilter={dateFrom:null,dateTo:null,cats:null};cardSortCol=null;cardSortAsc=true;
   renderCardTxTable();
 }
 
 function renderCardTxTable(){
   let rows=cardTxData;
-  if(cardFilter.dates)rows=rows.filter(r=>cardFilter.dates.has(r.tx_date||''));
+  if(cardFilter.dateFrom||cardFilter.dateTo){
+    const from=cardFilter.dateFrom||'0000';const to=cardFilter.dateTo||'9999';
+    rows=rows.filter(r=>r.tx_date>=from&&r.tx_date<=to);
+  }
   if(cardFilter.cats)rows=rows.filter(r=>cardFilter.cats.has(r.category||''));
   // 필터 뱃지
-  const hasFilter=cardFilter.dates||cardFilter.cats;
+  const hasFilter=cardFilter.dateFrom||cardFilter.dateTo||cardFilter.cats;
   const badge=document.getElementById('cardFilterBadge');
   if(badge){badge.style.display=hasFilter?'block':'none';}
   if(cardSortCol){
@@ -4037,7 +4043,7 @@ function openTxFilter(type){
   const filter=type==='bank'?bankFilter:cardFilter;
   if(!data.length)return toast('데이터가 없습니다','warn');
 
-  const dates=[...new Set(data.map(r=>r.tx_date||''))].sort();
+  const ym=type==='bank'?explistBankMonth:explistCardMonth;
   const cats=[...new Set(data.map(r=>r.category||''))].sort();
 
   let existing=document.getElementById('txFilterPopup');
@@ -4046,51 +4052,41 @@ function openTxFilter(type){
   popup.id='txFilterPopup';
   popup.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:999;display:flex;align-items:end;justify-content:center;';
   const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:70vh;overflow-y:auto;padding:20px;';
+  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px;';
 
-  let html='<div style="font-size:15px;font-weight:800;margin-bottom:14px;">필터</div>';
+  let html='<div style="font-size:15px;font-weight:800;margin-bottom:16px;">필터</div>';
 
-  // ── 입금/출금 (계좌만) ──
+  // ── 유형 (계좌만) ──
   if(type==='bank'){
-    html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">유형</div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;">
-      <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:8px;border-radius:10px;font-size:12px;cursor:pointer;background:${filter.direction==='all'?'var(--blue)':'var(--gray-100)'};color:${filter.direction==='all'?'#fff':'var(--text)'};">
-        <input type="radio" name="txDir" value="all" ${filter.direction==='all'?'checked':''} style="display:none;"> 전체
-      </label>
-      <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:8px;border-radius:10px;font-size:12px;cursor:pointer;background:${filter.direction==='in'?'var(--success)':'var(--gray-100)'};color:${filter.direction==='in'?'#fff':'var(--text)'};">
-        <input type="radio" name="txDir" value="in" ${filter.direction==='in'?'checked':''} style="display:none;"> 입금만
-      </label>
-      <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:8px;border-radius:10px;font-size:12px;cursor:pointer;background:${filter.direction==='out'?'var(--danger)':'var(--gray-100)'};color:${filter.direction==='out'?'#fff':'var(--text)'};">
-        <input type="radio" name="txDir" value="out" ${filter.direction==='out'?'checked':''} style="display:none;"> 출금만
-      </label>
-    </div>`;
+    const dirs=[{v:'all',l:'전체',bg:'var(--blue)'},{v:'in',l:'입금만',bg:'var(--success)'},{v:'out',l:'출금만',bg:'var(--danger)'}];
+    html+='<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">유형</div><div style="display:flex;gap:6px;margin-bottom:16px;">';
+    dirs.forEach(d=>{
+      const on=filter.direction===d.v;
+      html+=`<div class="txDirChip" data-val="${d.v}" style="flex:1;text-align:center;padding:9px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;background:${on?d.bg:'var(--gray-100)'};color:${on?'#fff':'var(--text)'};">${d.l}</div>`;
+    });
+    html+='</div>';
   }
 
-  // ── 날짜 선택 ──
-  html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">날짜</div>
-  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;">`;
-  dates.forEach(d=>{
-    const day=(d||'').slice(5);
-    const cnt=data.filter(r=>r.tx_date===d).length;
-    const checked=!filter.dates||filter.dates.has(d);
-    html+=`<label style="display:flex;align-items:center;gap:3px;padding:5px 8px;border-radius:8px;font-size:11px;cursor:pointer;background:var(--gray-100);">
-      <input type="checkbox" class="txFilterDate" value="${d}" ${checked?'checked':''} style="width:14px;height:14px;"> ${day} <span style="color:var(--gray-400);">(${cnt})</span>
-    </label>`;
-  });
-  html+=`</div>`;
+  // ── 날짜 범위 ──
+  const [fy,fm]=ym.split('-').map(Number);const lastDay=new Date(fy,fm,0).getDate();
+  const defStart=filter.dateFrom||ym+'-01';
+  const defEnd=filter.dateTo||ym+'-'+String(lastDay).padStart(2,'0');
+  html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">날짜 범위</div>
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;">
+    <input type="date" id="txFilterFrom" value="${defStart}" style="flex:1;padding:10px;border:1px solid var(--gray-200);border-radius:10px;font-size:13px;">
+    <span style="font-size:13px;color:var(--gray-400);">~</span>
+    <input type="date" id="txFilterTo" value="${defEnd}" style="flex:1;padding:10px;border:1px solid var(--gray-200);border-radius:10px;font-size:13px;">
+  </div>`;
 
-  // ── 분류 선택 ──
-  html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">분류</div>
-  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;">`;
+  // ── 분류 선택 (칩 토글) ──
+  html+='<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">분류</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:16px;">';
   cats.forEach(c=>{
-    const cnt=data.filter(r=>(r.category||'')===c).length;
-    const checked=!filter.cats||filter.cats.has(c);
+    const on=!filter.cats||filter.cats.has(c);
     const label=c||'미분류';
-    html+=`<label style="display:flex;align-items:center;gap:3px;padding:5px 8px;border-radius:8px;font-size:11px;cursor:pointer;background:var(--gray-100);">
-      <input type="checkbox" class="txFilterCat" value="${c}" ${checked?'checked':''} style="width:14px;height:14px;"> ${label} <span style="color:var(--gray-400);">(${cnt})</span>
-    </label>`;
+    const cnt=data.filter(r=>(r.category||'')===c).length;
+    html+=`<div class="txCatChip" data-val="${c}" style="padding:7px 12px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:${on?700:400};background:${on?'var(--blue)':'var(--gray-100)'};color:${on?'#fff':'var(--gray-600)'};">${label} ${cnt}</div>`;
   });
-  html+=`</div>`;
+  html+='</div>';
 
   // ── 버튼 ──
   html+=`<div style="display:flex;gap:8px;">
@@ -4102,34 +4098,45 @@ function openTxFilter(type){
   popup.appendChild(box);
   document.body.appendChild(popup);
 
-  // 라디오 버튼 시각 토글
-  box.querySelectorAll('input[name="txDir"]').forEach(r=>{
-    r.closest('label').addEventListener('click',()=>{
-      setTimeout(()=>{
-        box.querySelectorAll('input[name="txDir"]').forEach(rd=>{
-          const lbl=rd.closest('label');
-          if(rd.value==='all'){lbl.style.background=rd.checked?'var(--blue)':'var(--gray-100)';lbl.style.color=rd.checked?'#fff':'var(--text)';}
-          if(rd.value==='in'){lbl.style.background=rd.checked?'var(--success)':'var(--gray-100)';lbl.style.color=rd.checked?'#fff':'var(--text)';}
-          if(rd.value==='out'){lbl.style.background=rd.checked?'var(--danger)':'var(--gray-100)';lbl.style.color=rd.checked?'#fff':'var(--text)';}
-        });
-      },10);
+  // 유형 칩 토글
+  box.querySelectorAll('.txDirChip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const colors={all:'var(--blue)',in:'var(--success)',out:'var(--danger)'};
+      box.querySelectorAll('.txDirChip').forEach(c=>{c.style.background='var(--gray-100)';c.style.color='var(--text)';});
+      chip.style.background=colors[chip.dataset.val];chip.style.color='#fff';
+    });
+  });
+  // 분류 칩 토글
+  box.querySelectorAll('.txCatChip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const on=chip.style.background==='var(--gray-100)'||chip.style.fontWeight!=='700';
+      chip.style.background=on?'var(--blue)':'var(--gray-100)';
+      chip.style.color=on?'#fff':'var(--gray-600)';
+      chip.style.fontWeight=on?'700':'400';
     });
   });
 
   box.querySelector('#txFilterReset').addEventListener('click',()=>{
-    if(type==='bank')bankFilter={dates:null,cats:null,direction:'all'};
-    else cardFilter={dates:null,cats:null};
+    if(type==='bank')bankFilter={dates:null,cats:null,direction:'all',dateFrom:null,dateTo:null};
+    else cardFilter={dates:null,cats:null,dateFrom:null,dateTo:null};
     popup.remove();
     if(type==='bank')renderBankTxTable();else renderCardTxTable();
   });
   box.querySelector('#txFilterApply').addEventListener('click',()=>{
-    const checkedDates=[...box.querySelectorAll('.txFilterDate:checked')].map(cb=>cb.value);
-    const checkedCats=[...box.querySelectorAll('.txFilterCat:checked')].map(cb=>cb.value);
-    const dir=box.querySelector('input[name="txDir"]:checked')?.value||'all';
     const f=type==='bank'?bankFilter:cardFilter;
-    f.dates=checkedDates.length===dates.length||checkedDates.length===0?null:new Set(checkedDates);
-    f.cats=checkedCats.length===cats.length||checkedCats.length===0?null:new Set(checkedCats);
-    if(type==='bank')f.direction=dir;
+    // 날짜 범위
+    const from=box.querySelector('#txFilterFrom').value;
+    const to=box.querySelector('#txFilterTo').value;
+    if(from===ym+'-01'&&to===ym+'-'+String(lastDay).padStart(2,'0')){f.dateFrom=null;f.dateTo=null;f.dates=null;}
+    else{f.dateFrom=from;f.dateTo=to;f.dates=null;}
+    // 분류
+    const selCats=[...box.querySelectorAll('.txCatChip')].filter(c=>c.style.fontWeight==='700').map(c=>c.dataset.val);
+    f.cats=selCats.length===cats.length||selCats.length===0?null:new Set(selCats);
+    // 유형
+    if(type==='bank'){
+      const dirChip=[...box.querySelectorAll('.txDirChip')].find(c=>c.style.color==='rgb(255, 255, 255)');
+      f.direction=dirChip?dirChip.dataset.val:'all';
+    }
     popup.remove();
     if(type==='bank')renderBankTxTable();else renderCardTxTable();
   });
@@ -5324,8 +5331,8 @@ document.addEventListener('DOMContentLoaded', async()=>{
   // 필터 버튼 + 뱃지(필터 해제) 이벤트
   document.getElementById('bankFilterBtn').addEventListener('click',()=>openTxFilter('bank'));
   document.getElementById('cardFilterBtn').addEventListener('click',()=>openTxFilter('card'));
-  document.getElementById('bankFilterBadge').addEventListener('click',()=>{bankFilter={dates:null,cats:null,direction:'all'};renderBankTxTable();});
-  document.getElementById('cardFilterBadge').addEventListener('click',()=>{cardFilter={dates:null,cats:null};renderCardTxTable();});
+  document.getElementById('bankFilterBadge').addEventListener('click',()=>{bankFilter={dateFrom:null,dateTo:null,cats:null,direction:'all'};renderBankTxTable();});
+  document.getElementById('cardFilterBadge').addEventListener('click',()=>{cardFilter={dateFrom:null,dateTo:null,cats:null};renderCardTxTable();});
   bindFile('capsFileInput',inp=>handleCapsUpload(inp));
   bindFile('salesFileInput',inp=>handleSalesUpload(inp));
   bindFile('vendorFileInput',inp=>handleVendorUpload(inp));
