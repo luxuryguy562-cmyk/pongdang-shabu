@@ -746,6 +746,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button id="saleSrcUps" class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;" onclick="switchSaleSource('ups')">🏪 업솔루션</button>
     <button class="btn btn-secondary btn-sm" onclick="manualCrawl()" id="crawlBtn" style="flex:0 0 auto;font-size:10px;">↓</button>
   </div>
+  <!-- 가마감/진마감 토글 -->
+  <div style="display:flex;gap:0;margin-bottom:14px;background:var(--gray-100);border-radius:12px;padding:3px;">
+    <button id="dashModeProvisional" class="btn btn-primary btn-sm" style="flex:1;font-size:12px;border-radius:10px;" onclick="switchDashMode('provisional')">가마감 (예측)</button>
+    <button id="dashModeFinal" class="btn btn-sm" style="flex:1;font-size:12px;border-radius:10px;background:transparent;color:var(--gray-600);" onclick="switchDashMode('final')">진마감 (확정)</button>
+  </div>
 
   <!-- ━━ KPI 그리드 (주정산표 스타일) ━━ -->
   <div class="card" style="padding:16px;">
@@ -2713,7 +2718,7 @@ async function loadDashboard(){
       // 전월 고정비
       sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid).eq('year_month',prevYm),
       // 당월 지출 (병렬)
-      calcExpenseByCategories(ym)
+      calcExpenseByCategories(ym, dashMode)
     ]);
 
     // ══ 1. 매출 집계 ══
@@ -2775,8 +2780,18 @@ async function loadDashboard(){
     const reserveRate=parseFloat(settings.reserve_rate||5)/100;
     const reserveFixed=parseInt(settings.reserve_fixed||400000);
     const cardSales=salesBreakdown['신용카드']||salesBreakdown['카드']||0;
-    const royalty=Math.round(totalRevenue*royaltyRate);
-    const cardFee=Math.round(cardSales*cardFeeRate);
+    // 로열티/카드수수료: 가마감=요율계산, 진마감=mydata 실제출금
+    let royalty,cardFee;
+    if(dashMode==='final'){
+      // 진마감: mydata에서 '유림에퐁당'(로열티), 카드대금 제외 후 수수료 관련 출금
+      const{data:royaltyTx}=await sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end);
+      royalty=(royaltyTx||[]).reduce((a,r)=>a+Math.abs(r.amount||0),0);
+      // 카드수수료는 보통 카드사에서 매출-수수료 차감 입금이므로 요율 계산 유지
+      cardFee=Math.round(cardSales*cardFeeRate);
+    } else {
+      royalty=Math.round(totalRevenue*royaltyRate);
+      cardFee=Math.round(cardSales*cardFeeRate);
+    }
 
     // 마감예상 계산
     const estRevenue=isCurrent&&passedDays>0?Math.round(totalRevenue/passedDays*lastDay):totalRevenue;
@@ -2809,7 +2824,7 @@ async function loadDashboard(){
     document.getElementById('dashKpiGrid').innerHTML=`
       <!-- 매출 -->
       <div class="kpi-section">
-        <div class="kpi-section-label">이번 달 매출</div>
+        <div class="kpi-section-label">이번 달 매출 ${dashMode==='final'?'<span style="font-size:10px;color:var(--blue);font-weight:800;">진마감</span>':'<span style="font-size:10px;color:var(--gray-400);">가마감</span>'}</div>
         <div style="display:flex;align-items:baseline;gap:8px;">
           <span class="kpi-big blue">${fmt(totalRevenue)}원</span>
           ${deltaHtml(totalRevenue,prevRevenue)}
@@ -3533,6 +3548,16 @@ async function renderWageSummary(){
 let expCategories = [];
 let expCatColorSel = '#0050FF';
 let dashSaleSource = 'settle'; // 'settle' | 'ups'
+let dashMode = 'provisional'; // 'provisional' | 'final'
+
+function switchDashMode(mode){
+  dashMode=mode;
+  document.getElementById('dashModeProvisional').className='btn btn-sm'+(mode==='provisional'?' btn-primary':'');
+  document.getElementById('dashModeProvisional').style.cssText='flex:1;font-size:12px;border-radius:10px;'+(mode==='provisional'?'':'background:transparent;color:var(--gray-600);');
+  document.getElementById('dashModeFinal').className='btn btn-sm'+(mode==='final'?' btn-primary':'');
+  document.getElementById('dashModeFinal').style.cssText='flex:1;font-size:12px;border-radius:10px;'+(mode==='final'?'':'background:transparent;color:var(--gray-600);');
+  loadDashboard();
+}
 
 async function loadExpCategories(){
   if(!currentStore) return;
@@ -3692,48 +3717,60 @@ async function saveLaborConfirm(){
 }
 
 // ── 카테고리별 지출 집계 (핵심 함수)
-async function calcExpenseByCategories(ym){
+// mode: 'provisional'(가마감/예측) | 'final'(진마감/확정=mydata 실제 출금)
+async function calcExpenseByCategories(ym, mode){
   const [y,m]=ym.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
   const start=ym+'-01',end=ym+'-'+lastDay;
   const sid=currentStore.id;
+  const isFinal=(mode==='final');
+
+  // 진마감: mydata_transactions에서 귀속월/tx_date 기준 집계하는 헬퍼
+  const getMydataAmount=async(catId)=>{
+    const{data:mdByAttr}=await sb.from('mydata_transactions').select('amount')
+      .eq('store_id',sid).eq('category_id',catId)
+      .eq('exclude_from_settlement',false)
+      .eq('attribution_month',ym);
+    const{data:mdByDate}=await sb.from('mydata_transactions').select('amount')
+      .eq('store_id',sid).eq('category_id',catId)
+      .eq('exclude_from_settlement',false)
+      .is('attribution_month',null)
+      .gte('tx_date',start).lte('tx_date',end);
+    return[...(mdByAttr||[]),...(mdByDate||[])].reduce((a,r)=>a+Math.abs(r.amount||0),0);
+  };
 
   // 병렬: 모든 카테고리 동시 조회
   const promises=expCategories.map(async cat=>{
     let amount=0,isConfirmed=false;
     try{
-      if(cat.data_source==='vendor_orders'){
-        const{data}=await sb.from('vendor_orders').select('amount,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end);
-        amount=(data||[]).filter(o=>!cat.vendor_category||o.vendors?.category===cat.vendor_category).reduce((a,o)=>a+(o.amount||0),0);
-      } else if(cat.data_source==='receipts'){
-        const{data}=await sb.from('receipts').select('total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end);
-        amount=(data||[]).reduce((a,r)=>a+(r.total_price||0),0);
-      } else if(cat.data_source==='attendance'){
-        const{data:confirmed}=await sb.from('expense_category_amounts').select('amount').eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
-        if(confirmed?.amount){amount=confirmed.amount;isConfirmed=true;}
-        else{const{data}=await sb.from('attendance_logs').select('calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end);amount=(data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);laborAutoAmount=amount;}
-      } else if(cat.data_source==='fixed_costs'){
-        const{data}=await sb.from('fixed_cost_amounts').select('amount').eq('store_id',sid).eq('year_month',ym);
-        amount=(data||[]).reduce((a,r)=>a+(r.amount||0),0);
-      } else if(cat.data_source==='manual'){
-        const{data}=await sb.from('expense_category_amounts').select('amount').eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
-        amount=data?.amount||0;
-      }
-
-      // ─── mydata 보조: 기록 소스에 데이터 없으면 mydata_transactions로 보충 ───
-      // attribution_month(귀속월) 우선, 없으면 tx_date 기준
-      if(amount===0&&!isConfirmed){
-        const{data:mdByAttr}=await sb.from('mydata_transactions').select('amount')
-          .eq('store_id',sid).eq('category_id',cat.id)
-          .eq('exclude_from_settlement',false)
-          .eq('attribution_month',ym);
-        const{data:mdByDate}=await sb.from('mydata_transactions').select('amount')
-          .eq('store_id',sid).eq('category_id',cat.id)
-          .eq('exclude_from_settlement',false)
-          .is('attribution_month',null)
-          .gte('tx_date',start).lte('tx_date',end);
-        const mdTotal=[...(mdByAttr||[]),...(mdByDate||[])].reduce((a,r)=>a+Math.abs(r.amount||0),0);
-        if(mdTotal>0) amount=mdTotal;
+      if(isFinal){
+        // ── 진마감: mydata_transactions 실제 출금만 ──
+        amount=await getMydataAmount(cat.id);
+        isConfirmed=amount>0;
+      } else {
+        // ── 가마감: 기존 기록 소스 (예측) ──
+        if(cat.data_source==='vendor_orders'){
+          const{data}=await sb.from('vendor_orders').select('amount,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end);
+          amount=(data||[]).filter(o=>!cat.vendor_category||o.vendors?.category===cat.vendor_category).reduce((a,o)=>a+(o.amount||0),0);
+        } else if(cat.data_source==='receipts'){
+          const{data}=await sb.from('receipts').select('total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end);
+          amount=(data||[]).reduce((a,r)=>a+(r.total_price||0),0);
+        } else if(cat.data_source==='attendance'){
+          const{data:confirmed}=await sb.from('expense_category_amounts').select('amount').eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
+          if(confirmed?.amount){amount=confirmed.amount;isConfirmed=true;}
+          else{const{data}=await sb.from('attendance_logs').select('calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end);amount=(data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);laborAutoAmount=amount;}
+        } else if(cat.data_source==='fixed_costs'){
+          const{data}=await sb.from('fixed_cost_amounts').select('amount').eq('store_id',sid).eq('year_month',ym);
+          amount=(data||[]).reduce((a,r)=>a+(r.amount||0),0);
+        } else if(cat.data_source==='manual'){
+          const{data}=await sb.from('expense_category_amounts').select('amount').eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
+          amount=data?.amount||0;
+        }
+        // 가마감에서도 기록 없으면 mydata로 보충
+        if(amount===0&&!isConfirmed){
+          const mdTotal=await getMydataAmount(cat.id);
+          if(mdTotal>0) amount=mdTotal;
+        }
       }
     }catch(e){console.error('지출 계산 오류('+cat.name+'):',e);}
     return{id:cat.id,name:cat.name,color:cat.color||'#0050FF',source:cat.data_source,amount,isConfirmed};
