@@ -4499,13 +4499,21 @@ async function saveExcelBatch(){
 
   try{
     // expense_categories 조회 → category 문자열을 category_id로 매칭
+    // 분류 결과 → expense_categories.name 매핑
+    const CAT_NAME_MAP={'물품대금':'식자재(거래처)','직구':'식자재(직구)','고정비':'공과금/고정비','인건비':'인건비','세금':'세금','마케팅':'마케팅','기타':'기타'};
     const catMap={};
-    if(expCategories&&expCategories.length){
-      expCategories.forEach(c=>{catMap[c.name]=c.id;});
-    } else {
-      const{data:cats}=await sb.from('expense_categories').select('id,name').eq('store_id',currentStore.id).eq('is_active',true);
-      (cats||[]).forEach(c=>{catMap[c.name]=c.id;});
-    }
+    const cats=expCategories?.length?expCategories:(await sb.from('expense_categories').select('id,name').eq('store_id',currentStore.id).eq('is_active',true)).data||[];
+    cats.forEach(c=>{catMap[c.name]=c.id;});
+    // 매핑 이름으로도 찾을 수 있게
+    const resolveCatId=category=>{
+      if(!category)return null;
+      // 직접 매칭
+      if(catMap[category])return catMap[category];
+      // 매핑 테이블로 매칭
+      const mapped=CAT_NAME_MAP[category];
+      if(mapped&&catMap[mapped])return catMap[mapped];
+      return null;
+    };
 
     // 중복 체크용 해시 생성
     const rows=excelParsedData.map(item=>{
@@ -4523,7 +4531,7 @@ async function saveExcelBatch(){
         balance:item.balance||null,
         source:'excel_'+type,
         category:item.category||null,
-        category_id:catMap[item.category]||null,
+        category_id:resolveCatId(item.category),
         sub_category:item.sub_category||null,
         confidence:item.confidence||'high',
         needs_review:item.needs_review||false,
