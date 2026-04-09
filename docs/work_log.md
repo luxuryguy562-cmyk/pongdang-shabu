@@ -23,6 +23,29 @@
 ### 은행/카드 호환
 - 은행 13개사, 카드 8개사 검증 완료 (→ plan.md #3)
 
+---
+
+## [2026-04-09] docs 전체 정리
+
+### 상태: 완료
+
+### 작업 내용
+1. plan2.md → plan.md 이름 변경 + 전면 재작성 (excel-upload-plan 통합)
+2. excel-upload-plan.md 삭제
+3. services.md 신규 생성 (외부 URL/키/배포 정보 분리)
+4. work_log.md 축소 (중복 제거 → dev_lessons/business_rules 참조)
+5. dev_lessons.md 정리 (중복 제거)
+6. db_schema.md 업데이트 (mydata_transactions, reconciliation, vendor_diffs 추가)
+7. CLAUDE.md에 추가:
+   - 새 세션 시작 시 필독 순서
+   - docs 자동 기록 규칙 (모든 docs 파일 해당 이벤트 시 즉시 업데이트)
+
+### 반성
+- 사장님 지시사항(인건비 익월지급) 같은 변수를 코드 구현에 바로 반영하지 않았음
+- docs 기록을 수동으로만 하다 보니 누락 발생 → 자동 기록 규칙으로 방지
+
+---
+
 ### 다음 TODO
 - [ ] 디버그 console.log 제거
 - [ ] 카드 엑셀 실제 업로드 테스트

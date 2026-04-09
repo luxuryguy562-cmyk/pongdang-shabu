@@ -5,16 +5,7 @@
 ---
 
 ## 0. 외부 서비스 / 배포 정보
-
-| 서비스 | URL / 정보 |
-|--------|-----------|
-| **Supabase** | `https://ruytgygjwnbtzmtofopg.supabase.co` |
-| **Store ID** | `4ae03341-e5dc-4933-b746-29728cbc685f` (논산점) |
-| **배포** | Cloudflare Pages → `pongdang-shabu.pages.dev` |
-| **배포 브랜치** | `main` (자동 배포) |
-| **레포** | `luxuryguy562-cmyk/pongdang-shabu` |
-| **Gemini 프록시** | `gemini-proxy.luxuryguy562.workers.dev` (영수증/POS AI용) |
-| **업솔루션 크롤러** | `upsolution-crawler.js` (Cloudflare Workers) |
+> `docs/services.md` 참조
 
 ---
 
