@@ -3718,6 +3718,10 @@ async function calcExpenseByCategories(ym){
       } else if(cat.data_source==='manual'){
         const{data}=await sb.from('expense_category_amounts').select('amount').eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
         amount=data?.amount||0;
+      } else if(cat.data_source==='mydata'){
+        // mydata_transactions에서 category_id로 집계 (출금만, 정산제외 제외)
+        const{data}=await sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('exclude_from_settlement',false).gte('tx_date',start).lte('tx_date',end);
+        amount=(data||[]).reduce((a,r)=>a+Math.abs(r.amount||0),0);
       }
     }catch(e){console.error('지출 계산 오류('+cat.name+'):',e);}
     return{id:cat.id,name:cat.name,color:cat.color||'#0050FF',source:cat.data_source,amount,isConfirmed};
@@ -4494,6 +4498,15 @@ async function saveExcelBatch(){
   const type=excelUploadType;
 
   try{
+    // expense_categories 조회 → category 문자열을 category_id로 매칭
+    const catMap={};
+    if(expCategories&&expCategories.length){
+      expCategories.forEach(c=>{catMap[c.name]=c.id;});
+    } else {
+      const{data:cats}=await sb.from('expense_categories').select('id,name').eq('store_id',currentStore.id).eq('is_active',true);
+      (cats||[]).forEach(c=>{catMap[c.name]=c.id;});
+    }
+
     // 중복 체크용 해시 생성
     const rows=excelParsedData.map(item=>{
       const hashSrc=`${item.tx_date}|${item.tx_time||''}|${Math.abs(item.amount||0)}|${item.description||item.merchant_name||''}`;
@@ -4510,6 +4523,7 @@ async function saveExcelBatch(){
         balance:item.balance||null,
         source:'excel_'+type,
         category:item.category||null,
+        category_id:catMap[item.category]||null,
         sub_category:item.sub_category||null,
         confidence:item.confidence||'high',
         needs_review:item.needs_review||false,
@@ -4729,8 +4743,37 @@ async function loadReconciliation(){
       }
     }
 
-    // 미매칭: 출금 거래 중 매칭 안 된 건
-    const unmatchedTx=transactions.filter(tx=>tx.amount<0);
+    // ─── mydata_transactions → 실제 출금 자동 매칭 ───
+    // category_id가 있는 출금 거래를 카테고리별로 합산하여 actual에 반영
+    const txByCategory={};
+    const matchedTxIds=new Set();
+    transactions.filter(tx=>tx.amount<0&&!tx.exclude_from_settlement).forEach(tx=>{
+      if(tx.category_id){
+        if(!txByCategory[tx.category_id]) txByCategory[tx.category_id]=0;
+        txByCategory[tx.category_id]+=Math.abs(tx.amount);
+        matchedTxIds.add(tx.id);
+      }
+    });
+
+    // summary에 actual 자동 반영 (수동 입력 없는 항목만)
+    summary.forEach(entry=>{
+      const autoActual=txByCategory[entry.categoryId]||0;
+      if(autoActual>0){
+        // 수동 입력(saved recon)이 없는 경우에만 자동 반영
+        const hasManualActual=entry.details.some(d=>d.actual>0);
+        if(!hasManualActual){
+          entry.actual=autoActual;
+          // details가 1개면 바로 반영, 여러 개면 총액만
+          if(entry.details.length===1){
+            entry.details[0].actual=autoActual;
+            entry.details[0].status=autoActual===entry.details[0].recorded?'matched':(autoActual>entry.details[0].recorded?'overpaid':'underpaid');
+          }
+        }
+      }
+    });
+
+    // 미매칭: 출금 거래 중 category_id 없거나 매칭 안 된 건
+    const unmatchedTx=transactions.filter(tx=>tx.amount<0&&!tx.exclude_from_settlement&&!matchedTxIds.has(tx.id));
 
     reconData={summary,transactions,unmatched:unmatchedTx,savedRecon};
     renderReconSummary();
