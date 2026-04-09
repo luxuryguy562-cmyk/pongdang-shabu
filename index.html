@@ -938,37 +938,28 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           <button class="btn btn-secondary btn-sm" onclick="moveExplistMonth('bank',1)">›</button>
         </div>
       </div>
-      <div id="explistBankData">
-        <!-- 엑셀 업로드 버튼 -->
-        <div style="display:flex;gap:6px;margin-bottom:12px;">
-          <label class="btn btn-purple" style="flex:1;padding:12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-            📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="bankExcelInput">
-          </label>
-        </div>
-        <div id="explistBankConnected" style="display:none;">
-          <div style="display:flex;gap:6px;margin-bottom:12px;">
-            <select id="explistBankAccSel" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" onchange="loadBankTransactions()">
-              <option value="">전체 계좌</option>
-            </select>
-            <button class="btn btn-primary btn-sm" onclick="syncBankData()">↻ 동기화</button>
-          </div>
-          <div id="bankTxList"></div>
-          <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid var(--text);margin-top:8px;">
-            <span style="font-size:14px;font-weight:800;">합계</span>
-            <div style="text-align:right;">
-              <div style="font-size:12px;color:var(--success);font-weight:700;" id="bankTxInSum">입금 0원</div>
-              <div style="font-size:12px;color:var(--danger);font-weight:700;" id="bankTxOutSum">출금 0원</div>
-            </div>
-          </div>
-        </div>
-        <div id="explistBankEmpty">
-          <div class="empty-state">
-            <div class="empty-icon">🏦</div>
-            <p>마이데이터를 연결하면<br>계좌 입출금 내역이 자동으로 표시됩니다</p>
-            <button class="btn btn-primary" style="padding:12px 20px;font-size:13px;margin-top:12px;" onclick="explistTab('connect',document.querySelector('#explistCont .sub-tab:last-child'))">마이데이터 연결하기</button>
-          </div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <label class="btn btn-purple" style="flex:1;padding:10px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+          📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="bankExcelInput">
+        </label>
+        <select id="explistBankFilter" class="input-field" style="margin-bottom:0;flex:1;padding:8px 10px;font-size:12px;">
+          <option value="">전체 분류</option>
+        </select>
+      </div>
+      <div class="table-wrap" style="margin:0 -20px;">
+        <table>
+          <thead><tr><th style="width:75px">날짜</th><th>내용</th><th style="width:60px">분류</th><th style="width:68px">입금</th><th style="width:68px">출금</th><th style="width:68px">잔액</th></tr></thead>
+          <tbody id="bankTxBody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid var(--text);margin-top:4px;">
+        <span style="font-size:14px;font-weight:800;">합계</span>
+        <div style="text-align:right;">
+          <div style="font-size:12px;color:var(--success);font-weight:700;" id="bankTxInSum">입금 0원</div>
+          <div style="font-size:12px;color:var(--danger);font-weight:700;" id="bankTxOutSum">출금 0원</div>
         </div>
       </div>
+      <div id="bankTxEmpty" style="text-align:center;padding:30px 0;color:var(--gray-400);font-size:13px;">엑셀을 업로드하면 내역이 표시됩니다</div>
     </div>
   </div>
 
@@ -983,34 +974,25 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           <button class="btn btn-secondary btn-sm" onclick="moveExplistMonth('card',1)">›</button>
         </div>
       </div>
-      <div id="explistCardData">
-        <!-- 엑셀 업로드 버튼 -->
-        <div style="display:flex;gap:6px;margin-bottom:12px;">
-          <label class="btn btn-purple" style="flex:1;padding:12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-            📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="cardExcelInput">
-          </label>
-        </div>
-        <div id="explistCardConnected" style="display:none;">
-          <div style="display:flex;gap:6px;margin-bottom:12px;">
-            <select id="explistCardSel" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" onchange="loadCardTransactions()">
-              <option value="">전체 카드</option>
-            </select>
-            <button class="btn btn-primary btn-sm" onclick="syncCardData()">↻ 동기화</button>
-          </div>
-          <div id="cardTxList"></div>
-          <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid var(--text);margin-top:8px;">
-            <span style="font-size:14px;font-weight:800;">결제 합계</span>
-            <span style="font-size:15px;font-weight:800;color:var(--danger);" id="cardTxSum">0원</span>
-          </div>
-        </div>
-        <div id="explistCardEmpty">
-          <div class="empty-state">
-            <div class="empty-icon">💳</div>
-            <p>마이데이터를 연결하면<br>카드 결제 내역이 자동으로 표시됩니다</p>
-            <button class="btn btn-primary" style="padding:12px 20px;font-size:13px;margin-top:12px;" onclick="explistTab('connect',document.querySelector('#explistCont .sub-tab:last-child'))">마이데이터 연결하기</button>
-          </div>
-        </div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <label class="btn btn-purple" style="flex:1;padding:10px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+          📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="cardExcelInput">
+        </label>
+        <select id="explistCardFilter" class="input-field" style="margin-bottom:0;flex:1;padding:8px 10px;font-size:12px;">
+          <option value="">전체 분류</option>
+        </select>
       </div>
+      <div class="table-wrap" style="margin:0 -20px;">
+        <table>
+          <thead><tr><th style="width:75px">날짜</th><th>가맹점</th><th style="width:60px">분류</th><th style="width:75px">금액</th><th style="width:40px">상태</th></tr></thead>
+          <tbody id="cardTxBody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid var(--text);margin-top:4px;">
+        <span style="font-size:14px;font-weight:800;">결제 합계</span>
+        <span style="font-size:15px;font-weight:800;color:var(--danger);" id="cardTxSum">0원</span>
+      </div>
+      <div id="cardTxEmpty" style="text-align:center;padding:30px 0;color:var(--gray-400);font-size:13px;">엑셀을 업로드하면 내역이 표시됩니다</div>
     </div>
   </div>
 
@@ -3854,17 +3836,9 @@ async function loadMyDataStatus(){
     </div>`).join('');
 }
 function checkMyDataConnection(){
-  const hasBankConn=mydataAccounts.some(a=>a.account_type==='bank');
-  const hasCardConn=mydataAccounts.some(a=>a.account_type==='card');
-  document.getElementById('explistBankConnected').style.display=hasBankConn?'block':'none';
-  document.getElementById('explistBankEmpty').style.display=hasBankConn?'none':'block';
-  document.getElementById('explistCardConnected').style.display=hasCardConn?'block':'none';
-  document.getElementById('explistCardEmpty').style.display=hasCardConn?'none':'block';
-  // 계좌/카드 셀렉터 업데이트
-  const bankSel=document.getElementById('explistBankAccSel');
-  const cardSel=document.getElementById('explistCardSel');
-  if(bankSel){bankSel.innerHTML='<option value="">전체 계좌</option>'+mydataAccounts.filter(a=>a.account_type==='bank').map(a=>`<option value="${a.id}">${a.institution_name||''} ${a.account_alias||''}</option>`).join('');}
-  if(cardSel){cardSel.innerHTML='<option value="">전체 카드</option>'+mydataAccounts.filter(a=>a.account_type==='card').map(a=>`<option value="${a.id}">${a.institution_name||''} ${a.account_alias||''}</option>`).join('');}
+  // 마이데이터 연결 여부와 관계없이 항상 거래내역 로드
+  loadBankTransactions();
+  loadCardTransactions();
 }
 
 async function addBankAccount(){
@@ -3913,24 +3887,40 @@ async function disconnectMyData(id){
 }
 
 // ── 거래 내역 조회 ──
+let bankTxData=[],cardTxData=[];
+
 async function loadBankTransactions(){
   if(!currentStore)return;
   const ym=explistBankMonth;const[y,m]=ym.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
-  const accId=document.getElementById('explistBankAccSel')?.value||'';
-  let q=sb.from('mydata_transactions').select('*').eq('store_id',currentStore.id).eq('tx_type','bank').gte('tx_date',ym+'-01').lte('tx_date',ym+'-'+lastDay).order('tx_date',{ascending:false});
-  if(accId)q=q.eq('account_id',accId);
-  const{data}=await q;
-  const rows=data||[];
-  const c=document.getElementById('bankTxList');
-  if(!rows.length){c.innerHTML='<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:13px;">내역이 없습니다</div>';document.getElementById('bankTxInSum').innerText='입금 0원';document.getElementById('bankTxOutSum').innerText='출금 0원';return;}
+  const{data}=await sb.from('mydata_transactions').select('*').eq('store_id',currentStore.id).eq('tx_type','bank').gte('tx_date',ym+'-01').lte('tx_date',ym+'-'+lastDay).order('tx_date',{ascending:false});
+  bankTxData=data||[];
+  // 분류 필터 옵션 갱신
+  const filterEl=document.getElementById('explistBankFilter');
+  const cats=[...new Set(bankTxData.map(r=>r.category).filter(Boolean))].sort();
+  filterEl.innerHTML='<option value="">전체 분류 ('+bankTxData.length+')</option>'+cats.map(c=>'<option value="'+c+'">'+c+' ('+bankTxData.filter(r=>r.category===c).length+')</option>').join('');
+  renderBankTxTable();
+}
+
+function renderBankTxTable(){
+  const filter=document.getElementById('explistBankFilter').value;
+  const rows=filter?bankTxData.filter(r=>r.category===filter):bankTxData;
+  const body=document.getElementById('bankTxBody');
+  const empty=document.getElementById('bankTxEmpty');
+  if(!bankTxData.length){body.innerHTML='';empty.style.display='block';document.getElementById('bankTxInSum').innerText='입금 0원';document.getElementById('bankTxOutSum').innerText='출금 0원';return;}
+  empty.style.display='none';
   let inSum=0,outSum=0;
-  c.innerHTML=rows.map(r=>{
+  body.innerHTML=rows.map(r=>{
     const isIn=r.amount>0;if(isIn)inSum+=r.amount;else outSum+=Math.abs(r.amount);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray-100);">
-      <div><div style="font-size:13px;font-weight:700;">${r.description||'-'}</div><div style="font-size:11px;color:var(--gray-600);margin-top:2px;">${r.tx_date} ${r.tx_time||''}</div></div>
-      <div style="text-align:right;"><div style="font-size:14px;font-weight:800;color:var(--${isIn?'success':'danger'});">${isIn?'+':''}${fmt(r.amount)}원</div>
-      ${r.balance!=null?`<div style="font-size:10px;color:var(--gray-400);">잔액 ${fmt(r.balance)}</div>`:''}</div>
-    </div>`;
+    const cat=r.category||'';
+    const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--gray-600)';
+    return `<tr>
+      <td style="font-size:11px;white-space:nowrap;">${(r.tx_date||'').slice(5)}<br><span style="color:var(--gray-400);font-size:10px;">${r.tx_time||''}</span></td>
+      <td style="text-align:left;font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.description||''}">${r.description||'-'}</td>
+      <td style="font-size:10px;color:${catColor};">${cat}</td>
+      <td style="color:var(--success);font-weight:700;font-size:11px;">${isIn?fmt(r.amount):''}</td>
+      <td style="color:var(--danger);font-weight:700;font-size:11px;">${!isIn?fmt(Math.abs(r.amount)):''}</td>
+      <td style="font-size:10px;color:var(--gray-400);">${r.balance!=null?fmt(r.balance):''}</td>
+    </tr>`;
   }).join('');
   document.getElementById('bankTxInSum').innerText='입금 '+fmt(inSum)+'원';
   document.getElementById('bankTxOutSum').innerText='출금 '+fmt(outSum)+'원';
@@ -3939,20 +3929,36 @@ async function loadBankTransactions(){
 async function loadCardTransactions(){
   if(!currentStore)return;
   const ym=explistCardMonth;const[y,m]=ym.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
-  const accId=document.getElementById('explistCardSel')?.value||'';
-  let q=sb.from('mydata_transactions').select('*').eq('store_id',currentStore.id).eq('tx_type','card').gte('tx_date',ym+'-01').lte('tx_date',ym+'-'+lastDay).order('tx_date',{ascending:false});
-  if(accId)q=q.eq('account_id',accId);
-  const{data}=await q;
-  const rows=data||[];
-  const c=document.getElementById('cardTxList');
-  if(!rows.length){c.innerHTML='<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:13px;">내역이 없습니다</div>';document.getElementById('cardTxSum').innerText='0원';return;}
+  const{data}=await sb.from('mydata_transactions').select('*').eq('store_id',currentStore.id).eq('tx_type','card').gte('tx_date',ym+'-01').lte('tx_date',ym+'-'+lastDay).order('tx_date',{ascending:false});
+  cardTxData=data||[];
+  // 분류 필터 옵션 갱신
+  const filterEl=document.getElementById('explistCardFilter');
+  const cats=[...new Set(cardTxData.map(r=>r.category).filter(Boolean))].sort();
+  filterEl.innerHTML='<option value="">전체 분류 ('+cardTxData.length+')</option>'+cats.map(c=>'<option value="'+c+'">'+c+' ('+cardTxData.filter(r=>r.category===c).length+')</option>').join('');
+  renderCardTxTable();
+}
+
+function renderCardTxTable(){
+  const filter=document.getElementById('explistCardFilter').value;
+  const rows=filter?cardTxData.filter(r=>r.category===filter):cardTxData;
+  const body=document.getElementById('cardTxBody');
+  const empty=document.getElementById('cardTxEmpty');
+  if(!cardTxData.length){body.innerHTML='';empty.style.display='block';document.getElementById('cardTxSum').innerText='0원';return;}
+  empty.style.display='none';
   let total=0;
-  c.innerHTML=rows.map(r=>{
+  body.innerHTML=rows.map(r=>{
     total+=Math.abs(r.amount);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray-100);">
-      <div><div style="font-size:13px;font-weight:700;">${r.description||'-'}</div><div style="font-size:11px;color:var(--gray-600);margin-top:2px;">${r.tx_date} ${r.merchant_name||''}</div></div>
-      <div style="font-size:14px;font-weight:800;color:var(--danger);">${fmt(Math.abs(r.amount))}원</div>
-    </div>`;
+    const cat=r.category||'';
+    const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--gray-600)';
+    const status=r.is_cancelled?'취소':r.exclude_from_settlement?'제외':'';
+    const statusColor=r.is_cancelled?'var(--danger)':'var(--gray-400)';
+    return `<tr${r.is_cancelled?' class="row-off"':''}>
+      <td style="font-size:11px;white-space:nowrap;">${(r.tx_date||'').slice(5)}<br><span style="color:var(--gray-400);font-size:10px;">${r.tx_time||''}</span></td>
+      <td style="text-align:left;font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.merchant_name||r.description||''}">${r.merchant_name||r.description||'-'}</td>
+      <td style="font-size:10px;color:${catColor};">${cat}</td>
+      <td style="color:var(--danger);font-weight:700;font-size:11px;">${fmt(Math.abs(r.amount))}</td>
+      <td style="font-size:10px;color:${statusColor};">${status}</td>
+    </tr>`;
   }).join('');
   document.getElementById('cardTxSum').innerText=fmt(total)+'원';
 }
@@ -5135,6 +5141,10 @@ document.addEventListener('DOMContentLoaded', async()=>{
   const bindFile=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',function(){fn(this);});};
   bindFile('bankExcelInput',inp=>handleExcelUpload(inp,'bank'));
   bindFile('cardExcelInput',inp=>handleExcelUpload(inp,'card'));
+  // 분류 필터 이벤트
+  const bindSel=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',fn);};
+  bindSel('explistBankFilter',renderBankTxTable);
+  bindSel('explistCardFilter',renderCardTxTable);
   bindFile('capsFileInput',inp=>handleCapsUpload(inp));
   bindFile('salesFileInput',inp=>handleSalesUpload(inp));
   bindFile('vendorFileInput',inp=>handleVendorUpload(inp));
