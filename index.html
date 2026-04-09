@@ -4239,16 +4239,23 @@ function parseDate(v){
 }
 
 async function handleExcelUpload(input, type){
-  if(!guardStore()||!input.files[0])return;
+  console.log('[엑셀업로드] 시작, type='+type, 'files='+input.files?.length);
+  if(!guardStore()){console.log('[엑셀업로드] guardStore 실패');return;}
+  if(!input.files[0]){console.log('[엑셀업로드] 파일 없음');return;}
   const file=input.files[0];
+  console.log('[엑셀업로드] 파일:', file.name, file.size+'bytes');
   excelUploadType=type;
   setLoad(true,'엑셀 분석 중...');
 
   try{
+    console.log('[엑셀업로드] parseExcelFile 시작');
     const rows=await parseExcelFile(file);
+    console.log('[엑셀업로드] 파싱완료, rows='+rows.length);
     if(!rows.length) throw new Error('데이터가 없습니다.');
     const headers=Object.keys(rows[0]);
+    console.log('[엑셀업로드] 헤더:', headers.join(', '));
     const colMap=matchColumns(headers, type);
+    console.log('[엑셀업로드] 컬럼매칭:', JSON.stringify(colMap));
 
     // 필수 컬럼 확인 (인덱스 0도 유효하므로 ==null 사용)
     if(type==='bank'&&colMap.tx_date==null) throw new Error('날짜 컬럼을 찾을 수 없습니다. (거래일, 일자 등)');
@@ -4316,10 +4323,13 @@ async function handleExcelUpload(input, type){
 
     if(!parsed.length) throw new Error('유효한 거래 내역이 없습니다. 엑셀 형식을 확인해주세요.');
 
+    console.log('[엑셀업로드] 파싱결과:', parsed.length+'건, 미분류:'+parsed.filter(i=>i.needs_review).length+'건');
     excelParsedData=parsed;
     renderExcelPreview(parsed, type, parsed.length);
+    console.log('[엑셀업로드] 프리뷰 렌더 완료, 시트 열기');
     openSheet('excelUploadSheet');
   }catch(e){
+    console.error('[엑셀업로드] 에러:', e.message, e.stack);
     toast('분석 실패: '+e.message,'error');
   }finally{
     setLoad(false);
