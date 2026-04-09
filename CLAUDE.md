@@ -285,6 +285,27 @@ to: [다음 에이전트]
 
 ## 부칙
 
+### 새 세션 시작 시 필독 순서
+1. `CLAUDE.md` — 헌법 (이 파일)
+2. `docs/business_rules.md` — 비즈니스 변수 (놓치면 삽질)
+3. `docs/dev_lessons.md` — 개발 교훈 (같은 실수 방지)
+4. `docs/plan.md` — 구현 현황 (뭐가 됐고 안 됐는지)
+5. `docs/db_schema.md` — DB 구조 (쿼리 전 참조)
+6. `docs/work_log.md` — 이전 세션 작업 (이어서 할 거 확인)
+7. `docs/services.md` — 외부 서비스 URL/키 (코드 수정 시 참조)
+
+### docs 자동 기록 규칙
+**모든 docs 파일은 해당 이벤트 발생 시 즉시 업데이트한다. 누락 금지.**
+
+| 파일 | 자동 기록 시점 |
+|------|---------------|
+| `db_schema.md` | DB 테이블/컬럼 추가·변경·삭제 시 |
+| `plan.md` | 기능 추가·완료·상태 변경 시 |
+| `work_log.md` | 매 세션 작업 완료 시 (세션 끝나기 전 필수) |
+| `dev_lessons.md` | 버그·삽질·교훈 발견 시 |
+| `business_rules.md` | 사장님이 새 규칙·변수 알려줄 때 |
+| `services.md` | URL·키·외부 서비스 변경 시 |
+
 ### 토큰 비용 절감 수칙
 - context_reader: 전체 코드를 읽지 말고, 요청 관련 키워드로 grep 발췌만
 - 소형 작업: reviewer/tester/designer 건너뛰기
@@ -295,7 +316,7 @@ to: [다음 에이전트]
 ```
 pongdang-shabu/
 ├── CLAUDE.md              ← 헌법 (이 파일)
-├── agents/
+├── agents/                ← 에이전트 워크플로우 (자동 읽힘)
 │   ├── context_reader.md
 │   ├── advisor.md
 │   ├── planner.md
@@ -307,9 +328,10 @@ pongdang-shabu/
 ├── docs/
 │   ├── db_schema.md       ← Supabase 테이블 구조 (유일한 스키마 진실)
 │   ├── plan.md            ← 전체 시스템 설계 + 구현 현황 (유일한 계획 진실)
+│   ├── services.md        ← 외부 서비스 URL/키/배포 정보
 │   ├── work_log.md        ← 세션별 작업 요약
 │   ├── dev_lessons.md     ← 개발 교훈/반성 (같은 실수 방지)
-│   └── business_rules.md  ← 사장님 비즈니스 규칙/변수
+│   └── business_rules.md  ← 사장님 비즈니스 규칙/변수 (유일한 규칙 진실)
 ├── index.html             ← 앱 본체
 ├── manifest.json
 ├── icon-192.png
