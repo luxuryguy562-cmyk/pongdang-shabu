@@ -533,7 +533,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <div style="font-size:34px;margin-bottom:8px;">📊</div>
         <p style="font-size:13px;font-weight:600;color:var(--gray-600);margin:0 0 14px;">캡스 엑셀 파일을 업로드하세요</p>
         <label class="btn btn-primary" style="padding:14px 24px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;">
-          📎 엑셀 선택<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleCapsUpload(this)">
+          📎 엑셀 선택<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="capsFileInput">
         </label>
       </div>
       <div id="stagingList" style="margin-top:14px;"></div>
@@ -642,7 +642,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div class="card-title" style="margin-bottom:0;">매출</div>
         <label class="btn btn-secondary btn-sm" style="cursor:pointer;font-size:11px;padding:6px 10px;">
-          📎 엑셀<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleSalesUpload(this)">
+          📎 엑셀<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="salesFileInput">
         </label>
       </div>
       <p class="card-sub">포스기 장표 기준으로 입력하세요</p>
@@ -830,7 +830,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <label class="btn btn-primary" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;cursor:pointer;font-size:14px;margin-bottom:12px;">
         📎 파일 선택 (엑셀/CSV/PDF)
-        <input type="file" accept=".xlsx,.xls,.csv,.pdf" style="display:none" onchange="handleVendorUpload(this)">
+        <input type="file" accept=".xlsx,.xls,.csv,.pdf" style="display:none" id="vendorFileInput">
       </label>
       <div id="uploadPreview"></div>
     </div>
@@ -934,7 +934,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <!-- 엑셀 업로드 버튼 -->
         <div style="display:flex;gap:6px;margin-bottom:12px;">
           <label class="btn btn-purple" style="flex:1;padding:12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-            📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(this,'bank')">
+            📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="bankExcelInput">
           </label>
         </div>
         <div id="explistBankConnected" style="display:none;">
@@ -979,7 +979,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <!-- 엑셀 업로드 버튼 -->
         <div style="display:flex;gap:6px;margin-bottom:12px;">
           <label class="btn btn-purple" style="flex:1;padding:12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-            📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(this,'card')">
+            📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="cardExcelInput">
           </label>
         </div>
         <div id="explistCardConnected" style="display:none;">
@@ -4939,6 +4939,14 @@ document.addEventListener('DOMContentLoaded', async()=>{
     if(emp){completeLogin(emp);return;}
   }
   showLoginScreen();
+
+  // ─── 파일 업로드 이벤트 바인딩 (inline onchange CSP 차단 대응) ───
+  const bindFile=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',function(){fn(this);});};
+  bindFile('bankExcelInput',inp=>handleExcelUpload(inp,'bank'));
+  bindFile('cardExcelInput',inp=>handleExcelUpload(inp,'card'));
+  bindFile('capsFileInput',inp=>handleCapsUpload(inp));
+  bindFile('salesFileInput',inp=>handleSalesUpload(inp));
+  bindFile('vendorFileInput',inp=>handleVendorUpload(inp));
 });
 </script>
 </body>
