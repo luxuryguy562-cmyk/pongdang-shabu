@@ -1674,12 +1674,14 @@ function nav(tab, el) {
   }
 }
 function openSheet(id) {
-  document.getElementById('overlay').style.display='block';
   const el=document.getElementById(id);
   if(el.classList.contains('sheet-overlay')){
+    // sheet-overlay는 자체 배경이 있으므로 #overlay 불필요
     el.style.display='flex';
-    const inner=el.querySelector('.sheet');if(inner)inner.classList.add('show');
+    const inner=el.querySelector('.sheet');
+    if(inner) setTimeout(()=>inner.classList.add('show'),10);
   } else {
+    document.getElementById('overlay').style.display='block';
     el.classList.add('show');
   }
 }
@@ -1690,11 +1692,10 @@ function closeSheet(id) {
     setTimeout(()=>{el.style.display='none';},300);
   } else {
     el.classList.remove('show');
+    setTimeout(()=>{
+      if(!document.querySelector('.sheet.show')) document.getElementById('overlay').style.display='none';
+    },350);
   }
-  setTimeout(()=>{
-    const anyOpen=document.querySelector('.sheet.show');
-    if(!anyOpen) document.getElementById('overlay').style.display='none';
-  },350);
 }
 function closeAllSheets() {
   document.querySelectorAll('.sheet.show').forEach(s=>s.classList.remove('show'));
