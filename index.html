@@ -957,7 +957,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           <thead><tr>
             <th id="bankThDate" data-col="tx_date" data-label="날짜" style="width:62px;cursor:pointer;">날짜</th>
             <th id="bankThDesc" data-col="description" data-label="내용" style="width:70px;cursor:pointer;">내용</th>
-            <th id="bankThCat" data-col="sub_category" data-label="분류" style="width:55px;cursor:pointer;">분류</th>
+            <th id="bankThCat" data-col="sub_category" data-label="분류" style="width:65px;cursor:pointer;">분류</th>
             <th id="bankThIn" data-col="amount" data-label="입금" style="cursor:pointer;">입금</th>
             <th id="bankThOut" data-col="amount" data-label="출금" style="cursor:pointer;">출금</th>
           </tr></thead>
@@ -995,7 +995,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           <thead><tr>
             <th id="cardThDate" data-col="tx_date" data-label="날짜" style="width:62px;cursor:pointer;">날짜</th>
             <th id="cardThMerch" data-col="merchant_name" data-label="가맹점" style="width:70px;cursor:pointer;">가맹점</th>
-            <th id="cardThCat" data-col="sub_category" data-label="분류" style="width:55px;cursor:pointer;">분류</th>
+            <th id="cardThCat" data-col="sub_category" data-label="분류" style="width:65px;cursor:pointer;">분류</th>
             <th id="cardThAmt" data-col="amount" data-label="금액" style="cursor:pointer;">금액</th>
           </tr></thead>
           <tbody id="cardTxBody"></tbody>
@@ -3960,7 +3960,7 @@ function renderBankTxTable(){
     return `<tr>
       <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
       <td style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;" title="${r.description||''}">${truncDesc(cleanDesc(r.description),6)}</td>
-      <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${truncDesc(sub,5)}</td>
+      <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
       <td style="color:var(--success);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${isIn?fmt(r.amount):''}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${!isIn?fmt(Math.abs(r.amount)):''}</td>
     </tr>`;
@@ -4014,7 +4014,7 @@ function renderCardTxTable(){
     return `<tr${r.is_cancelled?' class="row-off"':''}>
       <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
       <td style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;" title="${name}">${truncDesc(name,6)}</td>
-      <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${truncDesc(sub,5)}</td>
+      <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${fmt(Math.abs(r.amount))}</td>
     </tr>`;
   }).join('');
