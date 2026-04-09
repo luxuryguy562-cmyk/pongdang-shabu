@@ -4284,29 +4284,56 @@ async function parseExcelFile(file){
   const ext=file.name.split('.').pop().toLowerCase();
   if(['xlsx','xls'].includes(ext)){
     const buf=await file.arrayBuffer();
+    // HTML 위장 .xls 감지 (카드사 다운로드 파일은 실제로 HTML인 경우가 많음)
+    const probe=new TextDecoder('utf-8',{fatal:false}).decode(buf.slice(0,500)).trim().toLowerCase();
+    if(probe.startsWith('<')||probe.includes('<html')||probe.includes('<table')){
+      console.log('[엑셀업로드] HTML 위장 .xls 감지, DOMParser로 파싱');
+      const html=new TextDecoder('utf-8',{fatal:false}).decode(buf);
+      const doc=new DOMParser().parseFromString(html,'text/html');
+      const tables=doc.querySelectorAll('table');
+      // 금융 키워드로 진짜 거래내역 테이블 찾기
+      const HEADER_KW=['이용일','거래일','승인일','이용금액','결제금액','가맹점','승인금액','공급가','부가세','입금','출금','잔액','적요','품목'];
+      let bestTable=null,bestScore=0,bestRowIdx=0;
+      tables.forEach(tbl=>{
+        const trs=[...tbl.querySelectorAll('tr')];
+        for(let i=0;i<Math.min(trs.length,10);i++){
+          const cells=[...trs[i].querySelectorAll('th,td')].map(c=>c.textContent.replace(/\s+/g,''));
+          const score=cells.filter(t=>t&&HEADER_KW.some(kw=>t.includes(kw))).length;
+          if(score>bestScore){bestScore=score;bestTable=tbl;bestRowIdx=i;}
+        }
+      });
+      if(bestTable&&bestScore>=2){
+        const trs=[...bestTable.querySelectorAll('tr')];
+        const headers=[...trs[bestRowIdx].querySelectorAll('th,td')].map(c=>c.textContent.trim());
+        console.log('[엑셀업로드] HTML 테이블 헤더 발견:', headers.join(', '));
+        return trs.slice(bestRowIdx+1).map(tr=>{
+          const cells=[...tr.querySelectorAll('td,th')].map(c=>c.textContent.trim());
+          const obj={};headers.forEach((h,i)=>{if(h)obj[h]=cells[i]||'';});return obj;
+        }).filter(obj=>Object.values(obj).some(v=>v));
+      }
+      console.log('[엑셀업로드] HTML이지만 거래내역 테이블 못 찾음, SheetJS 시도');
+    }
+    // 일반 엑셀 또는 HTML 파싱 실패 시 SheetJS로 파싱
     const wb=XLSX.read(buf,{type:'array'});
-    // 금융 키워드로 진짜 헤더 행 자동 탐색 (카드사 .xls는 요약 테이블이 상단에 있음)
-    const HEADER_KW=['이용일','거래일','승인일','날짜','일자','입금','출금','이용금액','결제금액','가맹점','잔액','적요','거래내용','승인금액','품목','품명','매출일','공급가','부가세'];
-    let bestSheet=null,bestIdx=0,bestScore=0;
+    const HEADER_KW2=['이용일','거래일','승인일','날짜','일자','입금','출금','이용금액','결제금액','가맹점','잔액','적요','거래내용','승인금액','품목','품명','매출일','공급가','부가세'];
+    let bestSheet=null,bestIdx=0,bestScore2=0;
     for(const sn of wb.SheetNames){
       const raw=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
       for(let i=0;i<Math.min(raw.length,30);i++){
         const row=raw[i];
         if(!Array.isArray(row)||row.length<3) continue;
         const texts=row.map(c=>String(c||'').replace(/\s+/g,''));
-        const score=texts.filter(t=>t&&HEADER_KW.some(kw=>t.includes(kw))).length;
-        if(score>bestScore){bestScore=score;bestSheet=sn;bestIdx=i;}
+        const score=texts.filter(t=>t&&HEADER_KW2.some(kw=>t.includes(kw))).length;
+        if(score>bestScore2){bestScore2=score;bestSheet=sn;bestIdx=i;}
       }
     }
-    // 키워드 매칭 2개 이상이면 해당 행을 헤더로 사용
-    if(bestScore>=2&&bestSheet){
+    if(bestScore2>=2&&bestSheet){
       const raw=XLSX.utils.sheet_to_json(wb.Sheets[bestSheet],{header:1,defval:''});
       const headers=raw[bestIdx].map(h=>String(h||'').trim());
       return raw.slice(bestIdx+1).filter(r=>Array.isArray(r)&&r.some(c=>c!==''&&c!=null)).map(r=>{
         const obj={};headers.forEach((h,i)=>{if(h)obj[h]=r[i]!=null?r[i]:'';});return obj;
       });
     }
-    // 키워드 못 찾으면 기존 방식 (첫 시트 첫 행이 헤더)
     return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
   } else if(ext==='csv'){
     const text=await file.text();
