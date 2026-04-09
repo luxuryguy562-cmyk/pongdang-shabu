@@ -4011,12 +4011,13 @@ let excelUploadType='';
 // ─── 컬럼 자동 매칭 엔진 ───
 const COL_PATTERNS={
   bank:{
-    tx_date:['거래일','거래일자','일자','날짜','거래날짜','처리일'],
+    tx_date:['거래일','거래일자','일자','날짜','거래날짜','처리일','거래일시'],
     tx_time:['거래시간','시간','시각','처리시간'],
     deposit:['입금','입금액','찾은금액','입금(원)','입금금액','대변'],
     withdraw:['출금','출금액','맡긴금액','출금(원)','출금금액','지급','차변'],
     balance:['잔액','잔고','잔액(원)','예금잔액'],
-    description:['적요','내용','거래내용','비고','메모','거래처','적요내용','거래상세','통장메모','받는분']
+    description:['적요','적요내용'],
+    content:['내용','거래내용','거래상세','통장메모','받는분','비고','메모','거래처']
   },
   card:{
     tx_date:['이용일','거래일','승인일','이용일자','매출일','결제일','거래일자'],
@@ -4258,17 +4259,32 @@ async function handleExcelUpload(input, type){
       const vals=Object.values(row);
       const getVal=idx=>idx!=null?String(vals[idx]||'').trim():'';
 
+      // 합계 행 건너뛰기
+      const dateRaw=getVal(colMap.tx_date);
+      if(!dateRaw||/합계/.test(dateRaw)) return null;
+
+      // 거래일시(날짜+시간 합쳐진 컬럼)에서 시간 추출
+      let txTime=getVal(colMap.tx_time)||null;
+      if(!txTime){
+        const tm=String(dateRaw).match(/(\d{1,2}:\d{2}:\d{2})/);
+        if(tm) txTime=tm[1];
+      }
+
       if(type==='bank'){
+        // 내용(content) 컬럼을 분류에 사용, 적요(description)는 보조
+        const content=getVal(colMap.content);
         const desc=getVal(colMap.description);
+        const classifyText=content||desc; // 내용 우선, 없으면 적요
+        const displayText=content?(desc?desc+' '+content:content):desc; // 표시용: 적요+내용
         const dep=parseNum(getVal(colMap.deposit));
         const wth=parseNum(getVal(colMap.withdraw));
         const amount=dep>0?dep:(wth>0?-wth:0);
-        if(amount===0) return null; // 금액 없는 행 건너뛰기
-        const cls=classifyByKeyword(desc,'bank');
+        if(amount===0) return null;
+        const cls=classifyByKeyword(classifyText,'bank');
         return {
-          tx_date:parseDate(getVal(colMap.tx_date)),
-          tx_time:getVal(colMap.tx_time)||null,
-          description:desc||null,
+          tx_date:parseDate(dateRaw),
+          tx_time:txTime,
+          description:displayText||null,
           amount,
           balance:colMap.balance!=null?parseNum(getVal(colMap.balance)):null,
           ...cls
@@ -4276,15 +4292,16 @@ async function handleExcelUpload(input, type){
       } else {
         // 카드
         const merchant=getVal(colMap.merchant)||getVal(colMap.description);
+        if(/합계/.test(merchant)) return null;
         let amount=-Math.abs(parseNum(getVal(colMap.amount)));
         if(amount===0) return null;
         const statusVal=getVal(colMap.status);
         const isCancelled=/(취소|승인취소|매입취소)/.test(statusVal);
-        if(isCancelled) amount=Math.abs(amount); // 취소 건은 양수
+        if(isCancelled) amount=Math.abs(amount);
         const cls=classifyByKeyword(merchant,'card');
         return {
-          tx_date:parseDate(getVal(colMap.tx_date)),
-          tx_time:getVal(colMap.tx_time)||null,
+          tx_date:parseDate(dateRaw),
+          tx_time:txTime,
           merchant_name:merchant||null,
           amount,
           supply_amount:colMap.supply!=null?parseNum(getVal(colMap.supply)):null,
@@ -4294,7 +4311,7 @@ async function handleExcelUpload(input, type){
           ...cls
         };
       }
-    }).filter(r=>r&&r.tx_date); // null 및 날짜 없는 행 제거
+    }).filter(r=>r&&r.tx_date);
 
     if(!parsed.length) throw new Error('유효한 거래 내역이 없습니다. 엑셀 형식을 확인해주세요.');
 
