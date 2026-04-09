@@ -92,6 +92,9 @@ td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-ra
 tr.row-off{opacity:.35;filter:grayscale(1);}
 td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 .add-row-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-weight:700;font-size:13px;cursor:pointer;background:var(--blue-light);border-radius:10px;margin:8px 0;}
+/* 내용 말풍선 툴팁 */
+.tx-tooltip{position:absolute;left:0;bottom:100%;background:var(--text);color:#fff;font-size:12px;padding:5px 10px;border-radius:8px;white-space:nowrap;z-index:50;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.tx-tooltip::after{content:'';position:absolute;top:100%;left:12px;border:5px solid transparent;border-top-color:var(--text);}
 
 /* ─ 마감정산 (토스 스타일) */
 .settle-item{display:flex;align-items:center;padding:0;border-bottom:1px solid var(--gray-100);margin:0;}
@@ -3959,7 +3962,7 @@ function renderBankTxTable(){
     const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     return `<tr>
       <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
-      <td style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;" title="${r.description||''}">${truncDesc(cleanDesc(r.description),6)}</td>
+      <td class="tx-desc-tip" data-full="${(cleanDesc(r.description)||'').replace(/"/g,'&quot;')}" style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;cursor:pointer;position:relative;">${truncDesc(cleanDesc(r.description),6)}</td>
       <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
       <td style="color:var(--success);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${isIn?fmt(r.amount):''}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${!isIn?fmt(Math.abs(r.amount)):''}</td>
@@ -4013,7 +4016,7 @@ function renderCardTxTable(){
     const name=r.merchant_name||r.description||'-';
     return `<tr${r.is_cancelled?' class="row-off"':''}>
       <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
-      <td style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;" title="${name}">${truncDesc(name,6)}</td>
+      <td class="tx-desc-tip" data-full="${(name||'').replace(/"/g,'&quot;')}" style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;cursor:pointer;position:relative;">${truncDesc(name,6)}</td>
       <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${fmt(Math.abs(r.amount))}</td>
     </tr>`;
@@ -4138,9 +4141,17 @@ function openTxFilter(type){
     document.body.appendChild(catSheet);
     // 전체 토글
     catBox.querySelector('#catSheetAll').addEventListener('click',()=>{
-      selectedCats=null;
-      catBox.querySelector('#catSheetAll span').textContent='✓';
-      catBox.querySelectorAll('.catSheetItem .catSheetCheck').forEach(s=>s.textContent='✓');
+      if(!selectedCats){
+        // 전체 선택 상태 → 전체 해제
+        selectedCats=new Set();
+        catBox.querySelector('#catSheetAll span').textContent='';
+        catBox.querySelectorAll('.catSheetItem .catSheetCheck').forEach(s=>s.textContent='');
+      }else{
+        // 일부/없음 → 전체 선택
+        selectedCats=null;
+        catBox.querySelector('#catSheetAll span').textContent='✓';
+        catBox.querySelectorAll('.catSheetItem .catSheetCheck').forEach(s=>s.textContent='✓');
+      }
     });
     // 개별 토글
     catBox.querySelectorAll('.catSheetItem').forEach(item=>{
@@ -5426,6 +5437,22 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.addEventListener('click',e=>{
     const td=e.target.closest('.tx-cat-edit');
     if(td)openCatEdit(td.dataset.txid,td.dataset.cat);
+  });
+  // 내용 셀 터치 → 말풍선 툴팁
+  let activeTip=null;
+  document.addEventListener('click',e=>{
+    // 기존 툴팁 제거
+    if(activeTip){activeTip.remove();activeTip=null;}
+    const td=e.target.closest('.tx-desc-tip');
+    if(!td)return;
+    const full=td.dataset.full;
+    if(!full||full.length<=6)return;
+    const tip=document.createElement('div');
+    tip.className='tx-tooltip';
+    tip.textContent=full;
+    td.appendChild(tip);
+    activeTip=tip;
+    setTimeout(()=>{if(activeTip===tip){tip.remove();activeTip=null;}},3000);
   });
   bindFile('capsFileInput',inp=>handleCapsUpload(inp));
   bindFile('salesFileInput',inp=>handleSalesUpload(inp));
