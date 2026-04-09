@@ -3902,12 +3902,17 @@ let bankSortCol=null,bankSortAsc=true,cardSortCol=null,cardSortAsc=true;
 let bankFilter={dateFrom:null,dateTo:null,cats:null,direction:'all'};
 let cardFilter={dateFrom:null,dateTo:null,cats:null};
 
-// 적요 코드 제거 — 실제 내용만 표시
-const STRIP_PREFIXES=/^(타행PC|타행MB|타행FB|타행IB|OP이체|FB자금|BZ뱅크|모바일|CD입금|현금|현찰|급여|배당|이체|인터넷|자기앞수표|자동이체|CMS출금|CMS입금|당좌수표|기타입금|기타출금|타행이체|전자금융|ATM|온라인|창구|폰뱅킹|스마트폰)\s*/;
+// 적요 코드 제거 — 실제 내용만 표시 (기존 DB 데이터 호환)
+const STRIP_PREFIXES=/^(타행PC|타행MB|타행FB|타행IB|OP이체|FB자금|BZ뱅크|모바일|CD입금|현금|현찰|급여|배당|이체|인터넷|자기앞수표|자동이체|CMS출금|CMS입금|당좌수표|기타입금|기타출금|타행이체|전자금융|ATM|온라인|창구|폰뱅킹|스마트폰|건별입금|건별출금|타행환|지방세|국고|당행|즉시이체|정기이체|예약이체|펌뱅킹|자금관리|대량이체|급여이체|전신환|카드대금|보험료|가상계좌|무통장|이체대행|수시입출금|자유입출금)\s*/;
 function cleanDesc(s){
   if(!s)return'-';
-  return s.replace(STRIP_PREFIXES,'').trim()||s;
+  let r=s.replace(STRIP_PREFIXES,'').trim();
+  // 두 번째 단어부터가 실제 내용인 경우 (적요가 첫 토큰)
+  if(!r||r===s){const parts=s.split(/\s+/);if(parts.length>1)r=parts.slice(1).join(' ');}
+  return r||s;
 }
+// 표시용 글자 자르기
+function truncDesc(s,max){if(!s)return'-';return s.length>max?s.slice(0,max)+'…':s;}
 
 async function loadBankTransactions(){
   if(!currentStore)return;
@@ -3951,12 +3956,13 @@ function renderBankTxTable(){
     const isIn=r.amount>0;if(isIn)inSum+=r.amount;else outSum+=Math.abs(r.amount);
     const sub=r.sub_category||r.category||'';
     const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--gray-600)';
+    const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     return `<tr>
-      <td style="font-size:11px;padding:5px 3px;white-space:nowrap;">${(r.tx_date||'').slice(5)}</td>
-      <td style="text-align:left;font-size:11px;padding:5px 3px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.description||''}">${cleanDesc(r.description)}</td>
-      <td style="font-size:10px;padding:5px 3px;color:${catColor};">${sub}</td>
-      <td style="color:var(--success);font-weight:700;font-size:11px;padding:5px 3px;">${isIn?fmt(r.amount):''}</td>
-      <td style="color:var(--danger);font-weight:700;font-size:11px;padding:5px 3px;">${!isIn?fmt(Math.abs(r.amount)):''}</td>
+      <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
+      <td style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;" title="${r.description||''}">${truncDesc(cleanDesc(r.description),6)}</td>
+      <td style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;">${truncDesc(sub,5)}</td>
+      <td style="color:var(--success);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;">${isIn?fmt(r.amount):''}</td>
+      <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;">${!isIn?fmt(Math.abs(r.amount)):''}</td>
     </tr>`;
   }).join('');
   document.getElementById('bankTxInSum').innerText='입금 '+fmt(inSum)+'원';
@@ -4003,12 +4009,13 @@ function renderCardTxTable(){
     total+=Math.abs(r.amount);
     const sub=r.sub_category||r.category||'';
     const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--gray-600)';
-    const status=r.is_cancelled?'취소':r.exclude_from_settlement?'제외':'';
+    const dt=(r.tx_date||'').slice(2); // YY-MM-DD
+    const name=r.merchant_name||r.description||'-';
     return `<tr${r.is_cancelled?' class="row-off"':''}>
-      <td style="font-size:11px;padding:5px 3px;white-space:nowrap;">${(r.tx_date||'').slice(5)}</td>
-      <td style="text-align:left;font-size:11px;padding:5px 3px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.merchant_name||r.description||''}">${r.merchant_name||r.description||'-'}</td>
-      <td style="font-size:10px;padding:5px 3px;color:${catColor};">${sub}</td>
-      <td style="color:var(--danger);font-weight:700;font-size:11px;padding:5px 3px;">${fmt(Math.abs(r.amount))}</td>
+      <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
+      <td style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;" title="${name}">${truncDesc(name,6)}</td>
+      <td style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;">${truncDesc(sub,5)}</td>
+      <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;">${fmt(Math.abs(r.amount))}</td>
     </tr>`;
   }).join('');
   document.getElementById('cardTxSum').innerText=fmt(total)+'원';
@@ -4617,11 +4624,10 @@ async function handleExcelUpload(input, type){
       }
 
       if(type==='bank'){
-        // 내용(content) 컬럼을 분류에 사용, 적요(description)는 보조
+        // 내용(content) 컬럼 = 실제 거래처명, 적요(description) = 거래코드
         const content=getVal(colMap.content);
         const desc=getVal(colMap.description);
-        const classifyText=content||desc; // 내용 우선, 없으면 적요
-        const displayText=content?(desc?desc+' '+content:content):desc; // 표시용: 적요+내용
+        const classifyText=content||desc; // 분류용: 내용 우선
         const dep=parseNum(getVal(colMap.deposit));
         const wth=parseNum(getVal(colMap.withdraw));
         const amount=dep>0?dep:(wth>0?-wth:0);
@@ -4630,7 +4636,8 @@ async function handleExcelUpload(input, type){
         return {
           tx_date:parseDate(dateRaw),
           tx_time:txTime,
-          description:displayText||null,
+          description:content||desc||null, // 내용만 저장 (적요 제외)
+          raw_memo:desc||null, // 적요는 별도 보관
           amount,
           balance:colMap.balance!=null?parseNum(getVal(colMap.balance)):null,
           ...cls
