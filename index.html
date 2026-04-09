@@ -1671,7 +1671,8 @@ function nav(tab, el) {
   }
 }
 function openSheet(id) { document.getElementById('overlay').style.display='block'; document.getElementById(id).classList.add('show'); }
-function closeAllSheets() { document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('show')); setTimeout(()=>document.getElementById('overlay').style.display='none',300); }
+function closeSheet(id) { document.getElementById(id)?.classList.remove('show'); setTimeout(()=>{if(!document.querySelector('.sheet-overlay.show'))document.getElementById('overlay').style.display='none';},300); }
+function closeAllSheets() { document.querySelectorAll('.sheet-overlay').forEach(s=>s.classList.remove('show')); setTimeout(()=>document.getElementById('overlay').style.display='none',300); }
 const fmt = n => (n||0).toLocaleString();
 const unFmt = s => parseInt((s||'0').replace(/,/g,''))||0;
 const guardStore = () => { if(!currentStore){toast('매장을 먼저 선택하세요.','warn');openStoreSheet();return false;}return true; };
