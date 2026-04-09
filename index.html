@@ -938,29 +938,31 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           <button class="btn btn-secondary btn-sm" onclick="moveExplistMonth('bank',1)">›</button>
         </div>
       </div>
-      <div style="margin-bottom:10px;">
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
         <label class="btn btn-purple" style="padding:8px 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
           📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="bankExcelInput">
         </label>
+        <button class="btn btn-secondary" id="bankFilterBtn" style="padding:8px 14px;font-size:12px;display:inline-flex;align-items:center;gap:4px;">🔽 필터</button>
+      </div>
+      <div id="bankFilterBadge" style="display:none;margin-bottom:6px;font-size:11px;color:var(--blue);font-weight:700;cursor:pointer;">필터 적용중 ✕</div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:2px solid var(--text);margin-bottom:2px;">
+        <span style="font-size:13px;font-weight:800;">합계</span>
+        <div style="display:flex;gap:12px;">
+          <span style="font-size:12px;color:var(--success);font-weight:700;" id="bankTxInSum">입금 0원</span>
+          <span style="font-size:12px;color:var(--danger);font-weight:700;" id="bankTxOutSum">출금 0원</span>
+        </div>
       </div>
       <div class="table-wrap" style="margin:0 -20px;">
         <table style="min-width:320px;">
           <thead><tr>
             <th id="bankThDate" data-col="tx_date" data-label="날짜" style="width:50px;cursor:pointer;">날짜</th>
             <th id="bankThDesc" data-col="description" data-label="내용" style="cursor:pointer;">내용</th>
-            <th id="bankThCat" data-col="sub_category" data-label="분류" style="width:65px;cursor:pointer;position:relative;">분류</th>
+            <th id="bankThCat" data-col="sub_category" data-label="분류" style="width:65px;cursor:pointer;">분류</th>
             <th id="bankThIn" data-col="amount" data-label="입금" style="width:60px;cursor:pointer;">입금</th>
             <th id="bankThOut" data-col="amount" data-label="출금" style="width:60px;cursor:pointer;">출금</th>
           </tr></thead>
           <tbody id="bankTxBody"></tbody>
         </table>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid var(--text);margin-top:4px;">
-        <span style="font-size:14px;font-weight:800;">합계</span>
-        <div style="text-align:right;">
-          <div style="font-size:12px;color:var(--success);font-weight:700;" id="bankTxInSum">입금 0원</div>
-          <div style="font-size:12px;color:var(--danger);font-weight:700;" id="bankTxOutSum">출금 0원</div>
-        </div>
       </div>
       <div id="bankTxEmpty" style="text-align:center;padding:30px 0;color:var(--gray-400);font-size:13px;">엑셀을 업로드하면 내역이 표시됩니다</div>
     </div>
@@ -977,10 +979,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           <button class="btn btn-secondary btn-sm" onclick="moveExplistMonth('card',1)">›</button>
         </div>
       </div>
-      <div style="margin-bottom:10px;">
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
         <label class="btn btn-purple" style="padding:8px 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
           📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="cardExcelInput">
         </label>
+        <button class="btn btn-secondary" id="cardFilterBtn" style="padding:8px 14px;font-size:12px;display:inline-flex;align-items:center;gap:4px;">🔽 필터</button>
+      </div>
+      <div id="cardFilterBadge" style="display:none;margin-bottom:6px;font-size:11px;color:var(--blue);font-weight:700;cursor:pointer;">필터 적용중 ✕</div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:2px solid var(--text);margin-bottom:2px;">
+        <span style="font-size:13px;font-weight:800;">결제 합계</span>
+        <span style="font-size:14px;font-weight:800;color:var(--danger);" id="cardTxSum">0원</span>
       </div>
       <div class="table-wrap" style="margin:0 -20px;">
         <table style="min-width:300px;">
@@ -992,10 +1000,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           </tr></thead>
           <tbody id="cardTxBody"></tbody>
         </table>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid var(--text);margin-top:4px;">
-        <span style="font-size:14px;font-weight:800;">결제 합계</span>
-        <span style="font-size:15px;font-weight:800;color:var(--danger);" id="cardTxSum">0원</span>
       </div>
       <div id="cardTxEmpty" style="text-align:center;padding:30px 0;color:var(--gray-400);font-size:13px;">엑셀을 업로드하면 내역이 표시됩니다</div>
     </div>
@@ -3894,7 +3898,9 @@ async function disconnectMyData(id){
 // ── 거래 내역 조회 ──
 let bankTxData=[],cardTxData=[];
 let bankSortCol=null,bankSortAsc=true,cardSortCol=null,cardSortAsc=true;
-let bankFilterCats=null,cardFilterCats=null; // null=전체, Set=선택된 대분류
+// 필터 상태: {dates:Set|null, cats:Set|null, direction:'all'|'in'|'out'}
+let bankFilter={dates:null,cats:null,direction:'all'};
+let cardFilter={dates:null,cats:null};
 
 // 적요 코드 제거 — 실제 내용만 표시
 const STRIP_PREFIXES=/^(타행PC|타행MB|타행FB|타행IB|OP이체|FB자금|BZ뱅크|모바일|CD입금|현금|현찰|급여|배당|이체|인터넷|자기앞수표|자동이체|CMS출금|CMS입금|당좌수표|기타입금|기타출금|타행이체|전자금융|ATM|온라인|창구|폰뱅킹|스마트폰)\s*/;
@@ -3908,14 +3914,21 @@ async function loadBankTransactions(){
   const ym=explistBankMonth;const[y,m]=ym.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
   const{data}=await sb.from('mydata_transactions').select('*').eq('store_id',currentStore.id).eq('tx_type','bank').gte('tx_date',ym+'-01').lte('tx_date',ym+'-'+lastDay).order('tx_date',{ascending:false});
   bankTxData=data||[];
-  bankFilterCats=null;bankSortCol=null;bankSortAsc=true;
+  bankFilter={dates:null,cats:null,direction:'all'};bankSortCol=null;bankSortAsc=true;
   renderBankTxTable();
 }
 
 function renderBankTxTable(){
   let rows=bankTxData;
-  // 필터
-  if(bankFilterCats)rows=rows.filter(r=>bankFilterCats.has(r.category||''));
+  // 필터 적용
+  if(bankFilter.dates)rows=rows.filter(r=>bankFilter.dates.has(r.tx_date||''));
+  if(bankFilter.cats)rows=rows.filter(r=>bankFilter.cats.has(r.category||''));
+  if(bankFilter.direction==='in')rows=rows.filter(r=>r.amount>0);
+  if(bankFilter.direction==='out')rows=rows.filter(r=>r.amount<0);
+  // 필터 뱃지
+  const hasFilter=bankFilter.dates||bankFilter.cats||bankFilter.direction!=='all';
+  const badge=document.getElementById('bankFilterBadge');
+  if(badge){badge.style.display=hasFilter?'block':'none';}
   // 정렬
   if(bankSortCol){
     const col=bankSortCol;const asc=bankSortAsc?1:-1;
@@ -3954,13 +3967,18 @@ async function loadCardTransactions(){
   const ym=explistCardMonth;const[y,m]=ym.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
   const{data}=await sb.from('mydata_transactions').select('*').eq('store_id',currentStore.id).eq('tx_type','card').gte('tx_date',ym+'-01').lte('tx_date',ym+'-'+lastDay).order('tx_date',{ascending:false});
   cardTxData=data||[];
-  cardFilterCats=null;cardSortCol=null;cardSortAsc=true;
+  cardFilter={dates:null,cats:null};cardSortCol=null;cardSortAsc=true;
   renderCardTxTable();
 }
 
 function renderCardTxTable(){
   let rows=cardTxData;
-  if(cardFilterCats)rows=rows.filter(r=>cardFilterCats.has(r.category||''));
+  if(cardFilter.dates)rows=rows.filter(r=>cardFilter.dates.has(r.tx_date||''));
+  if(cardFilter.cats)rows=rows.filter(r=>cardFilter.cats.has(r.category||''));
+  // 필터 뱃지
+  const hasFilter=cardFilter.dates||cardFilter.cats;
+  const badge=document.getElementById('cardFilterBadge');
+  if(badge){badge.style.display=hasFilter?'block':'none';}
   if(cardSortCol){
     const col=cardSortCol;const asc=cardSortAsc?1:-1;
     rows=[...rows].sort((a,b)=>{
@@ -4013,52 +4031,105 @@ function updateSortHeaders(type){
   });
 }
 
-// ─── 분류 필터 드롭다운 ───
-function openCatFilter(type){
+// ─── 통합 필터 팝업 ───
+function openTxFilter(type){
   const data=type==='bank'?bankTxData:cardTxData;
-  const currentFilter=type==='bank'?bankFilterCats:cardFilterCats;
+  const filter=type==='bank'?bankFilter:cardFilter;
+  if(!data.length)return toast('데이터가 없습니다','warn');
+
+  const dates=[...new Set(data.map(r=>r.tx_date||''))].sort();
   const cats=[...new Set(data.map(r=>r.category||''))].sort();
-  if(!cats.length)return toast('데이터가 없습니다','warn');
-  // 팝업 만들기
-  let existing=document.getElementById('catFilterPopup');
+
+  let existing=document.getElementById('txFilterPopup');
   if(existing)existing.remove();
   const popup=document.createElement('div');
-  popup.id='catFilterPopup';
+  popup.id='txFilterPopup';
   popup.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:999;display:flex;align-items:end;justify-content:center;';
   const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:60vh;overflow-y:auto;padding:20px;';
-  box.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:14px;">분류 필터</div>';
-  // 전체 선택
-  const allChecked=!currentFilter;
-  box.innerHTML+=`<label style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray-100);font-size:13px;font-weight:700;cursor:pointer;">
-    <input type="checkbox" id="catFilterAll" ${allChecked?'checked':''} style="width:18px;height:18px;"> 전체 (${data.length}건)
-  </label>`;
-  cats.forEach(c=>{
-    const cnt=data.filter(r=>(r.category||'')===c).length;
-    const checked=!currentFilter||currentFilter.has(c);
-    const label=c||'미분류';
-    box.innerHTML+=`<label style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13px;cursor:pointer;">
-      <input type="checkbox" class="catFilterItem" value="${c}" ${checked?'checked':''} style="width:18px;height:18px;"> ${label} (${cnt})
+  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:70vh;overflow-y:auto;padding:20px;';
+
+  let html='<div style="font-size:15px;font-weight:800;margin-bottom:14px;">필터</div>';
+
+  // ── 입금/출금 (계좌만) ──
+  if(type==='bank'){
+    html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">유형</div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:8px;border-radius:10px;font-size:12px;cursor:pointer;background:${filter.direction==='all'?'var(--blue)':'var(--gray-100)'};color:${filter.direction==='all'?'#fff':'var(--text)'};">
+        <input type="radio" name="txDir" value="all" ${filter.direction==='all'?'checked':''} style="display:none;"> 전체
+      </label>
+      <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:8px;border-radius:10px;font-size:12px;cursor:pointer;background:${filter.direction==='in'?'var(--success)':'var(--gray-100)'};color:${filter.direction==='in'?'#fff':'var(--text)'};">
+        <input type="radio" name="txDir" value="in" ${filter.direction==='in'?'checked':''} style="display:none;"> 입금만
+      </label>
+      <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:8px;border-radius:10px;font-size:12px;cursor:pointer;background:${filter.direction==='out'?'var(--danger)':'var(--gray-100)'};color:${filter.direction==='out'?'#fff':'var(--text)'};">
+        <input type="radio" name="txDir" value="out" ${filter.direction==='out'?'checked':''} style="display:none;"> 출금만
+      </label>
+    </div>`;
+  }
+
+  // ── 날짜 선택 ──
+  html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">날짜</div>
+  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;">`;
+  dates.forEach(d=>{
+    const day=(d||'').slice(5);
+    const cnt=data.filter(r=>r.tx_date===d).length;
+    const checked=!filter.dates||filter.dates.has(d);
+    html+=`<label style="display:flex;align-items:center;gap:3px;padding:5px 8px;border-radius:8px;font-size:11px;cursor:pointer;background:var(--gray-100);">
+      <input type="checkbox" class="txFilterDate" value="${d}" ${checked?'checked':''} style="width:14px;height:14px;"> ${day} <span style="color:var(--gray-400);">(${cnt})</span>
     </label>`;
   });
-  box.innerHTML+=`<div style="display:flex;gap:8px;margin-top:14px;">
-    <button class="btn btn-secondary" id="catFilterCancel" style="flex:1;padding:12px;">닫기</button>
-    <button class="btn btn-primary" id="catFilterApply" style="flex:1;padding:12px;">적용</button>
+  html+=`</div>`;
+
+  // ── 분류 선택 ──
+  html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">분류</div>
+  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;">`;
+  cats.forEach(c=>{
+    const cnt=data.filter(r=>(r.category||'')===c).length;
+    const checked=!filter.cats||filter.cats.has(c);
+    const label=c||'미분류';
+    html+=`<label style="display:flex;align-items:center;gap:3px;padding:5px 8px;border-radius:8px;font-size:11px;cursor:pointer;background:var(--gray-100);">
+      <input type="checkbox" class="txFilterCat" value="${c}" ${checked?'checked':''} style="width:14px;height:14px;"> ${label} <span style="color:var(--gray-400);">(${cnt})</span>
+    </label>`;
+  });
+  html+=`</div>`;
+
+  // ── 버튼 ──
+  html+=`<div style="display:flex;gap:8px;">
+    <button class="btn btn-secondary" id="txFilterReset" style="flex:1;padding:12px;">초기화</button>
+    <button class="btn btn-primary" id="txFilterApply" style="flex:1;padding:12px;">적용</button>
   </div>`;
+
+  box.innerHTML=html;
   popup.appendChild(box);
   document.body.appendChild(popup);
-  // 전체 토글
-  popup.querySelector('#catFilterAll').addEventListener('change',function(){
-    popup.querySelectorAll('.catFilterItem').forEach(cb=>cb.checked=this.checked);
+
+  // 라디오 버튼 시각 토글
+  box.querySelectorAll('input[name="txDir"]').forEach(r=>{
+    r.closest('label').addEventListener('click',()=>{
+      setTimeout(()=>{
+        box.querySelectorAll('input[name="txDir"]').forEach(rd=>{
+          const lbl=rd.closest('label');
+          if(rd.value==='all'){lbl.style.background=rd.checked?'var(--blue)':'var(--gray-100)';lbl.style.color=rd.checked?'#fff':'var(--text)';}
+          if(rd.value==='in'){lbl.style.background=rd.checked?'var(--success)':'var(--gray-100)';lbl.style.color=rd.checked?'#fff':'var(--text)';}
+          if(rd.value==='out'){lbl.style.background=rd.checked?'var(--danger)':'var(--gray-100)';lbl.style.color=rd.checked?'#fff':'var(--text)';}
+        });
+      },10);
+    });
   });
-  popup.querySelector('#catFilterCancel').addEventListener('click',()=>popup.remove());
-  popup.querySelector('#catFilterApply').addEventListener('click',()=>{
-    const checked=[...popup.querySelectorAll('.catFilterItem:checked')].map(cb=>cb.value);
-    if(checked.length===cats.length||checked.length===0){
-      if(type==='bank')bankFilterCats=null;else cardFilterCats=null;
-    }else{
-      if(type==='bank')bankFilterCats=new Set(checked);else cardFilterCats=new Set(checked);
-    }
+
+  box.querySelector('#txFilterReset').addEventListener('click',()=>{
+    if(type==='bank')bankFilter={dates:null,cats:null,direction:'all'};
+    else cardFilter={dates:null,cats:null};
+    popup.remove();
+    if(type==='bank')renderBankTxTable();else renderCardTxTable();
+  });
+  box.querySelector('#txFilterApply').addEventListener('click',()=>{
+    const checkedDates=[...box.querySelectorAll('.txFilterDate:checked')].map(cb=>cb.value);
+    const checkedCats=[...box.querySelectorAll('.txFilterCat:checked')].map(cb=>cb.value);
+    const dir=box.querySelector('input[name="txDir"]:checked')?.value||'all';
+    const f=type==='bank'?bankFilter:cardFilter;
+    f.dates=checkedDates.length===dates.length||checkedDates.length===0?null:new Set(checkedDates);
+    f.cats=checkedCats.length===cats.length||checkedCats.length===0?null:new Set(checkedCats);
+    if(type==='bank')f.direction=dir;
     popup.remove();
     if(type==='bank')renderBankTxTable();else renderCardTxTable();
   });
@@ -5243,19 +5314,18 @@ document.addEventListener('DOMContentLoaded', async()=>{
   const bindFile=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',function(){fn(this);});};
   bindFile('bankExcelInput',inp=>handleExcelUpload(inp,'bank'));
   bindFile('cardExcelInput',inp=>handleExcelUpload(inp,'card'));
-  // 컬럼 정렬 + 분류 필터 이벤트
+  // 컬럼 정렬 이벤트
   document.querySelectorAll('[id^="bankTh"]').forEach(th=>{
-    th.addEventListener('click',()=>{
-      if(th.id==='bankThCat')openCatFilter('bank');
-      else toggleTxSort('bank',th.dataset.col);
-    });
+    th.addEventListener('click',()=>toggleTxSort('bank',th.dataset.col));
   });
   document.querySelectorAll('[id^="cardTh"]').forEach(th=>{
-    th.addEventListener('click',()=>{
-      if(th.id==='cardThCat')openCatFilter('card');
-      else toggleTxSort('card',th.dataset.col);
-    });
+    th.addEventListener('click',()=>toggleTxSort('card',th.dataset.col));
   });
+  // 필터 버튼 + 뱃지(필터 해제) 이벤트
+  document.getElementById('bankFilterBtn').addEventListener('click',()=>openTxFilter('bank'));
+  document.getElementById('cardFilterBtn').addEventListener('click',()=>openTxFilter('card'));
+  document.getElementById('bankFilterBadge').addEventListener('click',()=>{bankFilter={dates:null,cats:null,direction:'all'};renderBankTxTable();});
+  document.getElementById('cardFilterBadge').addEventListener('click',()=>{cardFilter={dates:null,cats:null};renderCardTxTable();});
   bindFile('capsFileInput',inp=>handleCapsUpload(inp));
   bindFile('salesFileInput',inp=>handleSalesUpload(inp));
   bindFile('vendorFileInput',inp=>handleVendorUpload(inp));
