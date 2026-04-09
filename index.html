@@ -3023,7 +3023,7 @@ async function handleVendorUpload(input){
     if(!rows.length) throw new Error('데이터가 없습니다.');
     const headers=Object.keys(rows[0]);
     const colMap=matchColumns(headers,'vendor');
-    if(!colMap.amount) throw new Error('금액 컬럼을 찾을 수 없습니다. (금액, 합계 등)');
+    if(colMap.amount==null) throw new Error('금액 컬럼을 찾을 수 없습니다. (금액, 합계 등)');
 
     const list=rows.map(row=>{
       const vals=Object.values(row);
@@ -4058,7 +4058,7 @@ function matchColumns(headers, type){
       if(!nh) continue;
       for(const kw of keywords){
         if(nh.includes(kw.toLowerCase().replace(/\s+/g,''))){
-          if(!map[field]) map[field]=ci;
+          if(map[field]==null) map[field]=ci;
           break;
         }
       }
@@ -4185,20 +4185,34 @@ async function parseExcelFile(file){
     const text=await file.text();
     const lines=text.split('\n').filter(l=>l.trim());
     if(lines.length<2) return [];
-    const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+    // 쉼표가 따옴표 안에 있는 경우 처리
+    const splitCSV=line=>{
+      const result=[];let cur='';let inQ=false;
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==='"'){inQ=!inQ;}
+        else if(c===','&&!inQ){result.push(cur.trim().replace(/^"|"$/g,''));cur='';}
+        else{cur+=c;}
+      }
+      result.push(cur.trim().replace(/^"|"$/g,''));
+      return result;
+    };
+    const headers=splitCSV(lines[0]);
     return lines.slice(1).map(line=>{
-      const vals=line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+      const vals=splitCSV(line);
       const obj={};headers.forEach((h,i)=>obj[h]=vals[i]||'');return obj;
     });
   }
   throw new Error('xlsx, xls, csv 파일만 지원됩니다.');
 }
 
-// 숫자 파싱 (쉼표, 공백, 원 등 제거)
+// 숫자 파싱 (쉼표, 공백, 원 등 제거, 음수 보존)
 function parseNum(v){
   if(v==null||v==='') return 0;
   if(typeof v==='number') return v;
-  return parseInt(String(v).replace(/[,\s원₩\-\.]/g,''))||0;
+  const s=String(v).trim();
+  const neg=s.startsWith('-')?-1:1;
+  return neg*(parseInt(s.replace(/[^0-9]/g,''))||0);
 }
 
 // 날짜 파싱 (다양한 형식 대응)
@@ -4210,10 +4224,10 @@ function parseDate(v){
   // YYYY.MM.DD 또는 YYYY/MM/DD
   const m1=s.match(/^(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/);
   if(m1) return `${m1[1]}-${m1[2].padStart(2,'0')}-${m1[3].padStart(2,'0')}`;
-  // MM-DD-YYYY 또는 DD/MM/YYYY 형태 (한국은 보통 아님, 패스)
-  // 엑셀 시리얼넘버 (숫자형)
-  if(typeof v==='number'&&v>40000&&v<60000){
-    const d=new Date((v-25569)*86400000);
+  // 엑셀 시리얼넘버 (숫자형 또는 문자열)
+  const numVal=typeof v==='number'?v:Number(s);
+  if(!isNaN(numVal)&&numVal>40000&&numVal<60000){
+    const d=new Date((numVal-25569)*86400000);
     return d.toISOString().split('T')[0];
   }
   // Date 객체 시도
@@ -4234,11 +4248,11 @@ async function handleExcelUpload(input, type){
     const headers=Object.keys(rows[0]);
     const colMap=matchColumns(headers, type);
 
-    // 필수 컬럼 확인
-    if(type==='bank'&&!colMap.tx_date) throw new Error('날짜 컬럼을 찾을 수 없습니다. (거래일, 일자 등)');
-    if(type==='bank'&&!colMap.deposit&&!colMap.withdraw) throw new Error('입금/출금 컬럼을 찾을 수 없습니다.');
-    if(type==='card'&&!colMap.tx_date) throw new Error('날짜 컬럼을 찾을 수 없습니다. (이용일, 승인일 등)');
-    if(type==='card'&&!colMap.amount) throw new Error('금액 컬럼을 찾을 수 없습니다. (이용금액, 결제금액 등)');
+    // 필수 컬럼 확인 (인덱스 0도 유효하므로 ==null 사용)
+    if(type==='bank'&&colMap.tx_date==null) throw new Error('날짜 컬럼을 찾을 수 없습니다. (거래일, 일자 등)');
+    if(type==='bank'&&colMap.deposit==null&&colMap.withdraw==null) throw new Error('입금/출금 컬럼을 찾을 수 없습니다.');
+    if(type==='card'&&colMap.tx_date==null) throw new Error('날짜 컬럼을 찾을 수 없습니다. (이용일, 승인일 등)');
+    if(type==='card'&&colMap.amount==null) throw new Error('금액 컬럼을 찾을 수 없습니다. (이용금액, 결제금액 등)');
 
     const parsed=rows.map(row=>{
       const vals=Object.values(row);
