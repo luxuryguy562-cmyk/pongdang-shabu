@@ -4558,9 +4558,11 @@ function showLoginScreen(){
   // 관리자 영역 초기화
   document.getElementById('loginAdminArea').style.display='none';
   document.getElementById('loginFormArea').style.display='block';
-  // 매장 변경 버튼: 이전에 owner로 로그인했던 기록 있으면 표시
+  // 매장 변경 버튼: 매장 미선택이면 항상 표시, 선택됐으면 owner만
   const lastLevel=localStorage.getItem('pd_auth_level');
-  document.getElementById('loginStoreBtn').style.display=(lastLevel==='owner')?'inline-block':'none';
+  const needStore=!currentStore;
+  document.getElementById('loginStoreBtn').style.display=(needStore||lastLevel==='owner')?'inline-block':'none';
+  if(needStore) document.getElementById('loginStoreBtn').innerText='매장 선택';
   // PIN에 포커스 (이름 이미 선택됐으면)
   setTimeout(()=>{if(lastLoginName&&pinInput)pinInput.focus();},300);
 }
