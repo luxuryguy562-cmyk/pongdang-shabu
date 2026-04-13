@@ -4629,6 +4629,7 @@ function completeLogin(emp){
 }
 function doLogout(){
   if(!confirm('로그아웃?')) return;
+  closeAllSheets();
   currentEmp=null;isManager=false;isOwner=false;authLevel='staff';
   localStorage.removeItem('pd_emp');
   showLoginScreen();
