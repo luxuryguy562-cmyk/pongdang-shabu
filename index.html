@@ -311,29 +311,28 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- PIN 로그인 화면 -->
 <div id="loginOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
-  <div style="text-align:center;margin-bottom:30px;">
-    <div style="font-size:28px;font-weight:900;color:var(--blue);">퐁당샤브</div>
-    <div style="font-size:13px;color:var(--gray-600);margin-top:6px;" id="loginStoreName">매장을 먼저 선택하세요</div>
+  <!-- 브랜드 + 매장명 -->
+  <div style="text-align:center;margin-bottom:36px;">
+    <div style="font-size:32px;font-weight:900;color:var(--blue);letter-spacing:-1px;">퐁당샤브</div>
+    <div style="font-size:14px;color:var(--gray-600);margin-top:8px;font-weight:600;" id="loginStoreName">매장을 먼저 선택하세요</div>
   </div>
-  <!-- 직원 선택 -->
-  <div id="loginEmpList" style="width:100%;max-width:360px;max-height:300px;overflow-y:auto;margin-bottom:20px;"></div>
-  <!-- PIN 입력 -->
-  <div id="loginPinArea" style="display:none;width:100%;max-width:300px;text-align:center;">
-    <div style="font-size:15px;font-weight:700;margin-bottom:12px;" id="loginEmpName">-</div>
-    <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px;">
-      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+  <!-- 이름 + PIN 입력 폼 -->
+  <div id="loginFormArea" style="width:100%;max-width:320px;">
+    <input id="loginNameInput" class="input-field" placeholder="이름" type="text" autocomplete="off"
+      style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;">
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <input id="loginPinInput" class="input-field" placeholder="PIN 4자리" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
+        style="flex:1;text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;letter-spacing:8px;margin-bottom:0;">
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto;">
-      <button class="pin-btn" onclick="pinInput(1)">1</button><button class="pin-btn" onclick="pinInput(2)">2</button><button class="pin-btn" onclick="pinInput(3)">3</button>
-      <button class="pin-btn" onclick="pinInput(4)">4</button><button class="pin-btn" onclick="pinInput(5)">5</button><button class="pin-btn" onclick="pinInput(6)">6</button>
-      <button class="pin-btn" onclick="pinInput(7)">7</button><button class="pin-btn" onclick="pinInput(8)">8</button><button class="pin-btn" onclick="pinInput(9)">9</button>
-      <button class="pin-btn" onclick="loginBack()" style="font-size:13px;">← 뒤로</button><button class="pin-btn" onclick="pinInput(0)">0</button><button class="pin-btn" onclick="pinDelete()">⌫</button>
-    </div>
-    <div id="loginMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;"></div>
+    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" onclick="submitLogin()">로그인</button>
+    <div id="loginMsg" style="margin-top:12px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
   </div>
-  <!-- 매장선택 -->
-  <div style="margin-top:20px;">
-    <button class="btn btn-secondary" style="padding:12px 16px;font-size:13px;" onclick="openStoreSheet()">매장 선택</button>
+  <!-- 기존 직원 리스트/PIN 패드 (숨김, 호환용) -->
+  <div id="loginEmpList" style="display:none;"></div>
+  <div id="loginPinArea" style="display:none;"></div>
+  <!-- 매장 선택 (관리자 확인 후 표시) -->
+  <div id="loginStoreBtn" style="margin-top:24px;display:none;">
+    <button class="btn btn-secondary" style="padding:10px 16px;font-size:12px;color:var(--gray-400);" onclick="openStoreSheet()">매장 변경</button>
   </div>
 </div>
 
@@ -1806,11 +1805,13 @@ async function selectStore(id, name) {
   document.getElementById('headerStore').innerText = name;
   localStorage.setItem('pd_store', JSON.stringify({id,name}));
   closeAllSheets();
-  await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories()]);
-  recalcSettle2();
-  // 로그인 화면이 열려있으면 직원 목록 갱신
+  // 로그인 전이면 직원만 로드, 로그인 후면 전부 로드
   if(document.getElementById('loginOverlay').style.display!=='none'){
+    await loadEmployees();
     showLoginScreen();
+  } else {
+    await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories()]);
+    recalcSettle2();
   }
 }
 
@@ -4538,71 +4539,51 @@ function showLoginScreen(){
   document.body.style.overflow='hidden';
   document.querySelector('.bottom-nav').style.display='none';
   document.querySelector('.header').style.display='none';
-  document.getElementById('loginPinArea').style.display='none';
-  document.getElementById('loginEmpList').innerHTML='';
-  loginSelectedEmp=null;pinBuffer='';
+  // 입력 초기화
+  const nameInput=document.getElementById('loginNameInput');
+  const pinInput=document.getElementById('loginPinInput');
+  if(nameInput) nameInput.value='';
+  if(pinInput) pinInput.value='';
+  document.getElementById('loginMsg').innerText='';
   if(currentStore){
     document.getElementById('loginStoreName').innerText=currentStore.name;
-    renderLoginEmpList();
   } else {
     document.getElementById('loginStoreName').innerText='매장을 먼저 선택하세요';
   }
+  // 매장 변경 버튼: 이전에 owner로 로그인했던 기록 있으면 표시
+  const lastLevel=localStorage.getItem('pd_auth_level');
+  document.getElementById('loginStoreBtn').style.display=(lastLevel==='owner')?'block':'none';
+  // 이름 입력에 포커스
+  setTimeout(()=>{if(nameInput)nameInput.focus();},300);
 }
-async function renderLoginEmpList(){
-  if(!currentStore) return;
-  await loadEmployees();
-  const active=employees.filter(e=>e.is_active);
-  document.getElementById('loginEmpList').innerHTML=active.length
-    ?active.map(e=>`
-      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--white);border-radius:14px;margin-bottom:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.04);" onclick="selectLoginEmp('${e.id}')">
-        <div class="emp-avatar">${e.name?.charAt(0)||'?'}</div>
-        <div><div style="font-size:15px;font-weight:700;">${e.name}</div><div style="font-size:12px;color:var(--gray-600);">${e.role||''}</div></div>
-      </div>`).join('')
-    :'<div style="text-align:center;color:var(--gray-400);padding:20px;">등록된 직원이 없습니다</div>';
-}
-function selectLoginEmp(id){
-  loginSelectedEmp=employees.find(e=>e.id===id);
-  if(!loginSelectedEmp) return;
-  // PIN 미설정 시 진입 차단
-  if(!loginSelectedEmp.pin){
-    toast('PIN이 설정되지 않았습니다. 관리자에게 문의하세요.','warn');
-    return;
+// ─── 이름+PIN 로그인 ───
+function submitLogin(){
+  const nameVal=(document.getElementById('loginNameInput')?.value||'').trim();
+  const pinVal=(document.getElementById('loginPinInput')?.value||'').trim();
+  const msgEl=document.getElementById('loginMsg');
+  if(!nameVal){msgEl.innerText='이름을 입력하세요';return;}
+  if(!pinVal||pinVal.length!==4){msgEl.innerText='PIN 4자리를 입력하세요';return;}
+  if(!currentStore){msgEl.innerText='매장을 먼저 선택하세요';return;}
+  // 이름으로 직원 찾기
+  const emp=employees.find(e=>e.is_active&&e.name===nameVal);
+  if(!emp){msgEl.innerText='등록되지 않은 이름입니다';shakeLogin();return;}
+  if(!emp.pin){msgEl.innerText='PIN이 설정되지 않았습니다. 관리자에게 문의하세요.';return;}
+  if(pinVal!==emp.pin){
+    msgEl.innerText='PIN이 일치하지 않습니다';
+    document.getElementById('loginPinInput').value='';
+    shakeLogin();return;
   }
-  document.getElementById('loginEmpList').style.display='none';
-  document.getElementById('loginPinArea').style.display='block';
-  document.getElementById('loginEmpName').innerText=loginSelectedEmp.name;
-  document.getElementById('loginMsg').innerText='';
-  pinBuffer='';updatePinDots();
+  completeLogin(emp);
 }
-function pinInput(n){
-  if(pinBuffer.length>=4) return;
-  pinBuffer+=n;updatePinDots();
-  if(pinBuffer.length===4) checkPin();
+function shakeLogin(){
+  const form=document.getElementById('loginFormArea');
+  form.style.animation='shake 0.3s';
+  setTimeout(()=>form.style.animation='',300);
 }
-function pinDelete(){pinBuffer=pinBuffer.slice(0,-1);updatePinDots();}
-function loginBack(){
-  document.getElementById('loginPinArea').style.display='none';
-  document.getElementById('loginEmpList').style.display='block';
-  pinBuffer='';loginSelectedEmp=null;
+// PIN 입력에서 엔터키 → 로그인
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('loginOverlay').style.display!=='none') submitLogin();
 }
-function updatePinDots(){
-  for(let i=0;i<4;i++){
-    const d=document.getElementById('pd'+i);
-    if(d) d.className='pin-dot'+(i<pinBuffer.length?' filled':'');
-  }
-}
-function checkPin(){
-  if(!loginSelectedEmp) return;
-  if(pinBuffer===loginSelectedEmp.pin){
-    completeLogin(loginSelectedEmp);
-  } else {
-    document.getElementById('loginMsg').innerText='PIN이 일치하지 않습니다';
-    pinBuffer='';updatePinDots();
-    // 흔들림 효과
-    const area=document.getElementById('loginPinArea');
-    area.style.animation='shake 0.3s';
-    setTimeout(()=>area.style.animation='',300);
-  }
 }
 // devLogin 제거됨 — UI 버튼 삭제, 함수는 안전장치로 잔류
 function devLogin(){ toast('개발모드가 비활성화되었습니다.','warn'); }
@@ -4620,6 +4601,7 @@ function completeLogin(emp){
   document.querySelector('.bottom-nav').style.display='flex';
   document.querySelector('.header').style.display='flex';
   localStorage.setItem('pd_emp',emp.id);
+  localStorage.setItem('pd_auth_level',authLevel);
   applyPermissionUI();
   // 로그인 후 나머지 데이터 백그라운드 로드 (화면 차단 없이)
   Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
