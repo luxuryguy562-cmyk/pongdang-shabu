@@ -4647,8 +4647,9 @@ document.addEventListener('keydown',e=>{
 function devLogin(){ toast('개발모드가 비활성화되었습니다.','warn'); }
 function completeLogin(emp){
   currentEmp=emp;
-  // auth_level 기반 권한 (기존 is_manager 호환)
-  authLevel=emp.auth_level||(emp.is_manager?'store_manager':'staff');
+  // auth_level 기반 권한 (is_manager와 동기화)
+  authLevel=emp.auth_level||'staff';
+  if(authLevel==='staff'&&emp.is_manager) authLevel='store_manager';
   isOwner=authLevel==='owner';
   isManager=['owner','franchise_admin','store_manager'].includes(authLevel);
   // 전역 상태 초기화 (이전 세션 잔여 방지)
