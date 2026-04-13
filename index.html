@@ -4621,6 +4621,8 @@ function completeLogin(emp){
   document.querySelector('.header').style.display='flex';
   localStorage.setItem('pd_emp',emp.id);
   applyPermissionUI();
+  // 로그인 후 나머지 데이터 백그라운드 로드 (화면 차단 없이)
+  Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
 }
 function doLogout(){
   if(!confirm('로그아웃?')) return;
@@ -5696,13 +5698,13 @@ async function confirmReconCategory(categoryId){
 document.addEventListener('DOMContentLoaded', async()=>{
   initAttDate();recalcSettle2();initSchedDate();
 
-  // 매장 복원
+  // 매장 복원: 로그인에 필요한 것만 먼저 로드 (직원목록)
   const savedStore=localStorage.getItem('pd_store');
   if(savedStore){
     const s=JSON.parse(savedStore);currentStore=s;
     document.getElementById('headerStore').innerText=s.name;
-    await Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]);
-    recalcSettle2();
+    await loadEmployees(); // 로그인에 필수 (직원목록)
+    // 나머지는 로그인 후 백그라운드 로드
   }
 
   // ─── 파일 업로드 이벤트 바인딩 (inline onchange CSP 차단 대응) ───
