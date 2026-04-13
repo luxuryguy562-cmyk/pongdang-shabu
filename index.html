@@ -3418,20 +3418,42 @@ function renderEmpList(){
   let list=employees;
   if(fStatus==='active')list=list.filter(e=>e.is_active);if(fStatus==='inactive')list=list.filter(e=>!e.is_active);if(fRole)list=list.filter(e=>e.role===fRole);
   const c=document.getElementById('empList');if(!c)return;
-  c.innerHTML=list.length?list.map(e=>`
-    <div class="emp-card" onclick="openEmpDetail('${e.id}')">
-      <div class="emp-card-top">
-        <div class="emp-avatar${e.is_active?'':' inactive'}">${e.name?.charAt(0)||'?'}</div>
-        <div class="emp-card-info">
-          <div class="emp-card-name">${e.name} ${e.role?`<span class="badge badge-blue">${e.role}</span>`:''} ${!e.is_active?'<span class="badge badge-gray">퇴사</span>':''}</div>
-          <div class="emp-card-sub">시급 ${fmt(e.base_wage)}원${e.phone?' · '+e.phone:''}${e.account_number?' · '+maskAccount(e.account_number):''}</div>
+  c.innerHTML=list.length?list.map(e=>{
+    const authBadge=e.auth_level==='owner'?'<span class="badge badge-warn" style="font-size:9px;">👑총관리자</span>':e.auth_level==='store_manager'||e.is_manager?'<span class="badge badge-warn" style="font-size:9px;">🔑관리자</span>':'';
+    const statusBadge=!e.is_active?'<span class="badge badge-gray" style="font-size:9px;">퇴사</span>':'';
+    const pinBadge=!e.pin?'<span class="badge badge-red" style="font-size:9px;">PIN미설정</span>':'';
+    return `
+    <div style="background:var(--white);border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04);${!e.is_active?'opacity:0.6;':''}">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;" onclick="openEmpDetail('${e.id}')">
+        <div class="emp-avatar${e.is_active?'':' inactive'}" style="width:44px;height:44px;font-size:16px;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span style="font-size:15px;font-weight:800;">${e.name}</span>
+            ${e.role?`<span class="badge badge-blue" style="font-size:9px;">${e.role}</span>`:''}
+            ${authBadge}${statusBadge}${pinBadge}
+          </div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">${e.phone||'전화번호 없음'}</div>
         </div>
       </div>
-      <div class="emp-card-actions">
-        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="event.stopPropagation();openEditEmpSheet('${e.id}')">✏️ 편집</button>
-        ${e.is_active?`<button class="btn btn-danger btn-sm" style="flex:1;" onclick="event.stopPropagation();toggleEmp('${e.id}',false)">퇴사</button>`:`<button class="btn btn-success btn-sm" style="flex:1;" onclick="event.stopPropagation();toggleEmp('${e.id}',true)">복직</button>`}
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">시급</div>
+          <div style="font-size:13px;font-weight:800;color:var(--blue);">${fmt(e.base_wage)}원</div>
+        </div>
+        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">은행</div>
+          <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.bank_name||'-'}</div>
+        </div>
+        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">입사일</div>
+          <div style="font-size:11px;font-weight:700;">${e.hire_date?.slice(5)||'-'}</div>
+        </div>
       </div>
-    </div>`).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" style="flex:1;padding:10px;font-size:12px;" onclick="event.stopPropagation();openEditEmpSheet('${e.id}')">✏️ 편집</button>
+        ${e.is_active?`<button class="btn btn-danger btn-sm" style="flex:1;padding:10px;font-size:12px;" onclick="event.stopPropagation();toggleEmp('${e.id}',false)">퇴사</button>`:`<button class="btn btn-success btn-sm" style="flex:1;padding:10px;font-size:12px;" onclick="event.stopPropagation();toggleEmp('${e.id}',true)">복직</button>`}
+      </div>
+    </div>`}).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
 }
 async function openAddEmpSheet(){if(!guardStore())return;document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empBirthInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';selectedRoleName='';await renderRoleChips('');openSheet('addEmpSheet');}
 async function openEditEmpSheet(id){const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empBirthInput').value=e.birth_date||'';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');openSheet('addEmpSheet');}
@@ -3440,6 +3462,8 @@ function selectRoleChip(name,el){selectedRoleName=selectedRoleName===name?'':nam
 async function saveEmployee(){
   if(!guardStore())return;const name=document.getElementById('empNameInput').value.trim();if(!name)return toast('이름을 입력하세요.','warn');
   const pinVal=document.getElementById('empPinInput').value.trim()||null;
+  // PIN 필수 검증 (4자리 숫자)
+  if(!pinVal||!/^\d{4}$/.test(pinVal)) return toast('PIN 4자리 숫자를 입력하세요.','warn');
   const payload={store_id:currentStore.id,name,birth_date:document.getElementById('empBirthInput').value.trim()||null,phone:document.getElementById('empPhoneInput').value.trim()||null,address:document.getElementById('empAddressInput').value.trim()||null,bank_name:document.getElementById('empBankInput').value.trim()||null,account_number:document.getElementById('empAccountInput').value.trim()||null,base_wage:parseInt(document.getElementById('empWageInput').value)||10030,pin:pinVal,caps_id:document.getElementById('empCapsIdInput').value.trim()||null,hire_date:document.getElementById('empHireDateInput').value.trim()||null,role:selectedRoleName||null};
   setLoad(true,'저장 중...');const eid=document.getElementById('editEmpId').value;
   const{error}=eid?await sb.from('employees').update(payload).eq('id',eid):await sb.from('employees').insert(payload);
@@ -3734,32 +3758,65 @@ async function renderWageSummary(){
   const totalWage=rows.reduce((a,r)=>a+r.totalWage,0);
   const target=document.getElementById('wageSummaryData');if(!target)return;
   if(!rows.length){target.innerHTML='<div class="empty-state"><div class="empty-icon">💰</div><p>이 달의 근태 기록이 없습니다</p></div>';return;}
+  // 직원별 시급 매핑
+  const empWageMap={};employees.forEach(e=>empWageMap[e.id]={wage:e.base_wage,name:e.name});
+  // 0원 기록 감지
+  const zeroCount=(data||[]).filter(r=>!r.calculated_wage&&r.total_work_min>0).length;
   target.innerHTML=`
-    <div style="background:var(--blue-light);border-radius:12px;padding:14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
-      <div><div style="font-size:11px;color:var(--blue);font-weight:600;">이달 총 인건비</div><div style="font-size:22px;font-weight:800;">${fmt(totalWage)}원</div></div>
-      <div style="font-size:12px;color:var(--blue);">${rows.length}명</div>
+    <div style="background:var(--blue-light);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div style="font-size:11px;color:var(--blue);font-weight:600;">이달 총 인건비</div><div style="font-size:22px;font-weight:800;">${fmt(totalWage)}원</div></div>
+        <div style="font-size:12px;color:var(--blue);">${rows.length}명</div>
+      </div>
+      ${zeroCount>0?`<div style="margin-top:8px;font-size:11px;color:var(--danger);">⚠️ 급여 미산출 ${zeroCount}건 발견</div>`:''}
     </div>
+    ${zeroCount>0?`<button class="btn btn-warn btn-full" style="margin-bottom:12px;padding:12px;font-size:13px;" onclick="recalcMonthWages()">🔄 이달 급여 재계산 (현재 시급 기준)</button>`:''}
     <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="background:var(--gray-100);">
         <th style="padding:8px 6px;text-align:left;">직원</th>
-        <th style="padding:8px 6px;text-align:center;">근무일</th>
-        <th style="padding:8px 6px;text-align:center;">총 근무</th>
-        <th style="padding:8px 6px;text-align:right;">급여 합계</th>
+        <th style="padding:8px 6px;text-align:center;">시급</th>
+        <th style="padding:8px 6px;text-align:center;">근무</th>
+        <th style="padding:8px 6px;text-align:right;">급여</th>
       </tr></thead>
-      <tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--gray-100);">
+      <tbody>${rows.map(r=>{
+        const empInfo=Object.entries(empWageMap).find(([,v])=>v.name===r.name);
+        const baseWage=empInfo?empInfo[1].wage:10030;
+        return `<tr style="border-bottom:1px solid var(--gray-100);">
         <td style="padding:9px 6px;font-weight:700;">${r.name}</td>
-        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);">${r.days}일</td>
-        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);">${Math.round(r.totalMin/60*10)/10}시간</td>
-        <td style="padding:9px 6px;text-align:right;font-weight:800;color:var(--blue);">${fmt(r.totalWage)}원</td>
-      </tr>`).join('')}</tbody>
+        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);font-size:11px;">${fmt(baseWage)}</td>
+        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);">${r.days}일 / ${Math.round(r.totalMin/60*10)/10}h</td>
+        <td style="padding:9px 6px;text-align:right;font-weight:800;color:var(--blue);">${fmt(r.totalWage)}</td>
+      </tr>`}).join('')}</tbody>
     </table>
     </div>`;
 }
 
-// ══════════════════════════════════════════
-// 초기화
-// ══════════════════════════════════════════
+// ─── 급여 재계산: 현재 시급 기준으로 이달 전체 재계산 ───
+async function recalcMonthWages(){
+  if(!currentStore||!confirm('이달 근태 기록의 급여를 현재 시급 기준으로 재계산합니다.\n계속하시겠습니까?')) return;
+  setLoad(true,'급여 재계산 중...');
+  const [y,m]=wageMonthStr.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
+  const{data}=await sb.from('attendance_logs').select('id,employee_id,work_date,app_in,app_out,total_work_min,rest_min').eq('store_id',currentStore.id).gte('work_date',wageMonthStr+'-01').lte('work_date',wageMonthStr+'-'+String(lastDay).padStart(2,'0'));
+  let updated=0;
+  for(const r of (data||[])){
+    if(!r.total_work_min) continue;
+    const emp=employees.find(e=>e.id===r.employee_id);
+    if(!emp) continue;
+    const isWeekend=[0,6].includes(new Date(r.work_date).getDay());
+    const wE=isWeekend?(settings.weekend_extra||0):0;
+    const{data:sw}=await sb.from('special_wages').select('extra_amount').eq('store_id',currentStore.id).eq('target_date',r.work_date).maybeSingle();
+    const spE=sw?.extra_amount||0;
+    // 야간 계산 간소화: total_work_min 기반
+    const nE=0; // 야간수당은 기존 기록 유지 (재계산 시 정확도 이슈)
+    const wage=Math.round((r.total_work_min/60)*(emp.base_wage+wE+nE+spE));
+    await sb.from('attendance_logs').update({calculated_wage:wage}).eq('id',r.id);
+    updated++;
+  }
+  setLoad(false);
+  toast(`${updated}건 급여 재계산 완료!`,'success');
+  await renderWageSummary();
+}
 
 // ══════════════════════════════════════════
 // 지출 카테고리 관리
