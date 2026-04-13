@@ -448,7 +448,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="nav-item" data-tab="attendance" onclick="nav('attendance',this)"><span class="ni">⏰</span>근태</div>
   <div class="nav-item" data-tab="schedule" onclick="nav('schedule',this)"><span class="ni">📅</span>근무계획</div>
   <div class="nav-item" data-tab="settle" onclick="nav('settle',this)"><span class="ni">💰</span>마감정산</div>
-  <div class="nav-item" data-tab="explist" onclick="nav('explist',this)"><span class="ni">📑</span>지출리스트</div>
+  <div class="nav-item manager-only" data-tab="explist" onclick="nav('explist',this)"><span class="ni">📑</span>지출리스트</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -1737,8 +1737,11 @@ function applyPermissionUI() {
   document.querySelectorAll('.manager-only').forEach(el => {
     el.style.display = isManager ? '' : 'none';
   });
-  // 네비 탭도 동일하게 적용 후 재정렬
-  // nav-item들이 flex:1이므로 숨겨진 탭이 없으면 자동으로 균등분배됨
+  // 비관리자: 네비바에서 숨겨진 탭 완전 제거 (flex 균등분배)
+  document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
+    if(el.classList.contains('manager-only')&&!isManager) el.style.display='none';
+    else el.style.display='';
+  });
 }
 function daysInMonth(ym) { const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
 
@@ -5689,11 +5692,15 @@ document.addEventListener('DOMContentLoaded', async()=>{
     });
   });
 
-  // 로그인 복원 또는 로그인 화면 표시
+  // 로그인 복원: 관리자만 자동 로그인, 일반 직원은 매번 PIN
   const savedEmp=localStorage.getItem('pd_emp');
   if(savedEmp&&currentStore){
     const emp=employees.find(e=>e.id===savedEmp);
-    if(emp){completeLogin(emp);return;}
+    if(emp&&(emp.is_manager||emp.role==='팀장'||emp.role==='점장')){
+      completeLogin(emp);return;
+    }
+    // 일반 직원은 저장된 로그인 제거 → PIN 입력 화면
+    localStorage.removeItem('pd_emp');
   }
   showLoginScreen();
 });
