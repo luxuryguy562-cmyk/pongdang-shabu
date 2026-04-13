@@ -331,10 +331,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div id="loginMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;"></div>
   </div>
-  <!-- 개발모드 / 매장선택 -->
-  <div style="margin-top:20px;display:flex;gap:10px;">
+  <!-- 매장선택 -->
+  <div style="margin-top:20px;">
     <button class="btn btn-secondary" style="padding:12px 16px;font-size:13px;" onclick="openStoreSheet()">매장 선택</button>
-    <button class="btn btn-secondary" style="padding:12px 16px;font-size:13px;color:var(--gray-400);" onclick="devLogin()">개발모드</button>
   </div>
 </div>
 
@@ -1627,7 +1626,9 @@ let currentTargetRowIdx = -1, currentMatchStagingIdx = -1;
 let datePickerCtx = '', timePickerCtx = '';
 let b64 = '', rowCount = 0, stagingData = [];
 let cardDateStr = new Date().toISOString().split('T')[0];
-let currentEmp = null, isManager = true, isOwner = true;
+let currentEmp = null, isManager = false, isOwner = false;
+// auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
+let authLevel = 'staff';
 let dashMonthStr = new Date().toISOString().slice(0,7);
 let fcMonthStr = dashMonthStr;
 let schedEmpId = null;
@@ -1733,15 +1734,23 @@ const unFmt = s => parseInt((s||'0').replace(/,/g,''))||0;
 const guardStore = () => { if(!currentStore){toast('매장을 먼저 선택하세요.','warn');openStoreSheet();return false;}return true; };
 function maskAccount(a) { const c=a.replace(/[^0-9]/g,''); return c.length>=4?'****-****-'+c.slice(-4):a; }
 function applyPermissionUI() {
-  // 관리자면 전부 표시, 비관리자면 숨김
+  // manager-only: store_manager 이상 (owner, franchise_admin, store_manager)
   document.querySelectorAll('.manager-only').forEach(el => {
     el.style.display = isManager ? '' : 'none';
   });
-  // 비관리자: 네비바에서 숨겨진 탭 완전 제거 (flex 균등분배)
+  // owner-only: owner만
+  document.querySelectorAll('.owner-only').forEach(el => {
+    el.style.display = isOwner ? '' : 'none';
+  });
+  // 네비바 탭: 숨겨진 탭 flex 균등분배
   document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
     if(el.classList.contains('manager-only')&&!isManager) el.style.display='none';
     else el.style.display='';
   });
+  // 내 정보 배지 업데이트
+  const badge=isOwner?'👑 총관리자':isManager?'🔑 관리자':'';
+  const badgeEl=document.getElementById('authBadge');
+  if(badgeEl) badgeEl.innerHTML=badge?`<span class="badge badge-warn">${badge}</span>`:'';
 }
 function daysInMonth(ym) { const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
 
@@ -1760,9 +1769,9 @@ function openMyInfoSheet() {
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
         <div class="emp-avatar">${emp.name?.charAt(0)||'?'}</div>
         <div><div style="font-size:19px;font-weight:800;">${emp.name}</div>
-          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">
+          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;" id="authBadge">
             ${emp.role?`<span class="badge badge-blue">${emp.role}</span>`:''}
-            ${isManager?'<span class="badge badge-warn">🔑 관리자</span>':''}
+            ${isOwner?'<span class="badge badge-warn">👑 총관리자</span>':isManager?'<span class="badge badge-warn">🔑 관리자</span>':''}
           </div>
         </div>
       </div>
@@ -3458,8 +3467,8 @@ async function loadPermissions(){
   const{data:ed}=await sb.from('employees').select('id,name,role,is_manager,is_approved').eq('store_id',currentStore.id).order('name');
   const eEl=document.getElementById('empPermList');if(eEl)eEl.innerHTML=(ed||[]).map(e=>`<div class="perm-item"><div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.name} ${e.role?`<span class="badge badge-blue" style="font-size:10px;">${e.role}</span>`:''} ${!e.is_approved?'<span class="badge badge-warn" style="font-size:10px;">미승인</span>':''}</div><div style="font-size:11px;color:var(--gray-600);">개별 관리자 권한</div></div><div style="display:flex;align-items:center;gap:10px;">${!e.is_approved?`<button class="btn btn-success btn-sm" onclick="approveEmp('${e.id}')">승인</button>`:''}<label class="toggle-wrap"><input type="checkbox" ${e.is_manager?'checked':''} onchange="toggleEmpPerm('${e.id}',this.checked)"><span class="toggle-slider"></span></label></div></div>`).join('')||'<div class="empty-state" style="padding:12px;"><p>직원이 없습니다</p></div>';
 }
-async function toggleRolePerm(roleId,roleName,checked){await sb.from('roles').update({is_manager_role:checked}).eq('id',roleId);await sb.from('employees').update({is_manager:checked}).eq('store_id',currentStore.id).eq('role',roleName);}
-async function toggleEmpPerm(empId,checked){await sb.from('employees').update({is_manager:checked}).eq('id',empId);}
+async function toggleRolePerm(roleId,roleName,checked){await sb.from('roles').update({is_manager_role:checked}).eq('id',roleId);await sb.from('employees').update({is_manager:checked,auth_level:checked?'store_manager':'staff'}).eq('store_id',currentStore.id).eq('role',roleName);}
+async function toggleEmpPerm(empId,checked){await sb.from('employees').update({is_manager:checked,auth_level:checked?'store_manager':'staff'}).eq('id',empId);}
 async function approveEmp(empId){if(!confirm('승인하시겠습니까?'))return;await sb.from('employees').update({is_approved:true,is_active:true,store_id:currentStore.id}).eq('id',empId);toast('승인 완료!','success');loadPermissions();}
 
 // ══════════════════════════════════════════
@@ -4497,9 +4506,9 @@ async function renderLoginEmpList(){
 function selectLoginEmp(id){
   loginSelectedEmp=employees.find(e=>e.id===id);
   if(!loginSelectedEmp) return;
-  // PIN이 없으면 바로 로그인
+  // PIN 미설정 시 진입 차단
   if(!loginSelectedEmp.pin){
-    completeLogin(loginSelectedEmp);
+    toast('PIN이 설정되지 않았습니다. 관리자에게 문의하세요.','warn');
     return;
   }
   document.getElementById('loginEmpList').style.display='none';
@@ -4538,19 +4547,14 @@ function checkPin(){
     setTimeout(()=>area.style.animation='',300);
   }
 }
-function devLogin(){
-  isManager=true;isOwner=true;currentEmp=null;
-  document.getElementById('headerUser').innerText='개발모드';
-  document.getElementById('loginOverlay').style.display='none';
-  document.body.style.overflow='';
-  document.querySelector('.bottom-nav').style.display='flex';
-  document.querySelector('.header').style.display='flex';
-  applyPermissionUI();
-}
+// devLogin 제거됨 — UI 버튼 삭제, 함수는 안전장치로 잔류
+function devLogin(){ toast('개발모드가 비활성화되었습니다.','warn'); }
 function completeLogin(emp){
   currentEmp=emp;
-  isManager=emp.is_manager||emp.role==='팀장'||emp.role==='점장';
-  isOwner=emp.is_manager||false;
+  // auth_level 기반 권한 (기존 is_manager 호환)
+  authLevel=emp.auth_level||(emp.is_manager?'store_manager':'staff');
+  isOwner=authLevel==='owner';
+  isManager=['owner','franchise_admin','store_manager'].includes(authLevel);
   // 전역 상태 초기화 (이전 세션 잔여 방지)
   selectedEmpId=null;schedEmpId=null;
   document.getElementById('headerUser').innerText=emp.name;
@@ -4563,7 +4567,7 @@ function completeLogin(emp){
 }
 function doLogout(){
   if(!confirm('로그아웃?')) return;
-  currentEmp=null;isManager=false;isOwner=false;
+  currentEmp=null;isManager=false;isOwner=false;authLevel='staff';
   localStorage.removeItem('pd_emp');
   showLoginScreen();
 }
@@ -5692,14 +5696,14 @@ document.addEventListener('DOMContentLoaded', async()=>{
     });
   });
 
-  // 로그인 복원: 관리자만 자동 로그인, 일반 직원은 매번 PIN
+  // 로그인 복원: owner만 자동 로그인
   const savedEmp=localStorage.getItem('pd_emp');
   if(savedEmp&&currentStore){
     const emp=employees.find(e=>e.id===savedEmp);
-    if(emp&&(emp.is_manager||emp.role==='팀장'||emp.role==='점장')){
+    const empLevel=emp?.auth_level||(emp?.is_manager?'store_manager':'staff');
+    if(emp&&empLevel==='owner'){
       completeLogin(emp);return;
     }
-    // 일반 직원은 저장된 로그인 제거 → PIN 입력 화면
     localStorage.removeItem('pd_emp');
   }
   showLoginScreen();

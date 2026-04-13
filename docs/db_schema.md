@@ -2,12 +2,13 @@
 
 > **Supabase URL**: `https://ruytgygjwnbtzmtofopg.supabase.co`
 > **store_id**: `4ae03341-e5dc-4933-b746-29728cbc685f` (퐁당샤브 논산점)
-> **최종 업데이트**: 2025-04 (index.html 코드 기반 추출)
+> **최종 업데이트**: 2026-04-13
 
 ## 테이블 관계도
 
 ```
-stores (매장)
+franchises (프랜차이즈/브랜드)
+  └── stores (매장) ─ 1:N (franchise_id FK)
   ├── store_settings (매장 설정) ─ 1:1
   ├── employees (직원) ─ 1:N
   │     ├── attendance_logs (출퇴근) ─ 1:N
@@ -26,13 +27,22 @@ stores (매장)
   └── special_wages (특별 수당) ─ 1:N
 ```
 
-## 테이블 상세 (17개)
+## 테이블 상세 (18개 + franchises 1개 = 22개)
+
+### franchises (신규)
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | 프랜차이즈 ID |
+| name | 브랜드명 (퐁당샤브, 유림대패 등) |
+| is_active (bool, default true) | 활성 여부 |
+| created_at (timestamptz) | 생성일 |
 
 ### stores
 | 컬럼 | 용도 |
 |------|------|
 | id (uuid, PK) | 매장 고유 ID |
 | name | 매장명 |
+| franchise_id (FK→franchises) | 소속 프랜차이즈 |
 | is_active | 활성 여부 |
 
 ### store_settings
@@ -57,6 +67,7 @@ stores (매장)
 | caps_id | CAPS 지문인식기 ID |
 | hire_date, resign_date | 입퇴사일 |
 | is_active, is_approved, is_manager | 상태 플래그 |
+| auth_level (text, default 'staff') | 권한: owner/franchise_admin/store_manager/staff |
 
 ### roles
 | 컬럼 | 용도 |
