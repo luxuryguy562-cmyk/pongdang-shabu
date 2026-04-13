@@ -318,8 +318,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
   <!-- 이름 + PIN 입력 폼 -->
   <div id="loginFormArea" style="width:100%;max-width:320px;">
-    <input id="loginNameInput" class="input-field" placeholder="이름" type="text" autocomplete="off"
-      style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;">
+    <select id="loginNameInput" class="input-field"
+      style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;appearance:auto;">
+      <option value="">직원 선택</option>
+    </select>
     <div style="display:flex;gap:8px;margin-bottom:16px;">
       <input id="loginPinInput" class="input-field" placeholder="PIN 4자리" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
         style="flex:1;text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;letter-spacing:8px;margin-bottom:0;">
@@ -4539,10 +4541,16 @@ function showLoginScreen(){
   document.body.style.overflow='hidden';
   document.querySelector('.bottom-nav').style.display='none';
   document.querySelector('.header').style.display='none';
-  // 입력 초기화
-  const nameInput=document.getElementById('loginNameInput');
+  // 드롭박스 직원 목록 채우기
+  const nameSelect=document.getElementById('loginNameInput');
   const pinInput=document.getElementById('loginPinInput');
-  if(nameInput) nameInput.value='';
+  const lastLoginName=localStorage.getItem('pd_last_name')||'';
+  if(nameSelect){
+    const active=employees.filter(e=>e.is_active);
+    nameSelect.innerHTML='<option value="">직원 선택</option>'+active.map(e=>
+      `<option value="${e.name}"${e.name===lastLoginName?' selected':''}>${e.name}${e.role?' ('+e.role+')':''}</option>`
+    ).join('');
+  }
   if(pinInput) pinInput.value='';
   document.getElementById('loginMsg').innerText='';
   if(currentStore){
@@ -4553,26 +4561,28 @@ function showLoginScreen(){
   // 매장 변경 버튼: 이전에 owner로 로그인했던 기록 있으면 표시
   const lastLevel=localStorage.getItem('pd_auth_level');
   document.getElementById('loginStoreBtn').style.display=(lastLevel==='owner')?'block':'none';
-  // 이름 입력에 포커스
-  setTimeout(()=>{if(nameInput)nameInput.focus();},300);
+  // PIN에 포커스 (이름 이미 선택됐으면)
+  setTimeout(()=>{if(lastLoginName&&pinInput)pinInput.focus();},300);
 }
 // ─── 이름+PIN 로그인 ───
 function submitLogin(){
   const nameVal=(document.getElementById('loginNameInput')?.value||'').trim();
   const pinVal=(document.getElementById('loginPinInput')?.value||'').trim();
   const msgEl=document.getElementById('loginMsg');
-  if(!nameVal){msgEl.innerText='이름을 입력하세요';return;}
+  if(!nameVal){msgEl.innerText='직원을 선택하세요';return;}
   if(!pinVal||pinVal.length!==4){msgEl.innerText='PIN 4자리를 입력하세요';return;}
   if(!currentStore){msgEl.innerText='매장을 먼저 선택하세요';return;}
   // 이름으로 직원 찾기
   const emp=employees.find(e=>e.is_active&&e.name===nameVal);
-  if(!emp){msgEl.innerText='등록되지 않은 이름입니다';shakeLogin();return;}
+  if(!emp){msgEl.innerText='등록되지 않은 직원입니다';shakeLogin();return;}
   if(!emp.pin){msgEl.innerText='PIN이 설정되지 않았습니다. 관리자에게 문의하세요.';return;}
   if(pinVal!==emp.pin){
     msgEl.innerText='PIN이 일치하지 않습니다';
     document.getElementById('loginPinInput').value='';
     shakeLogin();return;
   }
+  // 다음 로그인 시 이름 기억
+  localStorage.setItem('pd_last_name',nameVal);
   completeLogin(emp);
 }
 function shakeLogin(){
@@ -4583,8 +4593,7 @@ function shakeLogin(){
 // PIN 입력에서 엔터키 → 로그인
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('loginOverlay').style.display!=='none') submitLogin();
-}
-}
+});
 // devLogin 제거됨 — UI 버튼 삭제, 함수는 안전장치로 잔류
 function devLogin(){ toast('개발모드가 비활성화되었습니다.','warn'); }
 function completeLogin(emp){
