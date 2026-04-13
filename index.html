@@ -4441,7 +4441,7 @@ function matchColumns(headers, type){
 const BANK_RULES=[
   // 매출
   {p:/^(NH|KB|SHC|삼성200|741961|하나|롯데992|현321|우602)/,cat:'매출',sub:'카드결제'},
-  {p:/(타행MB|타행FB|타행IB|OP이체|모바일)/,cat:'매출',sub:'송금결제'},
+  {p:/(타행|OP이체|모바일|FB자금|BZ뱅크|전자금융)/,cat:'매출',sub:'송금결제'},
   {p:/(CD입금|현금|현찰)/,cat:'매출',sub:'현금결제'},
   {p:/논산정산/,cat:'매출',sub:'QR결제'},
   {p:/(카카오페이정산|토스_)/,cat:'매출',sub:'기타결제'},
@@ -4725,7 +4725,17 @@ async function handleExcelUpload(input, type){
         const wth=parseNum(getVal(colMap.withdraw));
         const amount=dep>0?dep:(wth>0?-wth:0);
         if(amount===0) return null;
-        const cls=classifyByKeyword(classifyText,'bank');
+        let cls=classifyByKeyword(classifyText,'bank');
+        // ─── 사람이름 송금결제 자동 분류 ───
+        // 1차: 내용으로 미분류 → 적요(desc)로 재시도 (적요에 타행/OP이체 등 송금코드 있으면 매칭)
+        if(cls.needs_review&&desc&&content&&desc!==content){
+          const cls2=classifyByKeyword(desc,'bank');
+          if(!cls2.needs_review){cls=cls2;}
+        }
+        // 2차: 적요도 실패 + 입금(양수) + 한글 2~4자(사람이름) → 매출/송금결제 자동 처리
+        if(cls.needs_review&&amount>0&&/^[가-힣]{2,4}$/.test(classifyText)){
+          cls={category:'매출',sub_category:'송금결제',confidence:'medium',needs_review:false,review_reason:null,exclude_from_settlement:false};
+        }
         return {
           tx_date:parseDate(dateRaw),
           tx_time:txTime,
