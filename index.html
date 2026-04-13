@@ -3430,7 +3430,7 @@ async function loadEmployees(){
 function renderEmpList(){
   const fRole=document.getElementById('empFilterRole')?.value||'';
   const fStatus=document.getElementById('empFilterStatus')?.value||'active';
-  let list=employees;
+  let list=employees.filter(e=>e.auth_level!=='owner');
   if(fStatus==='active')list=list.filter(e=>e.is_active);if(fStatus==='inactive')list=list.filter(e=>!e.is_active);if(fRole)list=list.filter(e=>e.role===fRole);
   const c=document.getElementById('empList');if(!c)return;
   c.innerHTML=list.length?list.map(e=>{
@@ -4558,7 +4558,7 @@ function showLoginScreen(){
   const pinInput=document.getElementById('loginPinInput');
   const lastLoginName=localStorage.getItem('pd_last_name')||'';
   if(nameSelect){
-    const active=employees.filter(e=>e.is_active);
+    const active=employees.filter(e=>e.is_active&&e.auth_level!=='owner');
     nameSelect.innerHTML='<option value="">직원 선택</option>'+active.map(e=>
       `<option value="${e.name}"${e.name===lastLoginName?' selected':''}>${e.name}${e.role?' ('+e.role+')':''}</option>`
     ).join('');
