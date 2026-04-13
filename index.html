@@ -333,9 +333,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <!-- 기존 직원 리스트/PIN 패드 (숨김, 호환용) -->
   <div id="loginEmpList" style="display:none;"></div>
   <div id="loginPinArea" style="display:none;"></div>
-  <!-- 매장 선택 (관리자 확인 후 표시) -->
-  <div id="loginStoreBtn" style="margin-top:24px;display:none;">
-    <button class="btn btn-secondary" style="padding:10px 16px;font-size:12px;color:var(--gray-400);" onclick="openStoreSheet()">매장 변경</button>
+  <!-- 관리자 로그인 (이름 직접 입력) -->
+  <div id="loginAdminArea" style="display:none;width:100%;max-width:320px;margin-top:16px;">
+    <input id="loginAdminName" class="input-field" placeholder="이름" type="text" autocomplete="off"
+      style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;">
+    <input id="loginAdminPin" class="input-field" placeholder="PIN 4자리" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
+      style="text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;letter-spacing:8px;margin-bottom:12px;">
+    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" onclick="submitAdminLogin()">관리자 로그인</button>
+  </div>
+  <!-- 하단 버튼 -->
+  <div style="margin-top:24px;display:flex;gap:10px;">
+    <button class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);" onclick="toggleAdminLogin()">관리자</button>
+    <button id="loginStoreBtn" class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);display:none;" onclick="openStoreSheet()">매장 변경</button>
   </div>
 </div>
 
@@ -4570,9 +4579,12 @@ function showLoginScreen(){
   } else {
     document.getElementById('loginStoreName').innerText='매장을 먼저 선택하세요';
   }
+  // 관리자 영역 초기화
+  document.getElementById('loginAdminArea').style.display='none';
+  document.getElementById('loginFormArea').style.display='block';
   // 매장 변경 버튼: 이전에 owner로 로그인했던 기록 있으면 표시
   const lastLevel=localStorage.getItem('pd_auth_level');
-  document.getElementById('loginStoreBtn').style.display=(lastLevel==='owner')?'block':'none';
+  document.getElementById('loginStoreBtn').style.display=(lastLevel==='owner')?'inline-block':'none';
   // PIN에 포커스 (이름 이미 선택됐으면)
   setTimeout(()=>{if(lastLoginName&&pinInput)pinInput.focus();},300);
 }
@@ -4594,6 +4606,31 @@ function submitLogin(){
     shakeLogin();return;
   }
   // 다음 로그인 시 이름 기억
+  localStorage.setItem('pd_last_name',nameVal);
+  completeLogin(emp);
+}
+function toggleAdminLogin(){
+  const area=document.getElementById('loginAdminArea');
+  const form=document.getElementById('loginFormArea');
+  if(area.style.display==='none'){
+    area.style.display='block';form.style.display='none';
+    document.getElementById('loginAdminName').value='';
+    document.getElementById('loginAdminPin').value='';
+  } else {
+    area.style.display='none';form.style.display='block';
+  }
+}
+function submitAdminLogin(){
+  const nameVal=(document.getElementById('loginAdminName')?.value||'').trim();
+  const pinVal=(document.getElementById('loginAdminPin')?.value||'').trim();
+  const msgEl=document.getElementById('loginMsg');
+  if(!nameVal){msgEl.innerText='이름을 입력하세요';return;}
+  if(!pinVal||pinVal.length!==4){msgEl.innerText='PIN 4자리를 입력하세요';return;}
+  // 전체 직원에서 검색 (owner 포함)
+  const emp=employees.find(e=>e.is_active&&e.name===nameVal);
+  if(!emp){msgEl.innerText='등록되지 않은 이름입니다';shakeLogin();return;}
+  if(!emp.pin){msgEl.innerText='PIN이 설정되지 않았습니다.';return;}
+  if(pinVal!==emp.pin){msgEl.innerText='PIN이 일치하지 않습니다';document.getElementById('loginAdminPin').value='';shakeLogin();return;}
   localStorage.setItem('pd_last_name',nameVal);
   completeLogin(emp);
 }
