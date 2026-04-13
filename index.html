@@ -4526,8 +4526,8 @@ const CARD_RULES=[
   // 마케팅
   {p:/이니시스.*빌링.*플/,cat:'마케팅',sub:'도도포인트'},
   // 기타
-  {p:/(버거킹|맘스터치|파리바게뜨|메가엠지씨|교촌|롯데리아)/,cat:'기타',sub:'간식'},
-  {p:/(함흥면옥|취암반점|아리랑|본죽|한솥|꼬마김밥|써브웨이)/,cat:'기타',sub:'중식'},
+  {p:/(버거킹|맘스터치|파리바게뜨|메가엠지씨|메가커피|교촌|롯데리아|스타벅스|이디야|컴포즈|빽다방|투썸|할리스|배스킨|던킨|비알코리아)/,cat:'기타',sub:'간식'},
+  {p:/(함흥면옥|취암반점|아리랑|본죽|한솥|꼬마김밥|써브웨이|김밥천국|김밥|맥도날드|KFC|피자|치킨|분식|식당|반점|냉면|칼국수|설렁탕|감자탕|삼겹|보쌈|족발)/,cat:'기타',sub:'중식'},
   {p:/(아주조명|다수리철물)/,cat:'기타',sub:'유지보수'}
 ];
 
@@ -4816,9 +4816,10 @@ function renderExcelPreview(items, type, totalLines){
     const isIn=(i.amount||0)>0;
     const amt=Math.abs(i.amount||0);
     const desc=i.description||i.merchant_name||'-';
-    const badge=i.needs_review?'<span class="badge badge-warn">확인</span>':
-                i.exclude_from_settlement?'<span class="badge badge-gray">제외</span>':
-                i.is_cancelled?'<span class="badge badge-red">취소</span>':'';
+    let badge='';
+    if(i.needs_review) badge+='<span class="badge badge-warn">확인</span>';
+    if(i.exclude_from_settlement) badge+='<span class="badge badge-gray">제외</span>';
+    if(i.is_cancelled) badge+='<span class="badge badge-red">취소</span>';
     html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:6px;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${desc}</div>
