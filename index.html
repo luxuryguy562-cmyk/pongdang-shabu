@@ -545,12 +545,27 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="stagingList" style="margin-top:14px;"></div>
     </div>
     <div id="attList" style="display:none;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-        <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(-1,'list')">‹</button>
-        <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vListMonth">-</div>
-        <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(1,'list')">›</button>
+      <!-- 주간 간트차트 뷰 -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-secondary btn-sm" onclick="moveMyAttWeek(-1)">‹ 이전주</button>
+        <div style="flex:1;text-align:center;font-size:14px;font-weight:700;" id="myAttWeekLabel">-</div>
+        <button class="btn btn-secondary btn-sm" onclick="moveMyAttWeek(1)">다음주 ›</button>
       </div>
-      <div id="attListData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div>
+      <!-- 오늘 근태 상태 요약 -->
+      <div id="myAttTodayStatus" style="margin-bottom:12px;"></div>
+      <!-- 주간 간트 -->
+      <div id="myAttGantt"></div>
+      <!-- 이번주 누락 경고 -->
+      <div id="myAttWarning"></div>
+      <!-- 월별 카드 리스트 (기존) -->
+      <div style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:12px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(-1,'list')">‹</button>
+          <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vListMonth">-</div>
+          <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(1,'list')">›</button>
+        </div>
+        <div id="attListData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div>
+      </div>
     </div>
     <div id="attAll" style="display:none;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -612,6 +627,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="sub-tab" onclick="settleTab('card',this)">일별 카드</button>
   </div>
   <div id="settleInput">
+    <!-- 정산 날짜 선택 (관리자만 변경 가능) -->
+    <div class="settle-card-group" id="settleDateGroup" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title" style="margin-bottom:0;">정산 날짜</div>
+        <span style="font-size:11px;color:var(--gray-400);" id="settleDateStatus">관리자 전용</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="moveSettleDate(-1)">‹</button>
+        <input type="date" id="settleDatePicker" class="input-field" style="flex:1;text-align:center;font-size:15px;font-weight:700;padding:10px;margin-bottom:0;">
+        <button class="btn btn-secondary btn-sm" onclick="moveSettleDate(1)">›</button>
+      </div>
+    </div>
     <!-- 영업개시보고서 -->
     <div class="settle-card-group">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1663,7 +1690,7 @@ function nav(tab, el) {
     recon: initRecon,
   };
   if (actions[tab]) actions[tab]();
-  if (tab === 'settle') { recalcSettle2(); loadOpeningAmount(); }
+  if (tab === 'settle') { recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
   // 서브탭 전환
   if (subTab) {
     setTimeout(() => {
@@ -1870,6 +1897,8 @@ function attTab(tab,el){
   const panel = document.getElementById('att'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(panel) panel.style.display='block';
   if(tab==='list'){
+    // 주간 간트 로드
+    loadMyAttGantt();
     // 월 표시 초기화 후 조회
     document.getElementById('vListMonth').innerText = attListMonth;
     loadAttList(false);
@@ -2194,6 +2223,141 @@ async function loadAttList(allMode=false){
 }
 function loadAttAll(){ loadAttList(true); }
 
+// ─── 내 기록: 주간 간트차트 뷰 ───
+let myAttWeekStart='';
+function moveMyAttWeek(dir){
+  const d=new Date(myAttWeekStart);d.setDate(d.getDate()+dir*7);
+  myAttWeekStart=d.toISOString().split('T')[0];
+  loadMyAttGantt();
+}
+async function loadMyAttGantt(){
+  if(!currentStore||!currentEmp) return;
+  if(!myAttWeekStart) myAttWeekStart=getWeekStart(new Date().toISOString().split('T')[0]);
+  const days=getWeekDays(myAttWeekStart);
+  const todayStr=new Date().toISOString().split('T')[0];
+  document.getElementById('myAttWeekLabel').innerText=`${days[0].label} ~ ${days[6].label}`;
+
+  // 이번 주 내 근태 데이터 조회
+  const{data}=await sb.from('attendance_logs').select('*')
+    .eq('store_id',currentStore.id)
+    .eq('employee_id',currentEmp.id)
+    .gte('work_date',days[0].date)
+    .lte('work_date',days[6].date)
+    .order('work_date');
+
+  // 이번 주 근무계획도 조회 (비교용)
+  const{data:schedData}=await sb.from('work_schedules').select('*')
+    .eq('store_id',currentStore.id)
+    .eq('employee_id',currentEmp.id)
+    .gte('work_date',days[0].date)
+    .lte('work_date',days[6].date);
+  const schedMap={};(schedData||[]).forEach(s=>schedMap[s.work_date]=s);
+
+  const logs=data||[];
+  const logMap={};logs.forEach(r=>logMap[r.work_date]=r);
+
+  // 오늘 근태 상태 카드
+  const todayLog=logMap[todayStr];
+  const tK=ts=>ts?new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):null;
+  const hasIn=todayLog?.app_in;
+  const hasOut=todayLog?.app_out;
+  let statusHtml=`<div style="background:var(--gray-100);border-radius:14px;padding:14px 16px;">
+    <div style="font-size:12px;font-weight:700;color:var(--gray-400);margin-bottom:8px;">오늘 근태 상태</div>
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1;background:${hasIn?'var(--success-light)':'var(--danger-light)'};border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:4px;">${hasIn?'✅':'❌'}</div>
+        <div style="font-size:11px;color:var(--gray-600);font-weight:600;">출근</div>
+        <div style="font-size:13px;font-weight:800;color:${hasIn?'var(--success)':'var(--danger)'};">${hasIn?tK(todayLog.app_in):'미기록'}</div>
+      </div>
+      <div style="flex:1;background:${hasOut?'var(--success-light)':'var(--warn-light)'};border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:4px;">${hasOut?'✅':hasIn?'⏳':'➖'}</div>
+        <div style="font-size:11px;color:var(--gray-600);font-weight:600;">퇴근</div>
+        <div style="font-size:13px;font-weight:800;color:${hasOut?'var(--success)':hasIn?'var(--warn)':'var(--gray-400)'};">${hasOut?tK(todayLog.app_out):hasIn?'근무 중':'—'}</div>
+      </div>
+      <div style="flex:1;background:var(--blue-light);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:4px;">⏱</div>
+        <div style="font-size:11px;color:var(--gray-600);font-weight:600;">근무시간</div>
+        <div style="font-size:13px;font-weight:800;color:var(--blue);">${todayLog?.total_work_min!=null?todayLog.total_work_min+'분':'—'}</div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('myAttTodayStatus').innerHTML=statusHtml;
+
+  // 주간 간트차트 (근무계획 스타일)
+  const bgCols=ganttHours.map(()=>`<div class="gantt-bg-col"></div>`).join('');
+  let ganttHtml='';
+  days.forEach(day=>{
+    const log=logMap[day.date];
+    const sched=schedMap[day.date];
+    const isToday=day.date===todayStr;
+    const isPast=day.date<todayStr;
+
+    ganttHtml+=`<div class="gantt-day-section">
+      <div class="gantt-day-label" style="${isToday?'color:var(--blue);font-weight:800;':''}">
+        <span>${day.label}${isToday?' (오늘)':''}</span>`;
+
+    // 상태 표시
+    if(log?.app_in&&log?.app_out) ganttHtml+=`<span style="font-size:10px;color:var(--success);font-weight:700;">✅ 완료</span>`;
+    else if(log?.app_in&&!log?.app_out&&isToday) ganttHtml+=`<span style="font-size:10px;color:var(--blue);font-weight:700;">🔵 근무중</span>`;
+    else if(isPast&&sched&&!sched.is_off&&!log) ganttHtml+=`<span style="font-size:10px;color:var(--danger);font-weight:700;">⚠️ 누락</span>`;
+    else if(sched?.is_off) ganttHtml+=`<span style="font-size:10px;color:var(--gray-400);">휴무</span>`;
+    else if(!isPast&&!isToday) ganttHtml+=`<span style="font-size:10px;color:var(--gray-400);">${sched?'예정':'—'}</span>`;
+
+    ganttHtml+=`</div>
+      <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
+
+    // 바 그리기
+    let bars='';
+    // 계획 바 (연한색)
+    if(sched&&!sched.is_off){
+      const sH=parseHour(sched.wish_start||sched.start_time),eH=parseHour(sched.wish_end||sched.end_time);
+      if(sH!=null&&eH!=null&&eH>sH){
+        const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
+        const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
+        bars+=`<div style="position:absolute;height:14px;top:2px;left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:var(--gray-300);opacity:0.5;border-radius:3px;"></div>`;
+      }
+    }
+    // 실제 근무 바 (진한색)
+    if(log?.app_in){
+      const inTime=new Date(log.app_in);
+      const sH=inTime.getHours()+inTime.getMinutes()/60;
+      let eH;
+      if(log.app_out){const outTime=new Date(log.app_out);eH=outTime.getHours()+outTime.getMinutes()/60;}
+      else if(isToday){const now=new Date();eH=now.getHours()+now.getMinutes()/60;} // 근무중이면 현재시간까지
+      if(eH!=null&&eH>sH){
+        const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
+        const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
+        const sLabel=String(Math.floor(sH)).padStart(2,'0')+':'+(sH%1>=0.5?'30':'00');
+        const eLabel=log.app_out?(String(Math.floor(eH)).padStart(2,'0')+':'+(eH%1>=0.5?'30':'00')):'지금';
+        const barColor=log.app_out?'var(--success)':'var(--blue)';
+        bars+=`<div class="gantt-bar" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${barColor};"><span style="font-size:8px;color:#fff;padding:0 2px;white-space:nowrap;">${sLabel}~${eLabel}</span></div>`;
+      }
+    }
+
+    if(!log&&!sched) ganttHtml+=`<div style="padding:4px 0;text-align:center;font-size:10px;color:var(--gray-300);">—</div>`;
+    else ganttHtml+=`<div class="gantt-row"><div class="gantt-name" style="font-size:10px;">내 근무</div><div class="gantt-bar-area">${bgCols}${bars}</div></div>`;
+
+    ganttHtml+=`</div>`;
+  });
+  document.getElementById('myAttGantt').innerHTML=ganttHtml;
+
+  // 누락 경고
+  const missing=days.filter(day=>{
+    const isPast=day.date<todayStr;
+    const sched=schedMap[day.date];
+    const log=logMap[day.date];
+    return isPast&&sched&&!sched.is_off&&!log;
+  });
+  if(missing.length>0){
+    document.getElementById('myAttWarning').innerHTML=`<div style="background:var(--danger-light);border-radius:12px;padding:12px 14px;margin-top:10px;">
+      <div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:4px;">⚠️ 이번 주 누락 ${missing.length}일</div>
+      <div style="font-size:11px;color:var(--danger);">${missing.map(d=>d.label).join(', ')} — 근무계획은 있지만 출퇴근 기록이 없습니다</div>
+    </div>`;
+  } else {
+    document.getElementById('myAttWarning').innerHTML='';
+  }
+}
+
 // ══════════════════════════════════════════
 // 캡스 업로드
 // ══════════════════════════════════════════
@@ -2415,6 +2579,55 @@ function renderGanttFiltered(){
 // 마감정산
 // ══════════════════════════════════════════
 // ── 마감정산 로직 ──
+// ─── 정산 날짜 선택 (관리자용) ───
+function initSettleDate(){
+  const picker=document.getElementById('settleDatePicker');
+  const group=document.getElementById('settleDateGroup');
+  const today=new Date().toISOString().split('T')[0];
+  picker.value=today;
+  picker.max=today; // 미래 날짜 차단
+  if(isManager){
+    group.style.display='block';
+    picker.addEventListener('change',function(){
+      // 날짜 변경 시 전일 마감금액 다시 로드
+      loadOpeningForDate(this.value);
+    });
+  }
+}
+function moveSettleDate(dir){
+  const picker=document.getElementById('settleDatePicker');
+  const d=new Date(picker.value);d.setDate(d.getDate()+dir);
+  const today=new Date().toISOString().split('T')[0];
+  const newDate=d.toISOString().split('T')[0];
+  if(newDate>today) return; // 미래 차단
+  picker.value=newDate;
+  loadOpeningForDate(newDate);
+}
+async function loadOpeningForDate(dateStr){
+  if(!currentStore) return;
+  const d=new Date(dateStr);d.setDate(d.getDate()-1);
+  const yd=d.toISOString().split('T')[0];
+  const{data}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
+  const el=document.getElementById('siOpening');
+  const statusEl=document.getElementById('openingStatus');
+  if(data?.actual_total!=null){
+    el.value=parseInt(data.actual_total).toLocaleString();
+    statusEl.innerText='전일('+yd+') 마감금액';
+  } else {
+    el.value='';
+    statusEl.innerText='전일 마감 데이터 없음';
+  }
+  recalcSettle2();
+  // 해당 날짜에 기존 정산 있으면 안내
+  const{data:existing}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
+  const statusEl2=document.getElementById('settleDateStatus');
+  if(existing) statusEl2.innerText='기존 데이터 있음 (덮어쓰기)';
+  else statusEl2.innerText='새 정산';
+}
+function getSettleDate(){
+  const picker=document.getElementById('settleDatePicker');
+  return picker?.value||new Date().toISOString().split('T')[0];
+}
 function onSInput(el){const raw=el.value.replace(/,/g,'');if(/^\d*$/.test(raw))el.value=raw?parseInt(raw).toLocaleString():'';recalcSettle2();}
 
 // ── POS 마감 사진 AI 인식 ──
@@ -2616,9 +2829,9 @@ async function finishSettlement2(){
   const diff=vault-book;const diffStatus=diff===0?'일치':`차액 ${diff>0?'+':''}${fmt(diff)}원`;
   if(!confirm(`매출: ${fmt(salesTotal)}원\n장부: ${fmt(book)}원\n금고: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'마감 저장 중...');
-  const today=new Date().toISOString().split('T')[0];
+  const settleDate=getSettleDate();
   const{error}=await sb.from('settlements').upsert({
-    store_id:currentStore.id,settle_date:today,
+    store_id:currentStore.id,settle_date:settleDate,
     items_json:items,vault_json:vMap,
     actual_total:vault,expected_total:book,
     diff_amount:diff,diff_status:diffStatus,
