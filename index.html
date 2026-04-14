@@ -1697,6 +1697,8 @@ function nav(tab, el) {
   document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
   const target = document.getElementById(tab + 'Cont');
   if (target) target.classList.add('active');
+  // 스크롤 최상단으로 초기화
+  window.scrollTo(0, 0);
   // 하단 탭 active 표시 (하단 탭에 있는 항목만)
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
