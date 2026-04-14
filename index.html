@@ -1384,14 +1384,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <input id="empPhoneInput" class="input-field" placeholder="010-1234-5678" type="tel" maxlength="13">
   <label class="emp-label">주소</label>
   <input id="empAddressInput" class="input-field" placeholder="논산시 ..." type="text">
-  <div style="display:flex;gap:8px;margin-bottom:12px;">
-    <div style="flex:1;">
-      <label class="emp-label">신고 구분</label>
-      <select id="empReportStatus" class="input-field" style="appearance:auto;">
-        <option value="미신고">미신고</option>
-        <option value="신고">신고</option>
-      </select>
-    </div>
+  <div id="empReportWrap" style="display:none;margin-bottom:12px;">
+    <label class="emp-label">신고 구분</label>
+    <select id="empReportStatus" class="input-field" style="appearance:auto;">
+      <option value="미신고">미신고</option>
+      <option value="신고">신고</option>
+    </select>
   </div>
   <p class="card-sub-title">급여 정보</p>
   <label class="emp-label">은행명</label>
@@ -3635,7 +3633,7 @@ function renderEmpList(){
     const statusBadge=!e.is_active?'<span class="badge badge-gray" style="font-size:9px;">퇴사</span>':'';
     const pinBadge=!e.pin?'<span class="badge badge-red" style="font-size:9px;">PIN미설정</span>':'';
     const foreignBadge=e.is_foreign?'<span class="badge badge-purple" style="font-size:9px;">외국인</span>':'';
-    const reportBadge=e.report_status==='신고'?'<span class="badge badge-green" style="font-size:9px;">신고</span>':'<span class="badge badge-gray" style="font-size:9px;">미신고</span>';
+    const reportBadge=e.is_foreign?(e.report_status==='신고'?'<span class="badge badge-green" style="font-size:9px;">신고</span>':'<span class="badge badge-red" style="font-size:9px;">미신고</span>'):'';
     return `
     <div style="background:var(--white);border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04);${!e.is_active?'opacity:0.6;':''}">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
@@ -3673,8 +3671,8 @@ function renderEmpList(){
       </div>`:''}
     </div>`}).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
 }
-async function openAddEmpSheet(){if(!guardStore())return;if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empIdNumInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';document.getElementById('empAuthLevel').value='staff';document.getElementById('empForeignCheck').checked=false;document.getElementById('empIdNumLabel').innerText='주민등록번호';document.getElementById('empIdNumInput').placeholder='960315-1234567';document.getElementById('empReportStatus').value='미신고';selectedRoleName='';await renderRoleChips('');const drWrap=document.getElementById('deviceResetWrap');if(drWrap)drWrap.style.display='none';openSheet('addEmpSheet');}
-async function openEditEmpSheet(id){if(!isManager)return toast('관리자만 편집할 수 있습니다.','warn');const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empIdNumInput').value=e.id_number||e.birth_date||'';document.getElementById('empForeignCheck').checked=!!e.is_foreign;document.getElementById('empIdNumLabel').innerText=e.is_foreign?'외국인등록번호':'주민등록번호';document.getElementById('empIdNumInput').placeholder=e.is_foreign?'960315-5234567':'960315-1234567';document.getElementById('empReportStatus').value=e.report_status||'미신고';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('empAuthLevel').value=e.auth_level||'staff';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');
+async function openAddEmpSheet(){if(!guardStore())return;if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empIdNumInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';document.getElementById('empAuthLevel').value='staff';document.getElementById('empForeignCheck').checked=false;document.getElementById('empIdNumLabel').innerText='주민등록번호';document.getElementById('empIdNumInput').placeholder='960315-1234567';document.getElementById('empReportStatus').value='미신고';document.getElementById('empReportWrap').style.display='none';selectedRoleName='';await renderRoleChips('');const drWrap=document.getElementById('deviceResetWrap');if(drWrap)drWrap.style.display='none';openSheet('addEmpSheet');}
+async function openEditEmpSheet(id){if(!isManager)return toast('관리자만 편집할 수 있습니다.','warn');const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empIdNumInput').value=e.id_number||e.birth_date||'';document.getElementById('empForeignCheck').checked=!!e.is_foreign;document.getElementById('empIdNumLabel').innerText=e.is_foreign?'외국인등록번호':'주민등록번호';document.getElementById('empIdNumInput').placeholder=e.is_foreign?'960315-5234567':'960315-1234567';document.getElementById('empReportStatus').value=e.report_status||'미신고';document.getElementById('empReportWrap').style.display=e.is_foreign?'block':'none';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('empAuthLevel').value=e.auth_level||'staff';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');
   // 기기 초기화 섹션 표시
   const drWrap=document.getElementById('deviceResetWrap');const dsEl=document.getElementById('deviceStatus');
   if(drWrap){drWrap.style.display='block';dsEl.innerText=e.device_fingerprint?'등록된 기기: '+e.device_fingerprint.slice(0,12)+'...':'등록된 기기 없음 (다음 출근 시 자동 등록)';}
@@ -6094,6 +6092,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('empForeignCheck').addEventListener('change',function(){
     document.getElementById('empIdNumLabel').innerText=this.checked?'외국인등록번호':'주민등록번호';
     document.getElementById('empIdNumInput').placeholder=this.checked?'960315-5234567':'960315-1234567';
+    document.getElementById('empReportWrap').style.display=this.checked?'block':'none';
   });
 
   // ─── sheet-overlay 배경 클릭 닫기 (inline onclick CSP 차단 대응) ───
