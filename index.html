@@ -4072,32 +4072,85 @@ async function loadExpCategories(){
 function renderExpCatList(){
   const c=document.getElementById('expCatList');if(!c)return;
   const srcLabel={vendor_orders:'거래처 주문',receipts:'영수증',attendance:'인건비(자동)',fixed_costs:'고정비(자동)',manual:'수동 입력'};
-  c.innerHTML=expCategories.length?expCategories.map((cat,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
-      <div style="width:14px;height:14px;border-radius:50%;background:${cat.color||'#0050FF'};flex-shrink:0;"></div>
-      <div style="flex:1;">
-        <div style="font-size:14px;font-weight:700;">${cat.name}</div>
-        <div style="font-size:11px;color:var(--gray-600);">${srcLabel[cat.data_source]||cat.data_source}</div>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="openEditExpCatSheet('${cat.id}')">편집</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteExpCat('${cat.id}','${cat.name}')">삭제</button>
-    </div>`).join(''):'<div class="empty-state" style="padding:20px;"><p>카테고리를 추가하세요</p></div>';
+  // 대분류(parent_id=null)와 소분류 분리
+  const parents=expCategories.filter(cat=>!cat.parent_id);
+  const childMap={};
+  expCategories.filter(cat=>cat.parent_id).forEach(cat=>{
+    if(!childMap[cat.parent_id])childMap[cat.parent_id]=[];
+    childMap[cat.parent_id].push(cat);
+  });
+  if(!expCategories.length){c.innerHTML='<div class="empty-state" style="padding:20px;"><p>카테고리를 추가하세요</p></div>';return;}
+  let html='';
+  parents.forEach(p=>{
+    const children=childMap[p.id]||[];
+    html+=`<div style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid var(--gray-200);">
+        <div style="width:14px;height:14px;border-radius:50%;background:${p.color||'#0050FF'};flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:800;">${p.name}</div>
+          <div style="font-size:11px;color:var(--gray-400);">${srcLabel[p.data_source]||p.data_source}${children.length?' · 소분류 '+children.length+'개':''}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openAddSubCatSheet('${p.id}','${p.name}')">+ 소분류</button>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openEditExpCatSheet('${p.id}')">편집</button>
+      </div>`;
+    if(children.length){
+      children.forEach(ch=>{
+        html+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 0 8px 24px;border-bottom:1px solid var(--gray-100);">
+          <div style="width:10px;height:10px;border-radius:50%;background:${ch.color||p.color||'#0050FF'};flex-shrink:0;"></div>
+          <div style="flex:1;font-size:13px;font-weight:600;">${ch.name}</div>
+          <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:4px 8px;" onclick="openEditExpCatSheet('${ch.id}')">편집</button>
+          <button class="btn btn-danger btn-sm" style="font-size:10px;padding:4px 8px;" onclick="deleteExpCat('${ch.id}','${ch.name}')">삭제</button>
+        </div>`;
+      });
+    }
+    html+=`</div>`;
+  });
+  // 소속 없는 카테고리 (기존 데이터 호환)
+  const orphans=expCategories.filter(cat=>cat.parent_id&&!parents.find(p=>p.id===cat.parent_id));
+  if(orphans.length){
+    html+=`<div style="margin-top:10px;font-size:12px;color:var(--gray-400);font-weight:700;">미분류</div>`;
+    orphans.forEach(cat=>{
+      html+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+        <div style="width:10px;height:10px;border-radius:50%;background:${cat.color||'#0050FF'};flex-shrink:0;"></div>
+        <div style="flex:1;font-size:13px;">${cat.name}</div>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openEditExpCatSheet('${cat.id}')">편집</button>
+      </div>`;
+    });
+  }
+  c.innerHTML=html;
 }
 
+let editExpCatParentId=null; // 소분류 추가 시 부모 ID
 function openAddExpCatSheet(){
   if(!guardStore())return;
-  document.getElementById('addExpCatTitle').innerText='카테고리 추가';
+  editExpCatParentId=null;
+  document.getElementById('addExpCatTitle').innerText='대분류 추가';
   document.getElementById('expCatNameInput').value='';
   document.getElementById('expCatSourceInput').value='vendor_orders';
+  document.getElementById('expCatSourceInput').closest('div,p')&&(document.getElementById('expCatSourceInput').style.display='block');
   document.getElementById('editExpCatId').value='';
   selectExpCatColor('#0050FF');
+  onExpCatSourceChange();
+  openSheet('addExpCatSheet');
+}
+function openAddSubCatSheet(parentId,parentName){
+  if(!guardStore())return;
+  editExpCatParentId=parentId;
+  document.getElementById('addExpCatTitle').innerText=parentName+' 소분류 추가';
+  document.getElementById('expCatNameInput').value='';
+  document.getElementById('editExpCatId').value='';
+  // 소분류는 부모 소스 상속
+  const parent=expCategories.find(c=>c.id===parentId);
+  if(parent){document.getElementById('expCatSourceInput').value=parent.data_source;}
+  selectExpCatColor(parent?.color||'#0050FF');
   onExpCatSourceChange();
   openSheet('addExpCatSheet');
 }
 
 function openEditExpCatSheet(id){
   const cat=expCategories.find(x=>x.id===id);if(!cat)return;
-  document.getElementById('addExpCatTitle').innerText='카테고리 편집';
+  editExpCatParentId=cat.parent_id||null;
+  document.getElementById('addExpCatTitle').innerText=(cat.parent_id?'소분류':'대분류')+' 편집';
   document.getElementById('expCatNameInput').value=cat.name;
   document.getElementById('expCatSourceInput').value=cat.data_source;
   document.getElementById('editExpCatId').value=cat.id;
@@ -4129,7 +4182,7 @@ async function saveExpCat(){
   const vendorCat=src==='vendor_orders'?document.getElementById('expCatVendorCat').value:'';
   const eid=document.getElementById('editExpCatId').value;
   setLoad(true,'저장 중...');
-  const payload={store_id:currentStore.id,name,data_source:src,color,vendor_category:vendorCat||null,sort_order:expCategories.length};
+  const payload={store_id:currentStore.id,name,data_source:src,color,vendor_category:vendorCat||null,sort_order:expCategories.length,parent_id:editExpCatParentId||null};
   const{error}=eid?await sb.from('expense_categories').update(payload).eq('id',eid):await sb.from('expense_categories').insert(payload);
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');
   closeAllSheets();await loadExpCategories();

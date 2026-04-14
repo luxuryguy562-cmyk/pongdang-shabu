@@ -138,7 +138,8 @@ franchises (프랜차이즈/브랜드)
 | expense_categories | expense_category_amounts |
 |-------------------|--------------------------|
 | id, store_id, name, color | expense_category_id(FK) |
-| data_source, source_filter, is_active | year_month, amount |
+| parent_id (FK→self, nullable) | year_month, amount |
+| data_source, source_filter, is_active | |
 
 ### fixed_costs / fixed_cost_amounts
 | fixed_costs | fixed_cost_amounts |
