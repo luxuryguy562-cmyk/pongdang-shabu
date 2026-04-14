@@ -358,7 +358,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button id="hamburgerBtn" class="hamburger-btn manager-only" onclick="toggleSideMenu()">
       <span></span><span></span><span></span>
     </button>
-    <div class="header-title">퐁당샤브</div>
+    <div class="header-title" style="cursor:pointer;" onclick="nav(isManager?'dashboard':'attendance')">퐁당샤브</div>
   </div>
   <div style="display:flex;align-items:center;gap:6px;">
     <div class="header-store" id="headerStore" onclick="openStoreSheet()">매장 선택</div>
@@ -4925,7 +4925,9 @@ function completeLogin(emp){
   localStorage.setItem('pd_emp',emp.id);
   localStorage.setItem('pd_auth_level',authLevel);
   applyPermissionUI();
-  // 로그인 후 나머지 데이터 백그라운드 로드 (화면 차단 없이)
+  // 로그인 후 첫 화면: 관리자→대시보드, 직원→근태
+  nav(isManager?'dashboard':'attendance');
+  // 나머지 데이터 백그라운드 로드 (화면 차단 없이)
   Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
 }
 function doLogout(){
