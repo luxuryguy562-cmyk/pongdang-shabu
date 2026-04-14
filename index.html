@@ -389,14 +389,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
-    <!-- 지출리스트 -->
+    <!-- 지출내역 -->
     <div class="side-group">
       <div class="side-group-header" onclick="toggleSideGroup(this)">
-        <span>📑 지출리스트</span><span class="side-arrow">›</span>
+        <span>📑 지출내역</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('explist')">계좌내역 · 카드리스트</div>
-        <div class="side-item" onclick="closeSideMenu();nav('settings');setTimeout(()=>{document.getElementById('expCatList')?.scrollIntoView({behavior:'smooth'})},200)">지출 분류 설정</div>
+        <div class="side-item" onclick="closeSideMenu();nav('explist')">계좌내역 · 카드내역</div>
+        <div class="side-item" onclick="closeSideMenu();nav('settings');setTimeout(()=>{document.getElementById('expCatList')?.scrollIntoView({behavior:'smooth'})},200)">지출 카테고리 설정</div>
       </div>
     </div>
 
@@ -940,7 +940,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <div id="explistCont" class="container">
   <div class="sub-tabs">
     <button class="sub-tab active" onclick="explistTab('bank',this)">🏦 계좌내역</button>
-    <button class="sub-tab" onclick="explistTab('card',this)">💳 카드리스트</button>
+    <button class="sub-tab" onclick="explistTab('card',this)">💳 카드내역</button>
     <button class="sub-tab" onclick="explistTab('connect',this)">🔗 마이데이터</button>
   </div>
 
@@ -985,7 +985,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
   </div>
 
-  <!-- 카드리스트 -->
+  <!-- 카드내역 -->
   <div id="explistCard" style="display:none;">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
