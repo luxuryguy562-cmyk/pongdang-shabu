@@ -1989,7 +1989,7 @@ function startAttClock(){
     const now=new Date();
     const timeEl=document.getElementById('attNowTime');
     const dateEl=document.getElementById('attTodayDate');
-    if(timeEl) timeEl.innerText=now.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
+    if(timeEl) timeEl.innerText=now.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
     if(dateEl){
       const days=['일','월','화','수','목','금','토'];
       dateEl.innerText=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (${days[now.getDay()]})`;
@@ -2025,14 +2025,14 @@ function updateCheckInOutUI(record){
   } else if(record.app_in&&!record.app_out){
     inBtn.disabled=true;inBtn.className='btn btn-secondary';
     if(outBtn){outBtn.disabled=false;outBtn.className='btn btn-danger';}
-    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
+    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
     if(statusEl) statusEl.innerText=`근무 중 (출근 ${inTime})`;
     if(recEl) recEl.innerHTML=`<div style="background:var(--success-light);border-radius:12px;padding:14px;text-align:center;"><div style="font-size:12px;color:var(--success);font-weight:700;">✅ 출근 완료</div><div style="font-size:20px;font-weight:800;margin-top:4px;">${inTime}</div></div>`;
   } else {
     inBtn.disabled=true;inBtn.className='btn btn-secondary';
     if(outBtn){outBtn.disabled=true;outBtn.className='btn btn-secondary';}
-    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
-    const outTime=new Date(record.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
+    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
+    const outTime=new Date(record.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
     if(statusEl) statusEl.innerText='오늘 근무 완료';
     if(recEl) recEl.innerHTML=`<div style="background:var(--blue-light);border-radius:12px;padding:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--gray-600);">출근</span><span style="font-size:14px;font-weight:700;">${inTime}</span></div><div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--gray-600);">퇴근</span><span style="font-size:14px;font-weight:700;">${outTime}</span></div><div style="text-align:center;margin-top:10px;font-size:13px;color:var(--gray-600);">근무 ${record.total_work_min!=null?record.total_work_min+'분':'-'} · 급여 ${record.calculated_wage!=null?fmt(record.calculated_wage)+'원':'-'}</div></div>`;
   }
@@ -2066,7 +2066,7 @@ async function checkIn(){
   if(devCheck.firstReg) toast('이 기기가 출퇴근 기기로 등록됐습니다.','success');
   const now=new Date();const today=now.toISOString().split('T')[0];
   const{data:exist}=await sb.from('attendance_logs').select('id,app_in').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
-  if(exist?.app_in){toast('이미 출근 처리됐습니다. 출근: '+new Date(exist.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}),'warn');return;}
+  if(exist?.app_in){toast('이미 출근 처리됐습니다. 출근: '+new Date(exist.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}),'warn');return;}
   setLoad(true,'출근 처리 중...');
   const{error}=await sb.from('attendance_logs').insert({store_id:currentStore.id,employee_id:empId,work_date:today,app_in:now.toISOString(),caps_match_status:'앱전용',check_in_ip:ipCheck.ip||null});
   setLoad(false);
@@ -2235,7 +2235,7 @@ async function loadAttList(allMode=false){
 
   if(error){ console.error('근태 조회 오류:',error); }
 
-  const tK = (r,key) => r[key] ? new Date(r[key]).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}) : '-';
+  const tK = (r,key) => r[key] ? new Date(r[key]).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const statusDot = s => {
     const m={'정상매칭':'#05C072','앱전용':'#0050FF','캡스전용':'#FF9500','시간오차':'#FF9500','출근누락':'#F04452','퇴근누락':'#F04452'};
     return `<span style="width:7px;height:7px;border-radius:50%;background:${m[s]||'#B0B8C1'};display:inline-block;margin-right:2px;"></span>`;
