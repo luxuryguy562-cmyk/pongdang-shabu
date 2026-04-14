@@ -1718,7 +1718,12 @@ function nav(tab, el) {
     recon: initRecon,
   };
   if (actions[tab]) actions[tab]();
-  if (tab === 'settle') { recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
+  if (tab === 'settle') { resetSettleView(); recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
+  // 서브탭 초기화: 탭 진입 시 첫 번째 서브탭을 active로
+  if (!subTab) {
+    const firstSub = document.querySelector(`#${tab}Cont .sub-tabs .sub-tab:first-child`);
+    if (firstSub && !firstSub.classList.contains('active')) firstSub.click();
+  }
   // 서브탭 전환
   if (subTab) {
     setTimeout(() => {
@@ -2917,6 +2922,12 @@ function settleTab(tab,el){
   document.getElementById('settleList').style.display=tab==='list'?'block':'none';
   document.getElementById('settleCard').style.display=tab==='card'?'block':'none';
   if(tab==='list')loadSettleList();if(tab==='card')loadSettleCard(cardDateStr);
+}
+// 마감정산 입력폼 초기화 (탭 진입 시)
+function resetSettleView(){
+  ['siPosCash','siPosCashReceipt','siPosCard','siPosEtc','siCashCash','siCashQr','siCashTransfer','siDrawLarge','siDrawSmall','siDeductEtc','siDeductBank'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.querySelectorAll('.v-input').forEach(i=>i.value='');
+  const statusEl=document.getElementById('settleDateStatus');if(statusEl)statusEl.innerText='관리자 전용';
 }
 async function finishSettlement2(){
   if(!guardStore()) return;
