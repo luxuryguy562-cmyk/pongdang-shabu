@@ -3629,9 +3629,9 @@ function renderEmpList(){
   if(fStatus==='active')list=list.filter(e=>e.is_active);if(fStatus==='inactive')list=list.filter(e=>!e.is_active);if(fRole)list=list.filter(e=>e.role===fRole);
   const c=document.getElementById('empList');if(!c)return;
   // 주민번호 마스킹 헬퍼
-  const maskId=(num)=>{if(!num)return'-';const d=num.replace(/[^\d]/g,'');if(d.length<7)return num;return d.slice(0,6)+'-'+d[6]+'******';};
+  const maskId=(num)=>{if(!num)return'';const d=num.replace(/[^\d]/g,'');if(d.length<7)return num;return d.slice(0,6)+'-'+d[6]+'******';};
   c.innerHTML=list.length?list.map(e=>{
-    const authBadge=e.auth_level==='owner'?'<span class="badge badge-warn" style="font-size:9px;">총관리자</span>':e.auth_level==='store_manager'||e.is_manager?'<span class="badge badge-warn" style="font-size:9px;">관리자</span>':'';
+    const authBadge=e.auth_level==='store_manager'||e.is_manager?'<span class="badge badge-warn" style="font-size:9px;">관리자</span>':'';
     const statusBadge=!e.is_active?'<span class="badge badge-gray" style="font-size:9px;">퇴사</span>':'';
     const pinBadge=!e.pin?'<span class="badge badge-red" style="font-size:9px;">PIN미설정</span>':'';
     const foreignBadge=e.is_foreign?'<span class="badge badge-purple" style="font-size:9px;">외국인</span>':'';
@@ -3644,19 +3644,19 @@ function renderEmpList(){
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
             <span style="font-size:15px;font-weight:800;">${e.name}</span>
             ${e.role?`<span class="badge badge-blue" style="font-size:9px;">${e.role}</span>`:''}
-            ${authBadge}${foreignBadge}${statusBadge}${pinBadge}
+            ${authBadge}${foreignBadge}${reportBadge}${statusBadge}${pinBadge}
           </div>
-          <div style="font-size:11px;color:var(--gray-600);margin-top:3px;">${maskId(e.id_number)} · ${reportBadge}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">${maskId(e.id_number)}</div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;">
+      <a href="tel:${e.phone||''}" style="display:flex;align-items:center;gap:6px;padding:10px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:10px;text-decoration:none;color:var(--text);${e.phone?'':'pointer-events:none;'}">
+        <span style="font-size:14px;">📞</span>
+        <span style="font-size:14px;font-weight:700;letter-spacing:0.5px;">${e.phone||'전화번호 없음'}</span>
+      </a>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">
         <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
           <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">시급</div>
-          <div style="font-size:12px;font-weight:800;color:var(--blue);">${fmt(e.base_wage)}</div>
-        </div>
-        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
-          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">전화</div>
-          <div style="font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.phone?.slice(-8)||'-'}</div>
+          <div style="font-size:13px;font-weight:800;color:var(--blue);">${fmt(e.base_wage)}원</div>
         </div>
         <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
           <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">은행</div>
