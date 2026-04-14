@@ -2250,42 +2250,39 @@ async function loadAttList(allMode=false){
   } else {
     // 전체조회 = 테이블, 내 기록 = 카드
     if(allMode){
-      html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <table style="width:100%;border-collapse:collapse;min-width:480px;font-size:12px;">
+      html = `
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
           <thead>
             <tr style="background:var(--gray-100);">
-              <th style="padding:8px 6px;text-align:left;font-weight:700;white-space:nowrap;">날짜</th>
-              <th style="padding:8px 6px;text-align:center;font-weight:700;">직원</th>
-              <th style="padding:8px 6px;text-align:center;font-weight:700;">출근</th>
-              <th style="padding:8px 6px;text-align:center;font-weight:700;">퇴근</th>
-              <th style="padding:8px 6px;text-align:center;font-weight:700;">근무</th>
-              <th style="padding:8px 6px;text-align:right;font-weight:700;">급여</th>
+              <th style="padding:6px 4px;text-align:left;font-weight:700;">날짜</th>
+              <th style="padding:6px 4px;text-align:center;font-weight:700;">이름</th>
+              <th style="padding:6px 4px;text-align:center;font-weight:700;">출퇴근</th>
+              <th style="padding:6px 4px;text-align:right;font-weight:700;">시간</th>
+              <th style="padding:6px 4px;text-align:right;font-weight:700;">급여</th>
             </tr>
           </thead>
           <tbody>
             ${data.map((r,i)=>`
             <tr style="border-bottom:1px solid var(--gray-100);background:${i%2?'#fafbfc':'#fff'};cursor:${isManager?'pointer':'default'};" ${isManager?`onclick="openEditAttSheet(window._attListData[${i}])"`:''}>
-              <td style="padding:9px 6px;white-space:nowrap;color:var(--gray-600);">${r.work_date?.slice(5)||'-'} ${statusDot(r.caps_match_status)}</td>
-              <td style="padding:9px 6px;text-align:center;font-weight:700;">${r.employees?.name||'-'}</td>
-              <td style="padding:9px 6px;text-align:center;">${tK(r,'app_in')}</td>
-              <td style="padding:9px 6px;text-align:center;">${tK(r,'app_out')}</td>
-              <td style="padding:9px 6px;text-align:center;">${r.total_work_min!=null?r.total_work_min+'분':'-'}</td>
-              <td style="padding:9px 6px;text-align:right;font-weight:700;color:${r.app_in&&r.app_out&&!r.calculated_wage?'var(--danger)':'var(--blue)'};">${r.app_in&&r.app_out&&!r.calculated_wage?'⚠️ 0원':r.calculated_wage!=null?fmt(r.calculated_wage):'-'}</td>
+              <td style="padding:7px 4px;color:var(--gray-600);white-space:nowrap;">${r.work_date?.slice(5)||'-'}</td>
+              <td style="padding:7px 4px;text-align:center;font-weight:700;">${r.employees?.name||'-'}</td>
+              <td style="padding:7px 4px;text-align:center;color:var(--gray-600);white-space:nowrap;">${tK(r,'app_in')}~${tK(r,'app_out')}</td>
+              <td style="padding:7px 4px;text-align:right;">${r.total_work_min!=null?Math.floor(r.total_work_min/60)+'h'+String(r.total_work_min%60).padStart(2,'0')+'m':'-'}</td>
+              <td style="padding:7px 4px;text-align:right;font-weight:700;color:${r.app_in&&r.app_out&&!r.calculated_wage?'var(--danger)':'var(--blue)'};">${r.app_in&&r.app_out&&!r.calculated_wage?'⚠️':r.calculated_wage!=null?fmt(r.calculated_wage):'-'}</td>
             </tr>`).join('')}
           </tbody>
           <tfoot>
             <tr style="background:var(--blue-light);">
-              <td colspan="4" style="padding:9px 6px;font-weight:700;color:var(--blue);">합계 ${data.length}건</td>
-              <td style="padding:9px 6px;text-align:center;font-weight:700;color:var(--blue);">
-                ${data.reduce((a,r)=>a+(r.total_work_min||0),0)}분
+              <td colspan="3" style="padding:7px 4px;font-weight:700;color:var(--blue);">합계 ${data.length}건</td>
+              <td style="padding:7px 4px;text-align:right;font-weight:700;color:var(--blue);">
+                ${Math.floor(data.reduce((a,r)=>a+(r.total_work_min||0),0)/60)}h
               </td>
-              <td style="padding:9px 6px;text-align:right;font-weight:800;color:var(--blue);">
+              <td style="padding:7px 4px;text-align:right;font-weight:800;color:var(--blue);">
                 ${fmt(data.reduce((a,r)=>a+(r.calculated_wage||0),0))}
               </td>
             </tr>
           </tfoot>
-        </table>
-      </div>`;
+        </table>`;
     } else {
       // 내 기록 = 카드형
       html = data.map(r=>`
