@@ -185,15 +185,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .recon-row{display:flex;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:7px;gap:6px;cursor:pointer;}
 .recon-row:active{opacity:.7;}
 .recon-row .rr-name{flex:2;font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.recon-row .rr-amt{flex:1.2;font-size:11px;font-weight:700;text-align:right;}
-.recon-row .rr-diff{flex:1;font-size:11px;font-weight:700;text-align:right;}
-.recon-row .rr-badge{flex-shrink:0;}
+.recon-row .rr-amt{flex:1.2;font-size:11px;font-weight:700;text-align:right;min-width:0;}
+.recon-row .rr-diff{flex:1;font-size:11px;font-weight:700;text-align:right;min-width:0;}
+.recon-row .rr-badge{width:36px;flex-shrink:0;text-align:right;}
 .recon-total{display:flex;justify-content:space-between;align-items:center;padding:14px;border-top:2px solid var(--text);margin-top:8px;}
 .recon-total .rt-label{font-size:14px;font-weight:800;}
 .recon-total .rt-vals{text-align:right;}
 .recon-total .rt-val{font-size:14px;font-weight:800;}
 .recon-header{display:flex;padding:0 14px 8px;gap:6px;font-size:11px;font-weight:700;color:var(--gray-400);}
-.recon-header span:first-child{flex:2;}
+.recon-header span:nth-child(1){flex:2;}
+.recon-header span:nth-child(2){flex:1.2;text-align:right;}
+.recon-header span:nth-child(3){flex:1.2;text-align:right;}
+.recon-header span:nth-child(4){flex:1;text-align:right;}
+.recon-header span:nth-child(5){width:36px;flex-shrink:0;}
 
 /* ─ 근무계획 간트 */
 .gantt-header{display:flex;border-bottom:2px solid var(--gray-200);}
@@ -5765,7 +5769,7 @@ function renderReconSummary(){
   const{summary}=reconData;
   let totalRecorded=0,totalActual=0;
 
-  let html='<div class="recon-header"><span>항목</span><span style="min-width:65px;text-align:right;">기록</span><span style="min-width:65px;text-align:right;">출금</span><span style="min-width:55px;text-align:right;">차이</span><span style="min-width:36px;"></span></div>';
+  let html='<div class="recon-header"><span style="width:8px;flex-shrink:0;"></span><span>항목</span><span>기록</span><span>출금</span><span>차이</span><span></span></div>';
 
   summary.forEach(entry=>{
     totalRecorded+=entry.recorded;totalActual+=entry.actual;
@@ -5826,7 +5830,7 @@ function renderReconDetailFor(categoryId){
   });
 
   let html=`<div class="card-title" style="margin-bottom:12px;">${entry.name}</div>`;
-  html+='<div class="recon-header"><span>상세</span><span style="min-width:65px;text-align:right;">기록</span><span style="min-width:65px;text-align:right;">출금</span><span style="min-width:55px;text-align:right;">차이</span><span style="min-width:36px;"></span></div>';
+  html+='<div class="recon-header"><span>상세</span><span>기록</span><span>출금</span><span>차이</span><span></span></div>';
 
   if(!entry.details.length){
     html+='<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:13px;">상세 내역이 없습니다</div>';
