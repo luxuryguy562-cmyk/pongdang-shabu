@@ -82,3 +82,32 @@ DOMContentLoaded 안 순서:
 해결: 업로드 시 내용(content)만 description에 저장.
 기존 데이터: cleanDesc()로 적요 패턴 제거 후 표시.
 ```
+
+---
+
+## 10. auth_level과 is_manager 동기화
+`auth_level='staff'`인데 `is_manager=true`인 경우 권한이 무시됨.
+`completeLogin`에서 반드시 is_manager를 보조 체크해야 함.
+```
+authLevel = emp.auth_level || 'staff';
+if(authLevel === 'staff' && emp.is_manager) authLevel = 'store_manager';
+```
+
+---
+
+## 11. 권한 변경은 반드시 UI에서
+SQL 하드코딩으로 auth_level 설정하면 불일치 발생.
+직원 편집 시트의 권한 드롭박스 → saveEmployee에서 auth_level + is_manager 동시 저장.
+owner만 최초 1회 SQL 설정, 나머지는 앱에서.
+
+---
+
+## 12. 로그아웃 시 화면 초기화 필수
+`doLogout()`에서 `closeAllSheets()` + 모든 컨테이너 리셋 + `applyPermissionUI()` 필수.
+안 하면 이전 세션 화면이 그대로 남아서 권한 없는 사용자가 관리 화면 접근 가능.
+
+---
+
+## 13. 첫 방문 시 매장 선택 버튼
+`currentStore`가 null이면 매장 선택 버튼 항상 표시.
+`pd_auth_level` localStorage만으로 판단하면 첫 방문자가 매장 선택 불가.
