@@ -111,3 +111,30 @@ owner만 최초 1회 SQL 설정, 나머지는 앱에서.
 ## 13. 첫 방문 시 매장 선택 버튼
 `currentStore`가 null이면 매장 선택 버튼 항상 표시.
 `pd_auth_level` localStorage만으로 판단하면 첫 방문자가 매장 선택 불가.
+
+---
+
+## 14. 시간 표시는 24시간 형식
+`toLocaleTimeString('ko')` 기본값은 "오후 04:16" (12시간). 모바일에서 공간 낭비.
+```
+❌ toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})  → "오후 04:16"
+✅ toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false})  → "16:16"
+```
+
+---
+
+## 15. 횡스크롤 금지 — 한 화면에 표시
+모바일 테이블에 `min-width`, `overflow-x:auto` 사용 금지.
+`table-layout:fixed` + `colgroup`으로 칼럼 비율 고정.
+
+---
+
+## 16. 탭 전환 시 상태 초기화
+다른 탭 갔다가 돌아오면 이전 상태(스크롤, 서브탭, 입력값)가 남아있음.
+`nav()` 함수에서: `window.scrollTo(0,0)` + 첫 번째 서브탭 자동 선택 + 입력폼 리셋.
+
+---
+
+## 17. HTML 요소 제거 후 JS 참조 확인
+HTML에서 `empBirthInput` 제거 → JS의 `autoFormatDate(empBirthInput)` 에서 null 에러.
+요소 ID 변경/삭제 시 JS에서 해당 ID 참조하는 곳 전부 grep 확인 필수.
