@@ -2960,14 +2960,97 @@ async function loadSettleCard(d){
   const{data}=await sb.from('settlements').select('*').eq('store_id',currentStore.id).eq('settle_date',d).maybeSingle();
   const c=document.getElementById('settleCardData');
   if(!data){c.innerHTML='<div class="empty-state"><div class="empty-icon">📅</div><p>기록이 없습니다</p></div>';return;}
-  const ri=r=>r==='plus'?'<span class="si-role plus" style="font-size:10px;">+</span>':r==='minus'?'<span class="si-role minus" style="font-size:10px;">-</span>':'<span class="si-role check" style="font-size:10px;">확</span>';
+  // items_json 항목 매핑 (key:숫자값 → 표시용 이름+역할)
+  const itemDefs={
+    opening:{name:'전일 이월금',icon:'💰',role:'plus'},
+    pos_cash:{name:'현금',icon:'💵',role:'plus'},
+    pos_cash_receipt:{name:'현금영수증',icon:'🧾',role:'plus'},
+    pos_card:{name:'신용카드',icon:'💳',role:'info'},
+    pos_etc:{name:'기타결제',icon:'📲',role:'info'},
+    cash_detail_cash:{name:'현금 상세',icon:'💵',role:'info'},
+    cash_detail_qr:{name:'QR',icon:'📱',role:'info'},
+    cash_detail_transfer:{name:'계좌이체',icon:'🏦',role:'info'},
+    extra_draw_large:{name:'뽑기(대형)',icon:'🎰',role:'plus'},
+    extra_draw_small:{name:'뽑기(소형)',icon:'🎲',role:'plus'},
+    deduct_etc:{name:'기타사용',icon:'📤',role:'minus'},
+    deduct_bank:{name:'통장입금',icon:'🏧',role:'minus'}
+  };
+  const ri=r=>r==='plus'?'<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--success-light);color:var(--success);font-size:10px;font-weight:800;">+</span>':r==='minus'?'<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--danger-light);color:var(--danger);font-size:10px;font-weight:800;">-</span>':'<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--blue-light);color:var(--blue);font-size:10px;font-weight:800;">i</span>';
   let html='';
-  if(data.items_json)Object.values(data.items_json).forEach(item=>{html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);display:flex;align-items:center;gap:6px;">${ri(item.role)} ${item.name}</span><span style="font-size:14px;font-weight:700;">${fmt(item.value)}원</span></div>`;});
+  // items_json 렌더링
+  if(data.items_json){
+    const items=data.items_json;
+    Object.entries(items).forEach(([key,val])=>{
+      if(val===0||val==null) return; // 0원 항목 생략
+      const def=itemDefs[key]||{name:key,icon:'📋',role:'info'};
+      html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);display:flex;align-items:center;gap:6px;">${ri(def.role)} ${def.icon} ${def.name}</span><span style="font-size:14px;font-weight:700;">${fmt(val)}원</span></div>`;
+    });
+  }
+  // 매출 합계 표시
+  if(data.sales_total) html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid var(--gray-200);"><span style="font-size:13px;font-weight:700;color:var(--blue);">매출 합계</span><span style="font-size:14px;font-weight:800;color:var(--blue);">${fmt(data.sales_total)}원</span></div>`;
   html+='<div style="height:1px;background:var(--gray-200);margin:8px 0;"></div>';
-  if(data.vault_json)Object.entries(data.vault_json).filter(([,v])=>v>0).forEach(([unit,cnt])=>{html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">💵 ${parseInt(unit).toLocaleString()}원권</span><span style="font-size:14px;font-weight:700;">${cnt}장 = ${fmt(parseInt(unit)*cnt)}원</span></div>`;});
+  // 금고 계수
+  if(data.vault_json){
+    html+='<div style="font-size:12px;font-weight:700;color:var(--gray-400);margin-bottom:6px;">금고 계수</div>';
+    Object.entries(data.vault_json).filter(([,v])=>v>0).sort((a,b)=>parseInt(b[0])-parseInt(a[0])).forEach(([unit,cnt])=>{html+=`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">💵 ${parseInt(unit).toLocaleString()}원권</span><span style="font-size:14px;font-weight:700;">${cnt}장 = ${fmt(parseInt(unit)*cnt)}원</span></div>`;});
+  }
+  // 최종 결과
   const diff=data.diff_amount||0;
   html+=`<div style="background:var(--${diff===0?'success':'danger'}-light);border-radius:12px;padding:14px;margin-top:12px;text-align:center;"><div style="font-size:12px;color:var(--gray-600);font-weight:600;">최종 결과</div><div style="font-size:22px;font-weight:800;color:var(--${diff===0?'success':'danger'});margin-top:4px;">${diff===0?'✅ 일치':(diff>0?'+':'')+fmt(diff)+'원'}</div><div style="font-size:12px;color:var(--gray-600);margin-top:4px;">장부 ${fmt(data.expected_total)} · 금고 ${fmt(data.actual_total)}</div></div>`;
+  // 관리자: 수정/삭제 버튼
+  if(isManager){
+    html+=`<div class="action-group" style="margin-top:12px;">
+      <button class="btn btn-primary" style="flex:2;padding:14px;" onclick="editSettlement('${d}')">수정하기</button>
+      <button class="btn btn-danger" style="flex:1;padding:14px;" onclick="deleteSettlement('${d}')">삭제</button>
+    </div>`;
+  }
   c.innerHTML=html;
+}
+// ─── 새 기능: 정산 수정 ───
+async function editSettlement(dateStr){
+  // 기존 정산 데이터를 입력 폼에 로드하고 입력 탭으로 전환
+  if(!currentStore) return;
+  const{data}=await sb.from('settlements').select('*').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
+  if(!data) return toast('정산 데이터를 찾을 수 없습니다.','warn');
+  // 날짜 설정
+  const picker=document.getElementById('settleDatePicker');
+  if(picker) picker.value=dateStr;
+  // 입력 탭으로 전환
+  const tabs=document.querySelectorAll('#settleCont .sub-tab');
+  tabs.forEach((t,i)=>t.classList.toggle('active',i===0));
+  document.getElementById('settleInput').style.display='block';
+  document.getElementById('settleList').style.display='none';
+  document.getElementById('settleCard').style.display='none';
+  // items_json → 입력 필드에 채우기
+  const fieldMap={
+    opening:'siOpening',pos_cash:'siPosCash',pos_cash_receipt:'siPosCashReceipt',
+    pos_card:'siPosCard',pos_etc:'siPosEtc',
+    cash_detail_cash:'siCashCash',cash_detail_qr:'siCashQr',cash_detail_transfer:'siCashTransfer',
+    extra_draw_large:'siDrawLarge',extra_draw_small:'siDrawSmall',
+    deduct_etc:'siDeductEtc',deduct_bank:'siDeductBank'
+  };
+  const items=data.items_json||{};
+  Object.entries(fieldMap).forEach(([key,elId])=>{
+    const el=document.getElementById(elId);
+    if(el) el.value=items[key]?parseInt(items[key]).toLocaleString():'';
+  });
+  // vault_json → 금고 입력
+  const vault=data.vault_json||{};
+  document.querySelectorAll('.v-input').forEach(i=>{i.value=vault[i.dataset.unit]||'';});
+  // 전일 마감금액 상태
+  const statusEl=document.getElementById('settleDateStatus');
+  if(statusEl) statusEl.innerText='기존 데이터 수정 중';
+  recalcSettle2();
+  toast('정산 데이터를 불러왔습니다. 수정 후 저장하세요.','success');
+}
+async function deleteSettlement(dateStr){
+  if(!confirm(dateStr+' 정산 기록을 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.')) return;
+  setLoad(true,'삭제 중...');
+  const{error}=await sb.from('settlements').delete().eq('store_id',currentStore.id).eq('settle_date',dateStr);
+  setLoad(false);
+  if(error) return toast('삭제 실패: '+error.message,'error');
+  toast('정산 기록 삭제 완료','success');
+  loadSettleCard(dateStr);
 }
 async function moveCardDate(dir){const d=new Date(cardDateStr);d.setDate(d.getDate()+dir);await loadSettleCard(d.toISOString().split('T')[0]);}
 
