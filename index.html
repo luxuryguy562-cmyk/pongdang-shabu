@@ -1404,6 +1404,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveEmployee()">저장</button>
   </div>
+  <!-- 기기 초기화 (관리자, 편집 시에만) -->
+  <div id="deviceResetWrap" class="manager-only" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-200);">
+    <div style="font-size:12px;color:var(--gray-400);margin-bottom:6px;">등록 기기 관리</div>
+    <div id="deviceStatus" style="font-size:12px;color:var(--gray-600);margin-bottom:8px;"></div>
+    <button class="btn btn-danger btn-full" style="padding:12px;" onclick="resetDeviceFingerprint(document.getElementById('editEmpId').value)">등록 기기 초기화</button>
+  </div>
 </div>
 
 <!-- 직급 추가/편집 -->
@@ -1429,6 +1435,27 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <p style="font-size:12px;color:var(--gray-600);margin-bottom:14px;" id="matchInfo"></p>
   <div id="matchEmpList"></div>
   <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="closeAllSheets()">취소</button>
+</div>
+
+<!-- 근태 기록 편집 (관리자) -->
+<div class="sheet" id="editAttSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">근태 기록 수정</div>
+  <div id="editAttInfo" style="font-size:13px;color:var(--gray-600);margin-bottom:12px;"></div>
+  <label class="emp-label">출근 시간</label>
+  <input id="editAttIn" class="input-field" type="time">
+  <label class="emp-label">퇴근 시간</label>
+  <input id="editAttOut" class="input-field" type="time">
+  <label class="emp-label">휴게시간 (분)</label>
+  <input id="editAttRest" class="input-field" type="number" inputmode="numeric" min="0" value="0">
+  <input type="hidden" id="editAttId">
+  <input type="hidden" id="editAttDate">
+  <input type="hidden" id="editAttEmpId">
+  <div class="action-group" style="margin-top:12px;">
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveEditAttendance()">저장</button>
+  </div>
+  <button class="btn btn-danger btn-full" style="margin-top:8px;padding:12px;" onclick="deleteAttendance()">이 기록 삭제</button>
 </div>
 
 <!-- 거래처 추가/편집 -->
@@ -1994,14 +2021,26 @@ async function checkIn(){
   // WiFi IP 검증
   setLoad(true,'위치 확인 중...');
   const ipCheck=await checkIPForAttendance();
-  setLoad(false);
   if(!ipCheck.ok){
+    setLoad(false);
     if(isManager){
       if(!confirm(ipCheck.msg+'\n\n관리자 권한으로 출근 처리하시겠습니까?')) return;
     } else {
       toast(ipCheck.msg+' 매장 WiFi에서 다시 시도하세요.','error');return;
     }
   }
+  // 기기 지문 검증
+  setLoad(true,'기기 확인 중...');
+  const devCheck=await checkDeviceForAttendance(empId);
+  setLoad(false);
+  if(!devCheck.ok){
+    if(isManager){
+      if(!confirm(devCheck.msg+'\n\n관리자 권한으로 출근 처리하시겠습니까?')) return;
+    } else {
+      toast(devCheck.msg,'error');return;
+    }
+  }
+  if(devCheck.firstReg) toast('이 기기가 출퇴근 기기로 등록됐습니다.','success');
   const now=new Date();const today=now.toISOString().split('T')[0];
   const{data:exist}=await sb.from('attendance_logs').select('id,app_in').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
   if(exist?.app_in){toast('이미 출근 처리됐습니다. 출근: '+new Date(exist.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}),'warn');return;}
@@ -2018,12 +2057,23 @@ async function checkOut(){
   // WiFi IP 검증
   setLoad(true,'위치 확인 중...');
   const ipCheck=await checkIPForAttendance();
-  setLoad(false);
   if(!ipCheck.ok){
+    setLoad(false);
     if(isManager){
       if(!confirm(ipCheck.msg+'\n\n관리자 권한으로 퇴근 처리하시겠습니까?')) return;
     } else {
       toast(ipCheck.msg+' 매장 WiFi에서 다시 시도하세요.','error');return;
+    }
+  }
+  // 기기 지문 검증
+  setLoad(true,'기기 확인 중...');
+  const devCheck=await checkDeviceForAttendance(empId);
+  setLoad(false);
+  if(!devCheck.ok){
+    if(isManager){
+      if(!confirm(devCheck.msg+'\n\n관리자 권한으로 퇴근 처리하시겠습니까?')) return;
+    } else {
+      toast(devCheck.msg,'error');return;
     }
   }
   const now=new Date();const today=now.toISOString().split('T')[0];
@@ -2160,6 +2210,9 @@ async function loadAttList(allMode=false){
     return `<span style="width:7px;height:7px;border-radius:50%;background:${m[s]||'#B0B8C1'};display:inline-block;margin-right:2px;"></span>`;
   };
 
+  // 편집용 데이터 저장 (관리자 터치→편집)
+  window._attListData=data||[];
+
   let html = '';
   if(!data?.length){
     html = '<div class="empty-state"><div class="empty-icon">📭</div><p>이 달의 기록이 없습니다</p></div>';
@@ -2180,7 +2233,7 @@ async function loadAttList(allMode=false){
           </thead>
           <tbody>
             ${data.map((r,i)=>`
-            <tr style="border-bottom:1px solid var(--gray-100);background:${i%2?'#fafbfc':'#fff'};">
+            <tr style="border-bottom:1px solid var(--gray-100);background:${i%2?'#fafbfc':'#fff'};cursor:${isManager?'pointer':'default'};" ${isManager?`onclick="openEditAttSheet(window._attListData[${i}])"`:''}>
               <td style="padding:9px 6px;white-space:nowrap;color:var(--gray-600);">${r.work_date?.slice(5)||'-'} ${statusDot(r.caps_match_status)}</td>
               <td style="padding:9px 6px;text-align:center;font-weight:700;">${r.employees?.name||'-'}</td>
               <td style="padding:9px 6px;text-align:center;">${tK(r,'app_in')}</td>
@@ -2237,6 +2290,51 @@ async function loadAttList(allMode=false){
 }
 function loadAttAll(){ loadAttList(true); }
 
+// ─── 새 기능: 근태 기록 편집 ───
+function openEditAttSheet(record){
+  if(!isManager) return toast('관리자만 수정할 수 있습니다.','warn');
+  const empName=record.employees?.name||'직원';
+  document.getElementById('editAttInfo').innerText=`${empName} · ${record.work_date}`;
+  document.getElementById('editAttId').value=record.id;
+  document.getElementById('editAttDate').value=record.work_date;
+  document.getElementById('editAttEmpId').value=record.employee_id;
+  // 시간 파싱
+  const toTimeStr=ts=>{if(!ts)return'';const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+  document.getElementById('editAttIn').value=toTimeStr(record.app_in);
+  document.getElementById('editAttOut').value=toTimeStr(record.app_out);
+  document.getElementById('editAttRest').value=record.rest_min||0;
+  openSheet('editAttSheet');
+}
+async function saveEditAttendance(){
+  const attId=document.getElementById('editAttId').value;
+  const date=document.getElementById('editAttDate').value;
+  const empId=document.getElementById('editAttEmpId').value;
+  const inStr=document.getElementById('editAttIn').value;
+  const outStr=document.getElementById('editAttOut').value;
+  const restMin=parseInt(document.getElementById('editAttRest').value)||0;
+  if(!inStr) return toast('출근 시간을 입력하세요.','warn');
+  const appIn=new Date(date+'T'+inStr+':00');
+  const appOut=outStr?new Date(date+'T'+outStr+':00'):null;
+  const w=await calcWageData(empId,appIn,appOut,date,restMin);
+  setLoad(true,'수정 중...');
+  const payload={app_in:appIn.toISOString(),app_out:appOut?.toISOString()||null,rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage};
+  const{error}=await sb.from('attendance_logs').update(payload).eq('id',attId);
+  setLoad(false);
+  if(error) return toast('수정 실패: '+error.message,'error');
+  toast('근태 기록 수정 완료!','success');
+  closeAllSheets();loadAttList(true);loadAttList(false);
+}
+async function deleteAttendance(){
+  const attId=document.getElementById('editAttId').value;
+  if(!confirm('이 근태 기록을 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.')) return;
+  setLoad(true,'삭제 중...');
+  const{error}=await sb.from('attendance_logs').delete().eq('id',attId);
+  setLoad(false);
+  if(error) return toast('삭제 실패: '+error.message,'error');
+  toast('기록 삭제 완료','success');
+  closeAllSheets();loadAttList(true);loadAttList(false);
+}
+
 // ─── 내 기록: 주간 간트차트 뷰 ───
 let myAttWeekStart='';
 function moveMyAttWeek(dir){
@@ -2270,32 +2368,11 @@ async function loadMyAttGantt(){
   const logs=data||[];
   const logMap={};logs.forEach(r=>logMap[r.work_date]=r);
 
-  // 오늘 근태 상태 카드
-  const todayLog=logMap[todayStr];
-  const tK=ts=>ts?new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):null;
-  const hasIn=todayLog?.app_in;
-  const hasOut=todayLog?.app_out;
-  let statusHtml=`<div style="background:var(--gray-100);border-radius:14px;padding:14px 16px;">
-    <div style="font-size:12px;font-weight:700;color:var(--gray-400);margin-bottom:8px;">오늘 근태 상태</div>
-    <div style="display:flex;gap:10px;">
-      <div style="flex:1;background:${hasIn?'var(--success-light)':'var(--danger-light)'};border-radius:10px;padding:12px;text-align:center;">
-        <div style="font-size:20px;margin-bottom:4px;">${hasIn?'✅':'❌'}</div>
-        <div style="font-size:11px;color:var(--gray-600);font-weight:600;">출근</div>
-        <div style="font-size:13px;font-weight:800;color:${hasIn?'var(--success)':'var(--danger)'};">${hasIn?tK(todayLog.app_in):'미기록'}</div>
-      </div>
-      <div style="flex:1;background:${hasOut?'var(--success-light)':'var(--warn-light)'};border-radius:10px;padding:12px;text-align:center;">
-        <div style="font-size:20px;margin-bottom:4px;">${hasOut?'✅':hasIn?'⏳':'➖'}</div>
-        <div style="font-size:11px;color:var(--gray-600);font-weight:600;">퇴근</div>
-        <div style="font-size:13px;font-weight:800;color:${hasOut?'var(--success)':hasIn?'var(--warn)':'var(--gray-400)'};">${hasOut?tK(todayLog.app_out):hasIn?'근무 중':'—'}</div>
-      </div>
-      <div style="flex:1;background:var(--blue-light);border-radius:10px;padding:12px;text-align:center;">
-        <div style="font-size:20px;margin-bottom:4px;">⏱</div>
-        <div style="font-size:11px;color:var(--gray-600);font-weight:600;">근무시간</div>
-        <div style="font-size:13px;font-weight:800;color:var(--blue);">${todayLog?.total_work_min!=null?todayLog.total_work_min+'분':'—'}</div>
-      </div>
-    </div>
-  </div>`;
-  document.getElementById('myAttTodayStatus').innerHTML=statusHtml;
+  // 오늘 근태 상태 카드 제거 — 간트차트에 근무시간 직접 표시
+  document.getElementById('myAttTodayStatus').innerHTML='';
+
+  // 근무시간 포맷 헬퍼
+  const fmtWorkTime=(min)=>{if(min==null)return'';const h=Math.floor(min/60);const m=min%60;return h>0?(m>0?h+'h'+m+'m':h+'h'):(m+'m');};
 
   // 주간 간트차트 (근무계획 스타일)
   const bgCols=ganttHours.map(()=>`<div class="gantt-bg-col"></div>`).join('');
@@ -2306,16 +2383,29 @@ async function loadMyAttGantt(){
     const isToday=day.date===todayStr;
     const isPast=day.date<todayStr;
 
+    // 근무시간 계산 (출근만 찍은 경우: 현재까지 경과시간)
+    let workTimeLabel='';
+    if(log?.app_in){
+      if(log.total_work_min!=null){
+        workTimeLabel=fmtWorkTime(log.total_work_min);
+      } else if(!log.app_out&&isToday){
+        // 출근만 찍고 퇴근 안 한 오늘 — 현재까지 경과
+        const elapsed=Math.round((new Date()-new Date(log.app_in))/60000);
+        workTimeLabel=fmtWorkTime(elapsed);
+      }
+    }
+
     ganttHtml+=`<div class="gantt-day-section">
       <div class="gantt-day-label" style="${isToday?'color:var(--blue);font-weight:800;':''}">
         <span>${day.label}${isToday?' (오늘)':''}</span>`;
 
-    // 상태 표시
-    if(log?.app_in&&log?.app_out) ganttHtml+=`<span style="font-size:10px;color:var(--success);font-weight:700;">✅ 완료</span>`;
-    else if(log?.app_in&&!log?.app_out&&isToday) ganttHtml+=`<span style="font-size:10px;color:var(--blue);font-weight:700;">🔵 근무중</span>`;
-    else if(isPast&&sched&&!sched.is_off&&!log) ganttHtml+=`<span style="font-size:10px;color:var(--danger);font-weight:700;">⚠️ 누락</span>`;
+    // 상태 + 근무시간 표시
+    if(log?.app_in&&log?.app_out) ganttHtml+=`<span style="font-size:10px;color:var(--success);font-weight:700;">${workTimeLabel}</span>`;
+    else if(log?.app_in&&!log?.app_out&&isToday) ganttHtml+=`<span style="font-size:10px;color:var(--blue);font-weight:700;">${workTimeLabel} 근무중</span>`;
+    else if(log?.app_in&&!log?.app_out&&isPast) ganttHtml+=`<span style="font-size:10px;color:var(--warn);font-weight:700;">퇴근누락</span>`;
+    else if(isPast&&sched&&!sched.is_off&&!log) ganttHtml+=`<span style="font-size:10px;color:var(--danger);font-weight:700;">누락</span>`;
     else if(sched?.is_off) ganttHtml+=`<span style="font-size:10px;color:var(--gray-400);">휴무</span>`;
-    else if(!isPast&&!isToday) ganttHtml+=`<span style="font-size:10px;color:var(--gray-400);">${sched?'예정':'—'}</span>`;
+    else if(!isPast&&!isToday) ganttHtml+=`<span style="font-size:10px;color:var(--gray-400);">${sched?'예정':''}</span>`;
 
     ganttHtml+=`</div>
       <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
@@ -2331,19 +2421,20 @@ async function loadMyAttGantt(){
         bars+=`<div style="position:absolute;height:14px;top:2px;left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:var(--gray-300);opacity:0.5;border-radius:3px;"></div>`;
       }
     }
-    // 실제 근무 바 (진한색)
+    // 실제 근무 바 (진한색) — 출근만 찍어도 표시
     if(log?.app_in){
       const inTime=new Date(log.app_in);
       const sH=inTime.getHours()+inTime.getMinutes()/60;
       let eH;
       if(log.app_out){const outTime=new Date(log.app_out);eH=outTime.getHours()+outTime.getMinutes()/60;}
-      else if(isToday){const now=new Date();eH=now.getHours()+now.getMinutes()/60;} // 근무중이면 현재시간까지
-      if(eH!=null&&eH>sH){
+      else if(isToday){const now=new Date();eH=now.getHours()+now.getMinutes()/60;}
+      else{eH=sH+0.5;} // 과거 퇴근누락 — 최소 바 표시
+      if(eH>sH){
         const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
         const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
         const sLabel=String(Math.floor(sH)).padStart(2,'0')+':'+(sH%1>=0.5?'30':'00');
-        const eLabel=log.app_out?(String(Math.floor(eH)).padStart(2,'0')+':'+(eH%1>=0.5?'30':'00')):'지금';
-        const barColor=log.app_out?'var(--success)':'var(--blue)';
+        const eLabel=log.app_out?(String(Math.floor(eH)).padStart(2,'0')+':'+(eH%1>=0.5?'30':'00')):isToday?'지금':'?';
+        const barColor=log.app_out?'var(--success)':isToday?'var(--blue)':'var(--warn)';
         bars+=`<div class="gantt-bar" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${barColor};"><span style="font-size:8px;color:#fff;padding:0 2px;white-space:nowrap;">${sLabel}~${eLabel}</span></div>`;
       }
     }
@@ -2364,7 +2455,7 @@ async function loadMyAttGantt(){
   });
   if(missing.length>0){
     document.getElementById('myAttWarning').innerHTML=`<div style="background:var(--danger-light);border-radius:12px;padding:12px 14px;margin-top:10px;">
-      <div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:4px;">⚠️ 이번 주 누락 ${missing.length}일</div>
+      <div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:4px;">이번 주 누락 ${missing.length}일</div>
       <div style="font-size:11px;color:var(--danger);">${missing.map(d=>d.label).join(', ')} — 근무계획은 있지만 출퇴근 기록이 없습니다</div>
     </div>`;
   } else {
@@ -3452,8 +3543,12 @@ function renderEmpList(){
       </div>`:''}
     </div>`}).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
 }
-async function openAddEmpSheet(){if(!guardStore())return;if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empBirthInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';document.getElementById('empAuthLevel').value='staff';selectedRoleName='';await renderRoleChips('');openSheet('addEmpSheet');}
-async function openEditEmpSheet(id){if(!isManager)return toast('관리자만 편집할 수 있습니다.','warn');const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empBirthInput').value=e.birth_date||'';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('empAuthLevel').value=e.auth_level||'staff';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');openSheet('addEmpSheet');}
+async function openAddEmpSheet(){if(!guardStore())return;if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empBirthInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';document.getElementById('empAuthLevel').value='staff';selectedRoleName='';await renderRoleChips('');const drWrap=document.getElementById('deviceResetWrap');if(drWrap)drWrap.style.display='none';openSheet('addEmpSheet');}
+async function openEditEmpSheet(id){if(!isManager)return toast('관리자만 편집할 수 있습니다.','warn');const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empBirthInput').value=e.birth_date||'';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('empAuthLevel').value=e.auth_level||'staff';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');
+  // 기기 초기화 섹션 표시
+  const drWrap=document.getElementById('deviceResetWrap');const dsEl=document.getElementById('deviceStatus');
+  if(drWrap){drWrap.style.display='block';dsEl.innerText=e.device_fingerprint?'등록된 기기: '+e.device_fingerprint.slice(0,12)+'...':'등록된 기기 없음 (다음 출근 시 자동 등록)';}
+  openSheet('addEmpSheet');}
 async function renderRoleChips(sel){await loadRoles(false);const wrap=document.getElementById('empRoleChips');if(!wrap)return;wrap.innerHTML=(roles.map(r=>`<span class="role-chip${r.name===sel?' selected':''}" onclick="selectRoleChip('${r.name}',this)">${r.name}</span>`).join(''))+`<span class="role-chip" style="border:1px dashed var(--gray-300);color:var(--gray-400);" onclick="promptAddRole()">+ 추가</span>`;}
 function selectRoleChip(name,el){selectedRoleName=selectedRoleName===name?'':name;document.querySelectorAll('#empRoleChips .role-chip').forEach(c=>c.classList.remove('selected'));if(selectedRoleName)el.classList.add('selected');}
 async function promptAddRole(){const name=prompt('새 직급명을 입력하세요');if(!name||!name.trim())return;setLoad(true,'추가 중...');const{error}=await sb.from('roles').insert({store_id:currentStore.id,name:name.trim(),level:roles.length+1});setLoad(false);if(error)return toast('추가 실패: '+error.message,'error');toast(name.trim()+' 직급 추가!','success');await renderRoleChips(name.trim());selectedRoleName=name.trim();}
@@ -4675,6 +4770,62 @@ async function checkIPForAttendance(){
   if(!ip) return {ok:false,ip:'',msg:'IP를 확인할 수 없습니다. 인터넷 연결을 확인하세요.'};
   if(ip===targetIP) return {ok:true,ip,msg:'매장 WiFi 확인됨'};
   return {ok:false,ip,msg:`매장 WiFi가 아닙니다.\n현재 IP: ${ip}\n매장 IP: ${targetIP}`};
+}
+
+// ─── 새 기능: 기기 지문(Device Fingerprint) ───
+async function getDeviceFingerprint(){
+  try{
+    // canvas + screen + userAgent 조합으로 기기 고유 해시 생성
+    const canvas=document.createElement('canvas');
+    const ctx=canvas.getContext('2d');
+    canvas.width=200;canvas.height=50;
+    ctx.textBaseline='top';
+    ctx.font='14px Arial';ctx.fillText('퐁당샤브FP',2,2);
+    ctx.font='18px Georgia';ctx.fillStyle='#0050FF';ctx.fillText('Device',50,10);
+    ctx.strokeStyle='#FF0000';ctx.beginPath();ctx.arc(100,25,15,0,Math.PI*2);ctx.stroke();
+    const canvasData=canvas.toDataURL();
+    // 기기 특성 조합
+    const raw=[
+      canvasData,
+      screen.width+'x'+screen.height,
+      screen.colorDepth,
+      navigator.userAgent,
+      navigator.language,
+      navigator.hardwareConcurrency||'',
+      new Date().getTimezoneOffset()
+    ].join('|||');
+    // 간단한 해시 (djb2)
+    let hash=5381;
+    for(let i=0;i<raw.length;i++) hash=((hash<<5)+hash)+raw.charCodeAt(i);
+    return 'DF'+Math.abs(hash).toString(36).toUpperCase();
+  }catch(e){console.error('기기 지문 생성 실패:',e);return null;}
+}
+async function checkDeviceForAttendance(empId){
+  // 기기 지문 검증 — 최초 출근 시 자동 등록, 이후 불일치 시 차단
+  const fp=await getDeviceFingerprint();
+  if(!fp) return {ok:true,fp:null,msg:'기기 지문 생성 불가 (검증 건너뜀)'};
+  const emp=employees.find(e=>e.id===empId);
+  if(!emp) return {ok:false,fp,msg:'직원 정보를 찾을 수 없습니다.'};
+  // 미등록 상태 → 자동 등록
+  if(!emp.device_fingerprint){
+    const{error}=await sb.from('employees').update({device_fingerprint:fp}).eq('id',empId);
+    if(!error) emp.device_fingerprint=fp; // 로컬 캐시도 업데이트
+    return {ok:true,fp,msg:'기기 최초 등록 완료',firstReg:true};
+  }
+  // 등록된 기기와 비교
+  if(emp.device_fingerprint===fp) return {ok:true,fp,msg:'등록된 기기 확인됨'};
+  return {ok:false,fp,msg:`등록되지 않은 기기입니다.\n본인 휴대폰에서 다시 시도하세요.`};
+}
+async function resetDeviceFingerprint(empId){
+  // 관리자용: 직원 기기 지문 초기화
+  if(!confirm('이 직원의 등록 기기를 초기화합니다.\n다음 출근 시 새 기기가 자동 등록됩니다.')) return;
+  setLoad(true,'초기화 중...');
+  const{error}=await sb.from('employees').update({device_fingerprint:null}).eq('id',empId);
+  setLoad(false);
+  if(error) return toast('초기화 실패: '+error.message,'error');
+  const emp=employees.find(e=>e.id===empId);
+  if(emp) emp.device_fingerprint=null;
+  toast('기기 초기화 완료! 다음 출근 시 새 기기가 등록됩니다.','success');
 }
 
 // ══════════════════════════════════════════

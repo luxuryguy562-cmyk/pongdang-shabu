@@ -65,6 +65,7 @@ franchises (프랜차이즈/브랜드)
 | base_wage (int) | 시급 |
 | pin | 로그인 PIN |
 | caps_id | CAPS 지문인식기 ID |
+| device_fingerprint (text, nullable) | 기기 지문 해시 (출퇴근 기기 인증용) |
 | hire_date, resign_date | 입퇴사일 |
 | is_active, is_approved, is_manager | 상태 플래그 |
 | auth_level (text, default 'staff') | 권한: owner/franchise_admin/store_manager/staff |
