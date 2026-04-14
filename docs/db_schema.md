@@ -60,6 +60,9 @@ franchises (프랜차이즈/브랜드)
 | store_id (FK→stores) | 소속 매장 |
 | name | 이름 |
 | role | 직급명 (**문자열**, roles.name 참조, FK 아님) |
+| id_number (text, nullable) | 주민번호 or 외국인등록번호 |
+| is_foreign (bool, default false) | 외국인 여부 |
+| report_status (text, default '미신고') | 신고 구분 (신고/미신고) |
 | birth_date, phone, address | 개인정보 |
 | bank_name, account_number | 급여 계좌 |
 | base_wage (int) | 시급 |
