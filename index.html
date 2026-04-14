@@ -2087,7 +2087,14 @@ async function checkOut(){
     }
   }
   const now=new Date();const today=now.toISOString().split('T')[0];
-  const{data:record}=await sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
+  let{data:record}=await sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
+  // 자정 넘긴 경우: 오늘 기록 없으면 어제 기록 확인
+  if(!record?.app_in){
+    const yd=new Date(now);yd.setDate(yd.getDate()-1);
+    const yesterday=yd.toISOString().split('T')[0];
+    const{data:yRecord}=await sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',yesterday).maybeSingle();
+    if(yRecord?.app_in&&!yRecord?.app_out) record=yRecord;
+  }
   if(!record?.app_in){toast('출근 기록이 없습니다.','warn');return;}
   if(record.app_out){toast('이미 퇴근 처리됐습니다.','warn');return;}
   const appIn=new Date(record.app_in);
@@ -2125,6 +2132,7 @@ async function saveAttendance(){
   if(sStr==='-') return toast('출근 시간을 입력하세요.','warn');
   const appIn=new Date(date+'T'+sStr+':00');
   const appOut=eStr!=='-'?new Date(date+'T'+eStr+':00'):null;
+  if(appOut&&appOut<=appIn) return toast('퇴근 시간이 출근보다 빠릅니다. 확인해주세요.','error');
   const restMin=parseInt(document.getElementById('vRest').value)||0;
   const w=await calcWageData(selectedEmpId, appIn, appOut, date, restMin);
   setLoad(true,'근태 기록 중...');
@@ -2249,7 +2257,7 @@ async function loadAttList(allMode=false){
               <td style="padding:9px 6px;text-align:center;">${tK(r,'app_in')}</td>
               <td style="padding:9px 6px;text-align:center;">${tK(r,'app_out')}</td>
               <td style="padding:9px 6px;text-align:center;">${r.total_work_min!=null?r.total_work_min+'분':'-'}</td>
-              <td style="padding:9px 6px;text-align:right;font-weight:700;color:var(--blue);">${r.calculated_wage!=null?fmt(r.calculated_wage):'-'}</td>
+              <td style="padding:9px 6px;text-align:right;font-weight:700;color:${r.app_in&&r.app_out&&!r.calculated_wage?'var(--danger)':'var(--blue)'};">${r.app_in&&r.app_out&&!r.calculated_wage?'⚠️ 0원':r.calculated_wage!=null?fmt(r.calculated_wage):'-'}</td>
             </tr>`).join('')}
           </tbody>
           <tfoot>
@@ -2325,6 +2333,7 @@ async function saveEditAttendance(){
   if(!inStr) return toast('출근 시간을 입력하세요.','warn');
   const appIn=new Date(date+'T'+inStr+':00');
   const appOut=outStr?new Date(date+'T'+outStr+':00'):null;
+  if(appOut&&appOut<=appIn) return toast('퇴근 시간이 출근보다 빠릅니다. 확인해주세요.','error');
   const w=await calcWageData(empId,appIn,appOut,date,restMin);
   setLoad(true,'수정 중...');
   const payload={app_in:appIn.toISOString(),app_out:appOut?.toISOString()||null,rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage};
