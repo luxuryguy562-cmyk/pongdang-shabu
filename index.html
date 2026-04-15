@@ -3347,17 +3347,20 @@ async function loadDashboard(){
 
     // ══ A-1. 월 요약 테이블 렌더 ══
     const estCol=isCurrent;
+    // 매출 대비 비율 헬퍼
+    const pctR=v=>totalRevenue>0?((v/totalRevenue)*100).toFixed(1)+'%':'–';
+    const pctE=v=>estRevenue>0?((v/estRevenue)*100).toFixed(1)+'%':'–';
     document.getElementById('dashSummaryGrid').innerHTML=`
       <table class="dash-summary-tbl">
         <thead><tr>
-          <th></th><th>누적</th>${estCol?'<th>마감예상</th>':''}
+          <th></th><th>누적</th><th>비율</th>${estCol?'<th>마감예상</th><th>비율</th>':''}
         </tr></thead>
         <tbody>
-          <tr><td>매출</td><td class="amt-blue">${fmt(totalRevenue)}</td>${estCol?`<td class="amt-muted">${fmt(estRevenue)}</td>`:''}</tr>
-          <tr><td>지출</td><td class="amt-red">${fmt(totalCostFull)}</td>${estCol?`<td class="amt-muted">${fmt(estTotalCostFull)}</td>`:''}</tr>
-          <tr><td>순수익</td><td>${fmt(netProfit)}</td>${estCol?`<td class="amt-muted">${fmt(estNetProfit)}</td>`:''}</tr>
-          <tr><td>예비비</td><td>-${fmt(reserveAmt)}</td>${estCol?`<td class="amt-muted">-${fmt(estReserve)}</td>`:''}</tr>
-          <tr class="row-total"><td>실수익</td><td class="${realProfit>=0?'amt-green':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</td>${estCol?`<td class="amt-muted">${estRealProfit>=0?'':'-'}${fmt(Math.abs(estRealProfit))}</td>`:''}</tr>
+          <tr><td>매출</td><td class="amt-blue">${fmt(totalRevenue)}</td><td class="amt-muted">100%</td>${estCol?`<td class="amt-muted">${fmt(estRevenue)}</td><td class="amt-muted">100%</td>`:''}</tr>
+          <tr><td>지출</td><td class="amt-red">${fmt(totalCostFull)}</td><td class="amt-muted">${pctR(totalCostFull)}</td>${estCol?`<td class="amt-muted">${fmt(estTotalCostFull)}</td><td class="amt-muted">${pctE(estTotalCostFull)}</td>`:''}</tr>
+          <tr><td>순수익</td><td>${fmt(netProfit)}</td><td class="amt-muted">${pctR(netProfit)}</td>${estCol?`<td class="amt-muted">${fmt(estNetProfit)}</td><td class="amt-muted">${pctE(estNetProfit)}</td>`:''}</tr>
+          <tr><td>예비비</td><td>-${fmt(reserveAmt)}</td><td class="amt-muted">${pctR(reserveAmt)}</td>${estCol?`<td class="amt-muted">-${fmt(estReserve)}</td><td class="amt-muted">${pctE(estReserve)}</td>`:''}</tr>
+          <tr class="row-total"><td>실수익</td><td class="${realProfit>=0?'amt-green':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</td><td class="amt-muted">${pctR(Math.abs(realProfit))}</td>${estCol?`<td class="amt-muted">${estRealProfit>=0?'':'-'}${fmt(Math.abs(estRealProfit))}</td><td class="amt-muted">${pctE(Math.abs(estRealProfit))}</td>`:''}</tr>
         </tbody>
       </table>`;
 
@@ -3459,7 +3462,7 @@ async function loadDashboard(){
           const cats=dailyCatMap[d];
           let catItems='';
           catNames.forEach(c=>{
-            if(cats[c]>0) catItems+=`<span style="margin-right:8px;">${c} <b>${fmt(cats[c])}</b></span>`;
+            if(cats[c]>0){const cp=sale>0?((cats[c]/sale)*100).toFixed(1)+'%':'';catItems+=`<span style="margin-right:8px;">${c} <b>${fmt(cats[c])}</b> <span style="color:var(--blue);font-size:9px;">${cp}</span></span>`;}
           });
           if(catItems) catDetail=`<tr class="cat-detail-row" style="display:none;"><td colspan="5"><div style="padding:4px 0 4px 8px;font-size:10px;color:var(--gray-600);line-height:1.8;background:var(--gray-100);border-radius:6px;margin:2px 0;">${catItems}</div></td></tr>`;
         }
@@ -3483,7 +3486,7 @@ async function loadDashboard(){
       let wCatDetail='';
       let wCatItems='';
       catNames.forEach(c=>{
-        if(wCatTotals[c]>0) wCatItems+=`<span style="margin-right:8px;">${c} <b>${fmt(wCatTotals[c])}</b></span>`;
+        if(wCatTotals[c]>0){const wp=wSales>0?((wCatTotals[c]/wSales)*100).toFixed(1)+'%':'';wCatItems+=`<span style="margin-right:8px;">${c} <b>${fmt(wCatTotals[c])}</b> <span style="color:var(--blue);font-size:9px;">${wp}</span></span>`;}
       });
       if(wCatItems) wCatDetail=`<tr class="wk-cat-row" ${collapsed?'style="display:none;"':''}><td colspan="5"><div style="padding:4px 0 4px 8px;font-size:10px;color:var(--gray-600);line-height:1.8;background:var(--blue-light);border-radius:6px;margin:2px 0;">${wCatItems}</div></td></tr>`;
 

@@ -2,7 +2,7 @@
 
 > **Supabase URL**: `https://ruytgygjwnbtzmtofopg.supabase.co`
 > **store_id**: `4ae03341-e5dc-4933-b746-29728cbc685f` (퐁당샤브 논산점)
-> **최종 업데이트**: 2026-04-13
+> **최종 업데이트**: 2026-04-15
 
 ## 테이블 관계도
 
