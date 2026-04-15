@@ -325,9 +325,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .pivot-tbl.pv-compact tr.pv-week .pv-neg{color:#FCA5A5;}
 .pivot-tbl.pv-compact tr.pv-week .pv-pp{color:rgba(255,255,255,0.5);}
 
-/* ─ 상세비교 가로모드 (CSS fallback for iOS) */
-#dailyDetailModal.landscape-css{transform:rotate(90deg);transform-origin:top left;position:fixed;top:0;left:100vw;width:100vh;height:100vw;}
-#dailyDetailModal.landscape-css #dailyDetailContent{height:calc(100vw - 50px);}
 
 /* ─ 예비비 현황 */
 .reserve-balance-card{background:linear-gradient(135deg,#0050FF 0%,#3B82F6 100%);color:#fff;border-radius:16px;padding:20px;margin-bottom:14px;}
@@ -4515,8 +4512,25 @@ function openDailyDetail(){
 
     const html=`<div style="overflow:auto;padding:0 4px 20px;"><table class="pivot-tbl pv-compact"><thead><tr>${thHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>`;
     document.getElementById('dailyDetailContent').innerHTML=html;
-    document.getElementById('dailyDetailModal').style.display='block';
+    const modal=document.getElementById('dailyDetailModal');
+    modal.style.display='block';
     document.body.style.overflow='hidden';
+    // 가로 모드: JS로 직접 스타일 (iOS/Android 공용)
+    const vw=window.innerWidth,vh=window.innerHeight;
+    const contentEl=document.getElementById('dailyDetailContent');
+    if(vw<vh){
+      modal.style.transform='rotate(90deg)';
+      modal.style.transformOrigin='top left';
+      modal.style.width=vh+'px';
+      modal.style.height=vw+'px';
+      modal.style.top='0';
+      modal.style.left=vw+'px';
+      contentEl.style.height=(vw-50)+'px';
+      modal._rotated=true;
+    } else {
+      contentEl.style.height='calc(100% - 50px)';
+      modal._rotated=false;
+    }
   }catch(err){
     console.error('상세비교 오류:',err);
     alert('상세 비교 열기 실패: '+err.message);
@@ -4526,6 +4540,13 @@ function openDailyDetail(){
 function closeDailyDetail(){
   const modal=document.getElementById('dailyDetailModal');
   modal.style.display='none';
+  modal.style.transform='';
+  modal.style.transformOrigin='';
+  modal.style.width='100%';
+  modal.style.height='100%';
+  modal.style.top='0';
+  modal.style.left='0';
+  modal._rotated=false;
   document.body.style.overflow='';
 }
 
