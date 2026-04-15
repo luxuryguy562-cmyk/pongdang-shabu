@@ -893,7 +893,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           <span style="font-size:12px;font-weight:700;color:var(--blue);">예비비 잔고</span>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <span id="dashReserveBalanceAmt" style="font-size:14px;font-weight:900;color:var(--blue);">0원</span>
+          <span id="dashReserveBalanceAmt" style="font-size:14px;font-weight:900;color:var(--blue);">0</span>
           <span style="font-size:11px;color:var(--gray-400);">상세 ›</span>
         </div>
       </div>
@@ -3398,11 +3398,11 @@ async function loadDashboard(){
     const summRow=(label,val,cls,pct)=>`<div class="dash-summ-row"><span class="ds-label">${label}</span><div class="ds-vals"><span class="ds-main ${cls}">${val}</span>${pct?`<span class="ds-pct">${pct}</span>`:''}</div></div>`;
 
     let summHtml='';
-    summHtml+=summRow('매출',fmt(totalRevenue)+'원','amt-blue','');
-    summHtml+=summRow('지출',fmt(totalCostFull)+'원','amt-red',pctR(totalCostFull));
-    summHtml+=summRow('순수익',fmt(netProfit)+'원',netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
-    summHtml+=summRow('예비비','-'+fmt(reserveAmt)+'원','amt-muted',pctR(reserveAmt));
-    summHtml+=`<div class="dash-summ-total"><span class="ds-label">실수익</span><div class="ds-vals"><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}원</span></div></div>`;
+    summHtml+=summRow('매출',fmt(totalRevenue),'amt-blue','');
+    summHtml+=summRow('지출',fmt(totalCostFull),'amt-red',pctR(totalCostFull));
+    summHtml+=summRow('순수익',fmt(netProfit),netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
+    summHtml+=summRow('예비비','-'+fmt(reserveAmt),'amt-muted',pctR(reserveAmt));
+    summHtml+=`<div class="dash-summ-total"><span class="ds-label">실수익</span><div class="ds-vals"><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</span></div></div>`;
 
     // 마감예상 블록 (현재 월만)
     if(isCurrent){
@@ -3420,7 +3420,7 @@ async function loadDashboard(){
 
     // 예비비 잔고 미니
     const reserveBalance=await calcReserveBalance();
-    document.getElementById('dashReserveBalanceAmt').innerText=fmt(reserveBalance)+'원';
+    document.getElementById('dashReserveBalanceAmt').innerText=fmt(reserveBalance);
 
     // ══ A-2. 일별 정산 테이블 ══
     const allDays=Array.from({length:lastDay},(_,i)=>String(i+1).padStart(2,'0'));
@@ -3588,7 +3588,7 @@ async function loadDashboard(){
     const groupOrder=['식자재','식자재(직구/영수증)','인건비','공과금/고정비','로열티','카드수수료','기타/수동','마케팅'];
 
     // 매출 행
-    let monthHtml=`<div class="dash-summ-row" style="padding-bottom:12px;"><span class="ds-label" style="font-size:14px;font-weight:800;">총매출</span><span class="ds-main amt-blue">${fmt(totalRevenue)}원</span></div>`;
+    let monthHtml=`<div class="dash-summ-row" style="padding-bottom:12px;"><span class="ds-label" style="font-size:14px;font-weight:800;">총매출</span><span class="ds-main amt-blue">${fmt(totalRevenue)}</span></div>`;
 
     // 카테고리별 행
     groupOrder.forEach(g=>{
@@ -3607,7 +3607,7 @@ async function loadDashboard(){
       <div class="dash-summ-row"><span class="ds-label" style="font-weight:800;">지출합계</span><div class="ds-vals"><span class="ds-pct">${pctOf(totalCostFull)}</span><span class="ds-main amt-red">${fmt(totalCostFull)}</span></div></div>
       <div class="dash-summ-row"><span class="ds-label">순수익</span><div class="ds-vals"><span class="ds-pct">${pctOf(netProfit)}</span><span class="ds-main">${fmt(netProfit)}</span></div></div>
       <div class="dash-summ-row"><span class="ds-label">예비비</span><div class="ds-vals"><span class="ds-main">-${fmt(reserveAmt)}</span></div></div>
-      <div class="dash-summ-total"><span class="ds-label">실수익</span><span class="ds-main ${realProfit>=0?'amt-green':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}원</span></div>
+      <div class="dash-summ-total"><span class="ds-label">실수익</span><span class="ds-main ${realProfit>=0?'amt-green':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</span></div>
     </div>`;
     document.getElementById('dashMonthDetail').innerHTML=monthHtml;
 
