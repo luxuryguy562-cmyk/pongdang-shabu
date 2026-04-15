@@ -880,9 +880,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="dashDailyTable"></div>
     </div>
 
-    <!-- A-3. 주정산 요약 -->
-    <div id="dashWeekSummary" class="week-summary-bar"></div>
-
     <!-- A-4. 월정산 상세 -->
     <div class="card">
       <div class="card-title">월정산 상세</div>
@@ -3440,13 +3437,14 @@ async function loadDashboard(){
       dailyExpTotal[d]=dayExp;
     });
 
-    // 주차 구분 (날짜 기준: 1~7=1주, 8~14=2주, 15~21=3주, 22~28=4주, 29~=5주)
+    // 주차 구분 (월~일 기준: 평일/주말 패턴 유지)
     const weekGroups=[];
     let curWeek=[];
     allDays.forEach(d=>{
+      const dt=new Date(y,mo-1,parseInt(d));
+      const dow=dt.getDay(); // 0=일
       curWeek.push(d);
-      const dayNum=parseInt(d);
-      if(dayNum%7===0||d===allDays[allDays.length-1]){
+      if(dow===0||d===allDays[allDays.length-1]){
         weekGroups.push([...curWeek]);
         curWeek=[];
       }
@@ -3530,18 +3528,7 @@ async function loadDashboard(){
 
     document.getElementById('dashDailyTable').innerHTML=dailyHtml||'<div class="empty-state" style="padding:16px;"><p>정산 데이터가 없습니다</p></div>';
 
-    // ══ A-3. 주정산 요약 바 ══
-    let weekBarHtml='';
-    weekSummaries.forEach(ws=>{
-      const cls=ws.profit>=0?'amt-green':'amt-red';
-      weekBarHtml+=`<div class="week-summary-item">
-        <div class="ws-label">${ws.week}주차</div>
-        <div class="ws-value ${cls}">${ws.done?fmt(ws.profit)+'원':'진행중'}</div>
-      </div>`;
-    });
-    document.getElementById('dashWeekSummary').innerHTML=weekBarHtml;
-
-    // ══ A-4. 월정산 상세 테이블 ══
+    // ══ A-4. 월정산 상세 (토스 스타일) ══
     const groupMap={vendor_orders:'식자재',receipts:'식자재(직구/영수증)',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
     const expByGroup={};
     expData.forEach(e=>{
@@ -3554,24 +3541,31 @@ async function loadDashboard(){
     if(cardFee>0) expByGroup['카드수수료']=(expByGroup['카드수수료']||0)+cardFee;
 
     const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1)+'%':'–';
-    let monthHtml='<table class="dash-summary-tbl"><thead><tr><th>항목</th><th>금액</th><th>비율</th></tr></thead><tbody>';
-    monthHtml+=`<tr class="row-highlight"><td>총매출</td><td class="amt-blue">${fmt(totalRevenue)}</td><td>${pctOf(totalRevenue)}</td></tr>`;
-
+    const mGroupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','로열티':'#EF4444','카드수수료':'#EF4444','기타/수동':'#7C3AED','마케팅':'#F59E0B'};
     const groupOrder=['식자재','식자재(직구/영수증)','인건비','공과금/고정비','로열티','카드수수료','기타/수동','마케팅'];
+
+    // 매출 행
+    let monthHtml=`<div class="dash-summ-row" style="padding-bottom:12px;"><span class="ds-label" style="font-size:14px;font-weight:800;">총매출</span><span class="ds-main amt-blue">${fmt(totalRevenue)}원</span></div>`;
+
+    // 카테고리별 행
     groupOrder.forEach(g=>{
       const amt=expByGroup[g];
-      if(amt>0) monthHtml+=`<tr><td>${g}</td><td>${fmt(amt)}</td><td>${pctOf(amt)}</td></tr>`;
+      if(!amt||amt<=0) return;
+      const color=mGroupColors[g]||'#4E5968';
+      monthHtml+=`<div class="dash-summ-row"><div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span><span class="ds-label">${g}</span></div><div class="ds-vals"><span class="ds-pct">${pctOf(amt)}</span><span class="ds-main">${fmt(amt)}</span></div></div>`;
     });
-    // 등록되지 않은 그룹
+    // 미등록 그룹
     Object.entries(expByGroup).forEach(([g,amt])=>{
-      if(!groupOrder.includes(g)&&amt>0) monthHtml+=`<tr><td>${g}</td><td>${fmt(amt)}</td><td>${pctOf(amt)}</td></tr>`;
+      if(!groupOrder.includes(g)&&amt>0) monthHtml+=`<div class="dash-summ-row"><span class="ds-label">${g}</span><div class="ds-vals"><span class="ds-pct">${pctOf(amt)}</span><span class="ds-main">${fmt(amt)}</span></div></div>`;
     });
 
-    monthHtml+=`<tr class="row-total"><td>지출합계</td><td class="amt-red">${fmt(totalCostFull)}</td><td>${pctOf(totalCostFull)}</td></tr>`;
-    monthHtml+=`<tr><td>순수익</td><td>${fmt(netProfit)}</td><td>${pctOf(netProfit)}</td></tr>`;
-    monthHtml+=`<tr><td>예비비</td><td>-${fmt(reserveAmt)}</td><td></td></tr>`;
-    monthHtml+=`<tr class="row-total"><td>실수익</td><td class="${realProfit>=0?'amt-green':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</td><td>${pctOf(Math.abs(realProfit))}</td></tr>`;
-    monthHtml+='</tbody></table>';
+    // 합계
+    monthHtml+=`<div style="border-top:2px solid var(--text);padding-top:10px;margin-top:4px;">
+      <div class="dash-summ-row"><span class="ds-label" style="font-weight:800;">지출합계</span><div class="ds-vals"><span class="ds-pct">${pctOf(totalCostFull)}</span><span class="ds-main amt-red">${fmt(totalCostFull)}</span></div></div>
+      <div class="dash-summ-row"><span class="ds-label">순수익</span><div class="ds-vals"><span class="ds-pct">${pctOf(netProfit)}</span><span class="ds-main">${fmt(netProfit)}</span></div></div>
+      <div class="dash-summ-row"><span class="ds-label">예비비</span><div class="ds-vals"><span class="ds-main">-${fmt(reserveAmt)}</span></div></div>
+      <div class="dash-summ-total"><span class="ds-label">실수익</span><span class="ds-main ${realProfit>=0?'amt-green':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}원</span></div>
+    </div>`;
     document.getElementById('dashMonthDetail').innerHTML=monthHtml;
 
     // ══ A-5. 일별 차트 (매출 + 순이익) ══
