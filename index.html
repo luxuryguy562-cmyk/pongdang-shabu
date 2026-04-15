@@ -3730,10 +3730,11 @@ async function loadDashboard(){
         </tr>`;
       });
       // 일평균 + 영업일수
-      const avgDaily=receiptCount>0?Math.round(totalRevenue/receiptCount):0;
+      const avgDaily=passedDays>0?Math.round(totalRevenue/passedDays):0;
       revListHtml+=`<tr><td colspan="3" style="border-top:1px solid var(--gray-200);padding-top:6px;margin-top:4px;"></td></tr>`;
       revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;">일평균</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;">${fmt(avgDaily)}</td><td></td></tr>`;
-      revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;">영업일수</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;">${receiptCount}일</td><td></td></tr>`;
+      revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;">영업일수</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;">${passedDays}일</td><td></td></tr>`;
+      revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;">입력일수</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;">${receiptCount}일</td><td></td></tr>`;
       revListHtml+='</table>';
 
       revBody.innerHTML=`<div style="display:flex;gap:14px;align-items:center;">
@@ -3741,7 +3742,7 @@ async function loadDashboard(){
           <canvas id="revDonutChart" width="120" height="120"></canvas>
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
             <div style="font-size:10px;color:var(--gray-400);font-weight:600;">매출</div>
-            <div style="font-size:11px;font-weight:800;color:var(--blue);">${receiptCount}일</div>
+            <div style="font-size:11px;font-weight:800;color:var(--blue);">${passedDays}일</div>
           </div>
         </div>
         <div style="flex:1;min-width:0;">${revListHtml}</div>
