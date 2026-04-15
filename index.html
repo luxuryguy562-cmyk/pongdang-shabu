@@ -318,6 +318,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .pivot-tbl.pv-compact .pv-blue{color:var(--blue);font-weight:700;}
 .pivot-tbl.pv-compact .pv-exp{color:var(--danger);font-weight:700;}
 .pivot-tbl.pv-compact .pv-pp{font-size:9px;color:var(--blue);font-weight:700;display:block;}
+.pivot-tbl.pv-compact tr.pv-total{background:#F0F4FF;border-bottom:2px solid var(--blue);}
+.pivot-tbl.pv-compact tr.pv-total td{font-weight:900;border-bottom:2px solid var(--blue);}
+.pivot-tbl.pv-compact tr.pv-total .pv-fix{background:#F0F4FF;font-weight:900;border-right:1px solid #C7D2FE;}
+.pivot-tbl.pv-compact tr.pv-total .pv-pp{color:var(--gray-400);}
 .pivot-tbl.pv-compact tr.pv-week{background:#1B1D21;}
 .pivot-tbl.pv-compact tr.pv-week td{font-weight:800;color:#fff;border-bottom:none;}
 .pivot-tbl.pv-compact tr.pv-week .pv-fix{background:#1B1D21;font-weight:900;color:#fff;border-right:1px solid #333;}
@@ -4509,11 +4513,18 @@ function openDailyDetail(){
     let bodyHtml='';
     const pctS=(v,b)=>b>0?((v/b)*100).toFixed(0):'0';
     const pctN=(v,b)=>b>0?(v/b)*100:0;
+    const emptyCell='-<span class="pv-pp">&nbsp;</span>';
+
+    // 1차: 주별 데이터 수집 (총누계 계산용)
+    let totalS=0,totalE=0,totalP=0;
+    const totalC={};catNames.forEach(c=>{totalC[c]=0;});
+    const weekBlocks=[];
 
     for(let wi=0;wi<weekGroups.length;wi++){
       const week=weekGroups[wi];
       let wS=0,wE=0,wP=0,wHas=false;
       const wC={};catNames.forEach(c=>{wC[c]=0;});
+      const dayRows=[];
 
       for(let di=0;di<week.length;di++){
         const d=week[di];
@@ -4523,30 +4534,68 @@ function openDailyDetail(){
         const e=has?(expMap[d]||0):0;
         const p=s-e;
         if(has){wS+=s;wE+=e;wP+=p;wHas=true;catNames.forEach(c=>{wC[c]+=(catMap[d]?.[c]||0);});}
+        dayRows.push({d,has,s,e,p});
+      }
 
-        bodyHtml+=`<tr${!has?' style="color:var(--gray-300);"':''}><td class="pv-fix">${mo}/${parseInt(d)}</td><td class="${has?'pv-blue':''}">${has?fmt(s):'-'}</td>`;
+      if(wHas){totalS+=wS;totalE+=wE;totalP+=wP;catNames.forEach(c=>{totalC[c]+=wC[c];});}
+      weekBlocks.push({wi,week,wS,wE,wP,wC,wHas,dayRows});
+    }
+
+    // ── 총누계 행 ──
+    bodyHtml+=`<tr class="pv-total"><td class="pv-fix">총누계</td><td class="pv-blue">${fmt(totalS)}<span class="pv-pp">&nbsp;</span></td>`;
+    catNames.forEach(c=>{
+      const pVal=pctN(totalC[c],totalS);
+      bodyHtml+=`<td class="pv-cell" data-cat="${c}" data-pctval="${totalC[c]?pVal.toFixed(1):''}">${totalC[c]?fmt(totalC[c])+'<span class="pv-pp">'+pctS(totalC[c],totalS)+'%</span>':emptyCell}</td>`;
+    });
+    bodyHtml+=`<td class="pv-exp">${fmt(totalE)}<span class="pv-pp">${pctS(totalE,totalS)}%</span></td>`;
+    bodyHtml+=`<td class="${totalP>=0?'pv-pos':'pv-neg'}">${totalP>=0?'+':''}${fmt(totalP)}<span class="pv-pp">&nbsp;</span></td></tr>`;
+
+    // ── 주별 렌더 (주계 먼저 → 일별은 접기 가능) ──
+    weekBlocks.forEach(({wi,week,wS,wE,wP,wC,wHas,dayRows})=>{
+      if(!wHas) return;
+      const isCurrentWeek=week.some(d=>parseInt(d)===passedDays);
+      const collapsed=!isCurrentWeek;
+
+      // 주계 행 (클릭으로 접기/펼치기)
+      bodyHtml+=`<tr class="pv-week" data-weektoggle="${wi}" style="cursor:pointer;"><td class="pv-fix">${collapsed?'▶':'▼'} ${wi+1}주</td><td class="pv-blue">${fmt(wS)}<span class="pv-pp">&nbsp;</span></td>`;
+      catNames.forEach(c=>{
+        const pVal=pctN(wC[c],wS);
+        bodyHtml+=`<td class="pv-cell" data-cat="${c}" data-pctval="${wC[c]?pVal.toFixed(1):''}">${wC[c]?fmt(wC[c])+'<span class="pv-pp">'+pctS(wC[c],wS)+'%</span>':emptyCell}</td>`;
+      });
+      bodyHtml+=`<td class="pv-exp">${fmt(wE)}<span class="pv-pp">${pctS(wE,wS)}%</span></td>`;
+      bodyHtml+=`<td class="${wP>=0?'pv-pos':'pv-neg'}">${wP>=0?'+':''}${fmt(wP)}<span class="pv-pp">&nbsp;</span></td></tr>`;
+
+      // 일별 행
+      dayRows.forEach(({d,has,s,e,p})=>{
+        const styles=[];
+        if(collapsed) styles.push('display:none');
+        if(!has) styles.push('color:var(--gray-300)');
+        const styleAttr=styles.length?` style="${styles.join(';')};"`:'';
+        bodyHtml+=`<tr class="pv-day" data-weekgroup="${wi}"${styleAttr}><td class="pv-fix">${mo}/${parseInt(d)}</td><td class="${has?'pv-blue':''}">${has?fmt(s)+`<span class="pv-pp">&nbsp;</span>`:emptyCell}</td>`;
         catNames.forEach(c=>{
           const v=has?(catMap[d]?.[c]||0):0;
           const pVal=pctN(v,s);
-          bodyHtml+=`<td class="pv-cell" data-cat="${c}" data-pctval="${has?pVal.toFixed(1):''}">${has&&v?fmt(v)+'<span class="pv-pp">'+pctS(v,s)+'%</span>':'-'}</td>`;
+          bodyHtml+=`<td class="pv-cell" data-cat="${c}" data-pctval="${has?pVal.toFixed(1):''}">${has&&v?fmt(v)+'<span class="pv-pp">'+pctS(v,s)+'%</span>':emptyCell}</td>`;
         });
-        bodyHtml+=`<td class="${has?'pv-exp':''}">${has?fmt(e)+'<span class="pv-pp">'+pctS(e,s)+'%</span>':'-'}</td>`;
-        bodyHtml+=`<td class="${has?(p>=0?'pv-pos':'pv-neg'):''}">${has?(p>=0?'+':'')+fmt(p):'-'}</td></tr>`;
-      }
-
-      if(wHas){
-        bodyHtml+=`<tr class="pv-week"><td class="pv-fix">${wi+1}주</td><td class="pv-blue">${fmt(wS)}</td>`;
-        catNames.forEach(c=>{
-          const pVal=pctN(wC[c],wS);
-          bodyHtml+=`<td class="pv-cell" data-cat="${c}" data-pctval="${wC[c]?pVal.toFixed(1):''}">${wC[c]?fmt(wC[c])+'<span class="pv-pp">'+pctS(wC[c],wS)+'%</span>':'-'}</td>`;
-        });
-        bodyHtml+=`<td class="pv-exp">${fmt(wE)}<span class="pv-pp">${pctS(wE,wS)}%</span></td>`;
-        bodyHtml+=`<td class="${wP>=0?'pv-pos':'pv-neg'}">${wP>=0?'+':''}${fmt(wP)}</td></tr>`;
-      }
-    }
+        bodyHtml+=`<td class="${has?'pv-exp':''}">${has?fmt(e)+'<span class="pv-pp">'+pctS(e,s)+'%</span>':emptyCell}</td>`;
+        bodyHtml+=`<td class="${has?(p>=0?'pv-pos':'pv-neg'):''}">${has?(p>=0?'+':'')+fmt(p)+'<span class="pv-pp">&nbsp;</span>':emptyCell}</td></tr>`;
+      });
+    });
 
     const html=`<div style="overflow:auto;padding:0 4px 20px;"><table class="pivot-tbl pv-compact"><thead><tr>${thHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>`;
     document.getElementById('dailyDetailContent').innerHTML=html;
+
+    // 주계 행 클릭 → 일별 접기/펼치기
+    document.querySelectorAll('[data-weektoggle]').forEach(tr=>{
+      tr.addEventListener('click',()=>{
+        const wi=tr.dataset.weektoggle;
+        const dayTrs=document.querySelectorAll(`[data-weekgroup="${wi}"]`);
+        const isHidden=dayTrs[0]&&dayTrs[0].style.display==='none';
+        dayTrs.forEach(r=>{r.style.display=isHidden?'':'none';});
+        const fix=tr.querySelector('.pv-fix');
+        if(fix) fix.textContent=fix.textContent.replace(/[▶▼]/,isHidden?'▼':'▶');
+      });
+    });
 
     // 초기 색상 적용 + 입력 변경 시 재적용
     function applyThresholdColors(){
