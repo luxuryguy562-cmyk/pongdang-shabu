@@ -3442,7 +3442,10 @@ async function loadDashboard(){
     const sR=(lb,val,cls,pct)=>`<tr><td class="ds-lb">${lb}</td><td class="ds-amt ${cls}">${val}</td><td class="ds-pc">${pct||''}</td></tr>`;
 
     let summHtml='<table class="summ-tbl">';
-    summHtml+=sR('매출',fmt(totalRevenue),'amt-blue','');
+    summHtml+=`<tr><td class="ds-lb">매출 <button id="revAccordionToggle" style="font-size:10px;padding:2px 7px;margin-left:4px;border-radius:5px;border:1px solid var(--gray-200);background:var(--gray-100);color:var(--gray-600);font-weight:600;cursor:pointer;">매출 상세 ›</button></td><td class="ds-amt amt-blue">${fmt(totalRevenue)}</td><td class="ds-pc"></td></tr>`;
+    summHtml+='</table>';
+    summHtml+=`<div id="revAccordionBody" style="display:none;padding:12px 0 4px;"></div>`;
+    summHtml+='<table class="summ-tbl">';
     summHtml+=`<tr><td class="ds-lb">지출 <button id="expAccordionToggle" style="font-size:10px;padding:2px 7px;margin-left:4px;border-radius:5px;border:1px solid var(--gray-200);background:var(--gray-100);color:var(--gray-600);font-weight:600;cursor:pointer;">지출 상세 ›</button></td><td class="ds-amt amt-red">${fmt(totalCostFull)}</td><td class="ds-pc">${pctR(totalCostFull)}</td></tr>`;
     summHtml+='</table>';
     summHtml+=`<div id="expAccordionBody" style="display:none;padding:12px 0 4px;"></div>`;
@@ -3702,6 +3705,63 @@ async function loadDashboard(){
         const open=accBody.style.display!=='none';
         accBody.style.display=open?'none':'block';
         accToggle.textContent=open?'지출 상세 ›':'접기 ▲';
+      };
+    }
+
+    // ══ A-1b. 매출 상세 아코디언 (도넛차트 + 결제수단 테이블) ══
+    const revBody=document.getElementById('revAccordionBody');
+    if(revBody){
+      const revColors={'신용카드':'#0050FF','카드':'#0050FF','현금':'#05C072','현금영수증':'#10B981','기타결제':'#FF9500','기타':'#FF9500','뽑기(대형)':'#7C3AED','뽑기(소형)':'#A78BFA'};
+      const revOrder=['신용카드','카드','현금','현금영수증','기타결제','기타','뽑기(대형)','뽑기(소형)'];
+      const revDonutLabels=[],revDonutData=[],revDonutColors=[];
+      let revListHtml='<table style="width:100%;border-collapse:collapse;">';
+      // salesBreakdown에서 0 초과 항목만
+      const revEntries=[];
+      revOrder.forEach(k=>{if(salesBreakdown[k]&&salesBreakdown[k]>0) revEntries.push([k,salesBreakdown[k]]);});
+      Object.entries(salesBreakdown).forEach(([k,v])=>{if(!revOrder.includes(k)&&v>0) revEntries.push([k,v]);});
+      const pctRev=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1):'0';
+      revEntries.forEach(([k,v])=>{
+        const color=revColors[k]||'#4E5968';
+        revDonutLabels.push(k);revDonutData.push(v);revDonutColors.push(color);
+        revListHtml+=`<tr>
+          <td style="padding:3px 0;white-space:nowrap;text-align:left;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${color};margin-right:4px;vertical-align:middle;"></span><span style="font-size:11px;font-weight:600;color:var(--gray-600);">${k}</span></td>
+          <td style="padding:3px 0;text-align:right;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;">${fmt(v)}</td>
+          <td style="padding:3px 0;text-align:right;font-size:10px;font-weight:600;color:var(--gray-400);width:40px;">${pctRev(v)}%</td>
+        </tr>`;
+      });
+      // 일평균 + 영업일수
+      const avgDaily=receiptCount>0?Math.round(totalRevenue/receiptCount):0;
+      revListHtml+=`<tr><td colspan="3" style="border-top:1px solid var(--gray-200);padding-top:6px;margin-top:4px;"></td></tr>`;
+      revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;">일평균</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;">${fmt(avgDaily)}</td><td></td></tr>`;
+      revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;">영업일수</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;">${receiptCount}일</td><td></td></tr>`;
+      revListHtml+='</table>';
+
+      revBody.innerHTML=`<div style="display:flex;gap:14px;align-items:center;">
+        <div style="width:120px;height:120px;flex-shrink:0;position:relative;">
+          <canvas id="revDonutChart" width="120" height="120"></canvas>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+            <div style="font-size:10px;color:var(--gray-400);font-weight:600;">매출</div>
+            <div style="font-size:11px;font-weight:800;color:var(--blue);">${receiptCount}일</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0;">${revListHtml}</div>
+      </div>`;
+      destroyChart('revDonutChart');
+      if(revDonutData.length){
+        chartInstances.revDonutChart=new Chart(document.getElementById('revDonutChart'),{
+          type:'doughnut',
+          data:{labels:revDonutLabels,datasets:[{data:revDonutData,backgroundColor:revDonutColors,borderWidth:0}]},
+          options:{responsive:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:item=>item.label+' '+fmt(item.raw)+' ('+pctRev(item.raw)+'%)'}}}}
+        });
+      }
+    }
+    // 매출 상세 토글
+    const revToggle=document.getElementById('revAccordionToggle');
+    if(revToggle){
+      revToggle.onclick=()=>{
+        const open=revBody.style.display!=='none';
+        revBody.style.display=open?'none':'block';
+        revToggle.textContent=open?'매출 상세 ›':'접기 ▲';
       };
     }
 
