@@ -282,6 +282,24 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dt-day-cats .dc-val{font-weight:700;color:var(--text);}
 .dt-day-cats .dc-pct{font-weight:700;}
 
+/* ─ 풀스크린 피벗 테이블 */
+.pivot-tbl{border-collapse:collapse;width:100%;font-size:11px;}
+.pivot-tbl th{position:sticky;left:0;background:var(--white);z-index:2;text-align:left;font-size:11px;font-weight:700;color:var(--gray-600);padding:8px 10px;border-bottom:1px solid var(--gray-200);white-space:nowrap;min-width:70px;}
+.pivot-tbl th.pt-corner{z-index:3;}
+.pivot-tbl td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--gray-100);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:68px;}
+.pivot-tbl thead th{position:sticky;top:0;background:var(--gray-100);z-index:2;text-align:center;font-weight:800;color:var(--text);padding:10px 6px;border-bottom:2px solid var(--gray-200);}
+.pivot-tbl thead th:first-child{z-index:4;left:0;}
+.pivot-tbl .pt-row-label{position:sticky;left:0;background:var(--white);z-index:2;text-align:left;padding:8px 10px;font-weight:700;white-space:nowrap;}
+.pivot-tbl tr.pt-cat-row .pt-row-label{padding-left:20px;font-weight:600;color:var(--gray-600);}
+.pivot-tbl tr.pt-cat-row .pt-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+.pivot-tbl tr.pt-total td{border-top:2px solid var(--text);font-weight:800;}
+.pivot-tbl tr.pt-total .pt-row-label{font-weight:800;border-top:2px solid var(--text);}
+.pivot-tbl tr.pt-profit td{font-weight:900;font-size:12px;}
+.pivot-tbl .pv-pos{color:var(--success);}
+.pivot-tbl .pv-neg{color:var(--danger);}
+.pivot-tbl .pv-blue{color:var(--blue);}
+.pivot-tbl .pv-pct{font-size:9px;color:var(--gray-400);display:block;font-weight:600;}
+
 /* ─ 예비비 현황 */
 .reserve-balance-card{background:linear-gradient(135deg,#0050FF 0%,#3B82F6 100%);color:#fff;border-radius:16px;padding:20px;margin-bottom:14px;}
 .reserve-balance-card .rb-label{font-size:12px;opacity:0.8;margin-bottom:4px;}
@@ -874,10 +892,22 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
-    <!-- A-2. 일별 정산 테이블 -->
+    <!-- A-2. 일별 정산 -->
     <div class="card">
-      <div class="card-title">일별 정산</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="card-title" style="margin-bottom:0;">일별 정산</div>
+        <button class="btn btn-secondary btn-sm" id="openDailyDetailBtn" style="font-size:11px;padding:6px 12px;">상세 비교 ›</button>
+      </div>
       <div id="dashDailyTable"></div>
+    </div>
+
+    <!-- 풀스크린 일별 상세 모달 -->
+    <div id="dailyDetailModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:7000;overflow:hidden;">
+      <div style="position:sticky;top:0;background:var(--white);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-200);z-index:1;">
+        <span style="font-size:16px;font-weight:800;">일별 상세 비교</span>
+        <button class="btn btn-secondary btn-sm" id="closeDailyDetailBtn" style="font-size:12px;">닫기</button>
+      </div>
+      <div id="dailyDetailContent" style="overflow:auto;height:calc(100% - 50px);-webkit-overflow-scrolling:touch;"></div>
     </div>
 
     <!-- A-4. 월정산 상세 -->
@@ -3486,13 +3516,16 @@ async function loadDashboard(){
         });
 
         const profitCls=p>=0?'amt-green':'amt-red';
-        dayCardsHtml+=`<div class="dt-day-item">
+        dayCardsHtml+=`<div class="dt-day-item" style="cursor:pointer;">
           <div class="dt-day-top">
             <span class="dt-day-date">${mo}/${dayNum}</span>
             <span class="dt-day-profit ${profitCls}">${p>=0?'+':''}${fmt(p)}</span>
           </div>
-          <div class="dt-day-sales">매출 ${fmt(s)}</div>
-          <div class="dt-day-cats">${catDotsHtml}</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-400);font-weight:600;">
+            <span>매출 <b style="color:var(--blue);">${fmt(s)}</b></span>
+            <span>지출 <b style="color:var(--danger);">${fmt(e)}</b></span>
+          </div>
+          <div class="dt-day-cats" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid var(--gray-100);">${catDotsHtml}</div>
         </div>`;
       }
 
@@ -3527,6 +3560,9 @@ async function loadDashboard(){
     }
 
     document.getElementById('dashDailyTable').innerHTML=dailyHtml||'<div class="empty-state" style="padding:16px;"><p>정산 데이터가 없습니다</p></div>';
+
+    // 피벗 모달용 데이터 저장
+    _pivotData={days:allDays.filter(d=>parseInt(d)<=passedDays),salesMap:dailySalesMap,catMap:dailyCatMap,expMap:dailyExpTotal,catNames,catColors,shortNames,mo,royaltyRate,cardFeeRate};
 
     // ══ A-4. 월정산 상세 (토스 스타일) ══
     const groupMap={vendor_orders:'식자재',receipts:'식자재(직구/영수증)',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
@@ -4388,6 +4424,59 @@ function switchDashMode(mode){
   document.getElementById('dashModeFinal').className='btn btn-sm'+(mode==='final'?' btn-primary':'');
   document.getElementById('dashModeFinal').style.cssText='flex:1;font-size:12px;border-radius:10px;'+(mode==='final'?'':'background:transparent;color:var(--gray-600);');
   loadDashboard();
+}
+
+// ── 풀스크린 피벗 테이블 렌더 ──
+let _pivotData=null; // loadDashboard에서 저장
+function openDailyDetail(){
+  if(!_pivotData) return;
+  const{days,salesMap,catMap,expMap,catNames,catColors,shortNames,mo,royaltyRate,cardFeeRate}=_pivotData;
+  if(!days.length){document.getElementById('dailyDetailContent').innerHTML='<div class="empty-state" style="padding:40px;"><p>데이터 없음</p></div>';return;}
+
+  // 피벗: 항목이 행, 날짜가 열
+  const cols=days.filter(d=>salesMap.hasOwnProperty(d));
+  if(!cols.length) return;
+
+  let html='<div style="overflow:auto;padding:0 8px 20px;"><table class="pivot-tbl"><thead><tr><th class="pt-corner">항목</th>';
+  cols.forEach(d=>{html+=`<th>${mo}/${parseInt(d)}</th>`;});
+  html+='</tr></thead><tbody>';
+
+  // 매출행
+  html+='<tr><td class="pt-row-label" style="font-weight:800;">매출</td>';
+  cols.forEach(d=>{const v=salesMap[d]||0;html+=`<td class="pv-blue">${fmt(v)}</td>`;});
+  html+='</tr>';
+
+  // 카테고리별 행
+  catNames.forEach(c=>{
+    const color=catColors[c]||'#4E5968';
+    html+=`<tr class="pt-cat-row"><td class="pt-row-label"><span class="pt-dot" style="background:${color};"></span>${shortNames[c]}</td>`;
+    cols.forEach(d=>{
+      const s=salesMap[d]||0;
+      const v=catMap[d]?.[c]||0;
+      const pct=s>0?((v/s)*100).toFixed(1):'0';
+      html+=`<td>${v?fmt(v):'-'}<span class="pv-pct">${v?pct+'%':''}</span></td>`;
+    });
+    html+='</tr>';
+  });
+
+  // 지출합계
+  html+='<tr class="pt-total"><td class="pt-row-label">지출합계</td>';
+  cols.forEach(d=>{const v=expMap[d]||0;const s=salesMap[d]||0;const pct=s>0?((v/s)*100).toFixed(1):'0';html+=`<td class="pv-neg">${fmt(v)}<span class="pv-pct">${pct}%</span></td>`;});
+  html+='</tr>';
+
+  // 순이익
+  html+='<tr class="pt-profit"><td class="pt-row-label" style="font-weight:900;">순이익</td>';
+  cols.forEach(d=>{const s=salesMap[d]||0;const e=expMap[d]||0;const p=s-e;html+=`<td class="${p>=0?'pv-pos':'pv-neg'}">${p>=0?'+':''}${fmt(p)}</td>`;});
+  html+='</tr>';
+
+  html+='</tbody></table></div>';
+  document.getElementById('dailyDetailContent').innerHTML=html;
+  document.getElementById('dailyDetailModal').style.display='block';
+  document.body.style.overflow='hidden';
+}
+function closeDailyDetail(){
+  document.getElementById('dailyDetailModal').style.display='none';
+  document.body.style.overflow='';
 }
 
 // ── 예비비 잔고 계산 (실시간) ──
@@ -6390,8 +6479,9 @@ document.addEventListener('DOMContentLoaded', async()=>{
     // 나머지는 로그인 후 백그라운드 로드
   }
 
-  // ─── 대시보드: 주차 접기/펼치기 (이벤트 위임) ───
+  // ─── 대시보드: 주차 접기/펼치기 + 일별 카테고리 펼침 ───
   document.getElementById('dashDailyTable').addEventListener('click',function(e){
+    // 주차 토글
     const wh=e.target.closest('.dt-week-header');
     if(wh){
       const wi=wh.dataset.week;
@@ -6402,6 +6492,13 @@ document.addEventListener('DOMContentLoaded', async()=>{
         const title=wh.querySelector('.wk-title');
         if(title) title.innerHTML=title.innerHTML.replace(/[▶▼]/,show?'▼':'▶');
       }
+      return;
+    }
+    // 일별 카드 터치 → 카테고리 펼침/접힘
+    const dayItem=e.target.closest('.dt-day-item');
+    if(dayItem){
+      const cats=dayItem.querySelector('.dt-day-cats');
+      if(cats) cats.style.display=cats.style.display==='none'?'flex':'none';
     }
   });
 
@@ -6414,6 +6511,8 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('dashModeProvisional').addEventListener('click',()=>switchDashMode('provisional'));
   document.getElementById('dashModeFinal').addEventListener('click',()=>switchDashMode('final'));
   document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>{closeSideMenu();nav('reserve');});
+  document.getElementById('openDailyDetailBtn').addEventListener('click',()=>openDailyDetail());
+  document.getElementById('closeDailyDetailBtn').addEventListener('click',()=>closeDailyDetail());
   document.getElementById('saveReserveSettingsBtn').addEventListener('click',()=>saveReserveSettings());
   document.getElementById('addReserveUsageBtn').addEventListener('click',()=>{
     document.getElementById('rvUsageDate').value=new Date().toISOString().slice(0,10);
