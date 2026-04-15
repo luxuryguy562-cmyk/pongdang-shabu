@@ -245,10 +245,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 /* ─ 대시보드 월요약 테이블 */
 .dash-summary-tbl{width:100%;border-collapse:collapse;font-size:13px;}
-.dash-summary-tbl th{font-size:11px;font-weight:700;color:var(--gray-400);text-align:right;padding:4px 6px;border-bottom:2px solid var(--gray-200);}
+.dash-summary-tbl th{font-size:11px;font-weight:700;color:var(--gray-400);text-align:right;padding:4px 6px;border-bottom:2px solid var(--gray-200);white-space:nowrap;}
 .dash-summary-tbl th:first-child{text-align:left;}
-.dash-summary-tbl td{padding:7px 6px;border-bottom:1px solid var(--gray-100);text-align:right;font-weight:700;font-variant-numeric:tabular-nums;}
-.dash-summary-tbl td:first-child{text-align:left;color:var(--gray-600);font-weight:600;font-size:12px;}
+.dash-summary-tbl td{padding:7px 6px;border-bottom:1px solid var(--gray-100);text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.dash-summary-tbl td:first-child{text-align:left;color:var(--gray-600);font-weight:600;font-size:12px;min-width:52px;}
 .dash-summary-tbl tr.row-total td{border-top:2px solid var(--text);font-weight:900;font-size:14px;}
 .dash-summary-tbl tr.row-highlight td{background:var(--blue-light);font-weight:900;}
 .dash-summary-tbl .amt-red{color:var(--danger);}
@@ -271,6 +271,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .daily-excel-tbl tr.dt-day .dt-fix{color:var(--gray-600);font-weight:600;}
 .daily-excel-tbl tr.row-neg .dt-fix{color:var(--danger);}
 .daily-excel-tbl .dt-wk-label{font-weight:800;color:var(--text);}
+/* 카테고리 배경색 */
+.daily-excel-tbl .cat-food{background:rgba(5,192,114,0.08);}
+.daily-excel-tbl .cat-receipt{background:rgba(16,185,129,0.08);}
+.daily-excel-tbl .cat-labor{background:rgba(0,80,255,0.08);}
+.daily-excel-tbl .cat-fixed{background:rgba(255,149,0,0.08);}
+.daily-excel-tbl .cat-royal{background:rgba(239,68,68,0.08);}
+.daily-excel-tbl th.cat-food{background:rgba(5,192,114,0.15);}
+.daily-excel-tbl th.cat-receipt{background:rgba(16,185,129,0.15);}
+.daily-excel-tbl th.cat-labor{background:rgba(0,80,255,0.15);}
+.daily-excel-tbl th.cat-fixed{background:rgba(255,149,0,0.15);}
+.daily-excel-tbl th.cat-royal{background:rgba(239,68,68,0.15);}
 
 /* ─ 예비비 현황 */
 .reserve-balance-card{background:linear-gradient(135deg,#0050FF 0%,#3B82F6 100%);color:#fff;border-radius:16px;padding:20px;margin-bottom:14px;}
@@ -3423,14 +3434,13 @@ async function loadDashboard(){
       dailyExpTotal[d]=dayExp;
     });
 
-    // 주차 구분 (월~일 기준)
+    // 주차 구분 (날짜 기준: 1~7=1주, 8~14=2주, 15~21=3주, 22~28=4주, 29~=5주)
     const weekGroups=[];
     let curWeek=[];
     allDays.forEach(d=>{
-      const dt=new Date(y,mo-1,parseInt(d));
-      const dow=dt.getDay(); // 0=일
       curWeek.push(d);
-      if(dow===0||d===allDays[allDays.length-1]){
+      const dayNum=parseInt(d);
+      if(dayNum%7===0||d===allDays[allDays.length-1]){
         weekGroups.push([...curWeek]);
         curWeek=[];
       }
@@ -3463,8 +3473,8 @@ async function loadDashboard(){
         const cls=!has?'':(p>=0?'row-pos':'row-neg');
         let cells=`<td class="dt-fix">${mo}/${dayNum}</td><td class="dt-sale">${has?fmt(s):'-'}</td>`;
         catNames.forEach(c=>{
-          const v=has?(dailyCatMap[d]?.[c]||0):0;
-          cells+=`<td>${has&&v?fmt(v):'-'}</td><td class="dt-pct">${has&&v&&s?pctS(v,s):''}${has&&v&&s?'%':''}</td>`;
+          const cc=catCls[c]||'';const v=has?(dailyCatMap[d]?.[c]||0):0;
+          cells+=`<td class="${cc}">${has&&v?fmt(v):'-'}</td><td class="dt-pct ${cc}">${has&&v&&s?pctS(v,s)+'%':''}</td>`;
         });
         cells+=`<td class="dt-tot">${has?fmt(e):'-'}</td><td class="dt-pct">${has&&s?pctS(e,s)+'%':''}</td>`;
         cells+=`<td class="dt-profit ${has?(p>=0?'amt-green':'amt-red'):''}">${has?fmt(p):'-'}</td><td class="dt-pct">${has&&s?pctS(p,s)+'%':''}</td>`;
@@ -3476,7 +3486,8 @@ async function loadDashboard(){
       // 주계행 (항상 보임)
       let wCells=`<td class="dt-fix dt-wk-label" data-week="${wi}" style="cursor:pointer;">${collapsed?'▶':'▼'} ${wi+1}주</td><td class="dt-sale">${fmt(wS)}</td>`;
       catNames.forEach(c=>{
-        wCells+=`<td>${wC[c]?fmt(wC[c]):'-'}</td><td class="dt-pct">${wC[c]&&wS?pctS(wC[c],wS)+'%':''}</td>`;
+        const cc=catCls[c]||'';
+        wCells+=`<td class="${cc}">${wC[c]?fmt(wC[c]):'-'}</td><td class="dt-pct ${cc}">${wC[c]&&wS?pctS(wC[c],wS)+'%':''}</td>`;
       });
       wCells+=`<td class="dt-tot">${fmt(wE)}</td><td class="dt-pct">${wS?pctS(wE,wS)+'%':''}</td>`;
       wCells+=`<td class="dt-profit ${wP>=0?'amt-green':'amt-red'}">${fmt(wP)}</td><td class="dt-pct">${wS?pctS(wP,wS)+'%':''}</td>`;
@@ -3485,10 +3496,12 @@ async function loadDashboard(){
       weekSummaries.push({week:wi+1,profit:wP,done:!isLastWeek});
     }
 
+    // 카테고리 색상 클래스 매핑
+    const catCls={'식자재':'cat-food','직구/영수증':'cat-receipt','인건비':'cat-labor','고정비':'cat-fixed','로열티/수수료':'cat-royal'};
     // 헤더
     let thHtml=`<th class="dt-fix">날짜</th><th>매출</th>`;
     const shortNames={'식자재':'식자재','직구/영수증':'직구','인건비':'인건비','고정비':'고정비','로열티/수수료':'로열티'};
-    catNames.forEach(c=>{thHtml+=`<th>${shortNames[c]||c}</th><th>%</th>`;});
+    catNames.forEach(c=>{const cc=catCls[c]||'';thHtml+=`<th class="${cc}">${shortNames[c]||c}</th><th class="${cc}">%</th>`;});
     thHtml+=`<th>지출계</th><th>%</th><th>순이익</th><th>%</th>`;
 
     document.getElementById('dashDailyTable').innerHTML=`
