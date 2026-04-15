@@ -82,3 +82,89 @@ DOMContentLoaded 안 순서:
 해결: 업로드 시 내용(content)만 description에 저장.
 기존 데이터: cleanDesc()로 적요 패턴 제거 후 표시.
 ```
+
+---
+
+## 10. auth_level과 is_manager 동기화
+`auth_level='staff'`인데 `is_manager=true`인 경우 권한이 무시됨.
+`completeLogin`에서 반드시 is_manager를 보조 체크해야 함.
+```
+authLevel = emp.auth_level || 'staff';
+if(authLevel === 'staff' && emp.is_manager) authLevel = 'store_manager';
+```
+
+---
+
+## 11. 권한 변경은 반드시 UI에서
+SQL 하드코딩으로 auth_level 설정하면 불일치 발생.
+직원 편집 시트의 권한 드롭박스 → saveEmployee에서 auth_level + is_manager 동시 저장.
+owner만 최초 1회 SQL 설정, 나머지는 앱에서.
+
+---
+
+## 12. 로그아웃 시 화면 초기화 필수
+`doLogout()`에서 `closeAllSheets()` + 모든 컨테이너 리셋 + `applyPermissionUI()` 필수.
+안 하면 이전 세션 화면이 그대로 남아서 권한 없는 사용자가 관리 화면 접근 가능.
+
+---
+
+## 13. 첫 방문 시 매장 선택 버튼
+`currentStore`가 null이면 매장 선택 버튼 항상 표시.
+`pd_auth_level` localStorage만으로 판단하면 첫 방문자가 매장 선택 불가.
+
+---
+
+## 14. 시간 표시는 24시간 형식
+`toLocaleTimeString('ko')` 기본값은 "오후 04:16" (12시간). 모바일에서 공간 낭비.
+```
+❌ toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})  → "오후 04:16"
+✅ toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false})  → "16:16"
+```
+
+---
+
+## 15. 횡스크롤 금지 — 한 화면에 표시
+모바일 테이블에 `min-width`, `overflow-x:auto` 사용 금지.
+`table-layout:fixed` + `colgroup`으로 칼럼 비율 고정.
+
+---
+
+## 16. 탭 전환 시 상태 초기화
+다른 탭 갔다가 돌아오면 이전 상태(스크롤, 서브탭, 입력값)가 남아있음.
+`nav()` 함수에서: `window.scrollTo(0,0)` + 첫 번째 서브탭 자동 선택 + 입력폼 리셋.
+
+---
+
+## 19. 모바일 다수 컬럼 문제 → 카드 요약 + 풀스크린 모달
+모바일에서 엑셀처럼 다수 컬럼을 한 테이블에 넣으면 횡스크롤 or 글자 깨짐.
+해결: 평소에는 토스 스타일 카드 요약(매출/지출/순이익), 상세 비교가 필요할 때
+풀스크린 모달에서 피벗 테이블(항목=행, 날짜=열) 제공.
+토스 스타일: 격자선 없음, 여백과 색상(컬러도트)으로 구분, 카드형.
+
+---
+
+## 18. 대시보드는 비율(%)이 생명
+대시보드 수치에는 반드시 매출 대비 비율(%)을 함께 표시.
+고정 금액만 보여주면 "많다/적다" 판단 불가.
+비율이 있어야 "식자재 30% → 줄여야겠네" 같은 의사결정 가능.
+월요약, 일별 카테고리, 주계 모두 비율 필수.
+
+---
+
+## 20. CSS rotate로 모바일 가로 전환 시 주의
+`transform:rotate(90deg)` + `transform-origin:top left` + `left:vw px`.
+CSS 클래스로 하면 vw/vh 단위가 부정확 → JS로 `window.innerWidth/Height` 직접 읽어서 px 설정.
+풀스크린 모달은 body 직하위에 배치 (컨테이너 안에 넣으면 transform 좌표 꼬임).
+
+---
+
+## 21. 일별정산 catNames 하드코딩 문제 ✅ 해결됨
+~~현재 `['식자재','직구/영수증','인건비','고정비','로열티/수수료']` 고정.~~
+→ 2026-04-15 해결: expense_categories의 data_source 기반으로 동적 생성.
+`srcToCat` 매핑으로 vendor_orders→카테고리명 자동 연결.
+
+---
+
+## 17. HTML 요소 제거 후 JS 참조 확인
+HTML에서 `empBirthInput` 제거 → JS의 `autoFormatDate(empBirthInput)` 에서 null 에러.
+요소 ID 변경/삭제 시 JS에서 해당 ID 참조하는 곳 전부 grep 확인 필수.

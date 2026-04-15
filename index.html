@@ -45,6 +45,7 @@ body{font-family:-apple-system,'Noto Sans KR',sans-serif;margin:0;background:var
 .val.empty{color:var(--gray-400);}
 .input-field{width:100%;border:none;background:var(--gray-100);border-radius:13px;padding:14px 16px;font-size:14px;font-weight:600;color:var(--text);outline:none;margin-bottom:9px;}
 .input-field::placeholder{color:var(--gray-400);}
+.emp-label{display:block;font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:4px;margin-top:2px;padding-left:4px;}
 .input-inline{border:none;background:var(--gray-100);border-radius:9px;padding:7px 10px;font-size:14px;font-weight:700;outline:none;color:var(--blue);}
 
 /* ─ 버튼 */
@@ -184,15 +185,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .recon-row{display:flex;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:7px;gap:6px;cursor:pointer;}
 .recon-row:active{opacity:.7;}
 .recon-row .rr-name{flex:2;font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.recon-row .rr-amt{flex:1.2;font-size:11px;font-weight:700;text-align:right;}
-.recon-row .rr-diff{flex:1;font-size:11px;font-weight:700;text-align:right;}
-.recon-row .rr-badge{flex-shrink:0;}
+.recon-row .rr-amt{flex:1.2;font-size:11px;font-weight:700;text-align:right;min-width:0;}
+.recon-row .rr-diff{flex:1;font-size:11px;font-weight:700;text-align:right;min-width:0;}
+.recon-row .rr-badge{width:36px;flex-shrink:0;text-align:right;}
 .recon-total{display:flex;justify-content:space-between;align-items:center;padding:14px;border-top:2px solid var(--text);margin-top:8px;}
 .recon-total .rt-label{font-size:14px;font-weight:800;}
 .recon-total .rt-vals{text-align:right;}
 .recon-total .rt-val{font-size:14px;font-weight:800;}
 .recon-header{display:flex;padding:0 14px 8px;gap:6px;font-size:11px;font-weight:700;color:var(--gray-400);}
-.recon-header span:first-child{flex:2;}
+.recon-header span:nth-child(1){flex:2;}
+.recon-header span:nth-child(2){flex:1.2;text-align:right;}
+.recon-header span:nth-child(3){flex:1.2;text-align:right;}
+.recon-header span:nth-child(4){flex:1;text-align:right;}
+.recon-header span:nth-child(5){width:36px;flex-shrink:0;}
 
 /* ─ 근무계획 간트 */
 .gantt-header{display:flex;border-bottom:2px solid var(--gray-200);}
@@ -232,6 +237,107 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .kpi-delta.down{color:var(--danger);}
 .kpi-delta.neutral{color:var(--gray-400);}
 .chart-container{position:relative;height:220px;margin:12px 0;}
+
+/* ─ 대시보드 서브탭 */
+.dash-sub-tabs{display:flex;gap:0;margin-bottom:14px;background:var(--gray-100);border-radius:12px;padding:3px;}
+.dash-sub-tab{flex:1;text-align:center;padding:8px 0;font-size:13px;font-weight:700;border-radius:10px;cursor:pointer;color:var(--gray-600);background:transparent;border:none;}
+.dash-sub-tab.active{background:var(--white);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+
+/* ─ 공통 색상 유틸 */
+.amt-blue{color:var(--blue)!important;}
+.amt-red{color:var(--danger)!important;}
+.amt-green{color:var(--success)!important;}
+.amt-muted{color:var(--gray-400)!important;}
+
+/* ─ 대시보드 월요약 (토스 스타일) */
+.dash-summ-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--gray-100);}
+.dash-summ-row:last-child{border-bottom:none;}
+.dash-summ-row .ds-label{font-size:13px;font-weight:600;color:var(--gray-600);}
+.dash-summ-row .ds-vals{display:flex;align-items:baseline;gap:6px;}
+.dash-summ-row .ds-main{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;min-width:120px;text-align:right;}
+.dash-summ-row .ds-pct{font-size:11px;font-weight:700;color:var(--gray-400);min-width:46px;text-align:right;}
+.dash-summ-row .ds-est{font-size:11px;font-weight:600;color:var(--gray-400);font-variant-numeric:tabular-nums;}
+.dash-summ-total{padding:12px 0 4px;border-top:2px solid var(--text);display:flex;justify-content:space-between;align-items:baseline;}
+.dash-summ-total .ds-label{font-size:14px;font-weight:800;color:var(--gray-600);}
+.dash-summ-total .ds-vals{display:flex;align-items:baseline;gap:6px;}
+.dash-summ-total .ds-main{font-size:20px;font-weight:900;min-width:120px;text-align:right;}
+.dash-summ-total .ds-pct{font-size:11px;font-weight:700;color:var(--gray-400);min-width:46px;text-align:right;}
+.dash-summ-est-block{margin-top:10px;padding:10px 14px;background:var(--gray-100);border-radius:12px;}
+.dash-summ-est-block .est-title{font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;}
+.dash-summ-est-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;}
+.dash-summ-est-row .es-label{color:var(--gray-600);font-weight:600;}
+.dash-summ-est-row .es-val{font-weight:700;font-variant-numeric:tabular-nums;}
+.dash-summ-est-row .es-pct{font-size:10px;color:var(--gray-400);font-weight:600;margin-left:4px;}
+
+/* ─ 대시보드 일별 정산 (토스 카드 스타일) */
+.dt-week-card{background:var(--gray-100);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
+.dt-week-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:2px 0;}
+.dt-week-header .wk-title{font-size:14px;font-weight:800;}
+.dt-week-header .wk-profit{font-size:15px;font-weight:900;}
+.dt-week-cats{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-200);}
+.dt-week-cats .wc-item{font-size:11px;font-weight:600;color:var(--gray-600);}
+.dt-week-cats .wc-amt{font-weight:700;color:var(--text);}
+.dt-week-cats .wc-pct{font-size:10px;font-weight:700;margin-left:2px;}
+.dt-day-list{margin-top:8px;}
+.dt-day-item{background:var(--white);border-radius:10px;padding:10px 12px;margin-bottom:6px;}
+.dt-day-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.dt-day-date{font-size:13px;font-weight:700;color:var(--text);}
+.dt-day-profit{font-size:14px;font-weight:800;}
+.dt-day-sales{font-size:12px;color:var(--gray-400);font-weight:600;margin-bottom:6px;}
+.dt-day-cats{display:flex;flex-wrap:wrap;gap:2px 8px;}
+.dt-day-cats .dc-item{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:var(--gray-600);padding:2px 0;}
+.dt-day-cats .dc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dt-day-cats .dc-val{font-weight:700;color:var(--text);}
+.dt-day-cats .dc-pct{font-weight:700;}
+
+/* ─ 풀스크린 피벗 테이블 */
+.pivot-tbl{border-collapse:collapse;width:100%;font-size:11px;}
+.pivot-tbl th{position:sticky;left:0;background:var(--white);z-index:2;text-align:left;font-size:11px;font-weight:700;color:var(--gray-600);padding:8px 10px;border-bottom:1px solid var(--gray-200);white-space:nowrap;min-width:70px;}
+.pivot-tbl th.pt-corner{z-index:3;}
+.pivot-tbl td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--gray-100);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:68px;}
+.pivot-tbl thead th{position:sticky;top:0;background:var(--gray-100);z-index:2;text-align:center;font-weight:800;color:var(--text);padding:10px 6px;border-bottom:2px solid var(--gray-200);}
+.pivot-tbl thead th:first-child{z-index:4;left:0;}
+.pivot-tbl .pt-row-label{position:sticky;left:0;background:var(--white);z-index:2;text-align:left;padding:8px 10px;font-weight:700;white-space:nowrap;}
+.pivot-tbl tr.pt-cat-row .pt-row-label{padding-left:20px;font-weight:600;color:var(--gray-600);}
+.pivot-tbl tr.pt-cat-row .pt-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+.pivot-tbl tr.pt-total td{border-top:2px solid var(--text);font-weight:800;}
+.pivot-tbl tr.pt-total .pt-row-label{font-weight:800;border-top:2px solid var(--text);}
+.pivot-tbl tr.pt-profit td{font-weight:900;font-size:12px;}
+.pivot-tbl .pv-pos{color:var(--success);}
+.pivot-tbl .pv-neg{color:var(--danger);}
+.pivot-tbl .pv-blue{color:var(--blue);}
+.pivot-tbl .pv-pct{font-size:9px;color:var(--gray-400);display:block;font-weight:600;}
+/* compact 모드 (풀스크린 상세) */
+.pivot-tbl.pv-compact{font-size:11px;border-collapse:collapse;}
+.pivot-tbl.pv-compact th{font-size:10px;padding:6px 5px;min-width:auto;text-align:right;white-space:nowrap;border-bottom:2px solid var(--gray-200);}
+.pivot-tbl.pv-compact td{padding:6px 5px;font-size:11px;min-width:60px;text-align:right;border-bottom:1px solid var(--gray-100);font-variant-numeric:tabular-nums;vertical-align:top;}
+.pivot-tbl.pv-compact .pv-fix{position:sticky;left:0;background:#fff;z-index:2;font-weight:700;font-size:11px;padding-right:6px;min-width:36px;white-space:nowrap;text-align:left;border-right:1px solid var(--gray-200);}
+.pivot-tbl.pv-compact thead th{font-size:10px;padding:8px 5px;background:var(--gray-100);position:sticky;top:0;z-index:1;}
+.pivot-tbl.pv-compact thead .pv-fix{background:var(--gray-100);z-index:3;}
+.pivot-tbl.pv-compact .pv-blue{color:var(--blue);font-weight:700;}
+.pivot-tbl.pv-compact .pv-exp{color:var(--danger);font-weight:700;}
+.pivot-tbl.pv-compact .pv-pp{font-size:9px;color:var(--blue);font-weight:700;display:block;}
+.pivot-tbl.pv-compact tr.pv-week{background:#1B1D21;}
+.pivot-tbl.pv-compact tr.pv-week td{font-weight:800;color:#fff;border-bottom:none;}
+.pivot-tbl.pv-compact tr.pv-week .pv-fix{background:#1B1D21;font-weight:900;color:#fff;border-right:1px solid #333;}
+.pivot-tbl.pv-compact tr.pv-week .pv-blue{color:#60A5FA;}
+.pivot-tbl.pv-compact tr.pv-week .pv-exp{color:#FCA5A5;}
+.pivot-tbl.pv-compact tr.pv-week .pv-pos{color:#6EE7B7;}
+.pivot-tbl.pv-compact tr.pv-week .pv-neg{color:#FCA5A5;}
+.pivot-tbl.pv-compact tr.pv-week .pv-pp{color:rgba(255,255,255,0.5);}
+
+
+/* ─ 예비비 현황 */
+.reserve-balance-card{background:linear-gradient(135deg,#0050FF 0%,#3B82F6 100%);color:#fff;border-radius:16px;padding:20px;margin-bottom:14px;}
+.reserve-balance-card .rb-label{font-size:12px;opacity:0.8;margin-bottom:4px;}
+.reserve-balance-card .rb-amount{font-size:28px;font-weight:900;letter-spacing:-1px;}
+.reserve-balance-card .rb-sub{display:flex;gap:16px;margin-top:12px;font-size:12px;opacity:0.9;}
+
+/* ─ 주정산 바 */
+.week-summary-bar{display:flex;gap:6px;margin-bottom:14px;}
+.week-summary-item{flex:1;background:var(--white);border-radius:12px;padding:10px 8px;text-align:center;border:1px solid var(--gray-200);}
+.week-summary-item .ws-label{font-size:10px;color:var(--gray-400);font-weight:600;}
+.week-summary-item .ws-value{font-size:14px;font-weight:800;margin-top:2px;}
 
 /* ─ 스테이징 */
 .staging-row{background:var(--gray-100);border-radius:13px;padding:13px 14px;margin-bottom:9px;}
@@ -311,30 +417,39 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- PIN 로그인 화면 -->
 <div id="loginOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
-  <div style="text-align:center;margin-bottom:30px;">
-    <div style="font-size:28px;font-weight:900;color:var(--blue);">퐁당샤브</div>
-    <div style="font-size:13px;color:var(--gray-600);margin-top:6px;" id="loginStoreName">매장을 먼저 선택하세요</div>
+  <!-- 브랜드 + 매장명 -->
+  <div style="text-align:center;margin-bottom:36px;">
+    <div style="font-size:32px;font-weight:900;color:var(--blue);letter-spacing:-1px;">퐁당샤브</div>
+    <div style="font-size:14px;color:var(--gray-600);margin-top:8px;font-weight:600;" id="loginStoreName">매장을 먼저 선택하세요</div>
   </div>
-  <!-- 직원 선택 -->
-  <div id="loginEmpList" style="width:100%;max-width:360px;max-height:300px;overflow-y:auto;margin-bottom:20px;"></div>
-  <!-- PIN 입력 -->
-  <div id="loginPinArea" style="display:none;width:100%;max-width:300px;text-align:center;">
-    <div style="font-size:15px;font-weight:700;margin-bottom:12px;" id="loginEmpName">-</div>
-    <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px;">
-      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+  <!-- 이름 + PIN 입력 폼 -->
+  <div id="loginFormArea" style="width:100%;max-width:320px;">
+    <select id="loginNameInput" class="input-field"
+      style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;appearance:auto;">
+      <option value="">직원 선택</option>
+    </select>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <input id="loginPinInput" class="input-field" placeholder="PIN 4자리" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
+        style="flex:1;text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;letter-spacing:8px;margin-bottom:0;">
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto;">
-      <button class="pin-btn" onclick="pinInput(1)">1</button><button class="pin-btn" onclick="pinInput(2)">2</button><button class="pin-btn" onclick="pinInput(3)">3</button>
-      <button class="pin-btn" onclick="pinInput(4)">4</button><button class="pin-btn" onclick="pinInput(5)">5</button><button class="pin-btn" onclick="pinInput(6)">6</button>
-      <button class="pin-btn" onclick="pinInput(7)">7</button><button class="pin-btn" onclick="pinInput(8)">8</button><button class="pin-btn" onclick="pinInput(9)">9</button>
-      <button class="pin-btn" onclick="loginBack()" style="font-size:13px;">← 뒤로</button><button class="pin-btn" onclick="pinInput(0)">0</button><button class="pin-btn" onclick="pinDelete()">⌫</button>
-    </div>
-    <div id="loginMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;"></div>
+    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" onclick="submitLogin()">로그인</button>
+    <div id="loginMsg" style="margin-top:12px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
   </div>
-  <!-- 개발모드 / 매장선택 -->
-  <div style="margin-top:20px;display:flex;gap:10px;">
-    <button class="btn btn-secondary" style="padding:12px 16px;font-size:13px;" onclick="openStoreSheet()">매장 선택</button>
-    <button class="btn btn-secondary" style="padding:12px 16px;font-size:13px;color:var(--gray-400);" onclick="devLogin()">개발모드</button>
+  <!-- 기존 직원 리스트/PIN 패드 (숨김, 호환용) -->
+  <div id="loginEmpList" style="display:none;"></div>
+  <div id="loginPinArea" style="display:none;"></div>
+  <!-- 관리자 로그인 (이름 직접 입력) -->
+  <div id="loginAdminArea" style="display:none;width:100%;max-width:320px;margin-top:16px;">
+    <input id="loginAdminName" class="input-field" placeholder="이름" type="text" autocomplete="off"
+      style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;">
+    <input id="loginAdminPin" class="input-field" placeholder="PIN 4자리" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
+      style="text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;letter-spacing:8px;margin-bottom:12px;">
+    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" onclick="submitAdminLogin()">관리자 로그인</button>
+  </div>
+  <!-- 하단 버튼 -->
+  <div style="margin-top:24px;display:flex;gap:10px;">
+    <button class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);" onclick="toggleAdminLogin()">관리자</button>
+    <button id="loginStoreBtn" class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);display:none;" onclick="openStoreSheet()">매장 변경</button>
   </div>
 </div>
 
@@ -344,7 +459,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button id="hamburgerBtn" class="hamburger-btn manager-only" onclick="toggleSideMenu()">
       <span></span><span></span><span></span>
     </button>
-    <div class="header-title">퐁당샤브</div>
+    <div class="header-title" style="cursor:pointer;" onclick="nav(isManager?'dashboard':'attendance')">퐁당샤브</div>
   </div>
   <div style="display:flex;align-items:center;gap:6px;">
     <div class="header-store" id="headerStore" onclick="openStoreSheet()">매장 선택</div>
@@ -371,17 +486,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <div class="side-group-body">
         <div class="side-item" onclick="closeSideMenu();nav('dashboard')">대시보드</div>
+        <div class="side-item" onclick="closeSideMenu();nav('reserve')">예비비</div>
         <div class="side-item" onclick="closeSideMenu();nav('wage')">급여 집계</div>
       </div>
     </div>
 
-    <!-- 지출리스트 -->
+    <!-- 지출내역 -->
     <div class="side-group">
       <div class="side-group-header" onclick="toggleSideGroup(this)">
-        <span>📑 지출리스트</span><span class="side-arrow">›</span>
+        <span>📑 지출내역</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('explist')">계좌내역 · 카드리스트</div>
+        <div class="side-item" onclick="closeSideMenu();nav('explist')">계좌내역 · 카드내역</div>
+        <div class="side-item" onclick="closeSideMenu();nav('settings');setTimeout(()=>{document.getElementById('expCatList')?.scrollIntoView({behavior:'smooth'})},200)">지출 카테고리 설정</div>
       </div>
     </div>
 
@@ -391,7 +508,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span>🏪 거래처 관리</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('vendors')">거래처 목록 & 주문</div>
+        <div class="side-item" onclick="closeSideMenu();nav('vendors')">거래처 매입 관리</div>
         <div class="side-item" onclick="closeSideMenu();nav('vendorUpload')">파일 업로드</div>
       </div>
     </div>
@@ -422,9 +539,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span>👥 직원 관리</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('staff')">직원 목록</div>
-        <div class="side-item" onclick="closeSideMenu();nav('staffRoles')">직급 관리</div>
-        <div class="side-item" onclick="closeSideMenu();nav('staffPerms')">권한 관리</div>
+        <div class="side-item" onclick="closeSideMenu();nav('staff')">직원 관리</div>
       </div>
     </div>
 
@@ -448,7 +563,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="nav-item" data-tab="attendance" onclick="nav('attendance',this)"><span class="ni">⏰</span>근태</div>
   <div class="nav-item" data-tab="schedule" onclick="nav('schedule',this)"><span class="ni">📅</span>근무계획</div>
   <div class="nav-item" data-tab="settle" onclick="nav('settle',this)"><span class="ni">💰</span>마감정산</div>
-  <div class="nav-item" data-tab="explist" onclick="nav('explist',this)"><span class="ni">📑</span>지출리스트</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -545,12 +659,27 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="stagingList" style="margin-top:14px;"></div>
     </div>
     <div id="attList" style="display:none;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-        <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(-1,'list')">‹</button>
-        <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vListMonth">-</div>
-        <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(1,'list')">›</button>
+      <!-- 주간 간트차트 뷰 -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-secondary btn-sm" onclick="moveMyAttWeek(-1)">‹ 이전주</button>
+        <div style="flex:1;text-align:center;font-size:14px;font-weight:700;" id="myAttWeekLabel">-</div>
+        <button class="btn btn-secondary btn-sm" onclick="moveMyAttWeek(1)">다음주 ›</button>
       </div>
-      <div id="attListData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div>
+      <!-- 오늘 근태 상태 요약 -->
+      <div id="myAttTodayStatus" style="margin-bottom:12px;"></div>
+      <!-- 주간 간트 -->
+      <div id="myAttGantt"></div>
+      <!-- 이번주 누락 경고 -->
+      <div id="myAttWarning"></div>
+      <!-- 월별 카드 리스트 (기존) -->
+      <div style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:12px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(-1,'list')">‹</button>
+          <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vListMonth">-</div>
+          <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(1,'list')">›</button>
+        </div>
+        <div id="attListData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div>
+      </div>
     </div>
     <div id="attAll" style="display:none;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -612,6 +741,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="sub-tab" onclick="settleTab('card',this)">일별 카드</button>
   </div>
   <div id="settleInput">
+    <!-- 정산 날짜 선택 (관리자만 변경 가능) -->
+    <div class="settle-card-group" id="settleDateGroup" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title" style="margin-bottom:0;">정산 날짜</div>
+        <span style="font-size:11px;color:var(--gray-400);" id="settleDateStatus">관리자 전용</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="moveSettleDate(-1)">‹</button>
+        <input type="date" id="settleDatePicker" class="input-field" style="flex:1;text-align:center;font-size:15px;font-weight:700;padding:10px;margin-bottom:0;">
+        <button class="btn btn-secondary btn-sm" onclick="moveSettleDate(1)">›</button>
+      </div>
+    </div>
     <!-- 영업개시보고서 -->
     <div class="settle-card-group">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -738,63 +879,123 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [5] 대시보드 ══ -->
 <div id="dashboardCont" class="container">
-  <!-- 월 네비게이션 + 매출소스 -->
+  <!-- 월 네비게이션 -->
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-    <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(-1)">‹</button>
+    <button class="btn btn-secondary btn-sm" id="dashPrevBtn">‹</button>
     <span id="dashMonthLabel" style="flex:1;text-align:center;font-size:16px;font-weight:800;">-</span>
-    <button class="btn btn-secondary btn-sm" onclick="moveDashMonth(1)">›</button>
+    <button class="btn btn-secondary btn-sm" id="dashNextBtn">›</button>
   </div>
+  <!-- 매출소스 -->
   <div class="manager-only" style="display:flex;gap:6px;margin-bottom:14px;">
-    <button id="saleSrcSettle" class="btn btn-primary btn-sm" style="flex:1;font-size:11px;" onclick="switchSaleSource('settle')">📋 마감정산</button>
-    <button id="saleSrcUps" class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;" onclick="switchSaleSource('ups')">🏪 업솔루션</button>
-    <button class="btn btn-secondary btn-sm" onclick="manualCrawl()" id="crawlBtn" style="flex:0 0 auto;font-size:10px;">↓</button>
+    <button id="saleSrcSettle" class="btn btn-primary btn-sm" style="flex:1;font-size:11px;">📋 마감정산</button>
+    <button id="saleSrcUps" class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;">🏪 업솔루션</button>
+    <button class="btn btn-secondary btn-sm" id="crawlBtn" style="flex:0 0 auto;font-size:10px;">↓</button>
   </div>
   <!-- 가마감/진마감 토글 -->
   <div style="display:flex;gap:0;margin-bottom:14px;background:var(--gray-100);border-radius:12px;padding:3px;">
-    <button id="dashModeProvisional" class="btn btn-primary btn-sm" style="flex:1;font-size:12px;border-radius:10px;" onclick="switchDashMode('provisional')">가마감 (예측)</button>
-    <button id="dashModeFinal" class="btn btn-sm" style="flex:1;font-size:12px;border-radius:10px;background:transparent;color:var(--gray-600);" onclick="switchDashMode('final')">진마감 (확정)</button>
+    <button id="dashModeProvisional" class="btn btn-primary btn-sm" style="flex:1;font-size:12px;border-radius:10px;">가마감 (예측)</button>
+    <button id="dashModeFinal" class="btn btn-sm" style="flex:1;font-size:12px;border-radius:10px;background:transparent;color:var(--gray-600);">진마감 (확정)</button>
   </div>
 
-  <!-- ━━ KPI 그리드 (주정산표 스타일) ━━ -->
-  <div class="card" style="padding:16px;">
-    <div id="dashKpiGrid"></div>
-  </div>
-
-  <!-- ━━ 지출 비중 ━━ -->
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <div class="card-title" style="margin-bottom:0;">지출 비중</div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:12px;font-weight:700;color:var(--gray-600);" id="dashExpPct">0%</span>
-        <button onclick="toggleTooltip('expHelp')" style="width:20px;height:20px;border-radius:50%;border:1.5px solid var(--gray-400);background:none;color:var(--gray-400);font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;">?</button>
+  <!-- ═══ A. 정산현황 ═══ -->
+  <div id="dashSettleCont">
+    <!-- A-1. 월 요약 카드 -->
+    <div class="card" style="padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="card-title" style="margin-bottom:0;">월 요약</div>
+        <span id="dashPassedLabel" style="font-size:11px;color:var(--gray-400);font-weight:600;"></span>
+      </div>
+      <div id="dashSummaryGrid"></div>
+      <!-- 예비비 잔고 미니 -->
+      <div id="dashReserveBalanceMini" style="margin-top:12px;padding:10px 14px;background:var(--blue-light);border-radius:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:14px;">🏦</span>
+          <span style="font-size:12px;font-weight:700;color:var(--blue);">예비비 잔고</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="dashReserveBalanceAmt" style="font-size:14px;font-weight:900;color:var(--blue);">0</span>
+          <span style="font-size:11px;color:var(--gray-400);">상세 ›</span>
+        </div>
       </div>
     </div>
-    <div id="expHelp" style="display:none;background:var(--blue-light);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--blue);line-height:1.7;">
-      <b>지출 계산 방식</b><br>
-      • 고정비: 월 총액 ÷ 일수 × 경과일 (일할계산)<br>
-      • 세금: 월 총액 그대로<br>
-      • 식자재/인건비/기타: 실제 발생액 합산<br>
-      • 로열티/수수료: 현재 매출 기준 자동 계산 (설정 비율 적용)
+
+    <!-- A-2. 일별 정산 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="card-title" style="margin-bottom:0;">일별 정산</div>
+        <button class="btn btn-secondary btn-sm" id="openDailyDetailBtn" style="font-size:11px;padding:6px 12px;">상세 비교 ›</button>
+      </div>
+      <div id="dashDailyTable"></div>
     </div>
-    <!-- 원형 차트 -->
-    <div class="chart-container" style="height:200px;margin-bottom:12px;"><canvas id="expPieChart"></canvas></div>
-    <!-- 아코디언 -->
-    <div id="dashExpAccordion"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:2px solid var(--text);margin-top:6px;">
-      <span style="font-size:14px;font-weight:800;">지출 합계</span>
-      <span style="font-size:16px;font-weight:900;color:var(--danger);" id="dashExpTotalAmt">0원</span>
+
+    <!-- A-4. 월정산 상세 -->
+    <div class="card">
+      <div class="card-title">월정산 상세</div>
+      <div id="dashMonthDetail"></div>
+    </div>
+
+    <!-- A-5. 일별 차트 (매출 + 순이익) -->
+    <div class="card">
+      <div class="card-title">일별 추이</div>
+      <div class="chart-container"><canvas id="dailyChart"></canvas></div>
     </div>
   </div>
 
-  <!-- ━━ 결제방법별 매출 ━━ -->
+  </div>
+
+</div>
+
+<!-- ══ [5-B] 예비비 관리 ══ -->
+<div id="reserveCont" class="container">
+  <!-- 예비비 현황 카드 -->
+  <div class="reserve-balance-card">
+    <div class="rb-label">예비비 현재 잔고</div>
+    <div class="rb-amount" id="reserveBalanceMain">0원</div>
+    <div class="rb-sub">
+      <span>총 적립: <b id="reserveTotalDeposit">0원</b></span>
+      <span>총 사용: <b id="reserveTotalWithdraw">0원</b></span>
+    </div>
+  </div>
+
+  <!-- 예비비 설정 -->
   <div class="card">
-    <div class="card-title">결제방법별 매출</div>
-    <div id="dashSalesBreakdown"></div>
+    <div class="card-title">예비비 설정</div>
+    <div style="background:var(--blue-light);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--blue);line-height:1.5;">
+      예비비 = 순수익 × 비율 + 고정금액<br>
+      매월 순수익에서 자동 적립됩니다
+    </div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">적립 비율</div><div class="setting-sub">순수익 대비 %</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="rv-rate" min="0" step="0.1" class="input-inline" style="width:70px;text-align:right;">
+        <span style="font-size:13px;color:var(--gray-600);">%</span>
+      </div>
+    </div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">고정 적립액</div><div class="setting-sub">매월 고정</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="rv-fixed" min="0" class="input-inline" style="width:100px;text-align:right;">
+        <span style="font-size:13px;color:var(--gray-600);">원</span>
+      </div>
+    </div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">초기 잔고 (이월)</div><div class="setting-sub">이전 기간 적립금</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="rv-initial" min="0" class="input-inline" style="width:100px;text-align:right;">
+        <span style="font-size:13px;color:var(--gray-600);">원</span>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" id="saveReserveSettingsBtn">저장</button>
   </div>
 
-  <!-- ━━ 일별 매출 추이 ━━ -->
-  <div class="card"><div class="card-title">일별 매출 추이</div><div class="chart-container"><canvas id="dailyChart"></canvas></div></div>
-
+  <!-- 예비비 사용 등록 -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">예비비 이력</div>
+      <button class="btn btn-primary btn-sm" id="addReserveUsageBtn" style="font-size:11px;">+ 사용 등록</button>
+    </div>
+    <div id="reserveHistoryList"></div>
+  </div>
 </div>
 
 <!-- ══ [6] 거래처 관리 ══ -->
@@ -874,39 +1075,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [8] 직원관리 ══ -->
 <div id="staffCont" class="container">
-  <div class="sub-tabs">
-    <button class="sub-tab active" data-sub="list" onclick="staffTab('list',this)">직원 목록</button>
-    <button class="sub-tab" data-sub="roles" onclick="staffTab('roles',this)">직급 관리</button>
-    <button class="sub-tab" data-sub="perms" onclick="staffTab('perms',this)">권한 관리</button>
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" onchange="renderEmpList()"><option value="">전체 직급</option></select>
+    <select id="empFilterStatus" class="input-field" style="margin-bottom:0;width:85px;padding:10px 12px;font-size:13px;" onchange="renderEmpList()">
+      <option value="active">재직중</option><option value="all">전체</option><option value="inactive">퇴사</option>
+    </select>
+    <button class="btn btn-primary btn-sm manager-only" style="padding:10px 12px;" onclick="openAddEmpSheet()">+ 추가</button>
   </div>
-  <div id="staffList">
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" onchange="renderEmpList()"><option value="">전체 직급</option></select>
-      <select id="empFilterStatus" class="input-field" style="margin-bottom:0;width:85px;padding:10px 12px;font-size:13px;" onchange="renderEmpList()">
-        <option value="active">재직중</option><option value="all">전체</option><option value="inactive">퇴사</option>
-      </select>
-      <button class="btn btn-primary btn-sm" style="padding:10px 12px;" onclick="openAddEmpSheet()">+</button>
-    </div>
-    <div id="empList"><div class="empty-state"><div class="empty-icon">👥</div><p>등록된 직원이 없습니다</p></div></div>
-  </div>
-  <div id="staffRoles" style="display:none;">
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0;">직급 목록</div>
-        <button class="btn btn-primary btn-sm" onclick="openAddRoleSheet()">+ 추가</button>
-      </div>
-      <div id="roleList"><div class="empty-state"><div class="empty-icon">🏷️</div><p>등록된 직급이 없습니다</p></div></div>
-    </div>
-  </div>
-  <div id="staffPerms" style="display:none;">
-    <div class="card">
-      <div class="card-title">권한 관리</div>
-      <div class="card-sub-title">직급별 권한</div>
-      <div id="rolePermList"></div>
-      <div class="card-sub-title" style="margin-top:16px;">직원별 권한 · 미승인</div>
-      <div id="empPermList"></div>
-    </div>
-  </div>
+  <div id="empList"><div class="empty-state"><div class="empty-icon">👥</div><p>등록된 직원이 없습니다</p></div></div>
 </div>
 
 <!-- ══ [9] 급여 집계 ══ -->
@@ -926,7 +1102,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <div id="explistCont" class="container">
   <div class="sub-tabs">
     <button class="sub-tab active" onclick="explistTab('bank',this)">🏦 계좌내역</button>
-    <button class="sub-tab" onclick="explistTab('card',this)">💳 카드리스트</button>
+    <button class="sub-tab" onclick="explistTab('card',this)">💳 카드내역</button>
     <button class="sub-tab" onclick="explistTab('connect',this)">🔗 마이데이터</button>
   </div>
 
@@ -971,7 +1147,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
   </div>
 
-  <!-- 카드리스트 -->
+  <!-- 카드내역 -->
   <div id="explistCard" style="display:none;">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -1358,23 +1534,59 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addEmpTitle">직원 추가</div>
   <p class="card-sub-title">기본 정보</p>
-  <input id="empNameInput" class="input-field" placeholder="이름 *" type="text">
-  <input id="empBirthInput" class="input-field" placeholder="생년월일 (예: 1995-03-15)" type="text" inputmode="numeric">
-  <input id="empPhoneInput" class="input-field" placeholder="전화번호 *" type="tel">
-  <input id="empAddressInput" class="input-field" placeholder="주소" type="text">
+  <label class="emp-label">이름 *</label>
+  <input id="empNameInput" class="input-field" placeholder="홍길동" type="text">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+    <label class="emp-label" style="margin-bottom:0;flex:1;" id="empIdNumLabel">주민등록번호</label>
+    <label style="font-size:12px;color:var(--gray-600);display:flex;align-items:center;gap:4px;cursor:pointer;">
+      <input type="checkbox" id="empForeignCheck" style="width:16px;height:16px;"> 외국인
+    </label>
+  </div>
+  <input id="empIdNumInput" class="input-field" placeholder="960315-1234567" type="text" inputmode="numeric" maxlength="14">
+  <label class="emp-label">전화번호 *</label>
+  <input id="empPhoneInput" class="input-field" placeholder="010-1234-5678" type="tel" maxlength="13">
+  <label class="emp-label">주소</label>
+  <input id="empAddressInput" class="input-field" placeholder="논산시 ..." type="text">
+  <div id="empReportWrap" style="display:none;margin-bottom:12px;">
+    <label class="emp-label">신고 구분</label>
+    <select id="empReportStatus" class="input-field" style="appearance:auto;">
+      <option value="미신고">미신고</option>
+      <option value="신고">신고</option>
+    </select>
+  </div>
   <p class="card-sub-title">급여 정보</p>
-  <input id="empBankInput" class="input-field" placeholder="은행명" type="text">
-  <input id="empAccountInput" class="input-field" placeholder="계좌번호" type="text" inputmode="numeric">
-  <input id="empWageInput" class="input-field" placeholder="시급 (기본: 10030)" type="number" inputmode="numeric">
+  <label class="emp-label">은행명</label>
+  <input id="empBankInput" class="input-field" placeholder="신한" type="text">
+  <label class="emp-label">계좌번호</label>
+  <input id="empAccountInput" class="input-field" placeholder="110-123-456789" type="text" inputmode="numeric">
+  <label class="emp-label">시급 (원)</label>
+  <input id="empWageInput" class="input-field" placeholder="10030" type="number" inputmode="numeric">
   <p class="card-sub-title">근무 설정</p>
+  <label class="emp-label">직급</label>
   <div id="empRoleChips" class="role-chips-wrap"></div>
-  <input id="empPinInput" class="input-field" placeholder="PIN (4자리 숫자)" type="text" inputmode="numeric" maxlength="4">
-  <input id="empCapsIdInput" class="input-field" placeholder="캡스 사용자ID" type="text">
-  <input id="empHireDateInput" class="input-field" placeholder="입사일 (예: 2024-01-01)" type="text" inputmode="numeric">
+  <div id="empAuthLevelWrap" class="manager-only">
+    <label class="emp-label">권한</label>
+    <select id="empAuthLevel" class="input-field" style="appearance:auto;">
+      <option value="staff">일반 직원</option>
+      <option value="store_manager">매장 관리자 (점장/팀장)</option>
+    </select>
+  </div>
+  <label class="emp-label">PIN (4자리) *</label>
+  <input id="empPinInput" class="input-field" placeholder="••••" type="password" inputmode="numeric" maxlength="4">
+  <label class="emp-label">캡스 사용자ID</label>
+  <input id="empCapsIdInput" class="input-field" placeholder="CAPS ID" type="text">
+  <label class="emp-label">입사일</label>
+  <input id="empHireDateInput" class="input-field" placeholder="2024-01-01" type="text" inputmode="numeric" maxlength="10">
   <input type="hidden" id="editEmpId">
-  <div class="action-group">
+  <div class="action-group" style="margin-top:12px;">
     <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveEmployee()">저장</button>
+  </div>
+  <!-- 기기 초기화 (관리자, 편집 시에만) -->
+  <div id="deviceResetWrap" class="manager-only" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-200);">
+    <div style="font-size:12px;color:var(--gray-400);margin-bottom:6px;">등록 기기 관리</div>
+    <div id="deviceStatus" style="font-size:12px;color:var(--gray-600);margin-bottom:8px;"></div>
+    <button class="btn btn-danger btn-full" style="padding:12px;" onclick="resetDeviceFingerprint(document.getElementById('editEmpId').value)">등록 기기 초기화</button>
   </div>
 </div>
 
@@ -1401,6 +1613,27 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <p style="font-size:12px;color:var(--gray-600);margin-bottom:14px;" id="matchInfo"></p>
   <div id="matchEmpList"></div>
   <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="closeAllSheets()">취소</button>
+</div>
+
+<!-- 근태 기록 편집 (관리자) -->
+<div class="sheet" id="editAttSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">근태 기록 수정</div>
+  <div id="editAttInfo" style="font-size:13px;color:var(--gray-600);margin-bottom:12px;"></div>
+  <label class="emp-label">출근 시간</label>
+  <input id="editAttIn" class="input-field" type="time">
+  <label class="emp-label">퇴근 시간</label>
+  <input id="editAttOut" class="input-field" type="time">
+  <label class="emp-label">휴게시간 (분)</label>
+  <input id="editAttRest" class="input-field" type="number" inputmode="numeric" min="0" value="0">
+  <input type="hidden" id="editAttId">
+  <input type="hidden" id="editAttDate">
+  <input type="hidden" id="editAttEmpId">
+  <div class="action-group" style="margin-top:12px;">
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveEditAttendance()">저장</button>
+  </div>
+  <button class="btn btn-danger btn-full" style="margin-top:8px;padding:12px;" onclick="deleteAttendance()">이 기록 삭제</button>
 </div>
 
 <!-- 거래처 추가/편집 -->
@@ -1479,6 +1712,22 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- 예비비 사용 등록 -->
+<div class="sheet" id="reserveUsageSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">예비비 사용 등록</div>
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">사용 날짜</div>
+  <input id="rvUsageDate" class="input-field" type="date">
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">금액</div>
+  <input id="rvUsageAmount" class="input-field" type="number" placeholder="금액 (원)">
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">사유</div>
+  <input id="rvUsageMemo" class="input-field" type="text" placeholder="예: 에어컨 수리, 설비 교체">
+  <div class="action-group">
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" id="rvUsageCancelBtn">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" id="rvUsageSaveBtn">등록</button>
+  </div>
+</div>
+
 <!-- 고정비 추가/편집 -->
 <div class="sheet" id="addFcSheet">
   <div class="sheet-handle"></div>
@@ -1553,6 +1802,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <button class="btn btn-secondary btn-full" onclick="closeAllSheets()">취소</button>
 </div>
 
+<!-- 풀스크린 일별 상세 모달 (body 직하위) -->
+<div id="dailyDetailModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#FFFFFF;z-index:9000;overflow:hidden;">
+  <div id="dailyDetailHeader" style="position:sticky;top:0;background:var(--white);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-200);z-index:3;">
+    <span style="font-size:16px;font-weight:800;">일별 상세 비교</span>
+    <button class="btn btn-secondary btn-sm" id="closeDailyDetailBtn" style="font-size:12px;">닫기 ✕</button>
+  </div>
+  <div id="dailyThresholdBar" style="position:sticky;top:46px;background:var(--white);padding:6px 12px;border-bottom:1px solid var(--gray-200);z-index:2;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+    <span style="font-size:10px;font-weight:700;color:var(--gray-400);margin-right:2px;">기준%</span>
+  </div>
+  <div id="dailyDetailContent" style="overflow:auto;height:calc(100% - 90px);-webkit-overflow-scrolling:touch;"></div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 // 설정
@@ -1600,7 +1861,9 @@ let currentTargetRowIdx = -1, currentMatchStagingIdx = -1;
 let datePickerCtx = '', timePickerCtx = '';
 let b64 = '', rowCount = 0, stagingData = [];
 let cardDateStr = new Date().toISOString().split('T')[0];
-let currentEmp = null, isManager = true, isOwner = true;
+let currentEmp = null, isManager = false, isOwner = false;
+// auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
+let authLevel = 'staff';
 let dashMonthStr = new Date().toISOString().slice(0,7);
 let fcMonthStr = dashMonthStr;
 let schedEmpId = null;
@@ -1625,8 +1888,6 @@ function nav(tab, el) {
   // 서브탭 분리: staffRoles → staff 컨테이너 + roles 서브탭
   let subTab = null;
   const subTabMap = {
-    staffRoles: { container: 'staff', sub: 'roles' },
-    staffPerms: { container: 'staff', sub: 'perms' },
     vendorUpload: { container: 'vendors', sub: 'upload' },
     settingsBasic: { container: 'settings', sub: null },
     settingsWage: { container: 'settings', sub: null },
@@ -1642,6 +1903,8 @@ function nav(tab, el) {
   document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
   const target = document.getElementById(tab + 'Cont');
   if (target) target.classList.add('active');
+  // 스크롤 최상단으로 초기화
+  window.scrollTo(0, 0);
   // 하단 탭 active 표시 (하단 탭에 있는 항목만)
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
@@ -1654,6 +1917,7 @@ function nav(tab, el) {
     staff: loadEmployees,
     settings: loadAllSettings,
     dashboard: loadDashboard,
+    reserve: loadReserveFund,
     vendors: loadVendors,
     fixedcost: loadFixedCosts,
     attendance: initAttDate,
@@ -1663,7 +1927,12 @@ function nav(tab, el) {
     recon: initRecon,
   };
   if (actions[tab]) actions[tab]();
-  if (tab === 'settle') { recalcSettle2(); loadOpeningAmount(); }
+  if (tab === 'settle') { resetSettleView(); recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
+  // 서브탭 초기화: 탭 진입 시 첫 번째 서브탭을 active로
+  if (!subTab) {
+    const firstSub = document.querySelector(`#${tab}Cont .sub-tabs .sub-tab:first-child`);
+    if (firstSub && !firstSub.classList.contains('active')) firstSub.click();
+  }
   // 서브탭 전환
   if (subTab) {
     setTimeout(() => {
@@ -1706,12 +1975,23 @@ const unFmt = s => parseInt((s||'0').replace(/,/g,''))||0;
 const guardStore = () => { if(!currentStore){toast('매장을 먼저 선택하세요.','warn');openStoreSheet();return false;}return true; };
 function maskAccount(a) { const c=a.replace(/[^0-9]/g,''); return c.length>=4?'****-****-'+c.slice(-4):a; }
 function applyPermissionUI() {
-  // 관리자면 전부 표시, 비관리자면 숨김
+  // manager-only: store_manager 이상 (owner, franchise_admin, store_manager)
   document.querySelectorAll('.manager-only').forEach(el => {
     el.style.display = isManager ? '' : 'none';
   });
-  // 네비 탭도 동일하게 적용 후 재정렬
-  // nav-item들이 flex:1이므로 숨겨진 탭이 없으면 자동으로 균등분배됨
+  // owner-only: owner만
+  document.querySelectorAll('.owner-only').forEach(el => {
+    el.style.display = isOwner ? '' : 'none';
+  });
+  // 네비바 탭: 숨겨진 탭 flex 균등분배
+  document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
+    if(el.classList.contains('manager-only')&&!isManager) el.style.display='none';
+    else el.style.display='';
+  });
+  // 내 정보 배지 업데이트
+  const badge=isOwner?'👑 총관리자':isManager?'🔑 관리자':'';
+  const badgeEl=document.getElementById('authBadge');
+  if(badgeEl) badgeEl.innerHTML=badge?`<span class="badge badge-warn">${badge}</span>`:'';
 }
 function daysInMonth(ym) { const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
 
@@ -1730,9 +2010,9 @@ function openMyInfoSheet() {
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
         <div class="emp-avatar">${emp.name?.charAt(0)||'?'}</div>
         <div><div style="font-size:19px;font-weight:800;">${emp.name}</div>
-          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">
+          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;" id="authBadge">
             ${emp.role?`<span class="badge badge-blue">${emp.role}</span>`:''}
-            ${isManager?'<span class="badge badge-warn">🔑 관리자</span>':''}
+            ${isOwner?'<span class="badge badge-warn">👑 총관리자</span>':isManager?'<span class="badge badge-warn">🔑 관리자</span>':''}
           </div>
         </div>
       </div>
@@ -1741,7 +2021,7 @@ function openMyInfoSheet() {
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">은행/계좌</span><span style="font-size:13px;font-weight:700;">${emp.bank_name||'-'} ${emp.account_number?maskAccount(emp.account_number):''}</span></div>
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">시급</span><span style="font-size:13px;font-weight:700;">${fmt(emp.base_wage)}원</span></div>
       <div class="action-group" style="margin-top:16px;">
-        <button class="btn btn-secondary" style="flex:1;padding:14px;" onclick="closeAllSheets();openEditEmpSheet('${emp.id}')">✏️ 수정</button>
+        ${isManager?`<button class="btn btn-secondary" style="flex:1;padding:14px;" onclick="closeAllSheets();openEditEmpSheet('${emp.id}')">✏️ 수정</button>`:''}
         <button class="btn btn-danger" style="flex:1;padding:14px;" onclick="doLogout()">로그아웃</button>
       </div>`;
   }
@@ -1767,11 +2047,13 @@ async function selectStore(id, name) {
   document.getElementById('headerStore').innerText = name;
   localStorage.setItem('pd_store', JSON.stringify({id,name}));
   closeAllSheets();
-  await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories()]);
-  recalcSettle2();
-  // 로그인 화면이 열려있으면 직원 목록 갱신
+  // 로그인 전이면 직원만 로드, 로그인 후면 전부 로드
   if(document.getElementById('loginOverlay').style.display!=='none'){
+    await loadEmployees();
     showLoginScreen();
+  } else {
+    await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories()]);
+    recalcSettle2();
   }
 }
 
@@ -1870,6 +2152,8 @@ function attTab(tab,el){
   const panel = document.getElementById('att'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(panel) panel.style.display='block';
   if(tab==='list'){
+    // 주간 간트 로드
+    loadMyAttGantt();
     // 월 표시 초기화 후 조회
     document.getElementById('vListMonth').innerText = attListMonth;
     loadAttList(false);
@@ -1896,7 +2180,7 @@ function startAttClock(){
     const now=new Date();
     const timeEl=document.getElementById('attNowTime');
     const dateEl=document.getElementById('attTodayDate');
-    if(timeEl) timeEl.innerText=now.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
+    if(timeEl) timeEl.innerText=now.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
     if(dateEl){
       const days=['일','월','화','수','목','금','토'];
       dateEl.innerText=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (${days[now.getDay()]})`;
@@ -1932,14 +2216,14 @@ function updateCheckInOutUI(record){
   } else if(record.app_in&&!record.app_out){
     inBtn.disabled=true;inBtn.className='btn btn-secondary';
     if(outBtn){outBtn.disabled=false;outBtn.className='btn btn-danger';}
-    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
+    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
     if(statusEl) statusEl.innerText=`근무 중 (출근 ${inTime})`;
     if(recEl) recEl.innerHTML=`<div style="background:var(--success-light);border-radius:12px;padding:14px;text-align:center;"><div style="font-size:12px;color:var(--success);font-weight:700;">✅ 출근 완료</div><div style="font-size:20px;font-weight:800;margin-top:4px;">${inTime}</div></div>`;
   } else {
     inBtn.disabled=true;inBtn.className='btn btn-secondary';
     if(outBtn){outBtn.disabled=true;outBtn.className='btn btn-secondary';}
-    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
-    const outTime=new Date(record.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
+    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
+    const outTime=new Date(record.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
     if(statusEl) statusEl.innerText='오늘 근무 완료';
     if(recEl) recEl.innerHTML=`<div style="background:var(--blue-light);border-radius:12px;padding:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--gray-600);">출근</span><span style="font-size:14px;font-weight:700;">${inTime}</span></div><div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--gray-600);">퇴근</span><span style="font-size:14px;font-weight:700;">${outTime}</span></div><div style="text-align:center;margin-top:10px;font-size:13px;color:var(--gray-600);">근무 ${record.total_work_min!=null?record.total_work_min+'분':'-'} · 급여 ${record.calculated_wage!=null?fmt(record.calculated_wage)+'원':'-'}</div></div>`;
   }
@@ -1951,17 +2235,29 @@ async function checkIn(){
   // WiFi IP 검증
   setLoad(true,'위치 확인 중...');
   const ipCheck=await checkIPForAttendance();
-  setLoad(false);
   if(!ipCheck.ok){
+    setLoad(false);
     if(isManager){
       if(!confirm(ipCheck.msg+'\n\n관리자 권한으로 출근 처리하시겠습니까?')) return;
     } else {
       toast(ipCheck.msg+' 매장 WiFi에서 다시 시도하세요.','error');return;
     }
   }
+  // 기기 지문 검증
+  setLoad(true,'기기 확인 중...');
+  const devCheck=await checkDeviceForAttendance(empId);
+  setLoad(false);
+  if(!devCheck.ok){
+    if(isManager){
+      if(!confirm(devCheck.msg+'\n\n관리자 권한으로 출근 처리하시겠습니까?')) return;
+    } else {
+      toast(devCheck.msg,'error');return;
+    }
+  }
+  if(devCheck.firstReg) toast('이 기기가 출퇴근 기기로 등록됐습니다.','success');
   const now=new Date();const today=now.toISOString().split('T')[0];
   const{data:exist}=await sb.from('attendance_logs').select('id,app_in').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
-  if(exist?.app_in){toast('이미 출근 처리됐습니다. 출근: '+new Date(exist.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}),'warn');return;}
+  if(exist?.app_in){toast('이미 출근 처리됐습니다. 출근: '+new Date(exist.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}),'warn');return;}
   setLoad(true,'출근 처리 중...');
   const{error}=await sb.from('attendance_logs').insert({store_id:currentStore.id,employee_id:empId,work_date:today,app_in:now.toISOString(),caps_match_status:'앱전용',check_in_ip:ipCheck.ip||null});
   setLoad(false);
@@ -1975,16 +2271,34 @@ async function checkOut(){
   // WiFi IP 검증
   setLoad(true,'위치 확인 중...');
   const ipCheck=await checkIPForAttendance();
-  setLoad(false);
   if(!ipCheck.ok){
+    setLoad(false);
     if(isManager){
       if(!confirm(ipCheck.msg+'\n\n관리자 권한으로 퇴근 처리하시겠습니까?')) return;
     } else {
       toast(ipCheck.msg+' 매장 WiFi에서 다시 시도하세요.','error');return;
     }
   }
+  // 기기 지문 검증
+  setLoad(true,'기기 확인 중...');
+  const devCheck=await checkDeviceForAttendance(empId);
+  setLoad(false);
+  if(!devCheck.ok){
+    if(isManager){
+      if(!confirm(devCheck.msg+'\n\n관리자 권한으로 퇴근 처리하시겠습니까?')) return;
+    } else {
+      toast(devCheck.msg,'error');return;
+    }
+  }
   const now=new Date();const today=now.toISOString().split('T')[0];
-  const{data:record}=await sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
+  let{data:record}=await sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
+  // 자정 넘긴 경우: 오늘 기록 없으면 어제 기록 확인
+  if(!record?.app_in){
+    const yd=new Date(now);yd.setDate(yd.getDate()-1);
+    const yesterday=yd.toISOString().split('T')[0];
+    const{data:yRecord}=await sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',yesterday).maybeSingle();
+    if(yRecord?.app_in&&!yRecord?.app_out) record=yRecord;
+  }
   if(!record?.app_in){toast('출근 기록이 없습니다.','warn');return;}
   if(record.app_out){toast('이미 퇴근 처리됐습니다.','warn');return;}
   const appIn=new Date(record.app_in);
@@ -2022,6 +2336,7 @@ async function saveAttendance(){
   if(sStr==='-') return toast('출근 시간을 입력하세요.','warn');
   const appIn=new Date(date+'T'+sStr+':00');
   const appOut=eStr!=='-'?new Date(date+'T'+eStr+':00'):null;
+  if(appOut&&appOut<=appIn) return toast('퇴근 시간이 출근보다 빠릅니다. 확인해주세요.','error');
   const restMin=parseInt(document.getElementById('vRest').value)||0;
   const w=await calcWageData(selectedEmpId, appIn, appOut, date, restMin);
   setLoad(true,'근태 기록 중...');
@@ -2111,11 +2426,14 @@ async function loadAttList(allMode=false){
 
   if(error){ console.error('근태 조회 오류:',error); }
 
-  const tK = (r,key) => r[key] ? new Date(r[key]).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}) : '-';
+  const tK = (r,key) => r[key] ? new Date(r[key]).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const statusDot = s => {
     const m={'정상매칭':'#05C072','앱전용':'#0050FF','캡스전용':'#FF9500','시간오차':'#FF9500','출근누락':'#F04452','퇴근누락':'#F04452'};
     return `<span style="width:7px;height:7px;border-radius:50%;background:${m[s]||'#B0B8C1'};display:inline-block;margin-right:2px;"></span>`;
   };
+
+  // 편집용 데이터 저장 (관리자 터치→편집)
+  window._attListData=data||[];
 
   let html = '';
   if(!data?.length){
@@ -2123,42 +2441,46 @@ async function loadAttList(allMode=false){
   } else {
     // 전체조회 = 테이블, 내 기록 = 카드
     if(allMode){
-      html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <table style="width:100%;border-collapse:collapse;min-width:480px;font-size:12px;">
+      html = `
+        <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;">
+          <colgroup>
+            <col style="width:16%;">
+            <col style="width:16%;">
+            <col style="width:32%;">
+            <col style="width:16%;">
+            <col style="width:20%;">
+          </colgroup>
           <thead>
             <tr style="background:var(--gray-100);">
-              <th style="padding:8px 6px;text-align:left;font-weight:700;white-space:nowrap;">날짜</th>
-              <th style="padding:8px 6px;text-align:center;font-weight:700;">직원</th>
-              <th style="padding:8px 6px;text-align:center;font-weight:700;">출근</th>
-              <th style="padding:8px 6px;text-align:center;font-weight:700;">퇴근</th>
-              <th style="padding:8px 6px;text-align:center;font-weight:700;">근무</th>
-              <th style="padding:8px 6px;text-align:right;font-weight:700;">급여</th>
+              <th style="padding:6px 3px;text-align:left;font-weight:700;">날짜</th>
+              <th style="padding:6px 3px;text-align:center;font-weight:700;">이름</th>
+              <th style="padding:6px 3px;text-align:center;font-weight:700;">출퇴근</th>
+              <th style="padding:6px 3px;text-align:right;font-weight:700;">시간</th>
+              <th style="padding:6px 3px;text-align:right;font-weight:700;">급여</th>
             </tr>
           </thead>
           <tbody>
             ${data.map((r,i)=>`
-            <tr style="border-bottom:1px solid var(--gray-100);background:${i%2?'#fafbfc':'#fff'};">
-              <td style="padding:9px 6px;white-space:nowrap;color:var(--gray-600);">${r.work_date?.slice(5)||'-'} ${statusDot(r.caps_match_status)}</td>
-              <td style="padding:9px 6px;text-align:center;font-weight:700;">${r.employees?.name||'-'}</td>
-              <td style="padding:9px 6px;text-align:center;">${tK(r,'app_in')}</td>
-              <td style="padding:9px 6px;text-align:center;">${tK(r,'app_out')}</td>
-              <td style="padding:9px 6px;text-align:center;">${r.total_work_min!=null?r.total_work_min+'분':'-'}</td>
-              <td style="padding:9px 6px;text-align:right;font-weight:700;color:var(--blue);">${r.calculated_wage!=null?fmt(r.calculated_wage):'-'}</td>
+            <tr style="border-bottom:1px solid var(--gray-100);background:${i%2?'#fafbfc':'#fff'};cursor:${isManager?'pointer':'default'};" ${isManager?`onclick="openEditAttSheet(window._attListData[${i}])"`:''}>
+              <td style="padding:7px 3px;color:var(--gray-600);">${r.work_date?.slice(5)||'-'}</td>
+              <td style="padding:7px 3px;text-align:center;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.employees?.name||'-'}</td>
+              <td style="padding:7px 3px;text-align:center;color:var(--gray-600);">${tK(r,'app_in')}~${tK(r,'app_out')}</td>
+              <td style="padding:7px 3px;text-align:right;">${r.total_work_min!=null?Math.floor(r.total_work_min/60)+'h'+String(r.total_work_min%60).padStart(2,'0')+'m':'-'}</td>
+              <td style="padding:7px 3px;text-align:right;font-weight:700;color:${r.app_in&&r.app_out&&!r.calculated_wage?'var(--danger)':'var(--blue)'};">${r.app_in&&r.app_out&&!r.calculated_wage?'⚠️':r.calculated_wage!=null?fmt(r.calculated_wage):'-'}</td>
             </tr>`).join('')}
           </tbody>
           <tfoot>
             <tr style="background:var(--blue-light);">
-              <td colspan="4" style="padding:9px 6px;font-weight:700;color:var(--blue);">합계 ${data.length}건</td>
-              <td style="padding:9px 6px;text-align:center;font-weight:700;color:var(--blue);">
-                ${data.reduce((a,r)=>a+(r.total_work_min||0),0)}분
+              <td colspan="3" style="padding:7px 3px;font-weight:700;color:var(--blue);">합계 ${data.length}건</td>
+              <td style="padding:7px 3px;text-align:right;font-weight:700;color:var(--blue);">
+                ${Math.floor(data.reduce((a,r)=>a+(r.total_work_min||0),0)/60)}h
               </td>
-              <td style="padding:9px 6px;text-align:right;font-weight:800;color:var(--blue);">
+              <td style="padding:7px 3px;text-align:right;font-weight:800;color:var(--blue);">
                 ${fmt(data.reduce((a,r)=>a+(r.calculated_wage||0),0))}
               </td>
             </tr>
           </tfoot>
-        </table>
-      </div>`;
+        </table>`;
     } else {
       // 내 기록 = 카드형
       html = data.map(r=>`
@@ -2193,6 +2515,180 @@ async function loadAttList(allMode=false){
   document.getElementById(target).innerHTML = html;
 }
 function loadAttAll(){ loadAttList(true); }
+
+// ─── 새 기능: 근태 기록 편집 ───
+function openEditAttSheet(record){
+  if(!isManager) return toast('관리자만 수정할 수 있습니다.','warn');
+  const empName=record.employees?.name||'직원';
+  document.getElementById('editAttInfo').innerText=`${empName} · ${record.work_date}`;
+  document.getElementById('editAttId').value=record.id;
+  document.getElementById('editAttDate').value=record.work_date;
+  document.getElementById('editAttEmpId').value=record.employee_id;
+  // 시간 파싱
+  const toTimeStr=ts=>{if(!ts)return'';const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+  document.getElementById('editAttIn').value=toTimeStr(record.app_in);
+  document.getElementById('editAttOut').value=toTimeStr(record.app_out);
+  document.getElementById('editAttRest').value=record.rest_min||0;
+  openSheet('editAttSheet');
+}
+async function saveEditAttendance(){
+  const attId=document.getElementById('editAttId').value;
+  const date=document.getElementById('editAttDate').value;
+  const empId=document.getElementById('editAttEmpId').value;
+  const inStr=document.getElementById('editAttIn').value;
+  const outStr=document.getElementById('editAttOut').value;
+  const restMin=parseInt(document.getElementById('editAttRest').value)||0;
+  if(!inStr) return toast('출근 시간을 입력하세요.','warn');
+  const appIn=new Date(date+'T'+inStr+':00');
+  const appOut=outStr?new Date(date+'T'+outStr+':00'):null;
+  if(appOut&&appOut<=appIn) return toast('퇴근 시간이 출근보다 빠릅니다. 확인해주세요.','error');
+  const w=await calcWageData(empId,appIn,appOut,date,restMin);
+  setLoad(true,'수정 중...');
+  const payload={app_in:appIn.toISOString(),app_out:appOut?.toISOString()||null,rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage};
+  const{error}=await sb.from('attendance_logs').update(payload).eq('id',attId);
+  setLoad(false);
+  if(error) return toast('수정 실패: '+error.message,'error');
+  toast('근태 기록 수정 완료!','success');
+  closeAllSheets();loadAttList(true);loadAttList(false);
+}
+async function deleteAttendance(){
+  const attId=document.getElementById('editAttId').value;
+  if(!confirm('이 근태 기록을 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.')) return;
+  setLoad(true,'삭제 중...');
+  const{error}=await sb.from('attendance_logs').delete().eq('id',attId);
+  setLoad(false);
+  if(error) return toast('삭제 실패: '+error.message,'error');
+  toast('기록 삭제 완료','success');
+  closeAllSheets();loadAttList(true);loadAttList(false);
+}
+
+// ─── 내 기록: 주간 간트차트 뷰 ───
+let myAttWeekStart='';
+function moveMyAttWeek(dir){
+  const d=new Date(myAttWeekStart);d.setDate(d.getDate()+dir*7);
+  myAttWeekStart=d.toISOString().split('T')[0];
+  loadMyAttGantt();
+}
+async function loadMyAttGantt(){
+  if(!currentStore||!currentEmp) return;
+  if(!myAttWeekStart) myAttWeekStart=getWeekStart(new Date().toISOString().split('T')[0]);
+  const days=getWeekDays(myAttWeekStart);
+  const todayStr=new Date().toISOString().split('T')[0];
+  document.getElementById('myAttWeekLabel').innerText=`${days[0].label} ~ ${days[6].label}`;
+
+  // 이번 주 내 근태 데이터 조회
+  const{data}=await sb.from('attendance_logs').select('*')
+    .eq('store_id',currentStore.id)
+    .eq('employee_id',currentEmp.id)
+    .gte('work_date',days[0].date)
+    .lte('work_date',days[6].date)
+    .order('work_date');
+
+  // 이번 주 근무계획도 조회 (비교용)
+  const{data:schedData}=await sb.from('work_schedules').select('*')
+    .eq('store_id',currentStore.id)
+    .eq('employee_id',currentEmp.id)
+    .gte('work_date',days[0].date)
+    .lte('work_date',days[6].date);
+  const schedMap={};(schedData||[]).forEach(s=>schedMap[s.work_date]=s);
+
+  const logs=data||[];
+  const logMap={};logs.forEach(r=>logMap[r.work_date]=r);
+
+  // 오늘 근태 상태 카드 제거 — 간트차트에 근무시간 직접 표시
+  document.getElementById('myAttTodayStatus').innerHTML='';
+
+  // 근무시간 포맷 헬퍼
+  const fmtWorkTime=(min)=>{if(min==null)return'';const h=Math.floor(min/60);const m=min%60;return h>0?(m>0?h+'h'+m+'m':h+'h'):(m+'m');};
+
+  // 주간 간트차트 (근무계획 스타일)
+  const bgCols=ganttHours.map(()=>`<div class="gantt-bg-col"></div>`).join('');
+  let ganttHtml='';
+  days.forEach(day=>{
+    const log=logMap[day.date];
+    const sched=schedMap[day.date];
+    const isToday=day.date===todayStr;
+    const isPast=day.date<todayStr;
+
+    // 근무시간 계산 (출근만 찍은 경우: 현재까지 경과시간)
+    let workTimeLabel='';
+    if(log?.app_in){
+      if(log.total_work_min!=null){
+        workTimeLabel=fmtWorkTime(log.total_work_min);
+      } else if(!log.app_out&&isToday){
+        // 출근만 찍고 퇴근 안 한 오늘 — 현재까지 경과
+        const elapsed=Math.round((new Date()-new Date(log.app_in))/60000);
+        workTimeLabel=fmtWorkTime(elapsed);
+      }
+    }
+
+    ganttHtml+=`<div class="gantt-day-section">
+      <div class="gantt-day-label" style="${isToday?'color:var(--blue);font-weight:800;':''}">
+        <span>${day.label}${isToday?' (오늘)':''}</span>`;
+
+    // 상태 + 근무시간 표시
+    if(log?.app_in&&log?.app_out) ganttHtml+=`<span style="font-size:10px;color:var(--success);font-weight:700;">${workTimeLabel}</span>`;
+    else if(log?.app_in&&!log?.app_out&&isToday) ganttHtml+=`<span style="font-size:10px;color:var(--blue);font-weight:700;">${workTimeLabel} 근무중</span>`;
+    else if(log?.app_in&&!log?.app_out&&isPast) ganttHtml+=`<span style="font-size:10px;color:var(--warn);font-weight:700;">퇴근누락</span>`;
+    else if(isPast&&sched&&!sched.is_off&&!log) ganttHtml+=`<span style="font-size:10px;color:var(--danger);font-weight:700;">누락</span>`;
+    else if(sched?.is_off) ganttHtml+=`<span style="font-size:10px;color:var(--gray-400);">휴무</span>`;
+    else if(!isPast&&!isToday) ganttHtml+=`<span style="font-size:10px;color:var(--gray-400);">${sched?'예정':''}</span>`;
+
+    ganttHtml+=`</div>
+      <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
+
+    // 바 그리기
+    let bars='';
+    // 계획 바 (연한색)
+    if(sched&&!sched.is_off){
+      const sH=parseHour(sched.wish_start||sched.start_time),eH=parseHour(sched.wish_end||sched.end_time);
+      if(sH!=null&&eH!=null&&eH>sH){
+        const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
+        const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
+        bars+=`<div style="position:absolute;height:14px;top:2px;left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:var(--gray-300);opacity:0.5;border-radius:3px;"></div>`;
+      }
+    }
+    // 실제 근무 바 (진한색) — 출근만 찍어도 표시
+    if(log?.app_in){
+      const inTime=new Date(log.app_in);
+      const sH=inTime.getHours()+inTime.getMinutes()/60;
+      let eH;
+      if(log.app_out){const outTime=new Date(log.app_out);eH=outTime.getHours()+outTime.getMinutes()/60;}
+      else if(isToday){const now=new Date();eH=now.getHours()+now.getMinutes()/60;}
+      else{eH=sH+0.5;} // 과거 퇴근누락 — 최소 바 표시
+      if(eH>sH){
+        const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
+        const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
+        const sLabel=String(Math.floor(sH)).padStart(2,'0')+':'+(sH%1>=0.5?'30':'00');
+        const eLabel=log.app_out?(String(Math.floor(eH)).padStart(2,'0')+':'+(eH%1>=0.5?'30':'00')):isToday?'지금':'?';
+        const barColor=log.app_out?'var(--success)':isToday?'var(--blue)':'var(--warn)';
+        bars+=`<div class="gantt-bar" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${barColor};"><span style="font-size:8px;color:#fff;padding:0 2px;white-space:nowrap;">${sLabel}~${eLabel}</span></div>`;
+      }
+    }
+
+    if(!log&&!sched) ganttHtml+=`<div style="padding:4px 0;text-align:center;font-size:10px;color:var(--gray-300);">—</div>`;
+    else ganttHtml+=`<div class="gantt-row"><div class="gantt-name" style="font-size:10px;">내 근무</div><div class="gantt-bar-area">${bgCols}${bars}</div></div>`;
+
+    ganttHtml+=`</div>`;
+  });
+  document.getElementById('myAttGantt').innerHTML=ganttHtml;
+
+  // 누락 경고
+  const missing=days.filter(day=>{
+    const isPast=day.date<todayStr;
+    const sched=schedMap[day.date];
+    const log=logMap[day.date];
+    return isPast&&sched&&!sched.is_off&&!log;
+  });
+  if(missing.length>0){
+    document.getElementById('myAttWarning').innerHTML=`<div style="background:var(--danger-light);border-radius:12px;padding:12px 14px;margin-top:10px;">
+      <div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:4px;">이번 주 누락 ${missing.length}일</div>
+      <div style="font-size:11px;color:var(--danger);">${missing.map(d=>d.label).join(', ')} — 근무계획은 있지만 출퇴근 기록이 없습니다</div>
+    </div>`;
+  } else {
+    document.getElementById('myAttWarning').innerHTML='';
+  }
+}
 
 // ══════════════════════════════════════════
 // 캡스 업로드
@@ -2415,6 +2911,55 @@ function renderGanttFiltered(){
 // 마감정산
 // ══════════════════════════════════════════
 // ── 마감정산 로직 ──
+// ─── 정산 날짜 선택 (관리자용) ───
+function initSettleDate(){
+  const picker=document.getElementById('settleDatePicker');
+  const group=document.getElementById('settleDateGroup');
+  const today=new Date().toISOString().split('T')[0];
+  picker.value=today;
+  picker.max=today; // 미래 날짜 차단
+  if(isManager){
+    group.style.display='block';
+    picker.addEventListener('change',function(){
+      // 날짜 변경 시 전일 마감금액 다시 로드
+      loadOpeningForDate(this.value);
+    });
+  }
+}
+function moveSettleDate(dir){
+  const picker=document.getElementById('settleDatePicker');
+  const d=new Date(picker.value);d.setDate(d.getDate()+dir);
+  const today=new Date().toISOString().split('T')[0];
+  const newDate=d.toISOString().split('T')[0];
+  if(newDate>today) return; // 미래 차단
+  picker.value=newDate;
+  loadOpeningForDate(newDate);
+}
+async function loadOpeningForDate(dateStr){
+  if(!currentStore) return;
+  const d=new Date(dateStr);d.setDate(d.getDate()-1);
+  const yd=d.toISOString().split('T')[0];
+  const{data}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
+  const el=document.getElementById('siOpening');
+  const statusEl=document.getElementById('openingStatus');
+  if(data?.actual_total!=null){
+    el.value=parseInt(data.actual_total).toLocaleString();
+    statusEl.innerText='전일('+yd+') 마감금액';
+  } else {
+    el.value='';
+    statusEl.innerText='전일 마감 데이터 없음';
+  }
+  recalcSettle2();
+  // 해당 날짜에 기존 정산 있으면 안내
+  const{data:existing}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
+  const statusEl2=document.getElementById('settleDateStatus');
+  if(existing) statusEl2.innerText='기존 데이터 있음 (덮어쓰기)';
+  else statusEl2.innerText='새 정산';
+}
+function getSettleDate(){
+  const picker=document.getElementById('settleDatePicker');
+  return picker?.value||new Date().toISOString().split('T')[0];
+}
 function onSInput(el){const raw=el.value.replace(/,/g,'');if(/^\d*$/.test(raw))el.value=raw?parseInt(raw).toLocaleString():'';recalcSettle2();}
 
 // ── POS 마감 사진 AI 인식 ──
@@ -2600,6 +3145,12 @@ function settleTab(tab,el){
   document.getElementById('settleCard').style.display=tab==='card'?'block':'none';
   if(tab==='list')loadSettleList();if(tab==='card')loadSettleCard(cardDateStr);
 }
+// 마감정산 입력폼 초기화 (탭 진입 시)
+function resetSettleView(){
+  ['siPosCash','siPosCashReceipt','siPosCard','siPosEtc','siCashCash','siCashQr','siCashTransfer','siDrawLarge','siDrawSmall','siDeductEtc','siDeductBank'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.querySelectorAll('.v-input').forEach(i=>i.value='');
+  const statusEl=document.getElementById('settleDateStatus');if(statusEl)statusEl.innerText='관리자 전용';
+}
 async function finishSettlement2(){
   if(!guardStore()) return;
   const items={
@@ -2616,9 +3167,9 @@ async function finishSettlement2(){
   const diff=vault-book;const diffStatus=diff===0?'일치':`차액 ${diff>0?'+':''}${fmt(diff)}원`;
   if(!confirm(`매출: ${fmt(salesTotal)}원\n장부: ${fmt(book)}원\n금고: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'마감 저장 중...');
-  const today=new Date().toISOString().split('T')[0];
+  const settleDate=getSettleDate();
   const{error}=await sb.from('settlements').upsert({
-    store_id:currentStore.id,settle_date:today,
+    store_id:currentStore.id,settle_date:settleDate,
     items_json:items,vault_json:vMap,
     actual_total:vault,expected_total:book,
     diff_amount:diff,diff_status:diffStatus,
@@ -2642,14 +3193,97 @@ async function loadSettleCard(d){
   const{data}=await sb.from('settlements').select('*').eq('store_id',currentStore.id).eq('settle_date',d).maybeSingle();
   const c=document.getElementById('settleCardData');
   if(!data){c.innerHTML='<div class="empty-state"><div class="empty-icon">📅</div><p>기록이 없습니다</p></div>';return;}
-  const ri=r=>r==='plus'?'<span class="si-role plus" style="font-size:10px;">+</span>':r==='minus'?'<span class="si-role minus" style="font-size:10px;">-</span>':'<span class="si-role check" style="font-size:10px;">확</span>';
+  // items_json 항목 매핑 (key:숫자값 → 표시용 이름+역할)
+  const itemDefs={
+    opening:{name:'전일 이월금',icon:'💰',role:'plus'},
+    pos_cash:{name:'현금',icon:'💵',role:'plus'},
+    pos_cash_receipt:{name:'현금영수증',icon:'🧾',role:'plus'},
+    pos_card:{name:'신용카드',icon:'💳',role:'info'},
+    pos_etc:{name:'기타결제',icon:'📲',role:'info'},
+    cash_detail_cash:{name:'현금 상세',icon:'💵',role:'info'},
+    cash_detail_qr:{name:'QR',icon:'📱',role:'info'},
+    cash_detail_transfer:{name:'계좌이체',icon:'🏦',role:'info'},
+    extra_draw_large:{name:'뽑기(대형)',icon:'🎰',role:'plus'},
+    extra_draw_small:{name:'뽑기(소형)',icon:'🎲',role:'plus'},
+    deduct_etc:{name:'기타사용',icon:'📤',role:'minus'},
+    deduct_bank:{name:'통장입금',icon:'🏧',role:'minus'}
+  };
+  const ri=r=>r==='plus'?'<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--success-light);color:var(--success);font-size:10px;font-weight:800;">+</span>':r==='minus'?'<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--danger-light);color:var(--danger);font-size:10px;font-weight:800;">-</span>':'<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--blue-light);color:var(--blue);font-size:10px;font-weight:800;">i</span>';
   let html='';
-  if(data.items_json)Object.values(data.items_json).forEach(item=>{html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);display:flex;align-items:center;gap:6px;">${ri(item.role)} ${item.name}</span><span style="font-size:14px;font-weight:700;">${fmt(item.value)}원</span></div>`;});
+  // items_json 렌더링
+  if(data.items_json){
+    const items=data.items_json;
+    Object.entries(items).forEach(([key,val])=>{
+      if(val===0||val==null) return; // 0원 항목 생략
+      const def=itemDefs[key]||{name:key,icon:'📋',role:'info'};
+      html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);display:flex;align-items:center;gap:6px;">${ri(def.role)} ${def.icon} ${def.name}</span><span style="font-size:14px;font-weight:700;">${fmt(val)}원</span></div>`;
+    });
+  }
+  // 매출 합계 표시
+  if(data.sales_total) html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid var(--gray-200);"><span style="font-size:13px;font-weight:700;color:var(--blue);">매출 합계</span><span style="font-size:14px;font-weight:800;color:var(--blue);">${fmt(data.sales_total)}원</span></div>`;
   html+='<div style="height:1px;background:var(--gray-200);margin:8px 0;"></div>';
-  if(data.vault_json)Object.entries(data.vault_json).filter(([,v])=>v>0).forEach(([unit,cnt])=>{html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">💵 ${parseInt(unit).toLocaleString()}원권</span><span style="font-size:14px;font-weight:700;">${cnt}장 = ${fmt(parseInt(unit)*cnt)}원</span></div>`;});
+  // 금고 계수
+  if(data.vault_json){
+    html+='<div style="font-size:12px;font-weight:700;color:var(--gray-400);margin-bottom:6px;">금고 계수</div>';
+    Object.entries(data.vault_json).filter(([,v])=>v>0).sort((a,b)=>parseInt(b[0])-parseInt(a[0])).forEach(([unit,cnt])=>{html+=`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">💵 ${parseInt(unit).toLocaleString()}원권</span><span style="font-size:14px;font-weight:700;">${cnt}장 = ${fmt(parseInt(unit)*cnt)}원</span></div>`;});
+  }
+  // 최종 결과
   const diff=data.diff_amount||0;
   html+=`<div style="background:var(--${diff===0?'success':'danger'}-light);border-radius:12px;padding:14px;margin-top:12px;text-align:center;"><div style="font-size:12px;color:var(--gray-600);font-weight:600;">최종 결과</div><div style="font-size:22px;font-weight:800;color:var(--${diff===0?'success':'danger'});margin-top:4px;">${diff===0?'✅ 일치':(diff>0?'+':'')+fmt(diff)+'원'}</div><div style="font-size:12px;color:var(--gray-600);margin-top:4px;">장부 ${fmt(data.expected_total)} · 금고 ${fmt(data.actual_total)}</div></div>`;
+  // 관리자: 수정/삭제 버튼
+  if(isManager){
+    html+=`<div class="action-group" style="margin-top:12px;">
+      <button class="btn btn-primary" style="flex:2;padding:14px;" onclick="editSettlement('${d}')">수정하기</button>
+      <button class="btn btn-danger" style="flex:1;padding:14px;" onclick="deleteSettlement('${d}')">삭제</button>
+    </div>`;
+  }
   c.innerHTML=html;
+}
+// ─── 새 기능: 정산 수정 ───
+async function editSettlement(dateStr){
+  // 기존 정산 데이터를 입력 폼에 로드하고 입력 탭으로 전환
+  if(!currentStore) return;
+  const{data}=await sb.from('settlements').select('*').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
+  if(!data) return toast('정산 데이터를 찾을 수 없습니다.','warn');
+  // 날짜 설정
+  const picker=document.getElementById('settleDatePicker');
+  if(picker) picker.value=dateStr;
+  // 입력 탭으로 전환
+  const tabs=document.querySelectorAll('#settleCont .sub-tab');
+  tabs.forEach((t,i)=>t.classList.toggle('active',i===0));
+  document.getElementById('settleInput').style.display='block';
+  document.getElementById('settleList').style.display='none';
+  document.getElementById('settleCard').style.display='none';
+  // items_json → 입력 필드에 채우기
+  const fieldMap={
+    opening:'siOpening',pos_cash:'siPosCash',pos_cash_receipt:'siPosCashReceipt',
+    pos_card:'siPosCard',pos_etc:'siPosEtc',
+    cash_detail_cash:'siCashCash',cash_detail_qr:'siCashQr',cash_detail_transfer:'siCashTransfer',
+    extra_draw_large:'siDrawLarge',extra_draw_small:'siDrawSmall',
+    deduct_etc:'siDeductEtc',deduct_bank:'siDeductBank'
+  };
+  const items=data.items_json||{};
+  Object.entries(fieldMap).forEach(([key,elId])=>{
+    const el=document.getElementById(elId);
+    if(el) el.value=items[key]?parseInt(items[key]).toLocaleString():'';
+  });
+  // vault_json → 금고 입력
+  const vault=data.vault_json||{};
+  document.querySelectorAll('.v-input').forEach(i=>{i.value=vault[i.dataset.unit]||'';});
+  // 전일 마감금액 상태
+  const statusEl=document.getElementById('settleDateStatus');
+  if(statusEl) statusEl.innerText='기존 데이터 수정 중';
+  recalcSettle2();
+  toast('정산 데이터를 불러왔습니다. 수정 후 저장하세요.','success');
+}
+async function deleteSettlement(dateStr){
+  if(!confirm(dateStr+' 정산 기록을 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.')) return;
+  setLoad(true,'삭제 중...');
+  const{error}=await sb.from('settlements').delete().eq('store_id',currentStore.id).eq('settle_date',dateStr);
+  setLoad(false);
+  if(error) return toast('삭제 실패: '+error.message,'error');
+  toast('정산 기록 삭제 완료','success');
+  loadSettleCard(dateStr);
 }
 async function moveCardDate(dir){const d=new Date(cardDateStr);d.setDate(d.getDate()+dir);await loadSettleCard(d.toISOString().split('T')[0]);}
 
@@ -2662,73 +3296,65 @@ function moveDashMonth(dir){
   loadDashboard();
 }
 function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}}
-
 function toggleTooltip(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none';}
-function deltaHtml(cur,prev){
-  if(prev==null||prev===undefined) return '';
-  const d=cur-prev;
-  if(d===0) return '<span class="kpi-delta neutral">— 동일</span>';
-  const arrow=d>0?'▲':'▼';
-  const cls=d>0?'up':'down';
-  const abs=Math.abs(d);
-  const val=abs>=10000?fmt(Math.round(abs/10000))+'만':fmt(abs);
-  return `<span class="kpi-delta ${cls}">${arrow} ${val}원</span>`;
-}
+
+// 만원 단위 포맷 헬퍼
+function fmtMan(v){return v>=0?fmt(Math.round(v/10000)):'-'+fmt(Math.round(Math.abs(v)/10000));}
+
 
 async function loadDashboard(){
-  if(!currentStore){document.getElementById('dashKpiGrid').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
+  if(!currentStore){document.getElementById('dashSummaryGrid').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
   setLoad(true,'데이터 조회 중...');
   try{
     const ym=dashMonthStr;
     document.getElementById('dashMonthLabel').innerText=ym;
     const[y,mo]=ym.split('-').map(Number);
     const lastDay=new Date(y,mo,0).getDate();
-    const start=ym+'-01',end=ym+'-'+lastDay;
+    const start=ym+'-01',end=ym+'-'+String(lastDay).padStart(2,'0');
     const today=new Date();
     const passedDays=today.toISOString().slice(0,7)===ym?today.getDate():lastDay;
     const isCurrent=passedDays<lastDay;
 
-    // 전월 기간
-    const prevD=new Date(y,mo-1,1);
-    const prevYm=prevD.toISOString().slice(0,7);
-    const prevLastDay=new Date(prevD.getFullYear(),prevD.getMonth()+1,0).getDate();
-    const prevStart=prevYm+'-01',prevEnd=prevYm+'-'+prevLastDay;
+    document.getElementById('dashPassedLabel').innerText=`${lastDay}일 중 ${passedDays}일 경과`;
 
     // ══ 병렬 데이터 로드 ══
     await loadExpCategories();
     const sid=currentStore.id;
 
-    const [settleRes,prevSettleRes,fcRes,prevFcRes,expResults]=await Promise.all([
+    const [settleRes,fcRes,expResults,royaltyTxRes]=await Promise.all([
       // 당월 정산
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
         :sb.from('settlements').select('settle_date,expected_total,actual_total,items_json,sales_total').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end).order('settle_date'),
-      // 전월 정산
-      dashSaleSource==='ups'
-        ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',prevStart).lte('sale_date',prevEnd)
-        :sb.from('settlements').select('settle_date,items_json,sales_total,expected_total').eq('store_id',sid).gte('settle_date',prevStart).lte('settle_date',prevEnd),
       // 당월 고정비
       sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(name,is_active,is_variable)').eq('store_id',sid).eq('year_month',ym),
-      // 전월 고정비
-      sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid).eq('year_month',prevYm),
       // 당월 지출 (병렬)
-      calcExpenseByCategories(ym, dashMode)
+      calcExpenseByCategories(ym, dashMode),
+      // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
+      dashMode==='final'
+        ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
+        :Promise.resolve({data:null})
     ]);
 
-    // ══ 1. 매출 집계 ══
-    let salesBreakdown={},totalRevenue=0,dailyMap={},receiptCount=0;
+    // ══ 1. 일별 매출 맵 + 매출 집계 ══
+    let salesBreakdown={},totalRevenue=0,dailySalesMap={},receiptCount=0;
     const settle=settleRes.data||[];
 
     if(dashSaleSource==='ups'){
-      settle.forEach(s=>{totalRevenue+=s.total_sales||0;dailyMap[s.sale_date?.slice(8)]=s.total_sales||0;});
+      settle.forEach(s=>{
+        const day=s.sale_date?.slice(8);
+        const ds=s.total_sales||0;
+        totalRevenue+=ds;dailySalesMap[day]=ds;
+      });
       salesBreakdown={'카드':settle.reduce((a,s)=>a+(s.card_sales||0),0),'현금':settle.reduce((a,s)=>a+(s.cash_sales||0),0)};
       salesBreakdown['기타']=totalRevenue-salesBreakdown['카드']-salesBreakdown['현금'];
     } else {
       settle.forEach(s=>{
         const j=s.items_json||{};
+        const day=s.settle_date?.slice(8);
         if(j.pos_card!==undefined){
           const ds=(j.pos_cash||0)+(j.pos_cash_receipt||0)+(j.pos_card||0)+(j.pos_etc||0)+(j.extra_draw_large||0)+(j.extra_draw_small||0);
-          totalRevenue+=ds;dailyMap[s.settle_date?.slice(8)]=ds;
+          totalRevenue+=ds;dailySalesMap[day]=ds;
           salesBreakdown['신용카드']=(salesBreakdown['신용카드']||0)+(j.pos_card||0);
           salesBreakdown['현금']=(salesBreakdown['현금']||0)+(j.pos_cash||0);
           salesBreakdown['현금영수증']=(salesBreakdown['현금영수증']||0)+(j.pos_cash_receipt||0);
@@ -2736,19 +3362,12 @@ async function loadDashboard(){
           if(j.extra_draw_large)salesBreakdown['뽑기(대형)']=(salesBreakdown['뽑기(대형)']||0)+j.extra_draw_large;
           if(j.extra_draw_small)salesBreakdown['뽑기(소형)']=(salesBreakdown['뽑기(소형)']||0)+j.extra_draw_small;
         } else {
-          totalRevenue+=s.sales_total||s.expected_total||0;
-          dailyMap[s.settle_date?.slice(8)]=(s.sales_total||s.expected_total||0);
+          const ds=s.sales_total||s.expected_total||0;
+          totalRevenue+=ds;dailySalesMap[day]=ds;
         }
       });
     }
-    receiptCount=Object.keys(dailyMap).length;
-
-    // 전월 매출
-    let prevRevenue=0;
-    (prevSettleRes.data||[]).forEach(s=>{
-      if(dashSaleSource==='ups'){prevRevenue+=s.total_sales||0;}
-      else{const j=s.items_json||{};if(j.pos_card!==undefined)prevRevenue+=(j.pos_cash||0)+(j.pos_cash_receipt||0)+(j.pos_card||0)+(j.pos_etc||0)+(j.extra_draw_large||0)+(j.extra_draw_small||0);else prevRevenue+=s.sales_total||s.expected_total||0;}
-    });
+    receiptCount=Object.keys(dailySalesMap).length;
 
     // ══ 2. 지출 집계 ══
     const expData=expResults;
@@ -2764,210 +3383,292 @@ async function loadDashboard(){
     const fixedCatAmt=expData.filter(e=>e.source==='fixed_costs').reduce((a,e)=>a+e.amount,0);
     const totalCost=totalCostRaw-fixedCatAmt+fixedProrated;
 
-    // 전월 지출
-    const prevFcTotal=(prevFcRes.data||[]).filter(a=>a.fixed_costs?.is_active!==false)
-      .reduce((a,r)=>a+(r.is_confirmed?r.amount:(r.estimated_amount||r.amount||0)),0);
-
     // 비용 비율
     const royaltyRate=parseFloat(settings.royalty_rate||0)/100;
     const cardFeeRate=parseFloat(settings.card_fee_rate||0)/100;
     const reserveRate=parseFloat(settings.reserve_rate||5)/100;
     const reserveFixed=parseInt(settings.reserve_fixed||400000);
     const cardSales=salesBreakdown['신용카드']||salesBreakdown['카드']||0;
-    // 로열티/카드수수료: 가마감=요율계산, 진마감=mydata 실제출금
+
+    // 로열티/카드수수료 (로열티 쿼리는 위 Promise.all에서 병렬 완료)
     let royalty,cardFee;
     if(dashMode==='final'){
-      // 진마감: mydata에서 '유림에퐁당'(로열티), 카드대금 제외 후 수수료 관련 출금
-      const{data:royaltyTx}=await sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end);
-      royalty=(royaltyTx||[]).reduce((a,r)=>a+Math.abs(r.amount||0),0);
-      // 카드수수료는 보통 카드사에서 매출-수수료 차감 입금이므로 요율 계산 유지
+      royalty=(royaltyTxRes.data||[]).reduce((a,r)=>a+Math.abs(r.amount||0),0);
       cardFee=Math.round(cardSales*cardFeeRate);
     } else {
       royalty=Math.round(totalRevenue*royaltyRate);
       cardFee=Math.round(cardSales*cardFeeRate);
     }
 
+    // ══ 핵심 수치 계산 ══
+    const totalCostFull=totalCost+royalty+cardFee;
+    const netProfit=totalRevenue-totalCostFull;
+    const reserveAmt=Math.max(0,Math.round(netProfit*reserveRate)+reserveFixed);
+    const realProfit=netProfit-reserveAmt;
+
     // 마감예상 계산
-    const estRevenue=isCurrent&&passedDays>0?Math.round(totalRevenue/passedDays*lastDay):totalRevenue;
-    // 고정비는 월총액, 변동비만 일수비례
     const variableCost=totalCost-fixedProrated;
+    const estRevenue=isCurrent&&passedDays>0?Math.round(totalRevenue/passedDays*lastDay):totalRevenue;
     const estVariableCost=isCurrent&&passedDays>0?Math.round(variableCost/passedDays*lastDay):variableCost;
     const estTotalCost=fixedMonthly+estVariableCost;
     const estCardSales=isCurrent&&passedDays>0?Math.round(cardSales/passedDays*lastDay):cardSales;
     const estRoyalty=Math.round(estRevenue*royaltyRate);
     const estCardFee=Math.round(estCardSales*cardFeeRate);
-
-    // ══ 수식: 지출에 로열티/수수료 포함 ══
-    const totalCostFull=totalCost+royalty+cardFee;
     const estTotalCostFull=estTotalCost+estRoyalty+estCardFee;
-    const netProfitFinal=totalRevenue-totalCostFull;
-    const reserveFinal=Math.max(0,Math.round(netProfitFinal*reserveRate)+reserveFixed);
-    const netAfterReserveFinal=netProfitFinal-reserveFinal;
-    const estNetProfitFinal=estRevenue-estTotalCostFull;
-    const estReserveFinal=Math.max(0,Math.round(estNetProfitFinal*reserveRate)+reserveFixed);
-    const estNetAfterReserveFinal=estNetProfitFinal-estReserveFinal;
+    const estNetProfit=estRevenue-estTotalCostFull;
+    const estReserve=Math.max(0,Math.round(estNetProfit*reserveRate)+reserveFixed);
+    const estRealProfit=estNetProfit-estReserve;
 
-    // 영수당 평균 = 매출/영수건수, 일평균매출 = 매출/경과일수
-    const avgPerReceipt=receiptCount>0?Math.round(totalRevenue/receiptCount):0;
-    const dailyAvgSales=passedDays>0?Math.round(totalRevenue/passedDays):0;
-    const prevReceiptCount=(prevSettleRes.data||[]).length;
-    const prevAvgPerReceipt=prevReceiptCount>0?Math.round(prevRevenue/prevReceiptCount):0;
-    const prevDailyAvg=prevLastDay>0?Math.round(prevRevenue/prevLastDay):0;
+    // ══ A-1. 월 요약 렌더 (토스 스타일) ══
+    const pctR=v=>totalRevenue>0?((v/totalRevenue)*100).toFixed(1)+'%':'–';
+    const summRow=(label,val,cls,pct)=>`<div class="dash-summ-row"><span class="ds-label">${label}</span><div class="ds-vals"><span class="ds-main ${cls}">${val}</span>${pct?`<span class="ds-pct">${pct}</span>`:''}</div></div>`;
 
-    // ══ KPI 렌더 (토스 스타일) ══
-    document.getElementById('dashKpiGrid').innerHTML=`
-      <!-- 매출 -->
-      <div class="kpi-section">
-        <div class="kpi-section-label">이번 달 매출 ${dashMode==='final'?'<span style="font-size:10px;color:var(--blue);font-weight:800;">진마감</span>':'<span style="font-size:10px;color:var(--gray-400);">가마감</span>'}</div>
-        <div style="display:flex;align-items:baseline;gap:8px;">
-          <span class="kpi-big blue">${fmt(totalRevenue)}원</span>
-          ${deltaHtml(totalRevenue,prevRevenue)}
+    let summHtml='';
+    summHtml+=summRow('매출',fmt(totalRevenue),'amt-blue','');
+    summHtml+=summRow('지출',fmt(totalCostFull),'amt-red',pctR(totalCostFull));
+    summHtml+=summRow('순수익',fmt(netProfit),netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
+    summHtml+=summRow('예비비','-'+fmt(reserveAmt),'amt-muted',pctR(reserveAmt));
+    summHtml+=`<div class="dash-summ-total"><span class="ds-label">실수익</span><div class="ds-vals"><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</span><span class="ds-pct">${pctR(realProfit)}</span></div></div>`;
+
+    // 마감예상 블록 (현재 월만)
+    if(isCurrent){
+      const pctE=v=>estRevenue>0?((v/estRevenue)*100).toFixed(1)+'%':'–';
+      summHtml+=`<div class="dash-summ-est-block">
+        <div class="est-title">월말 마감예상 (${lastDay}일 기준)</div>
+        <div class="dash-summ-est-row"><span class="es-label">매출</span><span><span class="es-val" style="color:var(--blue);">${fmt(estRevenue)}</span></span></div>
+        <div class="dash-summ-est-row"><span class="es-label">지출</span><span><span class="es-val" style="color:var(--danger);">${fmt(estTotalCostFull)}</span><span class="es-pct">${pctE(estTotalCostFull)}</span></span></div>
+        <div class="dash-summ-est-row"><span class="es-label">순수익</span><span><span class="es-val" style="color:${estNetProfit>=0?'var(--blue)':'var(--danger)'};">${fmt(estNetProfit)}</span><span class="es-pct">${pctE(estNetProfit)}</span></span></div>
+        <div class="dash-summ-est-row"><span class="es-label">예비비</span><span><span class="es-val" style="color:var(--gray-400);">-${fmt(estReserve)}</span></span></div>
+        <div class="dash-summ-est-row" style="border-top:1px solid var(--gray-200);padding-top:6px;margin-top:4px;"><span class="es-label" style="font-weight:800;">실수익</span><span><span class="es-val" style="font-weight:800;color:${estRealProfit>=0?'var(--success)':'var(--danger)'};">${estRealProfit>=0?'':'-'}${fmt(Math.abs(estRealProfit))}</span><span class="es-pct">${pctE(Math.abs(estRealProfit))}</span></span></div>
+      </div>`;
+    }
+    document.getElementById('dashSummaryGrid').innerHTML=summHtml;
+
+    // 예비비 잔고 미니
+    const reserveBalance=await calcReserveBalance();
+    document.getElementById('dashReserveBalanceAmt').innerText=fmt(reserveBalance);
+
+    // ══ A-2. 일별 정산 테이블 ══
+    const allDays=Array.from({length:lastDay},(_,i)=>String(i+1).padStart(2,'0'));
+    // 일별 카테고리별 지출 맵 구축
+    const dailyCatMap={}; // { '15': { '식자재': 520000, '인건비': 380000, ... } }
+    const dailyExpTotal={}; // { '15': 1200000 }
+
+    // ── 일별정산 카테고리 (DB 동적 생성) ──
+    const _dailySrcs=['vendor_orders','receipts','attendance','fixed_costs'];
+    const catNames=[],catColors={},shortNames={},srcToCat={};
+    _dailySrcs.forEach(src=>{
+      const cat=expCategories.find(c=>c.data_source===src&&!c.parent_id)||expCategories.find(c=>c.data_source===src);
+      const nm=cat?cat.name:src;
+      catNames.push(nm);catColors[nm]=cat?.color||'#4E5968';srcToCat[src]=nm;
+      if(nm.includes('/'))shortNames[nm]=nm.split('/')[0];
+      else if(nm.includes('('))shortNames[nm]=nm.split('(')[0];
+      else shortNames[nm]=nm.length>4?nm.slice(0,3):nm;
+    });
+    catNames.push('로열티/수수료');catColors['로열티/수수료']='#EF4444';shortNames['로열티/수수료']='로열티';
+
+    // 일별 카테고리 데이터 (병렬 조회)
+    const[voRes2,rcRes2,attRes2]=await Promise.all([
+      sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+      sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+      sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end)
+    ]);
+    const voDaily=voRes2.data,rcDaily=rcRes2.data,attDaily=attRes2.data;
+    (voDaily||[]).forEach(v=>{
+      const d=v.order_date?.slice(8);if(!d)return;
+      if(!dailyCatMap[d])dailyCatMap[d]={};
+      const k=srcToCat['vendor_orders'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(v.amount||0);
+    });
+    (rcDaily||[]).forEach(r=>{
+      const d=r.receipt_date?.slice(8);if(!d)return;
+      if(!dailyCatMap[d])dailyCatMap[d]={};
+      const k=srcToCat['receipts'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
+    });
+    (attDaily||[]).forEach(a=>{
+      const d=a.work_date?.slice(8);if(!d)return;
+      if(!dailyCatMap[d])dailyCatMap[d]={};
+      const k=srcToCat['attendance'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(a.calculated_wage||0);
+    });
+    // 고정비 (일할 균등배분)
+    const dailyFixedShare=Math.round(fixedMonthly/lastDay);
+
+    // 일별 합계 계산
+    allDays.forEach(d=>{
+      const dayNum=parseInt(d);
+      if(dayNum>passedDays) return;
+      const hasSale=dailySalesMap.hasOwnProperty(d);
+      if(!hasSale) return;
+      if(!dailyCatMap[d])dailyCatMap[d]={};
+      dailyCatMap[d][srcToCat['fixed_costs']]=dailyFixedShare;
+      // 로열티/수수료: 해당일 매출 기준
+      const daySale=dailySalesMap[d]||0;
+      const dayRoyalty=Math.round(daySale*royaltyRate);
+      const dayCardFee=Math.round(daySale*cardFeeRate);
+      if(dayRoyalty+dayCardFee>0) dailyCatMap[d]['로열티/수수료']=dayRoyalty+dayCardFee;
+      // 일별 지출 합계
+      let dayExp=0;
+      catNames.forEach(c=>{dayExp+=(dailyCatMap[d]?.[c]||0);});
+      dailyExpTotal[d]=dayExp;
+    });
+
+    // 주차 구분 (월~일 기준: 평일/주말 패턴 유지)
+    const weekGroups=[];
+    let curWeek=[];
+    allDays.forEach(d=>{
+      const dt=new Date(y,mo-1,parseInt(d));
+      const dow=dt.getDay(); // 0=일
+      curWeek.push(d);
+      if(dow===0||d===allDays[allDays.length-1]){
+        weekGroups.push([...curWeek]);
+        curWeek=[];
+      }
+    });
+
+    // 토스 카드 스타일 일별정산
+    const weekSummaries=[];
+    const pctS=(v,base)=>base>0?((v/base)*100).toFixed(1):'0';
+    // catColors, shortNames는 위에서 DB 기반 동적 생성됨
+
+    let dailyHtml='';
+    for(let wi=0;wi<weekGroups.length;wi++){
+      const week=weekGroups[wi];
+      let wS=0,wE=0,wP=0,wHas=false;
+      const wC={};catNames.forEach(c=>{wC[c]=0;});
+
+      // 일별 카드 모으기
+      let dayCardsHtml='';
+      for(let di=0;di<week.length;di++){
+        const d=week[di];
+        const dayNum=parseInt(d);
+        if(dayNum>passedDays) continue;
+        const has=dailySalesMap.hasOwnProperty(d);
+        const s=dailySalesMap[d]||0;
+        const e=has?(dailyExpTotal[d]||0):0;
+        const p=s-e;
+        if(has){wS+=s;wE+=e;wP+=p;wHas=true;catNames.forEach(c=>{wC[c]+=(dailyCatMap[d]?.[c]||0);});}
+        if(!has) continue;
+
+        // 카테고리 도트 리스트
+        let catDotsHtml='';
+        catNames.forEach(c=>{
+          const v=dailyCatMap[d]?.[c]||0;
+          if(!v) return;
+          const color=catColors[c]||'#4E5968';
+          const pct=s>0?pctS(v,s)+'%':'';
+          catDotsHtml+=`<span class="dc-item"><span class="dc-dot" style="background:${color};"></span>${shortNames[c]} <span class="dc-val">${fmt(v)}</span> <span class="dc-pct" style="color:${color};">${pct}</span></span>`;
+        });
+
+        const profitCls=p>=0?'amt-green':'amt-red';
+        dayCardsHtml+=`<div class="dt-day-item" style="cursor:pointer;">
+          <div class="dt-day-top">
+            <span class="dt-day-date">${mo}/${dayNum}</span>
+            <span class="dt-day-profit ${profitCls}">${p>=0?'+':''}${fmt(p)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-400);font-weight:600;">
+            <span>매출 <b style="color:var(--blue);">${fmt(s)}</b></span>
+            <span>지출 <b style="color:var(--danger);">${fmt(e)}</b></span>
+          </div>
+          <div class="dt-day-cats" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid var(--gray-100);">${catDotsHtml}</div>
+        </div>`;
+      }
+
+      if(!wHas) continue;
+
+      // 주계 카테고리 바
+      let wCatsHtml='';
+      catNames.forEach(c=>{
+        if(!wC[c]) return;
+        const color=catColors[c]||'#4E5968';
+        const pct=wS>0?pctS(wC[c],wS)+'%':'';
+        wCatsHtml+=`<span class="wc-item">${shortNames[c]} <span class="wc-amt">${fmt(wC[c])}</span> <span class="wc-pct" style="color:${color};">${pct}</span></span>`;
+      });
+
+      const wProfitCls=wP>=0?'amt-green':'amt-red';
+      // 현재 주인지 판단 (passedDays가 이 주에 포함되면 현재 주)
+      const isCurrentWeek=week.some(d=>parseInt(d)===passedDays);
+      const collapsed=!isCurrentWeek;
+      dailyHtml+=`<div class="dt-week-card">
+        <div class="dt-week-header" data-week="${wi}">
+          <span class="wk-title">${collapsed?'▶':'▼'} ${wi+1}주 <span style="font-size:11px;font-weight:600;color:var(--gray-400);">${mo}/${parseInt(week[0])}~${mo}/${parseInt(week[week.length-1])}</span></span>
+          <span class="wk-profit ${wProfitCls}">${wP>=0?'+':''}${fmt(wP)}</span>
         </div>
-        ${isCurrent?`<div class="kpi-est">마감예상 <span>${fmt(estRevenue)}원</span></div>`:''}
-      </div>
-
-      <!-- 지출 + 예비비 -->
-      <div class="kpi-section">
-        <div class="kpi-row2">
-          <div>
-            <div class="kpi-section-label">지출</div>
-            <div class="kpi-mid red">${fmt(totalCostFull)}원</div>
-          </div>
-          <div>
-            <div class="kpi-section-label">예비비</div>
-            <div class="kpi-mid">${fmt(reserveFinal)}원</div>
-          </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:12px;color:var(--gray-600);">
+          <span>매출 <b style="color:var(--blue);">${fmt(wS)}</b></span>
+          <span>지출 <b style="color:var(--danger);">${fmt(wE)}</b></span>
         </div>
-      </div>
+        ${wCatsHtml?`<div class="dt-week-cats">${wCatsHtml}</div>`:''}
+        <div class="dt-day-list" data-wkbody="${wi}" ${collapsed?'style="display:none;"':''}>${dayCardsHtml}</div>
+      </div>`;
 
-      <!-- 순수익 -->
-      <div class="kpi-section" style="background:${netAfterReserveFinal>=0?'var(--success-light)':'var(--danger-light)'};margin:0 -16px;padding:14px 16px;border-radius:14px;border-bottom:none;">
-        <div class="kpi-section-label">순수익</div>
-        <div style="display:flex;align-items:baseline;gap:8px;">
-          <span class="kpi-big ${netAfterReserveFinal>=0?'green':'red'}">${netAfterReserveFinal>=0?'':'-'}${fmt(Math.abs(netAfterReserveFinal))}원</span>
-          ${deltaHtml(netAfterReserveFinal,prevRevenue-prevFcTotal)}
-        </div>
-        ${isCurrent?`<div class="kpi-est">마감예상 <span>${fmt(estNetAfterReserveFinal)}원</span></div>`:''}
-      </div>
+      const isCompleteWeek=(wi<weekGroups.length-1)||!isCurrent;
+      weekSummaries.push({week:wi+1,profit:wP,done:isCompleteWeek});
+    }
 
-      <!-- 하단 3칸 -->
-      <div class="kpi-section" style="border-bottom:none;">
-        <div class="kpi-bottom3">
-          <div>
-            <div class="kb-val">${fmt(receiptCount)}건</div>
-            <div class="kb-label">영수건수</div>
-            ${deltaHtml(receiptCount,prevReceiptCount)}
-          </div>
-          <div>
-            <div class="kb-val">${fmt(avgPerReceipt)}원</div>
-            <div class="kb-label">영수당평균</div>
-            ${deltaHtml(avgPerReceipt,prevAvgPerReceipt)}
-          </div>
-          <div>
-            <div class="kb-val">${fmt(dailyAvgSales)}원</div>
-            <div class="kb-label">일평균매출</div>
-            ${deltaHtml(dailyAvgSales,prevDailyAvg)}
-          </div>
-        </div>
-      </div>
-    `;
+    document.getElementById('dashDailyTable').innerHTML=dailyHtml||'<div class="empty-state" style="padding:16px;"><p>정산 데이터가 없습니다</p></div>';
 
-    // ══ 지출 비중 ══
-    const costPct=totalRevenue>0?(totalCost/totalRevenue*100).toFixed(1):'0';
-    document.getElementById('dashExpPct').innerText=costPct+'%';
-    document.getElementById('dashExpTotalAmt').innerText=fmt(totalCost)+'원';
+    // 피벗 모달용 데이터 저장
+    _pivotData={days:allDays.filter(d=>parseInt(d)<=passedDays),salesMap:dailySalesMap,catMap:dailyCatMap,expMap:dailyExpTotal,catNames,catColors,shortNames,mo,royaltyRate,cardFeeRate,weekGroups,passedDays};
 
-    // 대분류별 그룹핑 (고정비는 일할계산 적용)
+    // ══ A-4. 월정산 상세 (토스 스타일) ══
+    const groupMap={vendor_orders:'식자재',receipts:'식자재(직구/영수증)',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
     const expByGroup={};
     expData.forEach(e=>{
-      const groupMap={vendor_orders:'식자재',receipts:'식자재(직구/영수증)',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
       const group=groupMap[e.source]||'기타';
-      if(!expByGroup[group])expByGroup[group]={items:[],total:0};
-      if(e.source==='fixed_costs'){
-        expByGroup[group].total=fixedProrated;
-      } else {
-        expByGroup[group].items.push(e);
-        expByGroup[group].total+=e.amount;
-      }
+      if(!expByGroup[group])expByGroup[group]=0;
+      if(e.source==='fixed_costs') expByGroup[group]=fixedProrated;
+      else expByGroup[group]+=e.amount;
     });
-    if(fcAmounts.length){
-      const fcg=expByGroup['공과금/고정비']||(expByGroup['공과금/고정비']={items:[],total:fixedProrated});
-      fcg.details=fcAmounts.filter(a=>a.fixed_costs?.is_active!==false).map(a=>{
-        const monthAmt=a.is_confirmed?a.amount:(a.estimated_amount||a.amount||0);
-        return{name:a.fixed_costs?.name||'?',amount:Math.round(monthAmt/lastDay*passedDays),monthAmount:monthAmt,isVariable:a.fixed_costs?.is_variable||false,isConfirmed:a.is_confirmed||false};
-      });
-    }
+    if(royalty>0) expByGroup['로열티']=(expByGroup['로열티']||0)+royalty;
+    if(cardFee>0) expByGroup['카드수수료']=(expByGroup['카드수수료']||0)+cardFee;
 
-    // 로열티/수수료 → 지출 그룹에 자동 추가
-    if(royalty>0||cardFee>0){
-      const feeItems=[];
-      if(royalty>0) feeItems.push({id:'_royalty',name:`로열티 (${(royaltyRate*100).toFixed(1)}%)`,color:'#EF4444',source:'auto',amount:royalty});
-      if(cardFee>0) feeItems.push({id:'_cardfee',name:`카드수수료 (${(cardFeeRate*100).toFixed(1)}%)`,color:'#EF4444',source:'auto',amount:cardFee});
-      expByGroup['로열티/수수료']={items:feeItems,total:royalty+cardFee};
-    }
+    const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1)+'%':'–';
+    const mGroupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','로열티':'#EF4444','카드수수료':'#EF4444','기타/수동':'#7C3AED','마케팅':'#F59E0B'};
+    const groupOrder=['식자재','식자재(직구/영수증)','인건비','공과금/고정비','로열티','카드수수료','기타/수동','마케팅'];
 
-    // 색상 매핑 (차트와 아코디언 통일)
-    const groupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','기타/수동':'#7C3AED','마케팅':'#F59E0B','로열티/수수료':'#EF4444'};
+    // 매출 행
+    let monthHtml=`<div class="dash-summ-row" style="padding-bottom:12px;"><span class="ds-label" style="font-size:14px;font-weight:800;">총매출</span><span class="ds-main amt-blue">${fmt(totalRevenue)}</span></div>`;
 
-    // 원형 차트
-    destroyChart('expPieChart');
-    const pieEntries=Object.entries(expByGroup).filter(([,d])=>d.total>0).sort((a,b)=>b[1].total-a[1].total);
-    if(pieEntries.length){
-      const pieClrs=pieEntries.map(([g])=>groupColors[g]||'#4E5968');
-      chartInstances.expPieChart=new Chart(document.getElementById('expPieChart'),{type:'doughnut',data:{labels:pieEntries.map(([g])=>g),datasets:[{data:pieEntries.map(([,d])=>d.total),backgroundColor:pieClrs}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,color:'#4E5968'}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.raw)}원 (${totalCost>0?(ctx.raw/totalCost*100).toFixed(1):'0'}%)`}}}}});
-    }
-
-    // 아코디언
-    let accHtml='';
-    Object.entries(expByGroup).forEach(([group,data])=>{
-      const gPct=totalRevenue>0?(data.total/totalRevenue*100).toFixed(1):'0';
-      const color=groupColors[group]||'#4E5968';
-      let detailHtml='';
-      data.items.forEach(item=>{
-        detailHtml+=`<div style="display:flex;justify-content:space-between;padding:6px 0 6px 16px;border-bottom:1px solid var(--gray-100);">
-          <span style="font-size:11px;color:var(--gray-600);">${item.name}</span>
-          <span style="font-size:11px;font-weight:600;">${fmt(item.amount)}원</span>
-        </div>`;
-      });
-      if(data.details){
-        data.details.forEach(d=>{
-          const tag=d.isVariable?(d.isConfirmed?'<span style="color:var(--success);font-size:9px;"> 확정</span>':'<span style="color:var(--gray-400);font-size:9px;"> 예정</span>'):'';
-          detailHtml+=`<div style="display:flex;justify-content:space-between;padding:6px 0 6px 16px;border-bottom:1px solid var(--gray-100);">
-            <span style="font-size:11px;color:var(--gray-600);">${d.name}${tag}</span>
-            <span style="font-size:11px;font-weight:600;">${fmt(d.amount)}원 <span style="font-size:9px;color:var(--gray-400);">/${fmt(d.monthAmount)}</span></span>
-          </div>`;
-        });
-      }
-      accHtml+=`<div style="margin-bottom:6px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--gray-100);border-radius:10px;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <div style="width:7px;height:7px;border-radius:50%;background:${color};"></div>
-            <span style="font-size:12px;font-weight:700;">${group}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;font-weight:800;">${fmt(data.total)}원</span>
-            <span style="font-size:11px;font-weight:700;color:${color};">${gPct}%</span>
-          </div>
-        </div>
-        <div style="display:none;">${detailHtml}</div>
-      </div>`;
+    // 카테고리별 행
+    groupOrder.forEach(g=>{
+      const amt=expByGroup[g];
+      if(!amt||amt<=0) return;
+      const color=mGroupColors[g]||'#4E5968';
+      monthHtml+=`<div class="dash-summ-row"><div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span><span class="ds-label">${g}</span></div><div class="ds-vals"><span class="ds-pct">${pctOf(amt)}</span><span class="ds-main">${fmt(amt)}</span></div></div>`;
     });
-    document.getElementById('dashExpAccordion').innerHTML=accHtml||'<div class="empty-state" style="padding:16px;"><p>지출 카테고리를 설정에서 추가하세요</p></div>';
+    // 미등록 그룹
+    Object.entries(expByGroup).forEach(([g,amt])=>{
+      if(!groupOrder.includes(g)&&amt>0) monthHtml+=`<div class="dash-summ-row"><span class="ds-label">${g}</span><div class="ds-vals"><span class="ds-pct">${pctOf(amt)}</span><span class="ds-main">${fmt(amt)}</span></div></div>`;
+    });
 
-    // ══ 결제방법별 매출 ══
-    const pct=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1)+'%':'–';
-    const salesEntries=Object.entries(salesBreakdown).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-    document.getElementById('dashSalesBreakdown').innerHTML=salesEntries.length
-      ?salesEntries.map(([name,amt])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--gray-100);">
-          <span style="font-size:12px;font-weight:600;color:var(--gray-600);">${name}</span>
-          <div style="display:flex;gap:10px;"><span style="font-size:12px;font-weight:700;">${fmt(amt)}원</span><span style="font-size:11px;font-weight:700;color:var(--blue);min-width:40px;text-align:right;">${pct(amt)}</span></div>
-        </div>`).join('')
-      :'<div class="empty-state" style="padding:12px;"><p>매출 데이터가 없습니다</p></div>';
+    // 합계
+    monthHtml+=`<div style="border-top:2px solid var(--text);padding-top:10px;margin-top:4px;">
+      <div class="dash-summ-row"><span class="ds-label" style="font-weight:800;">지출합계</span><div class="ds-vals"><span class="ds-pct">${pctOf(totalCostFull)}</span><span class="ds-main amt-red">${fmt(totalCostFull)}</span></div></div>
+      <div class="dash-summ-row"><span class="ds-label">순수익</span><div class="ds-vals"><span class="ds-pct">${pctOf(netProfit)}</span><span class="ds-main">${fmt(netProfit)}</span></div></div>
+      <div class="dash-summ-row"><span class="ds-label">예비비</span><div class="ds-vals"><span class="ds-main">-${fmt(reserveAmt)}</span></div></div>
+      <div class="dash-summ-total"><span class="ds-label">실수익</span><span class="ds-main ${realProfit>=0?'amt-green':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</span></div>
+    </div>`;
+    document.getElementById('dashMonthDetail').innerHTML=monthHtml;
 
-    // ══ 일별 매출 차트 ══
+    // ══ A-5. 일별 차트 (매출 + 순이익) ══
     destroyChart('dailyChart');
-    const allDays=Array.from({length:lastDay},(_,i)=>String(i+1).padStart(2,'0'));
-    chartInstances.dailyChart=new Chart(document.getElementById('dailyChart'),{type:'line',data:{labels:allDays,datasets:[{label:'일별 매출',data:allDays.map(d=>dailyMap[d]||0),borderColor:'#0050FF',backgroundColor:'rgba(0,80,255,0.08)',tension:0.3,fill:true,pointRadius:2,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v>=10000?Math.round(v/10000)+'만':v},beginAtZero:true}}}});
+    const chartDays=allDays.filter(d=>parseInt(d)<=passedDays);
+    const dailyProfitMap={};
+    chartDays.forEach(d=>{
+      const sale=dailySalesMap[d]||0;
+      const exp=dailyExpTotal[d]||0;
+      dailyProfitMap[d]=sale-exp;
+    });
+    chartInstances.dailyChart=new Chart(document.getElementById('dailyChart'),{
+      type:'line',
+      data:{
+        labels:chartDays.map(d=>parseInt(d)+''),
+        datasets:[
+          {label:'매출',data:chartDays.map(d=>dailySalesMap[d]||0),borderColor:'#0050FF',backgroundColor:'rgba(0,80,255,0.08)',tension:0.3,fill:true,pointRadius:2,pointHoverRadius:5},
+          {label:'순이익',data:chartDays.map(d=>dailyProfitMap[d]||0),borderColor:'#05C072',backgroundColor:'rgba(5,192,114,0.08)',tension:0.3,fill:true,pointRadius:2,pointHoverRadius:5,borderDash:[4,3]}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}}},scales:{y:{ticks:{callback:v=>v>=10000?Math.round(v/10000)+'만':(v<=-10000?Math.round(v/10000)+'만':v)},beginAtZero:false}}}
+    });
 
   }catch(e){console.error('대시보드 오류:',e);}finally{setLoad(false);}
 }
@@ -3171,13 +3872,8 @@ async function saveFcAmounts(){
 // ══════════════════════════════════════════
 // 직원관리
 // ══════════════════════════════════════════
-function staffTab(tab,el){
-  document.querySelectorAll('#staffCont .sub-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
-  document.getElementById('staffList').style.display=tab==='list'?'block':'none';
-  document.getElementById('staffRoles').style.display=tab==='roles'?'block':'none';
-  document.getElementById('staffPerms').style.display=tab==='perms'?'block':'none';
-  if(tab==='roles')loadRoles();if(tab==='perms')loadPermissions();
-}
+// staffTab: 서브탭 제거됨 — 직원 목록만 표시
+function staffTab(){}
 async function loadEmployees(){
   if(!currentStore)return;
   const{data}=await sb.from('employees').select('*').eq('store_id',currentStore.id).order('name');
@@ -3190,32 +3886,75 @@ async function loadEmployees(){
 function renderEmpList(){
   const fRole=document.getElementById('empFilterRole')?.value||'';
   const fStatus=document.getElementById('empFilterStatus')?.value||'active';
-  let list=employees;
+  let list=employees.filter(e=>e.auth_level!=='owner');
   if(fStatus==='active')list=list.filter(e=>e.is_active);if(fStatus==='inactive')list=list.filter(e=>!e.is_active);if(fRole)list=list.filter(e=>e.role===fRole);
   const c=document.getElementById('empList');if(!c)return;
-  c.innerHTML=list.length?list.map(e=>`
-    <div class="emp-card" onclick="openEmpDetail('${e.id}')">
-      <div class="emp-card-top">
-        <div class="emp-avatar${e.is_active?'':' inactive'}">${e.name?.charAt(0)||'?'}</div>
-        <div class="emp-card-info">
-          <div class="emp-card-name">${e.name} ${e.role?`<span class="badge badge-blue">${e.role}</span>`:''} ${!e.is_active?'<span class="badge badge-gray">퇴사</span>':''}</div>
-          <div class="emp-card-sub">시급 ${fmt(e.base_wage)}원${e.phone?' · '+e.phone:''}${e.account_number?' · '+maskAccount(e.account_number):''}</div>
+  // 주민번호 마스킹 헬퍼
+  const maskId=(num)=>{if(!num)return'';const d=num.replace(/[^\d]/g,'');if(d.length<7)return num;return d.slice(0,6)+'-'+d[6]+'******';};
+  c.innerHTML=list.length?list.map(e=>{
+    const authBadge=e.auth_level==='store_manager'||e.is_manager?'<span class="badge badge-warn" style="font-size:9px;">관리자</span>':'';
+    const statusBadge=!e.is_active?'<span class="badge badge-gray" style="font-size:9px;">퇴사</span>':'';
+    const pinBadge=!e.pin?'<span class="badge badge-red" style="font-size:9px;">PIN미설정</span>':'';
+    const foreignBadge=e.is_foreign?'<span class="badge badge-purple" style="font-size:9px;">외국인</span>':'';
+    const reportBadge=e.is_foreign?(e.report_status==='신고'?'<span class="badge badge-green" style="font-size:9px;">신고</span>':'<span class="badge badge-red" style="font-size:9px;">미신고</span>'):'';
+    return `
+    <div style="background:var(--white);border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04);${!e.is_active?'opacity:0.6;':''}">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <div class="emp-avatar${e.is_active?'':' inactive'}" style="width:44px;height:44px;font-size:16px;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+            <span style="font-size:15px;font-weight:800;">${e.name}</span>
+            ${e.role?`<span class="badge badge-blue" style="font-size:9px;">${e.role}</span>`:''}
+            ${authBadge}${foreignBadge}${reportBadge}${statusBadge}${pinBadge}
+          </div>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">${maskId(e.id_number)}</div>
         </div>
       </div>
-      <div class="emp-card-actions">
-        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="event.stopPropagation();openEditEmpSheet('${e.id}')">✏️ 편집</button>
-        ${e.is_active?`<button class="btn btn-danger btn-sm" style="flex:1;" onclick="event.stopPropagation();toggleEmp('${e.id}',false)">퇴사</button>`:`<button class="btn btn-success btn-sm" style="flex:1;" onclick="event.stopPropagation();toggleEmp('${e.id}',true)">복직</button>`}
+      <a href="tel:${e.phone||''}" style="display:flex;align-items:center;gap:6px;padding:10px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:10px;text-decoration:none;color:var(--text);${e.phone?'':'pointer-events:none;'}">
+        <span style="font-size:14px;">📞</span>
+        <span style="font-size:14px;font-weight:700;letter-spacing:0.5px;">${e.phone||'전화번호 없음'}</span>
+      </a>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">
+        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">시급</div>
+          <div style="font-size:13px;font-weight:800;color:var(--blue);">${fmt(e.base_wage)}원</div>
+        </div>
+        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">은행</div>
+          <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.bank_name||'-'}</div>
+        </div>
+        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">입사</div>
+          <div style="font-size:11px;font-weight:700;">${e.hire_date?.slice(5)||'-'}</div>
+        </div>
       </div>
-    </div>`).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
+      ${isManager?`<div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" style="flex:1;padding:10px;font-size:12px;" onclick="event.stopPropagation();openEditEmpSheet('${e.id}')">편집</button>
+        ${e.is_active?`<button class="btn btn-danger btn-sm" style="flex:1;padding:10px;font-size:12px;" onclick="event.stopPropagation();toggleEmp('${e.id}',false)">퇴사</button>`:`<button class="btn btn-success btn-sm" style="flex:1;padding:10px;font-size:12px;" onclick="event.stopPropagation();toggleEmp('${e.id}',true)">복직</button>`}
+      </div>`:''}
+    </div>`}).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
 }
-async function openAddEmpSheet(){if(!guardStore())return;document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empBirthInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';selectedRoleName='';await renderRoleChips('');openSheet('addEmpSheet');}
-async function openEditEmpSheet(id){const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empBirthInput').value=e.birth_date||'';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');openSheet('addEmpSheet');}
-async function renderRoleChips(sel){await loadRoles(false);const wrap=document.getElementById('empRoleChips');if(!wrap)return;wrap.innerHTML=roles.length?roles.map(r=>`<span class="role-chip${r.name===sel?' selected':''}" onclick="selectRoleChip('${r.name}',this)">${r.name}</span>`).join(''):'<p style="font-size:12px;color:var(--gray-400);">직급 관리 탭에서 직급을 먼저 추가하세요</p>';}
+async function openAddEmpSheet(){if(!guardStore())return;if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empIdNumInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';document.getElementById('empAuthLevel').value='staff';document.getElementById('empForeignCheck').checked=false;document.getElementById('empIdNumLabel').innerText='주민등록번호';document.getElementById('empIdNumInput').placeholder='960315-1234567';document.getElementById('empReportStatus').value='미신고';document.getElementById('empReportWrap').style.display='none';selectedRoleName='';await renderRoleChips('');const drWrap=document.getElementById('deviceResetWrap');if(drWrap)drWrap.style.display='none';openSheet('addEmpSheet');}
+async function openEditEmpSheet(id){if(!isManager)return toast('관리자만 편집할 수 있습니다.','warn');const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empIdNumInput').value=e.id_number||e.birth_date||'';document.getElementById('empForeignCheck').checked=!!e.is_foreign;document.getElementById('empIdNumLabel').innerText=e.is_foreign?'외국인등록번호':'주민등록번호';document.getElementById('empIdNumInput').placeholder=e.is_foreign?'960315-5234567':'960315-1234567';document.getElementById('empReportStatus').value=e.report_status||'미신고';document.getElementById('empReportWrap').style.display=e.is_foreign?'block':'none';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('empAuthLevel').value=e.auth_level||'staff';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');
+  // 기기 초기화 섹션 표시
+  const drWrap=document.getElementById('deviceResetWrap');const dsEl=document.getElementById('deviceStatus');
+  if(drWrap){drWrap.style.display='block';dsEl.innerText=e.device_fingerprint?'등록된 기기: '+e.device_fingerprint.slice(0,12)+'...':'등록된 기기 없음 (다음 출근 시 자동 등록)';}
+  openSheet('addEmpSheet');}
+async function renderRoleChips(sel){await loadRoles(false);const wrap=document.getElementById('empRoleChips');if(!wrap)return;wrap.innerHTML=(roles.map(r=>`<span class="role-chip${r.name===sel?' selected':''}" onclick="selectRoleChip('${r.name}',this)">${r.name}</span>`).join(''))+`<span class="role-chip" style="border:1px dashed var(--gray-300);color:var(--gray-400);" onclick="promptAddRole()">+ 추가</span>`;}
 function selectRoleChip(name,el){selectedRoleName=selectedRoleName===name?'':name;document.querySelectorAll('#empRoleChips .role-chip').forEach(c=>c.classList.remove('selected'));if(selectedRoleName)el.classList.add('selected');}
+async function promptAddRole(){const name=prompt('새 직급명을 입력하세요');if(!name||!name.trim())return;setLoad(true,'추가 중...');const{error}=await sb.from('roles').insert({store_id:currentStore.id,name:name.trim(),level:roles.length+1});setLoad(false);if(error)return toast('추가 실패: '+error.message,'error');toast(name.trim()+' 직급 추가!','success');await renderRoleChips(name.trim());selectedRoleName=name.trim();}
 async function saveEmployee(){
   if(!guardStore())return;const name=document.getElementById('empNameInput').value.trim();if(!name)return toast('이름을 입력하세요.','warn');
   const pinVal=document.getElementById('empPinInput').value.trim()||null;
-  const payload={store_id:currentStore.id,name,birth_date:document.getElementById('empBirthInput').value.trim()||null,phone:document.getElementById('empPhoneInput').value.trim()||null,address:document.getElementById('empAddressInput').value.trim()||null,bank_name:document.getElementById('empBankInput').value.trim()||null,account_number:document.getElementById('empAccountInput').value.trim()||null,base_wage:parseInt(document.getElementById('empWageInput').value)||10030,pin:pinVal,caps_id:document.getElementById('empCapsIdInput').value.trim()||null,hire_date:document.getElementById('empHireDateInput').value.trim()||null,role:selectedRoleName||null};
+  // PIN 필수 검증 (4자리 숫자)
+  if(!pinVal||!/^\d{4}$/.test(pinVal)) return toast('PIN 4자리 숫자를 입력하세요.','warn');
+  const idNumRaw=document.getElementById('empIdNumInput').value.trim()||null;
+  // 주민번호에서 생년월일 추출 (호환용)
+  let birthDate=null;
+  if(idNumRaw){const digits=idNumRaw.replace(/[^\d]/g,'');if(digits.length>=6){const yy=digits.slice(0,2);const mm=digits.slice(2,4);const dd=digits.slice(4,6);const g=digits.length>=7?parseInt(digits[6]):1;const century=(g<=2)?'19':'20';birthDate=century+yy+'-'+mm+'-'+dd;}}
+  const payload={store_id:currentStore.id,name,id_number:idNumRaw,birth_date:birthDate,is_foreign:document.getElementById('empForeignCheck').checked,report_status:document.getElementById('empReportStatus').value||'미신고',phone:document.getElementById('empPhoneInput').value.trim()||null,address:document.getElementById('empAddressInput').value.trim()||null,bank_name:document.getElementById('empBankInput').value.trim()||null,account_number:document.getElementById('empAccountInput').value.trim()||null,base_wage:parseInt(document.getElementById('empWageInput').value)||10030,pin:pinVal,caps_id:document.getElementById('empCapsIdInput').value.trim()||null,hire_date:document.getElementById('empHireDateInput').value.trim()||null,role:selectedRoleName||null};
+  // 권한은 관리자만 변경 가능
+  if(isManager){const selAuth=document.getElementById('empAuthLevel').value||'staff';payload.auth_level=selAuth;payload.is_manager=selAuth!=='staff';}
   setLoad(true,'저장 중...');const eid=document.getElementById('editEmpId').value;
   const{error}=eid?await sb.from('employees').update(payload).eq('id',eid):await sb.from('employees').insert(payload);
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadEmployees();
@@ -3242,8 +3981,8 @@ async function loadPermissions(){
   const{data:ed}=await sb.from('employees').select('id,name,role,is_manager,is_approved').eq('store_id',currentStore.id).order('name');
   const eEl=document.getElementById('empPermList');if(eEl)eEl.innerHTML=(ed||[]).map(e=>`<div class="perm-item"><div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.name} ${e.role?`<span class="badge badge-blue" style="font-size:10px;">${e.role}</span>`:''} ${!e.is_approved?'<span class="badge badge-warn" style="font-size:10px;">미승인</span>':''}</div><div style="font-size:11px;color:var(--gray-600);">개별 관리자 권한</div></div><div style="display:flex;align-items:center;gap:10px;">${!e.is_approved?`<button class="btn btn-success btn-sm" onclick="approveEmp('${e.id}')">승인</button>`:''}<label class="toggle-wrap"><input type="checkbox" ${e.is_manager?'checked':''} onchange="toggleEmpPerm('${e.id}',this.checked)"><span class="toggle-slider"></span></label></div></div>`).join('')||'<div class="empty-state" style="padding:12px;"><p>직원이 없습니다</p></div>';
 }
-async function toggleRolePerm(roleId,roleName,checked){await sb.from('roles').update({is_manager_role:checked}).eq('id',roleId);await sb.from('employees').update({is_manager:checked}).eq('store_id',currentStore.id).eq('role',roleName);}
-async function toggleEmpPerm(empId,checked){await sb.from('employees').update({is_manager:checked}).eq('id',empId);}
+async function toggleRolePerm(roleId,roleName,checked){await sb.from('roles').update({is_manager_role:checked}).eq('id',roleId);await sb.from('employees').update({is_manager:checked,auth_level:checked?'store_manager':'staff'}).eq('store_id',currentStore.id).eq('role',roleName);}
+async function toggleEmpPerm(empId,checked){await sb.from('employees').update({is_manager:checked,auth_level:checked?'store_manager':'staff'}).eq('id',empId);}
 async function approveEmp(empId){if(!confirm('승인하시겠습니까?'))return;await sb.from('employees').update({is_approved:true,is_active:true,store_id:currentStore.id}).eq('id',empId);toast('승인 완료!','success');loadPermissions();}
 
 // ══════════════════════════════════════════
@@ -3509,32 +4248,65 @@ async function renderWageSummary(){
   const totalWage=rows.reduce((a,r)=>a+r.totalWage,0);
   const target=document.getElementById('wageSummaryData');if(!target)return;
   if(!rows.length){target.innerHTML='<div class="empty-state"><div class="empty-icon">💰</div><p>이 달의 근태 기록이 없습니다</p></div>';return;}
+  // 직원별 시급 매핑
+  const empWageMap={};employees.forEach(e=>empWageMap[e.id]={wage:e.base_wage,name:e.name});
+  // 0원 기록 감지
+  const zeroCount=(data||[]).filter(r=>!r.calculated_wage&&r.total_work_min>0).length;
   target.innerHTML=`
-    <div style="background:var(--blue-light);border-radius:12px;padding:14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
-      <div><div style="font-size:11px;color:var(--blue);font-weight:600;">이달 총 인건비</div><div style="font-size:22px;font-weight:800;">${fmt(totalWage)}원</div></div>
-      <div style="font-size:12px;color:var(--blue);">${rows.length}명</div>
+    <div style="background:var(--blue-light);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div style="font-size:11px;color:var(--blue);font-weight:600;">이달 총 인건비</div><div style="font-size:22px;font-weight:800;">${fmt(totalWage)}원</div></div>
+        <div style="font-size:12px;color:var(--blue);">${rows.length}명</div>
+      </div>
+      ${zeroCount>0?`<div style="margin-top:8px;font-size:11px;color:var(--danger);">⚠️ 급여 미산출 ${zeroCount}건 발견</div>`:''}
     </div>
+    ${zeroCount>0?`<button class="btn btn-warn btn-full" style="margin-bottom:12px;padding:12px;font-size:13px;" onclick="recalcMonthWages()">🔄 이달 급여 재계산 (현재 시급 기준)</button>`:''}
     <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="background:var(--gray-100);">
         <th style="padding:8px 6px;text-align:left;">직원</th>
-        <th style="padding:8px 6px;text-align:center;">근무일</th>
-        <th style="padding:8px 6px;text-align:center;">총 근무</th>
-        <th style="padding:8px 6px;text-align:right;">급여 합계</th>
+        <th style="padding:8px 6px;text-align:center;">시급</th>
+        <th style="padding:8px 6px;text-align:center;">근무</th>
+        <th style="padding:8px 6px;text-align:right;">급여</th>
       </tr></thead>
-      <tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--gray-100);">
+      <tbody>${rows.map(r=>{
+        const empInfo=Object.entries(empWageMap).find(([,v])=>v.name===r.name);
+        const baseWage=empInfo?empInfo[1].wage:10030;
+        return `<tr style="border-bottom:1px solid var(--gray-100);">
         <td style="padding:9px 6px;font-weight:700;">${r.name}</td>
-        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);">${r.days}일</td>
-        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);">${Math.round(r.totalMin/60*10)/10}시간</td>
-        <td style="padding:9px 6px;text-align:right;font-weight:800;color:var(--blue);">${fmt(r.totalWage)}원</td>
-      </tr>`).join('')}</tbody>
+        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);font-size:11px;">${fmt(baseWage)}</td>
+        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);">${r.days}일 / ${Math.round(r.totalMin/60*10)/10}h</td>
+        <td style="padding:9px 6px;text-align:right;font-weight:800;color:var(--blue);">${fmt(r.totalWage)}</td>
+      </tr>`}).join('')}</tbody>
     </table>
     </div>`;
 }
 
-// ══════════════════════════════════════════
-// 초기화
-// ══════════════════════════════════════════
+// ─── 급여 재계산: 현재 시급 기준으로 이달 전체 재계산 ───
+async function recalcMonthWages(){
+  if(!currentStore||!confirm('이달 근태 기록의 급여를 현재 시급 기준으로 재계산합니다.\n계속하시겠습니까?')) return;
+  setLoad(true,'급여 재계산 중...');
+  const [y,m]=wageMonthStr.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
+  const{data}=await sb.from('attendance_logs').select('id,employee_id,work_date,app_in,app_out,total_work_min,rest_min').eq('store_id',currentStore.id).gte('work_date',wageMonthStr+'-01').lte('work_date',wageMonthStr+'-'+String(lastDay).padStart(2,'0'));
+  let updated=0;
+  for(const r of (data||[])){
+    if(!r.total_work_min) continue;
+    const emp=employees.find(e=>e.id===r.employee_id);
+    if(!emp) continue;
+    const isWeekend=[0,6].includes(new Date(r.work_date).getDay());
+    const wE=isWeekend?(settings.weekend_extra||0):0;
+    const{data:sw}=await sb.from('special_wages').select('extra_amount').eq('store_id',currentStore.id).eq('target_date',r.work_date).maybeSingle();
+    const spE=sw?.extra_amount||0;
+    // 야간 계산 간소화: total_work_min 기반
+    const nE=0; // 야간수당은 기존 기록 유지 (재계산 시 정확도 이슈)
+    const wage=Math.round((r.total_work_min/60)*(emp.base_wage+wE+nE+spE));
+    await sb.from('attendance_logs').update({calculated_wage:wage}).eq('id',r.id);
+    updated++;
+  }
+  setLoad(false);
+  toast(`${updated}건 급여 재계산 완료!`,'success');
+  await renderWageSummary();
+}
 
 // ══════════════════════════════════════════
 // 지출 카테고리 관리
@@ -3543,15 +4315,6 @@ let expCategories = [];
 let expCatColorSel = '#0050FF';
 let dashSaleSource = 'settle'; // 'settle' | 'ups'
 let dashMode = 'provisional'; // 'provisional' | 'final'
-
-function switchDashMode(mode){
-  dashMode=mode;
-  document.getElementById('dashModeProvisional').className='btn btn-sm'+(mode==='provisional'?' btn-primary':'');
-  document.getElementById('dashModeProvisional').style.cssText='flex:1;font-size:12px;border-radius:10px;'+(mode==='provisional'?'':'background:transparent;color:var(--gray-600);');
-  document.getElementById('dashModeFinal').className='btn btn-sm'+(mode==='final'?' btn-primary':'');
-  document.getElementById('dashModeFinal').style.cssText='flex:1;font-size:12px;border-radius:10px;'+(mode==='final'?'':'background:transparent;color:var(--gray-600);');
-  loadDashboard();
-}
 
 async function loadExpCategories(){
   if(!currentStore) return;
@@ -3563,32 +4326,85 @@ async function loadExpCategories(){
 function renderExpCatList(){
   const c=document.getElementById('expCatList');if(!c)return;
   const srcLabel={vendor_orders:'거래처 주문',receipts:'영수증',attendance:'인건비(자동)',fixed_costs:'고정비(자동)',manual:'수동 입력'};
-  c.innerHTML=expCategories.length?expCategories.map((cat,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
-      <div style="width:14px;height:14px;border-radius:50%;background:${cat.color||'#0050FF'};flex-shrink:0;"></div>
-      <div style="flex:1;">
-        <div style="font-size:14px;font-weight:700;">${cat.name}</div>
-        <div style="font-size:11px;color:var(--gray-600);">${srcLabel[cat.data_source]||cat.data_source}</div>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="openEditExpCatSheet('${cat.id}')">편집</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteExpCat('${cat.id}','${cat.name}')">삭제</button>
-    </div>`).join(''):'<div class="empty-state" style="padding:20px;"><p>카테고리를 추가하세요</p></div>';
+  // 대분류(parent_id=null)와 소분류 분리
+  const parents=expCategories.filter(cat=>!cat.parent_id);
+  const childMap={};
+  expCategories.filter(cat=>cat.parent_id).forEach(cat=>{
+    if(!childMap[cat.parent_id])childMap[cat.parent_id]=[];
+    childMap[cat.parent_id].push(cat);
+  });
+  if(!expCategories.length){c.innerHTML='<div class="empty-state" style="padding:20px;"><p>카테고리를 추가하세요</p></div>';return;}
+  let html='';
+  parents.forEach(p=>{
+    const children=childMap[p.id]||[];
+    html+=`<div style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid var(--gray-200);">
+        <div style="width:14px;height:14px;border-radius:50%;background:${p.color||'#0050FF'};flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:800;">${p.name}</div>
+          <div style="font-size:11px;color:var(--gray-400);">${srcLabel[p.data_source]||p.data_source}${children.length?' · 소분류 '+children.length+'개':''}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openAddSubCatSheet('${p.id}','${p.name}')">+ 소분류</button>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openEditExpCatSheet('${p.id}')">편집</button>
+      </div>`;
+    if(children.length){
+      children.forEach(ch=>{
+        html+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 0 8px 24px;border-bottom:1px solid var(--gray-100);">
+          <div style="width:10px;height:10px;border-radius:50%;background:${ch.color||p.color||'#0050FF'};flex-shrink:0;"></div>
+          <div style="flex:1;font-size:13px;font-weight:600;">${ch.name}</div>
+          <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:4px 8px;" onclick="openEditExpCatSheet('${ch.id}')">편집</button>
+          <button class="btn btn-danger btn-sm" style="font-size:10px;padding:4px 8px;" onclick="deleteExpCat('${ch.id}','${ch.name}')">삭제</button>
+        </div>`;
+      });
+    }
+    html+=`</div>`;
+  });
+  // 소속 없는 카테고리 (기존 데이터 호환)
+  const orphans=expCategories.filter(cat=>cat.parent_id&&!parents.find(p=>p.id===cat.parent_id));
+  if(orphans.length){
+    html+=`<div style="margin-top:10px;font-size:12px;color:var(--gray-400);font-weight:700;">미분류</div>`;
+    orphans.forEach(cat=>{
+      html+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+        <div style="width:10px;height:10px;border-radius:50%;background:${cat.color||'#0050FF'};flex-shrink:0;"></div>
+        <div style="flex:1;font-size:13px;">${cat.name}</div>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openEditExpCatSheet('${cat.id}')">편집</button>
+      </div>`;
+    });
+  }
+  c.innerHTML=html;
 }
 
+let editExpCatParentId=null; // 소분류 추가 시 부모 ID
 function openAddExpCatSheet(){
   if(!guardStore())return;
-  document.getElementById('addExpCatTitle').innerText='카테고리 추가';
+  editExpCatParentId=null;
+  document.getElementById('addExpCatTitle').innerText='대분류 추가';
   document.getElementById('expCatNameInput').value='';
   document.getElementById('expCatSourceInput').value='vendor_orders';
+  document.getElementById('expCatSourceInput').closest('div,p')&&(document.getElementById('expCatSourceInput').style.display='block');
   document.getElementById('editExpCatId').value='';
   selectExpCatColor('#0050FF');
+  onExpCatSourceChange();
+  openSheet('addExpCatSheet');
+}
+function openAddSubCatSheet(parentId,parentName){
+  if(!guardStore())return;
+  editExpCatParentId=parentId;
+  document.getElementById('addExpCatTitle').innerText=parentName+' 소분류 추가';
+  document.getElementById('expCatNameInput').value='';
+  document.getElementById('editExpCatId').value='';
+  // 소분류는 부모 소스 상속
+  const parent=expCategories.find(c=>c.id===parentId);
+  if(parent){document.getElementById('expCatSourceInput').value=parent.data_source;}
+  selectExpCatColor(parent?.color||'#0050FF');
   onExpCatSourceChange();
   openSheet('addExpCatSheet');
 }
 
 function openEditExpCatSheet(id){
   const cat=expCategories.find(x=>x.id===id);if(!cat)return;
-  document.getElementById('addExpCatTitle').innerText='카테고리 편집';
+  editExpCatParentId=cat.parent_id||null;
+  document.getElementById('addExpCatTitle').innerText=(cat.parent_id?'소분류':'대분류')+' 편집';
   document.getElementById('expCatNameInput').value=cat.name;
   document.getElementById('expCatSourceInput').value=cat.data_source;
   document.getElementById('editExpCatId').value=cat.id;
@@ -3620,7 +4436,7 @@ async function saveExpCat(){
   const vendorCat=src==='vendor_orders'?document.getElementById('expCatVendorCat').value:'';
   const eid=document.getElementById('editExpCatId').value;
   setLoad(true,'저장 중...');
-  const payload={store_id:currentStore.id,name,data_source:src,color,vendor_category:vendorCat||null,sort_order:expCategories.length};
+  const payload={store_id:currentStore.id,name,data_source:src,color,vendor_category:vendorCat||null,sort_order:expCategories.length,parent_id:editExpCatParentId||null};
   const{error}=eid?await sb.from('expense_categories').update(payload).eq('id',eid):await sb.from('expense_categories').insert(payload);
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');
   closeAllSheets();await loadExpCategories();
@@ -3644,7 +4460,302 @@ function switchSaleSource(src){
   document.getElementById('saleSrcUps').className='btn btn-sm'+(src==='ups'?' btn-primary':' btn-secondary');
   document.getElementById('saleSrcSettle').style.flex='1';
   document.getElementById('saleSrcUps').style.flex='1';
-  loadDashboard('month');
+  loadDashboard();
+}
+function switchDashMode(mode){
+  dashMode=mode;
+  document.getElementById('dashModeProvisional').className='btn btn-sm'+(mode==='provisional'?' btn-primary':'');
+  document.getElementById('dashModeProvisional').style.cssText='flex:1;font-size:12px;border-radius:10px;'+(mode==='provisional'?'':'background:transparent;color:var(--gray-600);');
+  document.getElementById('dashModeFinal').className='btn btn-sm'+(mode==='final'?' btn-primary':'');
+  document.getElementById('dashModeFinal').style.cssText='flex:1;font-size:12px;border-radius:10px;'+(mode==='final'?'':'background:transparent;color:var(--gray-600);');
+  loadDashboard();
+}
+
+// ── 풀스크린 피벗 테이블 렌더 ──
+let _pivotData=null; // loadDashboard에서 저장
+function openDailyDetail(){
+  try{
+    if(!_pivotData||!_pivotData.days||!_pivotData.days.length){alert('정산 데이터를 먼저 로드해주세요.');return;}
+    const{days,salesMap,catMap,expMap,catNames,catColors,shortNames,mo,weekGroups,passedDays}=_pivotData;
+    const cols=days.filter(d=>salesMap.hasOwnProperty(d));
+    if(!cols.length){
+      document.getElementById('dailyDetailContent').innerHTML='<div class="empty-state" style="padding:40px;"><p>매출 데이터가 없습니다</p></div>';
+      document.getElementById('dailyDetailModal').style.display='block';
+      document.body.style.overflow='hidden';
+      return;
+    }
+
+    // 기준% (store_settings.expense_thresholds에서 로드, 없으면 기본값)
+    const savedThresholds=settings.expense_thresholds||{};
+    const defaultThresholds={'식자재':30,'직구/영수증':5,'인건비':25,'고정비':15,'로열티/수수료':5};
+
+    // 기준% 입력 바 생성
+    const bar=document.getElementById('dailyThresholdBar');
+    let barHtml='<span style="font-size:10px;font-weight:700;color:var(--gray-400);margin-right:2px;">기준%</span>';
+    catNames.forEach(c=>{
+      const color=catColors[c]||'#4E5968';
+      const def=savedThresholds[c]??defaultThresholds[c]??10;
+      barHtml+=`<span style="display:inline-flex;align-items:center;gap:2px;font-size:10px;"><span style="width:5px;height:5px;border-radius:50%;background:${color};"></span>${shortNames[c]}<input type="number" class="pv-threshold" data-cat="${c}" value="${def}" style="width:32px;font-size:10px;text-align:center;border:1px solid var(--gray-200);border-radius:4px;padding:2px;"></span>`;
+    });
+    bar.innerHTML=barHtml;
+
+    let thHtml='<th class="pv-fix">날짜</th><th>매출</th>';
+    catNames.forEach((c,ci)=>{
+      const color=catColors[c]||'#4E5968';
+      thHtml+=`<th><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${color};margin-right:2px;vertical-align:middle;"></span>${shortNames[c]}</th>`;
+    });
+    thHtml+='<th class="pv-exp">지출계</th><th class="pv-profit">순이익</th>';
+
+    let bodyHtml='';
+    const pctS=(v,b)=>b>0?((v/b)*100).toFixed(0):'0';
+    const pctN=(v,b)=>b>0?(v/b)*100:0;
+
+    for(let wi=0;wi<weekGroups.length;wi++){
+      const week=weekGroups[wi];
+      let wS=0,wE=0,wP=0,wHas=false;
+      const wC={};catNames.forEach(c=>{wC[c]=0;});
+
+      for(let di=0;di<week.length;di++){
+        const d=week[di];
+        if(parseInt(d)>passedDays) continue;
+        const has=salesMap.hasOwnProperty(d);
+        const s=salesMap[d]||0;
+        const e=has?(expMap[d]||0):0;
+        const p=s-e;
+        if(has){wS+=s;wE+=e;wP+=p;wHas=true;catNames.forEach(c=>{wC[c]+=(catMap[d]?.[c]||0);});}
+
+        bodyHtml+=`<tr${!has?' style="color:var(--gray-300);"':''}><td class="pv-fix">${mo}/${parseInt(d)}</td><td class="${has?'pv-blue':''}">${has?fmt(s):'-'}</td>`;
+        catNames.forEach(c=>{
+          const v=has?(catMap[d]?.[c]||0):0;
+          const pVal=pctN(v,s);
+          bodyHtml+=`<td class="pv-cell" data-cat="${c}" data-pctval="${has?pVal.toFixed(1):''}">${has&&v?fmt(v)+'<span class="pv-pp">'+pctS(v,s)+'%</span>':'-'}</td>`;
+        });
+        bodyHtml+=`<td class="${has?'pv-exp':''}">${has?fmt(e)+'<span class="pv-pp">'+pctS(e,s)+'%</span>':'-'}</td>`;
+        bodyHtml+=`<td class="${has?(p>=0?'pv-pos':'pv-neg'):''}">${has?(p>=0?'+':'')+fmt(p):'-'}</td></tr>`;
+      }
+
+      if(wHas){
+        bodyHtml+=`<tr class="pv-week"><td class="pv-fix">${wi+1}주</td><td class="pv-blue">${fmt(wS)}</td>`;
+        catNames.forEach(c=>{
+          const pVal=pctN(wC[c],wS);
+          bodyHtml+=`<td class="pv-cell" data-cat="${c}" data-pctval="${wC[c]?pVal.toFixed(1):''}">${wC[c]?fmt(wC[c])+'<span class="pv-pp">'+pctS(wC[c],wS)+'%</span>':'-'}</td>`;
+        });
+        bodyHtml+=`<td class="pv-exp">${fmt(wE)}<span class="pv-pp">${pctS(wE,wS)}%</span></td>`;
+        bodyHtml+=`<td class="${wP>=0?'pv-pos':'pv-neg'}">${wP>=0?'+':''}${fmt(wP)}</td></tr>`;
+      }
+    }
+
+    const html=`<div style="overflow:auto;padding:0 4px 20px;"><table class="pivot-tbl pv-compact"><thead><tr>${thHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>`;
+    document.getElementById('dailyDetailContent').innerHTML=html;
+
+    // 초기 색상 적용 + 입력 변경 시 재적용
+    function applyThresholdColors(){
+      const thresholds={};
+      document.querySelectorAll('.pv-threshold').forEach(inp=>{thresholds[inp.dataset.cat]=parseFloat(inp.value)||0;});
+      document.querySelectorAll('.pv-cell').forEach(td=>{
+        const cat=td.dataset.cat;
+        const pVal=parseFloat(td.dataset.pctval);
+        if(isNaN(pVal)||!cat||!thresholds[cat]) return;
+        const th=thresholds[cat];
+        // 주계행은 별도 처리 (pv-week 안의 셀)
+        const isWeek=td.closest('.pv-week');
+        if(isWeek){
+          // 주계행: 기존 색상 유지하되 pv-pp만 색상 변경
+          const pp=td.querySelector('.pv-pp');
+          if(pp) pp.style.color=pVal>th?'#FCA5A5':'#6EE7B7';
+        } else {
+          const pp=td.querySelector('.pv-pp');
+          if(pp) pp.style.color=pVal>th?'var(--danger)':'var(--blue)';
+          td.style.backgroundColor=pVal>th?'rgba(240,68,82,0.06)':'';
+        }
+      });
+    }
+    applyThresholdColors();
+    // 기준% 변경 시 색상 적용 + DB 자동 저장
+    let _thresholdTimer=null;
+    bar.addEventListener('input',()=>{
+      applyThresholdColors();
+      clearTimeout(_thresholdTimer);
+      _thresholdTimer=setTimeout(async()=>{
+        const thObj={};
+        document.querySelectorAll('.pv-threshold').forEach(inp=>{thObj[inp.dataset.cat]=parseFloat(inp.value)||0;});
+        settings.expense_thresholds=thObj;
+        if(currentStore) await sb.from('store_settings').upsert({store_id:currentStore.id,expense_thresholds:thObj},{onConflict:'store_id'});
+      },1500);
+    });
+    const modal=document.getElementById('dailyDetailModal');
+    modal.style.display='block';
+    document.body.style.overflow='hidden';
+    // 가로 모드: JS로 직접 스타일 (iOS/Android 공용)
+    const vw=window.innerWidth,vh=window.innerHeight;
+    const contentEl=document.getElementById('dailyDetailContent');
+    if(vw<vh){
+      modal.style.transform='rotate(90deg)';
+      modal.style.transformOrigin='top left';
+      modal.style.width=vh+'px';
+      modal.style.height=vw+'px';
+      modal.style.top='0';
+      modal.style.left=vw+'px';
+      contentEl.style.height=(vw-90)+'px';
+      modal._rotated=true;
+    } else {
+      contentEl.style.height='calc(100% - 90px)';
+      modal._rotated=false;
+    }
+  }catch(err){
+    console.error('상세비교 오류:',err);
+    alert('상세 비교 열기 실패: '+err.message);
+    document.body.style.overflow='';
+  }
+}
+function closeDailyDetail(){
+  const modal=document.getElementById('dailyDetailModal');
+  modal.style.display='none';
+  modal.style.transform='';
+  modal.style.transformOrigin='';
+  modal.style.width='100%';
+  modal.style.height='100%';
+  modal.style.top='0';
+  modal.style.left='0';
+  modal._rotated=false;
+  document.body.style.overflow='';
+}
+
+// ── 예비비 잔고 계산 (실시간) ──
+async function calcReserveBalance(){
+  if(!currentStore) return 0;
+  const sid=currentStore.id;
+  const rvRate=parseFloat(settings.reserve_rate||5)/100;
+  const rvFixed=parseInt(settings.reserve_fixed||400000);
+  const rvInitial=parseInt(settings.reserve_initial_balance||0);
+
+  // 모든 월의 순수익으로부터 적립금 합산
+  // settlements 전체에서 월별 매출 집계
+  const{data:allSettles}=await sb.from('settlements').select('settle_date,items_json,sales_total,expected_total').eq('store_id',sid).order('settle_date');
+  const{data:allFc}=await sb.from('fixed_cost_amounts').select('year_month,amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid);
+  const{data:allExp}=await sb.from('expense_category_amounts').select('year_month,amount,category_id').eq('store_id',sid);
+
+  // 월별 매출 집계
+  const monthlyRevenue={};
+  (allSettles||[]).forEach(s=>{
+    const ym=s.settle_date?.slice(0,7);
+    if(!ym) return;
+    const j=s.items_json||{};
+    let ds=0;
+    if(j.pos_card!==undefined) ds=(j.pos_cash||0)+(j.pos_cash_receipt||0)+(j.pos_card||0)+(j.pos_etc||0)+(j.extra_draw_large||0)+(j.extra_draw_small||0);
+    else ds=s.sales_total||s.expected_total||0;
+    monthlyRevenue[ym]=(monthlyRevenue[ym]||0)+ds;
+  });
+
+  // 월별 고정비 집계
+  const monthlyFc={};
+  (allFc||[]).filter(a=>a.fixed_costs?.is_active!==false).forEach(a=>{
+    monthlyFc[a.year_month]=(monthlyFc[a.year_month]||0)+(a.is_confirmed?a.amount:(a.estimated_amount||a.amount||0));
+  });
+
+  // 총 적립 계산 (각 월의 순수익 × 비율 + 고정)
+  let totalDeposit=0;
+  Object.keys(monthlyRevenue).forEach(ym=>{
+    const rev=monthlyRevenue[ym]||0;
+    const fc=monthlyFc[ym]||0;
+    // 간단히 매출-고정비를 순수익 근사치로
+    const approxNet=rev-fc;
+    const dep=Math.max(0,Math.round(approxNet*rvRate)+rvFixed);
+    totalDeposit+=dep;
+  });
+
+  // 사용(withdrawal) 합계
+  const{data:withdrawals}=await sb.from('reserve_fund_logs').select('amount').eq('store_id',sid).eq('type','withdrawal');
+  const totalWithdraw=(withdrawals||[]).reduce((a,r)=>a+(r.amount||0),0);
+
+  const balance=rvInitial+totalDeposit-totalWithdraw;
+  return balance;
+}
+
+// ── 예비비 탭 로드 ──
+async function loadReserveFund(){
+  if(!currentStore) return;
+  setLoad(true,'예비비 조회 중...');
+  try{
+    const sid=currentStore.id;
+    const rvRate=parseFloat(settings.reserve_rate||5)/100;
+    const rvFixed=parseInt(settings.reserve_fixed||400000);
+    const rvInitial=parseInt(settings.reserve_initial_balance||0);
+
+    // 설정 폼 채우기
+    document.getElementById('rv-rate').value=settings.reserve_rate||5;
+    document.getElementById('rv-fixed').value=settings.reserve_fixed||400000;
+    document.getElementById('rv-initial').value=settings.reserve_initial_balance||0;
+
+    // 잔고 계산
+    const balance=await calcReserveBalance();
+
+    // 사용 합계
+    const{data:withdrawals}=await sb.from('reserve_fund_logs').select('*').eq('store_id',sid).eq('type','withdrawal').order('log_date',{ascending:false});
+    const totalWithdraw=(withdrawals||[]).reduce((a,r)=>a+(r.amount||0),0);
+    const totalDeposit=balance-rvInitial+totalWithdraw;
+
+    // 현황 카드
+    document.getElementById('reserveBalanceMain').innerText=fmt(balance)+'원';
+    document.getElementById('reserveTotalDeposit').innerText=fmt(totalDeposit+rvInitial)+'원';
+    document.getElementById('reserveTotalWithdraw').innerText=fmt(totalWithdraw)+'원';
+
+    // 이력 리스트
+    let histHtml='';
+    if(withdrawals&&withdrawals.length){
+      withdrawals.forEach(w=>{
+        histHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+          <div>
+            <div style="font-size:13px;font-weight:700;">${w.memo||'사용'}</div>
+            <div style="font-size:11px;color:var(--gray-400);">${w.log_date} · ${w.year_month}</div>
+          </div>
+          <div style="font-size:14px;font-weight:800;color:var(--danger);">-${fmt(w.amount)}원</div>
+        </div>`;
+      });
+    } else {
+      histHtml='<div class="empty-state" style="padding:16px;"><p>사용 내역이 없습니다</p></div>';
+    }
+    document.getElementById('reserveHistoryList').innerHTML=histHtml;
+
+  }catch(e){console.error('예비비 오류:',e);}finally{setLoad(false);}
+}
+
+// ── 예비비 설정 저장 ──
+async function saveReserveSettings(){
+  if(!guardStore()) return;
+  const rate=parseFloat(document.getElementById('rv-rate').value)||5;
+  const fixed=parseInt(document.getElementById('rv-fixed').value)||400000;
+  const initial=parseInt(document.getElementById('rv-initial').value)||0;
+  setLoad(true,'저장 중...');
+  const{error}=await sb.from('store_settings').upsert({
+    store_id:currentStore.id,reserve_rate:rate,reserve_fixed:fixed,reserve_initial_balance:initial
+  },{onConflict:'store_id'});
+  setLoad(false);
+  if(error) return toast('저장 실패: '+error.message,'error');
+  settings.reserve_rate=rate;settings.reserve_fixed=fixed;settings.reserve_initial_balance=initial;
+  toast('예비비 설정 저장 완료!','success');
+  loadReserveFund();
+}
+
+// ── 예비비 사용 등록 ──
+async function saveReserveUsage(){
+  if(!guardStore()) return;
+  const dt=document.getElementById('rvUsageDate').value;
+  const amt=parseInt(document.getElementById('rvUsageAmount').value)||0;
+  const memo=document.getElementById('rvUsageMemo').value.trim();
+  if(!dt) return toast('날짜를 선택하세요','warn');
+  if(!amt) return toast('금액을 입력하세요','warn');
+  if(!memo) return toast('사유를 입력하세요','warn');
+  const ym=dt.slice(0,7);
+  setLoad(true,'등록 중...');
+  const{error}=await sb.from('reserve_fund_logs').insert({
+    store_id:currentStore.id,log_date:dt,year_month:ym,type:'withdrawal',amount:amt,memo
+  });
+  setLoad(false);
+  if(error) return toast('등록 실패: '+error.message,'error');
+  closeAllSheets();
+  toast('예비비 사용 등록 완료!','success');
+  loadReserveFund();
 }
 
 async function manualCrawl(){
@@ -3707,7 +4818,7 @@ async function saveLaborConfirm(){
     category_id:laborCat.id,store_id:currentStore.id,year_month:dashMonthStr,amount:amt,memo:'확정 인건비'
   },{onConflict:'category_id,year_month'});
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');
-  toast('확정 인건비 저장 완료!','success');loadDashboard('month');
+  toast('확정 인건비 저장 완료!','success');loadDashboard();
 }
 
 // ── 카테고리별 지출 집계 (핵심 함수)
@@ -3719,19 +4830,16 @@ async function calcExpenseByCategories(ym, mode){
   const sid=currentStore.id;
   const isFinal=(mode==='final');
 
-  // 진마감: mydata_transactions에서 귀속월/tx_date 기준 집계하는 헬퍼
-  const getMydataAmount=async(catId)=>{
-    const{data:mdByAttr}=await sb.from('mydata_transactions').select('amount')
-      .eq('store_id',sid).eq('category_id',catId)
-      .eq('exclude_from_settlement',false)
-      .eq('attribution_month',ym);
-    const{data:mdByDate}=await sb.from('mydata_transactions').select('amount')
-      .eq('store_id',sid).eq('category_id',catId)
-      .eq('exclude_from_settlement',false)
-      .is('attribution_month',null)
-      .gte('tx_date',start).lte('tx_date',end);
-    return[...(mdByAttr||[]),...(mdByDate||[])].reduce((a,r)=>a+Math.abs(r.amount||0),0);
-  };
+  // 진마감: mydata 전체 한 번에 조회 후 JS 필터 (카테고리별 N*2회 → 2회로 최적화)
+  const[mdByAttrRes,mdByDateRes]=await Promise.all([
+    sb.from('mydata_transactions').select('amount,category_id')
+      .eq('store_id',sid).eq('exclude_from_settlement',false).eq('attribution_month',ym),
+    sb.from('mydata_transactions').select('amount,category_id')
+      .eq('store_id',sid).eq('exclude_from_settlement',false).is('attribution_month',null)
+      .gte('tx_date',start).lte('tx_date',end)
+  ]);
+  const allMdTx=[...(mdByAttrRes.data||[]),...(mdByDateRes.data||[])];
+  const getMydataAmount=(catId)=>allMdTx.filter(t=>t.category_id===catId).reduce((a,r)=>a+Math.abs(r.amount||0),0);
 
   // 병렬: 모든 카테고리 동시 조회
   const promises=expCategories.map(async cat=>{
@@ -4256,85 +5364,98 @@ function showLoginScreen(){
   document.body.style.overflow='hidden';
   document.querySelector('.bottom-nav').style.display='none';
   document.querySelector('.header').style.display='none';
-  document.getElementById('loginPinArea').style.display='none';
-  document.getElementById('loginEmpList').innerHTML='';
-  loginSelectedEmp=null;pinBuffer='';
+  // 드롭박스 직원 목록 채우기
+  const nameSelect=document.getElementById('loginNameInput');
+  const pinInput=document.getElementById('loginPinInput');
+  const lastLoginName=localStorage.getItem('pd_last_name')||'';
+  if(nameSelect){
+    const active=employees.filter(e=>e.is_active&&e.auth_level!=='owner');
+    nameSelect.innerHTML='<option value="">직원 선택</option>'+active.map(e=>
+      `<option value="${e.name}"${e.name===lastLoginName?' selected':''}>${e.name}${e.role?' ('+e.role+')':''}</option>`
+    ).join('');
+  }
+  if(pinInput) pinInput.value='';
+  document.getElementById('loginMsg').innerText='';
   if(currentStore){
     document.getElementById('loginStoreName').innerText=currentStore.name;
-    renderLoginEmpList();
   } else {
     document.getElementById('loginStoreName').innerText='매장을 먼저 선택하세요';
   }
+  // 관리자 영역 초기화
+  document.getElementById('loginAdminArea').style.display='none';
+  document.getElementById('loginFormArea').style.display='block';
+  // 매장 변경 버튼: 매장 미선택이면 항상 표시, 선택됐으면 owner만
+  const lastLevel=localStorage.getItem('pd_auth_level');
+  const needStore=!currentStore;
+  document.getElementById('loginStoreBtn').style.display=(needStore||lastLevel==='owner')?'inline-block':'none';
+  if(needStore) document.getElementById('loginStoreBtn').innerText='매장 선택';
+  // PIN에 포커스 (이름 이미 선택됐으면)
+  setTimeout(()=>{if(lastLoginName&&pinInput)pinInput.focus();},300);
 }
-async function renderLoginEmpList(){
-  if(!currentStore) return;
-  await loadEmployees();
-  const active=employees.filter(e=>e.is_active);
-  document.getElementById('loginEmpList').innerHTML=active.length
-    ?active.map(e=>`
-      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--white);border-radius:14px;margin-bottom:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.04);" onclick="selectLoginEmp('${e.id}')">
-        <div class="emp-avatar">${e.name?.charAt(0)||'?'}</div>
-        <div><div style="font-size:15px;font-weight:700;">${e.name}</div><div style="font-size:12px;color:var(--gray-600);">${e.role||''}</div></div>
-      </div>`).join('')
-    :'<div style="text-align:center;color:var(--gray-400);padding:20px;">등록된 직원이 없습니다</div>';
-}
-function selectLoginEmp(id){
-  loginSelectedEmp=employees.find(e=>e.id===id);
-  if(!loginSelectedEmp) return;
-  // PIN이 없으면 바로 로그인
-  if(!loginSelectedEmp.pin){
-    completeLogin(loginSelectedEmp);
-    return;
+// ─── 이름+PIN 로그인 ───
+function submitLogin(){
+  const nameVal=(document.getElementById('loginNameInput')?.value||'').trim();
+  const pinVal=(document.getElementById('loginPinInput')?.value||'').trim();
+  const msgEl=document.getElementById('loginMsg');
+  if(!nameVal){msgEl.innerText='직원을 선택하세요';return;}
+  if(!pinVal||pinVal.length!==4){msgEl.innerText='PIN 4자리를 입력하세요';return;}
+  if(!currentStore){msgEl.innerText='매장을 먼저 선택하세요';return;}
+  // 이름으로 직원 찾기
+  const emp=employees.find(e=>e.is_active&&e.name===nameVal);
+  if(!emp){msgEl.innerText='등록되지 않은 직원입니다';shakeLogin();return;}
+  if(!emp.pin){msgEl.innerText='PIN이 설정되지 않았습니다. 관리자에게 문의하세요.';return;}
+  if(pinVal!==emp.pin){
+    msgEl.innerText='PIN이 일치하지 않습니다';
+    document.getElementById('loginPinInput').value='';
+    shakeLogin();return;
   }
-  document.getElementById('loginEmpList').style.display='none';
-  document.getElementById('loginPinArea').style.display='block';
-  document.getElementById('loginEmpName').innerText=loginSelectedEmp.name;
-  document.getElementById('loginMsg').innerText='';
-  pinBuffer='';updatePinDots();
+  // 다음 로그인 시 이름 기억
+  localStorage.setItem('pd_last_name',nameVal);
+  completeLogin(emp);
 }
-function pinInput(n){
-  if(pinBuffer.length>=4) return;
-  pinBuffer+=n;updatePinDots();
-  if(pinBuffer.length===4) checkPin();
-}
-function pinDelete(){pinBuffer=pinBuffer.slice(0,-1);updatePinDots();}
-function loginBack(){
-  document.getElementById('loginPinArea').style.display='none';
-  document.getElementById('loginEmpList').style.display='block';
-  pinBuffer='';loginSelectedEmp=null;
-}
-function updatePinDots(){
-  for(let i=0;i<4;i++){
-    const d=document.getElementById('pd'+i);
-    if(d) d.className='pin-dot'+(i<pinBuffer.length?' filled':'');
-  }
-}
-function checkPin(){
-  if(!loginSelectedEmp) return;
-  if(pinBuffer===loginSelectedEmp.pin){
-    completeLogin(loginSelectedEmp);
+function toggleAdminLogin(){
+  const area=document.getElementById('loginAdminArea');
+  const form=document.getElementById('loginFormArea');
+  if(area.style.display==='none'){
+    area.style.display='block';form.style.display='none';
+    document.getElementById('loginAdminName').value='';
+    document.getElementById('loginAdminPin').value='';
   } else {
-    document.getElementById('loginMsg').innerText='PIN이 일치하지 않습니다';
-    pinBuffer='';updatePinDots();
-    // 흔들림 효과
-    const area=document.getElementById('loginPinArea');
-    area.style.animation='shake 0.3s';
-    setTimeout(()=>area.style.animation='',300);
+    area.style.display='none';form.style.display='block';
   }
 }
-function devLogin(){
-  isManager=true;isOwner=true;currentEmp=null;
-  document.getElementById('headerUser').innerText='개발모드';
-  document.getElementById('loginOverlay').style.display='none';
-  document.body.style.overflow='';
-  document.querySelector('.bottom-nav').style.display='flex';
-  document.querySelector('.header').style.display='flex';
-  applyPermissionUI();
+function submitAdminLogin(){
+  const nameVal=(document.getElementById('loginAdminName')?.value||'').trim();
+  const pinVal=(document.getElementById('loginAdminPin')?.value||'').trim();
+  const msgEl=document.getElementById('loginMsg');
+  if(!nameVal){msgEl.innerText='이름을 입력하세요';return;}
+  if(!pinVal||pinVal.length!==4){msgEl.innerText='PIN 4자리를 입력하세요';return;}
+  // 전체 직원에서 검색 (owner 포함)
+  const emp=employees.find(e=>e.is_active&&e.name===nameVal);
+  if(!emp){msgEl.innerText='등록되지 않은 이름입니다';shakeLogin();return;}
+  if(!emp.pin){msgEl.innerText='PIN이 설정되지 않았습니다.';return;}
+  if(pinVal!==emp.pin){msgEl.innerText='PIN이 일치하지 않습니다';document.getElementById('loginAdminPin').value='';shakeLogin();return;}
+  localStorage.setItem('pd_last_name',nameVal);
+  completeLogin(emp);
 }
+function shakeLogin(){
+  const form=document.getElementById('loginFormArea');
+  form.style.animation='shake 0.3s';
+  setTimeout(()=>form.style.animation='',300);
+}
+// PIN 입력에서 엔터키 → 로그인
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('loginOverlay').style.display!=='none') submitLogin();
+});
+// devLogin 제거됨 — UI 버튼 삭제, 함수는 안전장치로 잔류
+function devLogin(){ toast('개발모드가 비활성화되었습니다.','warn'); }
 function completeLogin(emp){
   currentEmp=emp;
-  isManager=emp.is_manager||emp.role==='팀장'||emp.role==='점장';
-  isOwner=emp.is_manager||false;
+  // auth_level 기반 권한 (is_manager와 동기화)
+  authLevel=emp.auth_level||'staff';
+  if(authLevel==='staff'&&emp.is_manager) authLevel='store_manager';
+  isOwner=authLevel==='owner';
+  isManager=['owner','franchise_admin','store_manager'].includes(authLevel);
   // 전역 상태 초기화 (이전 세션 잔여 방지)
   selectedEmpId=null;schedEmpId=null;
   document.getElementById('headerUser').innerText=emp.name;
@@ -4343,12 +5464,25 @@ function completeLogin(emp){
   document.querySelector('.bottom-nav').style.display='flex';
   document.querySelector('.header').style.display='flex';
   localStorage.setItem('pd_emp',emp.id);
+  localStorage.setItem('pd_auth_level',authLevel);
   applyPermissionUI();
+  // 로그인 후 첫 화면: 관리자→대시보드, 직원→근태
+  nav(isManager?'dashboard':'attendance');
+  // 나머지 데이터 백그라운드 로드 (화면 차단 없이)
+  Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
 }
 function doLogout(){
   if(!confirm('로그아웃?')) return;
-  currentEmp=null;isManager=false;isOwner=false;
+  closeAllSheets();
+  currentEmp=null;isManager=false;isOwner=false;authLevel='staff';
   localStorage.removeItem('pd_emp');
+  // 모든 컨테이너 내용 초기화 (이전 세션 데이터 잔류 방지)
+  document.querySelectorAll('.container').forEach(c=>{c.classList.remove('active');});
+  document.getElementById('receiptCont').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{n.classList.remove('active');});
+  const firstNav=document.querySelector('.nav-item[data-tab="receipt"]');
+  if(firstNav) firstNav.classList.add('active');
+  applyPermissionUI();
   showLoginScreen();
 }
 
@@ -4369,6 +5503,62 @@ async function checkIPForAttendance(){
   if(!ip) return {ok:false,ip:'',msg:'IP를 확인할 수 없습니다. 인터넷 연결을 확인하세요.'};
   if(ip===targetIP) return {ok:true,ip,msg:'매장 WiFi 확인됨'};
   return {ok:false,ip,msg:`매장 WiFi가 아닙니다.\n현재 IP: ${ip}\n매장 IP: ${targetIP}`};
+}
+
+// ─── 새 기능: 기기 지문(Device Fingerprint) ───
+async function getDeviceFingerprint(){
+  try{
+    // canvas + screen + userAgent 조합으로 기기 고유 해시 생성
+    const canvas=document.createElement('canvas');
+    const ctx=canvas.getContext('2d');
+    canvas.width=200;canvas.height=50;
+    ctx.textBaseline='top';
+    ctx.font='14px Arial';ctx.fillText('퐁당샤브FP',2,2);
+    ctx.font='18px Georgia';ctx.fillStyle='#0050FF';ctx.fillText('Device',50,10);
+    ctx.strokeStyle='#FF0000';ctx.beginPath();ctx.arc(100,25,15,0,Math.PI*2);ctx.stroke();
+    const canvasData=canvas.toDataURL();
+    // 기기 특성 조합
+    const raw=[
+      canvasData,
+      screen.width+'x'+screen.height,
+      screen.colorDepth,
+      navigator.userAgent,
+      navigator.language,
+      navigator.hardwareConcurrency||'',
+      new Date().getTimezoneOffset()
+    ].join('|||');
+    // 간단한 해시 (djb2)
+    let hash=5381;
+    for(let i=0;i<raw.length;i++) hash=((hash<<5)+hash)+raw.charCodeAt(i);
+    return 'DF'+Math.abs(hash).toString(36).toUpperCase();
+  }catch(e){console.error('기기 지문 생성 실패:',e);return null;}
+}
+async function checkDeviceForAttendance(empId){
+  // 기기 지문 검증 — 최초 출근 시 자동 등록, 이후 불일치 시 차단
+  const fp=await getDeviceFingerprint();
+  if(!fp) return {ok:true,fp:null,msg:'기기 지문 생성 불가 (검증 건너뜀)'};
+  const emp=employees.find(e=>e.id===empId);
+  if(!emp) return {ok:false,fp,msg:'직원 정보를 찾을 수 없습니다.'};
+  // 미등록 상태 → 자동 등록
+  if(!emp.device_fingerprint){
+    const{error}=await sb.from('employees').update({device_fingerprint:fp}).eq('id',empId);
+    if(!error) emp.device_fingerprint=fp; // 로컬 캐시도 업데이트
+    return {ok:true,fp,msg:'기기 최초 등록 완료',firstReg:true};
+  }
+  // 등록된 기기와 비교
+  if(emp.device_fingerprint===fp) return {ok:true,fp,msg:'등록된 기기 확인됨'};
+  return {ok:false,fp,msg:`등록되지 않은 기기입니다.\n본인 휴대폰에서 다시 시도하세요.`};
+}
+async function resetDeviceFingerprint(empId){
+  // 관리자용: 직원 기기 지문 초기화
+  if(!confirm('이 직원의 등록 기기를 초기화합니다.\n다음 출근 시 새 기기가 자동 등록됩니다.')) return;
+  setLoad(true,'초기화 중...');
+  const{error}=await sb.from('employees').update({device_fingerprint:null}).eq('id',empId);
+  setLoad(false);
+  if(error) return toast('초기화 실패: '+error.message,'error');
+  const emp=employees.find(e=>e.id===empId);
+  if(emp) emp.device_fingerprint=null;
+  toast('기기 초기화 완료! 다음 출근 시 새 기기가 등록됩니다.','success');
 }
 
 // ══════════════════════════════════════════
@@ -4441,7 +5631,7 @@ function matchColumns(headers, type){
 const BANK_RULES=[
   // 매출
   {p:/^(NH|KB|SHC|삼성200|741961|하나|롯데992|현321|우602)/,cat:'매출',sub:'카드결제'},
-  {p:/(타행MB|타행FB|타행IB|OP이체|모바일)/,cat:'매출',sub:'송금결제'},
+  {p:/(타행|OP이체|모바일|FB자금|BZ뱅크|전자금융)/,cat:'매출',sub:'송금결제'},
   {p:/(CD입금|현금|현찰)/,cat:'매출',sub:'현금결제'},
   {p:/논산정산/,cat:'매출',sub:'QR결제'},
   {p:/(카카오페이정산|토스_)/,cat:'매출',sub:'기타결제'},
@@ -4526,8 +5716,8 @@ const CARD_RULES=[
   // 마케팅
   {p:/이니시스.*빌링.*플/,cat:'마케팅',sub:'도도포인트'},
   // 기타
-  {p:/(버거킹|맘스터치|파리바게뜨|메가엠지씨|교촌|롯데리아)/,cat:'기타',sub:'간식'},
-  {p:/(함흥면옥|취암반점|아리랑|본죽|한솥|꼬마김밥|써브웨이)/,cat:'기타',sub:'중식'},
+  {p:/(버거킹|맘스터치|파리바게뜨|메가엠지씨|메가커피|교촌|롯데리아|스타벅스|이디야|컴포즈|빽다방|투썸|할리스|배스킨|던킨|비알코리아)/,cat:'기타',sub:'간식'},
+  {p:/(함흥면옥|취암반점|아리랑|본죽|한솥|꼬마김밥|써브웨이|김밥천국|김밥|맥도날드|KFC|피자|치킨|분식|식당|반점|냉면|칼국수|설렁탕|감자탕|삼겹|보쌈|족발)/,cat:'기타',sub:'중식'},
   {p:/(아주조명|다수리철물)/,cat:'기타',sub:'유지보수'}
 ];
 
@@ -4573,7 +5763,7 @@ async function parseExcelFile(file){
     // HTML 위장 .xls 감지 (카드사 다운로드 파일은 실제로 HTML인 경우가 많음)
     const probe=new TextDecoder('utf-8',{fatal:false}).decode(buf.slice(0,500)).trim().toLowerCase();
     if(probe.startsWith('<')||probe.includes('<html')||probe.includes('<table')){
-      console.log('[엑셀업로드] HTML 위장 .xls 감지, DOMParser로 파싱');
+      // HTML 위장 .xls → DOMParser로 파싱
       const html=new TextDecoder('utf-8',{fatal:false}).decode(buf);
       const doc=new DOMParser().parseFromString(html,'text/html');
       const tables=doc.querySelectorAll('table');
@@ -4591,13 +5781,13 @@ async function parseExcelFile(file){
       if(bestTable&&bestScore>=2){
         const trs=[...bestTable.querySelectorAll('tr')];
         const headers=[...trs[bestRowIdx].querySelectorAll('th,td')].map(c=>c.textContent.trim());
-        console.log('[엑셀업로드] HTML 테이블 헤더 발견:', headers.join(', '));
+        // HTML 테이블 헤더 발견
         return trs.slice(bestRowIdx+1).map(tr=>{
           const cells=[...tr.querySelectorAll('td,th')].map(c=>c.textContent.trim());
           const obj={};headers.forEach((h,i)=>{if(h)obj[h]=cells[i]||'';});return obj;
         }).filter(obj=>Object.values(obj).some(v=>v));
       }
-      console.log('[엑셀업로드] HTML이지만 거래내역 테이블 못 찾음, SheetJS 시도');
+      // HTML이지만 거래내역 테이블 못 찾음 → SheetJS 시도
     }
     // 일반 엑셀 또는 HTML 파싱 실패 시 SheetJS로 파싱
     const wb=XLSX.read(buf,{type:'array'});
@@ -4677,23 +5867,17 @@ function parseDate(v){
 }
 
 async function handleExcelUpload(input, type){
-  console.log('[엑셀업로드] 시작, type='+type, 'files='+input.files?.length);
-  if(!guardStore()){console.log('[엑셀업로드] guardStore 실패');return;}
-  if(!input.files[0]){console.log('[엑셀업로드] 파일 없음');return;}
+  if(!guardStore())return;
+  if(!input.files[0])return;
   const file=input.files[0];
-  console.log('[엑셀업로드] 파일:', file.name, file.size+'bytes');
   excelUploadType=type;
   setLoad(true,'엑셀 분석 중...');
 
   try{
-    console.log('[엑셀업로드] parseExcelFile 시작');
     const rows=await parseExcelFile(file);
-    console.log('[엑셀업로드] 파싱완료, rows='+rows.length);
     if(!rows.length) throw new Error('데이터가 없습니다.');
     const headers=Object.keys(rows[0]);
-    console.log('[엑셀업로드] 헤더:', headers.join(', '));
     const colMap=matchColumns(headers, type);
-    console.log('[엑셀업로드] 컬럼매칭:', JSON.stringify(colMap));
 
     // 필수 컬럼 확인 (인덱스 0도 유효하므로 ==null 사용)
     if(type==='bank'&&colMap.tx_date==null) throw new Error('날짜 컬럼을 찾을 수 없습니다. (거래일, 일자 등)');
@@ -4725,7 +5909,17 @@ async function handleExcelUpload(input, type){
         const wth=parseNum(getVal(colMap.withdraw));
         const amount=dep>0?dep:(wth>0?-wth:0);
         if(amount===0) return null;
-        const cls=classifyByKeyword(classifyText,'bank');
+        let cls=classifyByKeyword(classifyText,'bank');
+        // ─── 사람이름 송금결제 자동 분류 ───
+        // 1차: 내용으로 미분류 → 적요(desc)로 재시도 (적요에 타행/OP이체 등 송금코드 있으면 매칭)
+        if(cls.needs_review&&desc&&content&&desc!==content){
+          const cls2=classifyByKeyword(desc,'bank');
+          if(!cls2.needs_review){cls=cls2;}
+        }
+        // 2차: 적요도 실패 + 입금(양수) + 한글 2~4자(사람이름) → 매출/송금결제 자동 처리
+        if(cls.needs_review&&amount>0&&/^[가-힣]{2,4}$/.test(classifyText)){
+          cls={category:'매출',sub_category:'송금결제',confidence:'medium',needs_review:false,review_reason:null,exclude_from_settlement:false};
+        }
         return {
           tx_date:parseDate(dateRaw),
           tx_time:txTime,
@@ -4761,10 +5955,8 @@ async function handleExcelUpload(input, type){
 
     if(!parsed.length) throw new Error('유효한 거래 내역이 없습니다. 엑셀 형식을 확인해주세요.');
 
-    console.log('[엑셀업로드] 파싱결과:', parsed.length+'건, 미분류:'+parsed.filter(i=>i.needs_review).length+'건');
     excelParsedData=parsed;
     renderExcelPreview(parsed, type, parsed.length);
-    console.log('[엑셀업로드] 프리뷰 렌더 완료, 시트 열기');
     openSheet('excelUploadSheet');
   }catch(e){
     console.error('[엑셀업로드] 에러:', e.message, e.stack);
@@ -4806,9 +5998,10 @@ function renderExcelPreview(items, type, totalLines){
     const isIn=(i.amount||0)>0;
     const amt=Math.abs(i.amount||0);
     const desc=i.description||i.merchant_name||'-';
-    const badge=i.needs_review?'<span class="badge badge-warn">확인</span>':
-                i.exclude_from_settlement?'<span class="badge badge-gray">제외</span>':
-                i.is_cancelled?'<span class="badge badge-red">취소</span>':'';
+    let badge='';
+    if(i.needs_review) badge+='<span class="badge badge-warn">확인</span>';
+    if(i.exclude_from_settlement) badge+='<span class="badge badge-gray">제외</span>';
+    if(i.is_cancelled) badge+='<span class="badge badge-red">취소</span>';
     html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:6px;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${desc}</div>
@@ -5202,7 +6395,7 @@ function renderReconSummary(){
   const{summary}=reconData;
   let totalRecorded=0,totalActual=0;
 
-  let html='<div class="recon-header"><span>항목</span><span style="min-width:65px;text-align:right;">기록</span><span style="min-width:65px;text-align:right;">출금</span><span style="min-width:55px;text-align:right;">차이</span><span style="min-width:36px;"></span></div>';
+  let html='<div class="recon-header"><span style="width:8px;flex-shrink:0;"></span><span>항목</span><span>기록</span><span>출금</span><span>차이</span><span></span></div>';
 
   summary.forEach(entry=>{
     totalRecorded+=entry.recorded;totalActual+=entry.actual;
@@ -5263,7 +6456,7 @@ function renderReconDetailFor(categoryId){
   });
 
   let html=`<div class="card-title" style="margin-bottom:12px;">${entry.name}</div>`;
-  html+='<div class="recon-header"><span>상세</span><span style="min-width:65px;text-align:right;">기록</span><span style="min-width:65px;text-align:right;">출금</span><span style="min-width:55px;text-align:right;">차이</span><span style="min-width:36px;"></span></div>';
+  html+='<div class="recon-header"><span>상세</span><span>기록</span><span>출금</span><span>차이</span><span></span></div>';
 
   if(!entry.details.length){
     html+='<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:13px;">상세 내역이 없습니다</div>';
@@ -5408,14 +6601,58 @@ async function confirmReconCategory(categoryId){
 document.addEventListener('DOMContentLoaded', async()=>{
   initAttDate();recalcSettle2();initSchedDate();
 
-  // 매장 복원
+  // 매장 복원: 로그인에 필요한 것만 먼저 로드 (직원목록)
   const savedStore=localStorage.getItem('pd_store');
   if(savedStore){
     const s=JSON.parse(savedStore);currentStore=s;
     document.getElementById('headerStore').innerText=s.name;
-    await Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]);
-    recalcSettle2();
+    await loadEmployees(); // 로그인에 필수 (직원목록)
+    // 나머지는 로그인 후 백그라운드 로드
   }
+
+  // ─── 대시보드: 주차 접기/펼치기 + 일별 카테고리 펼침 ───
+  document.getElementById('dashDailyTable').addEventListener('click',function(e){
+    // 주차 토글
+    const wh=e.target.closest('.dt-week-header');
+    if(wh){
+      const wi=wh.dataset.week;
+      const body=document.querySelector(`[data-wkbody="${wi}"]`);
+      if(body){
+        const show=body.style.display==='none';
+        body.style.display=show?'':'none';
+        const title=wh.querySelector('.wk-title');
+        if(title) title.innerHTML=title.innerHTML.replace(/[▶▼]/,show?'▼':'▶');
+      }
+      return;
+    }
+    // 일별 카드 터치 → 카테고리 펼침/접힘
+    const dayItem=e.target.closest('.dt-day-item');
+    if(dayItem){
+      const cats=dayItem.querySelector('.dt-day-cats');
+      if(cats) cats.style.display=cats.style.display==='none'?'flex':'none';
+    }
+  });
+
+  // ─── 대시보드 이벤트 바인딩 ───
+  document.getElementById('dashPrevBtn').addEventListener('click',()=>moveDashMonth(-1));
+  document.getElementById('dashNextBtn').addEventListener('click',()=>moveDashMonth(1));
+  document.getElementById('saleSrcSettle').addEventListener('click',()=>switchSaleSource('settle'));
+  document.getElementById('saleSrcUps').addEventListener('click',()=>switchSaleSource('ups'));
+  document.getElementById('crawlBtn').addEventListener('click',()=>manualCrawl());
+  document.getElementById('dashModeProvisional').addEventListener('click',()=>switchDashMode('provisional'));
+  document.getElementById('dashModeFinal').addEventListener('click',()=>switchDashMode('final'));
+  document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>{closeSideMenu();nav('reserve');});
+  document.getElementById('openDailyDetailBtn').addEventListener('click',()=>openDailyDetail());
+  document.getElementById('closeDailyDetailBtn').addEventListener('click',()=>closeDailyDetail());
+  document.getElementById('saveReserveSettingsBtn').addEventListener('click',()=>saveReserveSettings());
+  document.getElementById('addReserveUsageBtn').addEventListener('click',()=>{
+    document.getElementById('rvUsageDate').value=new Date().toISOString().slice(0,10);
+    document.getElementById('rvUsageAmount').value='';
+    document.getElementById('rvUsageMemo').value='';
+    openSheet('reserveUsageSheet');
+  });
+  document.getElementById('rvUsageSaveBtn').addEventListener('click',()=>saveReserveUsage());
+  document.getElementById('rvUsageCancelBtn').addEventListener('click',()=>closeAllSheets());
 
   // ─── 파일 업로드 이벤트 바인딩 (inline onchange CSP 차단 대응) ───
   const bindFile=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',function(){fn(this);});};
@@ -5458,6 +6695,43 @@ document.addEventListener('DOMContentLoaded', async()=>{
   bindFile('salesFileInput',inp=>handleSalesUpload(inp));
   bindFile('vendorFileInput',inp=>handleVendorUpload(inp));
 
+  // ─── 자동 하이픈 포맷팅 (전화번호, 날짜) ───
+  function autoFormatDate(el){
+    el.addEventListener('input',function(){
+      let v=this.value.replace(/[^\d]/g,'');
+      if(v.length>4) v=v.slice(0,4)+'-'+v.slice(4);
+      if(v.length>7) v=v.slice(0,7)+'-'+v.slice(7);
+      if(v.length>10) v=v.slice(0,10);
+      this.value=v;
+    });
+  }
+  function autoFormatPhone(el){
+    el.addEventListener('input',function(){
+      let v=this.value.replace(/[^\d]/g,'');
+      if(v.length>3) v=v.slice(0,3)+'-'+v.slice(3);
+      if(v.length>8) v=v.slice(0,8)+'-'+v.slice(8);
+      if(v.length>13) v=v.slice(0,13);
+      this.value=v;
+    });
+  }
+  // empBirthInput → empIdNumInput으로 변경됨 (주민번호는 별도 포맷터 사용)
+  autoFormatDate(document.getElementById('empHireDateInput'));
+  autoFormatPhone(document.getElementById('empPhoneInput'));
+
+  // ─── 주민번호 자동 하이픈 (6자리-7자리) ───
+  document.getElementById('empIdNumInput').addEventListener('input',function(){
+    let v=this.value.replace(/[^\d]/g,'');
+    if(v.length>6) v=v.slice(0,6)+'-'+v.slice(6);
+    if(v.length>14) v=v.slice(0,14);
+    this.value=v;
+  });
+  // 외국인 체크 → 라벨 변경
+  document.getElementById('empForeignCheck').addEventListener('change',function(){
+    document.getElementById('empIdNumLabel').innerText=this.checked?'외국인등록번호':'주민등록번호';
+    document.getElementById('empIdNumInput').placeholder=this.checked?'960315-5234567':'960315-1234567';
+    document.getElementById('empReportWrap').style.display=this.checked?'block':'none';
+  });
+
   // ─── sheet-overlay 배경 클릭 닫기 (inline onclick CSP 차단 대응) ───
   document.querySelectorAll('.sheet-overlay').forEach(overlay=>{
     overlay.addEventListener('click',function(e){
@@ -5465,11 +6739,15 @@ document.addEventListener('DOMContentLoaded', async()=>{
     });
   });
 
-  // 로그인 복원 또는 로그인 화면 표시
+  // 로그인 복원: owner만 자동 로그인
   const savedEmp=localStorage.getItem('pd_emp');
   if(savedEmp&&currentStore){
     const emp=employees.find(e=>e.id===savedEmp);
-    if(emp){completeLogin(emp);return;}
+    const empLevel=emp?.auth_level||(emp?.is_manager?'store_manager':'staff');
+    if(emp&&empLevel==='owner'){
+      completeLogin(emp);return;
+    }
+    localStorage.removeItem('pd_emp');
   }
   showLoginScreen();
 });

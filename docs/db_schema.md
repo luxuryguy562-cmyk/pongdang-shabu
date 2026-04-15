@@ -2,12 +2,13 @@
 
 > **Supabase URL**: `https://ruytgygjwnbtzmtofopg.supabase.co`
 > **store_id**: `4ae03341-e5dc-4933-b746-29728cbc685f` (퐁당샤브 논산점)
-> **최종 업데이트**: 2025-04 (index.html 코드 기반 추출)
+> **최종 업데이트**: 2026-04-15
 
 ## 테이블 관계도
 
 ```
-stores (매장)
+franchises (프랜차이즈/브랜드)
+  └── stores (매장) ─ 1:N (franchise_id FK)
   ├── store_settings (매장 설정) ─ 1:1
   ├── employees (직원) ─ 1:N
   │     ├── attendance_logs (출퇴근) ─ 1:N
@@ -26,13 +27,22 @@ stores (매장)
   └── special_wages (특별 수당) ─ 1:N
 ```
 
-## 테이블 상세 (17개)
+## 테이블 상세 (18개 + franchises 1개 = 22개)
+
+### franchises (신규)
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | 프랜차이즈 ID |
+| name | 브랜드명 (퐁당샤브, 유림대패 등) |
+| is_active (bool, default true) | 활성 여부 |
+| created_at (timestamptz) | 생성일 |
 
 ### stores
 | 컬럼 | 용도 |
 |------|------|
 | id (uuid, PK) | 매장 고유 ID |
 | name | 매장명 |
+| franchise_id (FK→franchises) | 소속 프랜차이즈 |
 | is_active | 활성 여부 |
 
 ### store_settings
@@ -41,6 +51,7 @@ stores (매장)
 | store_id (FK→stores, unique) | 매장 ID (1:1) |
 | ups_store_code | 업솔루션 매장 코드 |
 | ups_id / ups_pw | 업솔루션 로그인 정보 |
+| expense_thresholds (jsonb, default '{}') | 상세비교 기준% (카테고리명→%) |
 - upsert onConflict: `store_id`
 
 ### employees
@@ -50,13 +61,18 @@ stores (매장)
 | store_id (FK→stores) | 소속 매장 |
 | name | 이름 |
 | role | 직급명 (**문자열**, roles.name 참조, FK 아님) |
+| id_number (text, nullable) | 주민번호 or 외국인등록번호 |
+| is_foreign (bool, default false) | 외국인 여부 |
+| report_status (text, default '미신고') | 신고 구분 (신고/미신고) |
 | birth_date, phone, address | 개인정보 |
 | bank_name, account_number | 급여 계좌 |
 | base_wage (int) | 시급 |
 | pin | 로그인 PIN |
 | caps_id | CAPS 지문인식기 ID |
+| device_fingerprint (text, nullable) | 기기 지문 해시 (출퇴근 기기 인증용) |
 | hire_date, resign_date | 입퇴사일 |
 | is_active, is_approved, is_manager | 상태 플래그 |
+| auth_level (text, default 'staff') | 권한: owner/franchise_admin/store_manager/staff |
 
 ### roles
 | 컬럼 | 용도 |
@@ -123,7 +139,8 @@ stores (매장)
 | expense_categories | expense_category_amounts |
 |-------------------|--------------------------|
 | id, store_id, name, color | expense_category_id(FK) |
-| data_source, source_filter, is_active | year_month, amount |
+| parent_id (FK→self, nullable) | year_month, amount |
+| data_source, source_filter, is_active | |
 
 ### fixed_costs / fixed_cost_amounts
 | fixed_costs | fixed_cost_amounts |
@@ -209,6 +226,25 @@ stores (매장)
 | status | 'pending' / 'resolved' |
 | resolved_at | 해결일 |
 | memo | 메모 |
+
+### reserve_fund_logs (신규)
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | 기록 ID |
+| store_id (FK→stores) | 매장 |
+| log_date (date) | 발생일 |
+| year_month (text) | 귀속월 (YYYY-MM) |
+| type (text) | 'deposit' / 'withdrawal' |
+| amount (int) | 금액 |
+| memo (text) | 사유 |
+| created_at (timestamptz) | 생성일 |
+
+### store_settings 추가 컬럼
+| 컬럼 | 용도 |
+|------|------|
+| reserve_rate (numeric, default 0.05) | 예비비 비율 (%) |
+| reserve_fixed (int, default 400000) | 예비비 고정액 |
+| reserve_initial_balance (int, default 0) | 예비비 초기 이월 잔고 |
 
 ## 주의사항
 - **RLS 비활성**: anon key로 직접 접근 가능
