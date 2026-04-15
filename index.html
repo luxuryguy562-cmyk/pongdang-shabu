@@ -4487,20 +4487,19 @@ function openDailyDetail(){
       for(let di=0;di<week.length;di++){
         const d=week[di];
         if(parseInt(d)>passedDays) continue;
-        if(!salesMap.hasOwnProperty(d)) continue;
+        const has=salesMap.hasOwnProperty(d);
         const s=salesMap[d]||0;
-        const e=expMap[d]||0;
+        const e=has?(expMap[d]||0):0;
         const p=s-e;
-        wS+=s;wE+=e;wP+=p;wHas=true;
-        catNames.forEach(c=>{wC[c]+=(catMap[d]?.[c]||0);});
+        if(has){wS+=s;wE+=e;wP+=p;wHas=true;catNames.forEach(c=>{wC[c]+=(catMap[d]?.[c]||0);});}
 
-        bodyHtml+=`<tr><td class="pv-fix">${mo}/${parseInt(d)}</td><td class="pv-blue">${fmt(s)}</td>`;
+        bodyHtml+=`<tr${!has?' style="color:var(--gray-300);"':''}><td class="pv-fix">${mo}/${parseInt(d)}</td><td class="${has?'pv-blue':''}">${has?fmt(s):'-'}</td>`;
         catNames.forEach(c=>{
-          const v=catMap[d]?.[c]||0;
-          bodyHtml+=`<td>${v?fmt(v)+'<span class="pv-pp">'+pctS(v,s)+'%</span>':'-'}</td>`;
+          const v=has?(catMap[d]?.[c]||0):0;
+          bodyHtml+=`<td>${has&&v?fmt(v)+'<span class="pv-pp">'+pctS(v,s)+'%</span>':'-'}</td>`;
         });
-        bodyHtml+=`<td class="pv-exp">${fmt(e)}<span class="pv-pp">${pctS(e,s)}%</span></td>`;
-        bodyHtml+=`<td class="${p>=0?'pv-pos':'pv-neg'}">${p>=0?'+':''}${fmt(p)}</td></tr>`;
+        bodyHtml+=`<td class="${has?'pv-exp':''}">${has?fmt(e)+'<span class="pv-pp">'+pctS(e,s)+'%</span>':'-'}</td>`;
+        bodyHtml+=`<td class="${has?(p>=0?'pv-pos':'pv-neg'):''}">${has?(p>=0?'+':'')+fmt(p):'-'}</td></tr>`;
       }
 
       if(wHas){
