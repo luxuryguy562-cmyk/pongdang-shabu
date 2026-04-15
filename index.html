@@ -243,6 +243,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-sub-tab{flex:1;text-align:center;padding:8px 0;font-size:13px;font-weight:700;border-radius:10px;cursor:pointer;color:var(--gray-600);background:transparent;border:none;}
 .dash-sub-tab.active{background:var(--white);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08);}
 
+/* ─ 공통 색상 유틸 */
+.amt-blue{color:var(--blue)!important;}
+.amt-red{color:var(--danger)!important;}
+.amt-green{color:var(--success)!important;}
+.amt-muted{color:var(--gray-400)!important;}
+
 /* ─ 대시보드 월요약 (토스 스타일) */
 .dash-summ-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--gray-100);}
 .dash-summ-row:last-child{border-bottom:none;}
@@ -3388,14 +3394,14 @@ async function loadDashboard(){
 
     // ══ A-1. 월 요약 렌더 (토스 스타일) ══
     const pctR=v=>totalRevenue>0?((v/totalRevenue)*100).toFixed(1)+'%':'–';
-    const summRow=(label,val,cls,pct)=>`<div class="dash-summ-row"><span class="ds-label">${label}</span><div class="ds-vals"><span class="ds-pct">${pct}</span><span class="ds-main ${cls}">${val}</span></div></div>`;
+    const summRow=(label,val,cls,pct,labelCls)=>`<div class="dash-summ-row"><span class="ds-label ${labelCls||''}">${label}</span><div class="ds-vals"><span class="ds-pct">${pct}</span><span class="ds-main ${cls}">${val}</span></div></div>`;
 
     let summHtml='';
-    summHtml+=summRow('매출',fmt(totalRevenue)+'원','amt-blue','');
-    summHtml+=summRow('지출',fmt(totalCostFull)+'원','amt-red',pctR(totalCostFull));
-    summHtml+=summRow('순수익',fmt(netProfit)+'원',netProfit>=0?'amt-green':'amt-red',pctR(netProfit));
-    summHtml+=summRow('예비비','-'+fmt(reserveAmt)+'원','',pctR(reserveAmt));
-    summHtml+=`<div class="dash-summ-total"><span class="ds-label">실수익</span><span class="ds-main ${realProfit>=0?'amt-green':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}원</span></div>`;
+    summHtml+=summRow('매출',fmt(totalRevenue)+'원','amt-blue','','amt-blue');
+    summHtml+=summRow('지출',fmt(totalCostFull)+'원','amt-red',pctR(totalCostFull),'amt-red');
+    summHtml+=summRow('순수익',fmt(netProfit)+'원',netProfit>=0?'amt-blue':'amt-red',pctR(netProfit),netProfit>=0?'amt-blue':'amt-red');
+    summHtml+=summRow('예비비','-'+fmt(reserveAmt)+'원','amt-muted',pctR(reserveAmt),'');
+    summHtml+=`<div class="dash-summ-total"><span class="ds-label ${realProfit>=0?'amt-blue':'amt-red'}">실수익</span><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}원</span></div>`;
 
     // 마감예상 블록 (현재 월만)
     if(isCurrent){
