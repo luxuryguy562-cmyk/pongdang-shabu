@@ -51,6 +51,7 @@ franchises (프랜차이즈/브랜드)
 | store_id (FK→stores, unique) | 매장 ID (1:1) |
 | ups_store_code | 업솔루션 매장 코드 |
 | ups_id / ups_pw | 업솔루션 로그인 정보 |
+| expense_thresholds (jsonb, default '{}') | 상세비교 기준% (카테고리명→%) |
 - upsert onConflict: `store_id`
 
 ### employees

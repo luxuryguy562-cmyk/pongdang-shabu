@@ -3321,7 +3321,7 @@ async function loadDashboard(){
     await loadExpCategories();
     const sid=currentStore.id;
 
-    const [settleRes,fcRes,expResults]=await Promise.all([
+    const [settleRes,fcRes,expResults,royaltyTxRes]=await Promise.all([
       // 당월 정산
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
@@ -3329,7 +3329,11 @@ async function loadDashboard(){
       // 당월 고정비
       sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(name,is_active,is_variable)').eq('store_id',sid).eq('year_month',ym),
       // 당월 지출 (병렬)
-      calcExpenseByCategories(ym, dashMode)
+      calcExpenseByCategories(ym, dashMode),
+      // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
+      dashMode==='final'
+        ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
+        :Promise.resolve({data:null})
     ]);
 
     // ══ 1. 일별 매출 맵 + 매출 집계 ══
@@ -3386,11 +3390,10 @@ async function loadDashboard(){
     const reserveFixed=parseInt(settings.reserve_fixed||400000);
     const cardSales=salesBreakdown['신용카드']||salesBreakdown['카드']||0;
 
-    // 로열티/카드수수료
+    // 로열티/카드수수료 (로열티 쿼리는 위 Promise.all에서 병렬 완료)
     let royalty,cardFee;
     if(dashMode==='final'){
-      const{data:royaltyTx}=await sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end);
-      royalty=(royaltyTx||[]).reduce((a,r)=>a+Math.abs(r.amount||0),0);
+      royalty=(royaltyTxRes.data||[]).reduce((a,r)=>a+Math.abs(r.amount||0),0);
       cardFee=Math.round(cardSales*cardFeeRate);
     } else {
       royalty=Math.round(totalRevenue*royaltyRate);
@@ -3451,32 +3454,43 @@ async function loadDashboard(){
     const dailyCatMap={}; // { '15': { '식자재': 520000, '인건비': 380000, ... } }
     const dailyExpTotal={}; // { '15': 1200000 }
 
-    // 식자재 (거래처)
-    const{data:voDaily}=await sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end);
+    // ── 일별정산 카테고리 (DB 동적 생성) ──
+    const _dailySrcs=['vendor_orders','receipts','attendance','fixed_costs'];
+    const catNames=[],catColors={},shortNames={},srcToCat={};
+    _dailySrcs.forEach(src=>{
+      const cat=expCategories.find(c=>c.data_source===src&&!c.parent_id)||expCategories.find(c=>c.data_source===src);
+      const nm=cat?cat.name:src;
+      catNames.push(nm);catColors[nm]=cat?.color||'#4E5968';srcToCat[src]=nm;
+      if(nm.includes('/'))shortNames[nm]=nm.split('/')[0];
+      else if(nm.includes('('))shortNames[nm]=nm.split('(')[0];
+      else shortNames[nm]=nm.length>4?nm.slice(0,3):nm;
+    });
+    catNames.push('로열티/수수료');catColors['로열티/수수료']='#EF4444';shortNames['로열티/수수료']='로열티';
+
+    // 일별 카테고리 데이터 (병렬 조회)
+    const[voRes2,rcRes2,attRes2]=await Promise.all([
+      sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+      sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+      sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end)
+    ]);
+    const voDaily=voRes2.data,rcDaily=rcRes2.data,attDaily=attRes2.data;
     (voDaily||[]).forEach(v=>{
       const d=v.order_date?.slice(8);if(!d)return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
-      dailyCatMap[d]['식자재']=(dailyCatMap[d]['식자재']||0)+(v.amount||0);
+      const k=srcToCat['vendor_orders'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(v.amount||0);
     });
-    // 식자재(직구/영수증)
-    const{data:rcDaily}=await sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end);
     (rcDaily||[]).forEach(r=>{
       const d=r.receipt_date?.slice(8);if(!d)return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
-      dailyCatMap[d]['직구/영수증']=(dailyCatMap[d]['직구/영수증']||0)+(r.total_price||0);
+      const k=srcToCat['receipts'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
     });
-    // 인건비 (일별)
-    const{data:attDaily}=await sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end);
     (attDaily||[]).forEach(a=>{
       const d=a.work_date?.slice(8);if(!d)return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
-      dailyCatMap[d]['인건비']=(dailyCatMap[d]['인건비']||0)+(a.calculated_wage||0);
+      const k=srcToCat['attendance'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(a.calculated_wage||0);
     });
     // 고정비 (일할 균등배분)
     const dailyFixedShare=Math.round(fixedMonthly/lastDay);
-    // 로열티/수수료는 해당일 매출 기준
-    const catNames=['식자재','직구/영수증','인건비','고정비','로열티/수수료'];
-    const catCls={'식자재':'cat-food','직구/영수증':'cat-receipt','인건비':'cat-labor','고정비':'cat-fixed','로열티/수수료':'cat-royal'};
 
     // 일별 합계 계산
     allDays.forEach(d=>{
@@ -3485,7 +3499,7 @@ async function loadDashboard(){
       const hasSale=dailySalesMap.hasOwnProperty(d);
       if(!hasSale) return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
-      dailyCatMap[d]['고정비']=dailyFixedShare;
+      dailyCatMap[d][srcToCat['fixed_costs']]=dailyFixedShare;
       // 로열티/수수료: 해당일 매출 기준
       const daySale=dailySalesMap[d]||0;
       const dayRoyalty=Math.round(daySale*royaltyRate);
@@ -3513,8 +3527,7 @@ async function loadDashboard(){
     // 토스 카드 스타일 일별정산
     const weekSummaries=[];
     const pctS=(v,base)=>base>0?((v/base)*100).toFixed(1):'0';
-    const catColors={'식자재':'#05C072','직구/영수증':'#10B981','인건비':'#0050FF','고정비':'#FF9500','로열티/수수료':'#EF4444'};
-    const shortNames={'식자재':'식자재','직구/영수증':'직구','인건비':'인건비','고정비':'고정비','로열티/수수료':'로열티'};
+    // catColors, shortNames는 위에서 DB 기반 동적 생성됨
 
     let dailyHtml='';
     for(let wi=0;wi<weekGroups.length;wi++){
@@ -4472,7 +4485,8 @@ function openDailyDetail(){
       return;
     }
 
-    // 기본 기준% (카테고리별)
+    // 기준% (store_settings.expense_thresholds에서 로드, 없으면 기본값)
+    const savedThresholds=settings.expense_thresholds||{};
     const defaultThresholds={'식자재':30,'직구/영수증':5,'인건비':25,'고정비':15,'로열티/수수료':5};
 
     // 기준% 입력 바 생성
@@ -4480,7 +4494,7 @@ function openDailyDetail(){
     let barHtml='<span style="font-size:10px;font-weight:700;color:var(--gray-400);margin-right:2px;">기준%</span>';
     catNames.forEach(c=>{
       const color=catColors[c]||'#4E5968';
-      const def=defaultThresholds[c]||10;
+      const def=savedThresholds[c]??defaultThresholds[c]??10;
       barHtml+=`<span style="display:inline-flex;align-items:center;gap:2px;font-size:10px;"><span style="width:5px;height:5px;border-radius:50%;background:${color};"></span>${shortNames[c]}<input type="number" class="pv-threshold" data-cat="${c}" value="${def}" style="width:32px;font-size:10px;text-align:center;border:1px solid var(--gray-200);border-radius:4px;padding:2px;"></span>`;
     });
     bar.innerHTML=barHtml;
@@ -4557,7 +4571,18 @@ function openDailyDetail(){
       });
     }
     applyThresholdColors();
-    bar.addEventListener('input',applyThresholdColors);
+    // 기준% 변경 시 색상 적용 + DB 자동 저장
+    let _thresholdTimer=null;
+    bar.addEventListener('input',()=>{
+      applyThresholdColors();
+      clearTimeout(_thresholdTimer);
+      _thresholdTimer=setTimeout(async()=>{
+        const thObj={};
+        document.querySelectorAll('.pv-threshold').forEach(inp=>{thObj[inp.dataset.cat]=parseFloat(inp.value)||0;});
+        settings.expense_thresholds=thObj;
+        if(currentStore) await sb.from('store_settings').upsert({store_id:currentStore.id,expense_thresholds:thObj},{onConflict:'store_id'});
+      },1500);
+    });
     const modal=document.getElementById('dailyDetailModal');
     modal.style.display='block';
     document.body.style.overflow='hidden';
@@ -4805,19 +4830,16 @@ async function calcExpenseByCategories(ym, mode){
   const sid=currentStore.id;
   const isFinal=(mode==='final');
 
-  // 진마감: mydata_transactions에서 귀속월/tx_date 기준 집계하는 헬퍼
-  const getMydataAmount=async(catId)=>{
-    const{data:mdByAttr}=await sb.from('mydata_transactions').select('amount')
-      .eq('store_id',sid).eq('category_id',catId)
-      .eq('exclude_from_settlement',false)
-      .eq('attribution_month',ym);
-    const{data:mdByDate}=await sb.from('mydata_transactions').select('amount')
-      .eq('store_id',sid).eq('category_id',catId)
-      .eq('exclude_from_settlement',false)
-      .is('attribution_month',null)
-      .gte('tx_date',start).lte('tx_date',end);
-    return[...(mdByAttr||[]),...(mdByDate||[])].reduce((a,r)=>a+Math.abs(r.amount||0),0);
-  };
+  // 진마감: mydata 전체 한 번에 조회 후 JS 필터 (카테고리별 N*2회 → 2회로 최적화)
+  const[mdByAttrRes,mdByDateRes]=await Promise.all([
+    sb.from('mydata_transactions').select('amount,category_id')
+      .eq('store_id',sid).eq('exclude_from_settlement',false).eq('attribution_month',ym),
+    sb.from('mydata_transactions').select('amount,category_id')
+      .eq('store_id',sid).eq('exclude_from_settlement',false).is('attribution_month',null)
+      .gte('tx_date',start).lte('tx_date',end)
+  ]);
+  const allMdTx=[...(mdByAttrRes.data||[]),...(mdByDateRes.data||[])];
+  const getMydataAmount=(catId)=>allMdTx.filter(t=>t.category_id===catId).reduce((a,r)=>a+Math.abs(r.amount||0),0);
 
   // 병렬: 모든 카테고리 동시 조회
   const promises=expCategories.map(async cat=>{
@@ -5741,7 +5763,7 @@ async function parseExcelFile(file){
     // HTML 위장 .xls 감지 (카드사 다운로드 파일은 실제로 HTML인 경우가 많음)
     const probe=new TextDecoder('utf-8',{fatal:false}).decode(buf.slice(0,500)).trim().toLowerCase();
     if(probe.startsWith('<')||probe.includes('<html')||probe.includes('<table')){
-      console.log('[엑셀업로드] HTML 위장 .xls 감지, DOMParser로 파싱');
+      // HTML 위장 .xls → DOMParser로 파싱
       const html=new TextDecoder('utf-8',{fatal:false}).decode(buf);
       const doc=new DOMParser().parseFromString(html,'text/html');
       const tables=doc.querySelectorAll('table');
@@ -5759,13 +5781,13 @@ async function parseExcelFile(file){
       if(bestTable&&bestScore>=2){
         const trs=[...bestTable.querySelectorAll('tr')];
         const headers=[...trs[bestRowIdx].querySelectorAll('th,td')].map(c=>c.textContent.trim());
-        console.log('[엑셀업로드] HTML 테이블 헤더 발견:', headers.join(', '));
+        // HTML 테이블 헤더 발견
         return trs.slice(bestRowIdx+1).map(tr=>{
           const cells=[...tr.querySelectorAll('td,th')].map(c=>c.textContent.trim());
           const obj={};headers.forEach((h,i)=>{if(h)obj[h]=cells[i]||'';});return obj;
         }).filter(obj=>Object.values(obj).some(v=>v));
       }
-      console.log('[엑셀업로드] HTML이지만 거래내역 테이블 못 찾음, SheetJS 시도');
+      // HTML이지만 거래내역 테이블 못 찾음 → SheetJS 시도
     }
     // 일반 엑셀 또는 HTML 파싱 실패 시 SheetJS로 파싱
     const wb=XLSX.read(buf,{type:'array'});
@@ -5845,23 +5867,17 @@ function parseDate(v){
 }
 
 async function handleExcelUpload(input, type){
-  console.log('[엑셀업로드] 시작, type='+type, 'files='+input.files?.length);
-  if(!guardStore()){console.log('[엑셀업로드] guardStore 실패');return;}
-  if(!input.files[0]){console.log('[엑셀업로드] 파일 없음');return;}
+  if(!guardStore())return;
+  if(!input.files[0])return;
   const file=input.files[0];
-  console.log('[엑셀업로드] 파일:', file.name, file.size+'bytes');
   excelUploadType=type;
   setLoad(true,'엑셀 분석 중...');
 
   try{
-    console.log('[엑셀업로드] parseExcelFile 시작');
     const rows=await parseExcelFile(file);
-    console.log('[엑셀업로드] 파싱완료, rows='+rows.length);
     if(!rows.length) throw new Error('데이터가 없습니다.');
     const headers=Object.keys(rows[0]);
-    console.log('[엑셀업로드] 헤더:', headers.join(', '));
     const colMap=matchColumns(headers, type);
-    console.log('[엑셀업로드] 컬럼매칭:', JSON.stringify(colMap));
 
     // 필수 컬럼 확인 (인덱스 0도 유효하므로 ==null 사용)
     if(type==='bank'&&colMap.tx_date==null) throw new Error('날짜 컬럼을 찾을 수 없습니다. (거래일, 일자 등)');
@@ -5939,10 +5955,8 @@ async function handleExcelUpload(input, type){
 
     if(!parsed.length) throw new Error('유효한 거래 내역이 없습니다. 엑셀 형식을 확인해주세요.');
 
-    console.log('[엑셀업로드] 파싱결과:', parsed.length+'건, 미분류:'+parsed.filter(i=>i.needs_review).length+'건');
     excelParsedData=parsed;
     renderExcelPreview(parsed, type, parsed.length);
-    console.log('[엑셀업로드] 프리뷰 렌더 완료, 시트 열기');
     openSheet('excelUploadSheet');
   }catch(e){
     console.error('[엑셀업로드] 에러:', e.message, e.stack);

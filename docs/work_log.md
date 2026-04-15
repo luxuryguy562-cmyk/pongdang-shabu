@@ -4,6 +4,28 @@
 
 ---
 
+## [2026-04-15] 대시보드 안정성 + 품질 개선
+
+### 상태: 구현완료
+### 브랜치: claude/review-docs-design-BjzwH
+
+### 작업 내용
+1. **CORS/502 쿼리 최적화**: getMydataAmount() 카테고리별 N×2회 → 전체 2회 조회 후 JS 필터. loadDashboard() 3개 순차 쿼리 → Promise.all 병렬. 로열티 쿼리도 메인 Promise.all에 합류
+2. **디버그 console.log 제거**: 엑셀업로드 관련 11개 삭제, console.error 9개 유지
+3. **catNames 동적화**: 하드코딩 배열 → expense_categories DB에서 data_source별 동적 생성. catColors/shortNames도 DB 기반
+4. **기준% DB 저장**: store_settings.expense_thresholds(jsonb) 추가, 상세비교 모달에서 변경 시 1.5초 디바운스 자동 저장
+5. **docs 수정**: plan.md UI 참조앱 "네이버 클로브" → "Clobe" 수정
+
+### DB 변경
+- store_settings: expense_thresholds (jsonb, default '{}') 컬럼 추가 필요
+- SQL: `ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS expense_thresholds jsonb DEFAULT '{}';`
+
+### 다음 TODO
+- [ ] Supabase에서 expense_thresholds 컬럼 추가 SQL 실행 (사장님)
+- [ ] 카드 엑셀 실제 업로드 테스트
+
+---
+
 ## [2026-04-15] 대시보드 재설계 + 예비비 관리
 
 ### 상태: 배포완료
@@ -35,9 +57,9 @@
 - reserve_fund_logs: 신규 테이블 (예비비 적립/사용 이력)
 
 ### 다음 TODO
-- [ ] 일별정산 catNames를 expense_categories DB에서 동적 로드 (카테고리 추가/삭제 자동 반영)
-- [ ] 상세비교 기준% 값을 store_settings에 저장 (현재 하드코딩)
-- [ ] Supabase mydata_transactions CORS/502 에러 — 병렬 쿼리 최적화 필요
+- [x] 일별정산 catNames를 expense_categories DB에서 동적 로드 → 2026-04-15 완료
+- [x] 상세비교 기준% 값을 store_settings에 저장 → 2026-04-15 완료
+- [x] Supabase mydata_transactions CORS/502 에러 — 병렬 쿼리 최적화 → 2026-04-15 완료
 
 ---
 

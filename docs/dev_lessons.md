@@ -158,10 +158,10 @@ CSS 클래스로 하면 vw/vh 단위가 부정확 → JS로 `window.innerWidth/H
 
 ---
 
-## 21. 일별정산 catNames 하드코딩 문제
-현재 `['식자재','직구/영수증','인건비','고정비','로열티/수수료']` 고정.
-expense_categories DB에서 동적으로 가져와야 카테고리 추가/삭제 시 자동 반영.
-일별 집계 로직도 data_source 기반으로 동적 매핑 필요.
+## 21. 일별정산 catNames 하드코딩 문제 ✅ 해결됨
+~~현재 `['식자재','직구/영수증','인건비','고정비','로열티/수수료']` 고정.~~
+→ 2026-04-15 해결: expense_categories의 data_source 기반으로 동적 생성.
+`srcToCat` 매핑으로 vendor_orders→카테고리명 자동 연결.
 
 ---
 
