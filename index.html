@@ -1804,11 +1804,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- 풀스크린 일별 상세 모달 (body 직하위) -->
 <div id="dailyDetailModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#FFFFFF;z-index:9000;overflow:hidden;">
-  <div id="dailyDetailHeader" style="position:sticky;top:0;background:var(--white);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-200);z-index:1;">
+  <div id="dailyDetailHeader" style="position:sticky;top:0;background:var(--white);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-200);z-index:3;">
     <span style="font-size:16px;font-weight:800;">일별 상세 비교</span>
     <button class="btn btn-secondary btn-sm" id="closeDailyDetailBtn" style="font-size:12px;">닫기 ✕</button>
   </div>
-  <div id="dailyDetailContent" style="overflow:auto;height:calc(100% - 50px);-webkit-overflow-scrolling:touch;"></div>
+  <div id="dailyThresholdBar" style="position:sticky;top:46px;background:var(--white);padding:6px 12px;border-bottom:1px solid var(--gray-200);z-index:2;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+    <span style="font-size:10px;font-weight:700;color:var(--gray-400);margin-right:2px;">기준%</span>
+  </div>
+  <div id="dailyDetailContent" style="overflow:auto;height:calc(100% - 90px);-webkit-overflow-scrolling:touch;"></div>
 </div>
 
 <script>
@@ -4469,8 +4472,21 @@ function openDailyDetail(){
       return;
     }
 
-    let thHtml='<th class="pv-fix">날짜</th><th>매출</th>';
+    // 기본 기준% (카테고리별)
+    const defaultThresholds={'식자재':30,'직구/영수증':5,'인건비':25,'고정비':15,'로열티/수수료':5};
+
+    // 기준% 입력 바 생성
+    const bar=document.getElementById('dailyThresholdBar');
+    let barHtml='<span style="font-size:10px;font-weight:700;color:var(--gray-400);margin-right:2px;">기준%</span>';
     catNames.forEach(c=>{
+      const color=catColors[c]||'#4E5968';
+      const def=defaultThresholds[c]||10;
+      barHtml+=`<span style="display:inline-flex;align-items:center;gap:2px;font-size:10px;"><span style="width:5px;height:5px;border-radius:50%;background:${color};"></span>${shortNames[c]}<input type="number" class="pv-threshold" data-cat="${c}" value="${def}" style="width:32px;font-size:10px;text-align:center;border:1px solid var(--gray-200);border-radius:4px;padding:2px;"></span>`;
+    });
+    bar.innerHTML=barHtml;
+
+    let thHtml='<th class="pv-fix">날짜</th><th>매출</th>';
+    catNames.forEach((c,ci)=>{
       const color=catColors[c]||'#4E5968';
       thHtml+=`<th><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${color};margin-right:2px;vertical-align:middle;"></span>${shortNames[c]}</th>`;
     });
@@ -4478,6 +4494,7 @@ function openDailyDetail(){
 
     let bodyHtml='';
     const pctS=(v,b)=>b>0?((v/b)*100).toFixed(0):'0';
+    const pctN=(v,b)=>b>0?(v/b)*100:0;
 
     for(let wi=0;wi<weekGroups.length;wi++){
       const week=weekGroups[wi];
@@ -4496,7 +4513,8 @@ function openDailyDetail(){
         bodyHtml+=`<tr${!has?' style="color:var(--gray-300);"':''}><td class="pv-fix">${mo}/${parseInt(d)}</td><td class="${has?'pv-blue':''}">${has?fmt(s):'-'}</td>`;
         catNames.forEach(c=>{
           const v=has?(catMap[d]?.[c]||0):0;
-          bodyHtml+=`<td>${has&&v?fmt(v)+'<span class="pv-pp">'+pctS(v,s)+'%</span>':'-'}</td>`;
+          const pVal=pctN(v,s);
+          bodyHtml+=`<td class="pv-cell" data-cat="${c}" data-pctval="${has?pVal.toFixed(1):''}">${has&&v?fmt(v)+'<span class="pv-pp">'+pctS(v,s)+'%</span>':'-'}</td>`;
         });
         bodyHtml+=`<td class="${has?'pv-exp':''}">${has?fmt(e)+'<span class="pv-pp">'+pctS(e,s)+'%</span>':'-'}</td>`;
         bodyHtml+=`<td class="${has?(p>=0?'pv-pos':'pv-neg'):''}">${has?(p>=0?'+':'')+fmt(p):'-'}</td></tr>`;
@@ -4505,7 +4523,8 @@ function openDailyDetail(){
       if(wHas){
         bodyHtml+=`<tr class="pv-week"><td class="pv-fix">${wi+1}주</td><td class="pv-blue">${fmt(wS)}</td>`;
         catNames.forEach(c=>{
-          bodyHtml+=`<td>${wC[c]?fmt(wC[c])+'<span class="pv-pp">'+pctS(wC[c],wS)+'%</span>':'-'}</td>`;
+          const pVal=pctN(wC[c],wS);
+          bodyHtml+=`<td class="pv-cell" data-cat="${c}" data-pctval="${wC[c]?pVal.toFixed(1):''}">${wC[c]?fmt(wC[c])+'<span class="pv-pp">'+pctS(wC[c],wS)+'%</span>':'-'}</td>`;
         });
         bodyHtml+=`<td class="pv-exp">${fmt(wE)}<span class="pv-pp">${pctS(wE,wS)}%</span></td>`;
         bodyHtml+=`<td class="${wP>=0?'pv-pos':'pv-neg'}">${wP>=0?'+':''}${fmt(wP)}</td></tr>`;
@@ -4514,6 +4533,31 @@ function openDailyDetail(){
 
     const html=`<div style="overflow:auto;padding:0 4px 20px;"><table class="pivot-tbl pv-compact"><thead><tr>${thHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>`;
     document.getElementById('dailyDetailContent').innerHTML=html;
+
+    // 초기 색상 적용 + 입력 변경 시 재적용
+    function applyThresholdColors(){
+      const thresholds={};
+      document.querySelectorAll('.pv-threshold').forEach(inp=>{thresholds[inp.dataset.cat]=parseFloat(inp.value)||0;});
+      document.querySelectorAll('.pv-cell').forEach(td=>{
+        const cat=td.dataset.cat;
+        const pVal=parseFloat(td.dataset.pctval);
+        if(isNaN(pVal)||!cat||!thresholds[cat]) return;
+        const th=thresholds[cat];
+        // 주계행은 별도 처리 (pv-week 안의 셀)
+        const isWeek=td.closest('.pv-week');
+        if(isWeek){
+          // 주계행: 기존 색상 유지하되 pv-pp만 색상 변경
+          const pp=td.querySelector('.pv-pp');
+          if(pp) pp.style.color=pVal>th?'#FCA5A5':'#6EE7B7';
+        } else {
+          const pp=td.querySelector('.pv-pp');
+          if(pp) pp.style.color=pVal>th?'var(--danger)':'var(--blue)';
+          td.style.backgroundColor=pVal>th?'rgba(240,68,82,0.06)':'';
+        }
+      });
+    }
+    applyThresholdColors();
+    bar.addEventListener('input',applyThresholdColors);
     const modal=document.getElementById('dailyDetailModal');
     modal.style.display='block';
     document.body.style.overflow='hidden';
@@ -4527,10 +4571,10 @@ function openDailyDetail(){
       modal.style.height=vw+'px';
       modal.style.top='0';
       modal.style.left=vw+'px';
-      contentEl.style.height=(vw-50)+'px';
+      contentEl.style.height=(vw-90)+'px';
       modal._rotated=true;
     } else {
-      contentEl.style.height='calc(100% - 50px)';
+      contentEl.style.height='calc(100% - 90px)';
       modal._rotated=false;
     }
   }catch(err){
