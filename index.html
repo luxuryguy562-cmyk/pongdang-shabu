@@ -908,8 +908,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <!-- A-1. 월 요약 카드 -->
     <div class="card" style="padding:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div class="card-title" style="margin-bottom:0;">월 요약</div>
-        <span id="dashPassedLabel" style="font-size:11px;color:var(--gray-400);font-weight:600;"></span>
+        <div class="card-title" style="margin-bottom:0;">월 요약 <span id="dashPassedLabel" style="font-size:11px;color:var(--gray-400);font-weight:600;"></span></div>
+        <button id="expAccordionToggle" class="btn btn-secondary btn-sm" style="font-size:11px;padding:6px 12px;">지출 상세 ›</button>
       </div>
       <div id="dashSummaryGrid"></div>
       <!-- 예비비 잔고 미니 -->
@@ -3425,11 +3425,7 @@ async function loadDashboard(){
 
     let summHtml='';
     summHtml+=summRow('매출',fmt(totalRevenue),'amt-blue','');
-    // 지출 행 + 상세 버튼
-    summHtml+=`<div class="dash-summ-row">
-      <span class="ds-label">지출</span>
-      <div class="ds-vals"><span class="ds-main amt-red">${fmt(totalCostFull)}</span>${pctR(totalCostFull)?`<span class="ds-pct">${pctR(totalCostFull)}</span>`:''}<button id="expAccordionToggle" class="btn btn-secondary" style="font-size:10px;padding:3px 8px;margin-left:6px;border-radius:6px;cursor:pointer;">지출 상세 ›</button></div>
-    </div>`;
+    summHtml+=summRow('지출',fmt(totalCostFull),'amt-red',pctR(totalCostFull));
     // 지출 상세 아코디언 (접힌 상태)
     summHtml+=`<div id="expAccordionBody" style="display:none;padding:12px 0 4px;"></div>`;
     summHtml+=summRow('순수익',fmt(netProfit),netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
