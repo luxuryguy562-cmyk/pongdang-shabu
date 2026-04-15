@@ -151,6 +151,20 @@ owner만 최초 1회 SQL 설정, 나머지는 앱에서.
 
 ---
 
+## 20. CSS rotate로 모바일 가로 전환 시 주의
+`transform:rotate(90deg)` + `transform-origin:top left` + `left:vw px`.
+CSS 클래스로 하면 vw/vh 단위가 부정확 → JS로 `window.innerWidth/Height` 직접 읽어서 px 설정.
+풀스크린 모달은 body 직하위에 배치 (컨테이너 안에 넣으면 transform 좌표 꼬임).
+
+---
+
+## 21. 일별정산 catNames 하드코딩 문제
+현재 `['식자재','직구/영수증','인건비','고정비','로열티/수수료']` 고정.
+expense_categories DB에서 동적으로 가져와야 카테고리 추가/삭제 시 자동 반영.
+일별 집계 로직도 data_source 기반으로 동적 매핑 필요.
+
+---
+
 ## 17. HTML 요소 제거 후 JS 참조 확인
 HTML에서 `empBirthInput` 제거 → JS의 `autoFormatDate(empBirthInput)` 에서 null 에러.
 요소 ID 변경/삭제 시 JS에서 해당 ID 참조하는 곳 전부 grep 확인 필수.
