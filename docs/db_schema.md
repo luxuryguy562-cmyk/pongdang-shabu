@@ -226,6 +226,25 @@ franchises (프랜차이즈/브랜드)
 | resolved_at | 해결일 |
 | memo | 메모 |
 
+### reserve_fund_logs (신규)
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | 기록 ID |
+| store_id (FK→stores) | 매장 |
+| log_date (date) | 발생일 |
+| year_month (text) | 귀속월 (YYYY-MM) |
+| type (text) | 'deposit' / 'withdrawal' |
+| amount (int) | 금액 |
+| memo (text) | 사유 |
+| created_at (timestamptz) | 생성일 |
+
+### store_settings 추가 컬럼
+| 컬럼 | 용도 |
+|------|------|
+| reserve_rate (numeric, default 0.05) | 예비비 비율 (%) |
+| reserve_fixed (int, default 400000) | 예비비 고정액 |
+| reserve_initial_balance (int, default 0) | 예비비 초기 이월 잔고 |
+
 ## 주의사항
 - **RLS 비활성**: anon key로 직접 접근 가능
 - **store_id 필수**: 모든 쿼리에 빠뜨리면 타 매장 데이터 노출
