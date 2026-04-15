@@ -261,6 +261,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-summ-total .ds-label{font-size:14px;font-weight:800;color:var(--gray-600);}
 .dash-summ-total .ds-vals{display:flex;align-items:baseline;gap:6px;}
 .dash-summ-total .ds-main{font-size:20px;font-weight:900;min-width:120px;text-align:right;}
+.dash-summ-total .ds-pct{font-size:11px;font-weight:700;color:var(--gray-400);min-width:46px;text-align:right;}
 .dash-summ-est-block{margin-top:10px;padding:10px 14px;background:var(--gray-100);border-radius:12px;}
 .dash-summ-est-block .est-title{font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;}
 .dash-summ-est-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;}
@@ -3567,10 +3568,12 @@ async function loadDashboard(){
       });
 
       const wProfitCls=wP>=0?'amt-green':'amt-red';
-      const weekRange=week[0]+'~'+week[week.length-1];
+      // 현재 주인지 판단 (passedDays가 이 주에 포함되면 현재 주)
+      const isCurrentWeek=week.some(d=>parseInt(d)===passedDays);
+      const collapsed=!isCurrentWeek;
       dailyHtml+=`<div class="dt-week-card">
         <div class="dt-week-header" data-week="${wi}">
-          <span class="wk-title">▼ ${wi+1}주 <span style="font-size:11px;font-weight:600;color:var(--gray-400);">${mo}/${parseInt(week[0])}~${mo}/${parseInt(week[week.length-1])}</span></span>
+          <span class="wk-title">${collapsed?'▶':'▼'} ${wi+1}주 <span style="font-size:11px;font-weight:600;color:var(--gray-400);">${mo}/${parseInt(week[0])}~${mo}/${parseInt(week[week.length-1])}</span></span>
           <span class="wk-profit ${wProfitCls}">${wP>=0?'+':''}${fmt(wP)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:12px;color:var(--gray-600);">
@@ -3578,7 +3581,7 @@ async function loadDashboard(){
           <span>지출 <b style="color:var(--danger);">${fmt(wE)}</b></span>
         </div>
         ${wCatsHtml?`<div class="dt-week-cats">${wCatsHtml}</div>`:''}
-        <div class="dt-day-list" data-wkbody="${wi}">${dayCardsHtml}</div>
+        <div class="dt-day-list" data-wkbody="${wi}" ${collapsed?'style="display:none;"':''}>${dayCardsHtml}</div>
       </div>`;
 
       const isCompleteWeek=(wi<weekGroups.length-1)||!isCurrent;
