@@ -4,24 +4,31 @@
 
 ---
 
-## [2026-04-15] 대시보드 안정성 + 품질 개선
+## [2026-04-15] 대시보드 안정성 + UI 전면 개선
 
-### 상태: 구현완료
-### 브랜치: claude/review-docs-design-BjzwH
+### 상태: 배포완료
+### 브랜치: claude/review-docs-design-BjzwH → main
 
 ### 작업 내용
-1. **CORS/502 쿼리 최적화**: getMydataAmount() 카테고리별 N×2회 → 전체 2회 조회 후 JS 필터. loadDashboard() 3개 순차 쿼리 → Promise.all 병렬. 로열티 쿼리도 메인 Promise.all에 합류
-2. **디버그 console.log 제거**: 엑셀업로드 관련 11개 삭제, console.error 9개 유지
-3. **catNames 동적화**: 하드코딩 배열 → expense_categories DB에서 data_source별 동적 생성. catColors/shortNames도 DB 기반
-4. **기준% DB 저장**: store_settings.expense_thresholds(jsonb) 추가, 상세비교 모달에서 변경 시 1.5초 디바운스 자동 저장
-5. **docs 수정**: plan.md UI 참조앱 "네이버 클로브" → "Clobe" 수정
+1. **CORS/502 쿼리 최적화**: getMydataAmount() N×2회 → 2회 단일쿼리. loadDashboard() 3개 순차 → Promise.all 병렬. 로열티도 병렬 합류
+2. **디버그 console.log 제거**: 엑셀업로드 11개 삭제, console.error 9개 유지
+3. **catNames 동적화**: 하드코딩 → expense_categories DB data_source 기반 동적 생성
+4. **기준% DB 저장**: store_settings.expense_thresholds(jsonb), 1.5초 디바운스 자동 저장
+5. **마감예상 카드 색상**: 매출 파랑, 지출 빨강, 순수익 조건색, 예비비 회색
+6. **주카드 개선**: 전체 카테고리 표시(0원 포함) + 컬러도트 + 순수익 라벨 + 2열 그리드
+7. **상세비교 모달**: 총누계 행(파란배경) + 주별 접기/펼치기(▶/▼) + 셀 높이 통일
+8. **모바일 좌우 스크롤 방지**: html overflow-x:hidden + min-width 제거 + container overflow
+9. **라벨 변경**: 일별정산→주단위 요약, 상세비교→일별 상세비교
+10. **월정산 상세 → 지출 상세 아코디언**: 독립 카드 제거, 지출 라벨 옆 버튼 → 아코디언(도넛차트+카테고리 테이블)
+11. **매출 상세 아코디언**: 매출 라벨 옆 버튼 → 도넛(카드/현금 비율) + 결제수단 테이블 + 일평균/영업일수
+12. **월 요약 table 전환**: flex→table + tabular-nums, 마감예상도 동일 구조. 숫자 자릿수 완벽 정렬
+13. **영업일수 수정**: receiptCount(입력일수) → passedDays(경과일) 기준으로 변경
+14. **docs 수정**: plan.md "네이버 클로브"→"Clobe", dev_lessons #22 행열 정렬 규칙 추가
 
 ### DB 변경
-- store_settings: expense_thresholds (jsonb, default '{}') 컬럼 추가 필요
-- SQL: `ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS expense_thresholds jsonb DEFAULT '{}';`
+- store_settings: expense_thresholds (jsonb, default '{}') 컬럼 추가 — 실행 완료
 
 ### 다음 TODO
-- [ ] Supabase에서 expense_thresholds 컬럼 추가 SQL 실행 (사장님)
 - [ ] 카드 엑셀 실제 업로드 테스트
 
 ---
