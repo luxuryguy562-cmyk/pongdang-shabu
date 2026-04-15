@@ -275,7 +275,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dt-week-header .wk-title{font-size:14px;font-weight:800;}
 .dt-week-header .wk-profit{font-size:15px;font-weight:900;}
 .dt-week-cats{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-200);}
-.dt-week-cats .wc-item{font-size:11px;font-weight:600;color:var(--gray-600);}
+.dt-week-cats .wc-item{font-size:11px;font-weight:600;color:var(--gray-600);display:inline-flex;align-items:center;gap:3px;}
+.dt-week-cats .wc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .dt-week-cats .wc-amt{font-weight:700;color:var(--text);}
 .dt-week-cats .wc-pct{font-size:10px;font-weight:700;margin-left:2px;}
 .dt-day-list{margin-top:8px;}
@@ -3574,13 +3575,12 @@ async function loadDashboard(){
 
       if(!wHas) continue;
 
-      // 주계 카테고리 바
+      // 주계 카테고리 바 (전체 카테고리 표시, 0원도 포함)
       let wCatsHtml='';
       catNames.forEach(c=>{
-        if(!wC[c]) return;
         const color=catColors[c]||'#4E5968';
-        const pct=wS>0?pctS(wC[c],wS)+'%':'';
-        wCatsHtml+=`<span class="wc-item">${shortNames[c]} <span class="wc-amt">${fmt(wC[c])}</span> <span class="wc-pct" style="color:${color};">${pct}</span></span>`;
+        const pct=wS>0?pctS(wC[c]||0,wS)+'%':'0%';
+        wCatsHtml+=`<span class="wc-item"><span class="wc-dot" style="background:${color};"></span>${shortNames[c]} <span class="wc-amt">${fmt(wC[c]||0)}</span> <span class="wc-pct" style="color:${color};">${pct}</span></span>`;
       });
 
       const wProfitCls=wP>=0?'amt-green':'amt-red';
@@ -3590,13 +3590,13 @@ async function loadDashboard(){
       dailyHtml+=`<div class="dt-week-card">
         <div class="dt-week-header" data-week="${wi}">
           <span class="wk-title">${collapsed?'▶':'▼'} ${wi+1}주 <span style="font-size:11px;font-weight:600;color:var(--gray-400);">${mo}/${parseInt(week[0])}~${mo}/${parseInt(week[week.length-1])}</span></span>
-          <span class="wk-profit ${wProfitCls}">${wP>=0?'+':''}${fmt(wP)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:12px;color:var(--gray-600);">
           <span>매출 <b style="color:var(--blue);">${fmt(wS)}</b></span>
           <span>지출 <b style="color:var(--danger);">${fmt(wE)}</b></span>
+          <span>순수익 <b class="${wProfitCls}">${wP>=0?'+':''}${fmt(wP)}</b></span>
         </div>
-        ${wCatsHtml?`<div class="dt-week-cats">${wCatsHtml}</div>`:''}
+        <div class="dt-week-cats">${wCatsHtml}</div>
         <div class="dt-day-list" data-wkbody="${wi}" ${collapsed?'style="display:none;"':''}>${dayCardsHtml}</div>
       </div>`;
 
