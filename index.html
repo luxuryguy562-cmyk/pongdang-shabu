@@ -306,6 +306,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .pivot-tbl .pv-neg{color:var(--danger);}
 .pivot-tbl .pv-blue{color:var(--blue);}
 .pivot-tbl .pv-pct{font-size:9px;color:var(--gray-400);display:block;font-weight:600;}
+/* compact 모드 (풀스크린 상세) */
+.pivot-tbl.pv-compact{font-size:9px;}
+.pivot-tbl.pv-compact th{font-size:8px;padding:5px 3px;min-width:auto;}
+.pivot-tbl.pv-compact td{padding:4px 3px;font-size:9px;min-width:auto;}
+.pivot-tbl.pv-compact .pv-fix{position:sticky;left:0;background:var(--white);z-index:2;font-weight:700;font-size:10px;padding-right:4px;min-width:34px;white-space:nowrap;}
+.pivot-tbl.pv-compact thead th{font-size:8px;padding:6px 3px;}
+.pivot-tbl.pv-compact thead .pv-fix{background:var(--gray-100);}
+.pivot-tbl.pv-compact .pv-blue{color:var(--blue);}
+.pivot-tbl.pv-compact .pv-exp{color:var(--danger);font-weight:700;}
+.pivot-tbl.pv-compact .pv-pp{font-size:7px;color:var(--gray-400);}
+.pivot-tbl.pv-compact tr.pv-week{background:var(--gray-100);}
+.pivot-tbl.pv-compact tr.pv-week td{font-weight:800;border-top:2px solid var(--gray-300);border-bottom:2px solid var(--gray-300);}
+.pivot-tbl.pv-compact tr.pv-week .pv-fix{background:var(--gray-100);font-weight:900;}
 
 /* ─ 예비비 현황 */
 .reserve-balance-card{background:linear-gradient(135deg,#0050FF 0%,#3B82F6 100%);color:#fff;border-radius:16px;padding:20px;margin-bottom:14px;}
@@ -3569,7 +3582,7 @@ async function loadDashboard(){
     document.getElementById('dashDailyTable').innerHTML=dailyHtml||'<div class="empty-state" style="padding:16px;"><p>정산 데이터가 없습니다</p></div>';
 
     // 피벗 모달용 데이터 저장
-    _pivotData={days:allDays.filter(d=>parseInt(d)<=passedDays),salesMap:dailySalesMap,catMap:dailyCatMap,expMap:dailyExpTotal,catNames,catColors,shortNames,mo,royaltyRate,cardFeeRate};
+    _pivotData={days:allDays.filter(d=>parseInt(d)<=passedDays),salesMap:dailySalesMap,catMap:dailyCatMap,expMap:dailyExpTotal,catNames,catColors,shortNames,mo,royaltyRate,cardFeeRate,weekGroups,passedDays};
 
     // ══ A-4. 월정산 상세 (토스 스타일) ══
     const groupMap={vendor_orders:'식자재',receipts:'식자재(직구/영수증)',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
@@ -4437,46 +4450,59 @@ function switchDashMode(mode){
 let _pivotData=null; // loadDashboard에서 저장
 function openDailyDetail(){
   if(!_pivotData) return;
-  const{days,salesMap,catMap,expMap,catNames,catColors,shortNames,mo,royaltyRate,cardFeeRate}=_pivotData;
-  if(!days.length){document.getElementById('dailyDetailContent').innerHTML='<div class="empty-state" style="padding:40px;"><p>데이터 없음</p></div>';return;}
-
-  // 피벗: 항목이 행, 날짜가 열
+  const{days,salesMap,catMap,expMap,catNames,catColors,shortNames,mo,weekGroups,passedDays}=_pivotData;
   const cols=days.filter(d=>salesMap.hasOwnProperty(d));
-  if(!cols.length) return;
+  if(!cols.length){document.getElementById('dailyDetailContent').innerHTML='<div class="empty-state" style="padding:40px;"><p>데이터 없음</p></div>';document.getElementById('dailyDetailModal').style.display='block';document.body.style.overflow='hidden';return;}
 
-  let html='<div style="overflow:auto;padding:0 8px 20px;"><table class="pivot-tbl"><thead><tr><th class="pt-corner">항목</th>';
-  cols.forEach(d=>{html+=`<th>${mo}/${parseInt(d)}</th>`;});
-  html+='</tr></thead><tbody>';
-
-  // 매출행
-  html+='<tr><td class="pt-row-label" style="font-weight:800;">매출</td>';
-  cols.forEach(d=>{const v=salesMap[d]||0;html+=`<td class="pv-blue">${fmt(v)}</td>`;});
-  html+='</tr>';
-
-  // 카테고리별 행
+  // 날짜=행, 항목=열 (엑셀 방향)
+  // 헤더: 날짜 | 매출 | 식자재 | 인건비 | 고정비 | 로열티 | 지출계 | 순이익
+  let thHtml='<th class="pv-fix">날짜</th><th>매출</th>';
   catNames.forEach(c=>{
     const color=catColors[c]||'#4E5968';
-    html+=`<tr class="pt-cat-row"><td class="pt-row-label"><span class="pt-dot" style="background:${color};"></span>${shortNames[c]}</td>`;
-    cols.forEach(d=>{
-      const s=salesMap[d]||0;
-      const v=catMap[d]?.[c]||0;
-      const pct=s>0?((v/s)*100).toFixed(1):'0';
-      html+=`<td>${v?fmt(v):'-'}<span class="pv-pct">${v?pct+'%':''}</span></td>`;
-    });
-    html+='</tr>';
+    thHtml+=`<th><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${color};margin-right:2px;vertical-align:middle;"></span>${shortNames[c]}</th>`;
   });
+  thHtml+='<th class="pv-exp">지출계</th><th class="pv-profit">순이익</th>';
 
-  // 지출합계
-  html+='<tr class="pt-total"><td class="pt-row-label">지출합계</td>';
-  cols.forEach(d=>{const v=expMap[d]||0;const s=salesMap[d]||0;const pct=s>0?((v/s)*100).toFixed(1):'0';html+=`<td class="pv-neg">${fmt(v)}<span class="pv-pct">${pct}%</span></td>`;});
-  html+='</tr>';
+  let bodyHtml='';
+  const pctS=(v,b)=>b>0?((v/b)*100).toFixed(0):'0';
 
-  // 순이익
-  html+='<tr class="pt-profit"><td class="pt-row-label" style="font-weight:900;">순이익</td>';
-  cols.forEach(d=>{const s=salesMap[d]||0;const e=expMap[d]||0;const p=s-e;html+=`<td class="${p>=0?'pv-pos':'pv-neg'}">${p>=0?'+':''}${fmt(p)}</td>`;});
-  html+='</tr>';
+  for(let wi=0;wi<weekGroups.length;wi++){
+    const week=weekGroups[wi];
+    let wS=0,wE=0,wP=0,wHas=false;
+    const wC={};catNames.forEach(c=>{wC[c]=0;});
 
-  html+='</tbody></table></div>';
+    // 일별 행
+    for(let di=0;di<week.length;di++){
+      const d=week[di];
+      if(parseInt(d)>passedDays) continue;
+      if(!salesMap.hasOwnProperty(d)) continue;
+      const s=salesMap[d]||0;
+      const e=expMap[d]||0;
+      const p=s-e;
+      wS+=s;wE+=e;wP+=p;wHas=true;
+      catNames.forEach(c=>{wC[c]+=(catMap[d]?.[c]||0);});
+
+      bodyHtml+=`<tr><td class="pv-fix">${mo}/${parseInt(d)}</td><td class="pv-blue">${fmt(s)}</td>`;
+      catNames.forEach(c=>{
+        const v=catMap[d]?.[c]||0;
+        bodyHtml+=`<td>${v?fmt(v)+' <span class="pv-pp">'+pctS(v,s)+'</span>':'-'}</td>`;
+      });
+      bodyHtml+=`<td class="pv-exp">${fmt(e)} <span class="pv-pp">${pctS(e,s)}</span></td>`;
+      bodyHtml+=`<td class="${p>=0?'pv-pos':'pv-neg'}">${p>=0?'+':''}${fmt(p)}</td></tr>`;
+    }
+
+    // 주계행
+    if(wHas){
+      bodyHtml+=`<tr class="pv-week"><td class="pv-fix">${wi+1}주</td><td class="pv-blue">${fmt(wS)}</td>`;
+      catNames.forEach(c=>{
+        bodyHtml+=`<td>${wC[c]?fmt(wC[c])+' <span class="pv-pp">'+pctS(wC[c],wS)+'</span>':'-'}</td>`;
+      });
+      bodyHtml+=`<td class="pv-exp">${fmt(wE)} <span class="pv-pp">${pctS(wE,wS)}</span></td>`;
+      bodyHtml+=`<td class="${wP>=0?'pv-pos':'pv-neg'}">${wP>=0?'+':''}${fmt(wP)}</td></tr>`;
+    }
+  }
+
+  const html=`<div style="overflow:auto;padding:0 4px 20px;"><table class="pivot-tbl pv-compact"><thead><tr>${thHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></div>`;
   document.getElementById('dailyDetailContent').innerHTML=html;
   document.getElementById('dailyDetailModal').style.display='block';
   document.body.style.overflow='hidden';
