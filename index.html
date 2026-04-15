@@ -32,7 +32,7 @@ body{font-family:-apple-system,'Noto Sans KR',sans-serif;margin:0;background:var
 .nav-item.active{color:var(--blue);}
 
 /* ─ 컨테이너/카드 */
-.container{padding:14px;max-width:640px;margin:0 auto;display:none;}
+.container{padding:14px;max-width:640px;margin:0 auto;display:none;overflow-x:hidden;}
 .container.active{display:block;}
 .card{background:var(--white);border-radius:22px;padding:20px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,0,0,0.04);}
 .card-title{font-size:18px;font-weight:700;margin-bottom:16px;}
@@ -86,7 +86,7 @@ body{font-family:-apple-system,'Noto Sans KR',sans-serif;margin:0;background:var
 
 /* ─ 영수증 테이블 */
 .table-wrap{margin:14px -20px 0;overflow-x:auto;border-top:1px solid var(--gray-200);}
-table{width:100%;border-collapse:collapse;min-width:340px;}
+table{width:100%;border-collapse:collapse;}
 th{padding:9px 6px;font-size:11px;font-weight:700;color:var(--gray-600);background:var(--gray-100);text-align:center;}
 td{padding:10px 5px;font-size:12px;border-bottom:1px solid var(--gray-100);text-align:center;vertical-align:middle;}
 td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
@@ -254,14 +254,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-summ-row:last-child{border-bottom:none;}
 .dash-summ-row .ds-label{font-size:13px;font-weight:600;color:var(--gray-600);}
 .dash-summ-row .ds-vals{display:flex;align-items:baseline;gap:6px;}
-.dash-summ-row .ds-main{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;min-width:120px;text-align:right;}
-.dash-summ-row .ds-pct{font-size:11px;font-weight:700;color:var(--gray-400);min-width:46px;text-align:right;}
+.dash-summ-row .ds-main{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;}
+.dash-summ-row .ds-pct{font-size:11px;font-weight:700;color:var(--gray-400);text-align:right;white-space:nowrap;}
 .dash-summ-row .ds-est{font-size:11px;font-weight:600;color:var(--gray-400);font-variant-numeric:tabular-nums;}
 .dash-summ-total{padding:12px 0 4px;border-top:2px solid var(--text);display:flex;justify-content:space-between;align-items:baseline;}
 .dash-summ-total .ds-label{font-size:14px;font-weight:800;color:var(--gray-600);}
 .dash-summ-total .ds-vals{display:flex;align-items:baseline;gap:6px;}
-.dash-summ-total .ds-main{font-size:20px;font-weight:900;min-width:120px;text-align:right;}
-.dash-summ-total .ds-pct{font-size:11px;font-weight:700;color:var(--gray-400);min-width:46px;text-align:right;}
+.dash-summ-total .ds-main{font-size:20px;font-weight:900;text-align:right;}
+.dash-summ-total .ds-pct{font-size:11px;font-weight:700;color:var(--gray-400);text-align:right;white-space:nowrap;}
 .dash-summ-est-block{margin-top:10px;padding:10px 14px;background:var(--gray-100);border-radius:12px;}
 .dash-summ-est-block .est-title{font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;}
 .dash-summ-est-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;}
