@@ -3734,7 +3734,6 @@ async function loadDashboard(){
       revListHtml+=`<tr><td colspan="3" style="border-top:1px solid var(--gray-200);padding-top:6px;margin-top:4px;"></td></tr>`;
       revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;">일평균</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;">${fmt(avgDaily)}</td><td></td></tr>`;
       revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;">영업일수</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;">${passedDays}일</td><td></td></tr>`;
-      revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-400);text-align:left;">입력일수</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;">${receiptCount}일</td><td></td></tr>`;
       revListHtml+='</table>';
 
       revBody.innerHTML=`<div style="display:flex;gap:14px;align-items:center;">
