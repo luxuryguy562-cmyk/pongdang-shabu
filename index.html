@@ -909,9 +909,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="card" style="padding:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <div class="card-title" style="margin-bottom:0;">월 요약</div>
-        <span id="dashPassedLabel" style="font-size:11px;color:var(--gray-400);font-weight:600;"></span>
+        <button class="btn btn-secondary btn-sm" id="openMonthDetailBtn" style="font-size:11px;padding:6px 12px;">월정산 상세 ›</button>
       </div>
+      <div id="dashPassedLabel" style="font-size:11px;color:var(--gray-400);font-weight:600;text-align:right;margin-bottom:6px;"></div>
       <div id="dashSummaryGrid"></div>
+      <!-- 월정산 상세 (접힌 상태, 버튼으로 펼침) -->
+      <div id="dashMonthDetailWrap" style="display:none;margin-top:14px;padding-top:14px;border-top:2px solid var(--gray-200);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:14px;font-weight:800;">월정산 상세</div>
+          <span id="closeMonthDetailBtn" style="font-size:12px;color:var(--gray-400);font-weight:600;cursor:pointer;">접기 ▲</span>
+        </div>
+        <div id="dashMonthDetail"></div>
+      </div>
       <!-- 예비비 잔고 미니 -->
       <div id="dashReserveBalanceMini" style="margin-top:12px;padding:10px 14px;background:var(--blue-light);border-radius:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
         <div style="display:flex;align-items:center;gap:6px;">
@@ -932,12 +941,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <button class="btn btn-secondary btn-sm" id="openDailyDetailBtn" style="font-size:11px;padding:6px 12px;">일별 상세비교 ›</button>
       </div>
       <div id="dashDailyTable"></div>
-    </div>
-
-    <!-- A-4. 월정산 상세 -->
-    <div class="card">
-      <div class="card-title">월정산 상세</div>
-      <div id="dashMonthDetail"></div>
     </div>
 
     <!-- A-5. 일별 차트 (매출 + 순이익) -->
@@ -6694,6 +6697,17 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>{closeSideMenu();nav('reserve');});
   document.getElementById('openDailyDetailBtn').addEventListener('click',()=>openDailyDetail());
   document.getElementById('closeDailyDetailBtn').addEventListener('click',()=>closeDailyDetail());
+  // 월정산 상세 펼침/접기
+  document.getElementById('openMonthDetailBtn').addEventListener('click',()=>{
+    const wrap=document.getElementById('dashMonthDetailWrap');
+    const btn=document.getElementById('openMonthDetailBtn');
+    wrap.style.display='block';btn.style.display='none';
+    wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+  document.getElementById('closeMonthDetailBtn').addEventListener('click',()=>{
+    document.getElementById('dashMonthDetailWrap').style.display='none';
+    document.getElementById('openMonthDetailBtn').style.display='';
+  });
   document.getElementById('saveReserveSettingsBtn').addEventListener('click',()=>saveReserveSettings());
   document.getElementById('addReserveUsageBtn').addEventListener('click',()=>{
     document.getElementById('rvUsageDate').value=new Date().toISOString().slice(0,10);
