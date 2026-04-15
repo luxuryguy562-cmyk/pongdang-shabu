@@ -309,13 +309,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* compact 모드 (풀스크린 상세) */
 .pivot-tbl.pv-compact{font-size:11px;border-collapse:collapse;}
 .pivot-tbl.pv-compact th{font-size:10px;padding:6px 5px;min-width:auto;text-align:right;white-space:nowrap;border-bottom:2px solid var(--gray-200);}
-.pivot-tbl.pv-compact td{padding:6px 5px;font-size:11px;min-width:auto;text-align:right;border-bottom:1px solid var(--gray-100);font-variant-numeric:tabular-nums;}
+.pivot-tbl.pv-compact td{padding:6px 5px;font-size:11px;min-width:60px;text-align:right;border-bottom:1px solid var(--gray-100);font-variant-numeric:tabular-nums;vertical-align:top;}
 .pivot-tbl.pv-compact .pv-fix{position:sticky;left:0;background:#fff;z-index:2;font-weight:700;font-size:11px;padding-right:6px;min-width:36px;white-space:nowrap;text-align:left;border-right:1px solid var(--gray-200);}
 .pivot-tbl.pv-compact thead th{font-size:10px;padding:8px 5px;background:var(--gray-100);position:sticky;top:0;z-index:1;}
 .pivot-tbl.pv-compact thead .pv-fix{background:var(--gray-100);z-index:3;}
 .pivot-tbl.pv-compact .pv-blue{color:var(--blue);font-weight:700;}
 .pivot-tbl.pv-compact .pv-exp{color:var(--danger);font-weight:700;}
-.pivot-tbl.pv-compact .pv-pp{font-size:9px;color:var(--gray-400);margin-left:1px;}
+.pivot-tbl.pv-compact .pv-pp{font-size:9px;color:var(--blue);font-weight:700;display:block;}
 .pivot-tbl.pv-compact tr.pv-week{background:#1B1D21;}
 .pivot-tbl.pv-compact tr.pv-week td{font-weight:800;color:#fff;border-bottom:none;}
 .pivot-tbl.pv-compact tr.pv-week .pv-fix{background:#1B1D21;font-weight:900;color:#fff;border-right:1px solid #333;}
@@ -4494,18 +4494,18 @@ function openDailyDetail(){
         bodyHtml+=`<tr><td class="pv-fix">${mo}/${parseInt(d)}</td><td class="pv-blue">${fmt(s)}</td>`;
         catNames.forEach(c=>{
           const v=catMap[d]?.[c]||0;
-          bodyHtml+=`<td>${v?fmt(v)+' <span class="pv-pp">'+pctS(v,s)+'</span>':'-'}</td>`;
+          bodyHtml+=`<td>${v?fmt(v)+'<span class="pv-pp">'+pctS(v,s)+'%</span>':'-'}</td>`;
         });
-        bodyHtml+=`<td class="pv-exp">${fmt(e)} <span class="pv-pp">${pctS(e,s)}</span></td>`;
+        bodyHtml+=`<td class="pv-exp">${fmt(e)}<span class="pv-pp">${pctS(e,s)}%</span></td>`;
         bodyHtml+=`<td class="${p>=0?'pv-pos':'pv-neg'}">${p>=0?'+':''}${fmt(p)}</td></tr>`;
       }
 
       if(wHas){
         bodyHtml+=`<tr class="pv-week"><td class="pv-fix">${wi+1}주</td><td class="pv-blue">${fmt(wS)}</td>`;
         catNames.forEach(c=>{
-          bodyHtml+=`<td>${wC[c]?fmt(wC[c])+' <span class="pv-pp">'+pctS(wC[c],wS)+'</span>':'-'}</td>`;
+          bodyHtml+=`<td>${wC[c]?fmt(wC[c])+'<span class="pv-pp">'+pctS(wC[c],wS)+'%</span>':'-'}</td>`;
         });
-        bodyHtml+=`<td class="pv-exp">${fmt(wE)} <span class="pv-pp">${pctS(wE,wS)}</span></td>`;
+        bodyHtml+=`<td class="pv-exp">${fmt(wE)}<span class="pv-pp">${pctS(wE,wS)}%</span></td>`;
         bodyHtml+=`<td class="${wP>=0?'pv-pos':'pv-neg'}">${wP>=0?'+':''}${fmt(wP)}</td></tr>`;
       }
     }
