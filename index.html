@@ -250,7 +250,25 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .amt-green{color:var(--success)!important;}
 .amt-muted{color:var(--gray-400)!important;}
 
-/* ─ 대시보드 월요약 (토스 스타일) */
+/* ─ 대시보드 월요약 테이블 */
+.summ-tbl{width:100%;border-collapse:collapse;}
+.summ-tbl td{padding:10px 0;border-bottom:1px solid var(--gray-100);vertical-align:baseline;}
+.summ-tbl tr:last-child td{border-bottom:none;}
+.summ-tbl .ds-lb{font-size:13px;font-weight:600;color:var(--gray-600);text-align:left;white-space:nowrap;}
+.summ-tbl .ds-amt{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;padding-left:10px;}
+.summ-tbl .ds-pc{font-size:11px;font-weight:700;color:var(--gray-400);text-align:right;width:50px;white-space:nowrap;padding-left:4px;}
+.summ-tbl tr.summ-total td{border-top:2px solid var(--text);border-bottom:none;padding-top:12px;}
+.summ-tbl tr.summ-total .ds-lb{font-size:14px;font-weight:800;}
+.summ-tbl tr.summ-total .ds-amt{font-size:20px;font-weight:900;}
+.summ-tbl.summ-est td{padding:3px 0;border-bottom:none;}
+.summ-tbl.summ-est .ds-lb{font-size:12px;color:var(--gray-600);}
+.summ-tbl.summ-est .ds-amt{font-size:12px;font-weight:700;}
+.summ-tbl.summ-est .ds-pc{font-size:10px;}
+.summ-tbl.summ-est tr.summ-total td{border-top:1px solid var(--gray-200);padding-top:6px;margin-top:4px;}
+.summ-tbl.summ-est tr.summ-total .ds-lb{font-weight:800;}
+.summ-tbl.summ-est tr.summ-total .ds-amt{font-weight:800;}
+
+/* ─ 대시보드 월요약 레거시 (토스 스타일) */
 .dash-summ-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--gray-100);}
 .dash-summ-row:last-child{border-bottom:none;}
 .dash-summ-row .ds-label{font-size:13px;font-weight:600;color:var(--gray-600);}
@@ -3420,26 +3438,32 @@ async function loadDashboard(){
 
     // ══ A-1. 월 요약 렌더 (토스 스타일) ══
     const pctR=v=>totalRevenue>0?((v/totalRevenue)*100).toFixed(1)+'%':'–';
-    const summRow=(label,val,cls,pct)=>`<div class="dash-summ-row"><span class="ds-label">${label}</span><div class="ds-vals"><span class="ds-main ${cls}">${val}</span>${pct?`<span class="ds-pct">${pct}</span>`:''}</div></div>`;
+    // 월 요약 테이블 (행열 정렬)
+    const sR=(lb,val,cls,pct)=>`<tr><td class="ds-lb">${lb}</td><td class="ds-amt ${cls}">${val}</td><td class="ds-pc">${pct||''}</td></tr>`;
 
-    let summHtml='';
-    summHtml+=summRow('매출',fmt(totalRevenue),'amt-blue','');
-    summHtml+=`<div class="dash-summ-row"><span class="ds-label">지출 <button id="expAccordionToggle" style="font-size:10px;padding:2px 7px;margin-left:4px;border-radius:5px;border:1px solid var(--gray-200);background:var(--gray-100);color:var(--gray-600);font-weight:600;cursor:pointer;">지출 상세 ›</button></span><div class="ds-vals"><span class="ds-main amt-red">${fmt(totalCostFull)}</span>${pctR(totalCostFull)?`<span class="ds-pct">${pctR(totalCostFull)}</span>`:''}</div></div>`;
+    let summHtml='<table class="summ-tbl">';
+    summHtml+=sR('매출',fmt(totalRevenue),'amt-blue','');
+    summHtml+=`<tr><td class="ds-lb">지출 <button id="expAccordionToggle" style="font-size:10px;padding:2px 7px;margin-left:4px;border-radius:5px;border:1px solid var(--gray-200);background:var(--gray-100);color:var(--gray-600);font-weight:600;cursor:pointer;">지출 상세 ›</button></td><td class="ds-amt amt-red">${fmt(totalCostFull)}</td><td class="ds-pc">${pctR(totalCostFull)}</td></tr>`;
+    summHtml+='</table>';
     summHtml+=`<div id="expAccordionBody" style="display:none;padding:12px 0 4px;"></div>`;
-    summHtml+=summRow('순수익',fmt(netProfit),netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
-    summHtml+=summRow('예비비','-'+fmt(reserveAmt),'amt-muted',pctR(reserveAmt));
-    summHtml+=`<div class="dash-summ-total"><span class="ds-label">실수익</span><div class="ds-vals"><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</span><span class="ds-pct">${pctR(realProfit)}</span></div></div>`;
+    summHtml+='<table class="summ-tbl">';
+    summHtml+=sR('순수익',fmt(netProfit),netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
+    summHtml+=sR('예비비','-'+fmt(reserveAmt),'amt-muted',pctR(reserveAmt));
+    summHtml+=`<tr class="summ-total"><td class="ds-lb">실수익</td><td class="ds-amt ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</td><td class="ds-pc">${pctR(realProfit)}</td></tr>`;
+    summHtml+='</table>';
 
     // 마감예상 블록 (현재 월만)
     if(isCurrent){
       const pctE=v=>estRevenue>0?((v/estRevenue)*100).toFixed(1)+'%':'–';
       summHtml+=`<div class="dash-summ-est-block">
         <div class="est-title">월말 마감예상 (${lastDay}일 기준)</div>
-        <div class="dash-summ-est-row"><span class="es-label">매출</span><span><span class="es-val" style="color:var(--blue);">${fmt(estRevenue)}</span></span></div>
-        <div class="dash-summ-est-row"><span class="es-label">지출</span><span><span class="es-val" style="color:var(--danger);">${fmt(estTotalCostFull)}</span><span class="es-pct">${pctE(estTotalCostFull)}</span></span></div>
-        <div class="dash-summ-est-row"><span class="es-label">순수익</span><span><span class="es-val" style="color:${estNetProfit>=0?'var(--blue)':'var(--danger)'};">${fmt(estNetProfit)}</span><span class="es-pct">${pctE(estNetProfit)}</span></span></div>
-        <div class="dash-summ-est-row"><span class="es-label">예비비</span><span><span class="es-val" style="color:var(--gray-400);">-${fmt(estReserve)}</span></span></div>
-        <div class="dash-summ-est-row" style="border-top:1px solid var(--gray-200);padding-top:6px;margin-top:4px;"><span class="es-label" style="font-weight:800;">실수익</span><span><span class="es-val" style="font-weight:800;color:${estRealProfit>=0?'var(--success)':'var(--danger)'};">${estRealProfit>=0?'':'-'}${fmt(Math.abs(estRealProfit))}</span><span class="es-pct">${pctE(Math.abs(estRealProfit))}</span></span></div>
+        <table class="summ-tbl summ-est">
+          ${sR('매출',fmt(estRevenue),'amt-blue','')}
+          ${sR('지출',fmt(estTotalCostFull),'amt-red',pctE(estTotalCostFull))}
+          ${sR('순수익',fmt(estNetProfit),estNetProfit>=0?'amt-blue':'amt-red',pctE(estNetProfit))}
+          ${sR('예비비','-'+fmt(estReserve),'amt-muted','')}
+          <tr class="summ-total"><td class="ds-lb">실수익</td><td class="ds-amt ${estRealProfit>=0?'amt-blue':'amt-red'}">${estRealProfit>=0?'':'-'}${fmt(Math.abs(estRealProfit))}</td><td class="ds-pc">${pctE(Math.abs(estRealProfit))}</td></tr>
+        </table>
       </div>`;
     }
     document.getElementById('dashSummaryGrid').innerHTML=summHtml;
