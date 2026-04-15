@@ -4516,26 +4516,11 @@ function openDailyDetail(){
   const modal=document.getElementById('dailyDetailModal');
   modal.style.display='block';
   document.body.style.overflow='hidden';
-  // 가로 모드 전환: A(API) 시도 → 실패 시 B(CSS rotate)
-  modal._landscapeMethod=null;
-  try{
-    if(screen.orientation&&screen.orientation.lock){
-      screen.orientation.lock('landscape').then(()=>{modal._landscapeMethod='api';}).catch(()=>{
-        modal.classList.add('landscape-css');modal._landscapeMethod='css';
-      });
-    } else {
-      modal.classList.add('landscape-css');modal._landscapeMethod='css';
-    }
-  }catch(e){modal.classList.add('landscape-css');modal._landscapeMethod='css';}
 }
 function closeDailyDetail(){
   const modal=document.getElementById('dailyDetailModal');
   modal.style.display='none';
-  modal.classList.remove('landscape-css');
   document.body.style.overflow='';
-  // 가로 모드 복원
-  try{if(modal._landscapeMethod==='api'&&screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();}catch(e){}
-  modal._landscapeMethod=null;
 }
 
 // ── 예비비 잔고 계산 (실시간) ──
