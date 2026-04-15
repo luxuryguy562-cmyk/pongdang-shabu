@@ -256,17 +256,21 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-summary-tbl .amt-blue{color:var(--blue);}
 .dash-summary-tbl .amt-muted{color:var(--gray-400);font-size:11px;font-weight:600;}
 
-/* ─ 대시보드 일별 정산 테이블 */
-.daily-settle-tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
-.daily-settle-tbl th{font-size:10px;font-weight:700;color:var(--gray-400);padding:6px 2px;border-bottom:2px solid var(--gray-200);text-align:right;}
-.daily-settle-tbl th:first-child{text-align:left;width:50px;}
-.daily-settle-tbl td{padding:8px 2px;border-bottom:1px solid var(--gray-100);text-align:right;font-weight:600;font-variant-numeric:tabular-nums;}
-.daily-settle-tbl td:first-child{text-align:left;font-weight:700;color:var(--gray-600);}
-.daily-settle-tbl tr.week-total{background:var(--gray-100);}
-.daily-settle-tbl tr.week-total td{font-weight:800;border-bottom:2px solid var(--gray-200);}
-.daily-settle-tbl .dot-green{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);}
-.daily-settle-tbl .dot-red{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);}
-.daily-settle-tbl .dot-gray{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gray-200);}
+/* ─ 대시보드 일별 정산 엑셀 테이블 */
+.daily-excel-tbl{border-collapse:collapse;font-size:11px;white-space:nowrap;}
+.daily-excel-tbl th{font-size:9px;font-weight:700;color:var(--gray-400);padding:5px 4px;border-bottom:2px solid var(--gray-200);text-align:right;position:sticky;top:0;background:var(--white);z-index:1;}
+.daily-excel-tbl td{padding:5px 4px;border-bottom:1px solid var(--gray-100);text-align:right;font-weight:600;font-variant-numeric:tabular-nums;}
+.daily-excel-tbl .dt-fix{position:sticky;left:0;background:var(--white);z-index:2;text-align:left;font-weight:700;min-width:42px;padding-right:6px;}
+.daily-excel-tbl .dt-sale{color:var(--blue);font-weight:700;}
+.daily-excel-tbl .dt-pct{font-size:9px;color:var(--gray-400);font-weight:600;min-width:30px;}
+.daily-excel-tbl .dt-tot{font-weight:700;color:var(--danger);}
+.daily-excel-tbl .dt-profit{font-weight:800;}
+.daily-excel-tbl tr.dt-week{background:var(--gray-100);}
+.daily-excel-tbl tr.dt-week td{font-weight:800;border-bottom:2px solid var(--gray-200);}
+.daily-excel-tbl tr.dt-week .dt-fix{background:var(--gray-100);}
+.daily-excel-tbl tr.dt-day .dt-fix{color:var(--gray-600);font-weight:600;}
+.daily-excel-tbl tr.row-neg .dt-fix{color:var(--danger);}
+.daily-excel-tbl .dt-wk-label{font-weight:800;color:var(--text);}
 
 /* ─ 예비비 현황 */
 .reserve-balance-card{background:linear-gradient(135deg,#0050FF 0%,#3B82F6 100%);color:#fff;border-radius:16px;padding:20px;margin-bottom:14px;}
@@ -3432,86 +3436,68 @@ async function loadDashboard(){
       }
     });
 
-    // 주차별 렌더링 (주계 위에, 접기/펼치기)
-    let dailyHtml='';
+    // 엑셀 스타일 가로 테이블 (날짜 고정 + 가로 스크롤)
+    // 컬럼: 날짜 | 매출 | 식자재 | % | 인건비 | % | 고정비 | % | 로열티 | % | 지출계 | % | 순이익 | %
     const weekSummaries=[];
+    const pctS=(v,base)=>base>0?((v/base)*100).toFixed(1):'0';
 
+    let tblRows='';
     for(let wi=0;wi<weekGroups.length;wi++){
       const week=weekGroups[wi];
-      let wSales=0,wExp=0,wProfit=0,wHasData=false;
-      const wCatTotals={};
-      let dayRowsHtml='';
+      let wS=0,wE=0,wP=0,wHas=false;
+      const wC={};catNames.forEach(c=>{wC[c]=0;});
+      const isLastWeek=(wi===weekGroups.length-1)||(wi===weekGroups.length-2&&weekGroups[weekGroups.length-1].every(d=>parseInt(d)>passedDays));
+      const collapsed=!isLastWeek;
 
+      // 일별 행
+      let dayRows='';
       for(let di=0;di<week.length;di++){
         const d=week[di];
         const dayNum=parseInt(d);
         if(dayNum>passedDays) continue;
-        const hasSale=dailySalesMap.hasOwnProperty(d);
-        const sale=dailySalesMap[d]||0;
-        const exp=hasSale?(dailyExpTotal[d]||0):0;
-        const profit=sale-exp;
-        if(hasSale){
-          wSales+=sale;wExp+=exp;wProfit+=profit;wHasData=true;
-          catNames.forEach(c=>{wCatTotals[c]=(wCatTotals[c]||0)+(dailyCatMap[d]?.[c]||0);});
-        }
-        const dot=!hasSale?'dot-gray':(profit>=0?'dot-green':'dot-red');
-
-        // 카테고리 상세 (매출 있는 날만)
-        let catDetail='';
-        if(hasSale&&dailyCatMap[d]){
-          const cats=dailyCatMap[d];
-          let catItems='';
-          catNames.forEach(c=>{
-            if(cats[c]>0){const cp=sale>0?((cats[c]/sale)*100).toFixed(1)+'%':'';catItems+=`<span style="margin-right:8px;">${c} <b>${fmt(cats[c])}</b> <span style="color:var(--blue);font-size:9px;">${cp}</span></span>`;}
-          });
-          if(catItems) catDetail=`<tr class="cat-detail-row" style="display:none;"><td colspan="5"><div style="padding:4px 0 4px 8px;font-size:10px;color:var(--gray-600);line-height:1.8;background:var(--gray-100);border-radius:6px;margin:2px 0;">${catItems}</div></td></tr>`;
-        }
-
-        dayRowsHtml+=`<tr class="day-row" style="cursor:pointer;">
-          <td>${mo}/${dayNum}</td>
-          <td>${hasSale?fmt(sale):'-'}</td>
-          <td>${hasSale?fmt(exp):'-'}</td>
-          <td>${hasSale?fmt(profit):'-'}</td>
-          <td><span class="${dot}"></span></td>
-        </tr>${catDetail}`;
+        const has=dailySalesMap.hasOwnProperty(d);
+        const s=dailySalesMap[d]||0;
+        const e=has?(dailyExpTotal[d]||0):0;
+        const p=s-e;
+        if(has){wS+=s;wE+=e;wP+=p;wHas=true;catNames.forEach(c=>{wC[c]+=(dailyCatMap[d]?.[c]||0);});}
+        const cls=!has?'':(p>=0?'row-pos':'row-neg');
+        let cells=`<td class="dt-fix">${mo}/${dayNum}</td><td class="dt-sale">${has?fmt(s):'-'}</td>`;
+        catNames.forEach(c=>{
+          const v=has?(dailyCatMap[d]?.[c]||0):0;
+          cells+=`<td>${has&&v?fmt(v):'-'}</td><td class="dt-pct">${has&&v&&s?pctS(v,s):''}${has&&v&&s?'%':''}</td>`;
+        });
+        cells+=`<td class="dt-tot">${has?fmt(e):'-'}</td><td class="dt-pct">${has&&s?pctS(e,s)+'%':''}</td>`;
+        cells+=`<td class="dt-profit ${has?(p>=0?'amt-green':'amt-red'):''}">${has?fmt(p):'-'}</td><td class="dt-pct">${has&&s?pctS(p,s)+'%':''}</td>`;
+        dayRows+=`<tr class="dt-day ${cls}" data-wk="${wi}"${collapsed?' style="display:none;"':''}>${cells}</tr>`;
       }
 
-      if(!wHasData) continue;
+      if(!wHas) continue;
 
-      const wDot=wProfit>=0?'dot-green':'dot-red';
-      const isLastWeek=(wi===weekGroups.length-1)||(wi===weekGroups.length-2&&weekGroups[weekGroups.length-1].every(d=>parseInt(d)>passedDays));
-      const collapsed=!isLastWeek;
-
-      // 주계 카테고리 상세
-      let wCatDetail='';
-      let wCatItems='';
+      // 주계행 (항상 보임)
+      let wCells=`<td class="dt-fix dt-wk-label" data-week="${wi}" style="cursor:pointer;">${collapsed?'▶':'▼'} ${wi+1}주</td><td class="dt-sale">${fmt(wS)}</td>`;
       catNames.forEach(c=>{
-        if(wCatTotals[c]>0){const wp=wSales>0?((wCatTotals[c]/wSales)*100).toFixed(1)+'%':'';wCatItems+=`<span style="margin-right:8px;">${c} <b>${fmt(wCatTotals[c])}</b> <span style="color:var(--blue);font-size:9px;">${wp}</span></span>`;}
+        wCells+=`<td>${wC[c]?fmt(wC[c]):'-'}</td><td class="dt-pct">${wC[c]&&wS?pctS(wC[c],wS)+'%':''}</td>`;
       });
-      if(wCatItems) wCatDetail=`<tr class="wk-cat-row" ${collapsed?'style="display:none;"':''}><td colspan="5"><div style="padding:4px 0 4px 8px;font-size:10px;color:var(--gray-600);line-height:1.8;background:var(--blue-light);border-radius:6px;margin:2px 0;">${wCatItems}</div></td></tr>`;
+      wCells+=`<td class="dt-tot">${fmt(wE)}</td><td class="dt-pct">${wS?pctS(wE,wS)+'%':''}</td>`;
+      wCells+=`<td class="dt-profit ${wP>=0?'amt-green':'amt-red'}">${fmt(wP)}</td><td class="dt-pct">${wS?pctS(wP,wS)+'%':''}</td>`;
+      tblRows+=`<tr class="dt-week">${wCells}</tr>${dayRows}`;
 
-      dailyHtml+=`<table class="daily-settle-tbl" style="margin-bottom:8px;">
-        <tbody>
-          <tr class="week-total week-toggle" style="cursor:pointer;" data-week="${wi}">
-            <td>${collapsed?'▶':'▼'} ${wi+1}주</td>
-            <td>${fmt(wSales)}</td>
-            <td>${fmt(wExp)}</td>
-            <td>${fmt(wProfit)}</td>
-            <td><span class="${wDot}"></span></td>
-          </tr>
-          ${wCatDetail}
-          <tbody class="week-body-${wi}" ${collapsed?'style="display:none;"':''}>
-            ${dayRowsHtml}
-          </tbody>
-        </tbody>
-      </table>`;
-
-      weekSummaries.push({week:wi+1,profit:wProfit,done:!isLastWeek});
+      weekSummaries.push({week:wi+1,profit:wP,done:!isLastWeek});
     }
 
-    // 테이블 헤더 한 번만
-    const headerHtml='<table class="daily-settle-tbl"><thead><tr><th>날짜</th><th>매출</th><th>지출</th><th>순이익</th><th></th></tr></thead></table>';
-    document.getElementById('dashDailyTable').innerHTML=headerHtml+dailyHtml;
+    // 헤더
+    let thHtml=`<th class="dt-fix">날짜</th><th>매출</th>`;
+    const shortNames={'식자재':'식자재','직구/영수증':'직구','인건비':'인건비','고정비':'고정비','로열티/수수료':'로열티'};
+    catNames.forEach(c=>{thHtml+=`<th>${shortNames[c]||c}</th><th>%</th>`;});
+    thHtml+=`<th>지출계</th><th>%</th><th>순이익</th><th>%</th>`;
+
+    document.getElementById('dashDailyTable').innerHTML=`
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <table class="daily-excel-tbl">
+          <thead><tr>${thHtml}</tr></thead>
+          <tbody>${tblRows}</tbody>
+        </table>
+      </div>`;
 
     // ══ A-3. 주정산 요약 바 ══
     let weekBarHtml='';
@@ -6379,29 +6365,15 @@ document.addEventListener('DOMContentLoaded', async()=>{
     // 나머지는 로그인 후 백그라운드 로드
   }
 
-  // ─── 대시보드: 주차 접기/펼치기 + 일별 카테고리 토글 (이벤트 위임) ───
+  // ─── 대시보드: 주차 접기/펼치기 (이벤트 위임) ───
   document.getElementById('dashDailyTable').addEventListener('click',function(e){
-    // 주차 토글
-    const wt=e.target.closest('.week-toggle');
-    if(wt){
-      const wi=wt.dataset.week;
-      const body=document.querySelector('.week-body-'+wi);
-      const catRow=wt.nextElementSibling;
-      if(body){
-        const show=body.style.display==='none';
-        body.style.display=show?'':'none';
-        if(catRow&&catRow.classList.contains('wk-cat-row')) catRow.style.display=show?'':'none';
-        wt.querySelector('td').textContent=wt.querySelector('td').textContent.replace(/[▶▼]/,show?'▼':'▶');
-      }
-      return;
-    }
-    // 일별 카테고리 토글
-    const dr=e.target.closest('.day-row');
-    if(dr){
-      const next=dr.nextElementSibling;
-      if(next&&next.classList.contains('cat-detail-row')){
-        next.style.display=next.style.display==='none'?'':'none';
-      }
+    const wkLabel=e.target.closest('.dt-wk-label');
+    if(wkLabel){
+      const wi=wkLabel.dataset.week;
+      const rows=document.querySelectorAll(`.dt-day[data-wk="${wi}"]`);
+      const isHidden=rows.length>0&&rows[0].style.display==='none';
+      rows.forEach(r=>{r.style.display=isHidden?'':'none';});
+      wkLabel.textContent=wkLabel.textContent.replace(/[▶▼]/,isHidden?'▼':'▶');
     }
   });
 
