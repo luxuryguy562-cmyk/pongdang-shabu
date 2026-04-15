@@ -909,18 +909,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="card" style="padding:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <div class="card-title" style="margin-bottom:0;">월 요약</div>
-        <button class="btn btn-secondary btn-sm" id="openMonthDetailBtn" style="font-size:11px;padding:6px 12px;">월정산 상세 ›</button>
+        <span id="dashPassedLabel" style="font-size:11px;color:var(--gray-400);font-weight:600;"></span>
       </div>
-      <div id="dashPassedLabel" style="font-size:11px;color:var(--gray-400);font-weight:600;text-align:right;margin-bottom:6px;"></div>
       <div id="dashSummaryGrid"></div>
-      <!-- 월정산 상세 (접힌 상태, 버튼으로 펼침) -->
-      <div id="dashMonthDetailWrap" style="display:none;margin-top:14px;padding-top:14px;border-top:2px solid var(--gray-200);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div style="font-size:14px;font-weight:800;">월정산 상세</div>
-          <span id="closeMonthDetailBtn" style="font-size:12px;color:var(--gray-400);font-weight:600;cursor:pointer;">접기 ▲</span>
-        </div>
-        <div id="dashMonthDetail"></div>
-      </div>
       <!-- 예비비 잔고 미니 -->
       <div id="dashReserveBalanceMini" style="margin-top:12px;padding:10px 14px;background:var(--blue-light);border-radius:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
         <div style="display:flex;align-items:center;gap:6px;">
@@ -3434,7 +3425,13 @@ async function loadDashboard(){
 
     let summHtml='';
     summHtml+=summRow('매출',fmt(totalRevenue),'amt-blue','');
-    summHtml+=summRow('지출',fmt(totalCostFull),'amt-red',pctR(totalCostFull));
+    // 지출 행: 아코디언 (터치하면 지출 상세 펼침)
+    summHtml+=`<div class="dash-summ-row" id="expAccordionToggle" style="cursor:pointer;">
+      <span class="ds-label">지출 <span id="expAccordionArrow" style="font-size:10px;color:var(--gray-400);">›</span></span>
+      <div class="ds-vals"><span class="ds-main amt-red">${fmt(totalCostFull)}</span>${pctR(totalCostFull)?`<span class="ds-pct">${pctR(totalCostFull)}</span>`:''}</div>
+    </div>`;
+    // 지출 상세 아코디언 (접힌 상태)
+    summHtml+=`<div id="expAccordionBody" style="display:none;padding:12px 0 4px;"></div>`;
     summHtml+=summRow('순수익',fmt(netProfit),netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
     summHtml+=summRow('예비비','-'+fmt(reserveAmt),'amt-muted',pctR(reserveAmt));
     summHtml+=`<div class="dash-summ-total"><span class="ds-label">실수익</span><div class="ds-vals"><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</span><span class="ds-pct">${pctR(realProfit)}</span></div></div>`;
@@ -3617,7 +3614,7 @@ async function loadDashboard(){
     // 피벗 모달용 데이터 저장
     _pivotData={days:allDays.filter(d=>parseInt(d)<=passedDays),salesMap:dailySalesMap,catMap:dailyCatMap,expMap:dailyExpTotal,catNames,catColors,shortNames,mo,royaltyRate,cardFeeRate,weekGroups,passedDays};
 
-    // ══ A-4. 월정산 상세 (토스 스타일) ══
+    // ══ A-4. 지출 상세 아코디언 (도넛차트 + 카테고리 리스트) ══
     const groupMap={vendor_orders:'식자재',receipts:'식자재(직구/영수증)',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
     const expByGroup={};
     expData.forEach(e=>{
@@ -3629,33 +3626,67 @@ async function loadDashboard(){
     if(royalty>0) expByGroup['로열티']=(expByGroup['로열티']||0)+royalty;
     if(cardFee>0) expByGroup['카드수수료']=(expByGroup['카드수수료']||0)+cardFee;
 
-    const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1)+'%':'–';
+    const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1):'0';
     const mGroupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','로열티':'#EF4444','카드수수료':'#EF4444','기타/수동':'#7C3AED','마케팅':'#F59E0B'};
     const groupOrder=['식자재','식자재(직구/영수증)','인건비','공과금/고정비','로열티','카드수수료','기타/수동','마케팅'];
 
-    // 매출 행
-    let monthHtml=`<div class="dash-summ-row" style="padding-bottom:12px;"><span class="ds-label" style="font-size:14px;font-weight:800;">총매출</span><span class="ds-main amt-blue">${fmt(totalRevenue)}</span></div>`;
-
-    // 카테고리별 행
+    // 도넛 데이터 + 카테고리 리스트 생성
+    const donutLabels=[],donutData=[],donutColors=[];
+    let catListHtml='';
     groupOrder.forEach(g=>{
       const amt=expByGroup[g];
       if(!amt||amt<=0) return;
       const color=mGroupColors[g]||'#4E5968';
-      monthHtml+=`<div class="dash-summ-row"><div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span><span class="ds-label">${g}</span></div><div class="ds-vals"><span class="ds-pct">${pctOf(amt)}</span><span class="ds-main">${fmt(amt)}</span></div></div>`;
+      donutLabels.push(g);donutData.push(amt);donutColors.push(color);
+      catListHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+        <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span><span style="font-size:12px;font-weight:600;color:var(--gray-600);">${g}</span></div>
+        <div style="text-align:right;"><span style="font-size:12px;font-weight:700;">${fmt(amt)}</span><span style="font-size:10px;font-weight:600;color:var(--gray-400);margin-left:4px;">${pctOf(amt)}%</span></div>
+      </div>`;
     });
     // 미등록 그룹
     Object.entries(expByGroup).forEach(([g,amt])=>{
-      if(!groupOrder.includes(g)&&amt>0) monthHtml+=`<div class="dash-summ-row"><span class="ds-label">${g}</span><div class="ds-vals"><span class="ds-pct">${pctOf(amt)}</span><span class="ds-main">${fmt(amt)}</span></div></div>`;
+      if(!groupOrder.includes(g)&&amt>0){
+        const color='#4E5968';
+        donutLabels.push(g);donutData.push(amt);donutColors.push(color);
+        catListHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+          <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span><span style="font-size:12px;font-weight:600;color:var(--gray-600);">${g}</span></div>
+          <div style="text-align:right;"><span style="font-size:12px;font-weight:700;">${fmt(amt)}</span><span style="font-size:10px;font-weight:600;color:var(--gray-400);margin-left:4px;">${pctOf(amt)}%</span></div>
+        </div>`;
+      }
     });
 
-    // 합계
-    monthHtml+=`<div style="border-top:2px solid var(--text);padding-top:10px;margin-top:4px;">
-      <div class="dash-summ-row"><span class="ds-label" style="font-weight:800;">지출합계</span><div class="ds-vals"><span class="ds-pct">${pctOf(totalCostFull)}</span><span class="ds-main amt-red">${fmt(totalCostFull)}</span></div></div>
-      <div class="dash-summ-row"><span class="ds-label">순수익</span><div class="ds-vals"><span class="ds-pct">${pctOf(netProfit)}</span><span class="ds-main">${fmt(netProfit)}</span></div></div>
-      <div class="dash-summ-row"><span class="ds-label">예비비</span><div class="ds-vals"><span class="ds-main">-${fmt(reserveAmt)}</span></div></div>
-      <div class="dash-summ-total"><span class="ds-label">실수익</span><span class="ds-main ${realProfit>=0?'amt-green':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</span></div>
-    </div>`;
-    document.getElementById('dashMonthDetail').innerHTML=monthHtml;
+    const accBody=document.getElementById('expAccordionBody');
+    if(accBody){
+      accBody.innerHTML=`<div style="display:flex;gap:14px;align-items:center;">
+        <div style="width:120px;height:120px;flex-shrink:0;position:relative;">
+          <canvas id="expDonutChart" width="120" height="120"></canvas>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+            <div style="font-size:10px;color:var(--gray-400);font-weight:600;">지출</div>
+            <div style="font-size:13px;font-weight:800;color:var(--danger);">${pctOf(totalCostFull)}%</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0;">${catListHtml}</div>
+      </div>`;
+      // 도넛차트 렌더
+      destroyChart('expDonutChart');
+      if(donutData.length){
+        chartInstances.expDonutChart=new Chart(document.getElementById('expDonutChart'),{
+          type:'doughnut',
+          data:{labels:donutLabels,datasets:[{data:donutData,backgroundColor:donutColors,borderWidth:0}]},
+          options:{responsive:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:item=>item.label+' '+fmt(item.raw)+' ('+pctOf(item.raw)+'%)'}}}}
+        });
+      }
+    }
+    // 아코디언 토글 바인딩
+    const accToggle=document.getElementById('expAccordionToggle');
+    const accArrow=document.getElementById('expAccordionArrow');
+    if(accToggle){
+      accToggle.onclick=()=>{
+        const open=accBody.style.display!=='none';
+        accBody.style.display=open?'none':'block';
+        if(accArrow) accArrow.textContent=open?'›':'▾';
+      };
+    }
 
     // ══ A-5. 일별 차트 (매출 + 순이익) ══
     destroyChart('dailyChart');
@@ -6697,17 +6728,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>{closeSideMenu();nav('reserve');});
   document.getElementById('openDailyDetailBtn').addEventListener('click',()=>openDailyDetail());
   document.getElementById('closeDailyDetailBtn').addEventListener('click',()=>closeDailyDetail());
-  // 월정산 상세 펼침/접기
-  document.getElementById('openMonthDetailBtn').addEventListener('click',()=>{
-    const wrap=document.getElementById('dashMonthDetailWrap');
-    const btn=document.getElementById('openMonthDetailBtn');
-    wrap.style.display='block';btn.style.display='none';
-    wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
-  });
-  document.getElementById('closeMonthDetailBtn').addEventListener('click',()=>{
-    document.getElementById('dashMonthDetailWrap').style.display='none';
-    document.getElementById('openMonthDetailBtn').style.display='';
-  });
+
   document.getElementById('saveReserveSettingsBtn').addEventListener('click',()=>saveReserveSettings());
   document.getElementById('addReserveUsageBtn').addEventListener('click',()=>{
     document.getElementById('rvUsageDate').value=new Date().toISOString().slice(0,10);
