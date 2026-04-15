@@ -427,6 +427,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <div class="side-group-body">
         <div class="side-item" onclick="closeSideMenu();nav('dashboard')">대시보드</div>
+        <div class="side-item" onclick="closeSideMenu();nav('reserve')">예비비</div>
         <div class="side-item" onclick="closeSideMenu();nav('wage')">급여 집계</div>
       </div>
     </div>
@@ -837,13 +838,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button id="dashModeFinal" class="btn btn-sm" style="flex:1;font-size:12px;border-radius:10px;background:transparent;color:var(--gray-600);">진마감 (확정)</button>
   </div>
 
-  <!-- ━━ 서브탭: 정산현황 / 예비비 ━━ -->
-  <div class="dash-sub-tabs">
-    <button class="dash-sub-tab active" id="dashTabSettle">정산현황</button>
-    <button class="dash-sub-tab" id="dashTabReserve">예비비</button>
-  </div>
-
-  <!-- ═══ A. 정산현황 탭 ═══ -->
+  <!-- ═══ A. 정산현황 ═══ -->
   <div id="dashSettleCont">
     <!-- A-1. 월 요약 카드 -->
     <div class="card" style="padding:16px;">
@@ -887,59 +882,61 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
   </div>
 
-  <!-- ═══ B. 예비비 탭 ═══ -->
-  <div id="dashReserveCont" style="display:none;">
-    <!-- B-1. 예비비 현황 카드 -->
-    <div class="reserve-balance-card">
-      <div class="rb-label">예비비 현재 잔고</div>
-      <div class="rb-amount" id="reserveBalanceMain">0원</div>
-      <div class="rb-sub">
-        <span>총 적립: <b id="reserveTotalDeposit">0원</b></span>
-        <span>총 사용: <b id="reserveTotalWithdraw">0원</b></span>
-      </div>
-    </div>
+  </div>
 
-    <!-- B-2. 예비비 설정 -->
-    <div class="card">
-      <div class="card-title">예비비 설정</div>
-      <div style="background:var(--blue-light);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--blue);line-height:1.5;">
-        예비비 = 순수익 × 비율 + 고정금액<br>
-        매월 순수익에서 자동 적립됩니다
-      </div>
-      <div class="setting-row" style="cursor:default;">
-        <div><div class="setting-label">적립 비율</div><div class="setting-sub">순수익 대비 %</div></div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <input type="number" id="rv-rate" min="0" step="0.1" class="input-inline" style="width:70px;text-align:right;">
-          <span style="font-size:13px;color:var(--gray-600);">%</span>
-        </div>
-      </div>
-      <div class="setting-row" style="cursor:default;">
-        <div><div class="setting-label">고정 적립액</div><div class="setting-sub">매월 고정</div></div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <input type="number" id="rv-fixed" min="0" class="input-inline" style="width:100px;text-align:right;">
-          <span style="font-size:13px;color:var(--gray-600);">원</span>
-        </div>
-      </div>
-      <div class="setting-row" style="cursor:default;">
-        <div><div class="setting-label">초기 잔고 (이월)</div><div class="setting-sub">이전 기간 적립금</div></div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <input type="number" id="rv-initial" min="0" class="input-inline" style="width:100px;text-align:right;">
-          <span style="font-size:13px;color:var(--gray-600);">원</span>
-        </div>
-      </div>
-      <button class="btn btn-primary btn-full" id="saveReserveSettingsBtn">저장</button>
-    </div>
+</div>
 
-    <!-- B-3. 예비비 사용 등록 -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div class="card-title" style="margin-bottom:0;">예비비 이력</div>
-        <button class="btn btn-primary btn-sm" id="addReserveUsageBtn" style="font-size:11px;">+ 사용 등록</button>
-      </div>
-      <div id="reserveHistoryList"></div>
+<!-- ══ [5-B] 예비비 관리 ══ -->
+<div id="reserveCont" class="container">
+  <!-- 예비비 현황 카드 -->
+  <div class="reserve-balance-card">
+    <div class="rb-label">예비비 현재 잔고</div>
+    <div class="rb-amount" id="reserveBalanceMain">0원</div>
+    <div class="rb-sub">
+      <span>총 적립: <b id="reserveTotalDeposit">0원</b></span>
+      <span>총 사용: <b id="reserveTotalWithdraw">0원</b></span>
     </div>
   </div>
 
+  <!-- 예비비 설정 -->
+  <div class="card">
+    <div class="card-title">예비비 설정</div>
+    <div style="background:var(--blue-light);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--blue);line-height:1.5;">
+      예비비 = 순수익 × 비율 + 고정금액<br>
+      매월 순수익에서 자동 적립됩니다
+    </div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">적립 비율</div><div class="setting-sub">순수익 대비 %</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="rv-rate" min="0" step="0.1" class="input-inline" style="width:70px;text-align:right;">
+        <span style="font-size:13px;color:var(--gray-600);">%</span>
+      </div>
+    </div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">고정 적립액</div><div class="setting-sub">매월 고정</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="rv-fixed" min="0" class="input-inline" style="width:100px;text-align:right;">
+        <span style="font-size:13px;color:var(--gray-600);">원</span>
+      </div>
+    </div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">초기 잔고 (이월)</div><div class="setting-sub">이전 기간 적립금</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="rv-initial" min="0" class="input-inline" style="width:100px;text-align:right;">
+        <span style="font-size:13px;color:var(--gray-600);">원</span>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" id="saveReserveSettingsBtn">저장</button>
+  </div>
+
+  <!-- 예비비 사용 등록 -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">예비비 이력</div>
+      <button class="btn btn-primary btn-sm" id="addReserveUsageBtn" style="font-size:11px;">+ 사용 등록</button>
+    </div>
+    <div id="reserveHistoryList"></div>
+  </div>
 </div>
 
 <!-- ══ [6] 거래처 관리 ══ -->
@@ -1849,6 +1846,7 @@ function nav(tab, el) {
     staff: loadEmployees,
     settings: loadAllSettings,
     dashboard: loadDashboard,
+    reserve: loadReserveFund,
     vendors: loadVendors,
     fixedcost: loadFixedCosts,
     attendance: initAttDate,
@@ -3232,14 +3230,6 @@ function toggleTooltip(id){const el=document.getElementById(id);if(el)el.style.d
 // 만원 단위 포맷 헬퍼
 function fmtMan(v){return v>=0?fmt(Math.round(v/10000)):'-'+fmt(Math.round(Math.abs(v)/10000));}
 
-// 서브탭 전환
-function switchDashTab(tab){
-  document.getElementById('dashTabSettle').classList.toggle('active',tab==='settle');
-  document.getElementById('dashTabReserve').classList.toggle('active',tab==='reserve');
-  document.getElementById('dashSettleCont').style.display=tab==='settle'?'block':'none';
-  document.getElementById('dashReserveCont').style.display=tab==='reserve'?'block':'none';
-  if(tab==='reserve') loadReserveFund();
-}
 
 async function loadDashboard(){
   if(!currentStore){document.getElementById('dashSummaryGrid').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
@@ -3405,36 +3395,36 @@ async function loadDashboard(){
       }
     });
 
-    // 일별 데이터 배열 + 주계
+    // 일별 데이터 배열 + 주계 (정순: 1일부터)
     let dailyHtml='<table class="daily-settle-tbl"><thead><tr><th>날짜</th><th>매출</th><th>지출</th><th>순이익</th><th></th></tr></thead><tbody>';
     const weekSummaries=[];
 
-    // 역순으로 주차 표시 (최신 주 먼저)
-    for(let wi=weekGroups.length-1;wi>=0;wi--){
+    for(let wi=0;wi<weekGroups.length;wi++){
       const week=weekGroups[wi];
-      let wSales=0,wExp=0,wProfit=0;
+      let wSales=0,wExp=0,wProfit=0,wHasData=false;
 
-      // 해당 주의 일별 데이터 (역순)
-      for(let di=week.length-1;di>=0;di--){
+      for(let di=0;di<week.length;di++){
         const d=week[di];
         const dayNum=parseInt(d);
         if(dayNum>passedDays) continue; // 미래 날짜 스킵
+        const hasSale=dailySalesMap.hasOwnProperty(d);
         const sale=dailySalesMap[d]||0;
-        const exp=(dailyExpMap[d]||0)+dailyFixedShare+dailyLaborShare+dailyRoyaltyShare;
+        // 매출 데이터가 있는 날만 지출 배분
+        const exp=hasSale?(dailyExpMap[d]||0)+dailyFixedShare+dailyLaborShare+dailyRoyaltyShare:0;
         const profit=sale-exp;
-        wSales+=sale;wExp+=exp;wProfit+=profit;
-        const dot=sale===0&&!dailySalesMap[d]?'dot-gray':(profit>=0?'dot-green':'dot-red');
+        if(hasSale){wSales+=sale;wExp+=exp;wProfit+=profit;wHasData=true;}
+        const dot=!hasSale?'dot-gray':(profit>=0?'dot-green':'dot-red');
         dailyHtml+=`<tr>
           <td>${mo}/${dayNum}</td>
-          <td>${sale?fmtMan(sale):'-'}</td>
-          <td>${exp?fmtMan(exp):'-'}</td>
-          <td>${sale?fmtMan(profit):'-'}</td>
+          <td>${hasSale?fmtMan(sale):'-'}</td>
+          <td>${hasSale?fmtMan(exp):'-'}</td>
+          <td>${hasSale?fmtMan(profit):'-'}</td>
           <td><span class="${dot}"></span></td>
         </tr>`;
       }
 
       // 주계행
-      if(wSales>0||wExp>0){
+      if(wHasData){
         const wDot=wProfit>=0?'dot-green':'dot-red';
         dailyHtml+=`<tr class="week-total">
           <td>${wi+1}주계</td>
@@ -3443,7 +3433,7 @@ async function loadDashboard(){
           <td>${fmtMan(wProfit)}</td>
           <td><span class="${wDot}"></span></td>
         </tr>`;
-        weekSummaries.unshift({week:wi+1,profit:wProfit,done:wi<weekGroups.length-1||!isCurrent});
+        weekSummaries.push({week:wi+1,profit:wProfit,done:wi<weekGroups.length-1||!isCurrent});
       }
     }
     dailyHtml+='</tbody></table>';
@@ -6323,9 +6313,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('crawlBtn').addEventListener('click',()=>manualCrawl());
   document.getElementById('dashModeProvisional').addEventListener('click',()=>switchDashMode('provisional'));
   document.getElementById('dashModeFinal').addEventListener('click',()=>switchDashMode('final'));
-  document.getElementById('dashTabSettle').addEventListener('click',()=>switchDashTab('settle'));
-  document.getElementById('dashTabReserve').addEventListener('click',()=>switchDashTab('reserve'));
-  document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>{switchDashTab('reserve');});
+  document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>{closeSideMenu();nav('reserve');});
   document.getElementById('saveReserveSettingsBtn').addEventListener('click',()=>saveReserveSettings());
   document.getElementById('addReserveUsageBtn').addEventListener('click',()=>{
     document.getElementById('rvUsageDate').value=new Date().toISOString().slice(0,10);
