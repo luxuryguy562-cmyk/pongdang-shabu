@@ -3435,10 +3435,10 @@ async function loadDashboard(){
       const pctE=v=>estRevenue>0?((v/estRevenue)*100).toFixed(1)+'%':'–';
       summHtml+=`<div class="dash-summ-est-block">
         <div class="est-title">월말 마감예상 (${lastDay}일 기준)</div>
-        <div class="dash-summ-est-row"><span class="es-label">매출</span><span><span class="es-val">${fmt(estRevenue)}</span></span></div>
-        <div class="dash-summ-est-row"><span class="es-label">지출</span><span><span class="es-val">${fmt(estTotalCostFull)}</span><span class="es-pct">${pctE(estTotalCostFull)}</span></span></div>
-        <div class="dash-summ-est-row"><span class="es-label">순수익</span><span><span class="es-val">${fmt(estNetProfit)}</span><span class="es-pct">${pctE(estNetProfit)}</span></span></div>
-        <div class="dash-summ-est-row"><span class="es-label">예비비</span><span><span class="es-val">-${fmt(estReserve)}</span></span></div>
+        <div class="dash-summ-est-row"><span class="es-label">매출</span><span><span class="es-val" style="color:var(--blue);">${fmt(estRevenue)}</span></span></div>
+        <div class="dash-summ-est-row"><span class="es-label">지출</span><span><span class="es-val" style="color:var(--danger);">${fmt(estTotalCostFull)}</span><span class="es-pct">${pctE(estTotalCostFull)}</span></span></div>
+        <div class="dash-summ-est-row"><span class="es-label">순수익</span><span><span class="es-val" style="color:${estNetProfit>=0?'var(--blue)':'var(--danger)'};">${fmt(estNetProfit)}</span><span class="es-pct">${pctE(estNetProfit)}</span></span></div>
+        <div class="dash-summ-est-row"><span class="es-label">예비비</span><span><span class="es-val" style="color:var(--gray-400);">-${fmt(estReserve)}</span></span></div>
         <div class="dash-summ-est-row" style="border-top:1px solid var(--gray-200);padding-top:6px;margin-top:4px;"><span class="es-label" style="font-weight:800;">실수익</span><span><span class="es-val" style="font-weight:800;color:${estRealProfit>=0?'var(--success)':'var(--danger)'};">${estRealProfit>=0?'':'-'}${fmt(Math.abs(estRealProfit))}</span><span class="es-pct">${pctE(Math.abs(estRealProfit))}</span></span></div>
       </div>`;
     }
