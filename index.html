@@ -3422,7 +3422,7 @@ async function loadDashboard(){
     summHtml+=summRow('지출',fmt(totalCostFull),'amt-red',pctR(totalCostFull));
     summHtml+=summRow('순수익',fmt(netProfit),netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
     summHtml+=summRow('예비비','-'+fmt(reserveAmt),'amt-muted',pctR(reserveAmt));
-    summHtml+=`<div class="dash-summ-total"><span class="ds-label">실수익</span><div class="ds-vals"><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</span><span class="ds-pct">${pctR(Math.abs(realProfit))}</span></div></div>`;
+    summHtml+=`<div class="dash-summ-total"><span class="ds-label">실수익</span><div class="ds-vals"><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</span><span class="ds-pct">${pctR(realProfit)}</span></div></div>`;
 
     // 마감예상 블록 (현재 월만)
     if(isCurrent){
