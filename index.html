@@ -253,13 +253,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-summ-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--gray-100);}
 .dash-summ-row:last-child{border-bottom:none;}
 .dash-summ-row .ds-label{font-size:13px;font-weight:600;color:var(--gray-600);}
-.dash-summ-row .ds-vals{display:flex;gap:12px;align-items:baseline;}
-.dash-summ-row .ds-main{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;}
-.dash-summ-row .ds-pct{font-size:11px;font-weight:700;color:var(--gray-400);}
+.dash-summ-row .ds-vals{display:flex;align-items:baseline;gap:6px;}
+.dash-summ-row .ds-main{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;min-width:120px;text-align:right;}
+.dash-summ-row .ds-pct{font-size:11px;font-weight:700;color:var(--gray-400);min-width:46px;text-align:right;}
 .dash-summ-row .ds-est{font-size:11px;font-weight:600;color:var(--gray-400);font-variant-numeric:tabular-nums;}
 .dash-summ-total{padding:12px 0 4px;border-top:2px solid var(--text);display:flex;justify-content:space-between;align-items:baseline;}
-.dash-summ-total .ds-label{font-size:14px;font-weight:800;}
-.dash-summ-total .ds-main{font-size:20px;font-weight:900;}
+.dash-summ-total .ds-label{font-size:14px;font-weight:800;color:var(--gray-600);}
+.dash-summ-total .ds-vals{display:flex;align-items:baseline;gap:6px;}
+.dash-summ-total .ds-main{font-size:20px;font-weight:900;min-width:120px;text-align:right;}
 .dash-summ-est-block{margin-top:10px;padding:10px 14px;background:var(--gray-100);border-radius:12px;}
 .dash-summ-est-block .est-title{font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;}
 .dash-summ-est-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;}
@@ -3394,14 +3395,14 @@ async function loadDashboard(){
 
     // ══ A-1. 월 요약 렌더 (토스 스타일) ══
     const pctR=v=>totalRevenue>0?((v/totalRevenue)*100).toFixed(1)+'%':'–';
-    const summRow=(label,val,cls,pct,labelCls)=>`<div class="dash-summ-row"><span class="ds-label ${labelCls||''}">${label}</span><div class="ds-vals"><span class="ds-pct">${pct}</span><span class="ds-main ${cls}">${val}</span></div></div>`;
+    const summRow=(label,val,cls,pct)=>`<div class="dash-summ-row"><span class="ds-label">${label}</span><div class="ds-vals"><span class="ds-main ${cls}">${val}</span>${pct?`<span class="ds-pct">${pct}</span>`:''}</div></div>`;
 
     let summHtml='';
-    summHtml+=summRow('매출',fmt(totalRevenue)+'원','amt-blue','','amt-blue');
-    summHtml+=summRow('지출',fmt(totalCostFull)+'원','amt-red',pctR(totalCostFull),'amt-red');
-    summHtml+=summRow('순수익',fmt(netProfit)+'원',netProfit>=0?'amt-blue':'amt-red',pctR(netProfit),netProfit>=0?'amt-blue':'amt-red');
-    summHtml+=summRow('예비비','-'+fmt(reserveAmt)+'원','amt-muted',pctR(reserveAmt),'');
-    summHtml+=`<div class="dash-summ-total"><span class="ds-label ${realProfit>=0?'amt-blue':'amt-red'}">실수익</span><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}원</span></div>`;
+    summHtml+=summRow('매출',fmt(totalRevenue)+'원','amt-blue','');
+    summHtml+=summRow('지출',fmt(totalCostFull)+'원','amt-red',pctR(totalCostFull));
+    summHtml+=summRow('순수익',fmt(netProfit)+'원',netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
+    summHtml+=summRow('예비비','-'+fmt(reserveAmt)+'원','amt-muted',pctR(reserveAmt));
+    summHtml+=`<div class="dash-summ-total"><span class="ds-label">실수익</span><div class="ds-vals"><span class="ds-main ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}원</span></div></div>`;
 
     // 마감예상 블록 (현재 월만)
     if(isCurrent){
