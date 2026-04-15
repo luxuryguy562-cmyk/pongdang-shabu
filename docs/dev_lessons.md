@@ -165,6 +165,19 @@ CSS 클래스로 하면 vw/vh 단위가 부정확 → JS로 `window.innerWidth/H
 
 ---
 
+## 22. 금액/비율 리스트는 반드시 행열 정렬 (tabular-nums + table)
+카테고리별 금액+비율을 나열할 때 flex/div로 하면 숫자 자릿수 안 맞음.
+```
+❌ flex + text-align:right → 항목마다 금액 위치가 들쭉날쭉
+✅ <table> + font-variant-numeric:tabular-nums → 금액/비율 컬럼 완벽 정렬
+```
+**규칙**: 이름+금액+비율이 2행 이상 나열되면 무조건 `<table>` 사용.
+- 이름 컬럼: 왼쪽 정렬
+- 금액 컬럼: 오른쪽 정렬 + tabular-nums
+- 비율 컬럼: 오른쪽 정렬 + 고정 width
+
+---
+
 ## 17. HTML 요소 제거 후 JS 참조 확인
 HTML에서 `empBirthInput` 제거 → JS의 `autoFormatDate(empBirthInput)` 에서 null 에러.
 요소 ID 변경/삭제 시 JS에서 해당 ID 참조하는 곳 전부 grep 확인 필수.

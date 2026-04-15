@@ -3425,10 +3425,10 @@ async function loadDashboard(){
 
     let summHtml='';
     summHtml+=summRow('매출',fmt(totalRevenue),'amt-blue','');
-    // 지출 행: 아코디언 (터치하면 지출 상세 펼침)
-    summHtml+=`<div class="dash-summ-row" id="expAccordionToggle" style="cursor:pointer;">
-      <span class="ds-label">지출 <span id="expAccordionArrow" style="font-size:10px;color:var(--gray-400);">›</span></span>
-      <div class="ds-vals"><span class="ds-main amt-red">${fmt(totalCostFull)}</span>${pctR(totalCostFull)?`<span class="ds-pct">${pctR(totalCostFull)}</span>`:''}</div>
+    // 지출 행 + 상세 버튼
+    summHtml+=`<div class="dash-summ-row">
+      <span class="ds-label">지출</span>
+      <div class="ds-vals"><span class="ds-main amt-red">${fmt(totalCostFull)}</span>${pctR(totalCostFull)?`<span class="ds-pct">${pctR(totalCostFull)}</span>`:''}<button id="expAccordionToggle" class="btn btn-secondary" style="font-size:10px;padding:3px 8px;margin-left:6px;border-radius:6px;cursor:pointer;">지출 상세 ›</button></div>
     </div>`;
     // 지출 상세 아코디언 (접힌 상태)
     summHtml+=`<div id="expAccordionBody" style="display:none;padding:12px 0 4px;"></div>`;
@@ -3630,30 +3630,30 @@ async function loadDashboard(){
     const mGroupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','로열티':'#EF4444','카드수수료':'#EF4444','기타/수동':'#7C3AED','마케팅':'#F59E0B'};
     const groupOrder=['식자재','식자재(직구/영수증)','인건비','공과금/고정비','로열티','카드수수료','기타/수동','마케팅'];
 
-    // 도넛 데이터 + 카테고리 리스트 생성
+    // 도넛 데이터 + 카테고리 테이블 생성 (행열 정렬)
     const donutLabels=[],donutData=[],donutColors=[];
-    let catListHtml='';
+    const catRows=[];
+    const addCatRow=(g,amt,color)=>{
+      donutLabels.push(g);donutData.push(amt);donutColors.push(color);
+      catRows.push({g,amt,color});
+    };
     groupOrder.forEach(g=>{
       const amt=expByGroup[g];
       if(!amt||amt<=0) return;
-      const color=mGroupColors[g]||'#4E5968';
-      donutLabels.push(g);donutData.push(amt);donutColors.push(color);
-      catListHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
-        <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span><span style="font-size:12px;font-weight:600;color:var(--gray-600);">${g}</span></div>
-        <div style="text-align:right;"><span style="font-size:12px;font-weight:700;">${fmt(amt)}</span><span style="font-size:10px;font-weight:600;color:var(--gray-400);margin-left:4px;">${pctOf(amt)}%</span></div>
-      </div>`;
+      addCatRow(g,amt,mGroupColors[g]||'#4E5968');
     });
-    // 미등록 그룹
     Object.entries(expByGroup).forEach(([g,amt])=>{
-      if(!groupOrder.includes(g)&&amt>0){
-        const color='#4E5968';
-        donutLabels.push(g);donutData.push(amt);donutColors.push(color);
-        catListHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
-          <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span><span style="font-size:12px;font-weight:600;color:var(--gray-600);">${g}</span></div>
-          <div style="text-align:right;"><span style="font-size:12px;font-weight:700;">${fmt(amt)}</span><span style="font-size:10px;font-weight:600;color:var(--gray-400);margin-left:4px;">${pctOf(amt)}%</span></div>
-        </div>`;
-      }
+      if(!groupOrder.includes(g)&&amt>0) addCatRow(g,amt,'#4E5968');
     });
+    let catListHtml='<table style="width:100%;border-collapse:collapse;">';
+    catRows.forEach(r=>{
+      catListHtml+=`<tr>
+        <td style="padding:3px 0;white-space:nowrap;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${r.color};margin-right:4px;vertical-align:middle;"></span><span style="font-size:11px;font-weight:600;color:var(--gray-600);">${r.g}</span></td>
+        <td style="padding:3px 0;text-align:right;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;">${fmt(r.amt)}</td>
+        <td style="padding:3px 0;text-align:right;font-size:10px;font-weight:600;color:var(--gray-400);width:40px;">${pctOf(r.amt)}%</td>
+      </tr>`;
+    });
+    catListHtml+='</table>';
 
     const accBody=document.getElementById('expAccordionBody');
     if(accBody){
@@ -3679,12 +3679,11 @@ async function loadDashboard(){
     }
     // 아코디언 토글 바인딩
     const accToggle=document.getElementById('expAccordionToggle');
-    const accArrow=document.getElementById('expAccordionArrow');
     if(accToggle){
       accToggle.onclick=()=>{
         const open=accBody.style.display!=='none';
         accBody.style.display=open?'none':'block';
-        if(accArrow) accArrow.textContent=open?'›':'▾';
+        accToggle.textContent=open?'지출 상세 ›':'접기 ▲';
       };
     }
 
