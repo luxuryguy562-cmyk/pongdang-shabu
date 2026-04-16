@@ -1159,8 +1159,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
             <th id="bankThDate" data-col="tx_date" data-label="날짜" style="width:62px;cursor:pointer;">날짜</th>
             <th id="bankThDesc" data-col="description" data-label="내용" style="width:70px;cursor:pointer;">내용</th>
             <th id="bankThCat" data-col="sub_category" data-label="분류" style="width:65px;cursor:pointer;">분류</th>
-            <th id="bankThIn" data-col="amount" data-label="입금" style="cursor:pointer;">입금</th>
-            <th id="bankThOut" data-col="amount" data-label="출금" style="cursor:pointer;">출금</th>
+            <th id="bankThIn" data-col="deposit" data-label="입금" style="cursor:pointer;">입금</th>
+            <th id="bankThOut" data-col="withdraw" data-label="출금" style="cursor:pointer;">출금</th>
           </tr></thead>
           <tbody id="bankTxBody"></tbody>
         </table>
@@ -5356,8 +5356,10 @@ function renderBankTxTable(){
   if(bankSortCol){
     const col=bankSortCol;const asc=bankSortAsc?1:-1;
     rows=[...rows].sort((a,b)=>{
-      let va=a[col],vb=b[col];
-      if(col==='amount'){va=Math.abs(va||0);vb=Math.abs(vb||0);}
+      let va,vb;
+      if(col==='deposit'){va=(a.amount||0)>0?a.amount:0;vb=(b.amount||0)>0?b.amount:0;}
+      else if(col==='withdraw'){va=(a.amount||0)<0?Math.abs(a.amount):0;vb=(b.amount||0)<0?Math.abs(b.amount):0;}
+      else{va=a[col];vb=b[col];}
       if(typeof va==='number'&&typeof vb==='number')return (va-vb)*asc;
       return String(va||'').localeCompare(String(vb||''))*asc;
     });
