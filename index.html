@@ -5780,52 +5780,93 @@ function openTxFilter(type){
 }
 
 // ─── 분류 수정 (category + category_id FK 동기화) ───
-const CAT_NAME_MAP_REV={'물품대금':'식자재(거래처)','직구':'식자재(직구)','고정비':'공과금/고정비','인건비':'인건비','세금':'세금','마케팅':'마케팅','기타':'기타'};
+// DB 카테고리에서 id 찾기 (대분류명, 소분류명 모두 검색)
+function findCatId(catName){
+  if(!catName||!expCategories?.length)return null;
+  const exact=expCategories.find(c=>c.name===catName);
+  if(exact)return exact.id;
+  return null;
+}
+
 function openCatEdit(txId,currentCat){
-  // BANK_RULES + CARD_RULES에서 대분류 추출
-  const allCats=[...new Set(['매출','물품대금','인건비','고정비','세금','배당금','카드대금','마케팅','직구','미분류'])];
+  // DB 카테고리에서 대분류>소분류 구조로 목록 생성
+  const cats=expCategories?.length?expCategories:[];
+  const parents=cats.filter(c=>!c.parent_id);
+  const childMap={};
+  cats.filter(c=>c.parent_id).forEach(c=>{if(!childMap[c.parent_id])childMap[c.parent_id]=[];childMap[c.parent_id].push(c);});
+  // 고정 카테고리 (DB에 없어도 항상 표시)
+  const fixedCats=['매출','카드대금','배당금','미분류'];
+
   let existing=document.getElementById('catEditPopup');
   if(existing)existing.remove();
   const popup=document.createElement('div');
   popup.id='catEditPopup';
   popup.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:999;display:flex;align-items:end;justify-content:center;';
   const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px;';
-  box.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:14px;">분류 변경</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">'+
-    allCats.map(c=>`<div class="catEditChip" data-val="${c}" style="padding:10px 16px;border-radius:12px;font-size:13px;cursor:pointer;font-weight:${c===currentCat?700:400};background:${c===currentCat?'var(--blue)':'var(--gray-100)'};color:${c===currentCat?'#fff':'var(--text)'};">${c}</div>`).join('')+
-    '</div><div style="display:flex;gap:8px;"><button class="btn btn-secondary" id="catEditCancel" style="flex:1;padding:12px;">취소</button><button class="btn btn-primary" id="catEditSave" style="flex:1;padding:12px;">저장</button></div>';
+  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px;max-height:70vh;overflow-y:auto;';
+
+  // 대분류 > 소분류 UI 생성
+  let chipsHtml='<div style="font-size:15px;font-weight:800;margin-bottom:14px;">분류 변경</div>';
+  // 고정 카테고리
+  chipsHtml+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">';
+  fixedCats.forEach(c=>{
+    const isSel=c===currentCat;
+    chipsHtml+=`<div class="catEditChip" data-val="${c}" data-id="" style="padding:8px 14px;border-radius:10px;font-size:12px;cursor:pointer;font-weight:${isSel?700:400};background:${isSel?'var(--blue)':'var(--gray-100)'};color:${isSel?'#fff':'var(--text)'};">${c}</div>`;
+  });
+  chipsHtml+='</div>';
+  // DB 카테고리 (대분류 > 소분류)
+  parents.forEach(p=>{
+    const children=childMap[p.id]||[];
+    const pSel=p.name===currentCat;
+    chipsHtml+=`<div style="margin-bottom:10px;">
+      <div class="catEditChip" data-val="${p.name}" data-id="${p.id}" style="padding:8px 14px;border-radius:10px;font-size:13px;cursor:pointer;font-weight:${pSel?700:500};background:${pSel?'var(--blue)':'var(--gray-200)'};color:${pSel?'#fff':'var(--text)'};">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color||'#0050FF'};margin-right:6px;vertical-align:middle;"></span>${p.name}
+      </div>`;
+    if(children.length){
+      chipsHtml+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 0 18px;">';
+      children.forEach(ch=>{
+        const chSel=ch.name===currentCat;
+        chipsHtml+=`<div class="catEditChip" data-val="${ch.name}" data-id="${ch.id}" style="padding:6px 12px;border-radius:8px;font-size:11px;cursor:pointer;font-weight:${chSel?700:400};background:${chSel?'var(--blue)':'var(--gray-100)'};color:${chSel?'#fff':'var(--gray-600)'};">${ch.name}</div>`;
+      });
+      chipsHtml+='</div>';
+    }
+    chipsHtml+='</div>';
+  });
+  chipsHtml+='<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn btn-secondary" id="catEditCancel" style="flex:1;padding:12px;">취소</button><button class="btn btn-primary" id="catEditSave" style="flex:1;padding:12px;">저장</button></div>';
+  box.innerHTML=chipsHtml;
   popup.appendChild(box);
   document.body.appendChild(popup);
+
   let selected=currentCat;
+  let selectedId=findCatId(currentCat);
   box.querySelectorAll('.catEditChip').forEach(chip=>{
     chip.addEventListener('click',()=>{
       box.querySelectorAll('.catEditChip').forEach(c=>{c.style.background='var(--gray-100)';c.style.color='var(--text)';c.style.fontWeight='400';});
+      // 대분류 칩은 gray-200 복원
+      parents.forEach(p=>{const el=box.querySelector(`.catEditChip[data-id="${p.id}"]`);if(el){el.style.background='var(--gray-200)';el.style.color='var(--text)';el.style.fontWeight='500';}});
       chip.style.background='var(--blue)';chip.style.color='#fff';chip.style.fontWeight='700';
       selected=chip.dataset.val;
+      selectedId=chip.dataset.id||findCatId(selected);
     });
   });
   box.querySelector('#catEditCancel').addEventListener('click',()=>popup.remove());
   box.querySelector('#catEditSave').addEventListener('click',async()=>{
     if(selected===currentCat){popup.remove();return;}
-    // category_id FK 매칭
-    const cats=expCategories?.length?expCategories:[];
-    let catId=null;
-    const mapped=CAT_NAME_MAP_REV[selected];
-    const match=cats.find(c=>c.name===selected)||cats.find(c=>c.name===mapped);
-    if(match)catId=match.id;
+    const catId=selectedId||findCatId(selected)||null;
+    const isExclude=['카드대금','배당금'].includes(selected);
     // DB 업데이트
-    const{error}=await sb.from('mydata_transactions').update({category:selected,category_id:catId,sub_category:selected,needs_review:false,confidence:'manual'}).eq('id',txId);
+    const{error}=await sb.from('mydata_transactions').update({category:selected,category_id:catId,sub_category:selected,needs_review:false,confidence:'manual',exclude_from_settlement:isExclude}).eq('id',txId);
     popup.remove();
     if(error){toast('수정 실패','error');return;}
     toast('분류 변경 완료','success');
     // 로컬 데이터도 반영
-    [bankTxData,cardTxData].forEach(arr=>{const r=arr.find(x=>x.id===txId);if(r){r.category=selected;r.category_id=catId;r.sub_category=selected;r.needs_review=false;}});
-    // 자동 학습: 분류 변경 시 규칙 DB에 저장
+    [bankTxData,cardTxData].forEach(arr=>{const r=arr.find(x=>x.id===txId);if(r){r.category=selected;r.category_id=catId;r.sub_category=selected;r.needs_review=false;r.exclude_from_settlement=isExclude;}});
+    // 자동 학습
     const tx=[bankTxData,cardTxData].flat().find(x=>x.id===txId);
     if(tx){
       const kw=tx.description||tx.merchant_name||'';
       const txType=tx.tx_type||'both';
-      if(kw&&selected&&selected!=='미분류') learnClassification(kw,selected,selected,txType,false).catch(()=>{});
+      if(kw&&selected&&selected!=='미분류') learnClassification(kw,selected,selected,txType,isExclude).catch(()=>{});
     }
     renderBankTxTable();renderCardTxTable();
   });
@@ -6612,18 +6653,16 @@ function openReviewItems(){
       <div style="display:flex;gap:6px;">
         <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvCat${globalIdx}" onchange="updateReviewItem(${globalIdx})">
           <option value="${item.category||''}">${item.category||'선택'}/${item.sub_category||'?'}</option>
-          <option value="물품대금">물품대금</option>
-          <option value="인건비">인건비</option>
-          <option value="고정비">고정비</option>
-          <option value="식자재">식자재</option>
-          <option value="비품">비품</option>
-          <option value="직구">직구</option>
-          <option value="기타">기타</option>
           <option value="매출">매출</option>
-          <option value="세금">세금</option>
-          <option value="마케팅">마케팅</option>
           <option value="카드대금">카드대금</option>
           <option value="배당금">배당금</option>
+          ${(expCategories||[]).filter(c=>!c.parent_id).map(p=>{
+            const children=(expCategories||[]).filter(c=>c.parent_id===p.id);
+            let opts=`<option value="${p.name}">── ${p.name}</option>`;
+            children.forEach(ch=>{opts+=`<option value="${ch.name}">&nbsp;&nbsp;${ch.name}</option>`;});
+            return opts;
+          }).join('')}
+          <option value="미분류">미분류</option>
         </select>
         <input class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" placeholder="소분류" id="rvSub${globalIdx}" value="${item.sub_category||''}">
       </div>
@@ -6676,20 +6715,14 @@ async function saveExcelBatch(){
   const type=excelUploadType;
 
   try{
-    // expense_categories 조회 → category 문자열을 category_id로 매칭
-    // 분류 결과 → expense_categories.name 매핑
-    const CAT_NAME_MAP={'물품대금':'식자재(거래처)','직구':'식자재(직구)','고정비':'공과금/고정비','인건비':'인건비','세금':'세금','마케팅':'마케팅','기타':'기타'};
+    // expense_categories 조회 → category 문자열을 category_id로 매칭 (DB 직접)
+    const cats=expCategories?.length?expCategories:(await sb.from('expense_categories').select('id,name,parent_id').eq('store_id',currentStore.id).eq('is_active',true)).data||[];
     const catMap={};
-    const cats=expCategories?.length?expCategories:(await sb.from('expense_categories').select('id,name').eq('store_id',currentStore.id).eq('is_active',true)).data||[];
     cats.forEach(c=>{catMap[c.name]=c.id;});
-    // 매핑 이름으로도 찾을 수 있게
     const resolveCatId=category=>{
       if(!category)return null;
-      // 직접 매칭
+      // DB 카테고리명 직접 매칭 (대분류·소분류 모두)
       if(catMap[category])return catMap[category];
-      // 매핑 테이블로 매칭
-      const mapped=CAT_NAME_MAP[category];
-      if(mapped&&catMap[mapped])return catMap[mapped];
       return null;
     };
 
