@@ -4762,6 +4762,7 @@ function renderExpCatList(){
         </div>
         <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openAddSubCatSheet('${p.id}','${p.name}')">+ 소분류</button>
         <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openEditExpCatSheet('${p.id}')">편집</button>
+        <button class="btn btn-danger btn-sm" style="font-size:10px;" onclick="deleteExpCat('${p.id}','${p.name}')">삭제</button>
       </div>`;
     if(children.length){
       children.forEach(ch=>{
@@ -4784,6 +4785,7 @@ function renderExpCatList(){
         <div style="width:10px;height:10px;border-radius:50%;background:${cat.color||'#0050FF'};flex-shrink:0;"></div>
         <div style="flex:1;font-size:13px;">${cat.name}</div>
         <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openEditExpCatSheet('${cat.id}')">편집</button>
+        <button class="btn btn-danger btn-sm" style="font-size:10px;" onclick="deleteExpCat('${cat.id}','${cat.name}')">삭제</button>
       </div>`;
     });
   }
@@ -4859,8 +4861,17 @@ async function saveExpCat(){
 }
 
 async function deleteExpCat(id,name){
-  if(!confirm(`'${name}' 카테고리를 삭제할까요?
-연결된 데이터는 유지됩니다.`))return;
+  // 소분류가 있는 대분류 삭제 시 경고
+  const children=expCategories.filter(c=>c.parent_id===id);
+  const msg=children.length
+    ?`'${name}' 아래 소분류 ${children.length}개도 함께 삭제됩니다.\n삭제할까요?`
+    :`'${name}' 카테고리를 삭제할까요?`;
+  if(!confirm(msg))return;
+  // 소분류도 함께 비활성화
+  if(children.length){
+    const childIds=children.map(c=>c.id);
+    await sb.from('expense_categories').update({is_active:false}).in('id',childIds);
+  }
   await sb.from('expense_categories').update({is_active:false}).eq('id',id);
   await loadExpCategories();
 }
