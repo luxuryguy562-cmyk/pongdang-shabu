@@ -4,6 +4,32 @@
 
 ---
 
+## [2026-04-16] 엑셀 분류 규칙 DB 범용화 + 자동 학습
+
+### 상태: 구현완료
+### 브랜치: claude/review-excel-matching-axdTW
+
+### 작업 내용
+1. **하드코딩 규칙 → 2단계 분류**: BANK_RULES/CARD_RULES 폐기 → COMMON_BANK_RULES(공통) + classification_rules(매장별 DB)
+2. **공통 규칙**: 카드사 정산코드, 이체코드, 세금, 카드대금 → 코드 유지 (어떤 매장이든 동일)
+3. **매장별 규칙**: 거래처, 가맹점, 고정비 등 → DB 테이블(classification_rules)로 이전
+4. **자동 학습**: 수동 분류(리뷰 확인/분류변경) 시 키워드를 DB에 자동 저장 → 다음부터 자동 매칭
+5. **시드 마이그레이션**: 퐁당샤브 기존 규칙 → 첫 업로드 시 자동 DB INSERT (seedDefaultRules)
+6. **범용성**: 새 매장은 빈 규칙으로 시작 → 사용하면서 규칙 축적
+
+### DB 변경
+- classification_rules: 신규 테이블 (keyword, match_type, category, sub_category, priority 등)
+- docs/db_schema.md 업데이트 완료
+
+### 수익화 포인트
+- 무료: 공통 규칙만 / 유료: 매장별 자동 학습 무제한
+
+### 다음 TODO
+- [ ] Supabase에서 CREATE TABLE SQL 실행 (사장님)
+- [ ] 실제 엑셀 업로드 테스트
+
+---
+
 ## [2026-04-16] 대시보드 전월대비 문구 추가 (클로브 스타일)
 
 ### 상태: 배포완료

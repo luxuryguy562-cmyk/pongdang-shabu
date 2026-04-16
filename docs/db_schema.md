@@ -27,7 +27,7 @@ franchises (프랜차이즈/브랜드)
   └── special_wages (특별 수당) ─ 1:N
 ```
 
-## 테이블 상세 (18개 + franchises 1개 = 22개)
+## 테이블 상세 (18개 + franchises 1개 + classification_rules 1개 = 23개)
 
 ### franchises (신규)
 | 컬럼 | 용도 |
@@ -238,6 +238,22 @@ franchises (프랜차이즈/브랜드)
 | amount (int) | 금액 |
 | memo (text) | 사유 |
 | created_at (timestamptz) | 생성일 |
+
+### classification_rules (신규)
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | 규칙 ID |
+| store_id (FK→stores) | 매장 (매장별 규칙) |
+| keyword (text, NOT NULL) | 매칭 키워드 ("양두현", "쿠팡") |
+| match_type (text, default 'contains') | 'contains' / 'exact' / 'regex' |
+| tx_type (text, default 'both') | 'bank' / 'card' / 'both' |
+| category (text, NOT NULL) | 대분류 (물품대금, 직구, 고정비...) |
+| sub_category (text, default '') | 소분류 (행복한정육점, 직구상세...) |
+| exclude_from_settlement (bool, default false) | 정산 제외 여부 |
+| priority (int, default 100) | 우선순위 (낮을수록 먼저) |
+| created_at (timestamptz) | 생성일 |
+- UNIQUE(store_id, keyword, tx_type)
+- 용도: 매장별 엑셀 업로드 자동 분류 규칙. 수동 분류 시 자동 학습(INSERT)
 
 ### store_settings 추가 컬럼
 | 컬럼 | 용도 |

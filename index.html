@@ -5621,6 +5621,13 @@ function openCatEdit(txId,currentCat){
     toast('분류 변경 완료','success');
     // 로컬 데이터도 반영
     [bankTxData,cardTxData].forEach(arr=>{const r=arr.find(x=>x.id===txId);if(r){r.category=selected;r.category_id=catId;r.sub_category=selected;r.needs_review=false;}});
+    // 자동 학습: 분류 변경 시 규칙 DB에 저장
+    const tx=[bankTxData,cardTxData].flat().find(x=>x.id===txId);
+    if(tx){
+      const kw=tx.description||tx.merchant_name||'';
+      const txType=tx.tx_type||'both';
+      if(kw&&selected&&selected!=='미분류') learnClassification(kw,selected,selected,txType,false).catch(()=>{});
+    }
     renderBankTxTable();renderCardTxTable();
   });
   popup.addEventListener('click',e=>{if(e.target===popup)popup.remove();});
@@ -5902,45 +5909,18 @@ function matchColumns(headers, type){
   return map;
 }
 
-// ─── 키워드 기반 자동 분류 (은행) ───
-const BANK_RULES=[
-  // 매출
-  {p:/^(NH|KB|SHC|삼성200|741961|하나|롯데992|현321|우602)/,cat:'매출',sub:'카드결제'},
+// ─── 공통 분류 규칙 (업종 무관, 모든 매장 동일) ───
+const COMMON_BANK_RULES=[
+  // 매출 — 카드사 정산 입금 코드
+  {p:/^(NH|KB|SHC|삼성\d{2,3}|741961|하나|롯데\d{2,3}|현\d{2,3}|우\d{2,3}|BC\d{2,3})/,cat:'매출',sub:'카드결제'},
+  // 매출 — 은행 이체 코드
   {p:/(타행|OP이체|모바일|FB자금|BZ뱅크|전자금융)/,cat:'매출',sub:'송금결제'},
+  // 매출 — 현금
   {p:/(CD입금|현금|현찰)/,cat:'매출',sub:'현금결제'},
-  {p:/논산정산/,cat:'매출',sub:'QR결제'},
-  {p:/(카카오페이정산|토스_)/,cat:'매출',sub:'기타결제'},
-  // 물품대금
-  {p:/(양두현|행복한정육|고기대금)/,cat:'물품대금',sub:'행복한정육점'},
-  {p:/(맛사랑|주식회사맛사랑)/,cat:'물품대금',sub:'맛사랑'},
-  {p:/대봄야채/,cat:'물품대금',sub:'대봄야채'},
-  {p:/(프레시원|씨제이프레시웨)/,cat:'물품대금',sub:'프레시원'},
-  {p:/대명주류/,cat:'물품대금',sub:'대명주류'},
-  {p:/롯데칠성/,cat:'물품대금',sub:'롯데칠성'},
-  {p:/판다마라소스/,cat:'물품대금',sub:'판다마라소스'},
-  {p:/순창국제/,cat:'물품대금',sub:'순창국제'},
-  {p:/웰스토리/,cat:'물품대금',sub:'웰스토리'},
-  // 인건비
+  // 매출 — 간편결제 정산
+  {p:/(카카오페이정산|토스_|네이버페이정산)/,cat:'매출',sub:'기타결제'},
+  // 인건비 — 급여 패턴
   {p:/급여.*월/,cat:'인건비',sub:'급여'},
-  {p:/단기알바/,cat:'인건비',sub:'단기알바'},
-  {p:/(직원복지|명절떡값)/,cat:'인건비',sub:'직원복지'},
-  // 고정비
-  {p:/한국전력/,cat:'고정비',sub:'전기요금'},
-  {p:/유림에퐁당/,cat:'고정비',sub:'로열티'},
-  {p:/코오롱정수/,cat:'고정비',sub:'정수기'},
-  {p:/본세무회계/,cat:'고정비',sub:'세무기장료'},
-  {p:/노무법인대유/,cat:'고정비',sub:'노무기장료'},
-  {p:/DB손/,cat:'고정비',sub:'화재보험'},
-  {p:/SK쉴더스/,cat:'고정비',sub:'캡스'},
-  {p:/비티원터치/,cat:'고정비',sub:'테이블오더'},
-  {p:/KT073/,cat:'고정비',sub:'매장인터넷'},
-  {p:/한국캐피탈/,cat:'고정비',sub:'음식물처리기'},
-  {p:/(월세|203호|204호)/,cat:'고정비',sub:'임대료'},
-  {p:/관리비/,cat:'고정비',sub:'관리비'},
-  {p:/가스/,cat:'고정비',sub:'가스요금'},
-  {p:/세스코/,cat:'고정비',sub:'세스코'},
-  {p:/삼성ＯＡ/,cat:'고정비',sub:'프린터'},
-  {p:/쿠팡와우/,cat:'고정비',sub:'쿠팡와우멤버십'},
   // 세금
   {p:/(부가.*세|부가가치세)/,cat:'세금',sub:'부가가치세'},
   {p:/(국민건강|건강보험)/,cat:'세금',sub:'건강보험'},
@@ -5948,86 +5928,199 @@ const BANK_RULES=[
   {p:/고용보험/,cat:'세금',sub:'고용보험'},
   {p:/산재보험/,cat:'세금',sub:'산재보험'},
   {p:/등록면허세/,cat:'세금',sub:'등록면허세'},
-  // 배당금
-  {p:/배당.*탁병근/,cat:'배당금',sub:'탁병근',exclude:true},
-  {p:/배당.*김은성/,cat:'배당금',sub:'김은성',exclude:true},
-  {p:/배당.*탁성현/,cat:'배당금',sub:'탁성현',exclude:true},
-  // 카드대금
-  {p:/롯데카드\(주\)/,cat:'카드대금',sub:'롯데카드',exclude:true},
-  {p:/신한카드/,cat:'카드대금',sub:'신한카드',exclude:true},
-  // 마케팅
-  {p:/논산맘정보통/,cat:'마케팅',sub:'논산맘정보통'},
-  {p:/이니시스.*정기/,cat:'마케팅',sub:'도도포인트'}
+  // 카드대금 (정산제외) — 주요 카드사
+  {p:/(롯데카드|신한카드|삼성카드|현대카드|KB국민카드|하나카드|비씨카드|우리카드|NH농협카드)/,cat:'카드대금',sub:'카드대금',exclude:true}
 ];
+const COMMON_CARD_RULES=[];
 
-// ─── 키워드 기반 자동 분류 (카드) ───
-const CARD_RULES=[
-  // 직구
-  {p:/(논산농협|하나로마트)/,cat:'직구',sub:'직구상세'},
-  {p:/쿠팡/,cat:'직구',sub:'직구상세'},
-  {p:/(광성|탑마트)/,cat:'직구',sub:'직구상세'},
-  {p:/다이소/,cat:'직구',sub:'직구상세'},
-  {p:/네이버파이낸셜/,cat:'직구',sub:'직구상세'},
-  {p:/에브리식자재/,cat:'직구',sub:'직구상세'},
-  {p:/홈플러스/,cat:'직구',sub:'직구상세'},
-  {p:/노브랜드/,cat:'직구',sub:'직구상세'},
-  {p:/GS25/,cat:'직구',sub:'직구상세'},
-  {p:/나나약국/,cat:'직구',sub:'직구상세'},
-  {p:/주방아울렛/,cat:'직구',sub:'직구상세'},
-  {p:/Temu/i,cat:'직구',sub:'직구상세'},
-  // 물품대금
-  {p:/(마켓보로|맛사랑)/,cat:'물품대금',sub:'맛사랑'},
-  {p:/(씨제이프레시|프레시원)/,cat:'물품대금',sub:'프레시원'},
-  // 고정비
-  {p:/(에스케이쉴더스|SK쉴더스)/,cat:'고정비',sub:'캡스'},
-  {p:/DB손해보험/,cat:'고정비',sub:'화재보험'},
-  {p:/KT.*인터넷/,cat:'고정비',sub:'매장인터넷'},
-  {p:/JB.*가스/,cat:'고정비',sub:'가스요금'},
-  {p:/코오롱정수/,cat:'고정비',sub:'정수기'},
-  {p:/유투브프리미엄/,cat:'고정비',sub:'유튜브'},
-  {p:/세스코/,cat:'고정비',sub:'세스코'},
-  {p:/효성에프엠에스/,cat:'고정비',sub:'프린터'},
-  {p:/쿠팡.*와우/,cat:'고정비',sub:'쿠팡와우멤버십'},
-  // 마케팅
-  {p:/이니시스.*빌링.*플/,cat:'마케팅',sub:'도도포인트'},
-  // 기타
-  {p:/(버거킹|맘스터치|파리바게뜨|메가엠지씨|메가커피|교촌|롯데리아|스타벅스|이디야|컴포즈|빽다방|투썸|할리스|배스킨|던킨|비알코리아)/,cat:'기타',sub:'간식'},
-  {p:/(함흥면옥|취암반점|아리랑|본죽|한솥|꼬마김밥|써브웨이|김밥천국|김밥|맥도날드|KFC|피자|치킨|분식|식당|반점|냉면|칼국수|설렁탕|감자탕|삼겹|보쌈|족발)/,cat:'기타',sub:'중식'},
-  {p:/(아주조명|다수리철물)/,cat:'기타',sub:'유지보수'}
-];
+// ─── 매장별 DB 분류 규칙 캐시 ───
+let storeClassRules=[];
 
-// 적요로 분류 + 귀속월 자동 추출
+// ─── DB 규칙 로드 (업로드 시 1회) ───
+async function loadClassificationRules(){
+  if(!currentStore) return;
+  const{data}=await sb.from('classification_rules').select('*').eq('store_id',currentStore.id).order('priority');
+  storeClassRules=data||[];
+  // 규칙이 0개면 시드 마이그레이션 실행
+  if(storeClassRules.length===0) await seedDefaultRules();
+}
+
+// ─── 시드: 기존 퐁당샤브 규칙 → DB 마이그레이션 ───
+async function seedDefaultRules(){
+  if(!currentStore) return;
+  // 기본 매장 규칙 (처음 한번만 실행)
+  const seeds=[
+    // 은행 — 물품대금
+    {keyword:'양두현',tx_type:'bank',category:'물품대금',sub_category:'행복한정육점',priority:10},
+    {keyword:'행복한정육',tx_type:'bank',category:'물품대금',sub_category:'행복한정육점',priority:10},
+    {keyword:'고기대금',tx_type:'bank',category:'물품대금',sub_category:'행복한정육점',priority:10},
+    {keyword:'맛사랑',tx_type:'bank',category:'물품대금',sub_category:'맛사랑',priority:10},
+    {keyword:'대봄야채',tx_type:'bank',category:'물품대금',sub_category:'대봄야채',priority:10},
+    {keyword:'프레시원',tx_type:'bank',category:'물품대금',sub_category:'프레시원',priority:10},
+    {keyword:'씨제이프레시웨',tx_type:'bank',category:'물품대금',sub_category:'프레시원',priority:10},
+    {keyword:'대명주류',tx_type:'bank',category:'물품대금',sub_category:'대명주류',priority:10},
+    {keyword:'롯데칠성',tx_type:'bank',category:'물품대금',sub_category:'롯데칠성',priority:10},
+    {keyword:'판다마라소스',tx_type:'bank',category:'물품대금',sub_category:'판다마라소스',priority:10},
+    {keyword:'순창국제',tx_type:'bank',category:'물품대금',sub_category:'순창국제',priority:10},
+    {keyword:'웰스토리',tx_type:'bank',category:'물품대금',sub_category:'웰스토리',priority:10},
+    // 은행 — 인건비
+    {keyword:'단기알바',tx_type:'bank',category:'인건비',sub_category:'단기알바',priority:20},
+    {keyword:'직원복지',tx_type:'bank',category:'인건비',sub_category:'직원복지',priority:20},
+    {keyword:'명절떡값',tx_type:'bank',category:'인건비',sub_category:'직원복지',priority:20},
+    // 은행 — 고정비
+    {keyword:'한국전력',tx_type:'bank',category:'고정비',sub_category:'전기요금',priority:30},
+    {keyword:'유림에퐁당',tx_type:'bank',category:'고정비',sub_category:'로열티',priority:30},
+    {keyword:'코오롱정수',tx_type:'bank',category:'고정비',sub_category:'정수기',priority:30},
+    {keyword:'본세무회계',tx_type:'bank',category:'고정비',sub_category:'세무기장료',priority:30},
+    {keyword:'노무법인대유',tx_type:'bank',category:'고정비',sub_category:'노무기장료',priority:30},
+    {keyword:'DB손',tx_type:'bank',category:'고정비',sub_category:'화재보험',priority:30},
+    {keyword:'SK쉴더스',tx_type:'bank',category:'고정비',sub_category:'캡스',priority:30},
+    {keyword:'비티원터치',tx_type:'bank',category:'고정비',sub_category:'테이블오더',priority:30},
+    {keyword:'KT073',tx_type:'bank',category:'고정비',sub_category:'매장인터넷',priority:30},
+    {keyword:'한국캐피탈',tx_type:'bank',category:'고정비',sub_category:'음식물처리기',priority:30},
+    {keyword:'월세',tx_type:'bank',category:'고정비',sub_category:'임대료',priority:30},
+    {keyword:'203호',tx_type:'bank',category:'고정비',sub_category:'임대료',priority:30},
+    {keyword:'204호',tx_type:'bank',category:'고정비',sub_category:'임대료',priority:30},
+    {keyword:'관리비',tx_type:'bank',category:'고정비',sub_category:'관리비',priority:30},
+    {keyword:'가스',tx_type:'bank',category:'고정비',sub_category:'가스요금',priority:30},
+    {keyword:'세스코',tx_type:'bank',category:'고정비',sub_category:'세스코',priority:30},
+    {keyword:'삼성ＯＡ',tx_type:'bank',category:'고정비',sub_category:'프린터',priority:30},
+    {keyword:'쿠팡와우',tx_type:'bank',category:'고정비',sub_category:'쿠팡와우멤버십',priority:30},
+    // 은행 — 배당금
+    {keyword:'배당',tx_type:'bank',category:'배당금',sub_category:'배당금',priority:5,exclude_from_settlement:true},
+    // 은행 — 마케팅
+    {keyword:'논산맘정보통',tx_type:'bank',category:'마케팅',sub_category:'논산맘정보통',priority:40},
+    {keyword:'이니시스',tx_type:'bank',category:'마케팅',sub_category:'도도포인트',priority:40},
+    // 은행 — 매출
+    {keyword:'논산정산',tx_type:'bank',category:'매출',sub_category:'QR결제',priority:5},
+    // 카드 — 직구
+    {keyword:'논산농협',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'하나로마트',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'쿠팡',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'광성',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'탑마트',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'다이소',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'네이버파이낸셜',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'에브리식자재',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'홈플러스',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'노브랜드',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'GS25',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'나나약국',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'주방아울렛',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'Temu',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    // 카드 — 물품대금
+    {keyword:'마켓보로',tx_type:'card',category:'물품대금',sub_category:'맛사랑',priority:10},
+    {keyword:'맛사랑',tx_type:'card',category:'물품대금',sub_category:'맛사랑',priority:10},
+    {keyword:'씨제이프레시',tx_type:'card',category:'물품대금',sub_category:'프레시원',priority:10},
+    {keyword:'프레시원',tx_type:'card',category:'물품대금',sub_category:'프레시원',priority:10},
+    // 카드 — 고정비
+    {keyword:'에스케이쉴더스',tx_type:'card',category:'고정비',sub_category:'캡스',priority:30},
+    {keyword:'SK쉴더스',tx_type:'card',category:'고정비',sub_category:'캡스',priority:30},
+    {keyword:'DB손해보험',tx_type:'card',category:'고정비',sub_category:'화재보험',priority:30},
+    {keyword:'코오롱정수',tx_type:'card',category:'고정비',sub_category:'정수기',priority:30},
+    {keyword:'세스코',tx_type:'card',category:'고정비',sub_category:'세스코',priority:30},
+    {keyword:'효성에프엠에스',tx_type:'card',category:'고정비',sub_category:'프린터',priority:30},
+    {keyword:'유투브프리미엄',tx_type:'card',category:'고정비',sub_category:'유튜브',priority:30},
+    // 카드 — 마케팅
+    {keyword:'이니시스',tx_type:'card',category:'마케팅',sub_category:'도도포인트',priority:40},
+    // 카드 — 기타/간식
+    {keyword:'버거킹',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'맘스터치',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'파리바게뜨',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'메가커피',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'메가엠지씨',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'스타벅스',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'이디야',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'컴포즈',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'빽다방',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'투썸',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'할리스',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'배스킨',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'던킨',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'교촌',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'롯데리아',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    {keyword:'비알코리아',tx_type:'card',category:'기타',sub_category:'간식',priority:50},
+    // 카드 — 기타/중식
+    {keyword:'맥도날드',tx_type:'card',category:'기타',sub_category:'중식',priority:50},
+    {keyword:'KFC',tx_type:'card',category:'기타',sub_category:'중식',priority:50},
+    {keyword:'써브웨이',tx_type:'card',category:'기타',sub_category:'중식',priority:50},
+    // 카드 — 기타/유지보수
+    {keyword:'아주조명',tx_type:'card',category:'기타',sub_category:'유지보수',priority:50},
+    {keyword:'다수리철물',tx_type:'card',category:'기타',sub_category:'유지보수',priority:50}
+  ];
+  const rows=seeds.map(s=>({store_id:currentStore.id,keyword:s.keyword,match_type:'contains',tx_type:s.tx_type,category:s.category,sub_category:s.sub_category||'',exclude_from_settlement:s.exclude_from_settlement||false,priority:s.priority||100}));
+  // 50건씩 나눠서 저장
+  for(let i=0;i<rows.length;i+=50){
+    await sb.from('classification_rules').insert(rows.slice(i,i+50));
+  }
+  // 다시 로드
+  const{data}=await sb.from('classification_rules').select('*').eq('store_id',currentStore.id).order('priority');
+  storeClassRules=data||[];
+}
+
+// ─── 분류 엔진: 공통규칙 → DB규칙 → 미분류 ───
 function classifyByKeyword(desc, type){
   if(!desc) return {category:'미분류',sub_category:'',confidence:'low',needs_review:true,review_reason:'적요 없음',exclude_from_settlement:false,attribution_month:null};
-  const rules=type==='bank'?BANK_RULES:CARD_RULES;
+
+  // 1단계: 공통 규칙 (코드, 모든 매장 동일)
+  const commonRules=type==='bank'?COMMON_BANK_RULES:COMMON_CARD_RULES;
   let result=null;
-  for(const r of rules){
+  for(const r of commonRules){
     if(r.p.test(desc)){
       result={category:r.cat,sub_category:r.sub,confidence:'high',needs_review:false,review_reason:null,exclude_from_settlement:!!r.exclude};
       break;
     }
   }
+
+  // 2단계: 매장 DB 규칙 (매장마다 다름)
+  if(!result){
+    const descLower=desc.toLowerCase();
+    for(const r of storeClassRules){
+      if(r.tx_type!=='both'&&r.tx_type!==type) continue;
+      let matched=false;
+      if(r.match_type==='exact') matched=(desc===r.keyword);
+      else if(r.match_type==='regex'){try{matched=new RegExp(r.keyword,'i').test(desc);}catch(e){}}
+      else matched=descLower.includes(r.keyword.toLowerCase()); // contains (기본)
+      if(matched){
+        result={category:r.category,sub_category:r.sub_category||'',confidence:'high',needs_review:false,review_reason:null,exclude_from_settlement:!!r.exclude_from_settlement};
+        break;
+      }
+    }
+  }
+
+  // 3단계: 미분류
   if(!result) result={category:'미분류',sub_category:'',confidence:'low',needs_review:true,review_reason:'자동 분류 실패',exclude_from_settlement:false};
 
   // ─── 귀속월 자동 추출 ───
-  // "급여03월", "배당03월", "04월월세", "03월관리비" 등에서 월 추출
   result.attribution_month=null;
   const mMatch=desc.match(/(\d{2})월/);
   if(mMatch){
     const mon=parseInt(mMatch[1]);
     if(mon>=1&&mon<=12){
-      // 올해 기준 귀속월 (연도는 현재 연도 사용)
       const curYear=new Date().getFullYear();
       result.attribution_month=`${curYear}-${String(mon).padStart(2,'0')}`;
     }
   }
-  // "202603" 같은 패턴
   const ymMatch=desc.match(/(20\d{2})(\d{2})/);
   if(ymMatch&&!result.attribution_month){
     const yr=parseInt(ymMatch[1]),mo=parseInt(ymMatch[2]);
     if(mo>=1&&mo<=12) result.attribution_month=`${yr}-${String(mo).padStart(2,'0')}`;
   }
   return result;
+}
+
+// ─── 자동 학습: 수동 분류 시 DB 규칙 자동 저장 ───
+async function learnClassification(keyword,category,sub_category,type,exclude){
+  if(!currentStore||!keyword||keyword.length<2) return;
+  // 공통 규칙에 이미 매칭되는 키워드는 학습 안 함
+  const commonRules=type==='bank'?COMMON_BANK_RULES:COMMON_CARD_RULES;
+  for(const r of commonRules){if(r.p.test(keyword)) return;}
+  // 이미 있는 규칙이면 스킵
+  const kwLower=keyword.toLowerCase();
+  if(storeClassRules.find(r=>r.keyword.toLowerCase()===kwLower&&(r.tx_type===type||r.tx_type==='both'))) return;
+  const rule={store_id:currentStore.id,keyword:keyword,match_type:'contains',tx_type:type||'both',category:category,sub_category:sub_category||'',exclude_from_settlement:!!exclude,priority:100};
+  const{data}=await sb.from('classification_rules').insert(rule).select().single();
+  if(data) storeClassRules.push(data);
 }
 
 // ─── 엑셀 파싱 공통: 파일 → rows 배열 ───
@@ -6149,6 +6242,8 @@ async function handleExcelUpload(input, type){
   setLoad(true,'엑셀 분석 중...');
 
   try{
+    // 매장별 분류 규칙 DB 로드 (1회)
+    await loadClassificationRules();
     const rows=await parseExcelFile(file);
     if(!rows.length) throw new Error('데이터가 없습니다.');
     const headers=Object.keys(rows[0]);
@@ -6347,9 +6442,10 @@ function updateReviewItem(idx){
   excelParsedData[idx].confidence='high';
 }
 
-function confirmReviewAndSave(){
-  // 리뷰 건들 업데이트
+async function confirmReviewAndSave(){
+  // 리뷰 건들 업데이트 + 자동 학습
   if(excelParsedData){
+    const learnPromises=[];
     excelParsedData.filter(i=>i.needs_review).forEach((item,_)=>{
       const idx=excelParsedData.indexOf(item);
       const cat=document.getElementById('rvCat'+idx)?.value;
@@ -6357,7 +6453,14 @@ function confirmReviewAndSave(){
       if(cat)item.category=cat;
       if(sub)item.sub_category=sub;
       item.needs_review=false;
+      // 자동 학습: 수동 분류한 키워드를 DB에 저장 (다음부터 자동 매칭)
+      const keyword=item.description||item.merchant_name||'';
+      if(keyword&&cat&&cat!=='미분류'){
+        learnPromises.push(learnClassification(keyword,cat,sub||'',excelUploadType,item.exclude_from_settlement));
+      }
     });
+    // 학습은 백그라운드로 (저장 차단하지 않음)
+    if(learnPromises.length) Promise.all(learnPromises).catch(()=>{});
   }
   closeSheet('excelReviewSheet');
   saveExcelBatch();
