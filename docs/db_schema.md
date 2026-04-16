@@ -73,6 +73,13 @@ franchises (프랜차이즈/브랜드)
 | hire_date, resign_date | 입퇴사일 |
 | is_active, is_approved, is_manager | 상태 플래그 |
 | auth_level (text, default 'staff') | 권한: owner/franchise_admin/store_manager/staff |
+| visa_type (text, nullable) | 비자 유형 (E-9, F-2 등) |
+| visa_expires_at (date, nullable) | 비자 만료일 |
+| doc_contract (bool, default false) | 근로계약서 수취 여부 |
+| doc_health_cert (bool, default false) | 보건증 수취 여부 |
+| doc_health_expires (date, nullable) | 보건증 만료일 |
+| doc_minor_consent (bool, default false) | 법대동의서 수취 여부 (미성년자) |
+| doc_foreigner_id (bool, default false) | 외국인등록증 수취 여부 |
 
 ### roles
 | 컬럼 | 용도 |

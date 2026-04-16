@@ -1579,6 +1579,41 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <option value="신고">신고</option>
     </select>
   </div>
+  <div id="empVisaWrap" style="display:none;margin-bottom:12px;">
+    <label class="emp-label">비자 유형</label>
+    <select id="empVisaType" class="input-field" style="appearance:auto;">
+      <option value="">미선택</option>
+      <option value="E-9">E-9 (비전문취업)</option>
+      <option value="E-7">E-7 (특정활동)</option>
+      <option value="F-2">F-2 (거주)</option>
+      <option value="F-4">F-4 (재외동포)</option>
+      <option value="F-5">F-5 (영주)</option>
+      <option value="F-6">F-6 (결혼이민)</option>
+      <option value="H-2">H-2 (방문취업)</option>
+      <option value="기타">기타</option>
+    </select>
+    <label class="emp-label">비자 만료일</label>
+    <input id="empVisaExpires" class="input-field" placeholder="2026-12-31" type="date">
+  </div>
+  <p class="card-sub-title">서류 수취</p>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 12px;background:var(--gray-100);border-radius:10px;">
+      <input type="checkbox" id="empDocContract" style="width:16px;height:16px;"> 📄 근로계약서
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 12px;background:var(--gray-100);border-radius:10px;">
+      <input type="checkbox" id="empDocHealth" style="width:16px;height:16px;"> 📋 보건증
+    </label>
+    <div id="empDocHealthExpiresWrap" style="display:none;width:100%;">
+      <label class="emp-label" style="font-size:11px;">보건증 만료일</label>
+      <input id="empDocHealthExpires" class="input-field" type="date">
+    </div>
+    <label id="empDocMinorWrap" style="display:none;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 12px;background:var(--gray-100);border-radius:10px;">
+      <input type="checkbox" id="empDocMinorConsent" style="width:16px;height:16px;"> 🔞 법대동의서
+    </label>
+    <label id="empDocForeignerWrap" style="display:none;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 12px;background:var(--gray-100);border-radius:10px;">
+      <input type="checkbox" id="empDocForeignerId" style="width:16px;height:16px;"> 🛂 외국인등록증
+    </label>
+  </div>
   <p class="card-sub-title">급여 정보</p>
   <label class="emp-label">은행명</label>
   <input id="empBankInput" class="input-field" placeholder="신한" type="text">
@@ -4130,23 +4165,39 @@ function renderEmpList(){
     const pinBadge=!e.pin?'<span class="badge badge-red" style="font-size:9px;">PIN미설정</span>':'';
     const foreignBadge=e.is_foreign?'<span class="badge badge-purple" style="font-size:9px;">외국인</span>':'';
     const reportBadge=e.is_foreign?(e.report_status==='신고'?'<span class="badge badge-green" style="font-size:9px;">신고</span>':'<span class="badge badge-red" style="font-size:9px;">미신고</span>'):'';
+    // 미성년자 판단 (만 18세 미만)
+    const isMinor=(()=>{if(!e.birth_date)return false;const bd=new Date(e.birth_date);const today=new Date();let age=today.getFullYear()-bd.getFullYear();if(today.getMonth()<bd.getMonth()||(today.getMonth()===bd.getMonth()&&today.getDate()<bd.getDate()))age--;return age<18;})();
+    const minorBadge=isMinor?'<span class="badge badge-red" style="font-size:9px;">🔞미성년</span>':'';
+    // 서류 배지 (개별 나열)
+    const docBadge=(check,label)=>check?`<span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--blue);color:#fff;">${label}✅</span>`:`<span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--gray-200);color:var(--gray-400);opacity:0.5;">${label}</span>`;
+    let docBadges=docBadge(e.doc_contract,'📄계약')+' '+docBadge(e.doc_health_cert,'📋보건');
+    // 보건증 만료 임박 체크
+    if(e.doc_health_cert&&e.doc_health_expires){const exp=new Date(e.doc_health_expires);const diff=Math.ceil((exp-new Date())/(1000*60*60*24));if(diff<=0)docBadges=docBadges.replace('📋보건✅','📋보건❌').replace('background:var(--blue)','background:var(--danger)');else if(diff<=30)docBadges=docBadges.replace('📋보건✅','📋보건⚠️').replace('background:var(--blue)','background:var(--warning)');}
+    if(isMinor) docBadges+=' '+docBadge(e.doc_minor_consent,'🔞동의');
+    if(e.is_foreign){
+      docBadges+=' '+docBadge(e.doc_foreigner_id,'🛂등록');
+      // 비자 배지
+      if(e.visa_type){let visaColor='var(--success)',visaIcon='✅';if(e.visa_expires_at){const vExp=new Date(e.visa_expires_at);const vDiff=Math.ceil((vExp-new Date())/(1000*60*60*24));if(vDiff<=0){visaColor='var(--danger)';visaIcon='❌';}else if(vDiff<=30){visaColor='var(--warning)';visaIcon='⚠️';}}docBadges+=` <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:${visaColor};color:#fff;">🛃${e.visa_type}${visaIcon}</span>`;}
+      else docBadges+=' <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--gray-200);color:var(--gray-400);opacity:0.5;">🛃비자</span>';
+    }
     return `
     <div style="background:var(--white);border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04);${!e.is_active?'opacity:0.6;':''}">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
         <div class="emp-avatar${e.is_active?'':' inactive'}" style="width:44px;height:44px;font-size:16px;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
             <span style="font-size:15px;font-weight:800;">${e.name}</span>
             ${e.role?`<span class="badge badge-blue" style="font-size:9px;">${e.role}</span>`:''}
-            ${authBadge}${foreignBadge}${reportBadge}${statusBadge}${pinBadge}
+            ${authBadge}${foreignBadge}${minorBadge}${reportBadge}${statusBadge}${pinBadge}
           </div>
           <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">${maskId(e.id_number)}</div>
         </div>
       </div>
-      <a href="tel:${e.phone||''}" style="display:flex;align-items:center;gap:6px;padding:10px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:10px;text-decoration:none;color:var(--text);${e.phone?'':'pointer-events:none;'}">
+      <a href="tel:${e.phone||''}" style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:8px;text-decoration:none;color:var(--text);${e.phone?'':'pointer-events:none;'}">
         <span style="font-size:14px;">📞</span>
         <span style="font-size:14px;font-weight:700;letter-spacing:0.5px;">${e.phone||'전화번호 없음'}</span>
       </a>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${docBadges}</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">
         <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
           <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">시급</div>
@@ -4167,8 +4218,26 @@ function renderEmpList(){
       </div>`:''}
     </div>`}).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
 }
-async function openAddEmpSheet(){if(!guardStore())return;if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empIdNumInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';document.getElementById('empAuthLevel').value='staff';document.getElementById('empForeignCheck').checked=false;document.getElementById('empIdNumLabel').innerText='주민등록번호';document.getElementById('empIdNumInput').placeholder='960315-1234567';document.getElementById('empReportStatus').value='미신고';document.getElementById('empReportWrap').style.display='none';selectedRoleName='';await renderRoleChips('');const drWrap=document.getElementById('deviceResetWrap');if(drWrap)drWrap.style.display='none';openSheet('addEmpSheet');}
+async function openAddEmpSheet(){if(!guardStore())return;if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empIdNumInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';document.getElementById('empAuthLevel').value='staff';document.getElementById('empForeignCheck').checked=false;document.getElementById('empIdNumLabel').innerText='주민등록번호';document.getElementById('empIdNumInput').placeholder='960315-1234567';document.getElementById('empReportStatus').value='미신고';document.getElementById('empReportWrap').style.display='none';
+  // 서류/비자 초기화
+  document.getElementById('empDocContract').checked=false;document.getElementById('empDocHealth').checked=false;document.getElementById('empDocHealthExpires').value='';document.getElementById('empDocHealthExpiresWrap').style.display='none';document.getElementById('empDocMinorConsent').checked=false;document.getElementById('empDocForeignerId').checked=false;document.getElementById('empDocMinorWrap').style.display='none';document.getElementById('empDocForeignerWrap').style.display='none';document.getElementById('empVisaWrap').style.display='none';document.getElementById('empVisaType').value='';document.getElementById('empVisaExpires').value='';
+  selectedRoleName='';await renderRoleChips('');const drWrap=document.getElementById('deviceResetWrap');if(drWrap)drWrap.style.display='none';openSheet('addEmpSheet');}
 async function openEditEmpSheet(id){if(!isManager)return toast('관리자만 편집할 수 있습니다.','warn');const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empIdNumInput').value=e.id_number||'';document.getElementById('empForeignCheck').checked=!!e.is_foreign;document.getElementById('empIdNumLabel').innerText=e.is_foreign?'외국인등록번호':'주민등록번호';document.getElementById('empIdNumInput').placeholder=e.is_foreign?'960315-5234567':'960315-1234567';document.getElementById('empReportStatus').value=e.report_status||'미신고';document.getElementById('empReportWrap').style.display=e.is_foreign?'block':'none';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('empAuthLevel').value=e.auth_level||'staff';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');
+  // 서류 수취
+  document.getElementById('empDocContract').checked=!!e.doc_contract;
+  document.getElementById('empDocHealth').checked=!!e.doc_health_cert;
+  document.getElementById('empDocHealthExpires').value=e.doc_health_expires||'';
+  document.getElementById('empDocHealthExpiresWrap').style.display=e.doc_health_cert?'block':'none';
+  document.getElementById('empDocMinorConsent').checked=!!e.doc_minor_consent;
+  document.getElementById('empDocForeignerId').checked=!!e.doc_foreigner_id;
+  // 미성년자 판단 → 동의서 표시
+  const isMinorEdit=(()=>{if(!e.birth_date)return false;const bd=new Date(e.birth_date);const today=new Date();let age=today.getFullYear()-bd.getFullYear();if(today.getMonth()<bd.getMonth()||(today.getMonth()===bd.getMonth()&&today.getDate()<bd.getDate()))age--;return age<18;})();
+  document.getElementById('empDocMinorWrap').style.display=isMinorEdit?'flex':'none';
+  // 외국인 → 등록증/비자 표시
+  document.getElementById('empDocForeignerWrap').style.display=e.is_foreign?'flex':'none';
+  document.getElementById('empVisaWrap').style.display=e.is_foreign?'block':'none';
+  document.getElementById('empVisaType').value=e.visa_type||'';
+  document.getElementById('empVisaExpires').value=e.visa_expires_at||'';
   // 기기 초기화 섹션 표시
   const drWrap=document.getElementById('deviceResetWrap');const dsEl=document.getElementById('deviceStatus');
   if(drWrap){drWrap.style.display='block';dsEl.innerText=e.device_fingerprint?'등록된 기기: '+e.device_fingerprint.slice(0,12)+'...':'등록된 기기 없음 (다음 출근 시 자동 등록)';}
@@ -4185,7 +4254,18 @@ async function saveEmployee(){
   // 주민번호에서 생년월일 추출 (호환용)
   let birthDate=null;
   if(idNumRaw){const digits=idNumRaw.replace(/[^\d]/g,'');if(digits.length>=6){const yy=digits.slice(0,2);const mm=parseInt(digits.slice(2,4));const dd=parseInt(digits.slice(4,6));if(mm>=1&&mm<=12&&dd>=1&&dd<=31){const g=digits.length>=7?parseInt(digits[6]):1;const century=(g<=2)?'19':'20';birthDate=century+yy+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');}}}
-  const payload={store_id:currentStore.id,name,id_number:idNumRaw,birth_date:birthDate,is_foreign:document.getElementById('empForeignCheck').checked,report_status:document.getElementById('empReportStatus').value||'미신고',phone:document.getElementById('empPhoneInput').value.trim()||null,address:document.getElementById('empAddressInput').value.trim()||null,bank_name:document.getElementById('empBankInput').value.trim()||null,account_number:document.getElementById('empAccountInput').value.trim()||null,base_wage:parseInt(document.getElementById('empWageInput').value)||10030,pin:pinVal,caps_id:document.getElementById('empCapsIdInput').value.trim()||null,hire_date:document.getElementById('empHireDateInput').value.trim()||null,role:selectedRoleName||null};
+  const isForeign=document.getElementById('empForeignCheck').checked;
+  const payload={store_id:currentStore.id,name,id_number:idNumRaw,birth_date:birthDate,is_foreign:isForeign,report_status:document.getElementById('empReportStatus').value||'미신고',phone:document.getElementById('empPhoneInput').value.trim()||null,address:document.getElementById('empAddressInput').value.trim()||null,bank_name:document.getElementById('empBankInput').value.trim()||null,account_number:document.getElementById('empAccountInput').value.trim()||null,base_wage:parseInt(document.getElementById('empWageInput').value)||10030,pin:pinVal,caps_id:document.getElementById('empCapsIdInput').value.trim()||null,hire_date:document.getElementById('empHireDateInput').value.trim()||null,role:selectedRoleName||null,
+    // 서류 수취
+    doc_contract:document.getElementById('empDocContract').checked,
+    doc_health_cert:document.getElementById('empDocHealth').checked,
+    doc_health_expires:document.getElementById('empDocHealthExpires').value||null,
+    doc_minor_consent:document.getElementById('empDocMinorConsent').checked,
+    doc_foreigner_id:isForeign?document.getElementById('empDocForeignerId').checked:false,
+    // 비자
+    visa_type:isForeign?(document.getElementById('empVisaType').value||null):null,
+    visa_expires_at:isForeign?(document.getElementById('empVisaExpires').value||null):null
+  };
   // 권한은 관리자만 변경 가능
   if(isManager){const selAuth=document.getElementById('empAuthLevel').value||'staff';payload.auth_level=selAuth;payload.is_manager=selAuth!=='staff';}
   setLoad(true,'저장 중...');const eid=document.getElementById('editEmpId').value;
@@ -7143,6 +7223,27 @@ document.addEventListener('DOMContentLoaded', async()=>{
     document.getElementById('empIdNumLabel').innerText=this.checked?'외국인등록번호':'주민등록번호';
     document.getElementById('empIdNumInput').placeholder=this.checked?'960315-5234567':'960315-1234567';
     document.getElementById('empReportWrap').style.display=this.checked?'block':'none';
+    // 외국인 → 등록증/비자 섹션 토글
+    document.getElementById('empDocForeignerWrap').style.display=this.checked?'flex':'none';
+    document.getElementById('empVisaWrap').style.display=this.checked?'block':'none';
+  });
+  // 보건증 체크 → 만료일 입력 토글
+  document.getElementById('empDocHealth').addEventListener('change',function(){
+    document.getElementById('empDocHealthExpiresWrap').style.display=this.checked?'block':'none';
+  });
+  // 주민번호 입력 → 미성년자 동의서 자동 표시
+  document.getElementById('empIdNumInput').addEventListener('blur',function(){
+    const digits=(this.value||'').replace(/[^\d]/g,'');
+    if(digits.length>=7){
+      const yy=digits.slice(0,2);const mm=parseInt(digits.slice(2,4));const dd=parseInt(digits.slice(4,6));
+      if(mm>=1&&mm<=12&&dd>=1&&dd<=31){
+        const g=parseInt(digits[6]);const century=(g<=2)?'19':'20';
+        const bd=new Date(parseInt(century+yy),mm-1,dd);const today=new Date();
+        let age=today.getFullYear()-bd.getFullYear();
+        if(today.getMonth()<bd.getMonth()||(today.getMonth()===bd.getMonth()&&today.getDate()<bd.getDate()))age--;
+        document.getElementById('empDocMinorWrap').style.display=age<18?'flex':'none';
+      }
+    }
   });
 
   // ─── sheet-overlay 배경 클릭 닫기 (inline onclick CSP 차단 대응) ───
