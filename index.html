@@ -1400,9 +1400,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div><div class="setting-label">매장명</div><div class="setting-sub">앱 상단 표시 이름</div></div>
       <div class="setting-val" id="sv-store-name" onclick="openSettingEdit('store_name','매장명','')">미설정</div>
     </div>
-    <div class="setting-row">
-      <div><div class="setting-label">공인 IP</div><div class="setting-sub">출퇴근 위치 검증</div></div>
-      <div class="setting-val" id="sv-target-ip" onclick="openSettingEdit('target_ip','공인 IP','')">미설정</div>
+    <div class="setting-row" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div><div class="setting-label">공인 IP</div><div class="setting-sub">출퇴근 위치 검증 (매장 WiFi별 1개씩)</div></div>
+      </div>
+      <div id="ipInputList"></div>
+      <button class="btn btn-secondary" style="margin-top:6px;padding:8px;font-size:12px;" onclick="addIPInput()">+ IP 추가</button>
     </div>
     <button class="btn btn-primary btn-full" onclick="saveBasicSettings()">저장</button>
   </div>
@@ -4225,7 +4228,7 @@ async function loadAllSettings(){
   if(data?.settle_items_json)settleItems=data.settle_items_json;
   // 매장 기본정보
   const snEl=document.getElementById('sv-store-name');if(snEl)snEl.innerText=settings.store_name||'미설정';
-  const ipEl=document.getElementById('sv-target-ip');if(ipEl)ipEl.innerText=settings.target_ip||'미설정';
+  renderIPInputs();
   // 수당/휴게
   const arEl=document.getElementById('si-auto-rest');if(arEl)arEl.value=settings.auto_rest_min||0;
   const weEl=document.getElementById('si-weekend-extra');if(weEl)weEl.value=settings.weekend_extra||0;
@@ -4263,7 +4266,6 @@ function confirmSettingEdit(){
   // 화면 즉시 반영
   const elMap={
     'store_name':'sv-store-name',
-    'target_ip':'sv-target-ip',
     'crawler_url':'sv-crawler-url',
     'crawler_secret':'sv-crawler-secret',
     'ups_store_code':'sv-ups-store-code',
@@ -4278,8 +4280,35 @@ function confirmSettingEdit(){
   }
   closeAllSheets();
 }
+// ─── IP 다중 입력 관리 ───
+function renderIPInputs(){
+  const list=document.getElementById('ipInputList');if(!list)return;
+  const ips=(settings.target_ip||'').split(',').map(s=>s.trim()).filter(Boolean);
+  if(ips.length===0) ips.push(''); // 최소 1줄
+  list.innerHTML=ips.map((ip,i)=>`<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+    <input class="input-field ip-input" style="flex:1;margin-bottom:0;padding:10px;font-size:14px;" placeholder="예: 59.26.106.174" value="${ip}">
+    ${ips.length>1?`<button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:12px;flex-shrink:0;" onclick="removeIPInput(${i})">삭제</button>`:''}
+  </div>`).join('');
+}
+function addIPInput(){
+  const list=document.getElementById('ipInputList');if(!list)return;
+  const div=document.createElement('div');
+  div.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center;';
+  div.innerHTML=`<input class="input-field ip-input" style="flex:1;margin-bottom:0;padding:10px;font-size:14px;" placeholder="예: 59.26.106.174" value="">
+    <button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:12px;flex-shrink:0;" onclick="this.parentElement.remove()">삭제</button>`;
+  list.appendChild(div);
+}
+function removeIPInput(idx){
+  const inputs=document.querySelectorAll('#ipInputList .ip-input');
+  if(inputs.length<=1)return;
+  inputs[idx]?.closest('div')?.remove();
+}
+function collectIPs(){
+  return [...document.querySelectorAll('#ipInputList .ip-input')].map(el=>el.value.trim()).filter(Boolean).join(',');
+}
 async function saveBasicSettings(){
   if(!guardStore())return;setLoad(true,'저장 중...');
+  settings.target_ip=collectIPs()||null;
   const payload={
     store_id:currentStore.id,
     store_name:settings.store_name||null,
@@ -5783,8 +5812,10 @@ async function checkIPForAttendance(){
   if(!targetIP) return {ok:true,ip:'',msg:'IP 검증 미설정'};
   const ip=await getPublicIP();
   if(!ip) return {ok:false,ip:'',msg:'IP를 확인할 수 없습니다. 인터넷 연결을 확인하세요.'};
-  if(ip===targetIP) return {ok:true,ip,msg:'매장 WiFi 확인됨'};
-  return {ok:false,ip,msg:`매장 WiFi가 아닙니다.\n현재 IP: ${ip}\n매장 IP: ${targetIP}`};
+  // 쉼표 구분 다중 IP 지원
+  const allowedIPs=targetIP.split(',').map(s=>s.trim()).filter(Boolean);
+  if(allowedIPs.includes(ip)) return {ok:true,ip,msg:'매장 WiFi 확인됨'};
+  return {ok:false,ip,msg:`매장 WiFi가 아닙니다.\n현재 IP: ${ip}\n등록 IP: ${allowedIPs.join(', ')}`};
 }
 
 // ─── 새 기능: 기기 지문(Device Fingerprint) ───
