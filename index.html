@@ -4222,18 +4222,14 @@ function renderEmpList(){
         <span style="font-size:14px;font-weight:700;letter-spacing:0.5px;">${e.phone||'전화번호 없음'}</span>
       </a>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${docBadges}</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">
         <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
           <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">시급</div>
           <div style="font-size:13px;font-weight:800;color:var(--blue);">${fmt(e.base_wage)}원</div>
         </div>
         <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
-          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">은행</div>
-          <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.bank_name||'-'}</div>
-        </div>
-        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
-          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">입사</div>
-          <div style="font-size:11px;font-weight:700;">${e.hire_date?.slice(5)||'-'}</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">입사일</div>
+          <div style="font-size:13px;font-weight:700;">${e.hire_date||'-'}</div>
         </div>
       </div>
       ${isManager?`<div style="display:flex;gap:8px;">
