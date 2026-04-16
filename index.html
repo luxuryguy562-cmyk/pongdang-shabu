@@ -249,6 +249,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .amt-red{color:var(--danger)!important;}
 .amt-green{color:var(--success)!important;}
 .amt-muted{color:var(--gray-400)!important;}
+/* 전월대비 문구 */
+.mom-text{font-size:11px;font-weight:600;color:var(--gray-500);padding:6px 0 2px;line-height:1.5;}
+.mom-good{color:var(--blue);font-weight:700;}
+.mom-bad{color:var(--danger);font-weight:700;}
+.mom-week{font-size:10px;padding:3px 0 0;margin-top:4px;border-top:1px dashed var(--gray-150,#eee);}
 
 /* ─ 대시보드 월요약 테이블 */
 .summ-tbl{width:100%;border-collapse:collapse;}
@@ -3332,13 +3337,19 @@ async function loadDashboard(){
     const passedDays=today.toISOString().slice(0,7)===ym?today.getDate():lastDay;
     const isCurrent=passedDays<lastDay;
 
+    // ── 전월 기간 계산 ──
+    const pMo=mo===1?12:mo-1, pY=mo===1?y-1:y;
+    const pYm=pY+'-'+String(pMo).padStart(2,'0');
+    const pLastDay=new Date(pY,pMo,0).getDate();
+    const pStart=pYm+'-01', pEnd=pYm+'-'+String(pLastDay).padStart(2,'0');
+
     document.getElementById('dashPassedLabel').innerText=`${lastDay}일 중 ${passedDays}일 경과`;
 
     // ══ 병렬 데이터 로드 ══
     await loadExpCategories();
     const sid=currentStore.id;
 
-    const [settleRes,fcRes,expResults,royaltyTxRes]=await Promise.all([
+    const [settleRes,fcRes,expResults,royaltyTxRes,prevSettleRes,prevFcRes]=await Promise.all([
       // 당월 정산
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
@@ -3350,7 +3361,13 @@ async function loadDashboard(){
       // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
       dashMode==='final'
         ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
-        :Promise.resolve({data:null})
+        :Promise.resolve({data:null}),
+      // ── 전월 매출 ──
+      dashSaleSource==='ups'
+        ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
+        :sb.from('settlements').select('settle_date,items_json,sales_total,expected_total').eq('store_id',sid).gte('settle_date',pStart).lte('settle_date',pEnd),
+      // ── 전월 고정비 ──
+      sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid).eq('year_month',pYm)
     ]);
 
     // ══ 1. 일별 매출 맵 + 매출 집계 ══
@@ -3455,6 +3472,9 @@ async function loadDashboard(){
     summHtml+=`<tr class="summ-total"><td class="ds-lb">실수익</td><td class="ds-amt ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</td><td class="ds-pc">${pctR(realProfit)}</td></tr>`;
     summHtml+='</table>';
 
+    // 전월대비 문구 자리 (데이터 로드 후 DOM으로 채움)
+    summHtml+=`<p id="momSummaryText" class="mom-text" style="display:none;"></p>`;
+
     // 마감예상 블록 (현재 월만)
     if(isCurrent){
       const pctE=v=>estRevenue>0?((v/estRevenue)*100).toFixed(1)+'%':'–';
@@ -3494,11 +3514,15 @@ async function loadDashboard(){
     });
     catNames.push('로열티/수수료');catColors['로열티/수수료']='#EF4444';shortNames['로열티/수수료']='로열티';
 
-    // 일별 카테고리 데이터 (병렬 조회)
-    const[voRes2,rcRes2,attRes2]=await Promise.all([
+    // 일별 카테고리 데이터 (병렬 조회 — 전월 포함)
+    const[voRes2,rcRes2,attRes2,prevVoRes,prevAttRes,prevRcRes]=await Promise.all([
       sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
       sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
-      sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end)
+      sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+      // ── 전월 일별 식자재/인건비/영수증 ──
+      sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
+      sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
+      sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',pStart).lte('receipt_date',pEnd)
     ]);
     const voDaily=voRes2.data,rcDaily=rcRes2.data,attDaily=attRes2.data;
     (voDaily||[]).forEach(v=>{
@@ -3537,6 +3561,68 @@ async function loadDashboard(){
       catNames.forEach(c=>{dayExp+=(dailyCatMap[d]?.[c]||0);});
       dailyExpTotal[d]=dayExp;
     });
+
+    // ══ 전월 데이터 처리 (MoM 비교용) ══
+    const prevSettle=prevSettleRes.data||[];
+    let prevTotalRevenue=0;const prevDailySalesMap={};
+    if(dashSaleSource==='ups'){
+      prevSettle.forEach(s=>{const d=s.sale_date?.slice(8);prevTotalRevenue+=(s.total_sales||0);if(d)prevDailySalesMap[d]=s.total_sales||0;});
+    } else {
+      prevSettle.forEach(s=>{const j=s.items_json||{};const d=s.settle_date?.slice(8);
+        let ds=0;if(j.pos_card!==undefined)ds=(j.pos_cash||0)+(j.pos_cash_receipt||0)+(j.pos_card||0)+(j.pos_etc||0)+(j.extra_draw_large||0)+(j.extra_draw_small||0);
+        else ds=s.sales_total||s.expected_total||0;
+        prevTotalRevenue+=ds;if(d)prevDailySalesMap[d]=ds;
+      });
+    }
+    // 전월 일별 식자재/인건비/영수증
+    let prevVendorTotal=0,prevAttTotal=0,prevReceiptTotal=0;
+    const prevDailyVendor={},prevDailyAtt={},prevDailyReceipt={};
+    (prevVoRes.data||[]).forEach(v=>{const d=v.order_date?.slice(8);if(!d)return;prevVendorTotal+=(v.amount||0);prevDailyVendor[d]=(prevDailyVendor[d]||0)+(v.amount||0);});
+    (prevAttRes.data||[]).forEach(a=>{const d=a.work_date?.slice(8);if(!d)return;prevAttTotal+=(a.calculated_wage||0);prevDailyAtt[d]=(prevDailyAtt[d]||0)+(a.calculated_wage||0);});
+    (prevRcRes.data||[]).forEach(r=>{const d=r.receipt_date?.slice(8);if(!d)return;prevReceiptTotal+=(r.total_price||0);prevDailyReceipt[d]=(prevDailyReceipt[d]||0)+(r.total_price||0);});
+    // 전월 고정비/로열티/카드수수료
+    const prevFcMonthly=(prevFcRes.data||[]).filter(a=>a.fixed_costs?.is_active!==false).reduce((a,r)=>a+(r.is_confirmed?r.amount:(r.estimated_amount||r.amount||0)),0);
+    const prevRoyalty=Math.round(prevTotalRevenue*royaltyRate);
+    const prevCardFee=Math.round(prevTotalRevenue*cardFeeRate);
+    const prevTotalCostFull=prevVendorTotal+prevReceiptTotal+prevAttTotal+prevFcMonthly+prevRoyalty+prevCardFee;
+    // 전월 주차 그룹
+    const prevAllDays=Array.from({length:pLastDay},(_,i)=>String(i+1).padStart(2,'0'));
+    const prevWeekGroups=[];let pCurW=[];
+    prevAllDays.forEach(d=>{const dt=new Date(pY,pMo-1,parseInt(d));pCurW.push(d);if(dt.getDay()===0||d===prevAllDays[prevAllDays.length-1]){prevWeekGroups.push([...pCurW]);pCurW=[];}});
+    // 전월 주차별 매출/지출/식자재/인건비
+    const prevWeekData=prevWeekGroups.map(wk=>{
+      let wS=0,wV=0,wA=0,wR=0;
+      wk.forEach(d=>{wS+=(prevDailySalesMap[d]||0);wV+=(prevDailyVendor[d]||0);wA+=(prevDailyAtt[d]||0);wR+=(prevDailyReceipt[d]||0);});
+      const wFx=Math.round(prevFcMonthly/pLastDay*wk.length);
+      const wRoy=Math.round(wS*royaltyRate),wCf=Math.round(wS*cardFeeRate);
+      return{sales:wS,expense:wV+wR+wA+wFx+wRoy+wCf,vendor:wV,att:wA};
+    });
+    // ── 전월대비 문구 헬퍼 ──
+    const momTxt=(curr,prev,isRevType)=>{
+      if(!prev||prev===0)return null;
+      const diff=curr-prev,pct=Math.round(Math.abs(diff)/prev*100),up=diff>0;
+      if(pct<=2)return{text:'비슷',cls:'',arrow:'',pct:0};
+      const cls=isRevType?(up?'mom-good':'mom-bad'):(up?'mom-bad':'mom-good');
+      return{text:`${fmt(Math.abs(diff))}(${up?'▲':'▼'}${pct}%)`,cls,arrow:up?'▲':'▼',pct,up};
+    };
+
+    // ── 전월대비 문구 (월 요약) — DOM 삽입 ──
+    if(prevTotalRevenue>0){
+      const mRev=momTxt(totalRevenue,prevTotalRevenue,true);
+      const mExp=momTxt(totalCostFull,prevTotalCostFull,false);
+      let momLine='지난달보다 ';
+      if(mRev&&mRev.text==='비슷'&&mExp&&mExp.text==='비슷'){momLine+='매출·지출 모두 비슷해요 ✅';}
+      else{
+        const parts=[];
+        if(mRev&&mRev.text!=='비슷')parts.push(`매출 <span class="${mRev.cls}">${mRev.text}</span> ${mRev.up?'늘고':'줄고'}`);
+        if(mExp&&mExp.text!=='비슷')parts.push(`지출 <span class="${mExp.cls}">${mExp.text}</span> ${mExp.up?'늘었어요':'줄었어요'}`);
+        momLine+=parts.join(', ');
+        const revUp=mRev&&mRev.up,expUp=mExp&&mExp.up;
+        momLine+=' '+(revUp&&!expUp?'👍':(!revUp&&expUp)?'⚠️':revUp&&expUp?'📈':'📉');
+      }
+      const momEl=document.getElementById('momSummaryText');
+      if(momEl){momEl.innerHTML=momLine;momEl.style.display='';}
+    }
 
     // 주차 구분 (월~일 기준: 평일/주말 패턴 유지)
     const weekGroups=[];
@@ -3623,6 +3709,24 @@ async function loadDashboard(){
           <span>순수익 <b class="${wProfitCls}">${wP>=0?'+':''}${fmt(wP)}</b></span>
         </div>
         <div class="dt-week-cats">${wCatsHtml}</div>
+        ${(()=>{
+          const pw=prevWeekData[wi];
+          if(!pw||pw.sales<=0)return '';
+          const vendorCat=srcToCat['vendor_orders'],attCat=srcToCat['attendance'];
+          const mS=momTxt(wS,pw.sales,true),mE=momTxt(wE,pw.expense,false);
+          const mV=momTxt(wC[vendorCat]||0,pw.vendor,false),mA=momTxt(wC[attCat]||0,pw.att,false);
+          const pts=[];
+          if(mS&&mS.text!=='비슷')pts.push(`매출<span class="${mS.cls}">${mS.arrow}${mS.pct}%</span>`);
+          if(mE&&mE.text!=='비슷')pts.push(`지출<span class="${mE.cls}">${mE.arrow}${mE.pct}%</span>`);
+          const cats=[];
+          if(mV&&mV.text!=='비슷')cats.push(`식자재<span class="${mV.cls}">${mV.arrow}${mV.pct}%</span>`);
+          if(mA&&mA.text!=='비슷')cats.push(`인건비<span class="${mA.cls}">${mA.arrow}${mA.pct}%</span>`);
+          if(!pts.length&&!cats.length)return `<div class="mom-text mom-week">vs전월 비슷해요 ✅</div>`;
+          let txt='vs전월 ';
+          if(pts.length)txt+=pts.join(' ');
+          if(cats.length)txt+=(pts.length?' ｜매출대비 ':' 매출대비 ')+cats.join(' ');
+          return `<div class="mom-text mom-week">${txt}</div>`;
+        })()}
         <div class="dt-day-list" data-wkbody="${wi}" ${collapsed?'style="display:none;"':''}>${dayCardsHtml}</div>
       </div>`;
 
@@ -3687,7 +3791,17 @@ async function loadDashboard(){
           </div>
         </div>
         <div style="flex:1;min-width:0;">${catListHtml}</div>
-      </div>`;
+      </div>${(()=>{
+        if(prevTotalRevenue<=0)return '';
+        const currVendor=expByGroup['식자재']||0,currAtt=expByGroup['인건비']||0;
+        const mV=momTxt(currVendor,prevVendorTotal,false),mA=momTxt(currAtt,prevAttTotal,false);
+        let h='';
+        if(mV){const ic=mV.text==='비슷'?'✅':mV.up?'⚠️':'✅';
+          h+=`<div class="mom-text">${ic} 식자재 지난달보다 매출대비 ${mV.text==='비슷'?'비슷해요':`<span class="${mV.cls}">${mV.text}</span> ${mV.up?'늘었어요':'줄었어요'}`}</div>`;}
+        if(mA){const ic=mA.text==='비슷'?'✅':mA.up?'⚠️':'✅';
+          h+=`<div class="mom-text">${ic} 인건비 지난달보다 매출대비 ${mA.text==='비슷'?'비슷해요':`<span class="${mA.cls}">${mA.text}</span> ${mA.up?'늘었어요':'줄었어요'}`}</div>`;}
+        return h;
+      })()}`;
       // 도넛차트 렌더
       destroyChart('expDonutChart');
       if(donutData.length){
