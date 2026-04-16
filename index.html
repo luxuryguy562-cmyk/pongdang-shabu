@@ -527,7 +527,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <div class="side-group-body">
         <div class="side-item" onclick="closeSideMenu();nav('explist')">계좌내역 · 카드내역</div>
-        <div class="side-item" onclick="closeSideMenu();nav('settings');setTimeout(()=>{document.getElementById('expCatList')?.scrollIntoView({behavior:'smooth'})},200)">지출 카테고리 설정</div>
       </div>
     </div>
 
@@ -542,46 +541,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
-    <!-- 정산/검수 -->
-    <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
-        <span>🔍 정산/검수</span><span class="side-arrow">›</span>
-      </div>
-      <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('recon')">지출 대조표</div>
-      </div>
-    </div>
-
-    <!-- 고정비 -->
-    <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
-        <span>📋 고정비</span><span class="side-arrow">›</span>
-      </div>
-      <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('fixedcost')">항목 & 월별 금액</div>
-      </div>
-    </div>
-
-    <!-- 직원 -->
-    <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
-        <span>👥 직원 관리</span><span class="side-arrow">›</span>
-      </div>
-      <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('staff')">직원 관리</div>
-      </div>
-    </div>
-
-    <!-- 설정 -->
-    <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
-        <span>⚙️ 설정</span><span class="side-arrow">›</span>
-      </div>
-      <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('settings')">매장 기본정보</div>
-        <div class="side-item" onclick="closeSideMenu();nav('settings')">수당 & 휴게</div>
-      </div>
-    </div>
+    <!-- 단일 항목들 -->
+    <div class="side-item" style="padding:14px 20px;font-size:14px;" onclick="closeSideMenu();nav('recon')">🔍 지출 대조표</div>
+    <div class="side-item" style="padding:14px 20px;font-size:14px;" onclick="closeSideMenu();nav('fixedcost')">📋 고정비</div>
+    <div class="side-item" style="padding:14px 20px;font-size:14px;" onclick="closeSideMenu();nav('staff')">👥 직원 관리</div>
+    <div class="side-item" style="padding:14px 20px;font-size:14px;" onclick="closeSideMenu();nav('settings')">⚙️ 설정</div>
 
   </div>
 </div>
