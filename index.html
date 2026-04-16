@@ -5911,8 +5911,8 @@ function matchColumns(headers, type){
 
 // ─── 공통 분류 규칙 (업종 무관, 모든 매장 동일) ───
 const COMMON_BANK_RULES=[
-  // 매출 — 카드사 정산 입금 코드
-  {p:/^(NH|KB|SHC|삼성\d{2,3}|741961|하나|롯데\d{2,3}|현\d{2,3}|우\d{2,3}|BC\d{2,3})/,cat:'매출',sub:'카드결제'},
+  // 매출 — 카드사 정산 입금 (카드사 약자만, 뒤 가맹점번호는 매장마다 다름)
+  {p:/^(NH|KB|SHC|삼성|하나|롯데|현대|우리|BC)\d/,cat:'매출',sub:'카드결제'},
   // 매출 — 은행 이체 코드
   {p:/(타행|OP이체|모바일|FB자금|BZ뱅크|전자금융)/,cat:'매출',sub:'송금결제'},
   // 매출 — 현금
@@ -5993,6 +5993,7 @@ async function seedDefaultRules(){
     {keyword:'이니시스',tx_type:'bank',category:'마케팅',sub_category:'도도포인트',priority:40},
     // 은행 — 매출
     {keyword:'논산정산',tx_type:'bank',category:'매출',sub_category:'QR결제',priority:5},
+    {keyword:'741961',tx_type:'bank',category:'매출',sub_category:'카드결제',priority:5},
     // 카드 — 직구
     {keyword:'논산농협',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
     {keyword:'하나로마트',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
