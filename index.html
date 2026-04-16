@@ -4194,12 +4194,12 @@ function renderEmpList(){
     const minorBadge=isMinor?'<span class="badge badge-red" style="font-size:9px;">🔞미성년</span>':'';
     // 서류 배지 (개별 나열)
     const docBadge=(check,label)=>check?`<span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--blue);color:#fff;">${label}✅</span>`:`<span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--gray-200);color:var(--gray-400);opacity:0.5;">${label}</span>`;
-    let docBadges=docBadge(e.doc_contract,'📄계약')+' '+docBadge(e.doc_health_cert,'📋보건');
+    let docBadges=docBadge(e.doc_contract,'📄근로계약서')+' '+docBadge(e.doc_health_cert,'📋보건증');
     // 보건증 만료 임박 체크
-    if(e.doc_health_cert&&e.doc_health_expires){const exp=new Date(e.doc_health_expires);const diff=Math.ceil((exp-new Date())/(1000*60*60*24));if(diff<=0)docBadges=docBadges.replace('📋보건✅','📋보건❌').replace('background:var(--blue)','background:var(--danger)');else if(diff<=30)docBadges=docBadges.replace('📋보건✅','📋보건⚠️').replace('background:var(--blue)','background:var(--warning)');}
-    if(isMinor) docBadges+=' '+docBadge(e.doc_minor_consent,'🔞동의');
+    if(e.doc_health_cert&&e.doc_health_expires){const exp=new Date(e.doc_health_expires);const diff=Math.ceil((exp-new Date())/(1000*60*60*24));if(diff<=0)docBadges=docBadges.replace('📋보건증✅','📋보건증❌').replace('background:var(--blue)','background:var(--danger)');else if(diff<=30)docBadges=docBadges.replace('📋보건증✅','📋보건증⚠️').replace('background:var(--blue)','background:var(--warning)');}
+    if(isMinor) docBadges+=' '+docBadge(e.doc_minor_consent,'🔞법대동의서');
     if(e.is_foreign){
-      docBadges+=' '+docBadge(e.doc_foreigner_id,'🛂등록');
+      docBadges+=' '+docBadge(e.doc_foreigner_id,'🛂외국인등록증');
       // 비자 배지
       if(e.visa_type){let visaColor='var(--success)',visaIcon='✅';if(e.visa_expires_at){const vExp=new Date(e.visa_expires_at);const vDiff=Math.ceil((vExp-new Date())/(1000*60*60*24));if(vDiff<=0){visaColor='var(--danger)';visaIcon='❌';}else if(vDiff<=30){visaColor='var(--warning)';visaIcon='⚠️';}}docBadges+=` <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:${visaColor};color:#fff;">🛃${e.visa_type}${visaIcon}</span>`;}
       else docBadges+=' <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--gray-200);color:var(--gray-400);opacity:0.5;">🛃비자</span>';
