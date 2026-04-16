@@ -1143,6 +1143,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="bankExcelInput">
         </label>
         <button class="btn btn-secondary" id="bankFilterBtn" style="padding:8px 14px;font-size:12px;display:inline-flex;align-items:center;gap:4px;">🔽 필터</button>
+        <button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:11px;" onclick="deleteTxMonth('bank')">🗑️ 월삭제</button>
       </div>
       <div id="bankFilterBadge" style="display:none;margin-bottom:6px;font-size:11px;color:var(--blue);font-weight:700;cursor:pointer;">필터 적용중 ✕</div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:2px solid var(--text);margin-bottom:2px;">
@@ -1184,6 +1185,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="cardExcelInput">
         </label>
         <button class="btn btn-secondary" id="cardFilterBtn" style="padding:8px 14px;font-size:12px;display:inline-flex;align-items:center;gap:4px;">🔽 필터</button>
+        <button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:11px;" onclick="deleteTxMonth('card')">🗑️ 월삭제</button>
       </div>
       <div id="cardFilterBadge" style="display:none;margin-bottom:6px;font-size:11px;color:var(--blue);font-weight:700;cursor:pointer;">필터 적용중 ✕</div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:2px solid var(--text);margin-bottom:2px;">
@@ -5548,6 +5550,7 @@ function renderBankTxTable(){
       <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
       <td style="color:var(--success);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${isIn?fmt(r.amount):''}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${!isIn?fmt(Math.abs(r.amount)):''}</td>
+      <td style="padding:2px;"><button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" onclick="deleteTxRow('${r.id}','bank')">✕</button></td>
     </tr>`;
   }).join('');
   document.getElementById('bankTxInSum').innerText='입금 '+fmt(inSum)+'원';
@@ -5601,10 +5604,39 @@ function renderCardTxTable(){
       <td class="tx-desc-tip" data-full="${(name||'').replace(/"/g,'&quot;')}" style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;cursor:pointer;position:relative;">${truncDesc(name,6)}</td>
       <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${fmt(Math.abs(r.amount))}</td>
+      <td style="padding:2px;"><button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" onclick="deleteTxRow('${r.id}','card')">✕</button></td>
     </tr>`;
   }).join('');
   document.getElementById('cardTxSum').innerText=fmt(total)+'원';
   updateSortHeaders('card');
+}
+
+// ─── 거래 내역 삭제 ───
+async function deleteTxRow(id,type){
+  if(!confirm('이 거래 1건을 삭제할까요?'))return;
+  const{error}=await sb.from('mydata_transactions').delete().eq('id',id);
+  if(error){toast('삭제 실패: '+error.message,'error');return;}
+  if(type==='bank'){bankTxData=bankTxData.filter(r=>r.id!==id);renderBankTxTable();}
+  else{cardTxData=cardTxData.filter(r=>r.id!==id);renderCardTxTable();}
+  toast('1건 삭제 완료','success');
+}
+
+async function deleteTxMonth(type){
+  const ym=type==='bank'?explistBankMonth:explistCardMonth;
+  const data=type==='bank'?bankTxData:cardTxData;
+  if(!data.length){toast('삭제할 데이터가 없습니다','warn');return;}
+  if(!confirm(`${ym} ${type==='bank'?'계좌':'카드'}내역 ${data.length}건을 전부 삭제할까요?\n\n이 작업은 되돌릴 수 없습니다.`))return;
+  setLoad(true,`${data.length}건 삭제 중...`);
+  const ids=data.map(r=>r.id);
+  // 100건씩 나눠서 삭제
+  for(let i=0;i<ids.length;i+=100){
+    const chunk=ids.slice(i,i+100);
+    const{error}=await sb.from('mydata_transactions').delete().in('id',chunk);
+    if(error){setLoad(false);toast('삭제 실패: '+error.message,'error');return;}
+  }
+  setLoad(false);
+  toast(`${ym} ${data.length}건 삭제 완료`,'success');
+  if(type==='bank')loadBankTransactions();else loadCardTransactions();
 }
 
 // ─── 컬럼 정렬 토글 ───
