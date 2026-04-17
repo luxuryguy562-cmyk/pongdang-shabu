@@ -2190,11 +2190,34 @@ function getCatListForPrompt(){
     return children.length?children.map(ch=>`${p.name}>${ch.name}`).join(',')+`,${p.name}`:p.name;
   }).join(',');
 }
+// ─── 영수증 품목에 DB 규칙 덮어쓰기 (학습된 품목은 AI 결과 무시) ───
+async function applyRulesToReceipt(list){
+  if(!storeClassRules?.length) await loadClassificationRules();
+  const rcpRules=(storeClassRules||[]).filter(r=>r.tx_type==='receipt'||r.tx_type==='both');
+  if(!rcpRules.length) return list;
+  list.forEach(item=>{
+    const itemText=(item.item||'').toLowerCase();
+    const vendorText=(item.vendor||'').toLowerCase();
+    for(const r of rcpRules){
+      const kw=r.keyword.toLowerCase();
+      let matched=false;
+      if(r.match_type==='exact') matched=(item.item===r.keyword||item.vendor===r.keyword);
+      else if(r.match_type==='regex'){try{matched=new RegExp(r.keyword,'i').test(item.item+' '+item.vendor);}catch(e){}}
+      else matched=itemText.includes(kw)||vendorText.includes(kw);
+      if(matched){
+        item.category=r.sub_category?`${r.category}>${r.sub_category}`:r.category;
+        item._ruleMatched=true;
+        break;
+      }
+    }
+  });
+  return list;
+}
+
 async function runAI() {
   if(!b64) return toast('이미지를 먼저 업로드해주세요.','warn');
   setLoad(true,'AI 분석 중...');
   try {
-    const hints = await getVendorHints();
     const catList = getCatListForPrompt();
     const prompt=`한국 영수증/거래명세서를 분석해 JSON 배열로만 응답하세요. 설명/주석 금지.
 
@@ -2221,11 +2244,13 @@ async function runAI() {
 [
  {"date":"2025-08-13","vendor":"대봄야채","item":"양파 10kg","unitPrice":15000,"qty":2,"totalPrice":30000,"category":"식자재>거래처"},
  {"date":"2025-08-13","vendor":"이마트","item":"휴지 30롤 (행사)","unitPrice":null,"qty":1,"totalPrice":12900,"category":"비품"}
-]${hints}`;
-    const list=await callGemini([
+]`;
+    let list=await callGemini([
       {text:prompt},
       {inline_data:{mime_type:'image/jpeg',data:b64}}
     ]);
+    // DB 규칙으로 카테고리 덮어쓰기 (학습된 품목은 AI 판단 무시)
+    list=await applyRulesToReceipt(list);
     rowCount=0;
     document.getElementById('resTable').innerHTML=list.map(i=>buildReceiptRow(i)).join('');
     rowCount=list.length;
@@ -2235,12 +2260,13 @@ async function runAI() {
 }
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
+  const ruleBadge=i._ruleMatched?'<span title="학습된 분류" style="font-size:10px;color:var(--success);margin-right:2px;">✨</span>':'';
   return `<tr id="row-${idx}">
     <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" onclick="openReasonSheet(${idx})">X</button></td>
     <td><input type="text" class="c-v" value="${i.vendor||''}"></td>
     <td><input type="text" class="c-i" value="${i.item||''}"></td>
     <td><input type="number" class="c-p" value="${i.totalPrice||0}"></td>
-    <td><input type="text" class="c-c" value="${i.category||''}"></td>
+    <td>${ruleBadge}<input type="text" class="c-c" value="${i.category||''}"></td>
     <input type="hidden" class="c-u" value="${i.unitPrice||''}">
     <input type="hidden" class="c-q" value="${i.qty||1}">
     <input type="hidden" class="c-d" value="${i.date||new Date().toISOString().split('T')[0]}">
@@ -2285,6 +2311,14 @@ async function saveReceipt(){
   const {error}=await sb.from('receipts').insert(rows);
   setLoad(false);
   if(error) return toast('저장 실패: '+error.message,'error');
+  // 자동 학습: 품목→카테고리 규칙 저장 (정상 행만, 매장별)
+  rows.filter(r=>r.note==='정상'&&r.item&&r.category).forEach(r=>{
+    // "식자재>거래처" 형식 파싱
+    const parts=String(r.category).split('>').map(s=>s.trim());
+    const mainCat=parts[0]||'';
+    const subCat=parts[1]||'';
+    if(mainCat) learnClassification(r.item.trim(),mainCat,subCat,'receipt',false).catch(()=>{});
+  });
   toast('저장 완료!','success');resetReceipt();
 }
 
@@ -6450,13 +6484,24 @@ function classifyByKeyword(desc, type){
 // ─── 자동 학습: 수동 분류 시 DB 규칙 자동 저장 ───
 async function learnClassification(keyword,category,sub_category,type,exclude){
   if(!currentStore||!keyword||keyword.length<2) return;
-  // 공통 규칙에 이미 매칭되는 키워드는 학습 안 함
-  const commonRules=type==='bank'?COMMON_BANK_RULES:COMMON_CARD_RULES;
-  for(const r of commonRules){if(r.p.test(keyword)) return;}
-  // 이미 있는 규칙이면 스킵
+  if(!category||category==='미분류') return;
+  // 공통 규칙(bank/card)에 이미 매칭되는 키워드는 학습 안 함
+  if(type==='bank'||type==='card'){
+    const commonRules=type==='bank'?COMMON_BANK_RULES:COMMON_CARD_RULES;
+    for(const r of commonRules){if(r.p.test(keyword)) return;}
+  }
   const kwLower=keyword.toLowerCase();
-  if(storeClassRules.find(r=>r.keyword.toLowerCase()===kwLower&&(r.tx_type===type||r.tx_type==='both'))) return;
-  const rule={store_id:currentStore.id,keyword:keyword,match_type:'contains',tx_type:type||'both',category:category,sub_category:sub_category||'',exclude_from_settlement:!!exclude,priority:100};
+  const existing=storeClassRules.find(r=>r.keyword.toLowerCase()===kwLower&&(r.tx_type===type||r.tx_type==='both'));
+  if(existing){
+    // 값 동일 → 스킵, 다르면 UPDATE (사장님이 수정한 최신값 반영)
+    if(existing.category===category && (existing.sub_category||'')===(sub_category||'')) return;
+    await sb.from('classification_rules').update({category,sub_category:sub_category||'',exclude_from_settlement:!!exclude}).eq('id',existing.id);
+    existing.category=category;
+    existing.sub_category=sub_category||'';
+    existing.exclude_from_settlement=!!exclude;
+    return;
+  }
+  const rule={store_id:currentStore.id,keyword,match_type:'contains',tx_type:type||'both',category,sub_category:sub_category||'',exclude_from_settlement:!!exclude,priority:100};
   const{data}=await sb.from('classification_rules').insert(rule).select().single();
   if(data) storeClassRules.push(data);
 }
