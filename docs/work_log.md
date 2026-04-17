@@ -4,6 +4,64 @@
 
 ---
 
+## [2026-04-17] 코드 구조 개선 로드맵 Phase 2a — store_id 필터 누락 감사 + 수정
+
+### 상태: 구현완료 (배포 대기)
+### 브랜치: claude/review-docs-deployment-JjQkV
+### 백업 커밋: 12d7a70
+
+### 배경
+Supabase RLS 비활성 상태이므로 클라이언트 레이어 `.eq('store_id', currentStore.id)` 필터가 다매장 데이터 격리의 유일한 방어선. 다음 매장 추가 시(예: 대전점) 누락 곳에서 데이터 혼입·노출 위험. 본 작업은 사장님 B안(방어적) 승인하에 진행.
+
+### 절차 (제11조 6단계 준수)
+
+**11-1 사전 스캔**:
+- /tmp/phase2a/audit.py 작성 → sb.from(...) 호출 136개 전수 추출 후 체인 분석
+- 분류 결과 (1차): A=97 / B=1 / C=17 / D=21
+- 사장님 중간 리포트 + 재승인 (B안: C+D 전부 수정)
+- C 17건 수동 검증 → **11건 false positive 발견** (payload 변수가 sb.from 위에 정의돼 있어 audit script 한계). 진짜 C는 5건.
+- 최종 수정 대상: D 21 + C 5 = **26건**
+
+**11-2 백업 커밋**: 12d7a70 (빈 커밋, 롤백 지점)
+
+**11-3 스크립트화**: 
+- /tmp/phase2a/patch.py — 라인번호 + 패턴타입(eq_id/in_id/select_eq) + store 변수명 매핑
+- 변환 결과: 성공 26 / 실패 0
+- /tmp/phase2a/index.html.bak 보존
+
+**11-4 사후 검증 (3단 게이트)**:
+1. 구문: node --check (script 블록 추출) 통과
+2. 잔재: audit 재실행 → D 21→0, C 17→12 (12건은 검증 완료 false positive)
+3. 샘플: diff 26줄 전수 육안 — 패턴 일관성 확인
+
+**11-5 기록**: 본 항목 + dev_lessons #28 신설
+
+**11-6 배포 전 체크**: 6항목 전부 통과 후 main 머지
+
+### 수정 카테고리
+| 분류 | 패턴 | 건수 |
+|------|------|------|
+| D | `.eq('id', X).update/.delete` → `.eq('id', X).eq('store_id', currentStore.id)` 추가 | 21 |
+| C-eq | `.eq('id', X)` 단일 행 update | 1 (5016) |
+| C-in | `.in('id', list).update/.delete` → `.eq('store_id')` 추가 | 2 (5014, 5776) |
+| C-select | `.select(...).eq('category_id', ...)` → `.eq('store_id', sid)` 추가 | 3 (5477, 5484, 7147) |
+
+### False Positive 12건 (수정 불필요 — 이미 안전)
+- payload/rows 변수에 `store_id:currentStore.id` 사전 포함:
+  receipts(2356), attendance_logs(2990), caps_upload_staging(2992), work_schedules(3028), 
+  vendor_orders(4233), fixed_cost_amounts(4301), store_settings(4615/4641), 
+  special_wages(4673), classification_rules(6471/6550), mydata_transactions(6967)
+
+### DB 변경
+- 없음 (코드만)
+
+### 다음 단계 (Phase 2b — 별도 세션)
+- RLS 활성화 SQL + 롤백 SQL 준비
+- store_settings 등 모든 테이블에 `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` + `CREATE POLICY ... USING (true)` 1차 (방어막 2중화 후 점진적 강화)
+- Cloudflare Worker 프록시 검토 (anon key 노출 대안)
+
+---
+
 ## [2026-04-17] 코드 구조 개선 로드맵 Phase 0·1 — 인라인 핸들러 제거
 
 ### 상태: 구현완료 (배포 대기)

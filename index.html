@@ -2529,7 +2529,7 @@ async function checkOut(){
   const appIn=new Date(record.app_in);
   const w=await calcWageData(empId, appIn, now, today, null);
   setLoad(true,'퇴근 처리 중...');
-  const{error}=await sb.from('attendance_logs').update({app_out:now.toISOString(),rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage,check_out_ip:ipCheck.ip||null}).eq('id',record.id);
+  const{error}=await sb.from('attendance_logs').update({app_out:now.toISOString(),rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage,check_out_ip:ipCheck.ip||null}).eq('id',record.id).eq('store_id',currentStore.id);
   setLoad(false);
   if(error) return toast('퇴근 처리 실패: '+error.message,'error');
   await loadTodayRecord();
@@ -2770,7 +2770,7 @@ async function saveEditAttendance(){
   const w=await calcWageData(empId,appIn,appOut,date,restMin);
   setLoad(true,'수정 중...');
   const payload={app_in:appIn.toISOString(),app_out:appOut?.toISOString()||null,rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage};
-  const{error}=await sb.from('attendance_logs').update(payload).eq('id',attId);
+  const{error}=await sb.from('attendance_logs').update(payload).eq('id',attId).eq('store_id',currentStore.id);
   setLoad(false);
   if(error) return toast('수정 실패: '+error.message,'error');
   toast('근태 기록 수정 완료!','success');
@@ -2780,7 +2780,7 @@ async function deleteAttendance(){
   const attId=document.getElementById('editAttId').value;
   if(!confirm('이 근태 기록을 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.')) return;
   setLoad(true,'삭제 중...');
-  const{error}=await sb.from('attendance_logs').delete().eq('id',attId);
+  const{error}=await sb.from('attendance_logs').delete().eq('id',attId).eq('store_id',currentStore.id);
   setLoad(false);
   if(error) return toast('삭제 실패: '+error.message,'error');
   toast('기록 삭제 완료','success');
@@ -2986,7 +2986,7 @@ async function commitCaps(){
       const w=await calcWageData(g.empId, capsIn, capsOut, g.date, null);
       const{data:ex}=await sb.from('attendance_logs').select('id,app_in,app_out').eq('store_id',currentStore.id).eq('employee_id',g.empId).eq('work_date',g.date).maybeSingle();
       const payload={store_id:currentStore.id,employee_id:g.empId,work_date:g.date,caps_in:capsIn?.toISOString()||null,caps_out:capsOut?.toISOString()||null,caps_out_source:capsOutSource,rest_min:w.restMin,total_work_min:w.totalMin,night_min:w.nightMin,weekend_flag:w.isWeekend,calculated_wage:w.wage,caps_match_status:capsIn&&capsOut?'정상매칭':(capsIn?'퇴근누락':'출근누락')};
-      if(ex){payload.app_in=ex.app_in;payload.app_out=ex.app_out;if(capsIn&&ex.app_in){const df=Math.round((capsIn-new Date(ex.app_in))/60000);payload.time_diff_min=df;payload.caps_match_status=Math.abs(df)>10?'시간오차':'정상매칭';}await sb.from('attendance_logs').update(payload).eq('id',ex.id);}
+      if(ex){payload.app_in=ex.app_in;payload.app_out=ex.app_out;if(capsIn&&ex.app_in){const df=Math.round((capsIn-new Date(ex.app_in))/60000);payload.time_diff_min=df;payload.caps_match_status=Math.abs(df)>10?'시간오차':'정상매칭';}await sb.from('attendance_logs').update(payload).eq('id',ex.id).eq('store_id',currentStore.id);}
       else await sb.from('attendance_logs').insert(payload);
     }
     await sb.from('caps_upload_staging').insert(stagingData.map(r=>({...r})));
@@ -4150,7 +4150,7 @@ async function saveVendor(){
 }
 async function toggleVendor(id,active){
   const msg=active?'거래처를 재개하시겠습니까?':'거래종료 처리하시겠습니까?\n(기존 거래내역은 유지됩니다)';
-  if(!confirm(msg))return;await sb.from('vendors').update({is_active:active}).eq('id',id);await loadVendors();
+  if(!confirm(msg))return;await sb.from('vendors').update({is_active:active}).eq('id',id).eq('store_id',currentStore.id);await loadVendors();
 }
 async function loadVendorOrders(){
   if(!guardStore())return;
@@ -4273,7 +4273,7 @@ async function saveFc(){
 }
 async function toggleFc(id,active){
   if(!confirm(active?'복원하시겠습니까?':'숨김 처리하시겠습니까?\n(과거 데이터는 유지됩니다)'))return;
-  await sb.from('fixed_costs').update({is_active:active}).eq('id',id);await loadFixedCosts();
+  await sb.from('fixed_costs').update({is_active:active}).eq('id',id).eq('store_id',currentStore.id);await loadFixedCosts();
 }
 let fcMonthStr2=new Date().toISOString().slice(0,7);
 function moveFcMonth(dir){const d=new Date(fcMonthStr2+'-01');d.setMonth(d.getMonth()+dir);fcMonthStr2=d.toISOString().slice(0,7);loadFcMonthly();}
@@ -4425,10 +4425,10 @@ async function saveEmployee(){
   // 권한은 관리자만 변경 가능
   if(isManager){const selAuth=document.getElementById('empAuthLevel').value||'staff';payload.auth_level=selAuth;payload.is_manager=selAuth!=='staff';}
   setLoad(true,'저장 중...');const eid=document.getElementById('editEmpId').value;
-  const{error}=eid?await sb.from('employees').update(payload).eq('id',eid):await sb.from('employees').insert(payload);
+  const{error}=eid?await sb.from('employees').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('employees').insert(payload);
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadEmployees();
 }
-async function toggleEmp(id,active){if(!confirm(active?'복직?':'퇴사?'))return;await sb.from('employees').update({is_active:active,resign_date:active?null:new Date().toISOString().split('T')[0]}).eq('id',id);await loadEmployees();}
+async function toggleEmp(id,active){if(!confirm(active?'복직?':'퇴사?'))return;await sb.from('employees').update({is_active:active,resign_date:active?null:new Date().toISOString().split('T')[0]}).eq('id',id).eq('store_id',currentStore.id);await loadEmployees();}
 
 // ─── 서류 첨부 업로드/삭제 ───
 const DOC_COL_MAP={Contract:'doc_contract',Health:'doc_health_cert',Minor:'doc_minor_consent',Foreigner:'doc_foreigner_id'};
@@ -4458,7 +4458,7 @@ async function uploadDocFile(key,file){
   const publicUrl=urlData?.publicUrl||'';
   // DB 업데이트
   const col=DOC_COL_MAP[key];
-  const{error:dbErr}=await sb.from('employees').update({[col]:publicUrl}).eq('id',eid);
+  const{error:dbErr}=await sb.from('employees').update({[col]:publicUrl}).eq('id',eid).eq('store_id',currentStore.id);
   setLoad(false);
   if(dbErr){toast('DB 저장 실패: '+dbErr.message,'error');return;}
   updateDocStatus(key,publicUrl);
@@ -4481,7 +4481,7 @@ async function deleteDocFile(keyLower){
   await sb.storage.from('employee-docs').remove(paths);
   // DB null 처리
   const col=DOC_COL_MAP[key];
-  await sb.from('employees').update({[col]:null}).eq('id',eid);
+  await sb.from('employees').update({[col]:null}).eq('id',eid).eq('store_id',currentStore.id);
   setLoad(false);
   updateDocStatus(key,null);
   if(key==='Health') document.getElementById('empDocHealthExpiresWrap').style.display='none';
@@ -4499,7 +4499,7 @@ function renderRoleList(){const c=document.getElementById('roleList');if(!c)retu
 function openAddRoleSheet(){if(!guardStore())return;document.getElementById('addRoleTitle').innerText='직급 추가';document.getElementById('roleNameInput').value='';document.getElementById('roleLevelInput').value=roles.length+1;document.getElementById('editRoleId').value='';openSheet('addRoleSheet');}
 function openEditRoleSheet(id){const r=roles.find(x=>x.id===id);if(!r)return;document.getElementById('addRoleTitle').innerText='직급 편집';document.getElementById('roleNameInput').value=r.name;document.getElementById('roleLevelInput').value=r.level;document.getElementById('editRoleId').value=r.id;openSheet('addRoleSheet');}
 async function saveRole(){if(!guardStore())return;const name=document.getElementById('roleNameInput').value.trim();const level=parseInt(document.getElementById('roleLevelInput').value)||9;if(!name)return toast('직급명을 입력하세요.','warn');const rid=document.getElementById('editRoleId').value;setLoad(true,'저장 중...');const{error}=rid?await sb.from('roles').update({name,level}).eq('id',rid):await sb.from('roles').insert({store_id:currentStore.id,name,level});setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadRoles(true);}
-async function deleteRole(id,name){if(employees.some(e=>e.role===name))return toast(`'${name}' 직급 사용 중인 직원이 있습니다.`,'warn');if(!confirm(`'${name}' 직급을 삭제하시겠습니까?`))return;await sb.from('roles').delete().eq('id',id);await loadRoles(true);}
+async function deleteRole(id,name){if(employees.some(e=>e.role===name))return toast(`'${name}' 직급 사용 중인 직원이 있습니다.`,'warn');if(!confirm(`'${name}' 직급을 삭제하시겠습니까?`))return;await sb.from('roles').delete().eq('id',id).eq('store_id',currentStore.id);await loadRoles(true);}
 
 // 권한 관리
 async function loadPermissions(){
@@ -4510,7 +4510,7 @@ async function loadPermissions(){
   const eEl=document.getElementById('empPermList');if(eEl)eEl.innerHTML=(ed||[]).map(e=>`<div class="perm-item"><div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.name} ${e.role?`<span class="badge badge-blue" style="font-size:10px;">${e.role}</span>`:''} ${!e.is_approved?'<span class="badge badge-warn" style="font-size:10px;">미승인</span>':''}</div><div style="font-size:11px;color:var(--gray-600);">개별 관리자 권한</div></div><div style="display:flex;align-items:center;gap:10px;">${!e.is_approved?`<button class="btn btn-success btn-sm" data-action="approveEmp|${e.id}">승인</button>`:''}<label class="toggle-wrap"><input type="checkbox" ${e.is_manager?'checked':''} data-change="toggleEmpPermEvt|${e.id}|this"><span class="toggle-slider"></span></label></div></div>`).join('')||'<div class="empty-state" style="padding:12px;"><p>직원이 없습니다</p></div>';
 }
 async function toggleRolePerm(roleId,roleName,checked){await sb.from('roles').update({is_manager_role:checked}).eq('id',roleId);await sb.from('employees').update({is_manager:checked,auth_level:checked?'store_manager':'staff'}).eq('store_id',currentStore.id).eq('role',roleName);}
-async function toggleEmpPerm(empId,checked){await sb.from('employees').update({is_manager:checked,auth_level:checked?'store_manager':'staff'}).eq('id',empId);}
+async function toggleEmpPerm(empId,checked){await sb.from('employees').update({is_manager:checked,auth_level:checked?'store_manager':'staff'}).eq('id',empId).eq('store_id',currentStore.id);}
 async function approveEmp(empId){if(!confirm('승인하시겠습니까?'))return;await sb.from('employees').update({is_approved:true,is_active:true,store_id:currentStore.id}).eq('id',empId);toast('승인 완료!','success');loadPermissions();}
 
 // ══════════════════════════════════════════
@@ -4854,7 +4854,7 @@ async function recalcMonthWages(){
     // 야간 계산 간소화: total_work_min 기반
     const nE=0; // 야간수당은 기존 기록 유지 (재계산 시 정확도 이슈)
     const wage=Math.round((r.total_work_min/60)*(emp.base_wage+wE+nE+spE));
-    await sb.from('attendance_logs').update({calculated_wage:wage}).eq('id',r.id);
+    await sb.from('attendance_logs').update({calculated_wage:wage}).eq('id',r.id).eq('store_id',currentStore.id);
     updated++;
   }
   setLoad(false);
@@ -4996,7 +4996,7 @@ async function saveExpCat(){
   const eid=document.getElementById('editExpCatId').value;
   setLoad(true,'저장 중...');
   const payload={store_id:currentStore.id,name,data_source:src,color,vendor_category:vendorCat||null,sort_order:expCategories.length,parent_id:editExpCatParentId||null};
-  const{error}=eid?await sb.from('expense_categories').update(payload).eq('id',eid):await sb.from('expense_categories').insert(payload);
+  const{error}=eid?await sb.from('expense_categories').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('expense_categories').insert(payload);
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');
   closeAllSheets();await loadExpCategories();
 }
@@ -5011,9 +5011,9 @@ async function deleteExpCat(id,name){
   // 소분류도 함께 비활성화
   if(children.length){
     const childIds=children.map(c=>c.id);
-    await sb.from('expense_categories').update({is_active:false}).in('id',childIds);
+    await sb.from('expense_categories').update({is_active:false}).in('id',childIds).eq('store_id',currentStore.id);
   }
-  await sb.from('expense_categories').update({is_active:false}).eq('id',id);
+  await sb.from('expense_categories').update({is_active:false}).eq('id',id).eq('store_id',currentStore.id);
   await loadExpCategories();
 }
 
@@ -5474,14 +5474,14 @@ async function calcExpenseByCategories(ym, mode){
           const{data}=await sb.from('receipts').select('total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end);
           amount=(data||[]).reduce((a,r)=>a+(r.total_price||0),0);
         } else if(cat.data_source==='attendance'){
-          const{data:confirmed}=await sb.from('expense_category_amounts').select('amount').eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
+          const{data:confirmed}=await sb.from('expense_category_amounts').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
           if(confirmed?.amount){amount=confirmed.amount;isConfirmed=true;}
           else{const{data}=await sb.from('attendance_logs').select('calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end);amount=(data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);laborAutoAmount=amount;}
         } else if(cat.data_source==='fixed_costs'){
           const{data}=await sb.from('fixed_cost_amounts').select('amount').eq('store_id',sid).eq('year_month',ym);
           amount=(data||[]).reduce((a,r)=>a+(r.amount||0),0);
         } else if(cat.data_source==='manual'){
-          const{data}=await sb.from('expense_category_amounts').select('amount').eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
+          const{data}=await sb.from('expense_category_amounts').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
           amount=data?.amount||0;
         }
         // 가마감에서도 기록 없으면 mydata로 보충
@@ -5617,7 +5617,7 @@ async function addCardAccount(){
 
 async function disconnectMyData(id){
   if(!confirm('이 계정 연결을 해제할까요?'))return;
-  await sb.from('mydata_accounts').update({is_active:false}).eq('id',id);
+  await sb.from('mydata_accounts').update({is_active:false}).eq('id',id).eq('store_id',currentStore.id);
   toast('연결 해제 완료','info');
   await loadMyDataStatus();checkMyDataConnection();
 }
@@ -5756,7 +5756,7 @@ function renderCardTxTable(){
 // ─── 거래 내역 삭제 ───
 async function deleteTxRow(id,type){
   if(!confirm('이 거래 1건을 삭제할까요?'))return;
-  const{error}=await sb.from('mydata_transactions').delete().eq('id',id);
+  const{error}=await sb.from('mydata_transactions').delete().eq('id',id).eq('store_id',currentStore.id);
   if(error){toast('삭제 실패: '+error.message,'error');return;}
   if(type==='bank'){bankTxData=bankTxData.filter(r=>r.id!==id);renderBankTxTable();}
   else{cardTxData=cardTxData.filter(r=>r.id!==id);renderCardTxTable();}
@@ -5773,7 +5773,7 @@ async function deleteTxMonth(type){
   // 100건씩 나눠서 삭제
   for(let i=0;i<ids.length;i+=100){
     const chunk=ids.slice(i,i+100);
-    const{error}=await sb.from('mydata_transactions').delete().in('id',chunk);
+    const{error}=await sb.from('mydata_transactions').delete().in('id',chunk).eq('store_id',currentStore.id);
     if(error){setLoad(false);toast('삭제 실패: '+error.message,'error');return;}
   }
   setLoad(false);
@@ -6029,7 +6029,7 @@ function openCatEdit(txId,currentCat){
     const catId=selectedId||findCatId(selected)||null;
     const isExclude=['카드대금','배당금'].includes(selected);
     // DB 업데이트
-    const{error}=await sb.from('mydata_transactions').update({category:selected,category_id:catId,sub_category:selected,needs_review:false,confidence:'manual',exclude_from_settlement:isExclude}).eq('id',txId);
+    const{error}=await sb.from('mydata_transactions').update({category:selected,category_id:catId,sub_category:selected,needs_review:false,confidence:'manual',exclude_from_settlement:isExclude}).eq('id',txId).eq('store_id',currentStore.id);
     popup.remove();
     if(error){toast('수정 실패','error');return;}
     toast('분류 변경 완료','success');
@@ -6239,7 +6239,7 @@ async function checkDeviceForAttendance(empId){
   if(!emp) return {ok:false,fp,msg:'직원 정보를 찾을 수 없습니다.'};
   // 미등록 상태 → 자동 등록
   if(!emp.device_fingerprint){
-    const{error}=await sb.from('employees').update({device_fingerprint:fp}).eq('id',empId);
+    const{error}=await sb.from('employees').update({device_fingerprint:fp}).eq('id',empId).eq('store_id',currentStore.id);
     if(!error) emp.device_fingerprint=fp; // 로컬 캐시도 업데이트
     return {ok:true,fp,msg:'기기 최초 등록 완료',firstReg:true};
   }
@@ -6251,7 +6251,7 @@ async function resetDeviceFingerprint(empId){
   // 관리자용: 직원 기기 지문 초기화
   if(!confirm('이 직원의 등록 기기를 초기화합니다.\n다음 출근 시 새 기기가 자동 등록됩니다.')) return;
   setLoad(true,'초기화 중...');
-  const{error}=await sb.from('employees').update({device_fingerprint:null}).eq('id',empId);
+  const{error}=await sb.from('employees').update({device_fingerprint:null}).eq('id',empId).eq('store_id',currentStore.id);
   setLoad(false);
   if(error) return toast('초기화 실패: '+error.message,'error');
   const emp=employees.find(e=>e.id===empId);
@@ -6540,7 +6540,7 @@ async function learnClassification(keyword,category,sub_category,type,exclude){
   if(existing){
     // 값 동일 → 스킵, 다르면 UPDATE (사장님이 수정한 최신값 반영)
     if(existing.category===category && (existing.sub_category||'')===(sub_category||'')) return;
-    await sb.from('classification_rules').update({category,sub_category:sub_category||'',exclude_from_settlement:!!exclude}).eq('id',existing.id);
+    await sb.from('classification_rules').update({category,sub_category:sub_category||'',exclude_from_settlement:!!exclude}).eq('id',existing.id).eq('store_id',currentStore.id);
     existing.category=category;
     existing.sub_category=sub_category||'';
     existing.exclude_from_settlement=!!exclude;
@@ -7144,7 +7144,7 @@ async function loadReconciliation(){
     // 수동 카테고리 recorded 금액
     for(const entry of summary){
       if(entry.source==='manual'&&entry.details.length){
-        const{data}=await sb.from('expense_category_amounts').select('amount').eq('category_id',entry.categoryId).eq('year_month',ym).maybeSingle();
+        const{data}=await sb.from('expense_category_amounts').select('amount').eq('store_id',sid).eq('category_id',entry.categoryId).eq('year_month',ym).maybeSingle();
         const amt=data?.amount||0;
         entry.recorded=amt;entry.details[0].recorded=amt;
       }
