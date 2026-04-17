@@ -168,7 +168,7 @@ to: [다음 에이전트]
 ## 제6조. 프로젝트 현황
 
 ### 기술 스택
-- **프론트**: 단일 `index.html` (HTML + CSS + 바닐라 JS, 3400줄)
+- **프론트**: 단일 `index.html` (HTML + CSS + 바닐라 JS, 약 7,500줄 / CSS 434 · HTML 1,461 · JS 5,629)
 - **백엔드/DB**: Supabase (상세: `docs/db_schema.md` 참조)
 - **배포**: Cloudflare Pages → `pongdang-shabu.pages.dev`
 - **레포**: `luxuryguy562-cmyk/pongdang-shabu`

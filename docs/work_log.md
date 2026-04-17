@@ -4,6 +4,44 @@
 
 ---
 
+## [2026-04-17] 코드 구조 개선 로드맵 Phase 0·1 — 인라인 핸들러 제거
+
+### 상태: 진행중
+### 브랜치: claude/review-code-structure-scaDn
+
+### 배경
+전수 리뷰 결과 index.html이 3,400줄 → 7,535줄로 비대화. dev_lessons #1(CSP 인라인 핸들러 금지) 규칙이 있음에도 onclick 208개·onchange 28개가 방치돼 있어, CSP 강화 시 대규모 장애 위험. 6개 구조 개선 과제를 4단계 로드맵으로 분할.
+
+### 로드맵 (4단계)
+- **Phase 0 (소형)**: CLAUDE.md / plan.md / work_log.md 실제치 동기화 — 이번 세션
+- **Phase 1 (중형)**: onclick 208·onchange 28 → data-action + 중앙 이벤트 위임 — 이번 세션
+- **Phase 2 (대형)**: store_id 누락 감사 + RLS 준비 — 사장님 승인 후 별도 세션
+- **Phase 3 (중형)**: loadDashboard 583줄 분할
+- **Phase 4 (중형)**: openAdd/Edit*Sheet 제너릭화
+- **Phase 5 (중형)**: 전역 상태 네임스페이스 state.*
+
+### Phase 0 내용
+- CLAUDE.md 제6조 라인수 "3400줄" → "약 7,500줄 (CSS 434 · HTML 1,461 · JS 5,629)"
+- plan.md 최종 업데이트일 갱신
+- 본 항목 추가
+
+### Phase 1 내용
+- 중앙 이벤트 위임 라우터 추가: `document.addEventListener('click', ...)`
+- 기존 `onclick="foo()"` → `data-action="foo"` 치환
+- 인자 있는 경우 `data-action="foo|arg1|arg2"` 파이프 구분자
+- `this` 참조는 특수 토큰 "this"
+- 복합 호출(`closeSideMenu();nav('x')`)은 래퍼 함수 도입
+- change/input/blur 등 다른 이벤트는 별도 `data-change` / `data-input` 처리
+
+### DB 변경
+- 없음
+
+### 다음 TODO
+- Phase 2: store_id 필터 누락 58곳 전수 감사 보고서
+- Phase 3~5: 별도 세션
+
+---
+
 ## [2026-04-17] 엑셀 분류 DB 범용화 + 직원 서류 + 영수증 학습 + 버그 수정
 
 ### 상태: 배포완료
