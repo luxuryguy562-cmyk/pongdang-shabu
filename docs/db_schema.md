@@ -122,8 +122,10 @@ franchises (프랜차이즈/브랜드)
 | 컬럼 | 용도 |
 |------|------|
 | store_id | 매장 |
-| date, vendor, category, item | 날짜/거래처/분류/품목 |
+| receipt_date, vendor, category, item | 날짜/거래처/분류(문자열)/품목 |
+| category_id (FK→expense_categories) | 카테고리 FK (신규) |
 | price, count, total_price (int) | 단가/수량/합계 |
+| note | 정상/오답/반품 등 |
 | created_at | 등록일시 |
 
 ### settlements

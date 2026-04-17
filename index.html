@@ -2156,9 +2156,9 @@ function handleImg(input) {
     const img = new Image();
     img.onload = () => {
       const cvs = document.createElement('canvas');
-      let w=img.width,h=img.height; if(w>800){h*=800/w;w=800;}
+      let w=img.width,h=img.height; if(w>1600){h*=1600/w;w=1600;}
       cvs.width=w;cvs.height=h;cvs.getContext('2d').drawImage(img,0,0,w,h);
-      b64 = cvs.toDataURL('image/jpeg',0.7).split(',')[1];
+      b64 = cvs.toDataURL('image/jpeg',0.85).split(',')[1];
       document.getElementById('imgPreview').src=cvs.toDataURL('image/jpeg');
       document.getElementById('imgPreview').style.display='block';
       document.getElementById('uploadGroup').style.display='none';
@@ -2176,16 +2176,54 @@ async function getVendorHints() {
     const map={};
     data.forEach(r=>{if(!map[r.vendor])map[r.vendor]={};map[r.vendor][r.category]=(map[r.vendor][r.category]||0)+1;});
     const hints=Object.entries(map).map(([v,cats])=>{const top=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0][0];return `${v}→${top}`;}).join(', ');
-    return hints?`\n\n과거 거래처-카테고리 힌트: ${hints}`:'';
+    return hints?`\n\n[과거 거래처→카테고리 힌트]\n${hints}`:'';
   } catch{return '';}
+}
+// DB 카테고리 목록 → 프롬프트 리스트
+function getCatListForPrompt(){
+  const cats=(expCategories||[]).filter(c=>c.is_active!==false);
+  if(!cats.length) return '식자재,비품,인건비,고정비,세금,마케팅,기타';
+  // 소분류 있으면 "대분류>소분류" 형식, 없으면 대분류명만
+  const parents=cats.filter(c=>!c.parent_id);
+  return parents.map(p=>{
+    const children=cats.filter(c=>c.parent_id===p.id);
+    return children.length?children.map(ch=>`${p.name}>${ch.name}`).join(',')+`,${p.name}`:p.name;
+  }).join(',');
 }
 async function runAI() {
   if(!b64) return toast('이미지를 먼저 업로드해주세요.','warn');
   setLoad(true,'AI 분석 중...');
   try {
     const hints = await getVendorHints();
+    const catList = getCatListForPrompt();
+    const prompt=`한국 영수증/거래명세서를 분석해 JSON 배열로만 응답하세요. 설명/주석 금지.
+
+[필드]
+- date: YYYY-MM-DD (거래일시. "2025.08.13" "25-08-13" "8/13" 모두 인식. 없으면 오늘)
+- vendor: 상호명만 추출 (사업자번호/주소/전화/"감사합니다"/"영수증" 등 제외)
+- item: 품목명 (여러 개면 각 행으로 분리)
+- unitPrice: 단가 (숫자, 없으면 null)
+- qty: 수량 (정수, 없으면 1)
+- totalPrice: 실제 결제 금액 (할인/쿠폰 반영 후 최종가, 원 단위 정수)
+- category: 아래 목록에서 가장 적합한 하나 정확히 복붙
+  [${catList}]
+
+[규칙]
+1. "합계/소계/부가세/봉사료/결제금액" 같은 요약 행은 제외
+2. 마트 할인 처리: "김치 5,000원 → 할인 -500 → 4,500원"이면 totalPrice=4500 (할인 후 금액만)
+3. 행사가/할인가 표시되면 할인가를 totalPrice로 (원가 X)
+4. 상호명 못찾으면 vendor=""
+5. 숫자에서 쉼표/원 기호 제거, 음수 금지
+6. 흐릿해도 근접 추정 (빈 배열 금지)
+7. 품목별 category 각각 판단 (한 영수증이어도 다를 수 있음)
+
+[예시]
+[
+ {"date":"2025-08-13","vendor":"대봄야채","item":"양파 10kg","unitPrice":15000,"qty":2,"totalPrice":30000,"category":"식자재>거래처"},
+ {"date":"2025-08-13","vendor":"이마트","item":"휴지 30롤 (행사)","unitPrice":null,"qty":1,"totalPrice":12900,"category":"비품"}
+]${hints}`;
     const list=await callGemini([
-      {text:`영수증을 분석하여 항목별 JSON 배열로 응답해. 필드: date(YYYY-MM-DD), vendor(거래처명), item(품목명), totalPrice(숫자), category(음식재료/소모품/간식/비품 중 선택). 품목이 여러 개면 각각 별도 행. 순수 JSON만.${hints}`},
+      {text:prompt},
       {inline_data:{mime_type:'image/jpeg',data:b64}}
     ]);
     rowCount=0;
@@ -2203,6 +2241,8 @@ function buildReceiptRow(i={}) {
     <td><input type="text" class="c-i" value="${i.item||''}"></td>
     <td><input type="number" class="c-p" value="${i.totalPrice||0}"></td>
     <td><input type="text" class="c-c" value="${i.category||''}"></td>
+    <input type="hidden" class="c-u" value="${i.unitPrice||''}">
+    <input type="hidden" class="c-q" value="${i.qty||1}">
     <input type="hidden" class="c-d" value="${i.date||new Date().toISOString().split('T')[0]}">
   </tr>`;
 }
@@ -2218,12 +2258,29 @@ function selectReason(r){
 }
 async function saveReceipt(){
   if(!guardStore()) return;
-  const rows=Array.from(document.querySelectorAll('#resTable tr')).map(tr=>({
-    store_id:currentStore.id,receipt_date:tr.querySelector('.c-d').value,
-    vendor:tr.querySelector('.c-v').value,item:tr.querySelector('.c-i').value,
-    total_price:parseInt(tr.querySelector('.c-p').value)||0,category:tr.querySelector('.c-c').value,
-    note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
-  }));
+  // DB 카테고리 이름→id 맵 (대분류>소분류 경로 포함)
+  const catById={};
+  (expCategories||[]).forEach(c=>{catById[c.name]=c.id;});
+  const resolveRcpCatId=cat=>{
+    if(!cat)return null;
+    // "식자재>거래처" 형식이면 소분류명 추출
+    const parts=String(cat).split('>').map(s=>s.trim());
+    const target=parts[parts.length-1]; // 마지막 = 최하위 소분류
+    return catById[target]||catById[parts[0]]||null;
+  };
+  const rows=Array.from(document.querySelectorAll('#resTable tr')).map(tr=>{
+    const cat=tr.querySelector('.c-c').value;
+    const unit=parseInt(tr.querySelector('.c-u')?.value)||null;
+    const qty=parseInt(tr.querySelector('.c-q')?.value)||1;
+    return {
+      store_id:currentStore.id,receipt_date:tr.querySelector('.c-d').value,
+      vendor:tr.querySelector('.c-v').value,item:tr.querySelector('.c-i').value,
+      price:unit,count:qty,
+      total_price:parseInt(tr.querySelector('.c-p').value)||0,
+      category:cat,category_id:resolveRcpCatId(cat),
+      note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
+    };
+  });
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').insert(rows);
   setLoad(false);
