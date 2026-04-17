@@ -4,6 +4,76 @@
 
 ---
 
+## [2026-04-17] 코드 구조 개선 로드맵 Phase 0·1 — 인라인 핸들러 제거
+
+### 상태: 구현완료 (배포 대기)
+### 브랜치: claude/review-code-structure-scaDn
+
+### 배경
+전수 리뷰 결과 index.html이 3,400줄 → 7,535줄로 비대화. dev_lessons #1(CSP 인라인 핸들러 금지) 규칙이 있음에도 onclick 208개·onchange 28개가 방치돼 있어, CSP 강화 시 대규모 장애 위험. 6개 구조 개선 과제를 4단계 로드맵으로 분할.
+
+### 로드맵 (4단계)
+- **Phase 0 (소형)**: CLAUDE.md / plan.md / work_log.md 실제치 동기화 — 이번 세션
+- **Phase 1 (중형)**: onclick 208·onchange 28 → data-action + 중앙 이벤트 위임 — 이번 세션
+- **Phase 2 (대형)**: store_id 누락 감사 + RLS 준비 — 사장님 승인 후 별도 세션
+- **Phase 3 (중형)**: loadDashboard 583줄 분할
+- **Phase 4 (중형)**: openAdd/Edit*Sheet 제너릭화
+- **Phase 5 (중형)**: 전역 상태 네임스페이스 state.*
+
+### Phase 0 내용
+- CLAUDE.md 제6조 라인수 "3400줄" → "약 7,500줄 (CSS 434 · HTML 1,461 · JS 5,629)"
+- plan.md 최종 업데이트일 갱신
+- 본 항목 추가
+
+### Phase 1 내용
+- 중앙 이벤트 위임 라우터 추가 (index.html 1961~2008행): `_parseActionArg` / `_dispatchAction`
+- DOMContentLoaded 최상단에 click/change/input 3개 전역 리스너 등록
+- 치환 결과: `onclick 211개 + onchange 25개 + oninput 15개 = 251개` 전부 data-* 속성으로 전환, **미변환 0건**
+- 인라인 onclick → `data-action`, onchange → `data-change`, oninput → `data-input`
+- 단순 호출: `foo('a',1)` → `foo|a|1`
+- 복합 호출(다중 호출·JS 표현식) 14개는 래퍼 함수로 등록:
+  `navFromSide`, `navHome`, `editEmpAfterClose`, `setGanttDay`, `setGanttAllDays`,
+  `removeParent`, `openEditAttByIdx`, `saveVendorUploadGlobal`,
+  `setFcAmount`, `setSpecialWageDate`, `setSpecialWageAmount`,
+  `toggleRolePermEvt`, `toggleEmpPermEvt`, `resetCurrentEmpDevice`
+- `event.stopPropagation()` 제거 — `closest('[data-action]')`가 innermost 자동 선택
+- node --check 구문 검증 통과
+- dev_lessons.md #1 해결 표시 + 현재 구조 설명 추가
+
+### DB 변경
+- 없음
+
+### 다음 세션 시작 방법 (복붙용)
+```
+docs 전부 읽고 (CLAUDE.md 제11조 특히, business_rules.md, dev_lessons.md,
+plan.md, db_schema.md, work_log.md 최상단 Phase 0·1 항목, services.md)
+절대 무시·생략 없이 준수.
+
+현재 브랜치: claude/review-code-structure-scaDn
+마지막 커밋: Phase 1 인라인 핸들러 251개 제거 (커밋 912042b)
+Phase 0·1 배포 확인 완료 가정하에,
+Phase 2 (store_id 필터 누락 58곳 감사 + RLS 준비)부터 이어서 진행.
+
+반드시:
+- CLAUDE.md 제11조 "대규모 변경 안전 절차" 6단계 따를 것
+- 계획서 먼저 제출하고 승인 받은 후 코드 수정 (제1조 1-1)
+- DB 변경은 실행 SQL + 롤백 SQL 모두 제출 (제8조)
+```
+
+### 이번 세션에서 얻은 교훈 → 헌법·교훈 반영 완료
+- CLAUDE.md 제11조 신설: "대규모 변경 안전 절차" (사전 스캔→백업→스크립트→3단 검증→기록)
+- dev_lessons.md #27 신설: 일괄 치환 스크립트화 원칙
+- dev_lessons.md #5 보강: 대규모 변경은 제11조 참조하도록 링크
+
+### 남은 로드맵 (Phase 2~5, 별도 세션 진행)
+- **Phase 2 (대형, 보안)**: store_id 누락 58곳 감사 + RLS 활성화 SQL + Cloudflare Worker 프록시 검토
+  - 전제: 사장님 Supabase 콘솔 접근 필요
+- **Phase 3 (중형)**: loadDashboard 583줄 분할 (3485~4067행)
+- **Phase 4 (중형)**: openAdd/Edit*Sheet 6곳 중복 → 제너릭화
+- **Phase 5 (중형)**: 전역 가변 상태 20+개 → state.* 네임스페이스
+
+---
+
 ## [2026-04-17] 엑셀 분류 DB 범용화 + 직원 서류 + 영수증 학습 + 버그 수정
 
 ### 상태: 배포완료

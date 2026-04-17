@@ -461,7 +461,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <input id="loginPinInput" class="input-field" placeholder="PIN 4자리" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
         style="flex:1;text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;letter-spacing:8px;margin-bottom:0;">
     </div>
-    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" onclick="submitLogin()">로그인</button>
+    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="submitLogin">로그인</button>
     <div id="loginMsg" style="margin-top:12px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
   </div>
   <!-- 기존 직원 리스트/PIN 패드 (숨김, 호환용) -->
@@ -473,112 +473,112 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;">
     <input id="loginAdminPin" class="input-field" placeholder="PIN 4자리" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
       style="text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;letter-spacing:8px;margin-bottom:12px;">
-    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" onclick="submitAdminLogin()">관리자 로그인</button>
+    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="submitAdminLogin">관리자 로그인</button>
   </div>
   <!-- 하단 버튼 -->
   <div style="margin-top:24px;display:flex;gap:10px;">
-    <button class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);" onclick="toggleAdminLogin()">관리자</button>
-    <button id="loginStoreBtn" class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);display:none;" onclick="openStoreSheet()">매장 변경</button>
+    <button class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);" data-action="toggleAdminLogin">관리자</button>
+    <button id="loginStoreBtn" class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);display:none;" data-action="openStoreSheet">매장 변경</button>
   </div>
 </div>
 
 <!-- 헤더 -->
 <div class="header">
   <div style="display:flex;align-items:center;gap:10px;">
-    <button id="hamburgerBtn" class="hamburger-btn manager-only" onclick="toggleSideMenu()">
+    <button id="hamburgerBtn" class="hamburger-btn manager-only" data-action="toggleSideMenu">
       <span></span><span></span><span></span>
     </button>
-    <div class="header-title" style="cursor:pointer;" onclick="nav(isManager?'dashboard':'attendance')">퐁당샤브</div>
+    <div class="header-title" style="cursor:pointer;" data-action="navHome">퐁당샤브</div>
   </div>
   <div style="display:flex;align-items:center;gap:6px;">
-    <div class="header-store" id="headerStore" onclick="openStoreSheet()">매장 선택</div>
-    <div class="header-user" id="headerUser" onclick="openMyInfoSheet()">개발모드</div>
+    <div class="header-store" id="headerStore" data-action="openStoreSheet">매장 선택</div>
+    <div class="header-user" id="headerUser" data-action="openMyInfoSheet">개발모드</div>
   </div>
 </div>
 
 <!-- 사이드 메뉴 오버레이 -->
-<div id="sideOverlay" onclick="closeSideMenu()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1500;"></div>
+<div id="sideOverlay" data-action="closeSideMenu" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1500;"></div>
 
 <!-- 사이드 메뉴 -->
 <div id="sideMenu" style="position:fixed;top:0;left:-280px;width:280px;height:100%;background:#fff;z-index:1600;transition:left .3s cubic-bezier(.2,.8,.4,1);overflow-y:auto;box-shadow:4px 0 20px rgba(0,0,0,0.12);">
   <div style="padding:20px 20px 12px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:10px;">
     <div style="width:36px;height:36px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">관</div>
     <div><div style="font-size:15px;font-weight:800;">관리자 메뉴</div><div style="font-size:11px;color:var(--gray-600);" id="sideStoreName">매장 선택 전</div></div>
-    <button onclick="closeSideMenu()" style="margin-left:auto;background:none;border:none;font-size:22px;color:var(--gray-400);cursor:pointer;">✕</button>
+    <button data-action="closeSideMenu" style="margin-left:auto;background:none;border:none;font-size:22px;color:var(--gray-400);cursor:pointer;">✕</button>
   </div>
   <div style="padding:12px 0;">
 
     <!-- 현황 -->
     <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
         <span>📊 현황</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('dashboard')">대시보드</div>
-        <div class="side-item" onclick="closeSideMenu();nav('reserve')">예비비</div>
-        <div class="side-item" onclick="closeSideMenu();nav('wage')">급여 집계</div>
+        <div class="side-item" data-action="navFromSide|dashboard">대시보드</div>
+        <div class="side-item" data-action="navFromSide|reserve">예비비</div>
+        <div class="side-item" data-action="navFromSide|wage">급여 집계</div>
       </div>
     </div>
 
     <!-- 지출내역 -->
     <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
         <span>📑 지출내역</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('explist')">계좌내역 · 카드내역</div>
-        <div class="side-item" onclick="closeSideMenu();nav('expcat')">지출 카테고리 설정</div>
+        <div class="side-item" data-action="navFromSide|explist">계좌내역 · 카드내역</div>
+        <div class="side-item" data-action="navFromSide|expcat">지출 카테고리 설정</div>
       </div>
     </div>
 
     <!-- 거래처 -->
     <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
         <span>🏪 거래처 관리</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('vendors')">거래처 매입 관리</div>
-        <div class="side-item" onclick="closeSideMenu();nav('vendorUpload')">파일 업로드</div>
+        <div class="side-item" data-action="navFromSide|vendors">거래처 매입 관리</div>
+        <div class="side-item" data-action="navFromSide|vendorUpload">파일 업로드</div>
       </div>
     </div>
 
     <!-- 정산/검수 -->
     <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
         <span>🔍 정산/검수</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('recon')">지출 대조표</div>
+        <div class="side-item" data-action="navFromSide|recon">지출 대조표</div>
       </div>
     </div>
 
     <!-- 고정비 -->
     <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
         <span>📋 고정비</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('fixedcost')">항목 & 월별 금액</div>
+        <div class="side-item" data-action="navFromSide|fixedcost">항목 & 월별 금액</div>
       </div>
     </div>
 
     <!-- 직원 -->
     <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
         <span>👥 직원 관리</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('staff')">직원 관리</div>
+        <div class="side-item" data-action="navFromSide|staff">직원 관리</div>
       </div>
     </div>
 
     <!-- 설정 -->
     <div class="side-group">
-      <div class="side-group-header" onclick="toggleSideGroup(this)">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
         <span>⚙️ 설정</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" onclick="closeSideMenu();nav('settings')">매장 설정</div>
+        <div class="side-item" data-action="navFromSide|settings">매장 설정</div>
       </div>
     </div>
 
@@ -587,10 +587,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- 하단 네비: 직원용 4개 고정 -->
 <div class="bottom-nav" id="bottomNav">
-  <div class="nav-item active" data-tab="receipt" onclick="nav('receipt',this)"><span class="ni">🧾</span>영수증</div>
-  <div class="nav-item" data-tab="attendance" onclick="nav('attendance',this)"><span class="ni">⏰</span>근태</div>
-  <div class="nav-item" data-tab="schedule" onclick="nav('schedule',this)"><span class="ni">📅</span>근무계획</div>
-  <div class="nav-item" data-tab="settle" onclick="nav('settle',this)"><span class="ni">💰</span>마감정산</div>
+  <div class="nav-item active" data-tab="receipt" data-action="nav|receipt|this"><span class="ni">🧾</span>영수증</div>
+  <div class="nav-item" data-tab="attendance" data-action="nav|attendance|this"><span class="ni">⏰</span>근태</div>
+  <div class="nav-item" data-tab="schedule" data-action="nav|schedule|this"><span class="ni">📅</span>근무계획</div>
+  <div class="nav-item" data-tab="settle" data-action="nav|settle|this"><span class="ni">💰</span>마감정산</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -603,15 +603,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:14px;">
     <div id="uploadGroup" class="action-group" style="margin-top:0;">
       <label class="btn btn-primary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-        📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleImg(this)">
+        📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" data-change="handleImg|this">
       </label>
       <label class="btn btn-secondary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-        🖼 업로드<input type="file" accept="image/*" style="display:none" onchange="handleImg(this)">
+        🖼 업로드<input type="file" accept="image/*" style="display:none" data-change="handleImg|this">
       </label>
     </div>
     <div id="actionGroup" style="display:none;" class="action-group">
-      <button class="btn btn-primary" style="flex:4;padding:15px;font-size:14px;" onclick="runAI()">✨ AI 분석</button>
-      <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="resetReceipt()">취소</button>
+      <button class="btn btn-primary" style="flex:4;padding:15px;font-size:14px;" data-action="runAI">✨ AI 분석</button>
+      <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">취소</button>
     </div>
     <div id="resultArea" style="display:none;">
       <div class="table-wrap">
@@ -620,10 +620,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           <tbody id="resTable"></tbody>
         </table>
       </div>
-      <div class="add-row-btn" onclick="addReceiptRow()">＋ 행 추가</div>
+      <div class="add-row-btn" data-action="addReceiptRow">＋ 행 추가</div>
       <div class="action-group">
-        <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="resetReceipt()">초기화</button>
-        <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveReceipt()">저장하기</button>
+        <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">초기화</button>
+        <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveReceipt">저장하기</button>
       </div>
     </div>
   </div>
@@ -634,14 +634,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="card">
     <div class="card-title">근태 기록</div>
     <div class="sub-tabs">
-      <button class="sub-tab active" onclick="attTab('manual',this)">수동 입력</button>
-      <button class="sub-tab manager-only" onclick="attTab('caps',this)">캡스 업로드</button>
-      <button class="sub-tab" onclick="attTab('list',this)">내 기록</button>
-      <button class="sub-tab manager-only" onclick="attTab('all',this)">전체 조회</button>
+      <button class="sub-tab active" data-action="attTab|manual|this">수동 입력</button>
+      <button class="sub-tab manager-only" data-action="attTab|caps|this">캡스 업로드</button>
+      <button class="sub-tab" data-action="attTab|list|this">내 기록</button>
+      <button class="sub-tab manager-only" data-action="attTab|all|this">전체 조회</button>
     </div>
     <div id="attManual">
       <!-- 직원 선택 (관리자만 다른 직원 선택 가능) -->
-      <div class="input-row manager-only" onclick="openEmpSheet()">
+      <div class="input-row manager-only" data-action="openEmpSheet">
         <label>직원 선택</label><span id="vEmpName" class="val empty">선택</span>
       </div>
       <!-- 현재 시간 표시 -->
@@ -652,28 +652,28 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <!-- 출근/퇴근 버튼 -->
       <div class="action-group" style="margin-top:8px;">
-        <button class="btn btn-primary" id="btnCheckIn" style="flex:1;padding:20px;font-size:16px;" onclick="checkIn()">🟢 출근</button>
-        <button class="btn btn-secondary" id="btnCheckOut" style="flex:1;padding:20px;font-size:16px;" onclick="checkOut()" disabled>🔴 퇴근</button>
+        <button class="btn btn-primary" id="btnCheckIn" style="flex:1;padding:20px;font-size:16px;" data-action="checkIn">🟢 출근</button>
+        <button class="btn btn-secondary" id="btnCheckOut" style="flex:1;padding:20px;font-size:16px;" data-action="checkOut" disabled>🔴 퇴근</button>
       </div>
       <!-- 오늘 기록 미리보기 -->
       <div id="todayRecord" style="margin-top:16px;"></div>
       <!-- 수동 시간 조정 (관리자용) -->
       <div class="manager-only" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-200);">
         <div style="font-size:12px;font-weight:700;color:var(--gray-400);margin-bottom:10px;">수동 입력 (관리자)</div>
-        <div class="input-row" onclick="openDatePicker('att')">
+        <div class="input-row" data-action="openDatePicker|att">
           <label>날짜</label><span id="vDate" class="val">-</span>
         </div>
-        <div class="input-row" onclick="openTimePicker('start')">
+        <div class="input-row" data-action="openTimePicker|start">
           <label>출근 시간</label><span id="vStart" class="val empty">-</span>
         </div>
-        <div class="input-row" onclick="openTimePicker('end')">
+        <div class="input-row" data-action="openTimePicker|end">
           <label>퇴근 시간</label><span id="vEnd" class="val empty">-</span>
         </div>
         <div class="input-row" style="cursor:default;">
           <label>휴게시간 (분)</label>
           <input type="number" id="vRest" value="0" min="0" style="width:60px;text-align:right;border:none;background:none;font-size:15px;font-weight:700;color:var(--blue);outline:none;">
         </div>
-        <button class="btn btn-secondary btn-full" onclick="saveAttendance()">수동 기록 저장</button>
+        <button class="btn btn-secondary btn-full" data-action="saveAttendance">수동 기록 저장</button>
       </div>
     </div>
     <div id="attCaps" style="display:none;">
@@ -689,9 +689,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div id="attList" style="display:none;">
       <!-- 주간 간트차트 뷰 -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-        <button class="btn btn-secondary btn-sm" onclick="moveMyAttWeek(-1)">‹ 이전주</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveMyAttWeek|-1">‹ 이전주</button>
         <div style="flex:1;text-align:center;font-size:14px;font-weight:700;" id="myAttWeekLabel">-</div>
-        <button class="btn btn-secondary btn-sm" onclick="moveMyAttWeek(1)">다음주 ›</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveMyAttWeek|1">다음주 ›</button>
       </div>
       <!-- 오늘 근태 상태 요약 -->
       <div id="myAttTodayStatus" style="margin-bottom:12px;"></div>
@@ -702,20 +702,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <!-- 월별 카드 리스트 (기존) -->
       <div style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:12px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-          <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(-1,'list')">‹</button>
+          <button class="btn btn-secondary btn-sm" data-action="moveAttMonth|-1|list">‹</button>
           <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vListMonth">-</div>
-          <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(1,'list')">›</button>
+          <button class="btn btn-secondary btn-sm" data-action="moveAttMonth|1|list">›</button>
         </div>
         <div id="attListData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div>
       </div>
     </div>
     <div id="attAll" style="display:none;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-        <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(-1,'all')">‹</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveAttMonth|-1|all">‹</button>
         <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vAllMonth">-</div>
-        <button class="btn btn-secondary btn-sm" onclick="moveAttMonth(1,'all')">›</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveAttMonth|1|all">›</button>
       </div>
-      <select id="attEmpFilter" class="input-field" style="padding:10px 14px;font-size:13px;margin-bottom:10px;" onchange="loadAttAll()">
+      <select id="attEmpFilter" class="input-field" style="padding:10px 14px;font-size:13px;margin-bottom:10px;" data-change="loadAttAll">
         <option value="">전체 직원</option>
       </select>
       <div id="attAllData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div>
@@ -728,30 +728,30 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="card">
     <div class="card-title">근무 계획</div>
     <div class="sub-tabs">
-      <button class="sub-tab active" data-sub="input" onclick="schedTab('input',this)">희망근무 등록</button>
-      <button class="sub-tab" data-sub="gantt" onclick="schedTab('gantt',this)">📅 일정 보기</button>
+      <button class="sub-tab active" data-sub="input" data-action="schedTab|input|this">희망근무 등록</button>
+      <button class="sub-tab" data-sub="gantt" data-action="schedTab|gantt|this">📅 일정 보기</button>
     </div>
     <div id="schedInput">
-      <div class="input-row" onclick="openEmpSheet('sched')">
+      <div class="input-row" data-action="openEmpSheet|sched">
         <label>직원</label><span id="vSchedEmp" class="val empty">선택</span>
       </div>
-      <div class="input-row" onclick="openDatePicker('sched')">
+      <div class="input-row" data-action="openDatePicker|sched">
         <label>날짜</label><span id="vSchedDate" class="val empty">선택</span>
       </div>
-      <div class="input-row" onclick="openTimePicker('schedStart')">
+      <div class="input-row" data-action="openTimePicker|schedStart">
         <label>희망 출근</label><span id="vSchedStart" class="val empty">-</span>
       </div>
-      <div class="input-row" onclick="openTimePicker('schedEnd')">
+      <div class="input-row" data-action="openTimePicker|schedEnd">
         <label>희망 퇴근</label><span id="vSchedEnd" class="val empty">-</span>
       </div>
       <input id="vSchedMemo" class="input-field" placeholder="메모 (선택)" type="text">
-      <button class="btn btn-primary btn-full" onclick="saveSchedule()">희망근무 등록</button>
+      <button class="btn btn-primary btn-full" data-action="saveSchedule">희망근무 등록</button>
     </div>
     <div id="schedGantt" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <button class="btn btn-secondary btn-sm" onclick="moveGanttWeek(-1)">‹ 이전주</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveGanttWeek|-1">‹ 이전주</button>
         <span id="ganttWeekLabel" style="font-size:14px;font-weight:700;">-</span>
-        <button class="btn btn-secondary btn-sm" onclick="moveGanttWeek(1)">다음주 ›</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveGanttWeek|1">다음주 ›</button>
       </div>
       <!-- 요일 탭 -->
       <div style="display:flex;gap:3px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;" id="ganttDayTabs"></div>
@@ -764,9 +764,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [4] 마감정산 ══ -->
 <div id="settleCont" class="container">
   <div class="sub-tabs">
-    <button class="sub-tab active" onclick="settleTab('input',this)">오늘 마감</button>
-    <button class="sub-tab" onclick="settleTab('list',this)">기록 조회</button>
-    <button class="sub-tab" onclick="settleTab('card',this)">일별 카드</button>
+    <button class="sub-tab active" data-action="settleTab|input|this">오늘 마감</button>
+    <button class="sub-tab" data-action="settleTab|list|this">기록 조회</button>
+    <button class="sub-tab" data-action="settleTab|card|this">일별 카드</button>
   </div>
   <div id="settleInput">
     <!-- 정산 날짜 선택 (관리자만 변경 가능) -->
@@ -776,9 +776,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span style="font-size:11px;color:var(--gray-400);" id="settleDateStatus">관리자 전용</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-        <button class="btn btn-secondary btn-sm" onclick="moveSettleDate(-1)">‹</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveSettleDate|-1">‹</button>
         <input type="date" id="settleDatePicker" class="input-field" style="flex:1;text-align:center;font-size:15px;font-weight:700;padding:10px;margin-bottom:0;">
-        <button class="btn btn-secondary btn-sm" onclick="moveSettleDate(1)">›</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveSettleDate|1">›</button>
       </div>
     </div>
     <!-- 영업개시보고서 -->
@@ -789,7 +789,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <div class="settle-item">
         <span class="si-icon">💰</span><span class="si-label">전일 이월금</span>
-        <input type="text" class="s-input" id="siOpening" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()">
+        <input type="text" class="s-input" id="siOpening" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2">
       </div>
     </div>
 
@@ -800,15 +800,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <img id="posPreview" style="width:100%;display:none;border-radius:12px;margin-bottom:12px;">
       <div id="posUploadGroup" class="action-group" style="margin-top:0;padding-bottom:12px;">
         <label class="btn btn-primary" style="flex:1;padding:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-          📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePosImg(this)">
+          📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" data-change="handlePosImg|this">
         </label>
         <label class="btn btn-secondary" style="flex:1;padding:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-          🖼 업로드<input type="file" accept="image/*" style="display:none" onchange="handlePosImg(this)">
+          🖼 업로드<input type="file" accept="image/*" style="display:none" data-change="handlePosImg|this">
         </label>
       </div>
       <div id="posAiGroup" style="display:none;" class="action-group" style="padding-bottom:12px;">
-        <button class="btn btn-primary" style="flex:4;padding:14px;font-size:13px;" onclick="runPosAI()">✨ AI 인식</button>
-        <button class="btn btn-secondary" style="flex:1;padding:14px;" onclick="resetPosImg()">취소</button>
+        <button class="btn btn-primary" style="flex:4;padding:14px;font-size:13px;" data-action="runPosAI">✨ AI 인식</button>
+        <button class="btn btn-secondary" style="flex:1;padding:14px;" data-action="resetPosImg">취소</button>
       </div>
     </div>
 
@@ -821,10 +821,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </label>
       </div>
       <p class="card-sub">포스기 장표 기준으로 입력하세요</p>
-      <div class="settle-item"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-icon">🧾</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-icon">💳</span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-icon">📲</span><span class="si-label">기타결제</span><input type="text" class="s-input" id="siPosEtc" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item"><span class="si-icon">🧾</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item"><span class="si-icon">💳</span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item"><span class="si-icon">📲</span><span class="si-label">기타결제</span><input type="text" class="s-input" id="siPosEtc" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
       <div class="settle-summary">
         <span class="ss-label">매출 합계</span>
         <span class="ss-val" id="calcSalesTotal">0원</span>
@@ -835,9 +835,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="settle-card-group">
       <div class="card-title">현금 상세</div>
       <p class="card-sub">실제 받은 현금의 방식을 구분해주세요</p>
-      <div class="settle-item"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-icon">📱</span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-icon">🏦</span><span class="si-label">계좌이체</span><input type="text" class="s-input" id="siCashTransfer" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item"><span class="si-icon">📱</span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item"><span class="si-icon">🏦</span><span class="si-label">계좌이체</span><input type="text" class="s-input" id="siCashTransfer" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
       <div id="cashVerify" style="padding:12px 0;border-top:1px solid var(--gray-200);margin-top:4px;">
         <div style="display:flex;justify-content:space-between;font-size:12px;">
           <span style="color:var(--gray-600);">POS (현금+현금영수증)</span><span style="font-weight:700;" id="cvPosSum">0원</span>
@@ -852,16 +852,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <!-- 기타매출 -->
     <div class="settle-card-group">
       <div class="card-title">기타매출</div>
-      <div class="settle-item"><span class="si-icon">🎰</span><span class="si-label">뽑기(대형)</span><input type="text" class="s-input" id="siDrawLarge" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-icon">🎲</span><span class="si-label">뽑기(소형)</span><input type="text" class="s-input" id="siDrawSmall" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">🎰</span><span class="si-label">뽑기(대형)</span><input type="text" class="s-input" id="siDrawLarge" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item"><span class="si-icon">🎲</span><span class="si-label">뽑기(소형)</span><input type="text" class="s-input" id="siDrawSmall" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
     </div>
 
     <!-- 차감 -->
     <div class="settle-card-group">
       <div class="card-title">차감</div>
       <p class="card-sub">금고에서 빠진 금액을 입력하세요</p>
-      <div class="settle-item"><span class="si-icon">📤</span><span class="si-label">기타사용</span><input type="text" class="s-input" id="siDeductEtc" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
-      <div class="settle-item"><span class="si-icon">🏧</span><span class="si-label">통장입금</span><input type="text" class="s-input" id="siDeductBank" placeholder="0" inputmode="numeric" oninput="onSInput(this)" onchange="recalcSettle2()"></div>
+      <div class="settle-item"><span class="si-icon">📤</span><span class="si-label">기타사용</span><input type="text" class="s-input" id="siDeductEtc" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item"><span class="si-icon">🏧</span><span class="si-label">통장입금</span><input type="text" class="s-input" id="siDeductBank" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
     </div>
 
     <!-- 금고 계수 -->
@@ -888,7 +888,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="sr-row"><span class="sr-label">금고 합계</span><span class="sr-val" id="calcVault">0원</span></div>
       <div class="sr-row" id="diffRow"><span class="sr-label">차액</span><span class="sr-val" id="calcDiff">-</span></div>
     </div>
-    <button class="btn btn-primary btn-full" style="margin-top:8px;border-radius:16px;padding:18px;font-size:16px;" onclick="finishSettlement2()">마감 저장하기</button>
+    <button class="btn btn-primary btn-full" style="margin-top:8px;border-radius:16px;padding:18px;font-size:16px;" data-action="finishSettlement2">마감 저장하기</button>
   </div>
   <div id="settleList" style="display:none;">
     <div class="card"><div class="card-title">정산 기록</div><div id="settleListData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div></div>
@@ -896,9 +896,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div id="settleCard" style="display:none;">
     <div class="card">
       <div class="card-nav">
-        <button class="card-nav-btn" onclick="moveCardDate(-1)">‹</button>
+        <button class="card-nav-btn" data-action="moveCardDate|-1">‹</button>
         <div class="card-nav-date" id="cardNavDate">-</div>
-        <button class="card-nav-btn" onclick="moveCardDate(1)">›</button>
+        <button class="card-nav-btn" data-action="moveCardDate|1">›</button>
       </div>
       <div id="settleCardData"><div class="empty-state"><div class="empty-icon">📅</div><p>기록이 없습니다</p></div></div>
     </div>
@@ -1022,34 +1022,34 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [6] 거래처 관리 ══ -->
 <div id="vendorsCont" class="container">
   <div class="sub-tabs">
-    <button class="sub-tab active" data-sub="list" onclick="vendorTab('list',this)">거래처 목록</button>
-    <button class="sub-tab" data-sub="orders" onclick="vendorTab('orders',this)">주문 내역</button>
-    <button class="sub-tab" data-sub="upload" onclick="vendorTab('upload',this)">파일 업로드</button>
+    <button class="sub-tab active" data-sub="list" data-action="vendorTab|list|this">거래처 목록</button>
+    <button class="sub-tab" data-sub="orders" data-action="vendorTab|orders|this">주문 내역</button>
+    <button class="sub-tab" data-sub="upload" data-action="vendorTab|upload|this">파일 업로드</button>
   </div>
   <div id="vendorList">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <select id="vendorCatFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" onchange="renderVendorList()">
+      <select id="vendorCatFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderVendorList">
         <option value="">전체 카테고리</option>
         <option value="식자재">식자재</option>
         <option value="주류">주류</option>
         <option value="직구">직구</option>
         <option value="기타">기타</option>
       </select>
-      <button class="btn btn-primary btn-sm" style="margin-left:8px;" onclick="openAddVendorSheet()">+ 추가</button>
+      <button class="btn btn-primary btn-sm" style="margin-left:8px;" data-action="openAddVendorSheet">+ 추가</button>
     </div>
     <div id="vendorListData"><div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div></div>
   </div>
   <div id="vendorOrders" style="display:none;">
     <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <select id="orderVendorFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" onchange="loadVendorOrders()">
+      <select id="orderVendorFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="loadVendorOrders">
         <option value="">전체 거래처</option>
       </select>
-      <div class="input-row" style="flex:0 0 auto;margin-bottom:0;padding:10px 12px;" onclick="openDatePicker('orderMonth')">
+      <div class="input-row" style="flex:0 0 auto;margin-bottom:0;padding:10px 12px;" data-action="openDatePicker|orderMonth">
         <span id="vOrderMonth" class="val" style="font-size:13px;white-space:nowrap;">-</span>
       </div>
     </div>
     <div id="orderListData"></div>
-    <button class="btn btn-primary btn-full" style="margin-top:4px;" onclick="openAddOrderSheet()">+ 주문 수동 입력</button>
+    <button class="btn btn-primary btn-full" style="margin-top:4px;" data-action="openAddOrderSheet">+ 주문 수동 입력</button>
   </div>
   <div id="vendorUpload" style="display:none;">
     <div class="card">
@@ -1073,35 +1073,35 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [7] 고정비 ══ -->
 <div id="fixedcostCont" class="container">
   <div class="sub-tabs">
-    <button class="sub-tab active" onclick="fcTab('list',this)">항목 관리</button>
-    <button class="sub-tab" onclick="fcTab('monthly',this)">월별 금액</button>
+    <button class="sub-tab active" data-action="fcTab|list|this">항목 관리</button>
+    <button class="sub-tab" data-action="fcTab|monthly|this">월별 금액</button>
   </div>
   <div id="fcList">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <p style="font-size:12px;color:var(--gray-600);margin:0;">고정비는 월 금액 ÷ 일수로 매일 자동 반영됩니다.</p>
-      <button class="btn btn-primary btn-sm" onclick="openAddFcSheet()">+ 추가</button>
+      <button class="btn btn-primary btn-sm" data-action="openAddFcSheet">+ 추가</button>
     </div>
     <div id="fcListData"><div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div></div>
   </div>
   <div id="fcMonthly" style="display:none;">
     <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
-      <button class="btn btn-secondary btn-sm" onclick="moveFcMonth(-1)">‹</button>
+      <button class="btn btn-secondary btn-sm" data-action="moveFcMonth|-1">‹</button>
       <span id="fcMonthLabel" style="flex:1;text-align:center;font-size:15px;font-weight:700;">-</span>
-      <button class="btn btn-secondary btn-sm" onclick="moveFcMonth(1)">›</button>
+      <button class="btn btn-secondary btn-sm" data-action="moveFcMonth|1">›</button>
     </div>
     <div id="fcMonthlyData"></div>
-    <button class="btn btn-primary btn-full" onclick="saveFcAmounts()">월별 금액 저장</button>
+    <button class="btn btn-primary btn-full" data-action="saveFcAmounts">월별 금액 저장</button>
   </div>
 </div>
 
 <!-- ══ [8] 직원관리 ══ -->
 <div id="staffCont" class="container">
   <div style="display:flex;gap:8px;margin-bottom:12px;">
-    <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" onchange="renderEmpList()"><option value="">전체 직급</option></select>
-    <select id="empFilterStatus" class="input-field" style="margin-bottom:0;width:85px;padding:10px 12px;font-size:13px;" onchange="renderEmpList()">
+    <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderEmpList"><option value="">전체 직급</option></select>
+    <select id="empFilterStatus" class="input-field" style="margin-bottom:0;width:85px;padding:10px 12px;font-size:13px;" data-change="renderEmpList">
       <option value="active">재직중</option><option value="all">전체</option><option value="inactive">퇴사</option>
     </select>
-    <button class="btn btn-primary btn-sm manager-only" style="padding:10px 12px;" onclick="openAddEmpSheet()">+ 추가</button>
+    <button class="btn btn-primary btn-sm manager-only" style="padding:10px 12px;" data-action="openAddEmpSheet">+ 추가</button>
   </div>
   <div id="empList"><div class="empty-state"><div class="empty-icon">👥</div><p>등록된 직원이 없습니다</p></div></div>
 </div>
@@ -1111,9 +1111,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="card">
     <div class="card-title">급여 집계</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-      <button class="btn btn-secondary btn-sm" onclick="moveWageMonth(-1)">‹</button>
+      <button class="btn btn-secondary btn-sm" data-action="moveWageMonth|-1">‹</button>
       <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="wageMonthLabel">-</div>
-      <button class="btn btn-secondary btn-sm" onclick="moveWageMonth(1)">›</button>
+      <button class="btn btn-secondary btn-sm" data-action="moveWageMonth|1">›</button>
     </div>
     <div id="wageSummaryData"></div>
   </div>
@@ -1122,9 +1122,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [11] 지출리스트 ══ -->
 <div id="explistCont" class="container">
   <div class="sub-tabs">
-    <button class="sub-tab active" onclick="explistTab('bank',this)">🏦 계좌내역</button>
-    <button class="sub-tab" onclick="explistTab('card',this)">💳 카드내역</button>
-    <button class="sub-tab" onclick="explistTab('connect',this)">🔗 마이데이터</button>
+    <button class="sub-tab active" data-action="explistTab|bank|this">🏦 계좌내역</button>
+    <button class="sub-tab" data-action="explistTab|card|this">💳 카드내역</button>
+    <button class="sub-tab" data-action="explistTab|connect|this">🔗 마이데이터</button>
   </div>
 
   <!-- 계좌내역 -->
@@ -1133,9 +1133,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <div class="card-title" style="margin-bottom:0;">계좌 입출금 내역</div>
         <div style="display:flex;gap:6px;">
-          <button class="btn btn-secondary btn-sm" onclick="moveExplistMonth('bank',-1)">‹</button>
+          <button class="btn btn-secondary btn-sm" data-action="moveExplistMonth|bank|-1">‹</button>
           <span id="explistBankMonth" style="font-size:13px;font-weight:700;min-width:70px;text-align:center;line-height:28px;">-</span>
-          <button class="btn btn-secondary btn-sm" onclick="moveExplistMonth('bank',1)">›</button>
+          <button class="btn btn-secondary btn-sm" data-action="moveExplistMonth|bank|1">›</button>
         </div>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:8px;">
@@ -1143,7 +1143,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="bankExcelInput">
         </label>
         <button class="btn btn-secondary" id="bankFilterBtn" style="padding:8px 14px;font-size:12px;display:inline-flex;align-items:center;gap:4px;">🔽 필터</button>
-        <button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:11px;" onclick="deleteTxMonth('bank')">🗑️ 월삭제</button>
+        <button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:11px;" data-action="deleteTxMonth|bank">🗑️ 월삭제</button>
       </div>
       <div id="bankFilterBadge" style="display:none;margin-bottom:6px;font-size:11px;color:var(--blue);font-weight:700;cursor:pointer;">필터 적용중 ✕</div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:2px solid var(--text);margin-bottom:2px;">
@@ -1175,9 +1175,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <div class="card-title" style="margin-bottom:0;">카드 결제 내역</div>
         <div style="display:flex;gap:6px;">
-          <button class="btn btn-secondary btn-sm" onclick="moveExplistMonth('card',-1)">‹</button>
+          <button class="btn btn-secondary btn-sm" data-action="moveExplistMonth|card|-1">‹</button>
           <span id="explistCardMonth" style="font-size:13px;font-weight:700;min-width:70px;text-align:center;line-height:28px;">-</span>
-          <button class="btn btn-secondary btn-sm" onclick="moveExplistMonth('card',1)">›</button>
+          <button class="btn btn-secondary btn-sm" data-action="moveExplistMonth|card|1">›</button>
         </div>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:8px;">
@@ -1185,7 +1185,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           📎 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="cardExcelInput">
         </label>
         <button class="btn btn-secondary" id="cardFilterBtn" style="padding:8px 14px;font-size:12px;display:inline-flex;align-items:center;gap:4px;">🔽 필터</button>
-        <button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:11px;" onclick="deleteTxMonth('card')">🗑️ 월삭제</button>
+        <button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:11px;" data-action="deleteTxMonth|card">🗑️ 월삭제</button>
       </div>
       <div id="cardFilterBadge" style="display:none;margin-bottom:6px;font-size:11px;color:var(--blue);font-weight:700;cursor:pointer;">필터 적용중 ✕</div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:2px solid var(--text);margin-bottom:2px;">
@@ -1234,7 +1234,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="card-sub-title">API 설정</div>
       <input id="mydataClientId" class="input-field" placeholder="Codef Client ID" type="text">
       <input id="mydataClientSecret" class="input-field" placeholder="Codef Client Secret" type="password">
-      <button class="btn btn-primary btn-full" onclick="saveMyDataConfig()">API 키 저장</button>
+      <button class="btn btn-primary btn-full" data-action="saveMyDataConfig">API 키 저장</button>
 
       <div style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:16px;">
         <div class="card-sub-title">계좌 추가</div>
@@ -1262,7 +1262,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </select>
         <input id="mydataBankAccount" class="input-field" placeholder="계좌번호 (숫자만)" type="text" inputmode="numeric">
         <input id="mydataBankPw" class="input-field" placeholder="계좌 비밀번호 (4자리)" type="password" maxlength="4" inputmode="numeric">
-        <button class="btn btn-success btn-full" onclick="addBankAccount()">🏦 계좌 연결</button>
+        <button class="btn btn-success btn-full" data-action="addBankAccount">🏦 계좌 연결</button>
       </div>
 
       <div style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:16px;">
@@ -1282,7 +1282,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </select>
         <input id="mydataCardId" class="input-field" placeholder="카드사 로그인 ID" type="text">
         <input id="mydataCardPw" class="input-field" placeholder="카드사 로그인 비밀번호" type="password">
-        <button class="btn btn-success btn-full" onclick="addCardAccount()">💳 카드 연결</button>
+        <button class="btn btn-success btn-full" data-action="addCardAccount">💳 카드 연결</button>
       </div>
 
       <div style="margin-top:20px;background:var(--warn-light);border-radius:12px;padding:14px;">
@@ -1301,9 +1301,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [12] 정산/검수 ══ -->
 <div id="reconCont" class="container">
   <div class="sub-tabs">
-    <button class="sub-tab active" onclick="reconTab('summary',this)">총괄표</button>
-    <button class="sub-tab" onclick="reconTab('detail',this)">항목별 상세</button>
-    <button class="sub-tab" onclick="reconTab('unmatched',this)">미매칭</button>
+    <button class="sub-tab active" data-action="reconTab|summary|this">총괄표</button>
+    <button class="sub-tab" data-action="reconTab|detail|this">항목별 상세</button>
+    <button class="sub-tab" data-action="reconTab|unmatched|this">미매칭</button>
   </div>
 
   <!-- 월 선택 -->
@@ -1311,9 +1311,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div class="card-title" style="margin-bottom:0;">지출 대조표</div>
       <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="moveReconMonth(-1)">‹</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveReconMonth|-1">‹</button>
         <span id="reconMonthLabel" style="font-size:13px;font-weight:700;min-width:70px;text-align:center;line-height:28px;">-</span>
-        <button class="btn btn-secondary btn-sm" onclick="moveReconMonth(1)">›</button>
+        <button class="btn btn-secondary btn-sm" data-action="moveReconMonth|1">›</button>
       </div>
     </div>
   </div>
@@ -1368,7 +1368,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <option value="cash">현금</option>
     </select>
     <input id="mpMemo" class="input-field" placeholder="메모 (선택)" type="text">
-    <button class="btn btn-primary btn-full" onclick="saveManualPayment()">저장</button>
+    <button class="btn btn-primary btn-full" data-action="saveManualPayment">저장</button>
   </div>
 </div>
 
@@ -1388,7 +1388,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="sheet-title">확인 필요 건</div>
     <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">AI가 분류에 확신이 없는 건입니다. 확인 후 수정해주세요.</p>
     <div id="excelReviewList"></div>
-    <button class="btn btn-primary btn-full" onclick="confirmReviewAndSave()">확인 완료 → 전체 저장</button>
+    <button class="btn btn-primary btn-full" data-action="confirmReviewAndSave">확인 완료 → 전체 저장</button>
   </div>
 </div>
 
@@ -1397,7 +1397,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <div class="card-title" style="margin-bottom:0;">지출 카테고리</div>
-      <button class="btn btn-primary btn-sm" onclick="openAddExpCatSheet()">+ 추가</button>
+      <button class="btn btn-primary btn-sm" data-action="openAddExpCatSheet">+ 추가</button>
     </div>
     <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">대시보드 차트 항목이 이 카테고리 기준으로 표시됩니다.</p>
     <div id="expCatList"><div class="empty-state"><div class="empty-icon">📂</div><p>카테고리를 추가하세요</p></div></div>
@@ -1421,16 +1421,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="card-title">매장 기본정보</div>
     <div class="setting-row">
       <div><div class="setting-label">매장명</div><div class="setting-sub">앱 상단 표시 이름</div></div>
-      <div class="setting-val" id="sv-store-name" onclick="openSettingEdit('store_name','매장명','')">미설정</div>
+      <div class="setting-val" id="sv-store-name" data-action="openSettingEdit|store_name|매장명|">미설정</div>
     </div>
     <div class="setting-row" style="flex-direction:column;align-items:stretch;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div><div class="setting-label">공인 IP</div><div class="setting-sub">출퇴근 위치 검증 (매장 WiFi별 1개씩)</div></div>
       </div>
       <div id="ipInputList"></div>
-      <button class="btn btn-secondary" style="margin-top:6px;padding:8px;font-size:12px;" onclick="addIPInput()">+ IP 추가</button>
+      <button class="btn btn-secondary" style="margin-top:6px;padding:8px;font-size:12px;" data-action="addIPInput">+ IP 추가</button>
     </div>
-    <button class="btn btn-primary btn-full" onclick="saveBasicSettings()">저장</button>
+    <button class="btn btn-primary btn-full" data-action="saveBasicSettings">저장</button>
   </div>
 
   <!-- 수당 & 휴게 -->
@@ -1470,8 +1470,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div class="card-sub-title">특별 수당 <span style="font-weight:400;font-size:11px;">(설날·추석 등 일별)</span></div>
     <div id="specialWageList"></div>
-    <div class="add-item-btn" onclick="addSpecialWageRow()">＋ 특별 수당 날짜 추가</div>
-    <button class="btn btn-primary btn-full" onclick="saveWageSettings()">수당 & 휴게 저장</button>
+    <div class="add-item-btn" data-action="addSpecialWageRow">＋ 특별 수당 날짜 추가</div>
+    <button class="btn btn-primary btn-full" data-action="saveWageSettings">수당 & 휴게 저장</button>
   </div>
 
   <!-- 로열티 & 수수료 & 예비비 -->
@@ -1510,7 +1510,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span style="font-size:13px;color:var(--gray-600);">원</span>
       </div>
     </div>
-    <button class="btn btn-primary btn-full" onclick="saveWageSettings()">저장</button>
+    <button class="btn btn-primary btn-full" data-action="saveWageSettings">저장</button>
   </div>
 
   <!-- 지출 카테고리 -->
@@ -1525,19 +1525,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="card-sub-title">크롤러 서버</div>
     <div class="setting-row" style="cursor:default;">
       <div><div class="setting-label">Workers URL</div><div class="setting-sub">Cloudflare Workers</div></div>
-      <div class="setting-val" id="sv-crawler-url" onclick="openSettingEdit('crawler_url','크롤러 URL','')">미설정</div>
+      <div class="setting-val" id="sv-crawler-url" data-action="openSettingEdit|crawler_url|크롤러 URL|">미설정</div>
     </div>
     <div class="setting-row" style="cursor:default;">
       <div><div class="setting-label">시크릿</div><div class="setting-sub">인증 토큰</div></div>
-      <div class="setting-val" id="sv-crawler-secret" onclick="openSettingEdit('crawler_secret','크롤러 시크릿','')">미설정</div>
+      <div class="setting-val" id="sv-crawler-secret" data-action="openSettingEdit|crawler_secret|크롤러 시크릿|">미설정</div>
     </div>
-    <button class="btn btn-success btn-full" onclick="testCrawlerLogin()">🔗 로그인 테스트</button>
-    <button class="btn btn-primary btn-full" onclick="saveUpsSettings()">저장</button>
+    <button class="btn btn-success btn-full" data-action="testCrawlerLogin">🔗 로그인 테스트</button>
+    <button class="btn btn-primary btn-full" data-action="saveUpsSettings">저장</button>
   </div>
 </div>
 
 <!-- ══ SHEETS ══ -->
-<div class="overlay" id="overlay" onclick="closeAllSheets()"></div>
+<div class="overlay" id="overlay" data-action="closeAllSheets"></div>
 
 <!-- 내 정보 -->
 <div class="sheet" id="myInfoSheet"><div class="sheet-handle"></div><div id="myInfoContent"></div></div>
@@ -1547,7 +1547,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-handle"></div>
   <div class="sheet-title">매장 선택</div>
   <div id="storeList"></div>
-  <button class="btn btn-secondary btn-full" onclick="closeAllSheets()">취소</button>
+  <button class="btn btn-secondary btn-full" data-action="closeAllSheets">취소</button>
 </div>
 
 <!-- 직원 선택 -->
@@ -1555,7 +1555,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-handle"></div>
   <div class="sheet-title">직원 선택</div>
   <div id="empSheetList"></div>
-  <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="closeAllSheets()">취소</button>
+  <button class="btn btn-secondary btn-full" style="margin-top:8px;" data-action="closeAllSheets">취소</button>
 </div>
 
 <!-- 직원 추가/편집 -->
@@ -1607,7 +1607,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span style="flex:1;font-size:13px;font-weight:600;">근로계약서</span>
         <span class="doc-status" id="docStatusContract" style="font-size:11px;color:var(--gray-400);">미첨부</span>
         <label class="btn btn-primary btn-sm" style="padding:6px 12px;font-size:11px;margin:0;cursor:pointer;">첨부<input type="file" id="docFileContract" accept="image/*,.pdf" style="display:none;"></label>
-        <button class="btn btn-danger btn-sm doc-del-btn" id="docDelContract" style="padding:6px 8px;font-size:11px;display:none;" onclick="deleteDocFile('contract')">삭제</button>
+        <button class="btn btn-danger btn-sm doc-del-btn" id="docDelContract" style="padding:6px 8px;font-size:11px;display:none;" data-action="deleteDocFile|contract">삭제</button>
       </div>
     </div>
     <div class="doc-upload-row" data-doc="health">
@@ -1616,7 +1616,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span style="flex:1;font-size:13px;font-weight:600;">보건증</span>
         <span class="doc-status" id="docStatusHealth" style="font-size:11px;color:var(--gray-400);">미첨부</span>
         <label class="btn btn-primary btn-sm" style="padding:6px 12px;font-size:11px;margin:0;cursor:pointer;">첨부<input type="file" id="docFileHealth" accept="image/*,.pdf" style="display:none;"></label>
-        <button class="btn btn-danger btn-sm doc-del-btn" id="docDelHealth" style="padding:6px 8px;font-size:11px;display:none;" onclick="deleteDocFile('health')">삭제</button>
+        <button class="btn btn-danger btn-sm doc-del-btn" id="docDelHealth" style="padding:6px 8px;font-size:11px;display:none;" data-action="deleteDocFile|health">삭제</button>
       </div>
       <div id="empDocHealthExpiresWrap" style="display:none;margin-top:6px;">
         <label class="emp-label" style="font-size:11px;">보건증 만료일</label>
@@ -1629,7 +1629,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span style="flex:1;font-size:13px;font-weight:600;">법대동의서</span>
         <span class="doc-status" id="docStatusMinor" style="font-size:11px;color:var(--gray-400);">미첨부</span>
         <label class="btn btn-primary btn-sm" style="padding:6px 12px;font-size:11px;margin:0;cursor:pointer;">첨부<input type="file" id="docFileMinor" accept="image/*,.pdf" style="display:none;"></label>
-        <button class="btn btn-danger btn-sm doc-del-btn" id="docDelMinor" style="padding:6px 8px;font-size:11px;display:none;" onclick="deleteDocFile('minor')">삭제</button>
+        <button class="btn btn-danger btn-sm doc-del-btn" id="docDelMinor" style="padding:6px 8px;font-size:11px;display:none;" data-action="deleteDocFile|minor">삭제</button>
       </div>
     </div>
     <div class="doc-upload-row" data-doc="foreigner" id="empDocForeignerWrap" style="display:none;">
@@ -1638,7 +1638,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span style="flex:1;font-size:13px;font-weight:600;">외국인등록증</span>
         <span class="doc-status" id="docStatusForeigner" style="font-size:11px;color:var(--gray-400);">미첨부</span>
         <label class="btn btn-primary btn-sm" style="padding:6px 12px;font-size:11px;margin:0;cursor:pointer;">첨부<input type="file" id="docFileForeigner" accept="image/*,.pdf" style="display:none;"></label>
-        <button class="btn btn-danger btn-sm doc-del-btn" id="docDelForeigner" style="padding:6px 8px;font-size:11px;display:none;" onclick="deleteDocFile('foreigner')">삭제</button>
+        <button class="btn btn-danger btn-sm doc-del-btn" id="docDelForeigner" style="padding:6px 8px;font-size:11px;display:none;" data-action="deleteDocFile|foreigner">삭제</button>
       </div>
     </div>
   </div>
@@ -1667,14 +1667,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <input id="empHireDateInput" class="input-field" placeholder="2024-01-01" type="text" inputmode="numeric" maxlength="10">
   <input type="hidden" id="editEmpId">
   <div class="action-group" style="margin-top:12px;">
-    <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
-    <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveEmployee()">저장</button>
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveEmployee">저장</button>
   </div>
   <!-- 기기 초기화 (관리자, 편집 시에만) -->
   <div id="deviceResetWrap" class="manager-only" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-200);">
     <div style="font-size:12px;color:var(--gray-400);margin-bottom:6px;">등록 기기 관리</div>
     <div id="deviceStatus" style="font-size:12px;color:var(--gray-600);margin-bottom:8px;"></div>
-    <button class="btn btn-danger btn-full" style="padding:12px;" onclick="resetDeviceFingerprint(document.getElementById('editEmpId').value)">등록 기기 초기화</button>
+    <button class="btn btn-danger btn-full" style="padding:12px;" data-action="resetCurrentEmpDevice">등록 기기 초기화</button>
   </div>
 </div>
 
@@ -1689,8 +1689,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
   <input type="hidden" id="editRoleId">
   <div class="action-group">
-    <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
-    <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveRole()">저장</button>
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveRole">저장</button>
   </div>
 </div>
 
@@ -1700,7 +1700,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-title">직원 연결</div>
   <p style="font-size:12px;color:var(--gray-600);margin-bottom:14px;" id="matchInfo"></p>
   <div id="matchEmpList"></div>
-  <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="closeAllSheets()">취소</button>
+  <button class="btn btn-secondary btn-full" style="margin-top:8px;" data-action="closeAllSheets">취소</button>
 </div>
 
 <!-- 근태 기록 편집 (관리자) -->
@@ -1718,10 +1718,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <input type="hidden" id="editAttDate">
   <input type="hidden" id="editAttEmpId">
   <div class="action-group" style="margin-top:12px;">
-    <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
-    <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveEditAttendance()">저장</button>
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveEditAttendance">저장</button>
   </div>
-  <button class="btn btn-danger btn-full" style="margin-top:8px;padding:12px;" onclick="deleteAttendance()">이 기록 삭제</button>
+  <button class="btn btn-danger btn-full" style="margin-top:8px;padding:12px;" data-action="deleteAttendance">이 기록 삭제</button>
 </div>
 
 <!-- 거래처 추가/편집 -->
@@ -1737,8 +1737,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </select>
   <input type="hidden" id="editVendorId">
   <div class="action-group">
-    <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
-    <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveVendor()">저장</button>
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveVendor">저장</button>
   </div>
 </div>
 
@@ -1752,8 +1752,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <input id="orderAmtInput" class="input-field" placeholder="금액 (원)" type="number" inputmode="numeric">
   <input id="orderMemoInput" class="input-field" placeholder="메모" type="text">
   <div class="action-group">
-    <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
-    <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveOrder()">저장</button>
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveOrder">저장</button>
   </div>
 </div>
 
@@ -1763,7 +1763,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-title" id="addExpCatTitle">카테고리 추가</div>
   <input id="expCatNameInput" class="input-field" placeholder="카테고리명 (예: 식자재(거래처))" type="text">
   <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">데이터 소스</p>
-  <select id="expCatSourceInput" class="input-field" onchange="onExpCatSourceChange()">
+  <select id="expCatSourceInput" class="input-field" data-change="onExpCatSourceChange">
     <option value="vendor_orders">🏪 거래처 주문</option>
     <option value="receipts">🧾 영수증</option>
     <option value="attendance">⏰ 인건비 (자동 집계)</option>
@@ -1783,20 +1783,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
   <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">차트 색상</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;" id="colorPicker">
-    <div onclick="selectExpCatColor('#0050FF',this)" style="width:32px;height:32px;border-radius:50%;background:#0050FF;cursor:pointer;border:3px solid transparent;" data-color="#0050FF"></div>
-    <div onclick="selectExpCatColor('#05C072',this)" style="width:32px;height:32px;border-radius:50%;background:#05C072;cursor:pointer;border:3px solid transparent;" data-color="#05C072"></div>
-    <div onclick="selectExpCatColor('#FF9500',this)" style="width:32px;height:32px;border-radius:50%;background:#FF9500;cursor:pointer;border:3px solid transparent;" data-color="#FF9500"></div>
-    <div onclick="selectExpCatColor('#F04452',this)" style="width:32px;height:32px;border-radius:50%;background:#F04452;cursor:pointer;border:3px solid transparent;" data-color="#F04452"></div>
-    <div onclick="selectExpCatColor('#7C3AED',this)" style="width:32px;height:32px;border-radius:50%;background:#7C3AED;cursor:pointer;border:3px solid transparent;" data-color="#7C3AED"></div>
-    <div onclick="selectExpCatColor('#06B6D4',this)" style="width:32px;height:32px;border-radius:50%;background:#06B6D4;cursor:pointer;border:3px solid transparent;" data-color="#06B6D4"></div>
-    <div onclick="selectExpCatColor('#F59E0B',this)" style="width:32px;height:32px;border-radius:50%;background:#F59E0B;cursor:pointer;border:3px solid transparent;" data-color="#F59E0B"></div>
-    <div onclick="selectExpCatColor('#10B981',this)" style="width:32px;height:32px;border-radius:50%;background:#10B981;cursor:pointer;border:3px solid transparent;" data-color="#10B981"></div>
+    <div data-action="selectExpCatColor|#0050FF|this" style="width:32px;height:32px;border-radius:50%;background:#0050FF;cursor:pointer;border:3px solid transparent;" data-color="#0050FF"></div>
+    <div data-action="selectExpCatColor|#05C072|this" style="width:32px;height:32px;border-radius:50%;background:#05C072;cursor:pointer;border:3px solid transparent;" data-color="#05C072"></div>
+    <div data-action="selectExpCatColor|#FF9500|this" style="width:32px;height:32px;border-radius:50%;background:#FF9500;cursor:pointer;border:3px solid transparent;" data-color="#FF9500"></div>
+    <div data-action="selectExpCatColor|#F04452|this" style="width:32px;height:32px;border-radius:50%;background:#F04452;cursor:pointer;border:3px solid transparent;" data-color="#F04452"></div>
+    <div data-action="selectExpCatColor|#7C3AED|this" style="width:32px;height:32px;border-radius:50%;background:#7C3AED;cursor:pointer;border:3px solid transparent;" data-color="#7C3AED"></div>
+    <div data-action="selectExpCatColor|#06B6D4|this" style="width:32px;height:32px;border-radius:50%;background:#06B6D4;cursor:pointer;border:3px solid transparent;" data-color="#06B6D4"></div>
+    <div data-action="selectExpCatColor|#F59E0B|this" style="width:32px;height:32px;border-radius:50%;background:#F59E0B;cursor:pointer;border:3px solid transparent;" data-color="#F59E0B"></div>
+    <div data-action="selectExpCatColor|#10B981|this" style="width:32px;height:32px;border-radius:50%;background:#10B981;cursor:pointer;border:3px solid transparent;" data-color="#10B981"></div>
   </div>
   <input type="hidden" id="expCatColorSelected" value="#0050FF">
   <input type="hidden" id="editExpCatId">
   <div class="action-group">
-    <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
-    <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveExpCat()">저장</button>
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveExpCat">저장</button>
   </div>
 </div>
 
@@ -1839,8 +1839,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
   <input type="hidden" id="editFcId">
   <div class="action-group">
-    <button class="btn btn-secondary" style="flex:1;padding:15px;" onclick="closeAllSheets()">취소</button>
-    <button class="btn btn-primary" style="flex:2;padding:15px;" onclick="saveFc()">저장</button>
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveFc">저장</button>
   </div>
 </div>
 
@@ -1854,7 +1854,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="picker-col" id="pMonth"></div>
     <div class="picker-col" id="pDay"></div>
   </div>
-  <button class="btn btn-primary btn-full" onclick="confirmDate()">선택 완료</button>
+  <button class="btn btn-primary btn-full" data-action="confirmDate">선택 완료</button>
 </div>
 
 <!-- 시간 피커 (근태용 - 시:분) / (근무계획용 - 시간만) -->
@@ -1866,18 +1866,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="picker-col" id="pHour"></div>
     <div class="picker-col" id="pMin"></div>
   </div>
-  <button class="btn btn-primary btn-full" onclick="confirmTime()">완료</button>
+  <button class="btn btn-primary btn-full" data-action="confirmTime">완료</button>
 </div>
 
 <!-- 제외 사유 -->
 <div class="sheet" id="reasonSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title">제외 사유</div>
-  <div class="reason-item" onclick="selectReason('부가세 제외')">부가세 제외</div>
-  <div class="reason-item" onclick="selectReason('합계 오답')">합계 오답</div>
-  <div class="reason-item" onclick="selectReason('글자 깨짐')">글자 깨짐</div>
-  <div class="reason-item" onclick="selectReason('중복 항목')">중복 항목</div>
-  <div class="reason-item cancel" onclick="selectReason('cancel')">다시 포함하기</div>
+  <div class="reason-item" data-action="selectReason|부가세 제외">부가세 제외</div>
+  <div class="reason-item" data-action="selectReason|합계 오답">합계 오답</div>
+  <div class="reason-item" data-action="selectReason|글자 깨짐">글자 깨짐</div>
+  <div class="reason-item" data-action="selectReason|중복 항목">중복 항목</div>
+  <div class="reason-item cancel" data-action="selectReason|cancel">다시 포함하기</div>
 </div>
 
 <!-- 설정값 편집 -->
@@ -1886,8 +1886,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-title" id="settingEditTitle">설정 변경</div>
   <input id="settingEditInput" class="input-field" type="text">
   <input type="hidden" id="settingEditKey">
-  <button class="btn btn-primary btn-full" onclick="confirmSettingEdit()">저장</button>
-  <button class="btn btn-secondary btn-full" onclick="closeAllSheets()">취소</button>
+  <button class="btn btn-primary btn-full" data-action="confirmSettingEdit">저장</button>
+  <button class="btn btn-secondary btn-full" data-action="closeAllSheets">취소</button>
 </div>
 
 <!-- 풀스크린 일별 상세 모달 (body 직하위) -->
@@ -1957,6 +1957,51 @@ let fcMonthStr = dashMonthStr;
 let schedEmpId = null;
 let fcAmountsEditing = {};
 let chartInstances = {};
+
+// ══════════════════════════════════════════
+// 이벤트 위임 라우터 (CSP 인라인 핸들러 대체 — dev_lessons #1)
+// ══════════════════════════════════════════
+// 규칙: data-action="fnName|arg1|arg2" 형식. (파이프 '|' 구분)
+//   특수 토큰: 'this' → 해당 요소, 'true'/'false'/'null'/'undefined' → 그대로,
+//              숫자 → parseInt/parseFloat, 그 외 → 문자열.
+//   change/input 이벤트용 변형: data-change=, data-input=
+//   복합 동작(다중 호출·JS 표현식)은 아래 "인라인 대체용 래퍼"로 등록.
+function _parseActionArg(a, el){
+  if(a==='this') return el;
+  if(a==='true') return true;
+  if(a==='false') return false;
+  if(a==='null') return null;
+  if(a==='undefined') return undefined;
+  if(/^-?\d+$/.test(a)) return parseInt(a,10);
+  if(/^-?\d*\.\d+$/.test(a)) return parseFloat(a);
+  return a;
+}
+function _dispatchAction(attr, el){
+  const raw=el.getAttribute(attr);
+  if(!raw) return;
+  const parts=raw.split('|');
+  const fnName=parts[0];
+  const args=parts.slice(1).map(a=>_parseActionArg(a, el));
+  const fn=window[fnName];
+  if(typeof fn==='function'){ try{ return fn.apply(null, args); }catch(err){ console.error('[dispatch]',fnName,err); } }
+  else console.error('[dispatch]',attr,'→ unknown action:',fnName);
+}
+
+// ─── 인라인 핸들러 대체용 래퍼 ───
+function navFromSide(tab){ closeSideMenu(); nav(tab); }
+function navHome(){ nav(isManager?'dashboard':'attendance'); }
+function editEmpAfterClose(id){ closeAllSheets(); openEditEmpSheet(id); }
+function setGanttDay(date){ ganttSelectedDay=date; renderGanttFiltered(); }
+function setGanttAllDays(){ ganttSelectedDay='all'; renderGanttFiltered(); }
+function removeParent(el){ el.parentElement&&el.parentElement.remove(); }
+function openEditAttByIdx(i){ openEditAttSheet(window._attListData[i]); }
+function saveVendorUploadGlobal(){ saveVendorUpload(window._vendorUploadList, window._vendorUploadVendorId); }
+function setFcAmount(fcid, el){ fcAmountsEditing[fcid]=parseInt(el.value)||0; updateFcDaily(el); }
+function setSpecialWageDate(i, el){ specialWageRows[i].date=el.value; }
+function setSpecialWageAmount(i, el){ specialWageRows[i].amount=parseInt(el.value)||0; }
+function toggleRolePermEvt(roleId, roleName, el){ toggleRolePerm(roleId, roleName, el.checked); }
+function toggleEmpPermEvt(empId, el){ toggleEmpPerm(empId, el.checked); }
+function resetCurrentEmpDevice(){ resetDeviceFingerprint(document.getElementById('editEmpId').value); }
 
 // ══════════════════════════════════════════
 // 공통 유틸
@@ -2093,7 +2138,7 @@ function openMyInfoSheet() {
   if (!emp) {
     html = `<div style="font-size:18px;font-weight:800;margin-bottom:8px;">개발 모드</div>
       <p style="font-size:13px;color:var(--gray-600);">로그인 없이 관리자 권한으로 진입 중입니다.</p>
-      <button class="btn btn-secondary btn-full" style="margin-top:20px;" onclick="closeAllSheets()">닫기</button>`;
+      <button class="btn btn-secondary btn-full" style="margin-top:20px;" data-action="closeAllSheets">닫기</button>`;
   } else {
     html = `
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
@@ -2110,8 +2155,8 @@ function openMyInfoSheet() {
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">은행/계좌</span><span style="font-size:13px;font-weight:700;">${emp.bank_name||'-'} ${emp.account_number?maskAccount(emp.account_number):''}</span></div>
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">시급</span><span style="font-size:13px;font-weight:700;">${fmt(emp.base_wage)}원</span></div>
       <div class="action-group" style="margin-top:16px;">
-        ${isManager?`<button class="btn btn-secondary" style="flex:1;padding:14px;" onclick="closeAllSheets();openEditEmpSheet('${emp.id}')">✏️ 수정</button>`:''}
-        <button class="btn btn-danger" style="flex:1;padding:14px;" onclick="doLogout()">로그아웃</button>
+        ${isManager?`<button class="btn btn-secondary" style="flex:1;padding:14px;" data-action="editEmpAfterClose|${emp.id}">✏️ 수정</button>`:''}
+        <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="doLogout">로그아웃</button>
       </div>`;
   }
   document.getElementById('myInfoContent').innerHTML = html;
@@ -2126,7 +2171,7 @@ async function openStoreSheet() {
   openSheet('storeSheet');
   const {data} = await sb.from('stores').select('*').eq('is_active',true);
   document.getElementById('storeList').innerHTML = (data||[]).map(s=>`
-    <div class="store-item" onclick="selectStore('${s.id}','${s.name}')">
+    <div class="store-item" data-action="selectStore|${s.id}|${s.name}">
       <div class="store-dot"></div>
       <div><div style="font-size:15px;font-weight:700;">${s.name}</div><div style="font-size:12px;color:var(--gray-600);">${s.address||''}</div></div>
     </div>`).join('')||'<div class="empty-state"><p>등록된 매장이 없습니다</p></div>';
@@ -2262,7 +2307,7 @@ function buildReceiptRow(i={}) {
   const idx=rowCount++;
   const ruleBadge=i._ruleMatched?'<span title="학습된 분류" style="font-size:10px;color:var(--success);margin-right:2px;">✨</span>':'';
   return `<tr id="row-${idx}">
-    <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" onclick="openReasonSheet(${idx})">X</button></td>
+    <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" data-action="openReasonSheet|${idx}">X</button></td>
     <td><input type="text" class="c-v" value="${i.vendor||''}"></td>
     <td><input type="text" class="c-i" value="${i.item||''}"></td>
     <td><input type="number" class="c-p" value="${i.totalPrice||0}"></td>
@@ -2493,7 +2538,7 @@ async function openEmpSheet(ctx='att'){
   if(!guardStore()) return;
   selectedEmpCtx=ctx;
   document.getElementById('empSheetList').innerHTML=employees.filter(e=>e.is_active).map(e=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;cursor:pointer;" onclick="selectEmpFromSheet('${e.id}','${e.name}')">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;cursor:pointer;" data-action="selectEmpFromSheet|${e.id}|${e.name}">
       <div><div style="font-size:14px;font-weight:700;">${e.name}</div><div style="font-size:12px;color:var(--gray-600);">${e.role||''} · 시급 ${fmt(e.base_wage)}원</div></div>
     </div>`).join('')||'<div class="empty-state"><p>등록된 직원이 없습니다</p></div>';
   openSheet('empSheet');
@@ -2641,7 +2686,7 @@ async function loadAttList(allMode=false){
           </thead>
           <tbody>
             ${data.map((r,i)=>`
-            <tr style="border-bottom:1px solid var(--gray-100);background:${i%2?'#fafbfc':'#fff'};cursor:${isManager?'pointer':'default'};" ${isManager?`onclick="openEditAttSheet(window._attListData[${i}])"`:''}>
+            <tr style="border-bottom:1px solid var(--gray-100);background:${i%2?'#fafbfc':'#fff'};cursor:${isManager?'pointer':'default'};" ${isManager?`data-action="openEditAttByIdx|${i}"`:''}>
               <td style="padding:7px 3px;color:var(--gray-600);">${r.work_date?.slice(5)||'-'}</td>
               <td style="padding:7px 3px;text-align:center;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.employees?.name||'-'}</td>
               <td style="padding:7px 3px;text-align:center;color:var(--gray-600);">${tK(r,'app_in')}~${tK(r,'app_out')}</td>
@@ -2911,18 +2956,18 @@ function renderStaging(){
   let html=`<div style="background:var(--blue-light);border-radius:12px;padding:13px;margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:var(--blue);">파싱 결과</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;text-align:center;"><div><div style="font-size:19px;font-weight:800;">${stagingData.length}</div><div style="font-size:11px;color:var(--gray-600);">전체</div></div><div><div style="font-size:19px;font-weight:800;color:var(--success);">${ok.length}</div><div style="font-size:11px;color:var(--gray-600);">정상</div></div><div><div style="font-size:19px;font-weight:800;color:var(--danger);">${problems.length}</div><div style="font-size:11px;color:var(--gray-600);">검수필요</div></div></div></div>`;
   if(problems.length){html+=`<div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:7px;">⚠️ 검수 필요 (${problems.length}건)</div>`;
     problems.forEach(row=>{const ri=stagingData.indexOf(row);const sk=row.dedup_status!=='정상'?row.dedup_status:row.match_status;
-      html+=`<div class="staging-row"><div class="sr-top2"><span class="sr-name2">${row.raw_name||row.raw_caps_id||'이름없음'} · ${row.raw_mode}</span><span class="badge ${sc[sk]||'badge-gray'}">${sk}</span></div><div class="sr-info2">${row.raw_date||'-'} ${row.raw_time||''}</div><div class="sr-actions2">${row.match_status==='미매칭'?`<button class="btn btn-primary btn-sm" onclick="openMatchSheet(${ri})">직원 연결</button>`:''} ${row.dedup_status==='퇴근누락'?`<button class="btn btn-secondary btn-sm" onclick="manualSetOut(${ri})">퇴근 입력</button>`:''}<button class="btn btn-danger btn-sm" onclick="removeStaging(${ri})">무시</button></div></div>`;
+      html+=`<div class="staging-row"><div class="sr-top2"><span class="sr-name2">${row.raw_name||row.raw_caps_id||'이름없음'} · ${row.raw_mode}</span><span class="badge ${sc[sk]||'badge-gray'}">${sk}</span></div><div class="sr-info2">${row.raw_date||'-'} ${row.raw_time||''}</div><div class="sr-actions2">${row.match_status==='미매칭'?`<button class="btn btn-primary btn-sm" data-action="openMatchSheet|${ri}">직원 연결</button>`:''} ${row.dedup_status==='퇴근누락'?`<button class="btn btn-secondary btn-sm" data-action="manualSetOut|${ri}">퇴근 입력</button>`:''}<button class="btn btn-danger btn-sm" data-action="removeStaging|${ri}">무시</button></div></div>`;
     });
   }
   if(ok.length){html+=`<div style="font-size:12px;font-weight:700;color:var(--success);margin:10px 0 7px;">✅ 정상 (${ok.length}건)</div>`;ok.forEach(row=>{const emp=employees.find(e=>e.id===row.matched_employee_id);html+=`<div class="staging-row"><div class="sr-top2"><span class="sr-name2">${emp?.name||row.raw_name} · ${row.raw_mode}</span><span class="badge badge-green">정상</span></div><div class="sr-info2">${row.raw_date} ${row.raw_time}</div></div>`;});}
-  if(stagingData.some(r=>r.match_status==='매칭완료'&&r.dedup_status!=='중복-무시')) html+=`<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="commitCaps()">📋 근태에 반영하기</button>`;
+  if(stagingData.some(r=>r.match_status==='매칭완료'&&r.dedup_status!=='중복-무시')) html+=`<button class="btn btn-primary btn-full" style="margin-top:10px;" data-action="commitCaps">📋 근태에 반영하기</button>`;
   c.innerHTML=html;
 }
 function removeStaging(idx){stagingData[idx].dedup_status='중복-무시';renderStaging();}
 function openMatchSheet(idx){
   currentMatchStagingIdx=idx;const row=stagingData[idx];
   document.getElementById('matchInfo').innerText=`캡스ID: ${row.raw_caps_id||'-'} / 이름: ${row.raw_name||'-'} / ${row.raw_date} ${row.raw_mode}`;
-  document.getElementById('matchEmpList').innerHTML=employees.filter(e=>e.is_active).map(e=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;cursor:pointer;" onclick="confirmMatch('${e.id}')"><div><div style="font-size:14px;font-weight:700;">${e.name}</div><div style="font-size:12px;color:var(--gray-600);">${e.role||''} · 캡스ID: ${e.caps_id||'미설정'}</div></div></div>`).join('');
+  document.getElementById('matchEmpList').innerHTML=employees.filter(e=>e.is_active).map(e=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;cursor:pointer;" data-action="confirmMatch|${e.id}"><div><div style="font-size:14px;font-weight:700;">${e.name}</div><div style="font-size:12px;color:var(--gray-600);">${e.role||''} · 캡스ID: ${e.caps_id||'미설정'}</div></div></div>`).join('');
   openSheet('matchSheet');
 }
 function confirmMatch(empId){const row=stagingData[currentMatchStagingIdx];row.matched_employee_id=empId;row.match_status='수동연결';row.dedup_status='정상';closeAllSheets();renderStaging();}
@@ -3028,11 +3073,11 @@ async function renderGanttWeek(){
   document.getElementById('ganttWeekLabel').innerText=`${days[0].label} ~ ${days[6].label}`;
   // 요일 탭 (전체 + 7일)
   if(!ganttSelectedDay) ganttSelectedDay='all';
-  let tabsHtml=`<button class="sub-tab${ganttSelectedDay==='all'?' active':''}" style="flex:0 0 auto;padding:6px 10px;font-size:10px;" onclick="ganttSelectedDay='all';renderGanttFiltered()">전체</button>`;
+  let tabsHtml=`<button class="sub-tab${ganttSelectedDay==='all'?' active':''}" style="flex:0 0 auto;padding:6px 10px;font-size:10px;" data-action="setGanttAllDays">전체</button>`;
   days.forEach(d=>{
     const isToday=d.date===todayStr;
     const isSel=d.date===ganttSelectedDay;
-    tabsHtml+=`<button class="sub-tab${isSel?' active':''}" style="flex:0 0 auto;padding:6px 8px;font-size:10px;${isToday&&!isSel?'border-bottom:2px solid var(--blue);':''}" onclick="ganttSelectedDay='${d.date}';renderGanttFiltered()">${d.label}</button>`;
+    tabsHtml+=`<button class="sub-tab${isSel?' active':''}" style="flex:0 0 auto;padding:6px 8px;font-size:10px;${isToday&&!isSel?'border-bottom:2px solid var(--blue);':''}" data-action="setGanttDay|${d.date}">${d.label}</button>`;
   });
   document.getElementById('ganttDayTabs').innerHTML=tabsHtml;
   // 주간 데이터 로드
@@ -3365,7 +3410,7 @@ async function loadSettleList(){
   setLoad(false);
   const c=document.getElementById('settleListData');
   if(!data?.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div>';return;}
-  c.innerHTML=data.map(r=>`<div class="settle-list-item" onclick="gotoCard('${r.settle_date}')"><div class="sli-top"><span class="sli-date">${r.settle_date}</span><span class="sli-diff ${r.diff_amount===0?'ok':'bad'}">${r.diff_amount===0?'✅ 일치':(r.diff_amount>0?'+':'')+fmt(r.diff_amount)+'원'}</span></div><div style="font-size:12px;color:var(--gray-600);margin-top:4px;">금고 ${fmt(r.actual_total)}원 · 장부 ${fmt(r.expected_total)}원</div></div>`).join('');
+  c.innerHTML=data.map(r=>`<div class="settle-list-item" data-action="gotoCard|${r.settle_date}"><div class="sli-top"><span class="sli-date">${r.settle_date}</span><span class="sli-diff ${r.diff_amount===0?'ok':'bad'}">${r.diff_amount===0?'✅ 일치':(r.diff_amount>0?'+':'')+fmt(r.diff_amount)+'원'}</span></div><div style="font-size:12px;color:var(--gray-600);margin-top:4px;">금고 ${fmt(r.actual_total)}원 · 장부 ${fmt(r.expected_total)}원</div></div>`).join('');
 }
 function gotoCard(d){cardDateStr=d;const tabs=document.querySelectorAll('#settleCont .sub-tab');tabs.forEach((t,i)=>t.classList.toggle('active',i===2));document.getElementById('settleInput').style.display='none';document.getElementById('settleList').style.display='none';document.getElementById('settleCard').style.display='block';loadSettleCard(d);}
 async function loadSettleCard(d){
@@ -3413,8 +3458,8 @@ async function loadSettleCard(d){
   // 관리자: 수정/삭제 버튼
   if(isManager){
     html+=`<div class="action-group" style="margin-top:12px;">
-      <button class="btn btn-primary" style="flex:2;padding:14px;" onclick="editSettlement('${d}')">수정하기</button>
-      <button class="btn btn-danger" style="flex:1;padding:14px;" onclick="deleteSettlement('${d}')">삭제</button>
+      <button class="btn btn-primary" style="flex:2;padding:14px;" data-action="editSettlement|${d}">수정하기</button>
+      <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="deleteSettlement|${d}">삭제</button>
     </div>`;
   }
   c.innerHTML=html;
@@ -4089,8 +4134,8 @@ function renderVendorList(){
         <div class="v-sub">${v.category||''}</div>
       </div>
       <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="openEditVendorSheet('${v.id}')">편집</button>
-        ${v.is_active?`<button class="btn btn-danger btn-sm" onclick="toggleVendor('${v.id}',false)">거래종료</button>`:`<button class="btn btn-success btn-sm" onclick="toggleVendor('${v.id}',true)">재개</button>`}
+        <button class="btn btn-secondary btn-sm" data-action="openEditVendorSheet|${v.id}">편집</button>
+        ${v.is_active?`<button class="btn btn-danger btn-sm" data-action="toggleVendor|${v.id}|false">거래종료</button>`:`<button class="btn btn-success btn-sm" data-action="toggleVendor|${v.id}|true">재개</button>`}
       </div>
     </div>`).join(''):'<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div>';
 }
@@ -4179,7 +4224,7 @@ async function handleVendorUpload(input){
       <div style="max-height:300px;overflow-y:auto;">
         ${list.slice(0,20).map(r=>`<div style="background:var(--gray-100);border-radius:10px;padding:10px 12px;margin-bottom:7px;display:flex;justify-content:space-between;"><div><div style="font-size:13px;font-weight:600;">${r.item||'-'}</div><div style="font-size:11px;color:var(--gray-600);">${r.order_date}</div></div><span style="font-size:13px;font-weight:700;">${fmt(r.amount)}원</span></div>`).join('')}
       </div>
-      <button class="btn btn-primary btn-full" onclick="saveVendorUpload(window._vendorUploadList, window._vendorUploadVendorId)">📥 ${list.length}건 저장하기</button>`;
+      <button class="btn btn-primary btn-full" data-action="saveVendorUploadGlobal">📥 ${list.length}건 저장하기</button>`;
   }catch(e){toast('파싱 실패: '+e.message,'error');}finally{setLoad(false);input.value='';}
 }
 async function saveVendorUpload(list, vendorId){
@@ -4210,8 +4255,8 @@ function renderFcList(){
       <span class="fc-name">${fc.name}</span>
       <span class="badge badge-gray">${fc.category}</span>
       ${!fc.is_active?'<span class="badge badge-red">숨김</span>':''}
-      <button class="btn btn-secondary btn-sm" onclick="openEditFcSheet('${fc.id}')">편집</button>
-      ${fc.is_active?`<button class="btn btn-danger btn-sm" onclick="toggleFc('${fc.id}',false)">숨김</button>`:`<button class="btn btn-success btn-sm" onclick="toggleFc('${fc.id}',true)">복원</button>`}
+      <button class="btn btn-secondary btn-sm" data-action="openEditFcSheet|${fc.id}">편집</button>
+      ${fc.is_active?`<button class="btn btn-danger btn-sm" data-action="toggleFc|${fc.id}|false">숨김</button>`:`<button class="btn btn-success btn-sm" data-action="toggleFc|${fc.id}|true">복원</button>`}
     </div>`).join(''):'<div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div>';
 }
 function openAddFcSheet(){if(!guardStore())return;document.getElementById('addFcTitle').innerText='고정비 추가';document.getElementById('fcNameInput').value='';document.getElementById('fcCatInput').value='고정비';document.getElementById('editFcId').value='';document.getElementById('fcExpectedDay').value='';document.getElementById('fcToleranceDays').value='3';openSheet('addFcSheet');}
@@ -4243,7 +4288,7 @@ async function loadFcMonthly(){
     <div style="display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
       <div style="flex:1;"><div style="font-size:13px;font-weight:700;">${fc.name}</div><div style="font-size:11px;color:var(--gray-600);">${fc.category}</div></div>
       <div style="text-align:right;">
-        <input type="number" value="${amtMap[fc.id]||0}" min="0" data-fcid="${fc.id}" oninput="fcAmountsEditing['${fc.id}']=parseInt(this.value)||0;updateFcDaily(this)" style="width:110px;text-align:right;border:none;background:var(--gray-100);border-radius:9px;padding:7px 10px;font-size:13px;font-weight:700;outline:none;">
+        <input type="number" value="${amtMap[fc.id]||0}" min="0" data-fcid="${fc.id}" data-input="setFcAmount|${fc.id}|this" style="width:110px;text-align:right;border:none;background:var(--gray-100);border-radius:9px;padding:7px 10px;font-size:13px;font-weight:700;outline:none;">
         <div id="fc-daily-${fc.id}" style="font-size:11px;color:var(--gray-600);margin-top:2px;">일 ${fmt(Math.round((amtMap[fc.id]||0)/days))}원</div>
       </div>
     </div>`).join('')||'<div class="empty-state"><p>활성 고정비 항목이 없습니다</p></div>';
@@ -4329,8 +4374,8 @@ function renderEmpList(){
         </div>
       </div>
       ${isManager?`<div style="display:flex;gap:8px;">
-        <button class="btn btn-secondary btn-sm" style="flex:1;padding:10px;font-size:12px;" onclick="event.stopPropagation();openEditEmpSheet('${e.id}')">편집</button>
-        ${e.is_active?`<button class="btn btn-danger btn-sm" style="flex:1;padding:10px;font-size:12px;" onclick="event.stopPropagation();toggleEmp('${e.id}',false)">퇴사</button>`:`<button class="btn btn-success btn-sm" style="flex:1;padding:10px;font-size:12px;" onclick="event.stopPropagation();toggleEmp('${e.id}',true)">복직</button>`}
+        <button class="btn btn-secondary btn-sm" style="flex:1;padding:10px;font-size:12px;" data-action="openEditEmpSheet|${e.id}">편집</button>
+        ${e.is_active?`<button class="btn btn-danger btn-sm" style="flex:1;padding:10px;font-size:12px;" data-action="toggleEmp|${e.id}|false">퇴사</button>`:`<button class="btn btn-success btn-sm" style="flex:1;padding:10px;font-size:12px;" data-action="toggleEmp|${e.id}|true">복직</button>`}
       </div>`:''}
     </div>`}).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
 }
@@ -4358,7 +4403,7 @@ async function openEditEmpSheet(id){if(!isManager)return toast('관리자만 편
   const drWrap=document.getElementById('deviceResetWrap');const dsEl=document.getElementById('deviceStatus');
   if(drWrap){drWrap.style.display='block';dsEl.innerText=e.device_fingerprint?'등록된 기기: '+e.device_fingerprint.slice(0,12)+'...':'등록된 기기 없음 (다음 출근 시 자동 등록)';}
   openSheet('addEmpSheet');}
-async function renderRoleChips(sel){await loadRoles(false);const wrap=document.getElementById('empRoleChips');if(!wrap)return;wrap.innerHTML=(roles.map(r=>`<span class="role-chip${r.name===sel?' selected':''}" onclick="selectRoleChip('${r.name}',this)">${r.name}</span>`).join(''))+`<span class="role-chip" style="border:1px dashed var(--gray-300);color:var(--gray-400);" onclick="promptAddRole()">+ 추가</span>`;}
+async function renderRoleChips(sel){await loadRoles(false);const wrap=document.getElementById('empRoleChips');if(!wrap)return;wrap.innerHTML=(roles.map(r=>`<span class="role-chip${r.name===sel?' selected':''}" data-action="selectRoleChip|${r.name}|this">${r.name}</span>`).join(''))+`<span class="role-chip" style="border:1px dashed var(--gray-300);color:var(--gray-400);" data-action="promptAddRole">+ 추가</span>`;}
 function selectRoleChip(name,el){selectedRoleName=selectedRoleName===name?'':name;document.querySelectorAll('#empRoleChips .role-chip').forEach(c=>c.classList.remove('selected'));if(selectedRoleName)el.classList.add('selected');}
 async function promptAddRole(){const name=prompt('새 직급명을 입력하세요');if(!name||!name.trim())return;setLoad(true,'추가 중...');const{error}=await sb.from('roles').insert({store_id:currentStore.id,name:name.trim(),level:roles.length+1});setLoad(false);if(error)return toast('추가 실패: '+error.message,'error');toast(name.trim()+' 직급 추가!','success');await renderRoleChips(name.trim());selectedRoleName=name.trim();}
 async function saveEmployee(){
@@ -4450,7 +4495,7 @@ async function loadRoles(render=true){
   const sel=document.getElementById('empFilterRole');if(sel){const cur=sel.value;sel.innerHTML='<option value="">전체 직급</option>'+roles.map(r=>`<option value="${r.name}"${r.name===cur?' selected':''}>${r.name}</option>`).join('');}
   if(render)renderRoleList();
 }
-function renderRoleList(){const c=document.getElementById('roleList');if(!c)return;c.innerHTML=roles.length?roles.map(r=>`<div class="role-manage-item"><div><span style="font-size:14px;font-weight:700;">${r.name}</span><span style="font-size:12px;color:var(--gray-600);margin-left:8px;">우선순위 ${r.level}</span></div><div style="display:flex;gap:6px;"><button class="btn btn-secondary btn-sm" onclick="openEditRoleSheet('${r.id}')">편집</button><button class="btn btn-danger btn-sm" onclick="deleteRole('${r.id}','${r.name}')">삭제</button></div></div>`).join(''):'<div class="empty-state"><div class="empty-icon">🏷️</div><p>등록된 직급이 없습니다</p></div>';}
+function renderRoleList(){const c=document.getElementById('roleList');if(!c)return;c.innerHTML=roles.length?roles.map(r=>`<div class="role-manage-item"><div><span style="font-size:14px;font-weight:700;">${r.name}</span><span style="font-size:12px;color:var(--gray-600);margin-left:8px;">우선순위 ${r.level}</span></div><div style="display:flex;gap:6px;"><button class="btn btn-secondary btn-sm" data-action="openEditRoleSheet|${r.id}">편집</button><button class="btn btn-danger btn-sm" data-action="deleteRole|${r.id}|${r.name}">삭제</button></div></div>`).join(''):'<div class="empty-state"><div class="empty-icon">🏷️</div><p>등록된 직급이 없습니다</p></div>';}
 function openAddRoleSheet(){if(!guardStore())return;document.getElementById('addRoleTitle').innerText='직급 추가';document.getElementById('roleNameInput').value='';document.getElementById('roleLevelInput').value=roles.length+1;document.getElementById('editRoleId').value='';openSheet('addRoleSheet');}
 function openEditRoleSheet(id){const r=roles.find(x=>x.id===id);if(!r)return;document.getElementById('addRoleTitle').innerText='직급 편집';document.getElementById('roleNameInput').value=r.name;document.getElementById('roleLevelInput').value=r.level;document.getElementById('editRoleId').value=r.id;openSheet('addRoleSheet');}
 async function saveRole(){if(!guardStore())return;const name=document.getElementById('roleNameInput').value.trim();const level=parseInt(document.getElementById('roleLevelInput').value)||9;if(!name)return toast('직급명을 입력하세요.','warn');const rid=document.getElementById('editRoleId').value;setLoad(true,'저장 중...');const{error}=rid?await sb.from('roles').update({name,level}).eq('id',rid):await sb.from('roles').insert({store_id:currentStore.id,name,level});setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadRoles(true);}
@@ -4460,9 +4505,9 @@ async function deleteRole(id,name){if(employees.some(e=>e.role===name))return to
 async function loadPermissions(){
   if(!currentStore)return;
   const{data:rd}=await sb.from('roles').select('*').eq('store_id',currentStore.id).order('level');
-  const rEl=document.getElementById('rolePermList');if(rEl)rEl.innerHTML=(rd||[]).map(r=>`<div class="perm-item"><div><div style="font-size:14px;font-weight:700;">${r.name}</div><div style="font-size:11px;color:var(--gray-600);">직급 전체 관리자 권한</div></div><label class="toggle-wrap"><input type="checkbox" ${r.is_manager_role?'checked':''} onchange="toggleRolePerm('${r.id}','${r.name}',this.checked)"><span class="toggle-slider"></span></label></div>`).join('')||'<div class="empty-state" style="padding:12px;"><p>직급이 없습니다</p></div>';
+  const rEl=document.getElementById('rolePermList');if(rEl)rEl.innerHTML=(rd||[]).map(r=>`<div class="perm-item"><div><div style="font-size:14px;font-weight:700;">${r.name}</div><div style="font-size:11px;color:var(--gray-600);">직급 전체 관리자 권한</div></div><label class="toggle-wrap"><input type="checkbox" ${r.is_manager_role?'checked':''} data-change="toggleRolePermEvt|${r.id}|${r.name}|this"><span class="toggle-slider"></span></label></div>`).join('')||'<div class="empty-state" style="padding:12px;"><p>직급이 없습니다</p></div>';
   const{data:ed}=await sb.from('employees').select('id,name,role,is_manager,is_approved').eq('store_id',currentStore.id).order('name');
-  const eEl=document.getElementById('empPermList');if(eEl)eEl.innerHTML=(ed||[]).map(e=>`<div class="perm-item"><div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.name} ${e.role?`<span class="badge badge-blue" style="font-size:10px;">${e.role}</span>`:''} ${!e.is_approved?'<span class="badge badge-warn" style="font-size:10px;">미승인</span>':''}</div><div style="font-size:11px;color:var(--gray-600);">개별 관리자 권한</div></div><div style="display:flex;align-items:center;gap:10px;">${!e.is_approved?`<button class="btn btn-success btn-sm" onclick="approveEmp('${e.id}')">승인</button>`:''}<label class="toggle-wrap"><input type="checkbox" ${e.is_manager?'checked':''} onchange="toggleEmpPerm('${e.id}',this.checked)"><span class="toggle-slider"></span></label></div></div>`).join('')||'<div class="empty-state" style="padding:12px;"><p>직원이 없습니다</p></div>';
+  const eEl=document.getElementById('empPermList');if(eEl)eEl.innerHTML=(ed||[]).map(e=>`<div class="perm-item"><div style="flex:1;"><div style="font-size:14px;font-weight:700;">${e.name} ${e.role?`<span class="badge badge-blue" style="font-size:10px;">${e.role}</span>`:''} ${!e.is_approved?'<span class="badge badge-warn" style="font-size:10px;">미승인</span>':''}</div><div style="font-size:11px;color:var(--gray-600);">개별 관리자 권한</div></div><div style="display:flex;align-items:center;gap:10px;">${!e.is_approved?`<button class="btn btn-success btn-sm" data-action="approveEmp|${e.id}">승인</button>`:''}<label class="toggle-wrap"><input type="checkbox" ${e.is_manager?'checked':''} data-change="toggleEmpPermEvt|${e.id}|this"><span class="toggle-slider"></span></label></div></div>`).join('')||'<div class="empty-state" style="padding:12px;"><p>직원이 없습니다</p></div>';
 }
 async function toggleRolePerm(roleId,roleName,checked){await sb.from('roles').update({is_manager_role:checked}).eq('id',roleId);await sb.from('employees').update({is_manager:checked,auth_level:checked?'store_manager':'staff'}).eq('store_id',currentStore.id).eq('role',roleName);}
 async function toggleEmpPerm(empId,checked){await sb.from('employees').update({is_manager:checked,auth_level:checked?'store_manager':'staff'}).eq('id',empId);}
@@ -4537,7 +4582,7 @@ function renderIPInputs(){
   if(ips.length===0) ips.push(''); // 최소 1줄
   list.innerHTML=ips.map((ip,i)=>`<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
     <input class="input-field ip-input" style="flex:1;margin-bottom:0;padding:10px;font-size:14px;" placeholder="예: 59.26.106.174" value="${ip}">
-    ${ips.length>1?`<button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:12px;flex-shrink:0;" onclick="removeIPInput(${i})">삭제</button>`:''}
+    ${ips.length>1?`<button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:12px;flex-shrink:0;" data-action="removeIPInput|${i}">삭제</button>`:''}
   </div>`).join('');
 }
 function addIPInput(){
@@ -4545,7 +4590,7 @@ function addIPInput(){
   const div=document.createElement('div');
   div.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center;';
   div.innerHTML=`<input class="input-field ip-input" style="flex:1;margin-bottom:0;padding:10px;font-size:14px;" placeholder="예: 59.26.106.174" value="">
-    <button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:12px;flex-shrink:0;" onclick="this.parentElement.remove()">삭제</button>`;
+    <button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:12px;flex-shrink:0;" data-action="removeParent|this">삭제</button>`;
   list.appendChild(div);
 }
 function removeIPInput(idx){
@@ -4612,10 +4657,10 @@ function renderSpecialWageList(){
   const c=document.getElementById('specialWageList');if(!c)return;
   c.innerHTML=specialWageRows.map((row,i)=>`
     <div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--gray-100);">
-      <input type="date" value="${row.date||''}" oninput="specialWageRows[${i}].date=this.value" style="border:none;background:var(--gray-100);border-radius:8px;padding:6px 8px;font-size:13px;outline:none;flex:1;">
-      <input type="number" value="${row.amount||0}" oninput="specialWageRows[${i}].amount=parseInt(this.value)||0" style="width:90px;text-align:right;border:none;background:var(--gray-100);border-radius:8px;padding:6px 8px;font-size:13px;font-weight:700;outline:none;" placeholder="추가시급">
+      <input type="date" value="${row.date||''}" data-input="setSpecialWageDate|${i}|this" style="border:none;background:var(--gray-100);border-radius:8px;padding:6px 8px;font-size:13px;outline:none;flex:1;">
+      <input type="number" value="${row.amount||0}" data-input="setSpecialWageAmount|${i}|this" style="width:90px;text-align:right;border:none;background:var(--gray-100);border-radius:8px;padding:6px 8px;font-size:13px;font-weight:700;outline:none;" placeholder="추가시급">
       <span style="font-size:12px;color:var(--gray-600);">원/시</span>
-      <button class="btn btn-danger btn-sm" onclick="removeSpecialWageRow(${i})">✕</button>
+      <button class="btn btn-danger btn-sm" data-action="removeSpecialWageRow|${i}">✕</button>
     </div>`).join('');
 }
 function addSpecialWageRow(){specialWageRows.push({date:new Date().toISOString().split('T')[0],amount:0,memo:''});renderSpecialWageList();}
@@ -4769,7 +4814,7 @@ async function renderWageSummary(){
       </div>
       ${zeroCount>0?`<div style="margin-top:8px;font-size:11px;color:var(--danger);">⚠️ 급여 미산출 ${zeroCount}건 발견</div>`:''}
     </div>
-    ${zeroCount>0?`<button class="btn btn-warn btn-full" style="margin-bottom:12px;padding:12px;font-size:13px;" onclick="recalcMonthWages()">🔄 이달 급여 재계산 (현재 시급 기준)</button>`:''}
+    ${zeroCount>0?`<button class="btn btn-warn btn-full" style="margin-bottom:12px;padding:12px;font-size:13px;" data-action="recalcMonthWages">🔄 이달 급여 재계산 (현재 시급 기준)</button>`:''}
     <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="background:var(--gray-100);">
@@ -4856,17 +4901,17 @@ function renderExpCatList(){
           <div style="font-size:14px;font-weight:800;">${p.name}</div>
           <div style="font-size:11px;color:var(--gray-400);">${srcLabel[p.data_source]||p.data_source}${children.length?' · 소분류 '+children.length+'개':''}</div>
         </div>
-        <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openAddSubCatSheet('${p.id}','${p.name}')">+ 소분류</button>
-        <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openEditExpCatSheet('${p.id}')">편집</button>
-        <button class="btn btn-danger btn-sm" style="font-size:10px;" onclick="deleteExpCat('${p.id}','${p.name}')">삭제</button>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" data-action="openAddSubCatSheet|${p.id}|${p.name}">+ 소분류</button>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" data-action="openEditExpCatSheet|${p.id}">편집</button>
+        <button class="btn btn-danger btn-sm" style="font-size:10px;" data-action="deleteExpCat|${p.id}|${p.name}">삭제</button>
       </div>`;
     if(children.length){
       children.forEach(ch=>{
         html+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 0 8px 24px;border-bottom:1px solid var(--gray-100);">
           <div style="width:10px;height:10px;border-radius:50%;background:${ch.color||p.color||'#0050FF'};flex-shrink:0;"></div>
           <div style="flex:1;font-size:13px;font-weight:600;">${ch.name}</div>
-          <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:4px 8px;" onclick="openEditExpCatSheet('${ch.id}')">편집</button>
-          <button class="btn btn-danger btn-sm" style="font-size:10px;padding:4px 8px;" onclick="deleteExpCat('${ch.id}','${ch.name}')">삭제</button>
+          <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:4px 8px;" data-action="openEditExpCatSheet|${ch.id}">편집</button>
+          <button class="btn btn-danger btn-sm" style="font-size:10px;padding:4px 8px;" data-action="deleteExpCat|${ch.id}|${ch.name}">삭제</button>
         </div>`;
       });
     }
@@ -4880,8 +4925,8 @@ function renderExpCatList(){
       html+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-100);">
         <div style="width:10px;height:10px;border-radius:50%;background:${cat.color||'#0050FF'};flex-shrink:0;"></div>
         <div style="flex:1;font-size:13px;">${cat.name}</div>
-        <button class="btn btn-secondary btn-sm" style="font-size:10px;" onclick="openEditExpCatSheet('${cat.id}')">편집</button>
-        <button class="btn btn-danger btn-sm" style="font-size:10px;" onclick="deleteExpCat('${cat.id}','${cat.name}')">삭제</button>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" data-action="openEditExpCatSheet|${cat.id}">편집</button>
+        <button class="btn btn-danger btn-sm" style="font-size:10px;" data-action="deleteExpCat|${cat.id}|${cat.name}">삭제</button>
       </div>`;
     });
   }
@@ -5522,7 +5567,7 @@ async function loadMyDataStatus(){
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="badge badge-green">연결됨</span>
-        <button class="btn btn-danger btn-sm" onclick="disconnectMyData('${a.id}')">해제</button>
+        <button class="btn btn-danger btn-sm" data-action="disconnectMyData|${a.id}">해제</button>
       </div>
     </div>`).join('');
 }
@@ -5647,7 +5692,7 @@ function renderBankTxTable(){
       <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
       <td style="color:var(--success);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${isIn?fmt(r.amount):''}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${!isIn?fmt(Math.abs(r.amount)):''}</td>
-      <td style="padding:2px;"><button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" onclick="deleteTxRow('${r.id}','bank')">✕</button></td>
+      <td style="padding:2px;"><button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" data-action="deleteTxRow|${r.id}|bank">✕</button></td>
     </tr>`;
   }).join('');
   document.getElementById('bankTxInSum').innerText='입금 '+fmt(inSum)+'원';
@@ -5701,7 +5746,7 @@ function renderCardTxTable(){
       <td class="tx-desc-tip" data-full="${(name||'').replace(/"/g,'&quot;')}" style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;cursor:pointer;position:relative;">${truncDesc(name,6)}</td>
       <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${fmt(Math.abs(r.amount))}</td>
-      <td style="padding:2px;"><button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" onclick="deleteTxRow('${r.id}','card')">✕</button></td>
+      <td style="padding:2px;"><button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" data-action="deleteTxRow|${r.id}|card">✕</button></td>
     </tr>`;
   }).join('');
   document.getElementById('cardTxSum').innerText=fmt(total)+'원';
@@ -6768,9 +6813,9 @@ function renderExcelPreview(items, type, totalLines){
 
   // 버튼
   if(review.length>0){
-    html+=`<button class="btn btn-warn btn-full" style="margin-top:8px;" onclick="openReviewItems()">⚠️ 확인 필요 ${review.length}건 검토하기</button>`;
+    html+=`<button class="btn btn-warn btn-full" style="margin-top:8px;" data-action="openReviewItems">⚠️ 확인 필요 ${review.length}건 검토하기</button>`;
   }
-  html+=`<button class="btn btn-primary btn-full" onclick="saveExcelBatch()">📥 ${items.length}건 저장하기</button>`;
+  html+=`<button class="btn btn-primary btn-full" data-action="saveExcelBatch">📥 ${items.length}건 저장하기</button>`;
 
   document.getElementById('excelUploadResult').innerHTML=html;
 }
@@ -6791,7 +6836,7 @@ function openReviewItems(){
       <div style="font-size:12px;color:var(--warn);margin-bottom:8px;">${item.review_reason||'분류 확신 낮음'}</div>
       <div style="font-size:11px;color:var(--gray-600);margin-bottom:8px;">${item.tx_date} ${item.tx_time||''}</div>
       <div style="display:flex;gap:6px;">
-        <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvCat${globalIdx}" onchange="updateReviewItem(${globalIdx})">
+        <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvCat${globalIdx}" data-change="updateReviewItem|${globalIdx}">
           <option value="${item.category||''}">${item.category||'선택'}/${item.sub_category||'?'}</option>
           <option value="매출">매출</option>
           <option value="카드대금">카드대금</option>
@@ -7165,7 +7210,7 @@ function renderReconSummary(){
     else if(diff<0&&hasActual) statusBadge='<span class="badge badge-warn">부족</span>';
     else statusBadge='<span class="badge badge-gray">미입력</span>';
 
-    html+=`<div class="recon-row" onclick="showReconDetail('${entry.categoryId}')">
+    html+=`<div class="recon-row" data-action="showReconDetail|${entry.categoryId}">
       <div style="width:8px;height:8px;border-radius:50%;background:${entry.color};flex-shrink:0;"></div>
       <div class="rr-name">${entry.name}</div>
       <div class="rr-amt">${fmt(entry.recorded)}</div>
@@ -7197,7 +7242,7 @@ function renderReconCatChips(){
   if(!reconData)return;
   const c=document.getElementById('reconCatChips');
   c.innerHTML=reconData.summary.map(entry=>`
-    <button class="sub-tab" onclick="renderReconDetailFor('${entry.categoryId}')" style="font-size:11px;">
+    <button class="sub-tab" data-action="renderReconDetailFor|${entry.categoryId}" style="font-size:11px;">
       <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${entry.color};margin-right:4px;"></span>${entry.name}
     </button>`).join('');
 }
@@ -7227,7 +7272,7 @@ function renderReconDetailFor(categoryId){
       else if(diff<0&&hasActual) badge='<span class="badge badge-warn">부족</span>';
       else badge='<span class="badge badge-gray">미입력</span>';
 
-      html+=`<div class="recon-row" onclick="openManualPayment('${entry.categoryId}','${d.subKey}','${d.label}',${d.recorded},${d.actual})">
+      html+=`<div class="recon-row" data-action="openManualPayment|${entry.categoryId}|${d.subKey}|${d.label}|${d.recorded}|${d.actual}">
         <div class="rr-name">${d.label}${d.memo?` <span style="font-size:10px;color:var(--gray-400);">(${d.memo})</span>`:''}</div>
         <div class="rr-amt">${fmt(d.recorded)}</div>
         <div class="rr-amt">${hasActual?fmt(d.actual):'-'}</div>
@@ -7251,7 +7296,7 @@ function renderReconDetailFor(categoryId){
 
   const allConfirmed=entry.details.every(d=>d.confirmed);
   if(!allConfirmed&&hasSubActual){
-    html+=`<button class="btn btn-success btn-full" onclick="confirmReconCategory('${entry.categoryId}')">전체 확인 처리</button>`;
+    html+=`<button class="btn btn-success btn-full" data-action="confirmReconCategory|${entry.categoryId}">전체 확인 처리</button>`;
   }
 
   document.getElementById('reconDetailTable').innerHTML=html;
@@ -7355,6 +7400,20 @@ async function confirmReconCategory(categoryId){
 // 초기화
 // ══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async()=>{
+  // ─── 중앙 이벤트 위임 (CSP 인라인 핸들러 대체) ───
+  document.addEventListener('click',e=>{
+    const el=e.target.closest('[data-action]');
+    if(el) _dispatchAction('data-action', el);
+  });
+  document.addEventListener('change',e=>{
+    const el=e.target.closest('[data-change]');
+    if(el) _dispatchAction('data-change', el);
+  });
+  document.addEventListener('input',e=>{
+    const el=e.target.closest('[data-input]');
+    if(el) _dispatchAction('data-input', el);
+  });
+
   initAttDate();recalcSettle2();initSchedDate();
 
   // 매장 복원: 로그인에 필요한 것만 먼저 로드 (직원목록)
