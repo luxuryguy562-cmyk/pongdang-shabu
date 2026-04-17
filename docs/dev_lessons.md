@@ -4,15 +4,23 @@
 
 ---
 
-## 1. inline 핸들러 금지 (Cloudflare CSP)
+## 1. inline 핸들러 금지 (Cloudflare CSP) ✅ 2026-04-17 전수 제거
 Cloudflare Pages가 `onchange="..."`, `onclick="..."` **조용히 차단**. 에러도 안 뜸.
 
 ```
 ❌ <input onchange="doSomething(this)">
 ❌ <div onclick="event.stopPropagation()">
-✅ element.addEventListener('change', function(){ ... });
-✅ DOMContentLoaded에서 바인딩
+✅ <div data-action="함수명|인자1|인자2">   ← 중앙 라우터가 처리
+✅ <input data-change="함수명|this"> / data-input=...
 ```
+
+**현재 구조 (index.html 1961~2008행, DOMContentLoaded 최상단)**:
+- `_dispatchAction(attr, el)` 파서: `data-action="fnName|arg1|arg2"` 파싱
+- 특수 토큰: `this` → 요소, `true`/`false`/`null`/`undefined` → 그대로,
+  숫자(정수/소수/음수) → 자동 파싱, 그 외 → 문자열
+- 복합 동작(다중 호출)은 래퍼로 등록 (navFromSide, editEmpAfterClose, setGanttDay 등)
+- 인자에 `|` 문자가 들어가지 않도록 주의 (이름·라벨·UUID 모두 안전)
+- `event.stopPropagation()`은 불필요 — `closest('[data-action]')`가 innermost 자동 선택
 
 ---
 

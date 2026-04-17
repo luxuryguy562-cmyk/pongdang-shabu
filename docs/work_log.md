@@ -6,7 +6,7 @@
 
 ## [2026-04-17] 코드 구조 개선 로드맵 Phase 0·1 — 인라인 핸들러 제거
 
-### 상태: 진행중
+### 상태: 구현완료 (배포 대기)
 ### 브랜치: claude/review-code-structure-scaDn
 
 ### 배경
@@ -26,12 +26,19 @@
 - 본 항목 추가
 
 ### Phase 1 내용
-- 중앙 이벤트 위임 라우터 추가: `document.addEventListener('click', ...)`
-- 기존 `onclick="foo()"` → `data-action="foo"` 치환
-- 인자 있는 경우 `data-action="foo|arg1|arg2"` 파이프 구분자
-- `this` 참조는 특수 토큰 "this"
-- 복합 호출(`closeSideMenu();nav('x')`)은 래퍼 함수 도입
-- change/input/blur 등 다른 이벤트는 별도 `data-change` / `data-input` 처리
+- 중앙 이벤트 위임 라우터 추가 (index.html 1961~2008행): `_parseActionArg` / `_dispatchAction`
+- DOMContentLoaded 최상단에 click/change/input 3개 전역 리스너 등록
+- 치환 결과: `onclick 211개 + onchange 25개 + oninput 15개 = 251개` 전부 data-* 속성으로 전환, **미변환 0건**
+- 인라인 onclick → `data-action`, onchange → `data-change`, oninput → `data-input`
+- 단순 호출: `foo('a',1)` → `foo|a|1`
+- 복합 호출(다중 호출·JS 표현식) 14개는 래퍼 함수로 등록:
+  `navFromSide`, `navHome`, `editEmpAfterClose`, `setGanttDay`, `setGanttAllDays`,
+  `removeParent`, `openEditAttByIdx`, `saveVendorUploadGlobal`,
+  `setFcAmount`, `setSpecialWageDate`, `setSpecialWageAmount`,
+  `toggleRolePermEvt`, `toggleEmpPermEvt`, `resetCurrentEmpDevice`
+- `event.stopPropagation()` 제거 — `closest('[data-action]')`가 innermost 자동 선택
+- node --check 구문 검증 통과
+- dev_lessons.md #1 해결 표시 + 현재 구조 설명 추가
 
 ### DB 변경
 - 없음
