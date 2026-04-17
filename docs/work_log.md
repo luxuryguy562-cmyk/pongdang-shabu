@@ -4,6 +4,52 @@
 
 ---
 
+## [2026-04-17] 코드 구조 개선 로드맵 Phase 2b — RLS 1차 활성화
+
+### 상태: SQL 실행완료 (앱 골든패스 테스트 중)
+### 브랜치: claude/review-docs-sync-main-3aqxI → main
+### SQL 파일: docs/sql/phase2b_rls_enable.sql, phase2b_rls_rollback.sql
+
+### 배경
+Phase 2a에서 코드 레이어 `store_id` 필터 26곳 추가 완료(커밋 f5fc304). 이제 DB 레이어 RLS 활성화로 2중 방어망 구축. 1차는 **느슨한 정책**(USING true) + **스키마 정합성 강제**(WITH CHECK store_id IS NOT NULL)로 무중단 활성화. 2차(Phase 2c 이후) Cloudflare Worker 프록시 + auth.uid 기반 엄격화.
+
+### 절차 (제11조 6단계, DB 변경 버전)
+
+**11-1 사전 스캔**:
+- db_schema.md + index.html 쿼리 교차 검증 → store_id 컬럼 보유 테이블 22개 확정
+- 대상: store_settings, employees, roles, attendance_logs, caps_upload_staging, work_schedules, daily_sales, receipts, settlements, vendors, vendor_orders, expense_categories, expense_category_amounts, fixed_costs, fixed_cost_amounts, special_wages, mydata_accounts, mydata_transactions, reconciliation, reserve_fund_logs, classification_rules, vendor_diffs
+- 유보: stores, franchises (부모 테이블, store_id 없음)
+
+**11-2 백업**: Supabase 자동 스냅샷 + 롤백 SQL 사전 준비
+
+**11-3 스크립트화**: 단일 `.sql` 파일 BEGIN/COMMIT 트랜잭션 (enable + rollback 대칭)
+
+**11-4 사후 검증 (3단 게이트)**:
+1. 검증 쿼리: `SELECT tablename, rowsecurity FROM pg_tables WHERE ...` — 22건 true 확인
+2. 골든패스 테스트 5종: 근태/영수증/마감정산/거래처/대시보드
+3. (실패 시 즉시 phase2b_rls_rollback.sql 실행)
+
+**11-5 기록**: 본 항목 + dev_lessons #30 신설 (RLS 1차 활성 교훈) + db_schema.md + services.md 갱신
+
+**11-6 배포 전 체크**: SQL 파일 커밋 + 헌법 1-2 업데이트(브랜치 push → main 자동 머지)
+
+### 정책 설계
+```
+USING (true)                       -- 모든 SELECT 허용 (anon key 앱 무중단)
+WITH CHECK (store_id IS NOT NULL)  -- INSERT/UPDATE 시 store_id 필수 (스키마 정합성)
+FOR ALL TO public                  -- anon + authenticated 포함
+```
+
+### DB 변경
+- 22개 매장별 테이블 RLS ON + `pd_phase2b_all` 정책 생성
+- 코드 변경 0줄
+
+### 다음 단계 (Phase 2c — 별도 세션)
+- Cloudflare Worker 프록시로 anon key 서버측 보호
+- JWT 기반 `auth.uid()` 세션 도입 → RLS 정책 엄격화 (`USING (store_id = auth.store_id())` 등)
+
+---
+
 ## [2026-04-17] 코드 구조 개선 로드맵 Phase 2a — store_id 필터 누락 감사 + 수정
 
 ### 상태: 배포완료

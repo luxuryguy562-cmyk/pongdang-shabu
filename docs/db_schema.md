@@ -272,7 +272,12 @@ franchises (프랜차이즈/브랜드)
 | reserve_initial_balance (int, default 0) | 예비비 초기 이월 잔고 |
 
 ## 주의사항
-- **RLS 비활성**: anon key로 직접 접근 가능
+- **RLS 1차 활성 (2026-04-17 Phase 2b)**: 매장별 22개 테이블 RLS ON + `pd_phase2b_all` 정책
+  - 정책: `USING(true) WITH CHECK(store_id IS NOT NULL) FOR ALL TO public`
+  - 의미: 읽기 전부 허용 + 쓰기 시 store_id 필수. **느슨함 — 코드 레이어 필터와 2중 방어**
+  - 향후 Phase 2c에서 Cloudflare Worker + JWT auth 도입 후 엄격화 예정
+  - SQL 파일: `docs/sql/phase2b_rls_enable.sql` / `phase2b_rls_rollback.sql`
+- **RLS 비활성 테이블**: stores, franchises (부모 테이블, store_id 없음)
 - **store_id 필수**: 모든 쿼리에 빠뜨리면 타 매장 데이터 노출
 - **role 문자열 연결**: employees.role = roles.name (FK 아님), 직급명 변경 시 employees도 업데이트 필요
 - **category_id FK**: mydata_transactions.category_id → expense_categories.id. CAT_NAME_MAP으로 매핑 (→ business_rules.md)

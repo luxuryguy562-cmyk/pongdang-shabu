@@ -10,7 +10,7 @@
 | 서비스 | URL / 값 | 위치 (index.html 변수) | 비고 |
 |--------|----------|----------------------|------|
 | **Supabase** | `https://ruytgygjwnbtzmtofopg.supabase.co` | `SUPABASE_URL` | DB + REST API |
-| **Supabase Key** | `sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe` | `SUPABASE_ANON_KEY` | anon key (RLS 비활성) |
+| **Supabase Key** | `sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe` | `SUPABASE_ANON_KEY` | anon key (RLS 1차 활성 — Phase 2b 2026-04-17, USING true + WITH CHECK store_id) |
 | **Gemini 프록시** | `https://gemini-proxy.luxuryguy562.workers.dev` | `GEMINI_URL` | 영수증/POS AI용. 2026-04 기준 500 에러 |
 | **XLSX 라이브러리** | `cdn.jsdelivr.net/npm/xlsx@0.18.5` | `<script>` 태그 | 엑셀 파싱용 |
 | **Chart.js** | `cdn.jsdelivr.net/npm/chart.js@4.4.0` | `<script>` 태그 | 대시보드 차트 |
