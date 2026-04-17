@@ -6,8 +6,8 @@
 
 ## [2026-04-17] 코드 구조 개선 로드맵 Phase 2b — RLS 1차 활성화
 
-### 상태: SQL 실행완료 (앱 골든패스 테스트 중)
-### 브랜치: claude/review-docs-sync-main-3aqxI → main
+### 상태: 배포완료
+### 브랜치: claude/review-docs-sync-main-3aqxI → main (커밋 aa7b3cf)
 ### SQL 파일: docs/sql/phase2b_rls_enable.sql, phase2b_rls_rollback.sql
 
 ### 배경
@@ -25,9 +25,9 @@ Phase 2a에서 코드 레이어 `store_id` 필터 26곳 추가 완료(커밋 f5f
 **11-3 스크립트화**: 단일 `.sql` 파일 BEGIN/COMMIT 트랜잭션 (enable + rollback 대칭)
 
 **11-4 사후 검증 (3단 게이트)**:
-1. 검증 쿼리: `SELECT tablename, rowsecurity FROM pg_tables WHERE ...` — 22건 true 확인
-2. 골든패스 테스트 5종: 근태/영수증/마감정산/거래처/대시보드
-3. (실패 시 즉시 phase2b_rls_rollback.sql 실행)
+1. 검증 쿼리: `SELECT tablename, rowsecurity FROM pg_tables WHERE ...` — 사장님 실행
+2. 앱 동작 확인: 사장님이 `pongdang-shabu.pages.dev` 접속 후 정상 동작 확인 ✅
+3. Claude 샌드박스 직접 테스트 시도 → Supabase IP allowlist에 막힘 (→ dev_lessons #31 신설)
 
 **11-5 기록**: 본 항목 + dev_lessons #30 신설 (RLS 1차 활성 교훈) + db_schema.md + services.md 갱신
 
