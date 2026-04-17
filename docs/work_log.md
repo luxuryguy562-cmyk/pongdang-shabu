@@ -43,9 +43,34 @@
 ### DB 변경
 - 없음
 
-### 다음 TODO
-- Phase 2: store_id 필터 누락 58곳 전수 감사 보고서
-- Phase 3~5: 별도 세션
+### 다음 세션 시작 방법 (복붙용)
+```
+docs 전부 읽고 (CLAUDE.md 제11조 특히, business_rules.md, dev_lessons.md,
+plan.md, db_schema.md, work_log.md 최상단 Phase 0·1 항목, services.md)
+절대 무시·생략 없이 준수.
+
+현재 브랜치: claude/review-code-structure-scaDn
+마지막 커밋: Phase 1 인라인 핸들러 251개 제거 (커밋 912042b)
+Phase 0·1 배포 확인 완료 가정하에,
+Phase 2 (store_id 필터 누락 58곳 감사 + RLS 준비)부터 이어서 진행.
+
+반드시:
+- CLAUDE.md 제11조 "대규모 변경 안전 절차" 6단계 따를 것
+- 계획서 먼저 제출하고 승인 받은 후 코드 수정 (제1조 1-1)
+- DB 변경은 실행 SQL + 롤백 SQL 모두 제출 (제8조)
+```
+
+### 이번 세션에서 얻은 교훈 → 헌법·교훈 반영 완료
+- CLAUDE.md 제11조 신설: "대규모 변경 안전 절차" (사전 스캔→백업→스크립트→3단 검증→기록)
+- dev_lessons.md #27 신설: 일괄 치환 스크립트화 원칙
+- dev_lessons.md #5 보강: 대규모 변경은 제11조 참조하도록 링크
+
+### 남은 로드맵 (Phase 2~5, 별도 세션 진행)
+- **Phase 2 (대형, 보안)**: store_id 누락 58곳 감사 + RLS 활성화 SQL + Cloudflare Worker 프록시 검토
+  - 전제: 사장님 Supabase 콘솔 접근 필요
+- **Phase 3 (중형)**: loadDashboard 583줄 분할 (3485~4067행)
+- **Phase 4 (중형)**: openAdd/Edit*Sheet 6곳 중복 → 제너릭화
+- **Phase 5 (중형)**: 전역 가변 상태 20+개 → state.* 네임스페이스
 
 ---
 
