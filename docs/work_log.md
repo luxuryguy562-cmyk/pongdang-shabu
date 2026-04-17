@@ -6,9 +6,10 @@
 
 ## [2026-04-17] 코드 구조 개선 로드맵 Phase 2a — store_id 필터 누락 감사 + 수정
 
-### 상태: 구현완료 (배포 대기)
-### 브랜치: claude/review-docs-deployment-JjQkV
+### 상태: 배포완료
+### 브랜치: claude/review-docs-deployment-JjQkV → main
 ### 백업 커밋: 12d7a70
+### 수정 커밋: 9f6a30d
 
 ### 배경
 Supabase RLS 비활성 상태이므로 클라이언트 레이어 `.eq('store_id', currentStore.id)` 필터가 다매장 데이터 격리의 유일한 방어선. 다음 매장 추가 시(예: 대전점) 누락 곳에서 데이터 혼입·노출 위험. 본 작업은 사장님 B안(방어적) 승인하에 진행.
@@ -59,6 +60,40 @@ Supabase RLS 비활성 상태이므로 클라이언트 레이어 `.eq('store_id'
 - RLS 활성화 SQL + 롤백 SQL 준비
 - store_settings 등 모든 테이블에 `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` + `CREATE POLICY ... USING (true)` 1차 (방어막 2중화 후 점진적 강화)
 - Cloudflare Worker 프록시 검토 (anon key 노출 대안)
+
+### 다음 세션 시작 방법 (복붙용)
+```
+docs 전부 읽고 (CLAUDE.md 제11조 특히, business_rules.md, dev_lessons.md,
+plan.md, db_schema.md, work_log.md 최상단 Phase 2a 항목, services.md)
+절대 무시·생략 없이 준수.
+
+세션 시작 필수: git fetch --all 먼저 실행 (dev_lessons #29 참조).
+로컬 main이 뒤처져 있을 수 있음.
+
+현재 상태: Phase 2a 배포완료 (커밋 9f6a30d, main 머지 완료)
+Phase 2b (RLS 활성화 준비)부터 이어서 진행.
+
+Phase 2b 작업 범위:
+- Supabase 모든 매장별 테이블 21개 RLS 활성화
+- 1차 정책: USING (true) + WITH CHECK (store_id IS NOT NULL)
+  (코드 레이어 필터가 이미 있으므로 점진적 강화)
+- 실행 SQL + 롤백 SQL 작성
+- 사장님 Supabase 콘솔(Dashboard → Authentication → Policies)에서 실행
+- 실행 후 앱 골든패스 5가지 재테스트
+
+반드시:
+- CLAUDE.md 제11조 "대규모 변경 안전 절차" 6단계 따를 것
+- 계획서 먼저 제출하고 승인 받은 후 SQL 실행 (제1조 1-1)
+- DB 변경은 실행 SQL + 롤백 SQL 모두 제출 (제8조)
+- RLS 활성화는 DB 변경 = 대형 + 승인 게이트 강화 (제4-3조)
+```
+
+### 남은 로드맵 (Phase 2b, 2c, 3~5)
+- **Phase 2b (대형, DB/보안)**: RLS 활성화 — 사장님 Supabase 콘솔 실행 필요
+- **Phase 2c (중형, 인프라)**: Cloudflare Worker 프록시 (anon key 서버측 보호)
+- **Phase 3 (중형)**: loadDashboard 583줄 분할 (3485~4067행)
+- **Phase 4 (중형)**: openAdd/Edit*Sheet 6곳 중복 → 제너릭화
+- **Phase 5 (중형)**: 전역 가변 상태 20+개 → state.* 네임스페이스
 
 ---
 
