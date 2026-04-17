@@ -192,6 +192,42 @@ flex로 하면 자릿수가 안 맞아서 의미 없음.
 
 ---
 
+## 23. 카테고리 하드코딩 금지 — DB expense_categories 직접 매칭
+CAT_NAME_MAP 같은 매핑 테이블 하드코딩하면 카테고리명 변경 시 FK 깨짐.
+```
+❌ CAT_NAME_MAP = {'물품대금':'식자재(거래처)'}
+✅ expense_categories.name 직접 매칭 (findCatId)
+```
+분류 변경 UI, 리뷰 드롭다운, saveExcelBatch 모두 DB에서 동적 생성.
+
+---
+
+## 24. 비활성 카테고리도 거래 있으면 집계에 포함
+카테고리 삭제(is_active=false) 시 해당 월 거래 데이터가 사라지면 안 됨.
+```
+loadExpCategories: is_active 필터 없이 전체 로드
+관리 UI/분류 변경: is_active 필터 적용
+대시보드/정산: 활성 + 비활성(거래있는 달만) 포함
+```
+
+---
+
+## 25. 영수증 학습은 "힌트"가 아니라 "규칙 덮어쓰기"
+AI에 과거 데이터를 프롬프트로 넘기면(힌트): 무시할 수 있음, 프롬프트 비대, 비예측적.
+```
+❌ 프롬프트에 "바나나우유→간식" 힌트 삽입 (AI가 무시 가능)
+✅ AI 응답 후 classification_rules 조회 → 카테고리 강제 덮어쓰기
+```
+
+---
+
+## 26. birth_date를 주민번호 칸에 넣지 마라
+직원 편집에서 `id_number || birth_date` fallback 사용하면,
+birth_date("2025-06-01")를 주민번호로 파싱 → "1920-25-06" → DB 에러.
+주민번호 없으면 빈칸. 절대 다른 필드로 fallback 금지.
+
+---
+
 ## 17. HTML 요소 제거 후 JS 참조 확인
 HTML에서 `empBirthInput` 제거 → JS의 `autoFormatDate(empBirthInput)` 에서 null 에러.
 요소 ID 변경/삭제 시 JS에서 해당 ID 참조하는 곳 전부 grep 확인 필수.
