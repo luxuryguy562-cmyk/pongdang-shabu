@@ -4,6 +4,40 @@
 
 ---
 
+## [2026-04-20] 로그인 시 기기 등록 팝업
+
+### 상태: 배포대기 (브랜치 push → main 자동 머지)
+### 브랜치: claude/device-registration-feedback-CIjP4
+### 규모: 중형
+
+### 배경
+기존: `첫 출근` 버튼 누를 때만 기기 자동 등록 + 2초 토스트 → 사장님/직원이 등록됐는지 모름.
+요청: 로그인 시 기기 상태 팝업으로 명확히 알림 + 관리자 초기화 후 재로그인 시 자동 재등록.
+
+### 변경
+- 신규 시트 `#deviceStatusSheet` (sheet-overlay, dev_lessons #3 준수)
+- 신규 함수: `showDeviceStatusPopup(emp)`, `registerDeviceFromPopup()`, `closeDevicePopup()`
+- `completeLogin(emp)` 끝에 `if(!isManager) setTimeout(...showDeviceStatusPopup, 400)` 추가
+- `resetDeviceFingerprint` 토스트 문구: "다음 출근" → "다음 로그인" 교체, 편집 시트 상태 라벨 즉시 갱신
+
+### 팝업 3상태
+| 상태 | 제목 | 버튼 |
+|---|---|---|
+| 미등록 | 📱 기기 등록이 필요해요 | [이 기기로 등록] / [나중에] |
+| 일치 | ✅ 등록된 기기입니다 | [확인] (3초 자동 닫힘) |
+| 불일치 | ⚠️ 다른 기기에서 로그인했어요 | [확인] + 해결방법 안내 |
+
+### 영향 범위
+- DB: 변경 없음 (기존 `employees.device_fingerprint` 재사용)
+- 기존 `checkDeviceForAttendance()` 자동 등록 로직 유지 (팝업 "나중에" 선택 시 fallback)
+- staff 로그인 시만 팝업 (관리자 스킵 — 여러 기기 사용)
+
+### 검증
+- node --check 통과
+- 기존 출퇴근 플로우 영향 없음 (추가 레이어만)
+
+---
+
 ## [2026-04-17] 코드 구조 개선 로드맵 Phase 2b — RLS 1차 활성화
 
 ### 상태: 배포완료
