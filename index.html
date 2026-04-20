@@ -1372,6 +1372,25 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- 기기 등록 상태 팝업 (로그인 시 자동 표시) -->
+<div class="sheet-overlay" id="deviceStatusSheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div id="devPopupBody" style="text-align:center;padding:8px 4px 4px;">
+      <div id="devPopupIcon" style="font-size:48px;line-height:1;margin-bottom:12px;">📱</div>
+      <div id="devPopupTitle" style="font-size:18px;font-weight:700;margin-bottom:10px;">기기 등록이 필요해요</div>
+      <div id="devPopupDesc" style="font-size:14px;color:var(--gray-600);line-height:1.5;margin-bottom:14px;"></div>
+      <div id="devPopupInfo" style="background:var(--gray-50);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+        <table style="width:100%;font-size:12px;font-variant-numeric:tabular-nums;">
+          <tbody id="devPopupInfoRows"></tbody>
+        </table>
+      </div>
+      <div id="devPopupHelp" style="font-size:12px;color:var(--gray-600);text-align:left;margin-bottom:14px;display:none;"></div>
+    </div>
+    <div id="devPopupBtns" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+</div>
+
 <!-- 엑셀 업로드 결과 시트 -->
 <div class="sheet-overlay" id="excelUploadSheet">
   <div class="sheet" style="max-height:85vh;overflow-y:auto;">
@@ -6166,6 +6185,8 @@ function completeLogin(emp){
   nav(isManager?'dashboard':'attendance');
   // 나머지 데이터 백그라운드 로드 (화면 차단 없이)
   Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
+  // 기기 등록 상태 팝업 (staff만 — 관리자는 여러 기기 사용 가능하므로 스킵)
+  if(!isManager) setTimeout(()=>showDeviceStatusPopup(emp),400);
 }
 function doLogout(){
   if(!confirm('로그아웃?')) return;
@@ -6249,14 +6270,89 @@ async function checkDeviceForAttendance(empId){
 }
 async function resetDeviceFingerprint(empId){
   // 관리자용: 직원 기기 지문 초기화
-  if(!confirm('이 직원의 등록 기기를 초기화합니다.\n다음 출근 시 새 기기가 자동 등록됩니다.')) return;
+  if(!confirm('이 직원의 등록 기기를 초기화합니다.\n해당 직원이 다음 로그인 시 새 기기로 자동 재등록됩니다.')) return;
   setLoad(true,'초기화 중...');
   const{error}=await sb.from('employees').update({device_fingerprint:null}).eq('id',empId).eq('store_id',currentStore.id);
   setLoad(false);
   if(error) return toast('초기화 실패: '+error.message,'error');
   const emp=employees.find(e=>e.id===empId);
   if(emp) emp.device_fingerprint=null;
-  toast('기기 초기화 완료! 다음 출근 시 새 기기가 등록됩니다.','success');
+  // 편집 시트의 기기 상태 라벨도 즉시 갱신
+  const dsEl=document.getElementById('deviceStatus');
+  if(dsEl&&document.getElementById('editEmpId').value===empId) dsEl.innerText='등록된 기기 없음 (다음 로그인/출근 시 자동 등록)';
+  toast('기기 초기화 완료! 해당 직원이 다음 로그인 시 재등록됩니다.','success');
+}
+
+// ─── 새 기능: 로그인 시 기기 등록 상태 팝업 ───
+let _devPopupTimer=null;
+async function showDeviceStatusPopup(emp){
+  try{
+    if(!emp||!emp.id) return;
+    const fp=await getDeviceFingerprint();
+    if(!fp) return; // 지문 생성 불가 시 조용히 건너뜀 (기존 출근 로직 fallback)
+    const short=s=>s?s.slice(0,12)+'...':'-';
+    const body=document.getElementById('devPopupBody');
+    const icon=document.getElementById('devPopupIcon');
+    const title=document.getElementById('devPopupTitle');
+    const desc=document.getElementById('devPopupDesc');
+    const rows=document.getElementById('devPopupInfoRows');
+    const help=document.getElementById('devPopupHelp');
+    const btns=document.getElementById('devPopupBtns');
+    help.style.display='none';help.innerHTML='';
+    let infoHtml=`<tr><td style="text-align:left;color:var(--gray-600);padding:3px 0;">직원</td><td style="text-align:right;padding:3px 0;">${emp.name||'-'}</td></tr>`;
+    if(!emp.device_fingerprint){
+      // 미등록
+      icon.innerText='📱';
+      title.innerText='기기 등록이 필요해요';
+      desc.innerHTML='이 기기(휴대폰)를 <b>출퇴근 전용 기기</b>로 등록합니다.<br>등록 후에는 이 기기에서만 출퇴근할 수 있어요.';
+      infoHtml+=`<tr><td style="text-align:left;color:var(--gray-600);padding:3px 0;">현재 기기</td><td style="text-align:right;padding:3px 0;">${short(fp)}</td></tr>`;
+      rows.innerHTML=infoHtml;
+      btns.innerHTML=`
+        <button class="btn btn-primary btn-full" style="padding:13px;" data-action="registerDeviceFromPopup">✅ 이 기기로 등록</button>
+        <button class="btn btn-secondary btn-full" style="padding:13px;" data-action="closeDevicePopup">나중에 하기</button>`;
+    } else if(emp.device_fingerprint===fp){
+      // 일치
+      icon.innerText='✅';
+      title.innerText='등록된 기기입니다';
+      desc.innerHTML='출퇴근 전용 기기로 확인됐어요.<br>안심하고 근무하세요!';
+      infoHtml+=`<tr><td style="text-align:left;color:var(--gray-600);padding:3px 0;">등록 기기</td><td style="text-align:right;padding:3px 0;">${short(emp.device_fingerprint)}</td></tr>`;
+      infoHtml+=`<tr><td style="text-align:left;color:var(--gray-600);padding:3px 0;">현재 기기</td><td style="text-align:right;padding:3px 0;color:var(--success);font-weight:700;">일치 ✅</td></tr>`;
+      rows.innerHTML=infoHtml;
+      btns.innerHTML=`<button class="btn btn-primary btn-full" style="padding:13px;" data-action="closeDevicePopup">확인</button>`;
+      // 3초 자동 닫힘 (일치 상태만)
+      if(_devPopupTimer){clearTimeout(_devPopupTimer);_devPopupTimer=null;}
+      _devPopupTimer=setTimeout(()=>{closeDevicePopup();},3000);
+    } else {
+      // 불일치
+      icon.innerText='⚠️';
+      title.innerText='다른 기기에서 로그인했어요';
+      desc.innerHTML='등록된 기기가 아니에요.<br>이 기기에서는 <b style="color:var(--danger);">출퇴근이 차단</b>됩니다.';
+      infoHtml+=`<tr><td style="text-align:left;color:var(--gray-600);padding:3px 0;">등록 기기</td><td style="text-align:right;padding:3px 0;">${short(emp.device_fingerprint)}</td></tr>`;
+      infoHtml+=`<tr><td style="text-align:left;color:var(--gray-600);padding:3px 0;">현재 기기</td><td style="text-align:right;padding:3px 0;color:var(--danger);font-weight:700;">불일치 ❌</td></tr>`;
+      rows.innerHTML=infoHtml;
+      help.style.display='block';
+      help.innerHTML='<b>해결 방법</b><br>1) 본인 기기(휴대폰)로 다시 로그인<br>2) 관리자에게 <b>"기기 초기화"</b> 요청 → 재로그인';
+      btns.innerHTML=`<button class="btn btn-secondary btn-full" style="padding:13px;" data-action="closeDevicePopup">확인</button>`;
+    }
+    openSheet('deviceStatusSheet');
+  }catch(err){console.error('[devicePopup]',err);}
+}
+async function registerDeviceFromPopup(){
+  if(!currentEmp||!currentStore) return closeDevicePopup();
+  const fp=await getDeviceFingerprint();
+  if(!fp){toast('기기 지문 생성 실패','error');return;}
+  setLoad(true,'등록 중...');
+  const{error}=await sb.from('employees').update({device_fingerprint:fp}).eq('id',currentEmp.id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error){toast('등록 실패: '+error.message,'error');return;}
+  currentEmp.device_fingerprint=fp;
+  const e=employees.find(x=>x.id===currentEmp.id);if(e) e.device_fingerprint=fp;
+  closeDevicePopup();
+  toast('이 기기가 출퇴근 전용 기기로 등록됐어요!','success');
+}
+function closeDevicePopup(){
+  if(_devPopupTimer){clearTimeout(_devPopupTimer);_devPopupTimer=null;}
+  closeSheet('deviceStatusSheet');
 }
 
 // ══════════════════════════════════════════
