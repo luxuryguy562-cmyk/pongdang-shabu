@@ -88,6 +88,7 @@ body{font-family:-apple-system,'Noto Sans KR',sans-serif;margin:0;background:var
 /* ─ 영수증 테이블 */
 .table-wrap{margin:14px -20px 0;overflow-x:auto;border-top:1px solid var(--gray-200);}
 table{width:100%;border-collapse:collapse;}
+#bankTxBody tr td,#cardTxBody tr td{border-bottom:1px solid var(--gray-200);}
 th{padding:9px 6px;font-size:11px;font-weight:700;color:var(--gray-600);background:var(--gray-100);text-align:center;}
 td{padding:10px 5px;font-size:12px;border-bottom:1px solid var(--gray-100);text-align:center;vertical-align:middle;}
 td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
@@ -5739,9 +5740,8 @@ function renderBankTxTable(){
     const cat=r.category||'';
     const sub=r.sub_category||'';
     const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--text)';
-    const subColor=r.exclude_from_settlement?'var(--gray-400)':'var(--gray-500)';
     const catHtml=sub
-      ? `<div style="line-height:1.1;font-size:9px;color:${subColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:600;">${sub}</div>`
+      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};">${sub}</div>`
       : `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'-'}</div>`;
     const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     return `<tr>
@@ -5801,9 +5801,8 @@ function renderCardTxTable(){
     const cat=r.category||'';
     const sub=r.sub_category||'';
     const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--text)';
-    const subColor=r.exclude_from_settlement?'var(--gray-400)':'var(--gray-500)';
     const catHtml=sub
-      ? `<div style="line-height:1.1;font-size:9px;color:${subColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:600;">${sub}</div>`
+      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};">${sub}</div>`
       : `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'-'}</div>`;
     const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     const name=r.merchant_name||r.description||'-';
@@ -6538,8 +6537,8 @@ function matchColumns(headers, type){
 
 // ─── 공통 분류 규칙 (업종 무관, 모든 매장 동일) ───
 const COMMON_BANK_RULES=[
-  // 매출 — 카드사 정산 입금 (카드사 약자만, 뒤 가맹점번호는 매장마다 다름)
-  {p:/^(NH|KB|SHC|삼성|하나|롯데|현대|우리|BC)\d/,cat:'매출',sub:'카드결제'},
+  // 매출 — 카드사 정산 입금 (한글 1글자 약자 포함, 뒤 숫자 3자리↑로 승인번호/가맹점번호 보장)
+  {p:/^(NH|KB|SHC|BC|농협|삼성|삼|하나|하|롯데|롯|현대|현|우리|우)\d{3,}/,cat:'매출',sub:'카드결제'},
   // 매출 — 은행 이체 코드
   {p:/(타행|OP이체|모바일|FB자금|BZ뱅크|전자금융)/,cat:'매출',sub:'송금결제'},
   // 매출 — 현금
