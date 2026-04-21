@@ -4,6 +4,84 @@
 
 ---
 
+## [2026-04-21 말미] 후속 논의 — 지출카테고리 2차 개편 (**새 세션에서 진행**)
+
+### 상태: **논의·설계 단계 (미구현)**
+### 브랜치: claude/improve-category-ui-TQloc (현 브랜치 유지)
+
+### 배경 (사장님 요구)
+현재 지출카테고리 구조가 **구매경로별 분리**(식자재(거래처)/식자재(직구)/식자재(주류))라 사장님이 혼란스러움. 사장님 원하는 구조:
+```
+식자재 (대분류 하나)
+ ├ 육류
+ ├ 야채
+ └ 공산품
+```
+거래처/직구 구분은 **이미 거래처 탭·영수증 탭**에서 보이므로 대분류 레벨에서 가를 필요 없음.
+
+### FK 영향 점검 — 6군데 (새 세션에서 반드시 전부 검토)
+
+| # | 대상 | 이슈 |
+|---|------|------|
+| 1 | `vendors.category` (`식자재/주류/직구/기타`) | 선택지 변경 시 기존 "식자재" 저장값 무효화 → 집계 깨짐 위험. 호환 유지 + 재분류 도우미 필요 |
+| 2 | `expense_categories.data_source` | 현재 단일값. "거래처+영수증 합산"은 신규 분기 필요 → `food_composite` 소스 추가 or 집계함수 분기 |
+| 3 | `mydata_transactions.category_id` | 오늘 규칙 확립 (dev_lessons #33): **항상 대분류 id**. 유지 필요 |
+| 4 | `receipts.category_id` | 현재 소분류 id도 허용. mydata와 규칙 다름 → **통일 필요** (대분류 id + sub_category text) + 기존 데이터 마이그레이션 |
+| 5 | `classification_rules` 시드 + 학습 | `category='물품대금'` 등 기존 명칭이 expense_categories.name과 어긋남. 이름 변경 시 UPDATE SQL 필요 |
+| 6 | `expense_category_amounts` / `reconciliation` | 대분류 단위 저장·매칭. 소분류 수동 입력/대조는 **1차에서 제외** (대분류 단위 유지) |
+
+### 제안 단계 옵션 (새 세션에서 사장님이 선택)
+
+- **1단계만 (소형)**: `vendors.category` 선택지 확장 + 거래처 일괄 재분류 도우미 UI. 지출카테고리 구조는 그대로
+- **2단계 풀패키지 (대형)**: 위 FK 6군데 전부 손봄. `food_composite` 집계 로직 추가
+- **하이브리드 (추천)**: 1단계 먼저 배포 → 사용 체감 후 2단계 필요 여부 재판단
+
+### 기술 메모
+- `food_composite` data_source: 대시보드 집계 시 `vendors.category IN (육류,야채,공산품,...)`인 주문 + `receipts.category_id IN (자식 소분류들)` 합산
+- `resolveCatPair` 이미 있음 → receipts.category_id 규칙 통일에도 그대로 활용
+- 마이그레이션 SQL은 반드시 백업테이블 + 롤백 SQL 쌍으로 제출 (제8조)
+- classification_rules 시드 수정 시 기존 저장된 규칙도 UPDATE 필요
+
+### 주류 처리 미결
+- 별도 대분류 `주류`로 유지할지, `식자재` 아래 소분류로 넣을지 사장님 결정 대기
+- 권장: 별도 대분류 (주류세·매출비중 별도 추적 편의)
+
+---
+
+### 🚀 다음 세션 시작 방법 (복붙용)
+```
+docs 전부 읽고 (CLAUDE.md 제11조 특히, business_rules.md, dev_lessons.md,
+plan.md, db_schema.md, work_log.md 최상단 "지출카테고리 2차 개편" 항목,
+services.md) 절대 무시·생략 없이 준수.
+
+세션 시작 필수: git fetch --all 먼저 실행 (dev_lessons #29).
+
+현재 상태:
+- main 최신 커밋 0fab804 (거래내역 분류 2줄 + 1글자 약자 매칭)
+- 브랜치: claude/improve-category-ui-TQloc
+- 미완료: 지출카테고리 2차 개편 (식자재 대분류 통합 + 품목 기반 소분류)
+
+이어서 할 일:
+1. work_log.md "지출카테고리 2차 개편" 항목의 FK 6군데 전수 재확인
+2. 사장님께 단계 선택 확인 (1단계 소형 / 2단계 대형 / 하이브리드 중)
+3. planner가 계획서 작성 → 승인 게이트
+4. 승인 후 context_reader → advisor → reviewer → coder → tester → deployer
+
+반드시:
+- CLAUDE.md 제1조 1-1 승인 게이트 준수 (계획서 OK 전 코드 한 줄도 건드리지 말 것)
+- 제11조 대규모 변경 안전 절차 6단계 (사전 스캔→백업→스크립트→3단 검증→기록→배포체크)
+- 데이터 마이그레이션 SQL 실행/롤백 SQL 쌍 필수 (제8조)
+- FK 점검은 work_log의 6군데 표 그대로 전부 확인:
+  vendors.category · expense_categories.data_source ·
+  mydata_transactions.category_id · receipts.category_id ·
+  classification_rules · expense_category_amounts/reconciliation
+- 대시보드 집계 함수(loadDashboard 5524~, reconcileRender 7298~) 영향도 확인
+
+주류 처리 미결: 별도 대분류 유지 vs 식자재 아래 소분류 → 사장님 확인 먼저.
+```
+
+---
+
 ## [2026-04-21] 거래내역 분류 2줄 표시 + 5필드 편집 시트 + 소분류 FK 정합성
 
 ### 상태: 구현완료 (배포 대기 — 사장님 앱 테스트 + SQL 2·3단계 실행)
