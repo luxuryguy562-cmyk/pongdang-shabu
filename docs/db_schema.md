@@ -191,9 +191,9 @@ franchises (프랜차이즈/브랜드)
 | amount (int) | 금액 (입금 양수, 출금 음수) |
 | balance (int) | 잔액 |
 | source | 'excel_bank' / 'excel_card' |
-| **category** | 분류명 문자열 (물품대금, 인건비 등) |
-| **category_id (FK→expense_categories)** | 카테고리 FK |
-| sub_category | 소분류 |
+| **category** | 분류명 문자열 (대분류명 저장, 예: 식자재(거래처)) |
+| **category_id (FK→expense_categories)** | **항상 대분류 id** (parent_id IS NULL인 카테고리) — 2026-04-21 규칙 확립 |
+| sub_category | 소분류명 (text, FK 아님). resolveCatPair로 분리 저장 |
 | confidence | 'high' / 'medium' / 'low' |
 | needs_review (bool) | 확인 필요 여부 |
 | review_reason | 확인 필요 사유 |
@@ -280,5 +280,5 @@ franchises (프랜차이즈/브랜드)
 - **RLS 비활성 테이블**: stores, franchises (부모 테이블, store_id 없음)
 - **store_id 필수**: 모든 쿼리에 빠뜨리면 타 매장 데이터 노출
 - **role 문자열 연결**: employees.role = roles.name (FK 아님), 직급명 변경 시 employees도 업데이트 필요
-- **category_id FK**: mydata_transactions.category_id → expense_categories.id. CAT_NAME_MAP으로 매핑 (→ business_rules.md)
+- **category_id FK**: mydata_transactions.category_id → expense_categories.id. **항상 대분류(parent_id IS NULL) id만 저장** (2026-04-21 규칙). 소분류는 sub_category 컬럼(text)에. 코드: `resolveCatPair()`가 대분류/소분류 자동 분리.
 - **DB 변경 시**: 이 파일 즉시 업데이트할 것 (→ dev_lessons.md #7)

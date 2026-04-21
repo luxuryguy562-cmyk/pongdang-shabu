@@ -1156,11 +1156,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="table-wrap" style="margin:0 -20px;">
         <table style="min-width:320px;">
           <thead><tr>
-            <th id="bankThDate" data-col="tx_date" data-label="날짜" style="width:62px;cursor:pointer;">날짜</th>
-            <th id="bankThDesc" data-col="description" data-label="내용" style="width:70px;cursor:pointer;">내용</th>
-            <th id="bankThCat" data-col="sub_category" data-label="분류" style="width:65px;cursor:pointer;">분류</th>
+            <th id="bankThDate" data-col="tx_date" data-label="날짜" style="width:56px;cursor:pointer;">날짜</th>
+            <th id="bankThDesc" data-col="description" data-label="내용" style="width:60px;cursor:pointer;">내용</th>
+            <th id="bankThCat" data-col="sub_category" data-label="분류" style="width:70px;cursor:pointer;">분류</th>
             <th id="bankThIn" data-col="deposit" data-label="입금" style="cursor:pointer;">입금</th>
             <th id="bankThOut" data-col="withdraw" data-label="출금" style="cursor:pointer;">출금</th>
+            <th style="width:50px;"></th>
           </tr></thead>
           <tbody id="bankTxBody"></tbody>
         </table>
@@ -1195,10 +1196,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="table-wrap" style="margin:0 -20px;">
         <table style="min-width:300px;">
           <thead><tr>
-            <th id="cardThDate" data-col="tx_date" data-label="날짜" style="width:62px;cursor:pointer;">날짜</th>
-            <th id="cardThMerch" data-col="merchant_name" data-label="가맹점" style="width:70px;cursor:pointer;">가맹점</th>
-            <th id="cardThCat" data-col="sub_category" data-label="분류" style="width:65px;cursor:pointer;">분류</th>
+            <th id="cardThDate" data-col="tx_date" data-label="날짜" style="width:56px;cursor:pointer;">날짜</th>
+            <th id="cardThMerch" data-col="merchant_name" data-label="가맹점" style="width:60px;cursor:pointer;">가맹점</th>
+            <th id="cardThCat" data-col="sub_category" data-label="분류" style="width:70px;cursor:pointer;">분류</th>
             <th id="cardThAmt" data-col="amount" data-label="금액" style="cursor:pointer;">금액</th>
+            <th style="width:50px;"></th>
           </tr></thead>
           <tbody id="cardTxBody"></tbody>
         </table>
@@ -1408,6 +1410,38 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">AI가 분류에 확신이 없는 건입니다. 확인 후 수정해주세요.</p>
     <div id="excelReviewList"></div>
     <button class="btn btn-primary btn-full" data-action="confirmReviewAndSave">확인 완료 → 전체 저장</button>
+  </div>
+</div>
+
+<!-- 거래 전체 편집 시트 (날짜/내용/분류/입금/출금/정산제외) -->
+<div class="sheet-overlay" id="txEditSheet">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
+    <div class="sheet-title">거래 편집</div>
+    <div style="font-size:11px;color:var(--gray-600);margin:0 0 14px;">수정 후 저장을 눌러야 반영됩니다.</div>
+    <label style="font-size:12px;font-weight:700;color:var(--gray-600);">날짜</label>
+    <input type="date" class="input-field" id="txEditDate" style="margin-bottom:10px;">
+    <label style="font-size:12px;font-weight:700;color:var(--gray-600);">내용</label>
+    <input type="text" class="input-field" id="txEditDesc" placeholder="거래 내용" style="margin-bottom:10px;">
+    <label style="font-size:12px;font-weight:700;color:var(--gray-600);">분류</label>
+    <div id="txEditCatArea" style="margin-bottom:10px;"></div>
+    <div id="txEditAmtArea" style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="flex:1;">
+        <label style="font-size:12px;font-weight:700;color:var(--success);">입금</label>
+        <input type="text" inputmode="numeric" class="input-field" id="txEditIn" placeholder="0" style="margin-bottom:0;">
+      </div>
+      <div style="flex:1;">
+        <label style="font-size:12px;font-weight:700;color:var(--danger);">출금</label>
+        <input type="text" inputmode="numeric" class="input-field" id="txEditOut" placeholder="0" style="margin-bottom:0;">
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--gray-100);border-radius:10px;margin-bottom:14px;">
+      <input type="checkbox" id="txEditExclude" style="width:18px;height:18px;">
+      <label for="txEditExclude" style="font-size:13px;font-weight:700;flex:1;">정산에서 제외 (카드대금/배당금 등)</label>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" data-action="closeTxEdit" style="flex:1;padding:12px;">취소</button>
+      <button class="btn btn-primary" data-action="saveTxEdit" style="flex:2;padding:12px;">저장</button>
+    </div>
   </div>
 </div>
 
@@ -5702,16 +5736,24 @@ function renderBankTxTable(){
   let inSum=0,outSum=0;
   body.innerHTML=rows.map(r=>{
     const isIn=r.amount>0;if(isIn)inSum+=r.amount;else outSum+=Math.abs(r.amount);
-    const sub=r.sub_category||r.category||'';
-    const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--gray-600)';
+    const cat=r.category||'';
+    const sub=r.sub_category||'';
+    const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--text)';
+    const subColor=r.exclude_from_settlement?'var(--gray-400)':'var(--gray-500)';
+    const catHtml=sub
+      ? `<div style="line-height:1.1;font-size:9px;color:${subColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:600;">${sub}</div>`
+      : `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'-'}</div>`;
     const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     return `<tr>
       <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
       <td class="tx-desc-tip" data-full="${(cleanDesc(r.description)||'').replace(/"/g,'&quot;')}" style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;cursor:pointer;position:relative;">${truncDesc(cleanDesc(r.description),6)}</td>
-      <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
+      <td style="padding:3px 2px;white-space:nowrap;">${catHtml}</td>
       <td style="color:var(--success);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${isIn?fmt(r.amount):''}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${!isIn?fmt(Math.abs(r.amount)):''}</td>
-      <td style="padding:2px;"><button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" data-action="deleteTxRow|${r.id}|bank">✕</button></td>
+      <td style="padding:2px;white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:3px 5px;margin-right:2px;" data-action="openTxEditSheet|${r.id}|bank" title="편집">✎</button>
+        <button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" data-action="deleteTxRow|${r.id}|bank" title="삭제">✕</button>
+      </td>
     </tr>`;
   }).join('');
   document.getElementById('bankTxInSum').innerText='입금 '+fmt(inSum)+'원';
@@ -5756,16 +5798,24 @@ function renderCardTxTable(){
   let total=0;
   body.innerHTML=rows.map(r=>{
     total+=Math.abs(r.amount);
-    const sub=r.sub_category||r.category||'';
-    const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--gray-600)';
+    const cat=r.category||'';
+    const sub=r.sub_category||'';
+    const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--text)';
+    const subColor=r.exclude_from_settlement?'var(--gray-400)':'var(--gray-500)';
+    const catHtml=sub
+      ? `<div style="line-height:1.1;font-size:9px;color:${subColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:600;">${sub}</div>`
+      : `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'-'}</div>`;
     const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     const name=r.merchant_name||r.description||'-';
     return `<tr${r.is_cancelled?' class="row-off"':''}>
       <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
       <td class="tx-desc-tip" data-full="${(name||'').replace(/"/g,'&quot;')}" style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;cursor:pointer;position:relative;">${truncDesc(name,6)}</td>
-      <td class="tx-cat-edit" data-txid="${r.id}" data-cat="${r.category||''}" style="font-size:10px;padding:4px 2px;color:${catColor};white-space:nowrap;cursor:pointer;text-decoration:underline dotted;">${sub}</td>
+      <td style="padding:3px 2px;white-space:nowrap;">${catHtml}</td>
       <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${fmt(Math.abs(r.amount))}</td>
-      <td style="padding:2px;"><button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" data-action="deleteTxRow|${r.id}|card">✕</button></td>
+      <td style="padding:2px;white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:3px 5px;margin-right:2px;" data-action="openTxEditSheet|${r.id}|card" title="편집">✎</button>
+        <button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" data-action="deleteTxRow|${r.id}|card" title="삭제">✕</button>
+      </td>
     </tr>`;
   }).join('');
   document.getElementById('cardTxSum').innerText=fmt(total)+'원';
@@ -5981,89 +6031,154 @@ function findCatId(catName){
   return null;
 }
 
-function openCatEdit(txId,currentCat){
-  // 활성 카테고리만 분류 대상으로 표시
+// 카테고리명(대분류 or 소분류) → {mainId, mainName, subName}
+// 규칙: mydata_transactions.category_id = 항상 대분류 id, sub_category = 소분류명(text)
+function resolveCatPair(catName){
+  if(!catName||!expCategories?.length)return {mainId:null,mainName:catName||'',subName:''};
+  const found=expCategories.find(c=>c.name===catName);
+  if(!found)return {mainId:null,mainName:catName,subName:''}; // 고정 카테고리(매출/카드대금/배당금/미분류) 등
+  if(found.parent_id){
+    const parent=expCategories.find(c=>c.id===found.parent_id);
+    return {mainId:parent?.id||null,mainName:parent?.name||'',subName:found.name};
+  }
+  return {mainId:found.id,mainName:found.name,subName:''};
+}
+
+// 분류 칩 UI 생성 (편집 시트 내부에서 재사용)
+function buildCatChipsHtml(currentCat){
   const cats=(expCategories||[]).filter(c=>c.is_active!==false);
   const parents=cats.filter(c=>!c.parent_id);
   const childMap={};
   cats.filter(c=>c.parent_id).forEach(c=>{if(!childMap[c.parent_id])childMap[c.parent_id]=[];childMap[c.parent_id].push(c);});
-  // 고정 카테고리 (DB에 없어도 항상 표시)
   const fixedCats=['매출','카드대금','배당금','미분류'];
-
-  let existing=document.getElementById('catEditPopup');
-  if(existing)existing.remove();
-  const popup=document.createElement('div');
-  popup.id='catEditPopup';
-  popup.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:999;display:flex;align-items:end;justify-content:center;';
-  const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px;max-height:70vh;overflow-y:auto;';
-
-  // 대분류 > 소분류 UI 생성
-  let chipsHtml='<div style="font-size:15px;font-weight:800;margin-bottom:14px;">분류 변경</div>';
-  // 고정 카테고리
-  chipsHtml+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">';
+  let html='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
   fixedCats.forEach(c=>{
     const isSel=c===currentCat;
-    chipsHtml+=`<div class="catEditChip" data-val="${c}" data-id="" style="padding:8px 14px;border-radius:10px;font-size:12px;cursor:pointer;font-weight:${isSel?700:400};background:${isSel?'var(--blue)':'var(--gray-100)'};color:${isSel?'#fff':'var(--text)'};">${c}</div>`;
+    html+=`<div class="catEditChip" data-val="${c}" data-id="" style="padding:7px 12px;border-radius:10px;font-size:12px;cursor:pointer;font-weight:${isSel?700:400};background:${isSel?'var(--blue)':'var(--gray-100)'};color:${isSel?'#fff':'var(--text)'};">${c}</div>`;
   });
-  chipsHtml+='</div>';
-  // DB 카테고리 (대분류 > 소분류)
+  html+='</div>';
   parents.forEach(p=>{
     const children=childMap[p.id]||[];
     const pSel=p.name===currentCat;
-    chipsHtml+=`<div style="margin-bottom:10px;">
-      <div class="catEditChip" data-val="${p.name}" data-id="${p.id}" style="padding:8px 14px;border-radius:10px;font-size:13px;cursor:pointer;font-weight:${pSel?700:500};background:${pSel?'var(--blue)':'var(--gray-200)'};color:${pSel?'#fff':'var(--text)'};">
+    html+=`<div style="margin-bottom:8px;">
+      <div class="catEditChip" data-val="${p.name}" data-id="${p.id}" style="padding:7px 12px;border-radius:10px;font-size:13px;cursor:pointer;font-weight:${pSel?700:500};background:${pSel?'var(--blue)':'var(--gray-200)'};color:${pSel?'#fff':'var(--text)'};">
         <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color||'#0050FF'};margin-right:6px;vertical-align:middle;"></span>${p.name}
       </div>`;
     if(children.length){
-      chipsHtml+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 0 18px;">';
+      html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:5px 0 0 16px;">';
       children.forEach(ch=>{
         const chSel=ch.name===currentCat;
-        chipsHtml+=`<div class="catEditChip" data-val="${ch.name}" data-id="${ch.id}" style="padding:6px 12px;border-radius:8px;font-size:11px;cursor:pointer;font-weight:${chSel?700:400};background:${chSel?'var(--blue)':'var(--gray-100)'};color:${chSel?'#fff':'var(--gray-600)'};">${ch.name}</div>`;
+        html+=`<div class="catEditChip" data-val="${ch.name}" data-id="${ch.id}" style="padding:5px 10px;border-radius:8px;font-size:11px;cursor:pointer;font-weight:${chSel?700:400};background:${chSel?'var(--blue)':'var(--gray-100)'};color:${chSel?'#fff':'var(--gray-600)'};">${ch.name}</div>`;
       });
-      chipsHtml+='</div>';
+      html+='</div>';
     }
-    chipsHtml+='</div>';
+    html+='</div>';
   });
-  chipsHtml+='<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn btn-secondary" id="catEditCancel" style="flex:1;padding:12px;">취소</button><button class="btn btn-primary" id="catEditSave" style="flex:1;padding:12px;">저장</button></div>';
-  box.innerHTML=chipsHtml;
-  popup.appendChild(box);
-  document.body.appendChild(popup);
+  return html;
+}
 
-  let selected=currentCat;
-  let selectedId=findCatId(currentCat);
-  box.querySelectorAll('.catEditChip').forEach(chip=>{
+// ─── 거래 전체 편집 시트 (날짜/내용/분류/입금/출금/정산제외) ───
+let txEditContext={id:null,type:null,origCat:null};
+function openTxEditSheet(txId,type){
+  const arr=type==='bank'?bankTxData:cardTxData;
+  const r=arr.find(x=>x.id===txId);
+  if(!r){toast('거래를 찾을 수 없습니다','error');return;}
+  txEditContext={id:txId,type:type,origCat:r.category||''};
+  // 값 세팅
+  document.getElementById('txEditDate').value=r.tx_date||'';
+  document.getElementById('txEditDesc').value=(type==='card'?(r.merchant_name||r.description||''):cleanDesc(r.description)||'');
+  const amt=Number(r.amount)||0;
+  const inEl=document.getElementById('txEditIn');
+  const outEl=document.getElementById('txEditOut');
+  if(type==='bank'){
+    document.getElementById('txEditAmtArea').style.display='flex';
+    inEl.value=amt>0?fmt(amt):'';
+    outEl.value=amt<0?fmt(Math.abs(amt)):'';
+    inEl.closest('div').style.display='';
+  }else{
+    // 카드는 출금만
+    document.getElementById('txEditAmtArea').style.display='flex';
+    inEl.closest('div').style.display='none';
+    outEl.value=fmt(Math.abs(amt));
+  }
+  document.getElementById('txEditExclude').checked=!!r.exclude_from_settlement;
+  // 분류 칩 UI 렌더
+  const catArea=document.getElementById('txEditCatArea');
+  catArea.innerHTML=buildCatChipsHtml(r.sub_category||r.category||'');
+  catArea.dataset.selected=r.sub_category||r.category||'';
+  catArea.querySelectorAll('.catEditChip').forEach(chip=>{
     chip.addEventListener('click',()=>{
-      box.querySelectorAll('.catEditChip').forEach(c=>{c.style.background='var(--gray-100)';c.style.color='var(--text)';c.style.fontWeight='400';});
+      catArea.querySelectorAll('.catEditChip').forEach(c=>{
+        c.style.background='var(--gray-100)';c.style.color='var(--text)';c.style.fontWeight='400';
+      });
       // 대분류 칩은 gray-200 복원
-      parents.forEach(p=>{const el=box.querySelector(`.catEditChip[data-id="${p.id}"]`);if(el){el.style.background='var(--gray-200)';el.style.color='var(--text)';el.style.fontWeight='500';}});
+      (expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).forEach(p=>{
+        const el=catArea.querySelector(`.catEditChip[data-id="${p.id}"]`);
+        if(el){el.style.background='var(--gray-200)';el.style.color='var(--text)';el.style.fontWeight='500';}
+      });
       chip.style.background='var(--blue)';chip.style.color='#fff';chip.style.fontWeight='700';
-      selected=chip.dataset.val;
-      selectedId=chip.dataset.id||findCatId(selected);
+      catArea.dataset.selected=chip.dataset.val;
     });
   });
-  box.querySelector('#catEditCancel').addEventListener('click',()=>popup.remove());
-  box.querySelector('#catEditSave').addEventListener('click',async()=>{
-    if(selected===currentCat){popup.remove();return;}
-    const catId=selectedId||findCatId(selected)||null;
-    const isExclude=['카드대금','배당금'].includes(selected);
-    // DB 업데이트
-    const{error}=await sb.from('mydata_transactions').update({category:selected,category_id:catId,sub_category:selected,needs_review:false,confidence:'manual',exclude_from_settlement:isExclude}).eq('id',txId).eq('store_id',currentStore.id);
-    popup.remove();
-    if(error){toast('수정 실패','error');return;}
-    toast('분류 변경 완료','success');
-    // 로컬 데이터도 반영
-    [bankTxData,cardTxData].forEach(arr=>{const r=arr.find(x=>x.id===txId);if(r){r.category=selected;r.category_id=catId;r.sub_category=selected;r.needs_review=false;r.exclude_from_settlement=isExclude;}});
-    // 자동 학습
-    const tx=[bankTxData,cardTxData].flat().find(x=>x.id===txId);
-    if(tx){
-      const kw=tx.description||tx.merchant_name||'';
-      const txType=tx.tx_type||'both';
-      if(kw&&selected&&selected!=='미분류') learnClassification(kw,selected,selected,txType,isExclude).catch(()=>{});
-    }
-    renderBankTxTable();renderCardTxTable();
+  // 금액 입력 천단위 포맷 (bind once)
+  [inEl,outEl].forEach(el=>{
+    el.oninput=e=>{const v=unFmt(el.value);el.value=v?fmt(v):'';};
   });
-  popup.addEventListener('click',e=>{if(e.target===popup)popup.remove();});
+  openSheet('txEditSheet');
+}
+
+function closeTxEdit(){closeSheet('txEditSheet');}
+
+async function saveTxEdit(){
+  const {id,type,origCat}=txEditContext;
+  if(!id)return;
+  const arr=type==='bank'?bankTxData:cardTxData;
+  const r=arr.find(x=>x.id===id);
+  if(!r){toast('거래를 찾을 수 없습니다','error');closeTxEdit();return;}
+  const newDate=document.getElementById('txEditDate').value||r.tx_date;
+  const newDesc=document.getElementById('txEditDesc').value.trim();
+  const inVal=unFmt(document.getElementById('txEditIn').value)||0;
+  const outVal=unFmt(document.getElementById('txEditOut').value)||0;
+  const isExclude=document.getElementById('txEditExclude').checked;
+  const selected=document.getElementById('txEditCatArea').dataset.selected||origCat||'';
+  // 금액 부호 결정
+  let newAmount;
+  if(type==='bank'){
+    if(inVal>0&&outVal>0){toast('입금/출금 중 하나만 입력하세요','error');return;}
+    newAmount=inVal>0?Number(inVal):-Number(outVal);
+    if(newAmount===0){toast('금액을 입력하세요','error');return;}
+  }else{
+    newAmount=-Math.abs(Number(outVal));
+    if(newAmount===0){toast('금액을 입력하세요','error');return;}
+  }
+  // 분류 FK 정합성: 소분류 선택 → 대분류 id + 소분류명
+  const pair=resolveCatPair(selected);
+  const payload={
+    tx_date:newDate,
+    description:type==='card'?r.description:newDesc,
+    merchant_name:type==='card'?newDesc:r.merchant_name,
+    amount:newAmount,
+    category:pair.mainName||selected,
+    category_id:pair.mainId,
+    sub_category:pair.subName||'',
+    exclude_from_settlement:isExclude,
+    needs_review:false,
+    confidence:'manual'
+    // tx_hash 는 건드리지 않음 (C안: 원본 지문 유지 → 재업로드 중복 차단 정상 작동)
+  };
+  const{error}=await sb.from('mydata_transactions').update(payload).eq('id',id).eq('store_id',currentStore.id);
+  if(error){toast('저장 실패: '+error.message,'error');return;}
+  // 로컬 데이터 반영
+  Object.assign(r,payload);
+  closeTxEdit();
+  toast('저장 완료','success');
+  // 자동 학습 (분류가 바뀐 경우)
+  if(selected&&selected!=='미분류'&&selected!==origCat){
+    const kw=r.description||r.merchant_name||'';
+    const txType=r.tx_type||type||'both';
+    if(kw) learnClassification(kw,pair.mainName||selected,pair.subName||'',txType,isExclude).catch(()=>{});
+  }
+  renderBankTxTable();renderCardTxTable();
 }
 
 async function syncBankData(){toast('동기화 기능은 Codef API 연결 후 사용 가능합니다.','info');}
@@ -6931,22 +7046,19 @@ function openReviewItems(){
       </div>
       <div style="font-size:12px;color:var(--warn);margin-bottom:8px;">${item.review_reason||'분류 확신 낮음'}</div>
       <div style="font-size:11px;color:var(--gray-600);margin-bottom:8px;">${item.tx_date} ${item.tx_time||''}</div>
-      <div style="display:flex;gap:6px;">
-        <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvCat${globalIdx}" data-change="updateReviewItem|${globalIdx}">
-          <option value="${item.category||''}">${item.category||'선택'}/${item.sub_category||'?'}</option>
-          <option value="매출">매출</option>
-          <option value="카드대금">카드대금</option>
-          <option value="배당금">배당금</option>
-          ${(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).map(p=>{
-            const children=(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false);
-            let opts=`<option value="${p.name}">── ${p.name}</option>`;
-            children.forEach(ch=>{opts+=`<option value="${ch.name}">&nbsp;&nbsp;${ch.name}</option>`;});
-            return opts;
-          }).join('')}
-          <option value="미분류">미분류</option>
-        </select>
-        <input class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" placeholder="소분류" id="rvSub${globalIdx}" value="${item.sub_category||''}">
-      </div>
+      <select class="input-field" style="width:100%;margin-bottom:0;padding:8px;font-size:12px;" id="rvCat${globalIdx}" data-change="updateReviewItem|${globalIdx}">
+        <option value="${item.sub_category||item.category||''}">${(item.category||'선택')}${item.sub_category?' > '+item.sub_category:''}</option>
+        <option value="매출">매출</option>
+        <option value="카드대금">카드대금</option>
+        <option value="배당금">배당금</option>
+        ${(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).map(p=>{
+          const children=(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false);
+          let opts=`<option value="${p.name}">── ${p.name}</option>`;
+          children.forEach(ch=>{opts+=`<option value="${ch.name}">&nbsp;&nbsp;${p.name} > ${ch.name}</option>`;});
+          return opts;
+        }).join('')}
+        <option value="미분류">미분류</option>
+      </select>
       ${item.attribution_month?`<div style="margin-top:6px;font-size:11px;color:var(--blue);">귀속월: ${item.attribution_month}</div>`:''}
     </div>`;
   });
@@ -6954,12 +7066,19 @@ function openReviewItems(){
   openSheet('excelReviewSheet');
 }
 
+// 선택값(대분류명 or 소분류명) → category/sub_category 분리 저장
+// 규칙: category_id는 대분류 id 고정 (resolveCatPair) — 실제 id 매핑은 saveExcelBatch에서 수행
+function applyReviewChoice(item, selected){
+  if(!selected){item.category='미분류';item.sub_category='';return;}
+  const pair=resolveCatPair(selected);
+  item.category=pair.mainName||selected;
+  item.sub_category=pair.subName||'';
+}
+
 function updateReviewItem(idx){
   if(!excelParsedData||!excelParsedData[idx])return;
-  const cat=document.getElementById('rvCat'+idx)?.value;
-  const sub=document.getElementById('rvSub'+idx)?.value;
-  if(cat)excelParsedData[idx].category=cat;
-  if(sub)excelParsedData[idx].sub_category=sub;
+  const selected=document.getElementById('rvCat'+idx)?.value;
+  applyReviewChoice(excelParsedData[idx], selected);
   excelParsedData[idx].needs_review=false;
   excelParsedData[idx].confidence='high';
 }
@@ -6970,15 +7089,13 @@ async function confirmReviewAndSave(){
     const learnPromises=[];
     excelParsedData.filter(i=>i.needs_review).forEach((item,_)=>{
       const idx=excelParsedData.indexOf(item);
-      const cat=document.getElementById('rvCat'+idx)?.value;
-      const sub=document.getElementById('rvSub'+idx)?.value;
-      if(cat)item.category=cat;
-      if(sub)item.sub_category=sub;
+      const selected=document.getElementById('rvCat'+idx)?.value;
+      applyReviewChoice(item, selected);
       item.needs_review=false;
       // 자동 학습: 수동 분류한 키워드를 DB에 저장 (다음부터 자동 매칭)
       const keyword=item.description||item.merchant_name||'';
-      if(keyword&&cat&&cat!=='미분류'){
-        learnPromises.push(learnClassification(keyword,cat,sub||'',excelUploadType,item.exclude_from_settlement));
+      if(keyword&&item.category&&item.category!=='미분류'){
+        learnPromises.push(learnClassification(keyword,item.category,item.sub_category||'',excelUploadType,item.exclude_from_settlement));
       }
     });
     // 학습은 백그라운드로 (저장 차단하지 않음)
@@ -6996,21 +7113,40 @@ async function saveExcelBatch(){
   const type=excelUploadType;
 
   try{
-    // expense_categories 조회 → category 문자열을 category_id로 매칭 (DB 직접)
-    const cats=expCategories?.length?expCategories:(await sb.from('expense_categories').select('id,name,parent_id').eq('store_id',currentStore.id).eq('is_active',true)).data||[];
-    const catMap={};
-    cats.forEach(c=>{catMap[c.name]=c.id;});
-    const resolveCatId=category=>{
-      if(!category)return null;
-      // DB 카테고리명 직접 매칭 (대분류·소분류 모두)
-      if(catMap[category])return catMap[category];
-      return null;
+    // expense_categories 조회 → expCategories 캐시 미존재 시 로드
+    if(!expCategories?.length){
+      const{data}=await sb.from('expense_categories').select('id,name,parent_id').eq('store_id',currentStore.id).eq('is_active',true);
+      expCategories=data||[];
+    }
+    // category(대분류>소분류 or 대분류) + sub_category → {mainId, mainName, subName}
+    // 규칙: mydata_transactions.category_id는 항상 대분류 id
+    const resolveCatPayload=(catStr,subStr)=>{
+      let mainName=catStr||'';
+      let subName=subStr||'';
+      // "A>B" 합쳐진 포맷 분리
+      if(mainName.includes('>')){
+        const parts=mainName.split('>').map(s=>s.trim());
+        subName=parts.pop()||subName;
+        mainName=parts.join('>')||'';
+      }
+      // 소분류명으로 먼저 조회 → 부모 id 획득
+      if(subName){
+        const pair=resolveCatPair(subName);
+        if(pair.mainId) return {mainId:pair.mainId, mainName:pair.mainName||mainName, subName:pair.subName||subName};
+      }
+      // 대분류명만 있는 경우
+      if(mainName){
+        const pair=resolveCatPair(mainName);
+        return {mainId:pair.mainId, mainName:pair.mainName||mainName, subName:pair.subName||subName};
+      }
+      return {mainId:null, mainName:'', subName};
     };
 
     // 중복 체크용 해시 생성
     const rows=excelParsedData.map(item=>{
       const hashSrc=`${item.tx_date}|${item.tx_time||''}|${Math.abs(item.amount||0)}|${item.description||item.merchant_name||''}`;
       const txHash=btoa(unescape(encodeURIComponent(hashSrc))).slice(0,40);
+      const pair=resolveCatPayload(item.category, item.sub_category);
 
       return {
         store_id:currentStore.id,
@@ -7022,9 +7158,9 @@ async function saveExcelBatch(){
         amount:item.amount||0,
         balance:item.balance||null,
         source:'excel_'+type,
-        category:item.category||null,
-        category_id:resolveCatId(item.category),
-        sub_category:item.sub_category||null,
+        category:pair.mainName||item.category||null,
+        category_id:pair.mainId,
+        sub_category:pair.subName||null,
         confidence:item.confidence||'high',
         needs_review:item.needs_review||false,
         review_reason:item.review_reason||null,
@@ -7582,11 +7718,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('cardFilterBtn').addEventListener('click',()=>openTxFilter('card'));
   document.getElementById('bankFilterBadge').addEventListener('click',()=>{bankFilter={dateFrom:null,dateTo:null,cats:null,direction:'all'};renderBankTxTable();});
   document.getElementById('cardFilterBadge').addEventListener('click',()=>{cardFilter={dateFrom:null,dateTo:null,cats:null};renderCardTxTable();});
-  // 분류 셀 터치 → 수정 (이벤트 위임)
-  document.addEventListener('click',e=>{
-    const td=e.target.closest('.tx-cat-edit');
-    if(td)openCatEdit(td.dataset.txid,td.dataset.cat);
-  });
+  // 분류 셀 탭 → 편집 진입 경로 제거됨 (편집 버튼 ✎ 사용, 2026-04-21)
   // 내용 셀 터치 → 말풍선 툴팁
   let activeTip=null;
   document.addEventListener('click',e=>{

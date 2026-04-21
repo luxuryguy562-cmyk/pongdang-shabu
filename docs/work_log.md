@@ -4,6 +4,66 @@
 
 ---
 
+## [2026-04-21] 거래내역 분류 2줄 표시 + 5필드 편집 시트 + 소분류 FK 정합성
+
+### 상태: 구현완료 (배포 대기 — 사장님 앱 테스트 + SQL 2·3단계 실행)
+### 브랜치: claude/improve-category-ui-TQloc
+### 규모: 대형 (약 180줄 추가/수정 + 데이터 마이그레이션 SQL)
+
+### 배경
+- 엑셀 업로드 거래내역에서 분류 컬럼이 대분류만 보이거나 소분류만 보여서 혼란
+- 분류 셀 탭으로만 수정 가능했는데 날짜/내용/금액은 수정 불가
+- `openCatEdit` 저장 로직(6051행)이 `category=selected, sub_category=selected` 동일 덮어쓰기로 대분류 정보 소실
+- 확인필요 시트(6948행)의 `<input placeholder="소분류">` 자유 입력이 DB에 없는 소분류명 주입 → FK 깨짐
+- `resolveCatId`가 이름만 매칭 → 소분류 선택 시 `category_id`에 소분류 id 저장 → 대시보드 집계(5474행) 누락
+- 사장님 진단 핵심: "소분류 fk 안돼있음 → 계산수식 틀어짐"
+
+### 승인 이력
+- 계획서 제출: 2026-04-21
+- 사장님 결정: A안(분류 2줄 표시, 세로 최소) + C안(tx_hash 원본 보존)
+- 승인 커밋: (본 커밋)
+
+### 변경 요약
+1. 분류 셀 2줄 표시 (대분류 9px gray + 소분류 11px, line-height 1.1 → 행 +8px)
+2. 통합 편집 시트 신설 (날짜/내용/분류/입금/출금/정산제외)
+3. 분류 FK 규칙 확립: `category_id` = 항상 대분류 id, `sub_category` = 소분류명(text)
+4. 확인필요 시트 수기 입력 `<input>` 제거 → select만 사용
+5. 기존 거래내역 데이터 마이그레이션 SQL (백업테이블 + 2단계 UPDATE)
+6. tx_hash C안: 수정 시 원본 지문 유지 (재업로드 중복 차단 정상 작동)
+
+### DB 변경
+- 스키마 변경 없음
+- 데이터 마이그레이션: `docs/sql/migrate_tx_category_id_to_parent.sql`
+  - 1단계: `mydata_transactions_bak_20260421` 백업테이블 (사장님 실행 완료, RLS enabled)
+  - 2단계: sub_category 비어있는 건 소분류명 채움 (대기)
+  - 3단계: category_id를 부모(대분류) id로 치환 (대기)
+- 롤백: `docs/sql/migrate_tx_category_id_to_parent_rollback.sql`
+
+### 주요 구현 요소
+- `resolveCatPair(catName)` — 이름 → {mainId, mainName, subName} 분리
+- `buildCatChipsHtml(currentCat)` — 분류 칩 UI 재사용 가능 헬퍼
+- `openTxEditSheet(txId, type)` — 편집 시트 오픈
+- `saveTxEdit()` — 5필드 저장, tx_hash 원본 유지
+- `closeTxEdit()` — 시트 닫기
+- `applyReviewChoice(item, selected)` — 확인필요 시트 선택값 → category/sub_category 분리
+- `saveExcelBatch.resolveCatPayload` — 엑셀 배치 저장 시 규칙 적용
+
+### 검증
+- [x] node --check 통과
+- [x] 잔재 grep 0건 (tx-cat-edit, openCatEdit, catEditPopup, rvSub)
+- [x] 데이터 마이그레이션 SQL + 롤백 SQL 준비
+
+### 사장님 남은 할 일
+1. 브랜치 푸시 → main 자동 머지 후 앱 하드 리프레시 (Ctrl+Shift+R)
+2. Supabase SQL Editor에서 `docs/sql/migrate_tx_category_id_to_parent.sql` 2·3단계 실행
+3. 골든패스 테스트:
+   - 엑셀 업로드 후 분류 셀 2줄 표시 확인
+   - ✎ 편집 버튼 → 5필드 수정 → 저장 → 반영 확인
+   - 확인필요 시트에서 select 한 개로 분류 선택 (수기 입력 input 제거됨)
+   - 대시보드 집계 수치 정합성 확인
+
+---
+
 ## [2026-04-20] 로그인 시 기기 등록 팝업
 
 ### 상태: 배포대기 (브랜치 push → main 자동 머지)
