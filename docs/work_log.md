@@ -6,9 +6,9 @@
 
 ## [2026-04-21] 거래내역 분류 2줄 표시 + 5필드 편집 시트 + 소분류 FK 정합성
 
-### 상태: 구현중
+### 상태: 구현완료 (배포 대기 — 사장님 앱 테스트 + SQL 2·3단계 실행)
 ### 브랜치: claude/improve-category-ui-TQloc
-### 규모: 대형 (150줄 이상 + 데이터 마이그레이션)
+### 규모: 대형 (약 180줄 추가/수정 + 데이터 마이그레이션 SQL)
 
 ### 배경
 - 엑셀 업로드 거래내역에서 분류 컬럼이 대분류만 보이거나 소분류만 보여서 혼란
@@ -34,9 +34,33 @@
 ### DB 변경
 - 스키마 변경 없음
 - 데이터 마이그레이션: `docs/sql/migrate_tx_category_id_to_parent.sql`
-  - 1단계: `mydata_transactions_bak_20260421` 백업테이블 (사장님 실행 완료)
-  - 2단계: sub_category 비어있는 건 소분류명 채움
-  - 3단계: category_id를 부모(대분류) id로 치환
+  - 1단계: `mydata_transactions_bak_20260421` 백업테이블 (사장님 실행 완료, RLS enabled)
+  - 2단계: sub_category 비어있는 건 소분류명 채움 (대기)
+  - 3단계: category_id를 부모(대분류) id로 치환 (대기)
+- 롤백: `docs/sql/migrate_tx_category_id_to_parent_rollback.sql`
+
+### 주요 구현 요소
+- `resolveCatPair(catName)` — 이름 → {mainId, mainName, subName} 분리
+- `buildCatChipsHtml(currentCat)` — 분류 칩 UI 재사용 가능 헬퍼
+- `openTxEditSheet(txId, type)` — 편집 시트 오픈
+- `saveTxEdit()` — 5필드 저장, tx_hash 원본 유지
+- `closeTxEdit()` — 시트 닫기
+- `applyReviewChoice(item, selected)` — 확인필요 시트 선택값 → category/sub_category 분리
+- `saveExcelBatch.resolveCatPayload` — 엑셀 배치 저장 시 규칙 적용
+
+### 검증
+- [x] node --check 통과
+- [x] 잔재 grep 0건 (tx-cat-edit, openCatEdit, catEditPopup, rvSub)
+- [x] 데이터 마이그레이션 SQL + 롤백 SQL 준비
+
+### 사장님 남은 할 일
+1. 브랜치 푸시 → main 자동 머지 후 앱 하드 리프레시 (Ctrl+Shift+R)
+2. Supabase SQL Editor에서 `docs/sql/migrate_tx_category_id_to_parent.sql` 2·3단계 실행
+3. 골든패스 테스트:
+   - 엑셀 업로드 후 분류 셀 2줄 표시 확인
+   - ✎ 편집 버튼 → 5필드 수정 → 저장 → 반영 확인
+   - 확인필요 시트에서 select 한 개로 분류 선택 (수기 입력 input 제거됨)
+   - 대시보드 집계 수치 정합성 확인
 
 ---
 

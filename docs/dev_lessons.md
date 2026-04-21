@@ -345,6 +345,61 @@ CREATE POLICY "pd_phase2b_all" ON public.X
 
 ---
 
+## 33. mydata_transactions.category_id = 항상 대분류 id (2026-04-21)
+`expense_categories`가 parent_id로 2단계 트리인데, mydata_transactions.category_id가
+소분류 id인지 대분류 id인지 **규칙이 없었음** → 혼용 → 대시보드 집계 5474행
+`t.category_id === cat.id` 1:1 매칭이 소분류 건을 누락 → 수치 틀어짐.
+
+**사장님 진단**: "소분류 fk 안돼있는듯 / 계산수식 틀어짐"
+
+**범인 3곳**:
+1. `saveExcelBatch.resolveCatId` (구버전): 이름만 매칭 → 소분류 선택 시 소분류 id 저장
+2. `openCatEdit` 저장(구버전 6051): `category=selected, sub_category=selected` 동일 덮어씀
+3. 확인필요 시트 `<input placeholder="소분류">` 자유 입력 → DB에 없는 소분류명 주입
+
+**해결 규칙 (2026-04-21 확립)**:
+```
+mydata_transactions.category_id = 항상 대분류 id (parent_id IS NULL인 카테고리)
+mydata_transactions.sub_category = 소분류명 text (FK 아님, 참고용)
+```
+
+**구현**:
+- `resolveCatPair(catName)` — 대분류/소분류 이름 구분해서 `{mainId, mainName, subName}` 반환
+- `saveExcelBatch.resolveCatPayload` — "A>B" 합쳐진 포맷 + 소분류명만 있는 포맷 양쪽 처리
+- `openTxEditSheet/saveTxEdit` — 편집 저장 시 pair.mainId를 category_id에 고정
+- 확인필요 시트 `<input>` 제거 → `<select>` 한 개로 통일
+
+**마이그레이션**: `docs/sql/migrate_tx_category_id_to_parent.sql` (기존 소분류 id 박힌 거래 → 부모 id로 치환 + sub_category에 소분류명 채움)
+
+**교훈**: DB 컬럼 2개(category_id + sub_category)로 계층을 표현할 때는 **어느 쪽이 어느 레벨을 담는지** 처음부터 못 박을 것. 이름 기반 매칭은 계층 혼동 사각지대.
+
+---
+
+## 34. 분류 셀 세로 2줄 표시 (2026-04-21)
+모바일 테이블은 가로 폭 부족 → "대분류>소분류" 한 줄 동시 표시 불가.
+분류 셀을 **세로 2줄**로 쌓는 편이 공간 효율 최고.
+
+```
+❌ 분류 셀 탭 → 말풍선 → 확인하려면 매번 탭 (피곤)
+❌ 내용 칸 줄이고 분류 칸 늘림 → 내용이 잘려서 뭐가 뭔지 모름
+✅ 대분류 9px gray + 소분류 11px 진하게, line-height:1.1 → 행 +8px만
+```
+
+소분류 없는 행은 자연스럽게 1줄(대분류만). 폭 증가 0.
+
+---
+
+## 35. 거래 편집은 분류만이 아니라 5필드 전체 (2026-04-21)
+분류만 수정 가능하게 만들면 **금액 오타·날짜 오류는 수정 경로 없음**. 사장님 불만.
+```
+❌ 분류 셀 탭 → 분류만 수정 (금액/날짜 수정 불가)
+✅ ✎ 편집 버튼 → 날짜/내용/분류/입금/출금/정산제외 6필드 통합 시트
+```
+
+**tx_hash C안 원칙**: 편집해도 원본 지문 **그대로 둠**. 지문은 "이 엑셀 거래가 이미 들어왔다"는 사실을 표시하는 것이지, 현재 값이 아니라 **원본 값의 고유번호**. 재업로드 중복 차단 정상 작동.
+
+---
+
 ## 29. 세션 시작 시 `git fetch --all` 필수 (2026-04-17 Phase 2a 사고)
 새 Claude Code 세션이 시작되면 **로컬 git은 이전 세션의 snapshot**. 원격에서 다른 세션/사장님이 push한 커밋은 모른다.
 
