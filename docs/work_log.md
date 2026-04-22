@@ -4,6 +4,69 @@
 
 ---
 
+## [2026-04-22] 지출카테고리 2차 개편 (B+가 안 구현완료)
+
+### 상태: 구현완료 (배포 대기 — 사장님 SQL 실행 + 재분류 도우미 사용 + 대시보드 숫자 확인)
+### 브랜치: claude/review-docs-assessment-1UF8u
+### 규모: 대형 (약 150줄 추가/수정 + 마이그레이션 SQL 2개)
+### 승인: 사장님 "네 일단 해봐요" (B 풀패키지 + 가 주류별도 확정)
+
+### 배경
+- 기존 구조 `식자재(거래처)/식자재(직구)/식자재(주류)` 3분할 → 사장님 "식자재 얼마?" 물으면 3개 더해야 함
+- 사장님 원하는 구조: **식자재 대분류 하나 + 육류/야채/공산품 소분류**
+- "직구" 개념 삭제 — 쿠팡에서 사든 대봄에서 사든 "야채"는 야채, 품목으로 분류
+- 주류는 별도 대분류 유지 (주세·매출비중 별도 추적 필요)
+- 기존 expense_categories.vendor_category 컬럼이 이미 있어서 마이그레이션 단순화됨
+
+### 구조 최종
+```
+식자재 (composite, 자식 합산)
+  ├ 육류    (composite: vendor_category='육류' + receipts.category_id=소분류 id)
+  ├ 야채    (composite: vendor_category='야채' + 동일)
+  └ 공산품  (composite: vendor_category='공산품' + 동일)
+주류 (vendor_orders, vendor_category='주류')
+인건비/공과금·고정비/비품/마케팅/기타 (그대로 유지)
+```
+
+### 변경 요약 (8가지)
+1. **드롭다운 4곳 옵션 교체**: 식자재/주류/직구 → 육류/야채/공산품/주류 (vendorCatFilter, vendorCatInput, expCatVendorCat)
+2. **expCatSourceInput 신규 옵션**: `composite` (🍱 거래처+영수증 합산)
+3. **calcExpenseByCategories composite 분기**: 대/소분류별 vendor_orders+receipts 합산. composite 소분류는 루프 스킵(중복 방지)
+4. **reconcileRender composite 분기**: 자식 소분류별 details 생성 (sub_key='comp_<id>'). 대분류 자체 receipts는 'comp_direct_<id>'
+5. **groupMap 재편**: `식자재(직구/영수증)` 그룹 삭제, `composite:'식자재'` 추가, 주류는 이름 기반 별도 그룹
+6. **seedDefaultRules 카테고리명 통일**: `물품대금`(16건) + `직구`(14건) = 30건 → `식자재`로 일괄 치환 (Python 스크립트)
+7. **OCR 프롬프트 예시 갱신**: `식자재>거래처` → `식자재>야채/육류/공산품` 3건 예시
+8. **거래처 재분류 도우미 시트 신규**: 사이드메뉴 거래처 → 🔄 재분류 버튼 → 기존 식자재/직구 거래처를 육류/야채/공산품 일괄 재지정
+
+### DB 변경
+- 스키마 변경 없음 (기존 vendor_category 컬럼 활용, composite는 data_source text 값)
+- 마이그레이션 SQL: `docs/sql/migrate_food_composite_2026_04_22.sql`
+  - 1단계: 백업테이블 4개 (expense_categories/vendors/receipts/classification_rules)
+  - 2단계: expense_categories 재편 (식자재(거래처/직구) 비활성, 식자재(주류)→주류 리네임, 식자재+자식 3개 INSERT)
+  - 3단계: receipts 그대로 유지 (재분류 UI로 사장님이 업데이트)
+  - 4단계: classification_rules 이름 일치화 ('물품대금'/'직구' → '식자재')
+- 롤백 SQL: `docs/sql/migrate_food_composite_2026_04_22_rollback.sql`
+
+### 제11조 절차 준수
+- [x] 사전 스캔 (FK 6군데 grep + vendor_category 발견)
+- [x] 백업 커밋 (ede8291)
+- [x] 스크립트 치환 (Python: 물품대금 16 + 직구 14 = 30건, 실패 0)
+- [x] 3단 검증: node --check ✅ + grep 잔재 0 ✅ + 샘플 육안 ✅
+- [x] docs 5개 동기화 (본 항목 + db_schema + business_rules + dev_lessons + plan)
+- [ ] 배포 체크 (push 후 사장님 앱 테스트)
+
+### 사장님 남은 할 일
+1. **Supabase SQL Editor**에서 `migrate_food_composite_2026_04_22.sql` 실행
+2. 앱 하드 리프레시 (Ctrl+Shift+R)
+3. **거래처 탭 → 🔄 재분류 버튼** → 기존 "식자재" 거래처 목록 → 육류/야채/공산품 중 선택 → 일괄 저장
+4. 영수증 테스트 촬영 → AI가 "식자재>야채" 등으로 응답하는지 확인
+5. 대시보드 4월 지출 아코디언 확인:
+   - 식자재 1개 + 주류 1개 (이전: 식자재(거래처)/식자재(직구)/식자재(주류) 3개)
+   - 숫자 합이 이전 3개 합과 같은지 (±0원)
+6. 문제 시 즉시 롤백 SQL 실행 → 알려주시면 원인 분석
+
+---
+
 ## [2026-04-21 말미] 후속 논의 — 지출카테고리 2차 개편 (**새 세션에서 진행**)
 
 ### 상태: **논의·설계 단계 (미구현)**

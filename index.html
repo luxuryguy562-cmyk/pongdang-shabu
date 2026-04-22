@@ -1028,15 +1028,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="sub-tab" data-sub="upload" data-action="vendorTab|upload|this">파일 업로드</button>
   </div>
   <div id="vendorList">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:6px;">
       <select id="vendorCatFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderVendorList">
         <option value="">전체 카테고리</option>
-        <option value="식자재">식자재</option>
+        <option value="육류">육류</option>
+        <option value="야채">야채</option>
+        <option value="공산품">공산품</option>
         <option value="주류">주류</option>
-        <option value="직구">직구</option>
         <option value="기타">기타</option>
       </select>
-      <button class="btn btn-primary btn-sm" style="margin-left:8px;" data-action="openAddVendorSheet">+ 추가</button>
+      <button class="btn btn-secondary btn-sm" style="flex:0 0 auto;padding:10px 10px;font-size:12px;" data-action="openVendorReclassSheet" title="기존 식자재/직구 거래처를 육류/야채/공산품으로 재지정">🔄 재분류</button>
+      <button class="btn btn-primary btn-sm" data-action="openAddVendorSheet">+ 추가</button>
     </div>
     <div id="vendorListData"><div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div></div>
   </div>
@@ -1784,15 +1786,31 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-title" id="addVendorTitle">거래처 추가</div>
   <input id="vendorNameInput" class="input-field" placeholder="거래처명 *" type="text">
   <select id="vendorCatInput" class="input-field">
-    <option value="식자재">식자재</option>
+    <option value="육류">육류</option>
+    <option value="야채">야채</option>
+    <option value="공산품">공산품</option>
     <option value="주류">주류</option>
-    <option value="직구">직구</option>
     <option value="기타">기타</option>
   </select>
   <input type="hidden" id="editVendorId">
   <div class="action-group">
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveVendor">저장</button>
+  </div>
+</div>
+
+<!-- 거래처 재분류 도우미 (2026-04-22 식자재 개편) -->
+<div class="sheet" id="vendorReclassSheet" style="max-height:80vh;overflow-y:auto;">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">🔄 거래처 재분류</div>
+  <p style="font-size:13px;color:var(--gray-600);margin:0 0 12px;line-height:1.5;">
+    이전 "식자재/직구" 로 분류된 거래처를 <b>육류/야채/공산품</b> 중 하나로 다시 지정해주세요.<br>
+    (주류는 그대로 유지됩니다)
+  </p>
+  <div id="vendorReclassList" style="margin-bottom:16px;"></div>
+  <div class="action-group">
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">닫기</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveVendorReclass">일괄 저장</button>
   </div>
 </div>
 
@@ -1820,6 +1838,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <select id="expCatSourceInput" class="input-field" data-change="onExpCatSourceChange">
     <option value="vendor_orders">🏪 거래처 주문</option>
     <option value="receipts">🧾 영수증</option>
+    <option value="composite">🍱 거래처+영수증 합산 (식자재 소분류용)</option>
     <option value="attendance">⏰ 인건비 (자동 집계)</option>
     <option value="fixed_costs">📋 고정비 (자동 집계)</option>
     <option value="manual">✏️ 수동 입력</option>
@@ -1829,9 +1848,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <p style="font-size:12px;color:var(--gray-600);margin:0 0 6px;">거래처 카테고리 필터 (비워두면 전체)</p>
     <select id="expCatVendorCat" class="input-field">
       <option value="">전체 거래처</option>
-      <option value="식자재">식자재</option>
+      <option value="육류">육류</option>
+      <option value="야채">야채</option>
+      <option value="공산품">공산품</option>
       <option value="주류">주류</option>
-      <option value="직구">직구</option>
       <option value="기타">기타</option>
     </select>
   </div>
@@ -2341,7 +2361,9 @@ async function runAI() {
 
 [예시]
 [
- {"date":"2025-08-13","vendor":"대봄야채","item":"양파 10kg","unitPrice":15000,"qty":2,"totalPrice":30000,"category":"식자재>거래처"},
+ {"date":"2025-08-13","vendor":"대봄야채","item":"양파 10kg","unitPrice":15000,"qty":2,"totalPrice":30000,"category":"식자재>야채"},
+ {"date":"2025-08-13","vendor":"행복한정육점","item":"삼겹살 2kg","unitPrice":18000,"qty":2,"totalPrice":36000,"category":"식자재>육류"},
+ {"date":"2025-08-13","vendor":"이마트","item":"라면 5개입","unitPrice":null,"qty":1,"totalPrice":4500,"category":"식자재>공산품"},
  {"date":"2025-08-13","vendor":"이마트","item":"휴지 30롤 (행사)","unitPrice":null,"qty":1,"totalPrice":12900,"category":"비품"}
 ]`;
     let list=await callGemini([
@@ -2388,7 +2410,7 @@ async function saveReceipt(){
   (expCategories||[]).forEach(c=>{catById[c.name]=c.id;});
   const resolveRcpCatId=cat=>{
     if(!cat)return null;
-    // "식자재>거래처" 형식이면 소분류명 추출
+    // "식자재>야채" 형식이면 소분류명 추출
     const parts=String(cat).split('>').map(s=>s.trim());
     const target=parts[parts.length-1]; // 마지막 = 최하위 소분류
     return catById[target]||catById[parts[0]]||null;
@@ -2412,7 +2434,7 @@ async function saveReceipt(){
   if(error) return toast('저장 실패: '+error.message,'error');
   // 자동 학습: 품목→카테고리 규칙 저장 (정상 행만, 매장별)
   rows.filter(r=>r.note==='정상'&&r.item&&r.category).forEach(r=>{
-    // "식자재>거래처" 형식 파싱
+    // "식자재>야채" 형식 파싱 (대분류>소분류)
     const parts=String(r.category).split('>').map(s=>s.trim());
     const mainCat=parts[0]||'';
     const subCat=parts[1]||'';
@@ -3997,10 +4019,14 @@ async function loadDashboard(){
     _pivotData={days:allDays.filter(d=>parseInt(d)<=passedDays),salesMap:dailySalesMap,catMap:dailyCatMap,expMap:dailyExpTotal,catNames,catColors,shortNames,mo,royaltyRate,cardFeeRate,weekGroups,passedDays};
 
     // ══ A-4. 지출 상세 아코디언 (도넛차트 + 카테고리 리스트) ══
-    const groupMap={vendor_orders:'식자재',receipts:'식자재(직구/영수증)',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
+    // 2026-04-22: 식자재 통합(composite) 반영 — 직구/영수증 별도 그룹 제거
+    const groupMap={composite:'식자재',vendor_orders:'식자재',receipts:'기타',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
     const expByGroup={};
     expData.forEach(e=>{
-      const group=groupMap[e.source]||'기타';
+      // 주류는 vendor_orders지만 별도 그룹으로 분리 (식자재와 나란히)
+      let group;
+      if(e.name==='주류') group='주류';
+      else group=groupMap[e.source]||'기타';
       if(!expByGroup[group])expByGroup[group]=0;
       if(e.source==='fixed_costs') expByGroup[group]=fixedProrated;
       else expByGroup[group]+=e.amount;
@@ -4009,8 +4035,8 @@ async function loadDashboard(){
     if(cardFee>0) expByGroup['카드수수료']=(expByGroup['카드수수료']||0)+cardFee;
 
     const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1):'0';
-    const mGroupColors={'식자재':'#05C072','식자재(직구/영수증)':'#10B981','인건비':'#0050FF','공과금/고정비':'#FF9500','로열티':'#EF4444','카드수수료':'#EF4444','기타/수동':'#7C3AED','마케팅':'#F59E0B'};
-    const groupOrder=['식자재','식자재(직구/영수증)','인건비','공과금/고정비','로열티','카드수수료','기타/수동','마케팅'];
+    const mGroupColors={'식자재':'#05C072','주류':'#8B5CF6','인건비':'#0050FF','공과금/고정비':'#FF9500','로열티':'#EF4444','카드수수료':'#EF4444','기타/수동':'#7C3AED','마케팅':'#F59E0B','기타':'#94A3B8'};
+    const groupOrder=['식자재','주류','인건비','공과금/고정비','로열티','카드수수료','기타/수동','마케팅','기타'];
 
     // 도넛 데이터 + 카테고리 테이블 생성 (행열 정렬)
     const donutLabels=[],donutData=[],donutColors=[];
@@ -4201,6 +4227,55 @@ async function saveVendor(){
   setLoad(true,'저장 중...');
   const{error}=eid?await sb.from('vendors').update({name,category:cat}).eq('id',eid):await sb.from('vendors').insert({store_id:currentStore.id,name,category:cat});
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadVendors();
+}
+
+// ─── 거래처 재분류 도우미 (2026-04-22 식자재 개편) ───
+// 기존 '식자재'/'직구' 카테고리 거래처 → 육류/야채/공산품으로 재지정
+function openVendorReclassSheet(){
+  if(!guardStore())return;
+  const legacy=(vendors||[]).filter(v=>['식자재','직구'].includes(v.category));
+  const box=document.getElementById('vendorReclassList');
+  if(!legacy.length){
+    box.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><p style="font-weight:600;">재분류할 거래처가 없어요</p><p style="font-size:12px;color:var(--gray-500);">모든 거래처가 새 분류로 이미 지정됐습니다</p></div>';
+  } else {
+    box.innerHTML=legacy.map(v=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+        <div style="flex:1;font-size:14px;font-weight:600;">${v.name}
+          <div style="font-size:11px;color:var(--gray-500);font-weight:400;">현재: ${v.category||'(미지정)'}</div>
+        </div>
+        <select class="input-field vreclass-sel" data-vid="${v.id}" style="margin-bottom:0;flex:0 0 110px;padding:8px 10px;font-size:13px;">
+          <option value="">선택</option>
+          <option value="육류">육류</option>
+          <option value="야채">야채</option>
+          <option value="공산품">공산품</option>
+          <option value="주류">주류</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+    `).join('');
+  }
+  openSheet('vendorReclassSheet');
+}
+
+async function saveVendorReclass(){
+  if(!guardStore())return;
+  const selects=document.querySelectorAll('#vendorReclassList .vreclass-sel');
+  const updates=[];
+  selects.forEach(s=>{
+    if(s.value) updates.push({id:s.dataset.vid,category:s.value});
+  });
+  if(!updates.length) return toast('재분류할 항목을 선택해주세요','warn');
+  if(!confirm(`${updates.length}건을 재분류합니다. 계속할까요?`))return;
+  setLoad(true,'재분류 저장 중...');
+  let success=0,fail=0;
+  for(const u of updates){
+    const{error}=await sb.from('vendors').update({category:u.category}).eq('id',u.id).eq('store_id',currentStore.id);
+    if(error)fail++;else success++;
+  }
+  setLoad(false);
+  if(fail>0) toast(`${success}건 성공, ${fail}건 실패`,'warn');
+  else toast(`${success}건 재분류 완료!`,'success');
+  closeAllSheets();await loadVendors();
 }
 async function toggleVendor(id,active){
   const msg=active?'거래처를 재개하시겠습니까?':'거래종료 처리하시겠습니까?\n(기존 거래내역은 유지됩니다)';
@@ -5509,8 +5584,13 @@ async function calcExpenseByCategories(ym, mode){
   const getMydataAmount=(catId)=>allMdTx.filter(t=>t.category_id===catId).reduce((a,r)=>a+Math.abs(r.amount||0),0);
 
   // 집계 대상: 활성 카테고리 + 비활성이어도 이번 달 거래 있는 카테고리
+  // composite 소분류는 대분류에서 자식 합산하므로 중복 집계 방지 위해 루프에서 스킵
   const activeCatIdsInMonth=new Set(allMdTx.filter(t=>t.category_id).map(t=>t.category_id));
-  const catsForAggregation=expCategories.filter(c=>c.is_active!==false||activeCatIdsInMonth.has(c.id));
+  const catsForAggregation=expCategories.filter(c=>{
+    if(c.is_active===false && !activeCatIdsInMonth.has(c.id)) return false;
+    if(c.data_source==='composite' && c.parent_id) return false; // composite 소분류 스킵
+    return true;
+  });
   // 병렬: 대상 카테고리 동시 조회
   const promises=catsForAggregation.map(async cat=>{
     let amount=0,isConfirmed=false;
@@ -5525,8 +5605,34 @@ async function calcExpenseByCategories(ym, mode){
           const{data}=await sb.from('vendor_orders').select('amount,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end);
           amount=(data||[]).filter(o=>!cat.vendor_category||o.vendors?.category===cat.vendor_category).reduce((a,o)=>a+(o.amount||0),0);
         } else if(cat.data_source==='receipts'){
-          const{data}=await sb.from('receipts').select('total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end);
-          amount=(data||[]).reduce((a,r)=>a+(r.total_price||0),0);
+          // receipts.category_id는 소분류 id. 대분류 receipts면 자식 id도 포함
+          const childIds=expCategories.filter(c=>c.parent_id===cat.id).map(c=>c.id);
+          const targetIds=[cat.id,...childIds];
+          const{data}=await sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end);
+          amount=(data||[]).filter(r=>targetIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
+        } else if(cat.data_source==='composite'){
+          // ─── composite: 거래처(vendor_orders) + 영수증(receipts) 합산 ───
+          // 소분류: vendors.category=cat.vendor_category + receipts.category_id=cat.id
+          // 대분류: 자식 소분류들의 vendor_category 전부 + 자식 id로 된 receipts 전부 + 본인 id receipts
+          let vCats=[],rIds=[cat.id];
+          if(!cat.parent_id){
+            // 대분류: 자식들 수집
+            const children=expCategories.filter(c=>c.parent_id===cat.id);
+            children.forEach(ch=>{if(ch.vendor_category)vCats.push(ch.vendor_category); rIds.push(ch.id);});
+            if(cat.vendor_category) vCats.push(cat.vendor_category);
+          } else {
+            // 소분류: 본인 vendor_category만
+            if(cat.vendor_category) vCats.push(cat.vendor_category);
+          }
+          const[voRes,rcpRes]=await Promise.all([
+            vCats.length
+              ? sb.from('vendor_orders').select('amount,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end)
+              : Promise.resolve({data:[]}),
+            sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end)
+          ]);
+          const voSum=(voRes.data||[]).filter(o=>vCats.includes(o.vendors?.category)).reduce((a,o)=>a+(o.amount||0),0);
+          const rcpSum=(rcpRes.data||[]).filter(r=>rIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
+          amount=voSum+rcpSum;
         } else if(cat.data_source==='attendance'){
           const{data:confirmed}=await sb.from('expense_category_amounts').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
           if(confirmed?.amount){amount=confirmed.amount;isConfirmed=true;}
@@ -6577,18 +6683,18 @@ async function seedDefaultRules(){
   // 기본 매장 규칙 (처음 한번만 실행)
   const seeds=[
     // 은행 — 물품대금
-    {keyword:'양두현',tx_type:'bank',category:'물품대금',sub_category:'행복한정육점',priority:10},
-    {keyword:'행복한정육',tx_type:'bank',category:'물품대금',sub_category:'행복한정육점',priority:10},
-    {keyword:'고기대금',tx_type:'bank',category:'물품대금',sub_category:'행복한정육점',priority:10},
-    {keyword:'맛사랑',tx_type:'bank',category:'물품대금',sub_category:'맛사랑',priority:10},
-    {keyword:'대봄야채',tx_type:'bank',category:'물품대금',sub_category:'대봄야채',priority:10},
-    {keyword:'프레시원',tx_type:'bank',category:'물품대금',sub_category:'프레시원',priority:10},
-    {keyword:'씨제이프레시웨',tx_type:'bank',category:'물품대금',sub_category:'프레시원',priority:10},
-    {keyword:'대명주류',tx_type:'bank',category:'물품대금',sub_category:'대명주류',priority:10},
-    {keyword:'롯데칠성',tx_type:'bank',category:'물품대금',sub_category:'롯데칠성',priority:10},
-    {keyword:'판다마라소스',tx_type:'bank',category:'물품대금',sub_category:'판다마라소스',priority:10},
-    {keyword:'순창국제',tx_type:'bank',category:'물품대금',sub_category:'순창국제',priority:10},
-    {keyword:'웰스토리',tx_type:'bank',category:'물품대금',sub_category:'웰스토리',priority:10},
+    {keyword:'양두현',tx_type:'bank',category:'식자재',sub_category:'행복한정육점',priority:10},
+    {keyword:'행복한정육',tx_type:'bank',category:'식자재',sub_category:'행복한정육점',priority:10},
+    {keyword:'고기대금',tx_type:'bank',category:'식자재',sub_category:'행복한정육점',priority:10},
+    {keyword:'맛사랑',tx_type:'bank',category:'식자재',sub_category:'맛사랑',priority:10},
+    {keyword:'대봄야채',tx_type:'bank',category:'식자재',sub_category:'대봄야채',priority:10},
+    {keyword:'프레시원',tx_type:'bank',category:'식자재',sub_category:'프레시원',priority:10},
+    {keyword:'씨제이프레시웨',tx_type:'bank',category:'식자재',sub_category:'프레시원',priority:10},
+    {keyword:'대명주류',tx_type:'bank',category:'식자재',sub_category:'대명주류',priority:10},
+    {keyword:'롯데칠성',tx_type:'bank',category:'식자재',sub_category:'롯데칠성',priority:10},
+    {keyword:'판다마라소스',tx_type:'bank',category:'식자재',sub_category:'판다마라소스',priority:10},
+    {keyword:'순창국제',tx_type:'bank',category:'식자재',sub_category:'순창국제',priority:10},
+    {keyword:'웰스토리',tx_type:'bank',category:'식자재',sub_category:'웰스토리',priority:10},
     // 은행 — 인건비
     {keyword:'단기알바',tx_type:'bank',category:'인건비',sub_category:'단기알바',priority:20},
     {keyword:'직원복지',tx_type:'bank',category:'인건비',sub_category:'직원복지',priority:20},
@@ -6621,25 +6727,25 @@ async function seedDefaultRules(){
     {keyword:'논산정산',tx_type:'bank',category:'매출',sub_category:'QR결제',priority:5},
     {keyword:'741961',tx_type:'bank',category:'매출',sub_category:'카드결제',priority:5},
     // 카드 — 직구
-    {keyword:'논산농협',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'하나로마트',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'쿠팡',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'광성',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'탑마트',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'다이소',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'네이버파이낸셜',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'에브리식자재',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'홈플러스',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'노브랜드',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'GS25',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'나나약국',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'주방아울렛',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
-    {keyword:'Temu',tx_type:'card',category:'직구',sub_category:'직구상세',priority:10},
+    {keyword:'논산농협',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'하나로마트',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'쿠팡',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'광성',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'탑마트',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'다이소',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'네이버파이낸셜',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'에브리식자재',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'홈플러스',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'노브랜드',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'GS25',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'나나약국',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'주방아울렛',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
+    {keyword:'Temu',tx_type:'card',category:'식자재',sub_category:'직구상세',priority:10},
     // 카드 — 물품대금
-    {keyword:'마켓보로',tx_type:'card',category:'물품대금',sub_category:'맛사랑',priority:10},
-    {keyword:'맛사랑',tx_type:'card',category:'물품대금',sub_category:'맛사랑',priority:10},
-    {keyword:'씨제이프레시',tx_type:'card',category:'물품대금',sub_category:'프레시원',priority:10},
-    {keyword:'프레시원',tx_type:'card',category:'물품대금',sub_category:'프레시원',priority:10},
+    {keyword:'마켓보로',tx_type:'card',category:'식자재',sub_category:'맛사랑',priority:10},
+    {keyword:'맛사랑',tx_type:'card',category:'식자재',sub_category:'맛사랑',priority:10},
+    {keyword:'씨제이프레시',tx_type:'card',category:'식자재',sub_category:'프레시원',priority:10},
+    {keyword:'프레시원',tx_type:'card',category:'식자재',sub_category:'프레시원',priority:10},
     // 카드 — 고정비
     {keyword:'에스케이쉴더스',tx_type:'card',category:'고정비',sub_category:'캡스',priority:30},
     {keyword:'SK쉴더스',tx_type:'card',category:'고정비',sub_category:'캡스',priority:30},
@@ -7275,8 +7381,13 @@ async function loadReconciliation(){
     const fixedCosts=(fcRes.data||[]).filter(a=>a.fixed_costs?.is_active!==false);
     const transactions=txRes.data||[];
     // 집계 대상: 활성 + 비활성이어도 이번 달 거래 있는 카테고리
+    // composite 소분류는 대분류에서 합산하므로 스킵 (중복 방지)
     const catIdsWithTx=new Set(transactions.filter(t=>t.category_id).map(t=>t.category_id));
-    const categories=allCategories.filter(c=>c.is_active!==false||catIdsWithTx.has(c.id));
+    const categories=allCategories.filter(c=>{
+      if(c.is_active===false && !catIdsWithTx.has(c.id)) return false;
+      if(c.data_source==='composite' && c.parent_id) return false;
+      return true;
+    });
     const settlements=salesRes.data||[];
     const storeSettings=settingsRes.data||{};
     const savedRecon=matchRes.data||[];
@@ -7317,6 +7428,30 @@ async function loadReconciliation(){
         const s=saved.find(r=>r.sub_key==='receipts_total');
         entry.recorded=rcpTotal;entry.actual=s?.actual_total||0;
         entry.details.push({subKey:'receipts_total',label:'영수증 합계',recorded:rcpTotal,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''});
+
+      } else if(cat.data_source==='composite'){
+        // ─── composite: 거래처(vendor_orders) + 영수증(receipts) 합산, 소분류별 details ───
+        const isParent=!cat.parent_id;
+        const children=isParent?allCategories.filter(c=>c.parent_id===cat.id):[];
+        const subs=isParent?children:[cat]; // 대분류면 자식들 각각, 소분류면 자신만
+        subs.forEach(sub=>{
+          const vCat=sub.vendor_category;
+          const voAmt=vendorOrders.filter(o=>vCat && o.vendors?.category===vCat).reduce((a,o)=>a+(o.amount||0),0);
+          const rcpAmt=receipts.filter(r=>r.category_id===sub.id).reduce((a,r)=>a+(r.total_price||0),0);
+          const subTotal=voAmt+rcpAmt;
+          const s=saved.find(r=>r.sub_key==='comp_'+sub.id);
+          entry.details.push({subKey:'comp_'+sub.id,label:sub.name,recorded:subTotal,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''});
+          entry.recorded+=subTotal;entry.actual+=(s?.actual_total||0);
+        });
+        // 대분류 자체의 receipts (category_id=대분류 id, 소분류 미지정 케이스)
+        if(isParent){
+          const directRcp=receipts.filter(r=>r.category_id===cat.id).reduce((a,r)=>a+(r.total_price||0),0);
+          if(directRcp>0){
+            const s=saved.find(r=>r.sub_key==='comp_direct_'+cat.id);
+            entry.details.push({subKey:'comp_direct_'+cat.id,label:'(소분류 미지정)',recorded:directRcp,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''});
+            entry.recorded+=directRcp;entry.actual+=(s?.actual_total||0);
+          }
+        }
 
       } else if(cat.data_source==='attendance'){
         const empMap={};
