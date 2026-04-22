@@ -50,23 +50,31 @@
 
 ---
 
-## 5. expense_categories 이름 규칙
-**날짜**: 2026-04-09  
-**현재 등록된 카테고리와 키워드 분류 매핑**:
+## 5. expense_categories 이름 규칙 (2026-04-22 개편)
+**날짜**: 2026-04-22 (식자재 통합 + 주류 분리 + 품목 소분류)
 
-| expense_categories.name | 키워드 분류명 | data_source |
-|---|---|---|
-| 식자재(거래처) | 물품대금 | vendor_orders |
-| 식자재(주류) | — | vendor_orders |
-| 식자재(직구) | 직구 | receipts |
-| 비품 | — | receipts |
-| 인건비 | 인건비 | attendance |
-| 공과금/고정비 | 고정비 | fixed_costs |
-| 세금 | 세금 | manual |
-| 마케팅 | 마케팅 | manual |
-| 기타 | 기타 | manual |
+**현재 카테고리 구조**:
 
-**새 카테고리 추가 시**: 코드의 `CAT_NAME_MAP`에도 매핑 추가 필요
+| expense_categories.name | parent_id | data_source | vendor_category | 비고 |
+|---|---|---|---|---|
+| **식자재** (대분류) | NULL | composite | NULL | 자식 합산 + 본인 id receipts |
+| 육류 (소분류) | 식자재 id | composite | 육류 | vendor_orders(육류) + receipts(본인 id) |
+| 야채 (소분류) | 식자재 id | composite | 야채 | 동일 |
+| 공산품 (소분류) | 식자재 id | composite | 공산품 | 동일 |
+| **주류** (대분류) | NULL | vendor_orders | 주류 | 기존 식자재(주류) 리네임 |
+| 비품 | NULL | receipts | — | 영수증만 |
+| 인건비 | NULL | attendance | — | 자동 집계 |
+| 공과금/고정비 | NULL | fixed_costs | — | 자동 집계 |
+| 세금/마케팅/기타 | NULL | manual | — | 수동 입력 |
+| ~~식자재(거래처)~~ (비활성) | NULL | vendor_orders | 식자재 | 2026-04-22 이후 신규 거래 없음 |
+| ~~식자재(직구)~~ (비활성) | NULL | receipts | — | 동일 |
+
+**classification_rules 분류명 규칙 (2026-04-22 통일)**:
+- `category` = expense_categories.name과 정확히 일치 (예: '식자재', '고정비')
+- `sub_category` = text (소분류명 or 거래처명, FK 아님, 참고용)
+- ⚠️ 기존 '물품대금', '직구' 시드는 전량 '식자재'로 UPDATE (마이그레이션 SQL 포함)
+
+**CAT_NAME_MAP 하드코딩은 2026-04-17에 제거됨** (→ dev_lessons #23). DB 카테고리명 직접 매칭.
 
 ---
 

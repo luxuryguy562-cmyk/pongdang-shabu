@@ -2,7 +2,7 @@
 
 > **Supabase URL**: `https://ruytgygjwnbtzmtofopg.supabase.co`
 > **store_id**: `4ae03341-e5dc-4933-b746-29728cbc685f` (퐁당샤브 논산점)
-> **최종 업데이트**: 2026-04-15
+> **최종 업데이트**: 2026-04-22 (지출카테고리 2차 개편 — composite data_source + vendor_category 컬럼 명시)
 
 ## 테이블 관계도
 
@@ -123,7 +123,7 @@ franchises (프랜차이즈/브랜드)
 |------|------|
 | store_id | 매장 |
 | receipt_date, vendor, category, item | 날짜/거래처/분류(문자열)/품목 |
-| category_id (FK→expense_categories) | 카테고리 FK (신규) |
+| **category_id** (FK→expense_categories) | **소분류 id 저장 규칙** (2026-04-22 확립). 품목이 명시돼 있어 소분류 추론 가능. mydata는 대분류 id. 집계 시 parent 조인으로 대분류 합산 |
 | price, count, total_price (int) | 단가/수량/합계 |
 | note | 정상/오답/반품 등 |
 | created_at | 등록일시 |
@@ -150,6 +150,18 @@ franchises (프랜차이즈/브랜드)
 | id, store_id, name, color | expense_category_id(FK) |
 | parent_id (FK→self, nullable) | year_month, amount |
 | data_source, source_filter, is_active | |
+| **vendor_category** (text, nullable) — vendors.category 필터 매핑 (예: '육류') | |
+
+**data_source 값 정의 (2026-04-22 확장)**:
+- `vendor_orders` — 거래처 주문(vendor_orders)만 집계. `vendor_category` 필터 적용
+- `receipts` — 영수증만 집계. 소분류 id 또는 대분류 id인 receipts 포함
+- `composite` — 거래처+영수증 **합산** (식자재 대분류 및 육류/야채/공산품 소분류용).
+  - 대분류 composite: 자식 소분류들의 vendor_category 총합 + 자식 id로 된 receipts + 본인 id receipts
+  - 소분류 composite: 본인 vendor_category + 본인 id receipts
+  - ⚠️ 대분류만 집계 루프 참여, 소분류는 `details`로 하위 표시됨 (중복 방지)
+- `attendance` — attendance_logs.calculated_wage 합 (인건비)
+- `fixed_costs` — fixed_cost_amounts (고정비)
+- `manual` — expense_category_amounts 수동 입력
 
 ### fixed_costs / fixed_cost_amounts
 | fixed_costs | fixed_cost_amounts |
@@ -280,5 +292,8 @@ franchises (프랜차이즈/브랜드)
 - **RLS 비활성 테이블**: stores, franchises (부모 테이블, store_id 없음)
 - **store_id 필수**: 모든 쿼리에 빠뜨리면 타 매장 데이터 노출
 - **role 문자열 연결**: employees.role = roles.name (FK 아님), 직급명 변경 시 employees도 업데이트 필요
-- **category_id FK**: mydata_transactions.category_id → expense_categories.id. **항상 대분류(parent_id IS NULL) id만 저장** (2026-04-21 규칙). 소분류는 sub_category 컬럼(text)에. 코드: `resolveCatPair()`가 대분류/소분류 자동 분리.
+- **category_id FK 규칙 (2가지)**:
+  - `mydata_transactions.category_id` = **대분류 id 고정** (은행/카드 출금, 소분류 추론 불가, dev_lessons #33)
+  - `receipts.category_id` = **소분류 id 저장** (영수증 품목 명시, 소분류 확정 가능, 2026-04-22 확립)
+  - 집계 시 대분류는 자식(소분류) 합산 or 본인 id receipts 포함
 - **DB 변경 시**: 이 파일 즉시 업데이트할 것 (→ dev_lessons.md #7)

@@ -424,6 +424,51 @@ mydata_transactions.sub_category = 소분류명 text (FK 아님, 참고용)
 
 ---
 
+## 37. composite data_source — 대분류만 루프, 소분류는 details로 (2026-04-22)
+식자재 대분류가 거래처(vendor_orders) + 영수증(receipts) 둘 다 합산하는 구조에서,
+대분류/소분류 둘 다 집계 루프에 참여하면 **이중 집계** 발생.
+
+```
+❌ catsForAggregation = 모든 expense_categories (대+소 둘 다)
+   → 식자재 = 300만 (대분류) + 육류 100 + 야채 80 + 공산품 120 = 총 600만 (이중)
+✅ catsForAggregation = composite 소분류는 스킵
+   if(c.data_source==='composite' && c.parent_id) return false;
+   → 대분류만 집계 + 소분류는 reconcileRender의 details로 펼침
+```
+
+**집계 로직 (calcExpenseByCategories, reconcileRender 동일)**:
+- 대분류 composite: 자식들 `vendor_category` 전부 + 자식 id로 된 receipts + 본인 id receipts
+- 소분류 composite: 본인 `vendor_category` + 본인 id receipts (단, 소분류는 loop skip)
+
+**장점**:
+- 대분류 집계는 자식 합과 **반드시 일치** (자식 vendor_category들을 모두 포함하므로)
+- 소분류 세부 금액은 `details` 배열에서 표시 (아코디언 펼칠 때)
+
+**교훈**: 부모-자식 구조에서 집계 루프 설계할 때 **이중 집계 방지 필터** 반드시 적용. 설계 단계부터 점검.
+
+---
+
+## 38. receipts.category_id = 소분류 id (mydata와 규칙 다름) (2026-04-22)
+`mydata_transactions.category_id` = 대분류 id (dev_lessons #33). 그런데 receipts는 **소분류 id**.
+왜 규칙이 다른가? 데이터 출처 특성이 다름.
+
+```
+mydata: 은행/카드 출금. description = "양두현" (거래처명만). 품목 알 수 없음 → 대분류가 맞음
+receipts: 영수증 직접 촬영. item = "양파 10kg" (품목 명시) → 소분류까지 확정 가능
+```
+
+**집계 처리 (calcExpenseByCategories receipts 분기)**:
+```
+// 대분류 receipts면 자식 id도 포함 (소분류 미지정 receipts까지 잡기)
+const childIds = expCategories.filter(c=>c.parent_id===cat.id).map(c=>c.id);
+const targetIds = [cat.id, ...childIds];
+// category_id IN targetIds
+```
+
+**교훈**: FK 저장 규칙은 **테이블별로 다를 수 있음**. 모든 FK를 "대분류 id 고정" 같은 단일 규칙으로 통일하려 하지 말 것. 데이터 특성에 맞게 규칙 분화.
+
+---
+
 ## 29. 세션 시작 시 `git fetch --all` 필수 (2026-04-17 Phase 2a 사고)
 새 Claude Code 세션이 시작되면 **로컬 git은 이전 세션의 snapshot**. 원격에서 다른 세션/사장님이 push한 커밋은 모른다.
 
