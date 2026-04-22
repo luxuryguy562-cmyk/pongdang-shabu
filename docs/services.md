@@ -14,6 +14,7 @@
 | **Gemini 프록시** | `https://gemini-proxy.luxuryguy562.workers.dev` | `GEMINI_URL` | 영수증/POS AI용. 2026-04 기준 500 에러 |
 | **XLSX 라이브러리** | `cdn.jsdelivr.net/npm/xlsx@0.18.5` | `<script>` 태그 | 엑셀 파싱용 |
 | **Chart.js** | `cdn.jsdelivr.net/npm/chart.js@4.4.0` | `<script>` 태그 | 대시보드 차트 |
+| **SortableJS** | `cdn.jsdelivr.net/npm/sortablejs@1.15.0` | `<script>` 태그 | 카테고리 드래그 정렬 (모바일 터치 지원) |
 
 ## 배포 정보
 
