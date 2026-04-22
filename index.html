@@ -7158,8 +7158,8 @@ function openReviewItems(){
         <option value="배당금">배당금</option>
         ${(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).map(p=>{
           const children=(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false);
-          let opts=`<option value="${p.name}">── ${p.name}</option>`;
-          children.forEach(ch=>{opts+=`<option value="${ch.name}">&nbsp;&nbsp;${p.name} > ${ch.name}</option>`;});
+          let opts=`<option value="${p.name}">${p.name}</option>`;
+          children.forEach(ch=>{opts+=`<option value="${ch.name}">&nbsp;&nbsp;└ ${p.name} > ${ch.name}</option>`;});
           return opts;
         }).join('')}
         <option value="미분류">미분류</option>
