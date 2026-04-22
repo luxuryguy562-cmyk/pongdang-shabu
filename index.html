@@ -5055,24 +5055,32 @@ function renderExpCatList(){
   });
   if(!activeCats.length){c.innerHTML='<div class="empty-state" style="padding:20px;"><p>카테고리를 추가하세요</p></div>';return;}
   let html='';
-  parents.forEach(p=>{
-    const children=childMap[p.id]||[];
+  // sort_order 명시 정렬 (안정성)
+  parents.sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  parents.forEach((p,pIdx)=>{
+    const children=(childMap[p.id]||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+    const pFirst=pIdx===0, pLast=pIdx===parents.length-1;
     html+=`<div style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid var(--gray-200);">
+      <div style="display:flex;align-items:center;gap:4px;padding:10px 0;border-bottom:2px solid var(--gray-200);">
         <div style="width:14px;height:14px;border-radius:50%;background:${p.color||'#0050FF'};flex-shrink:0;"></div>
-        <div style="flex:1;">
+        <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:800;">${p.name}</div>
           <div style="font-size:11px;color:var(--gray-400);">${srcLabel[p.data_source]||p.data_source}${children.length?' · 소분류 '+children.length+'개':''}</div>
         </div>
-        <button class="btn btn-secondary btn-sm" style="font-size:10px;" data-action="openAddSubCatSheet|${p.id}|${p.name}">+ 소분류</button>
+        <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 6px;min-width:24px;" data-action="moveExpCat|${p.id}|-1" ${pFirst?'disabled style="opacity:0.3;"':''}>▲</button>
+        <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 6px;min-width:24px;" data-action="moveExpCat|${p.id}|1" ${pLast?'disabled style="opacity:0.3;"':''}>▼</button>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" data-action="openAddSubCatSheet|${p.id}|${p.name}">+ 소</button>
         <button class="btn btn-secondary btn-sm" style="font-size:10px;" data-action="openEditExpCatSheet|${p.id}">편집</button>
         <button class="btn btn-danger btn-sm" style="font-size:10px;" data-action="deleteExpCat|${p.id}|${p.name}">삭제</button>
       </div>`;
     if(children.length){
-      children.forEach(ch=>{
-        html+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 0 8px 24px;border-bottom:1px solid var(--gray-100);">
+      children.forEach((ch,cIdx)=>{
+        const cFirst=cIdx===0, cLast=cIdx===children.length-1;
+        html+=`<div style="display:flex;align-items:center;gap:4px;padding:8px 0 8px 24px;border-bottom:1px solid var(--gray-100);">
           <div style="width:10px;height:10px;border-radius:50%;background:${ch.color||p.color||'#0050FF'};flex-shrink:0;"></div>
-          <div style="flex:1;font-size:13px;font-weight:600;">${ch.name}</div>
+          <div style="flex:1;min-width:0;font-size:13px;font-weight:600;">${ch.name}</div>
+          <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 5px;min-width:22px;" data-action="moveExpCat|${ch.id}|-1" ${cFirst?'disabled style="opacity:0.3;"':''}>▲</button>
+          <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 5px;min-width:22px;" data-action="moveExpCat|${ch.id}|1" ${cLast?'disabled style="opacity:0.3;"':''}>▼</button>
           <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:4px 8px;" data-action="openEditExpCatSheet|${ch.id}">편집</button>
           <button class="btn btn-danger btn-sm" style="font-size:10px;padding:4px 8px;" data-action="deleteExpCat|${ch.id}|${ch.name}">삭제</button>
         </div>`;
@@ -5187,10 +5195,45 @@ async function saveExpCat(){
   const vendorCat=(type==='expense'&&src==='vendor_orders')?document.getElementById('expCatVendorCat').value:'';
   const eid=document.getElementById('editExpCatId').value;
   setLoad(true,'저장 중...');
-  const payload={store_id:currentStore.id,name,data_source:src,category_type:type,color,vendor_category:vendorCat||null,sort_order:expCategories.length,parent_id:editExpCatParentId||null};
+  // 편집 시 sort_order 유지 (기존 순서 보존), 신규만 끝에 추가
+  const existing=eid?expCategories.find(c=>c.id===eid):null;
+  const payload={store_id:currentStore.id,name,data_source:src,category_type:type,color,vendor_category:vendorCat||null,parent_id:editExpCatParentId||null};
+  if(existing){
+    payload.sort_order=existing.sort_order; // 기존 순서 유지
+  } else {
+    // 신규: 같은 그룹(타입+부모) 내 최대값+1
+    const sameGroup=expCategories.filter(c=>(c.category_type||'expense')===type&&(c.parent_id||null)===(editExpCatParentId||null));
+    payload.sort_order=sameGroup.length?Math.max(...sameGroup.map(c=>c.sort_order||0))+1:0;
+  }
   const{error}=eid?await sb.from('expense_categories').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('expense_categories').insert(payload);
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');
   closeAllSheets();await loadExpCategories();
+}
+
+// 카테고리 순서 변경 (같은 타입+같은 부모 내에서만 스왑)
+async function moveExpCat(id,dir){
+  if(!guardStore())return;
+  const cat=expCategories.find(c=>c.id===id);if(!cat)return;
+  const type=cat.category_type||'expense';
+  const parentId=cat.parent_id||null;
+  // 같은 그룹 내 정렬된 형제들
+  const siblings=expCategories
+    .filter(c=>(c.category_type||'expense')===type && (c.parent_id||null)===parentId)
+    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const curIdx=siblings.findIndex(c=>c.id===id);
+  const newIdx=curIdx+(dir<0?-1:1);
+  if(newIdx<0||newIdx>=siblings.length) return; // 경계
+  const other=siblings[newIdx];
+  setLoad(true,'순서 변경 중...');
+  // sort_order 스왑
+  const [a,b]=[cat.sort_order||0,other.sort_order||0];
+  const[r1,r2]=await Promise.all([
+    sb.from('expense_categories').update({sort_order:b}).eq('id',cat.id).eq('store_id',currentStore.id),
+    sb.from('expense_categories').update({sort_order:a}).eq('id',other.id).eq('store_id',currentStore.id)
+  ]);
+  setLoad(false);
+  if(r1.error||r2.error) return toast('순서 변경 실패','error');
+  await loadExpCategories();
 }
 
 async function deleteExpCat(id,name){
