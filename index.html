@@ -1839,12 +1839,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addExpCatTitle">카테고리 추가</div>
   <input id="expCatNameInput" class="input-field" placeholder="카테고리명 (예: 식자재(거래처))" type="text">
-  <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">카테고리 타입</p>
-  <select id="expCatTypeInput" class="input-field" data-change="onExpCatTypeChange">
-    <option value="expense">💸 지출</option>
-    <option value="income">💰 매출 (입금)</option>
-    <option value="exclude">🚫 정산제외 (카드대금/배당금 등)</option>
-  </select>
+  <!-- 카테고리 타입: 현재 탭 기준 자동 고정 (변경 불가, 탭 전환해서 다른 타입 편집) -->
+  <div class="input-field" id="expCatTypeLabel" style="background:var(--gray-100);font-weight:700;color:var(--gray-700);display:flex;align-items:center;">💸 지출</div>
+  <input type="hidden" id="expCatTypeInput" value="expense">
   <!-- 지출 타입일 때만 표시: 데이터 소스 + 거래처 필터 -->
   <div id="expCatSourceWrap">
     <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">데이터 소스</p>
@@ -5148,9 +5145,12 @@ function onExpCatSourceChange(){
   document.getElementById('expCatVendorFilter').style.display=src==='vendor_orders'?'block':'none';
 }
 
-// 카테고리 타입 변경 시: 지출 타입만 데이터 소스 필요
+// 카테고리 타입 설정 (hidden input) + 라벨 + 필드 표시/숨김 (드롭다운 제거)
 function onExpCatTypeChange(){
   const type=document.getElementById('expCatTypeInput').value;
+  const labelMap={expense:'💸 지출',income:'💰 매출 (입금)',exclude:'🚫 정산제외'};
+  const labelEl=document.getElementById('expCatTypeLabel');
+  if(labelEl) labelEl.innerText=labelMap[type]||labelMap.expense;
   const srcWrap=document.getElementById('expCatSourceWrap');
   const hint=document.getElementById('expCatTypeHint');
   if(type==='expense'){
@@ -5161,9 +5161,9 @@ function onExpCatTypeChange(){
     srcWrap.style.display='none';
     hint.style.display='block';
     if(type==='income'){
-      hint.innerHTML='💡 <b>매출 카테고리</b>는 은행/카드 입금내역 분류용입니다. 데이터 소스는 자동으로 엑셀 업로드(mydata)가 되며, 실제 매출 집계는 마감정산(POS)에서 합니다.';
+      hint.innerHTML='💡 <b>매출 카테고리</b>는 은행/카드 입금내역 분류용입니다. 실제 매출 집계는 마감정산(POS)에서 처리돼요.';
     } else if(type==='exclude'){
-      hint.innerHTML='💡 <b>정산제외 카테고리</b>는 카드대금·배당금처럼 지출 집계에서 빼야 하는 항목입니다. 대시보드·정산에서 자동 제외됩니다.';
+      hint.innerHTML='💡 <b>정산제외 카테고리</b>는 카드대금·배당금처럼 지출 집계에서 빼야 하는 항목입니다. 대시보드·정산에서 자동 제외돼요.';
     }
   }
 }
