@@ -7144,6 +7144,20 @@ function openReviewItems(){
     const desc=item.description||item.merchant_name||'-';
     const amt=Math.abs(item.amount||0);
     const globalIdx=excelParsedData.indexOf(item);
+    const curMain=item.category||'미분류';
+    const curSub=item.sub_category||'';
+    // 현재 대분류의 자식 소분류 목록
+    const parentCat=(expCategories||[]).find(c=>c.name===curMain&&!c.parent_id);
+    const curChildren=parentCat?(expCategories||[]).filter(c=>c.parent_id===parentCat.id&&c.is_active!==false):[];
+    // 대분류 옵션 (특수 4종 + DB 활성 대분류)
+    const specialMains=['미분류','매출','카드대금','배당금'];
+    const dbMains=(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).map(c=>c.name);
+    const allMains=[...specialMains,...dbMains];
+    const mainOpts=allMains.map(m=>`<option value="${m}"${m===curMain?' selected':''}>${m}</option>`).join('');
+    // 소분류 옵션
+    const subOpts=curChildren.length
+      ? `<option value="">(소분류 없음)</option>`+curChildren.map(ch=>`<option value="${ch.name}"${ch.name===curSub?' selected':''}>${ch.name}</option>`).join('')
+      : `<option value="">(소분류 없음)</option>`;
     html+=`<div style="background:var(--warn-light);border-radius:12px;padding:14px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div style="font-size:14px;font-weight:700;">${desc}</div>
@@ -7151,24 +7165,29 @@ function openReviewItems(){
       </div>
       <div style="font-size:12px;color:var(--warn);margin-bottom:8px;">${item.review_reason||'분류 확신 낮음'}</div>
       <div style="font-size:11px;color:var(--gray-600);margin-bottom:8px;">${item.tx_date} ${item.tx_time||''}</div>
-      <select class="input-field" style="width:100%;margin-bottom:0;padding:8px;font-size:12px;" id="rvCat${globalIdx}" data-change="updateReviewItem|${globalIdx}">
-        <option value="${item.sub_category||item.category||''}">${(item.category||'선택')}${item.sub_category?' > '+item.sub_category:''}</option>
-        <option value="매출">매출</option>
-        <option value="카드대금">카드대금</option>
-        <option value="배당금">배당금</option>
-        ${(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).map(p=>{
-          const children=(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false);
-          let opts=`<option value="${p.name}">${p.name}</option>`;
-          children.forEach(ch=>{opts+=`<option value="${ch.name}">&nbsp;&nbsp;└ ${p.name} > ${ch.name}</option>`;});
-          return opts;
-        }).join('')}
-        <option value="미분류">미분류</option>
-      </select>
+      <div style="display:flex;gap:6px;">
+        <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvMain${globalIdx}" data-change="onReviewMainChange|${globalIdx}">${mainOpts}</select>
+        <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvSub${globalIdx}" data-change="updateReviewItem|${globalIdx}"${curChildren.length?'':' disabled'}>${subOpts}</select>
+      </div>
       ${item.attribution_month?`<div style="margin-top:6px;font-size:11px;color:var(--blue);">귀속월: ${item.attribution_month}</div>`:''}
     </div>`;
   });
   document.getElementById('excelReviewList').innerHTML=html;
   openSheet('excelReviewSheet');
+}
+
+// 대분류 변경 시 소분류 드롭다운 갱신
+function onReviewMainChange(idx){
+  if(!excelParsedData||!excelParsedData[idx])return;
+  const mainEl=document.getElementById('rvMain'+idx);
+  const subEl=document.getElementById('rvSub'+idx);
+  if(!mainEl||!subEl)return;
+  const main=mainEl.value;
+  const parent=(expCategories||[]).find(c=>c.name===main&&!c.parent_id);
+  const children=parent?(expCategories||[]).filter(c=>c.parent_id===parent.id&&c.is_active!==false):[];
+  subEl.innerHTML='<option value="">(소분류 없음)</option>'+children.map(ch=>`<option value="${ch.name}">${ch.name}</option>`).join('');
+  subEl.disabled=!children.length;
+  updateReviewItem(idx);
 }
 
 // 선택값(대분류명 or 소분류명) → category/sub_category 분리 저장
@@ -7182,7 +7201,10 @@ function applyReviewChoice(item, selected){
 
 function updateReviewItem(idx){
   if(!excelParsedData||!excelParsedData[idx])return;
-  const selected=document.getElementById('rvCat'+idx)?.value;
+  const main=document.getElementById('rvMain'+idx)?.value||'';
+  const sub=document.getElementById('rvSub'+idx)?.value||'';
+  // 대분류>소분류 조합. sub 비어있으면 대분류만
+  const selected=sub?`${main}>${sub}`:main;
   applyReviewChoice(excelParsedData[idx], selected);
   excelParsedData[idx].needs_review=false;
   excelParsedData[idx].confidence='high';
@@ -7194,7 +7216,9 @@ async function confirmReviewAndSave(){
     const learnPromises=[];
     excelParsedData.filter(i=>i.needs_review).forEach((item,_)=>{
       const idx=excelParsedData.indexOf(item);
-      const selected=document.getElementById('rvCat'+idx)?.value;
+      const main=document.getElementById('rvMain'+idx)?.value||'';
+      const sub=document.getElementById('rvSub'+idx)?.value||'';
+      const selected=sub?`${main}>${sub}`:main;
       applyReviewChoice(item, selected);
       item.needs_review=false;
       // 자동 학습: 수동 분류한 키워드를 DB에 저장 (다음부터 자동 매칭)
