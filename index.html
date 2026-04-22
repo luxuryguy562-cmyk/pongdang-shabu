@@ -1452,10 +1452,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <div id="expcatCont" class="container">
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <div class="card-title" style="margin-bottom:0;">지출 카테고리</div>
+      <div class="card-title" style="margin-bottom:0;" id="expCatTitle">💸 지출 카테고리</div>
       <button class="btn btn-primary btn-sm" data-action="openAddExpCatSheet">+ 추가</button>
     </div>
-    <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">대시보드 차트 항목이 이 카테고리 기준으로 표시됩니다.</p>
+    <div class="sub-tabs" style="margin:8px 0 10px;">
+      <button class="sub-tab active" data-action="switchExpCatType|expense|this">💸 지출</button>
+      <button class="sub-tab" data-action="switchExpCatType|income|this">💰 매출</button>
+      <button class="sub-tab" data-action="switchExpCatType|exclude|this">🚫 제외</button>
+    </div>
+    <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;" id="expCatTypeDesc">대시보드 차트 항목이 이 카테고리 기준으로 표시됩니다.</p>
     <div id="expCatList"><div class="empty-state"><div class="empty-icon">📂</div><p>카테고리를 추가하세요</p></div></div>
     <div style="margin-top:12px;padding:12px;background:var(--gray-100);border-radius:11px;">
       <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:8px;">데이터 소스 안내</div>
@@ -1834,6 +1839,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addExpCatTitle">카테고리 추가</div>
   <input id="expCatNameInput" class="input-field" placeholder="카테고리명 (예: 식자재(거래처))" type="text">
+  <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">카테고리 타입</p>
+  <select id="expCatTypeInput" class="input-field">
+    <option value="expense">💸 지출</option>
+    <option value="income">💰 매출 (입금)</option>
+    <option value="exclude">🚫 정산제외 (카드대금/배당금 등)</option>
+  </select>
   <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">데이터 소스</p>
   <select id="expCatSourceInput" class="input-field" data-change="onExpCatSourceChange">
     <option value="vendor_orders">🏪 거래처 주문</option>
@@ -5007,11 +5018,32 @@ async function loadExpCategories(){
   renderExpCatList();
 }
 
+// 현재 선택된 카테고리 타입 탭 (expense/income/exclude)
+let currentExpCatType='expense';
+function switchExpCatType(type,el){
+  currentExpCatType=type;
+  document.querySelectorAll('#expcatCont .sub-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const titles={expense:'💸 지출 카테고리',income:'💰 매출 카테고리',exclude:'🚫 정산제외 카테고리'};
+  const descs={
+    expense:'대시보드 지출 집계에 포함됩니다.',
+    income:'은행 입금 내역 분류용. 실제 매출은 마감정산(POS)에서 집계됩니다.',
+    exclude:'카드대금/배당금 등 정산 집계에서 자동 제외됩니다.'
+  };
+  document.getElementById('expCatTitle').innerText=titles[type]||titles.expense;
+  document.getElementById('expCatTypeDesc').innerText=descs[type]||descs.expense;
+  renderExpCatList();
+}
+
 function renderExpCatList(){
   const c=document.getElementById('expCatList');if(!c)return;
-  const srcLabel={vendor_orders:'거래처 주문',receipts:'영수증',attendance:'인건비(자동)',fixed_costs:'고정비(자동)',manual:'수동 입력'};
-  // 관리 UI에서는 활성 카테고리만 표시
-  const activeCats=expCategories.filter(c=>c.is_active!==false);
+  const srcLabel={vendor_orders:'거래처 주문',receipts:'영수증',composite:'거래처+영수증',attendance:'인건비(자동)',fixed_costs:'고정비(자동)',manual:'수동 입력'};
+  // 관리 UI에서는 활성 + 현재 탭 타입 카테고리만 표시
+  const typeFilter=(cat)=>{
+    const t=cat.category_type||'expense';
+    return t===currentExpCatType;
+  };
+  const activeCats=expCategories.filter(c=>c.is_active!==false && typeFilter(c));
   // 대분류(parent_id=null)와 소분류 분리
   const parents=activeCats.filter(cat=>!cat.parent_id);
   const childMap={};
@@ -5069,6 +5101,7 @@ function openAddExpCatSheet(){
   document.getElementById('addExpCatTitle').innerText='대분류 추가';
   document.getElementById('expCatNameInput').value='';
   document.getElementById('expCatSourceInput').value='vendor_orders';
+  document.getElementById('expCatTypeInput').value=currentExpCatType||'expense'; // 현재 탭 타입 기본값
   document.getElementById('expCatSourceInput').closest('div,p')&&(document.getElementById('expCatSourceInput').style.display='block');
   document.getElementById('editExpCatId').value='';
   selectExpCatColor('#0050FF');
@@ -5081,9 +5114,12 @@ function openAddSubCatSheet(parentId,parentName){
   document.getElementById('addExpCatTitle').innerText=parentName+' 소분류 추가';
   document.getElementById('expCatNameInput').value='';
   document.getElementById('editExpCatId').value='';
-  // 소분류는 부모 소스 상속
+  // 소분류는 부모 소스 + 타입 상속
   const parent=expCategories.find(c=>c.id===parentId);
-  if(parent){document.getElementById('expCatSourceInput').value=parent.data_source;}
+  if(parent){
+    document.getElementById('expCatSourceInput').value=parent.data_source;
+    document.getElementById('expCatTypeInput').value=parent.category_type||'expense';
+  }
   selectExpCatColor(parent?.color||'#0050FF');
   onExpCatSourceChange();
   openSheet('addExpCatSheet');
@@ -5095,6 +5131,7 @@ function openEditExpCatSheet(id){
   document.getElementById('addExpCatTitle').innerText=(cat.parent_id?'소분류':'대분류')+' 편집';
   document.getElementById('expCatNameInput').value=cat.name;
   document.getElementById('expCatSourceInput').value=cat.data_source;
+  document.getElementById('expCatTypeInput').value=cat.category_type||'expense';
   document.getElementById('editExpCatId').value=cat.id;
   if(cat.vendor_category) document.getElementById('expCatVendorCat').value=cat.vendor_category;
   selectExpCatColor(cat.color||'#0050FF');
@@ -5120,11 +5157,13 @@ async function saveExpCat(){
   const name=document.getElementById('expCatNameInput').value.trim();
   if(!name) return toast('카테고리명을 입력하세요.','warn');
   const src=document.getElementById('expCatSourceInput').value;
+  const type=document.getElementById('expCatTypeInput')?.value||'expense';
   const color=document.getElementById('expCatColorSelected').value;
   const vendorCat=src==='vendor_orders'?document.getElementById('expCatVendorCat').value:'';
   const eid=document.getElementById('editExpCatId').value;
   setLoad(true,'저장 중...');
-  const payload={store_id:currentStore.id,name,data_source:src,color,vendor_category:vendorCat||null,sort_order:expCategories.length,parent_id:editExpCatParentId||null};
+  // exclude 타입은 자동으로 exclude_from_settlement=true (리뷰·집계 이중 안전망)
+  const payload={store_id:currentStore.id,name,data_source:src,category_type:type,color,vendor_category:vendorCat||null,sort_order:expCategories.length,parent_id:editExpCatParentId||null};
   const{error}=eid?await sb.from('expense_categories').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('expense_categories').insert(payload);
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');
   closeAllSheets();await loadExpCategories();
@@ -5585,8 +5624,11 @@ async function calcExpenseByCategories(ym, mode){
 
   // 집계 대상: 활성 카테고리 + 비활성이어도 이번 달 거래 있는 카테고리
   // composite 소분류는 대분류에서 자식 합산하므로 중복 집계 방지 위해 루프에서 스킵
+  // category_type='expense'만 집계 (income/exclude는 지출 집계에서 제외)
   const activeCatIdsInMonth=new Set(allMdTx.filter(t=>t.category_id).map(t=>t.category_id));
   const catsForAggregation=expCategories.filter(c=>{
+    const t=c.category_type||'expense';
+    if(t!=='expense') return false; // 매출(income)/정산제외(exclude)는 제외
     if(c.is_active===false && !activeCatIdsInMonth.has(c.id)) return false;
     if(c.data_source==='composite' && c.parent_id) return false; // composite 소분류 스킵
     return true;
@@ -7140,6 +7182,13 @@ function openReviewItems(){
   if(!excelParsedData)return;
   const reviewItems=excelParsedData.filter(i=>i.needs_review);
   let html='';
+  // 타입별 대분류 그룹 (DB 기반 완전 동적 — 하드코딩 없음)
+  const typeLabel={expense:'💸 지출',income:'💰 매출',exclude:'🚫 제외'};
+  const mainsByType={expense:[],income:[],exclude:[]};
+  (expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).forEach(p=>{
+    const t=p.category_type||'expense';
+    if(mainsByType[t]) mainsByType[t].push(p);
+  });
   reviewItems.forEach((item,idx)=>{
     const desc=item.description||item.merchant_name||'-';
     const amt=Math.abs(item.amount||0);
@@ -7149,11 +7198,16 @@ function openReviewItems(){
     // 현재 대분류의 자식 소분류 목록
     const parentCat=(expCategories||[]).find(c=>c.name===curMain&&!c.parent_id);
     const curChildren=parentCat?(expCategories||[]).filter(c=>c.parent_id===parentCat.id&&c.is_active!==false):[];
-    // 대분류 옵션 (특수 4종 + DB 활성 대분류)
-    const specialMains=['미분류','매출','카드대금','배당금'];
-    const dbMains=(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).map(c=>c.name);
-    const allMains=[...specialMains,...dbMains];
-    const mainOpts=allMains.map(m=>`<option value="${m}"${m===curMain?' selected':''}>${m}</option>`).join('');
+    // 대분류 옵션: optgroup으로 타입별 구분 + '미분류' 추가
+    let mainOpts=`<option value="미분류"${curMain==='미분류'?' selected':''}>미분류</option>`;
+    ['expense','income','exclude'].forEach(t=>{
+      if(!mainsByType[t].length) return;
+      mainOpts+=`<optgroup label="${typeLabel[t]}">`;
+      mainsByType[t].forEach(p=>{
+        mainOpts+=`<option value="${p.name}"${p.name===curMain?' selected':''}>${p.name}</option>`;
+      });
+      mainOpts+=`</optgroup>`;
+    });
     // 소분류 옵션
     const subOpts=curChildren.length
       ? `<option value="">(소분류 없음)</option>`+curChildren.map(ch=>`<option value="${ch.name}"${ch.name===curSub?' selected':''}>${ch.name}</option>`).join('')
@@ -7406,8 +7460,11 @@ async function loadReconciliation(){
     const transactions=txRes.data||[];
     // 집계 대상: 활성 + 비활성이어도 이번 달 거래 있는 카테고리
     // composite 소분류는 대분류에서 합산하므로 스킵 (중복 방지)
+    // category_type='expense'만 집계 (매출/제외는 지출대조 대상 아님)
     const catIdsWithTx=new Set(transactions.filter(t=>t.category_id).map(t=>t.category_id));
     const categories=allCategories.filter(c=>{
+      const t=c.category_type||'expense';
+      if(t!=='expense') return false;
       if(c.is_active===false && !catIdsWithTx.has(c.id)) return false;
       if(c.data_source==='composite' && c.parent_id) return false;
       return true;

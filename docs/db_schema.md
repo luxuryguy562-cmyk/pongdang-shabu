@@ -2,7 +2,7 @@
 
 > **Supabase URL**: `https://ruytgygjwnbtzmtofopg.supabase.co`
 > **store_id**: `4ae03341-e5dc-4933-b746-29728cbc685f` (퐁당샤브 논산점)
-> **최종 업데이트**: 2026-04-22 (지출카테고리 2차 개편 — composite data_source + vendor_category 컬럼 명시)
+> **최종 업데이트**: 2026-04-22 (#53 매출/제외 카테고리 분리 — category_type 컬럼 추가)
 
 ## 테이블 관계도
 
@@ -151,6 +151,14 @@ franchises (프랜차이즈/브랜드)
 | parent_id (FK→self, nullable) | year_month, amount |
 | data_source, source_filter, is_active | |
 | **vendor_category** (text, nullable) — vendors.category 필터 매핑 (예: '육류') | |
+| **category_type** (text, default 'expense') — 'expense'/'income'/'exclude' (2026-04-22 #53) | |
+
+**category_type 규칙 (2026-04-22 #53)**:
+- `expense` — 지출 카테고리. 대시보드/정산 지출 집계에 포함
+- `income` — 매출 카테고리. **지출 집계에서 제외**. 은행 입금 분류용 (실제 매출은 settlements POS에서)
+- `exclude` — 정산제외 카테고리. 카드대금/배당금 등. 지출 집계에서 제외
+- 앱 UI "지출카테고리" 화면에 상단 탭 3개로 타입별 관리
+- 리뷰 드롭다운은 3 타입 optgroup으로 구분 표시
 
 **data_source 값 정의 (2026-04-22 확장)**:
 - `vendor_orders` — 거래처 주문(vendor_orders)만 집계. `vendor_category` 필터 적용

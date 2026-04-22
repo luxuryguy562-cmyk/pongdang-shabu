@@ -65,6 +65,7 @@
 | 50 | 로그인 시 기기 등록 팝업 | ✅ 완료 | staff 로그인 직후 3상태 팝업(미등록/일치/불일치), 일치 3초 자동닫힘, 관리자 스킵 |
 | 51 | 거래내역 분류 2줄 + 5필드 편집 + FK 정합성 | ✅ 완료 | 분류 셀 2줄(대분류 9px/소분류 11px), ✎편집 버튼 신설(날짜/내용/분류/입금/출금), category_id=대분류 고정 규칙 확립, 확인필요 수기입력 제거, tx_hash C안(원본 지문 보존) |
 | 52 | 지출카테고리 2차 개편 (식자재 통합 + 주류 분리) | ✅ 완료 | **B+가 안**. 식자재 대분류 1개(composite) + 육류/야채/공산품 소분류 3개. 직구 개념 삭제(품목 기반). 주류 별도 대분류. vendor_orders + receipts 자동 합산. receipts.category_id=소분류 id 규칙. 거래처 재분류 도우미 UI. 마이그레이션 SQL+롤백 SQL 포함 |
+| 53 | 매출/제외 카테고리 분리 (category_type) | ✅ 완료 | expense_categories.category_type 컬럼(expense/income/exclude) 추가. 관리 화면 상단 탭 3개. 리뷰 드롭다운 하드코딩 제거 → DB optgroup 동적. 집계 함수 category_type='expense' 필터. 매출/제외는 사장님이 UI에서 직접 추가 (하드코딩 금지 원칙) |
 
 ---
 

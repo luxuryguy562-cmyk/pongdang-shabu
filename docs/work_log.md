@@ -4,6 +4,55 @@
 
 ---
 
+## [2026-04-22] 매출/제외 카테고리 분리 (#53 category_type 컬럼 추가)
+
+### 상태: 구현완료 (배포 대기)
+### 브랜치: claude/review-docs-assessment-1UF8u
+### 규모: 중형 (약 100줄 수정, DB ALTER 1건)
+### 배경
+- 2차 개편 후 리뷰 드롭다운에 '매출/카드대금/배당금' 하드코딩 남아있음
+- 사장님 지적: "매출은 지출이 아닌데 지출카테고리에서 하면 안되지 않아?"
+- 내 틀린 제안: 매출 소분류 4개 미리 INSERT
+- 사장님 올바른 방향: 하드코딩/미리INSERT 금지, DB 관리 UI로 사장님이 직접 추가
+
+### 변경
+1. **expense_categories.category_type 컬럼 추가** (ALTER TABLE, default 'expense')
+   - 사장님이 Supabase SQL Editor에서 이미 실행 완료:
+     ALTER TABLE + UPDATE NULL → 'expense'
+2. **편집 시트**: category_type 드롭다운 (지출/매출/제외) 추가
+3. **지출카테고리 화면**: 상단 탭 3개 (💸 지출 / 💰 매출 / 🚫 제외)
+   - 탭 전환 시 해당 타입 카테고리만 표시
+   - + 추가 시 현재 탭 타입 기본값
+   - 소분류 추가는 부모 타입 상속
+4. **리뷰 드롭다운 하드코딩 제거**:
+   - 기존 '매출/카드대금/배당금' 3개 option 삭제
+   - DB 기반 optgroup 3개 (지출/매출/제외) 동적 생성
+   - '미분류'만 유지
+5. **집계 필터**: calcExpenseByCategories + reconcileRender에 category_type='expense' 필터
+   - income/exclude 카테고리는 지출 집계에서 자동 제외
+
+### DB 변경
+- ALTER TABLE expense_categories ADD COLUMN category_type text DEFAULT 'expense' (사장님 실행 완료)
+- 롤백: ALTER TABLE DROP COLUMN category_type (필요 시)
+- 실제 매출/제외 카테고리 INSERT는 **하지 않음** — 사장님이 UI에서 직접 추가
+
+### 사장님 남은 할 일
+1. 앱 하드 리프레시 (Ctrl+Shift+R)
+2. 사이드메뉴 → 지출 카테고리 → 상단 탭 확인 (지출/매출/제외)
+3. 필요시 💰 매출 탭 → + 추가 (예: "매출" 대분류 → "QR결제/카드결제/현금입금/송금결제" 소분류)
+4. 필요시 🚫 제외 탭 → + 추가 (예: "카드대금", "배당금")
+5. 엑셀 업로드 후 확인필요 시트에서 드롭다운 그룹 구분 확인
+
+### 제11조 절차
+- [x] 사전 스캔 (기존 하드코딩 위치 확인)
+- [x] 계획서 제출 + 사장님 지적 (하드코딩 금지 원칙 확립)
+- [x] 수정 (DB 미리 INSERT 제거)
+- [x] 3단 검증: node --check ✅ + 잔재 grep ✅
+- [x] docs 업데이트 (db_schema + business_rules + work_log + dev_lessons)
+- [ ] 배포 후 사장님 테스트
+
+---
+
 ## [2026-04-22] 지출카테고리 2차 개편 (B+가 안 구현완료)
 
 ### 상태: 구현완료 (배포 대기 — 사장님 SQL 실행 + 재분류 도우미 사용 + 대시보드 숫자 확인)
