@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <style>
 :root{
   --blue:#0050FF;--blue-light:#EEF3FF;--bg:#F2F4F6;--white:#FFFFFF;
@@ -170,6 +171,10 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s;}
 input:checked+.toggle-slider{background:var(--blue);}
 input:checked+.toggle-slider:before{transform:translateX(20px);}
+
+/* ─ 드래그 정렬 (SortableJS) */
+.drag-handle:active{cursor:grabbing;}
+.drag-ghost{opacity:0.4;background:var(--blue-light)!important;}
 
 /* ─ 거래처 */
 .vendor-item{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;}
@@ -5054,40 +5059,39 @@ function renderExpCatList(){
     childMap[cat.parent_id].push(cat);
   });
   if(!activeCats.length){c.innerHTML='<div class="empty-state" style="padding:20px;"><p>카테고리를 추가하세요</p></div>';return;}
-  let html='';
+  let html='<div id="expCatParentBox">';
   // sort_order 명시 정렬 (안정성)
   parents.sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   parents.forEach((p,pIdx)=>{
     const children=(childMap[p.id]||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-    const pFirst=pIdx===0, pLast=pIdx===parents.length-1;
-    html+=`<div style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:4px;padding:10px 0;border-bottom:2px solid var(--gray-200);">
+    html+=`<div data-cat-id="${p.id}" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:6px;padding:10px 0;border-bottom:2px solid var(--gray-200);">
+        <div class="drag-handle" style="cursor:grab;padding:4px 8px;color:var(--gray-500);font-size:16px;user-select:none;touch-action:none;" title="드래그하여 순서 변경">☰</div>
         <div style="width:14px;height:14px;border-radius:50%;background:${p.color||'#0050FF'};flex-shrink:0;"></div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:800;">${p.name}</div>
           <div style="font-size:11px;color:var(--gray-400);">${srcLabel[p.data_source]||p.data_source}${children.length?' · 소분류 '+children.length+'개':''}</div>
         </div>
-        <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 6px;min-width:24px;" data-action="moveExpCat|${p.id}|-1" ${pFirst?'disabled style="opacity:0.3;"':''}>▲</button>
-        <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 6px;min-width:24px;" data-action="moveExpCat|${p.id}|1" ${pLast?'disabled style="opacity:0.3;"':''}>▼</button>
-        <button class="btn btn-secondary btn-sm" style="font-size:10px;" data-action="openAddSubCatSheet|${p.id}|${p.name}">+ 소</button>
+        <button class="btn btn-secondary btn-sm" style="font-size:10px;" data-action="openAddSubCatSheet|${p.id}|${p.name}">+ 소분류</button>
         <button class="btn btn-secondary btn-sm" style="font-size:10px;" data-action="openEditExpCatSheet|${p.id}">편집</button>
         <button class="btn btn-danger btn-sm" style="font-size:10px;" data-action="deleteExpCat|${p.id}|${p.name}">삭제</button>
       </div>`;
     if(children.length){
-      children.forEach((ch,cIdx)=>{
-        const cFirst=cIdx===0, cLast=cIdx===children.length-1;
-        html+=`<div style="display:flex;align-items:center;gap:4px;padding:8px 0 8px 24px;border-bottom:1px solid var(--gray-100);">
+      html+=`<div class="subcat-box" data-parent="${p.id}">`;
+      children.forEach((ch)=>{
+        html+=`<div data-cat-id="${ch.id}" style="display:flex;align-items:center;gap:6px;padding:8px 0 8px 24px;border-bottom:1px solid var(--gray-100);">
+          <div class="drag-handle" style="cursor:grab;padding:3px 6px;color:var(--gray-500);font-size:14px;user-select:none;touch-action:none;" title="드래그하여 순서 변경">☰</div>
           <div style="width:10px;height:10px;border-radius:50%;background:${ch.color||p.color||'#0050FF'};flex-shrink:0;"></div>
           <div style="flex:1;min-width:0;font-size:13px;font-weight:600;">${ch.name}</div>
-          <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 5px;min-width:22px;" data-action="moveExpCat|${ch.id}|-1" ${cFirst?'disabled style="opacity:0.3;"':''}>▲</button>
-          <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 5px;min-width:22px;" data-action="moveExpCat|${ch.id}|1" ${cLast?'disabled style="opacity:0.3;"':''}>▼</button>
           <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:4px 8px;" data-action="openEditExpCatSheet|${ch.id}">편집</button>
           <button class="btn btn-danger btn-sm" style="font-size:10px;padding:4px 8px;" data-action="deleteExpCat|${ch.id}|${ch.name}">삭제</button>
         </div>`;
       });
+      html+=`</div>`;
     }
     html+=`</div>`;
   });
+  html+=`</div>`; // expCatParentBox
   // 소속 없는 카테고리 (기존 데이터 호환) — 활성만
   const orphans=activeCats.filter(cat=>cat.parent_id&&!parents.find(p=>p.id===cat.parent_id));
   if(orphans.length){
@@ -5102,6 +5106,45 @@ function renderExpCatList(){
     });
   }
   c.innerHTML=html;
+  // Sortable 초기화 (대분류 + 각 소분류 그룹)
+  initExpCatSortable();
+}
+
+// 카테고리 드래그 정렬 초기화 (SortableJS)
+function initExpCatSortable(){
+  if(!window.Sortable) return;
+  const parentBox=document.getElementById('expCatParentBox');
+  if(parentBox){
+    new Sortable(parentBox,{
+      handle:'.drag-handle',
+      animation:150,
+      ghostClass:'drag-ghost',
+      onEnd:()=>reorderExpCats(parentBox)
+    });
+  }
+  document.querySelectorAll('.subcat-box').forEach(box=>{
+    new Sortable(box,{
+      handle:'.drag-handle',
+      animation:150,
+      ghostClass:'drag-ghost',
+      onEnd:()=>reorderExpCats(box)
+    });
+  });
+}
+
+// 드래그 완료 후 sort_order 재할당 (DOM 순서 기준)
+async function reorderExpCats(box){
+  if(!currentStore) return;
+  const ids=Array.from(box.children).map(el=>el.dataset.catId).filter(Boolean);
+  if(!ids.length) return;
+  setLoad(true,'순서 저장 중...');
+  const updates=ids.map((id,idx)=>
+    sb.from('expense_categories').update({sort_order:idx}).eq('id',id).eq('store_id',currentStore.id)
+  );
+  const results=await Promise.all(updates);
+  setLoad(false);
+  if(results.some(r=>r.error)){toast('순서 저장 실패','error');}
+  await loadExpCategories();
 }
 
 let editExpCatParentId=null; // 소분류 추가 시 부모 ID
@@ -5210,31 +5253,7 @@ async function saveExpCat(){
   closeAllSheets();await loadExpCategories();
 }
 
-// 카테고리 순서 변경 (같은 타입+같은 부모 내에서만 스왑)
-async function moveExpCat(id,dir){
-  if(!guardStore())return;
-  const cat=expCategories.find(c=>c.id===id);if(!cat)return;
-  const type=cat.category_type||'expense';
-  const parentId=cat.parent_id||null;
-  // 같은 그룹 내 정렬된 형제들
-  const siblings=expCategories
-    .filter(c=>(c.category_type||'expense')===type && (c.parent_id||null)===parentId)
-    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-  const curIdx=siblings.findIndex(c=>c.id===id);
-  const newIdx=curIdx+(dir<0?-1:1);
-  if(newIdx<0||newIdx>=siblings.length) return; // 경계
-  const other=siblings[newIdx];
-  setLoad(true,'순서 변경 중...');
-  // sort_order 스왑
-  const [a,b]=[cat.sort_order||0,other.sort_order||0];
-  const[r1,r2]=await Promise.all([
-    sb.from('expense_categories').update({sort_order:b}).eq('id',cat.id).eq('store_id',currentStore.id),
-    sb.from('expense_categories').update({sort_order:a}).eq('id',other.id).eq('store_id',currentStore.id)
-  ]);
-  setLoad(false);
-  if(r1.error||r2.error) return toast('순서 변경 실패','error');
-  await loadExpCategories();
-}
+// (moveExpCat 제거 — SortableJS 드래그로 대체. reorderExpCats 사용)
 
 async function deleteExpCat(id,name){
   // 소분류가 있는 대분류 삭제 시 경고
