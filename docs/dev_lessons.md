@@ -620,6 +620,33 @@ if(catName.includes('>')){
 
 ---
 
+## 47. 같은 지표는 단 하나의 소스에서만 (2026-04-23 대시보드 sales_daily 통합)
+
+**사건**: 대시보드는 `settlements.items_json` 조회, 매출 관리는 `sales_daily` 조회. 사장님이 매출 관리에서 금액 고쳐도 대시보드는 **원본 마감정산 기준**이라 영원히 안 맞음.
+
+**원인**:
+- `syncClosingToSalesDaily`는 settlements → sales_daily 단방향 복사
+- sales_daily 수정본은 settlements로 역류하지 않음 (의도적, 원본 보존)
+- 결과: 두 테이블이 "한 번은 같고 그 뒤는 다름"
+
+**해법 패턴 (재사용)**:
+1. **파생 데이터는 하향 전용**: 원본(settlements) → 파생(sales_daily)으로만 흐름. 양쪽 조회 금지.
+2. **UI/보고는 최종 파생 테이블만 조회**: 대시보드, 리포트, 집계는 모두 sales_daily 같은 최종 소스에서.
+3. **원본 테이블(settlements)은 입력 로그/감사 용도**: 마감정산 탭에서만 표시.
+4. **전환 시 백필 SQL 필수**: `NOT EXISTS` 가드로 기존 파생 행 보호.
+5. **롤백 SQL은 memo/source 조합으로 식별**: 백필로 생긴 행만 지워지도록.
+
+**체크리스트 (같은 지표가 여러 테이블에 있을 때)**:
+- [ ] 소스 → 파생 관계 명확히 문서화 (db_schema.md)
+- [ ] UI는 **파생만** 조회, 원본은 입력/감사에만
+- [ ] 파생 테이블에 수동 편집 흔적(`source='..._edited'`) 구분 컬럼
+- [ ] 원본 재저장 시 파생 수정본 보호 로직 (#46과 연결)
+- [ ] 전환 시 백필 + 롤백 SQL 세트 필수
+
+**관련**: dev_lessons #46 (수정본 보호) + 이번 통합으로 sales_daily가 **매출 단일 진실의 원천**으로 확정.
+
+---
+
 ## 46. 자동 sync는 수동 수정본을 덮어쓰지 말 것 (2026-04-23 closing_edited 도입)
 
 **사건**: `sales_daily` 행을 사장님이 손으로 고쳐도, 같은 날 마감정산 재저장 시 `syncClosingToSalesDaily`가 **upsert onConflict**로 무조건 덮어씀 → 수동 수정 사라짐.

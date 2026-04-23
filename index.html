@@ -972,7 +972,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
   <!-- 매출소스 -->
   <div class="manager-only" style="display:flex;gap:6px;margin-bottom:14px;">
-    <button id="saleSrcSettle" class="btn btn-primary btn-sm" style="flex:1;font-size:11px;">📋 마감정산</button>
+    <button id="saleSrcSettle" class="btn btn-primary btn-sm" style="flex:1;font-size:11px;">📊 매출 관리</button>
     <button id="saleSrcUps" class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;">🏪 업솔루션</button>
     <button class="btn btn-secondary btn-sm" id="crawlBtn" style="flex:0 0 auto;font-size:10px;">↓</button>
   </div>
@@ -3844,10 +3844,10 @@ async function loadDashboard(){
     const sid=currentStore.id;
 
     const [settleRes,fcRes,expResults,royaltyTxRes,prevSettleRes,prevFcRes]=await Promise.all([
-      // 당월 정산
+      // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
-        :sb.from('settlements').select('settle_date,expected_total,actual_total,items_json,sales_total').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end).order('settle_date'),
+        :sb.from('sales_daily').select('date,card,cash,cash_receipt,qr,etc,extra_large,extra_small').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
       // 당월 고정비
       sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(name,is_active,is_variable)').eq('store_id',sid).eq('year_month',ym),
       // 당월 지출 (병렬)
@@ -3859,7 +3859,7 @@ async function loadDashboard(){
       // ── 전월 매출 ──
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
-        :sb.from('settlements').select('settle_date,items_json,sales_total,expected_total').eq('store_id',sid).gte('settle_date',pStart).lte('settle_date',pEnd),
+        :sb.from('sales_daily').select('date,card,cash,cash_receipt,qr,etc,extra_large,extra_small').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
       // ── 전월 고정비 ──
       sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid).eq('year_month',pYm)
     ]);
@@ -3877,22 +3877,18 @@ async function loadDashboard(){
       salesBreakdown={'카드':settle.reduce((a,s)=>a+(s.card_sales||0),0),'현금':settle.reduce((a,s)=>a+(s.cash_sales||0),0)};
       salesBreakdown['기타']=totalRevenue-salesBreakdown['카드']-salesBreakdown['현금'];
     } else {
+      // sales_daily 기준 (매출 관리 페이지와 동일 소스 — 수동 수정본 반영)
       settle.forEach(s=>{
-        const j=s.items_json||{};
-        const day=s.settle_date?.slice(8);
-        if(j.pos_card!==undefined){
-          const ds=(j.pos_cash||0)+(j.pos_cash_receipt||0)+(j.pos_card||0)+(j.pos_etc||0)+(j.extra_draw_large||0)+(j.extra_draw_small||0);
-          totalRevenue+=ds;dailySalesMap[day]=ds;
-          salesBreakdown['신용카드']=(salesBreakdown['신용카드']||0)+(j.pos_card||0);
-          salesBreakdown['현금']=(salesBreakdown['현금']||0)+(j.pos_cash||0);
-          salesBreakdown['현금영수증']=(salesBreakdown['현금영수증']||0)+(j.pos_cash_receipt||0);
-          if(j.pos_etc)salesBreakdown['기타결제']=(salesBreakdown['기타결제']||0)+j.pos_etc;
-          if(j.extra_draw_large)salesBreakdown['뽑기(대형)']=(salesBreakdown['뽑기(대형)']||0)+j.extra_draw_large;
-          if(j.extra_draw_small)salesBreakdown['뽑기(소형)']=(salesBreakdown['뽑기(소형)']||0)+j.extra_draw_small;
-        } else {
-          const ds=s.sales_total||s.expected_total||0;
-          totalRevenue+=ds;dailySalesMap[day]=ds;
-        }
+        const day=s.date?.slice(8);
+        const ds=(s.card||0)+(s.cash||0)+(s.cash_receipt||0)+(s.qr||0)+(s.etc||0)+(s.extra_large||0)+(s.extra_small||0);
+        totalRevenue+=ds;dailySalesMap[day]=ds;
+        salesBreakdown['신용카드']=(salesBreakdown['신용카드']||0)+(s.card||0);
+        salesBreakdown['현금']=(salesBreakdown['현금']||0)+(s.cash||0);
+        salesBreakdown['현금영수증']=(salesBreakdown['현금영수증']||0)+(s.cash_receipt||0);
+        if(s.qr)salesBreakdown['QR']=(salesBreakdown['QR']||0)+s.qr;
+        if(s.etc)salesBreakdown['기타결제']=(salesBreakdown['기타결제']||0)+s.etc;
+        if(s.extra_large)salesBreakdown['뽑기(대형)']=(salesBreakdown['뽑기(대형)']||0)+s.extra_large;
+        if(s.extra_small)salesBreakdown['뽑기(소형)']=(salesBreakdown['뽑기(소형)']||0)+s.extra_small;
       });
     }
     receiptCount=Object.keys(dailySalesMap).length;
@@ -4062,9 +4058,10 @@ async function loadDashboard(){
     if(dashSaleSource==='ups'){
       prevSettle.forEach(s=>{const d=s.sale_date?.slice(8);prevTotalRevenue+=(s.total_sales||0);if(d)prevDailySalesMap[d]=s.total_sales||0;});
     } else {
-      prevSettle.forEach(s=>{const j=s.items_json||{};const d=s.settle_date?.slice(8);
-        let ds=0;if(j.pos_card!==undefined)ds=(j.pos_cash||0)+(j.pos_cash_receipt||0)+(j.pos_card||0)+(j.pos_etc||0)+(j.extra_draw_large||0)+(j.extra_draw_small||0);
-        else ds=s.sales_total||s.expected_total||0;
+      // sales_daily 기준
+      prevSettle.forEach(s=>{
+        const d=s.date?.slice(8);
+        const ds=(s.card||0)+(s.cash||0)+(s.cash_receipt||0)+(s.qr||0)+(s.etc||0)+(s.extra_large||0)+(s.extra_small||0);
         prevTotalRevenue+=ds;if(d)prevDailySalesMap[d]=ds;
       });
     }
@@ -4323,8 +4320,8 @@ async function loadDashboard(){
     // ══ A-1b. 매출 상세 아코디언 (도넛차트 + 결제수단 테이블) ══
     const revBody=document.getElementById('revAccordionBody');
     if(revBody){
-      const revColors={'신용카드':'#0050FF','카드':'#0050FF','현금':'#05C072','현금영수증':'#10B981','기타결제':'#FF9500','기타':'#FF9500','뽑기(대형)':'#7C3AED','뽑기(소형)':'#A78BFA'};
-      const revOrder=['신용카드','카드','현금','현금영수증','기타결제','기타','뽑기(대형)','뽑기(소형)'];
+      const revColors={'신용카드':'#0050FF','카드':'#0050FF','현금':'#05C072','현금영수증':'#10B981','QR':'#14B8A6','기타결제':'#FF9500','기타':'#FF9500','뽑기(대형)':'#7C3AED','뽑기(소형)':'#A78BFA'};
+      const revOrder=['신용카드','카드','현금','현금영수증','QR','기타결제','기타','뽑기(대형)','뽑기(소형)'];
       const revDonutLabels=[],revDonutData=[],revDonutColors=[];
       let revListHtml='<table style="width:100%;border-collapse:collapse;">';
       // salesBreakdown에서 0 초과 항목만
@@ -5211,7 +5208,7 @@ async function recalcMonthWages(){
 // ══════════════════════════════════════════
 let expCategories = [];
 let expCatColorSel = '#0050FF';
-let dashSaleSource = 'settle'; // 'settle' | 'ups'
+let dashSaleSource = 'settle'; // 'settle' = sales_daily (매출 관리와 동일) | 'ups' = 업솔루션 daily_sales
 let dashMode = 'provisional'; // 'provisional' | 'final'
 
 async function loadExpCategories(){
