@@ -68,6 +68,7 @@
 | 53 | 매출/제외 카테고리 분리 (category_type) | ✅ 완료 | expense_categories.category_type 컬럼(expense/income/exclude) 추가. 관리 화면 상단 탭 3개. 리뷰 드롭다운 하드코딩 제거 → DB optgroup 동적. 집계 함수 category_type='expense' 필터. 매출/제외는 사장님이 UI에서 직접 추가 (하드코딩 금지 원칙) |
 | 54 | "영수증 참조" 소분류 + 영수증 기반 집계 대체 | ✅ 완료 | 한 영수증에 식자재/비품 섞인 케이스 대응. 카드 거래는 식자재>영수증참조로 분류하고 지출 집계에서 제외, receipts에서 품목별 집계 → 이중 집계 방지. 거래내역 UI에 📸 배지 표시 |
 | 55 | 카테고리 드래그 정렬 (SortableJS) | ✅ 완료 | ▲▼ 버튼 → ☰ 삼선 드래그 핸들, 모바일 터치 지원. sort_order 자동 저장. 편집 시 순서 유지 (기존에 편집하면 맨 뒤로 밀리던 버그 수정) |
+| 56 | linked 카테고리 분리 (영수증참조 + 예비비) | ✅ 완료 | category_type에 'receipt_ref', 'reserve' 추가. 2개 대분류 INSERT(시스템 상수). 관리 탭은 기존 3개(지출/매출/제외) 유지. 리뷰 드롭다운 optgroup 5개. 예비비 선택 시 메모 입력 필드. 저장 시 reserve_fund_logs 자동 INSERT(source_tx_id 연결). exclude_from_settlement 자동 처리 |
 
 ---
 

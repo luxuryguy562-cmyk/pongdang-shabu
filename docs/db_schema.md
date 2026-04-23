@@ -153,12 +153,15 @@ franchises (프랜차이즈/브랜드)
 | **vendor_category** (text, nullable) — vendors.category 필터 매핑 (예: '육류') | |
 | **category_type** (text, default 'expense') — 'expense'/'income'/'exclude' (2026-04-22 #53) | |
 
-**category_type 규칙 (2026-04-22 #53)**:
-- `expense` — 지출 카테고리. 대시보드/정산 지출 집계에 포함
-- `income` — 매출 카테고리. **지출 집계에서 제외**. 은행 입금 분류용 (실제 매출은 settlements POS에서)
-- `exclude` — 정산제외 카테고리. 카드대금/배당금 등. 지출 집계에서 제외
-- 앱 UI "지출카테고리" 화면에 상단 탭 3개로 타입별 관리
-- 리뷰 드롭다운은 3 타입 optgroup으로 구분 표시
+**category_type 규칙 (2026-04-22 #53 + #55)**:
+- `expense` — 지출 카테고리 (사장님 관리)
+- `income` — 매출 카테고리 (사장님 관리, 은행 입금 분류. 실제 매출은 settlements POS)
+- `exclude` — 정산제외 (사장님 관리, 카드대금/배당금)
+- `receipt_ref` — **영수증 참조** (시스템 상수, 관리 탭 X). 카드/은행 거래 1건이 여러 품목 섞인 경우 이 분류로 두고 영수증에서 품목별 집계
+- `reserve` — **예비비 사용** (시스템 상수, 관리 탭 X). 거래 저장 시 `reserve_fund_logs`에 자동 INSERT (source_tx_id 연결)
+- 관리 화면 탭 3개: expense/income/exclude만 (receipt_ref/reserve는 시스템 연결용 상수)
+- 리뷰 드롭다운은 5 타입 optgroup으로 구분 표시
+- expense/income/exclude만 사장님이 UI에서 편집 가능, receipt_ref/reserve는 DB에 고정 1건씩 INSERT된 상태
 
 **data_source 값 정의 (2026-04-22 확장)**:
 - `vendor_orders` — 거래처 주문(vendor_orders)만 집계. `vendor_category` 필터 적용
@@ -265,8 +268,14 @@ franchises (프랜차이즈/브랜드)
 | year_month (text) | 귀속월 (YYYY-MM) |
 | type (text) | 'deposit' / 'withdrawal' |
 | amount (int) | 금액 |
-| memo (text) | 사유 |
+| memo (text) | 사유 (예비비 사용 상세, 예: "에어컨 수리") |
+| source_tx_id (uuid, FK→mydata_transactions, nullable) | 자동 동기화 연결 (2026-04-22 #55) |
 | created_at (timestamptz) | 생성일 |
+
+**source_tx_id 규칙 (2026-04-22 #55)**:
+- 엑셀 업로드 or 거래 편집 시 category='예비비 사용' 선택하면 이 log에 자동 INSERT
+- 거래 삭제·분류 변경 시 ON DELETE SET NULL (log는 유지, 연결만 해제)
+- 거래 편집 시 이미 log 존재하면 UPDATE, 없으면 INSERT
 
 ### classification_rules (신규)
 | 컬럼 | 용도 |
