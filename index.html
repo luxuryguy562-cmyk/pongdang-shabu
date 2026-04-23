@@ -7434,6 +7434,13 @@ function openReviewCatPicker(idx){
   });
 }
 
+// 대분류 카테고리 타입 조회 헬퍼
+function getCatType(mainName){
+  if(!mainName)return 'expense';
+  const p=(expCategories||[]).find(c=>c.name===mainName&&!c.parent_id);
+  return p?.category_type||'expense';
+}
+
 // 거래/확인필요 항목의 분류 라벨 (버튼 표시용)
 function getCatLabel(cat,sub){
   const c=cat||'미분류';
