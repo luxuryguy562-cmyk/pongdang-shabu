@@ -134,7 +134,7 @@ franchises (프랜차이즈/브랜드)
 | extra_large | NUMERIC | 🎰 뽑기(대형) (extra_draw_large) |
 | extra_small | NUMERIC | 🎲 뽑기(소형) (extra_draw_small) |
 | memo | TEXT | 비고 |
-| source | TEXT | 'manual'/'closing'/'pos_api'/'card_api' |
+| source | TEXT | 'manual'/'closing'/'closing_edited'/'pos_api'/'card_api' — `closing_edited`는 마감자동 행을 사장님이 손으로 고친 후. 이후 마감정산 재저장 시 **보호(skip)** |
 | created_at, updated_at | TIMESTAMPTZ | |
 | **UNIQUE(store_id, date)** | | 하루 1행 강제 |
 

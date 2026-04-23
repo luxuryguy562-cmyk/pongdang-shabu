@@ -620,6 +620,31 @@ if(catName.includes('>')){
 
 ---
 
+## 46. 자동 sync는 수동 수정본을 덮어쓰지 말 것 (2026-04-23 closing_edited 도입)
+
+**사건**: `sales_daily` 행을 사장님이 손으로 고쳐도, 같은 날 마감정산 재저장 시 `syncClosingToSalesDaily`가 **upsert onConflict**로 무조건 덮어씀 → 수동 수정 사라짐.
+
+**원인**:
+- sync 함수가 `source` 컬럼을 **쓰기만** 하고 **읽지 않음**
+- upsert는 편하지만 "이미 있는 행의 상태"를 고려하지 않는 blind write
+
+**해법 패턴 (재사용)**:
+1. 자동 sync 전에 기존 행의 `source`(또는 `edited_at`, `user_locked` 플래그) **먼저 조회**
+2. 사용자 편집 흔적이 있으면 **스킵** + `{skipped:true}` 반환 (throw 금지)
+3. 호출부에서 skipped 여부로 토스트 메시지 분기
+4. 수동 편집 시 저장 쪽에서 `source` 를 `edited` 변종으로 자동 승격 (사장님 별도 조작 불필요)
+
+**체크리스트 (자동-수동 데이터 혼재 테이블 다룰 때)**:
+- [ ] 자동 소스(`closing` 등)와 수동 편집을 구분할 컬럼 있나
+- [ ] 수동 편집 저장 시 source 승격 로직 있나
+- [ ] 자동 sync에서 기존 행 조회 후 분기 있나
+- [ ] sync 실패/스킵을 **사용자에게 토스트로 알림** (console.error만 → 금지)
+- [ ] 뱃지/아이콘으로 수정본 여부 시각화
+
+**관련**: 이번 수정으로 `source='closing_edited'` 값 추가 (db_schema.md sales_daily 컬럼 주석 갱신).
+
+---
+
 ## 45. 사용자 UX 는 DB 스키마보다 강하다 (2026-04-23 sales_records 폐기 사건)
 
 **사건**: sales_records 세로 raw 설계 (`payment_method` 컬럼) → 사장님 즉각 반발:
