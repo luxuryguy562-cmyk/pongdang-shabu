@@ -118,6 +118,27 @@ franchises (프랜차이즈/브랜드)
 | store_id, sale_date | 매장/날짜 |
 | total_sales, card_sales, cash_sales (int) | 매출 |
 
+### sales_records (신규 2026-04-23)
+매출 raw 거래 데이터. `settlements.items_json` 덩어리에 묶여있던 매출을 결제수단별/날짜별 한 줄씩 풀어서 관리. 미래 POS/카드사 API 연동 대비 `source` 컬럼 보유.
+
+| 컬럼 | 타입 | 용도 |
+|------|------|------|
+| id | UUID PK | |
+| store_id | UUID FK→stores (CASCADE) | 매장 격리 |
+| date | DATE | 매출일 |
+| payment_method | TEXT | 'POS 현금' / 'POS 카드' / '배달' / '현금' / '카드' 등 자유 |
+| category_id | UUID FK→expense_categories (SET NULL) | **category_type='income' 만 허용** (앱 레벨 검증) |
+| amount | NUMERIC | 금액 |
+| memo | TEXT | 비고 |
+| source | TEXT | 'manual'/'closing'/'excel'/'pos_api'/'card_api' — 미래 API 식별용 |
+| created_at, updated_at | TIMESTAMPTZ | |
+
+**인덱스**: `(store_id, date DESC)`, `(store_id, date, payment_method)`
+**연결**:
+- 마감정산 저장 시 `syncClosingToSalesRecords()` 가 해당 날짜의 `source='closing'` 행 DELETE 후 재INSERT
+- 매출 관리 페이지(`salesCont`)는 이 테이블만 조회/편집. settlements는 건드리지 않음
+- 매장 격리: 모든 쿼리에 `.eq('store_id', currentStore.id)` 필수 (RLS 미적용 상태 가정)
+
 ### receipts
 | 컬럼 | 용도 |
 |------|------|

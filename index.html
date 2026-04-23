@@ -188,6 +188,22 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .tx-cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0;}
 .tx-date-header td{background:var(--gray-100);font-weight:700;color:var(--blue);font-size:12px;padding:8px 12px;letter-spacing:0.2px;text-align:left;position:sticky;top:0;z-index:2;box-shadow:0 1px 0 var(--gray-200);}
 
+/* ─ 매출 관리 페이지 (1단계: raw 입력/조회/편집) */
+.sales-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;}
+.sales-table thead th{background:var(--gray-100);color:var(--gray-700);font-weight:700;font-size:11px;padding:8px 6px;text-align:center;border-bottom:1px solid var(--gray-200);letter-spacing:0.3px;}
+.sales-table tbody td{padding:6px 4px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+.sales-table tbody td:first-child{padding-left:10px;}
+.sales-table tbody td:last-child{padding-right:10px;text-align:center;}
+.sales-table input, .sales-table select{width:100%;box-sizing:border-box;padding:6px 6px;font-size:12px;border:1px solid transparent;border-radius:5px;background:transparent;}
+.sales-table input:focus, .sales-table select:focus{border-color:var(--blue);background:#fff;outline:none;}
+.sales-table input.sales-amt{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
+.sales-row[data-src="closing"]{background:var(--gray-100);}
+.sales-row[data-src="excel"]{background:#fffbe6;}
+.sales-row[data-dirty="1"]{box-shadow:inset 3px 0 0 var(--blue);}
+.sales-row[data-new="1"]{box-shadow:inset 3px 0 0 #4caf50;}
+.sales-del-btn{width:28px;height:28px;border-radius:50%;border:none;background:transparent;color:var(--gray-500);cursor:pointer;font-size:14px;}
+.sales-del-btn:active{background:var(--gray-200);}
+
 /* ─ 거래처 */
 .vendor-item{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;}
 .vendor-info .v-name{font-size:14px;font-weight:700;}
@@ -546,6 +562,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="side-group-body">
         <div class="side-item" data-action="navFromSide|explist">계좌내역 · 카드내역</div>
         <div class="side-item" data-action="navFromSide|expcat">지출 카테고리 설정</div>
+      </div>
+    </div>
+
+    <!-- 매출 관리 -->
+    <div class="side-group">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
+        <span>💰 매출 관리</span><span class="side-arrow">›</span>
+      </div>
+      <div class="side-group-body">
+        <div class="side-item" data-action="navFromSide|sales">매출 기록 (raw)</div>
       </div>
     </div>
 
@@ -1506,6 +1532,71 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- ══ [10c] 매출 관리 ══ -->
+<div id="salesCont" class="container">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;">
+      <div class="card-title" style="margin-bottom:0;">💰 매출 관리</div>
+      <input type="month" id="salesMonth" class="input-inline" style="width:140px;" data-change="onSalesMonthChange|this">
+    </div>
+    <p style="font-size:12px;color:var(--gray-600);margin:0 0 12px;line-height:1.6;">
+      매출을 한 줄씩 기록합니다. 마감정산 저장 시 여기에도 자동 기록됩니다.
+    </p>
+
+    <div style="overflow-x:hidden;">
+      <table class="sales-table" id="salesTable">
+        <colgroup>
+          <col style="width:21%;">
+          <col style="width:19%;">
+          <col style="width:25%;">
+          <col style="width:23%;">
+          <col style="width:12%;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>날짜</th><th>결제수단</th><th>카테고리</th><th>금액</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="salesTbody">
+          <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-500);">데이터가 없습니다</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" data-action="addSalesRow">+ 행 추가</button>
+      <button class="btn btn-secondary btn-sm" data-action="openSalesPaste">📋 엑셀 붙여넣기</button>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto;" data-action="saveAllSalesChanges">💾 변경 저장</button>
+    </div>
+
+    <div style="margin-top:14px;padding:10px;background:var(--gray-100);border-radius:8px;font-size:11px;color:var(--gray-600);line-height:1.9;">
+      <b>배경색 가이드</b><br>
+      ⚪ 흰색 = 수동 입력 · ⚫ 회색 = 마감정산 자동 · 🟡 노랑 = 엑셀 일괄<br>
+      ▌파랑 세로줄 = 변경됨 · ▌초록 세로줄 = 새 행
+    </div>
+  </div>
+</div>
+
+<!-- 엑셀 붙여넣기 시트 -->
+<div class="sheet-overlay" id="salesPasteSheet" style="display:none;">
+  <div class="sheet sheet-content">
+    <div class="sheet-header">
+      <div class="sheet-title">📋 엑셀 붙여넣기</div>
+      <button class="sheet-close" data-action="closeSheet|salesPasteSheet">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--gray-600);margin:0 0 8px;line-height:1.7;">
+      엑셀에서 복사한 내용을 붙여넣으세요.<br>
+      열 순서: <b>날짜 · 결제수단 · 카테고리 · 금액</b> (탭/쉼표 구분).<br>
+      첫 줄이 제목이면 자동 건너뜁니다.
+    </p>
+    <textarea id="salesPasteText" rows="10" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;padding:8px;border:1px solid var(--gray-300);border-radius:6px;resize:vertical;" placeholder="2026-04-23&#9;카드&#9;매장매출&#9;125&#10;2026-04-22&#9;현금&#9;매장매출&#9;38"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-secondary btn-full" data-action="closeSheet|salesPasteSheet">취소</button>
+      <button class="btn btn-primary btn-full" data-action="applySalesPaste">행 생성</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ [10b] 설정 ══ -->
 <div id="settingsCont" class="container">
   <!-- 매장 기본정보 -->
@@ -2177,6 +2268,7 @@ function nav(tab, el) {
     explist: initExplist,
     expcat: loadExpCategories,
     recon: initRecon,
+    sales: loadSalesRecords,
   };
   if (actions[tab]) actions[tab]();
   if (tab === 'settle') { resetSettleView(); recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
@@ -2305,6 +2397,8 @@ async function selectStore(id, name) {
     showLoginScreen();
   } else {
     await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories()]);
+    // 매출 캐시 클리어 (매장 바꾸면 새로 로드)
+    salesRecords = []; salesEditing = {}; salesNewRows = [];
     recalcSettle2();
   }
 }
@@ -3520,8 +3614,41 @@ async function finishSettlement2(){
     diff_amount:diff,diff_status:diffStatus,
     sales_total:salesTotal
   },{onConflict:'store_id,settle_date'});
-  setLoad(false);if(error) return toast('저장 실패: '+error.message,'error');
+  if(error){setLoad(false);return toast('저장 실패: '+error.message,'error');}
+  // ─── 새 기능: sales_records 동시 기록 (매출 관리 페이지용) ───
+  try{ await syncClosingToSalesRecords(settleDate, items); }
+  catch(e){ console.error('[sales_records sync]',e); /* 실패해도 마감정산은 성공 처리 */ }
+  setLoad(false);
   toast('마감 저장 완료!','success');location.reload();
+}
+
+// ─── 새 기능: 마감정산 → sales_records 동기화 ───
+// 해당 날짜의 source='closing' 행들 전부 삭제 후 현재 items 로 재삽입
+async function syncClosingToSalesRecords(settleDate, items){
+  if(!currentStore) return;
+  // 매출 항목만 추출 (결제수단별 라벨 매핑)
+  const methodMap={
+    pos_cash:'POS 현금', pos_cash_receipt:'POS 현금영수증',
+    pos_card:'POS 카드', pos_etc:'POS 기타',
+    extra_draw_large:'추가수입(큰돈)', extra_draw_small:'추가수입(잔돈)'
+  };
+  const rows=[];
+  Object.keys(methodMap).forEach(key=>{
+    const amt=items[key]||0;
+    if(amt>0) rows.push({
+      store_id:currentStore.id, date:settleDate,
+      payment_method:methodMap[key], category_id:null,
+      amount:amt, memo:'마감정산 자동', source:'closing'
+    });
+  });
+  // 기존 closing 행 삭제 (그 날짜만, 매장 격리 필수)
+  await sb.from('sales_records').delete()
+    .eq('store_id',currentStore.id).eq('date',settleDate).eq('source','closing');
+  // 새로 삽입
+  if(rows.length){
+    const{error}=await sb.from('sales_records').insert(rows);
+    if(error) throw error;
+  }
 }
 async function loadSettleList(){
   if(!guardStore()) return;
@@ -8434,6 +8561,295 @@ document.addEventListener('DOMContentLoaded', async()=>{
   }
   showLoginScreen();
 });
+
+// ══════════════════════════════════════════
+// 매출 관리 페이지 (2026-04-23 신설)
+// 테이블: sales_records
+// 모드: DB raw 행 로드 → 인라인 편집 → 일괄 저장
+// ══════════════════════════════════════════
+let salesRecords=[];       // 서버에서 로드한 원본 (id 기준 매칭)
+let salesEditing={};       // id → 변경된 필드 dict
+let salesNewRows=[];       // 아직 저장 전 새 행 (임시 키 _new_N)
+let salesIncomeCats=[];    // category_type='income' 카테고리 캐시
+
+const SALES_METHODS=['POS 현금','POS 현금영수증','POS 카드','POS 기타','추가수입(큰돈)','추가수입(잔돈)','카드(기타)','현금','배달','계좌이체','QR','기타'];
+
+function getSalesMonthStr(){
+  const el=document.getElementById('salesMonth');
+  if(el && el.value) return el.value;
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+
+async function loadSalesRecords(){
+  if(!guardStore()) return;
+  const monthStr=getSalesMonthStr();
+  // 월 input 기본값 세팅
+  const mEl=document.getElementById('salesMonth');
+  if(mEl && !mEl.value) mEl.value=monthStr;
+  const start=monthStr+'-01';
+  const [yy,mm]=monthStr.split('-').map(Number);
+  const endDate=new Date(yy, mm, 0); // 해당 월 마지막일
+  const end=monthStr+'-'+String(endDate.getDate()).padStart(2,'0');
+
+  setLoad(true,'매출 조회 중...');
+  // 카테고리(income) + 매출 레코드 병렬 로드
+  const [catRes, recRes]=await Promise.all([
+    sb.from('expense_categories').select('id,name,parent_id,category_type,is_active')
+      .eq('store_id',currentStore.id).eq('category_type','income'),
+    sb.from('sales_records').select('*')
+      .eq('store_id',currentStore.id).gte('date',start).lte('date',end)
+      .order('date',{ascending:false}).order('created_at',{ascending:false})
+  ]);
+  setLoad(false);
+
+  if(catRes.error){toast('카테고리 로드 실패','error');return;}
+  if(recRes.error){toast('매출 로드 실패: '+recRes.error.message,'error');return;}
+
+  salesIncomeCats=catRes.data||[];
+  salesRecords=recRes.data||[];
+  salesEditing={};
+  salesNewRows=[];
+  renderSalesTable();
+}
+
+function onSalesMonthChange(el){
+  // 변경 미저장 경고
+  if(Object.keys(salesEditing).length || salesNewRows.length){
+    if(!confirm('저장하지 않은 변경이 있습니다. 월을 바꾸면 사라집니다. 계속할까요?')){
+      // 롤백
+      el.value=getSalesMonthStr();
+      return;
+    }
+  }
+  loadSalesRecords();
+}
+
+function renderSalesTable(){
+  const tbody=document.getElementById('salesTbody');
+  if(!tbody) return;
+  const allRows=[...salesNewRows, ...salesRecords];
+  if(!allRows.length){
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-500);">이번 달 매출 기록이 없습니다</td></tr>';
+    return;
+  }
+  // 카테고리 드롭다운 옵션 (활성만 + 최상위 먼저, 소분류는 들여쓰기)
+  const actCats=salesIncomeCats.filter(c=>c.is_active!==false);
+  const parents=actCats.filter(c=>!c.parent_id);
+  const catOptions=id=>{
+    let html='<option value="">(선택)</option>';
+    parents.forEach(p=>{
+      const sel=id===p.id?'selected':'';
+      html+=`<option value="${p.id}" ${sel}>${escapeHtml(p.name)}</option>`;
+      actCats.filter(c=>c.parent_id===p.id).forEach(sub=>{
+        const selS=id===sub.id?'selected':'';
+        html+=`<option value="${sub.id}" ${selS}>　└ ${escapeHtml(sub.name)}</option>`;
+      });
+    });
+    return html;
+  };
+  const methodOptions=cur=>{
+    return SALES_METHODS.map(m=>`<option value="${m}" ${m===cur?'selected':''}>${m}</option>`).join('');
+  };
+  tbody.innerHTML=allRows.map(r=>{
+    const isNew=String(r.id).startsWith('_new_');
+    const edited=salesEditing[r.id];
+    const dirty=!isNew && edited ? '1' : '';
+    const newAttr=isNew?'1':'';
+    const src=r.source||'manual';
+    const cur=edited ? {...r,...edited} : r;
+    return `<tr class="sales-row" data-id="${r.id}" data-src="${src}" data-dirty="${dirty}" data-new="${newAttr}">
+      <td><input type="date" value="${cur.date||''}" data-change="onSalesEdit|${r.id}|date|this"></td>
+      <td><select data-change="onSalesEdit|${r.id}|payment_method|this">${methodOptions(cur.payment_method||'')}</select></td>
+      <td><select data-change="onSalesEdit|${r.id}|category_id|this">${catOptions(cur.category_id||'')}</select></td>
+      <td><input type="text" class="sales-amt" value="${cur.amount!=null?fmt(cur.amount):''}" data-change="onSalesEditAmt|${r.id}|this" inputmode="numeric"></td>
+      <td><button class="sales-del-btn" data-action="onSalesRowDelete|${r.id}" title="삭제">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function onSalesEdit(id, field, el){
+  const val=el.value||null;
+  if(String(id).startsWith('_new_')){
+    const row=salesNewRows.find(r=>r.id===id);
+    if(row) row[field]=val;
+  } else {
+    if(!salesEditing[id]) salesEditing[id]={};
+    salesEditing[id][field]=val;
+    // 변경 표시 즉시 반영
+    const tr=document.querySelector(`tr.sales-row[data-id="${id}"]`);
+    if(tr) tr.setAttribute('data-dirty','1');
+  }
+}
+
+function onSalesEditAmt(id, el){
+  // 숫자만 추출 후 포맷 유지
+  const raw=unFmt(el.value);
+  el.value=fmt(raw);
+  onSalesEdit(id, 'amount', {value:raw});
+}
+
+function onSalesRowDelete(id){
+  if(String(id).startsWith('_new_')){
+    salesNewRows=salesNewRows.filter(r=>r.id!==id);
+    renderSalesTable();
+    return;
+  }
+  if(!confirm('이 매출 기록을 삭제할까요?\n(마감정산 자동 행은 다음 마감 저장 시 다시 생성됩니다)')) return;
+  setLoad(true,'삭제 중...');
+  sb.from('sales_records').delete()
+    .eq('id',id).eq('store_id',currentStore.id)
+    .then(({error})=>{
+      setLoad(false);
+      if(error){toast('삭제 실패: '+error.message,'error');return;}
+      salesRecords=salesRecords.filter(r=>r.id!==id);
+      delete salesEditing[id];
+      renderSalesTable();
+      toast('삭제됨','success');
+    });
+}
+
+function addSalesRow(){
+  if(!guardStore()) return;
+  const today=new Date().toISOString().split('T')[0];
+  const monthStr=getSalesMonthStr();
+  // 이번 달이 아니면 1일로
+  const defaultDate=today.startsWith(monthStr)?today:monthStr+'-01';
+  const tmpId='_new_'+(Date.now()+salesNewRows.length);
+  salesNewRows.unshift({
+    id:tmpId, date:defaultDate, payment_method:'',
+    category_id:null, amount:0, memo:'', source:'manual'
+  });
+  renderSalesTable();
+}
+
+async function saveAllSalesChanges(){
+  if(!guardStore()) return;
+  const editedIds=Object.keys(salesEditing);
+  const hasNew=salesNewRows.length>0;
+  if(!editedIds.length && !hasNew){
+    toast('변경된 내용이 없습니다','info');
+    return;
+  }
+  // 검증: 신규 행은 date + amount 필수
+  for(const nr of salesNewRows){
+    if(!nr.date || !nr.amount || nr.amount<=0){
+      toast('새 행에 날짜와 금액을 입력하세요','warn');return;
+    }
+    if(!nr.payment_method){
+      toast('새 행에 결제수단을 선택하세요','warn');return;
+    }
+  }
+  setLoad(true,'저장 중...');
+  try{
+    // UPDATE: editing 행들
+    for(const id of editedIds){
+      const changes=salesEditing[id];
+      const payload={};
+      if(changes.date!==undefined) payload.date=changes.date;
+      if(changes.payment_method!==undefined) payload.payment_method=changes.payment_method;
+      if(changes.category_id!==undefined) payload.category_id=changes.category_id||null;
+      if(changes.amount!==undefined) payload.amount=Number(changes.amount)||0;
+      if(changes.memo!==undefined) payload.memo=changes.memo;
+      if(!Object.keys(payload).length) continue;
+      const{error}=await sb.from('sales_records').update(payload)
+        .eq('id',id).eq('store_id',currentStore.id);
+      if(error) throw error;
+    }
+    // INSERT: 새 행들
+    if(hasNew){
+      const rows=salesNewRows.map(r=>({
+        store_id:currentStore.id, date:r.date,
+        payment_method:r.payment_method, category_id:r.category_id||null,
+        amount:Number(r.amount)||0, memo:r.memo||null,
+        source:r.source||'manual'
+      }));
+      const{error}=await sb.from('sales_records').insert(rows);
+      if(error) throw error;
+    }
+    setLoad(false);
+    toast('매출 저장 완료','success');
+    await loadSalesRecords(); // 재로딩 (서버 상태 기준)
+  }catch(e){
+    setLoad(false);
+    toast('저장 실패: '+e.message,'error');
+  }
+}
+
+function openSalesPaste(){
+  if(!guardStore()) return;
+  const txt=document.getElementById('salesPasteText');
+  if(txt) txt.value='';
+  openSheet('salesPasteSheet');
+}
+
+function applySalesPaste(){
+  const txt=document.getElementById('salesPasteText').value||'';
+  if(!txt.trim()){toast('붙여넣을 내용이 없습니다','warn');return;}
+  const rows=parseSalesPaste(txt);
+  if(!rows.length){toast('인식된 행이 없습니다. 형식: 날짜 결제수단 카테고리 금액','warn');return;}
+  // 카테고리 이름 → id 매핑
+  const catByName={};
+  salesIncomeCats.forEach(c=>{catByName[c.name.trim().toLowerCase()]=c.id;});
+  const today=new Date().toISOString().split('T')[0];
+  rows.forEach(r=>{
+    const tmpId='_new_'+(Date.now()+Math.random());
+    const catName=(r.category||'').trim().toLowerCase();
+    salesNewRows.unshift({
+      id:tmpId,
+      date:r.date||today,
+      payment_method:r.method||'',
+      category_id:catByName[catName]||null,
+      amount:r.amount||0,
+      memo:null,
+      source:'excel'
+    });
+  });
+  closeSheet('salesPasteSheet');
+  renderSalesTable();
+  toast(`${rows.length}개 행 생성됨. 확인 후 [💾 변경 저장]을 누르세요`,'success');
+}
+
+function parseSalesPaste(text){
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return [];
+  const out=[];
+  lines.forEach((line,idx)=>{
+    // 탭 우선, 쉼표, 공백(2개이상) 순
+    let parts=line.split('\t');
+    if(parts.length<2) parts=line.split(',');
+    if(parts.length<2) parts=line.split(/ {2,}/);
+    if(parts.length<2) return;
+    parts=parts.map(p=>p.trim());
+    // 첫 줄이 제목인지 판별 (숫자 없으면 제목으로 간주)
+    if(idx===0 && !parts.some(p=>/\d/.test(p))) return;
+    const [date,method,category,amount]=[parts[0]||'',parts[1]||'',parts[2]||'',parts[3]||parts[2]||''];
+    const dateNorm=normalizeDate(date);
+    const amt=parseSalesAmount(amount);
+    if(!dateNorm && !amt) return; // 날짜도 금액도 없으면 스킵
+    out.push({date:dateNorm, method:method, category:category, amount:amt});
+  });
+  return out;
+}
+
+function normalizeDate(s){
+  if(!s) return '';
+  s=s.trim();
+  // 2026-04-23 / 2026/04/23 / 2026.04.23 / 20260423
+  let m=s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  if(m) return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  m=s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  return '';
+}
+
+function parseSalesAmount(s){
+  if(!s) return 0;
+  const n=parseInt(String(s).replace(/[^\d\-]/g,''))||0;
+  return n;
+}
 </script>
 </body>
 </html>

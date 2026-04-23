@@ -4,6 +4,91 @@
 
 ---
 
+## [2026-04-23 말미] #58 매출 관리 페이지 1단계 (sales_records 신설)
+
+### 상태: 구현완료 (브랜치 푸시 + main 머지 예정)
+### 브랜치: claude/apply-gstack-repo-24Y4m
+### 규모: 대형 (새 테이블 + 새 페이지 + 마감정산 연계)
+### critic v2 실전 가동 첫 건
+
+### 배경
+사장님 요청: "매출을 마감정산에서 수기 입력만 가능 → 매출 관리 페이지 별도 필요, 미래 API 연동 대비"
+critic v2 발동 결과:
+- Q1 "API 연동"은 핑계, 진짜는 입력 UX 고통 — 목표 재정의
+- Q4 옵션 B(별도 페이지) 사장님 직관 존중 + 단계 분할 (1단계 raw 입력/조회/편집, 2단계 API·분류·집계)
+- 입력방식은 **표 형식 1개로 통합** (행 추가 + 엑셀 paste)
+
+### 변경 내역
+1. **[신규 테이블]** `sales_records`
+   - 컬럼: store_id, date, payment_method, category_id(FK→expense_categories), amount, memo, source, created_at, updated_at
+   - source: 'manual' / 'closing' / 'excel' / 'pos_api' / 'card_api' — 미래 API 대비
+   - 인덱스: (store_id, date DESC) + (store_id, date, payment_method)
+   - updated_at 자동 갱신 트리거
+   - SQL: `docs/sql/migrate_sales_records_2026_04_23.sql` (+ rollback)
+
+2. **[UI] 사이드메뉴 → "💰 매출 관리" 그룹 추가**
+   - 지출내역 그룹 바로 아래
+
+3. **[UI] 매출 관리 페이지 (`salesCont`)**
+   - 월 선택 input (기본 이번달)
+   - 5열 표: 날짜 / 결제수단 / 카테고리 / 금액 / 🗑
+   - 인라인 편집 (date/select/input all inline)
+   - 색상 구분: 회색=closing, 노랑=excel, 흰=manual, 파란줄=변경됨, 초록줄=새 행
+   - 버튼: + 행 추가 / 📋 엑셀 붙여넣기 / 💾 변경 저장
+   - 엑셀 paste 시트: 탭/쉼표 구분, 첫 줄 제목 자동 감지, normalizeDate + parseSalesAmount
+
+4. **[JS] 신규 함수 11개**
+   - `loadSalesRecords` — 월별 조회 + income 카테고리 병렬 로드
+   - `renderSalesTable` — 표 렌더 (tabular-nums + escapeHtml)
+   - `addSalesRow` / `onSalesEdit` / `onSalesEditAmt` / `onSalesRowDelete`
+   - `saveAllSalesChanges` — UPDATE + INSERT 일괄
+   - `openSalesPaste` / `applySalesPaste` / `parseSalesPaste` / `normalizeDate` / `parseSalesAmount`
+   - `onSalesMonthChange` — 미저장 변경 경고
+   - `syncClosingToSalesRecords` — 마감정산 → sales_records 동기화
+
+5. **[JS] 연결부 수정**
+   - `nav()` actions 매핑에 `sales: loadSalesRecords` 추가
+   - `selectStore()` Promise.all 후 salesRecords/salesEditing/salesNewRows 캐시 클리어
+   - 마감정산 저장 함수: settlements upsert 성공 후 `await syncClosingToSalesRecords()` 호출
+     (sync 실패해도 마감정산은 성공 처리 — try/catch + console.error)
+
+6. **[CSS]** `.sales-table` + `.sales-row[data-src]` + `.sales-del-btn` 등 18줄 추가 (table-layout:fixed + tabular-nums)
+
+7. **[docs]** `db_schema.md`에 sales_records 섹션 / `plan.md`에 #58 항목 추가
+
+### 매장 격리 (dev_lessons #28 준수)
+모든 sales_records 쿼리에 `.eq('store_id', currentStore.id)` 강제:
+- SELECT (loadSalesRecords) ✅
+- INSERT (saveAllSalesChanges, syncClosing) ✅ store_id 페이로드에 포함
+- UPDATE (saveAllSalesChanges) ✅ .eq 추가
+- DELETE (onSalesRowDelete, syncClosing) ✅ .eq 추가
+
+### FK 전수 점검 (dev_lessons #36 준수)
+`sales_records.category_id → expense_categories.id`:
+- ON DELETE SET NULL (카테고리 삭제 시 안전)
+- 앱 레벨 필터: category_type='income' 만 드롭다운에 노출
+- 삭제된 카테고리 데이터: category_id=null로 남음 (집계 가능)
+
+### 검증
+- ✅ node --check 구문 통과
+- ✅ grep 잔재 없음
+- ✅ data-action/data-change 인라인 핸들러 X (dev_lessons #1 준수)
+- ✅ `<table>` + tabular-nums 준수 (dev_lessons #22)
+- ✅ table-layout:fixed + colgroup (dev_lessons #15 횡스크롤 방지)
+- ⚠️ 사장님 실제 사용 검증 필요 (추후 피드백)
+
+### 다음 단계 (2단계, 별도 작업)
+- POS/카드사 API 연동 (source='pos_api' 등)
+- 대시보드 매출 차트 — settlements 대신 sales_records 집계로 전환
+- 매출 카테고리 자동 분류 규칙
+
+### 롤백 절차
+1. 앱: git revert + 배포 재트리거
+2. DB: `migrate_sales_records_2026_04_23_rollback.sql` 실행
+3. 마감정산은 원래 그대로 동작 (settlements만 쓰던 흐름 복귀)
+
+---
+
 ## [2026-04-23 후반] critic v2 — 퐁당샤브 3대 질문 + 사전 스캔 자동화
 
 ### 상태: 배포완료 (브랜치 푸시 + main 머지)
