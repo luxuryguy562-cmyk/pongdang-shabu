@@ -118,26 +118,39 @@ franchises (프랜차이즈/브랜드)
 | store_id, sale_date | 매장/날짜 |
 | total_sales, card_sales, cash_sales (int) | 매출 |
 
-### sales_records (신규 2026-04-23)
-매출 raw 거래 데이터. `settlements.items_json` 덩어리에 묶여있던 매출을 결제수단별/날짜별 한 줄씩 풀어서 관리. 미래 POS/카드사 API 연동 대비 `source` 컬럼 보유.
+### sales_daily (신규 2026-04-23)
+⚠️ 이전 설계 `sales_records` (세로 raw)는 **폐기**. 세로로 풀면 월 180행 → 결산 비효율 + 모바일 짤림. **가로형 피벗**으로 재설계 (하루 1행, 결제수단 컬럼 7개).
 
 | 컬럼 | 타입 | 용도 |
 |------|------|------|
 | id | UUID PK | |
 | store_id | UUID FK→stores (CASCADE) | 매장 격리 |
 | date | DATE | 매출일 |
-| payment_method | TEXT | 'POS 현금' / 'POS 카드' / '배달' / '현금' / '카드' 등 자유 |
-| category_id | UUID FK→expense_categories (SET NULL) | **category_type='income' 만 허용** (앱 레벨 검증) |
-| amount | NUMERIC | 금액 |
+| card | NUMERIC | 💳 신용카드 (POS pos_card) |
+| cash | NUMERIC | 💵 현금 (cash_detail_cash = 순수 현금) |
+| cash_receipt | NUMERIC | 🧾 현금영수증 (pos_cash_receipt) |
+| qr | NUMERIC | 📱 QR (cash_detail_qr) |
+| etc | NUMERIC | 📲 기타결제 (pos_etc + cash_detail_transfer) |
+| extra_large | NUMERIC | 🎰 뽑기(대형) (extra_draw_large) |
+| extra_small | NUMERIC | 🎲 뽑기(소형) (extra_draw_small) |
 | memo | TEXT | 비고 |
-| source | TEXT | 'manual'/'closing'/'excel'/'pos_api'/'card_api' — 미래 API 식별용 |
+| source | TEXT | 'manual'/'closing'/'pos_api'/'card_api' |
 | created_at, updated_at | TIMESTAMPTZ | |
+| **UNIQUE(store_id, date)** | | 하루 1행 강제 |
 
-**인덱스**: `(store_id, date DESC)`, `(store_id, date, payment_method)`
-**연결**:
-- 마감정산 저장 시 `syncClosingToSalesRecords()` 가 해당 날짜의 `source='closing'` 행 DELETE 후 재INSERT
-- 매출 관리 페이지(`salesCont`)는 이 테이블만 조회/편집. settlements는 건드리지 않음
-- 매장 격리: 모든 쿼리에 `.eq('store_id', currentStore.id)` 필수 (RLS 미적용 상태 가정)
+**인덱스**: `(store_id, date DESC)`
+**합계 계산**: 앱 레벨 — `total = card + cash + cash_receipt + qr + etc + extra_large + extra_small`
+**settlements ↔ sales_daily 매핑** (마감정산 저장 시 `syncClosingToSalesDaily()`):
+- items.pos_card → card
+- items.cash_detail_cash → cash (순수 현금)
+- items.pos_cash_receipt → cash_receipt
+- items.cash_detail_qr → qr
+- items.pos_etc + items.cash_detail_transfer → etc (POS 기타 + 계좌이체 합)
+- items.extra_draw_large → extra_large
+- items.extra_draw_small → extra_small
+
+**UI**: 매출 관리 페이지는 **카드형** (각 일자 1카드, 세로 스크롤). 월 합계 sticky 상단. 카드 탭 → 편집 시트 (7개 결제수단 입력 + 합계 자동).
+**매장 격리**: 모든 쿼리에 `.eq('store_id', currentStore.id)` 필수.
 
 ### receipts
 | 컬럼 | 용도 |
