@@ -64,24 +64,24 @@
 - 위치: `loadReconciliation` (약 7986~8450행)
 - 규모: 중~대형
 
-### ⑥ 편집 시트 모바일 세로 공간 부족
+### ⑥ ✅ [2026-04-23 수정] 편집 시트 모바일 세로 공간 부족
 - 결제수단 7개 + 메모 + 합계 + 버튼 → 스크롤 필요
 - `sales-edit-row` 부모에 `overflow-y:auto; max-height:80vh` 추가 검토
 - 또는 입력 항목 2열 그리드로
 
-### ⑦ 합계 0원 카드 숨김
+### ⑦ ✅ [2026-04-23 수정] 합계 0원 카드 숨김
 - 휴무일에도 마감 찍으면 0원 카드 생성 → 의미 없음
 - `renderSalesCards` 에서 `total===0 && source==='closing'` 은 제외
 
-### ⑧ 로딩 표시(`setLoad`) 누락 4곳
+### ⑧ ✅ [2026-04-23 부분 수정] 로딩 표시(`setLoad`) 누락 — 실제는 상세비교 1곳만 필요
 - `openTxEditSheet`, `applyReviewChoice`, `bulkReclassify`, 상세비교 열기
 - 네트워크 느릴 때 중복 저장 위험
 
-### ⑨ 비활성 카테고리(`is_active=false`)가 **분류 선택 UI에 노출**
+### ⑨ ✅ [2026-04-23 확인] 비활성 카테고리 — 이미 `openCatPicker` 3단계 모두 `is_active!==false` 필터 있음. 재확인 완료.
 - 관리 화면은 필터링되는데 분류 선택 드롭다운에서 안 됨
 - 위치: `openCatPicker` (약 5955행)
 
-### ⑩ 에러 메시지 기술 문구 노출 2곳
+### ⑩ ✅ [2026-04-23 수정] 에러 메시지 기술 문구 노출 — openDailyDetail alert → toast
 - `alert('상세 비교 열기 실패: TypeError: ...')` 같은 것
 - 위치: 약 5654, 6290행
 - 교체: 사용자 친화 메시지 + `console.error` 분리
