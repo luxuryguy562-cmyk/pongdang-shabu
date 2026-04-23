@@ -4,6 +4,41 @@
 
 ---
 
+## [2026-04-23] gstack 흡수 — `critic` 에이전트 신설 (기획 빈틈 비평가)
+
+### 상태: 브랜치 푸시완료, 메인 머지 보류(사장님 판단 대기)
+### 브랜치: claude/apply-gstack-repo-24Y4m
+### 규모: 대형 (새 에이전트 + 헌법 워크플로우 변경)
+
+### 배경
+사장님 요청: garrytan/gstack 레포의 좋은 부분만 흡수. 특히 `/office-hours`(6강제질문)와 `/plan-ceo-review`(4모드 검토)의 **기획 비평 로직**을 우리 `agents/`에 이식 — "내 기획의 빈틈을 네가 먼저 찾아내게" 하는 게 목적.
+
+### 변경 요약
+1. **신규**: `agents/critic.md` — 기획 빈틈 비평가
+   - 6강제질문 (식당 버전): 수요현실 / 현재우회법 / 절박한한명 / 가장작은버전 / 관찰놀라움 / 미래적합성
+   - 반-아부 규칙 + 5개 푸시백 패턴
+   - 4가지 검토 모드 (확장/선별확장/유지/축소)
+   - 탈출구: "그냥 해" 2번이면 즉시 통과 (위험 신호만 한 줄 경고)
+2. **수정**: `CLAUDE.md` 4-1 표 + 4-2 순서도 → 중형/대형 워크플로우에 `critic` 단계 추가 (context_reader → **critic** → advisor → planner → …). 소형은 스킵.
+3. **수정**: `CLAUDE.md` 부칙 파일구조에 `agents/critic.md` 추가
+4. **수정**: `agents/advisor.md` depends_on: `critic`, 역할 경계 명시 (advisor=HOW, critic=WHY)
+5. **신규**: `docs/dev_lessons.md` #44 "외부 프레임워크 흡수 시 인프라 버리고 사고법만" 교훈 추가
+
+### 인프라 코드 제거 원칙 (dev_lessons #44)
+- gstack 원본 SKILL.md ~2100줄 중 ~800줄이 telemetry/config/세션 관리 bash — **전부 제외**
+- 가져온 것: 사고법·질문·패턴만 한국어로 번역
+- 버린 것: `~/.claude/skills/gstack/bin/` 경로, preamble bash, WRITING_STYLE/LAKE_INTRO 등 gstack 전용 state
+
+### 영향
+- 코드(index.html) 무변경
+- 다음 중형/대형 작업부터 critic 단계 자동 발동
+
+### 다음 단계
+- 사장님이 실제 중형 작업 요청 시 critic 1차 시험 가동
+- 너무 깐깐하면 질문 수/푸시백 강도 조정
+
+---
+
 ## [2026-04-22 후반] #57 거래내역 UI 전면 개편 + 분류 선택 바텀시트
 
 ### 상태: 배포완료 (main 1de7615)

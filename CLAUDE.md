@@ -58,9 +58,9 @@
 
 | 규모 | 기준 | 경로 | 토큰 절약 |
 |------|------|------|-----------|
-| **소형** | 텍스트 수정, 색상 변경, 버그 1줄 수정 | planner → coder → deployer | reviewer/tester/designer 생략 |
-| **중형** | 기존 기능 개선, UI 추가, 쿼리 변경 | context_reader → advisor → planner → designer(UI있으면) → reviewer → coder → tester → deployer | 전체 경로 |
-| **대형** | 새 탭/모듈 추가, DB 스키마 변경 | context_reader → advisor → planner → designer → reviewer → **사장님 승인** → coder → tester → deployer | 전체 경로 + 승인 게이트 강화 |
+| **소형** | 텍스트 수정, 색상 변경, 버그 1줄 수정 | planner → coder → deployer | critic/reviewer/tester/designer 생략 |
+| **중형** | 기존 기능 개선, UI 추가, 쿼리 변경 | context_reader → **critic** → advisor → planner → designer(UI있으면) → reviewer → coder → tester → deployer | 전체 경로 |
+| **대형** | 새 탭/모듈 추가, DB 스키마 변경 | context_reader → **critic** → advisor → planner → designer → reviewer → **사장님 승인** → coder → tester → deployer | 전체 경로 + 승인 게이트 강화 |
 
 **규모 판단 기준:**
 - 변경 라인 10줄 이하 → 소형
@@ -81,10 +81,13 @@
   ① context_reader ─── 현황 보고서 작성
        │
        ▼
-  ② advisor ────────── 기술 추천 (더 좋은 방법 있으면 제안)
+  ②ⓐ critic ─────────── 기획 빈틈 검증 (6강제질문+반아부)
+       │                 (실패 시 사장님에게 보류 권장)
+       ▼
+  ②ⓑ advisor ────────── 기술 추천 (더 좋은 방법 있으면 제안)
        │
        ▼
-  ③ planner ────────── 계획서 작성 (advisor 추천 반영)
+  ③ planner ────────── 계획서 작성 (critic 권장 모드 + advisor 추천 반영)
        │
        ├─ UI 변경 있으면 ──→ ④ designer ── UI 설계 추가
        │                          │
@@ -373,6 +376,7 @@ pongdang-shabu/
 ├── CLAUDE.md              ← 헌법 (이 파일)
 ├── agents/                ← 에이전트 워크플로우 (자동 읽힘)
 │   ├── context_reader.md
+│   ├── critic.md
 │   ├── advisor.md
 │   ├── planner.md
 │   ├── designer.md
