@@ -6155,9 +6155,14 @@ function updateSortHeaders(type){
     const col=th.dataset.col;
     const sortCol=type==='bank'?bankSortCol:cardSortCol;
     const asc=type==='bank'?bankSortAsc:cardSortAsc;
-    const arrow=sortCol===col?(asc?' △':' ▽'):'';
+    const isActive=sortCol===col;
+    const arrow=isActive?(asc?' ↑':' ↓'):'';
     const base=th.dataset.label||'';
     th.innerText=base+arrow;
+    // 활성 헤더 강조: 파란색 + 굵게 + 연한 배경
+    th.style.color=isActive?'var(--blue)':'';
+    th.style.fontWeight=isActive?'800':'';
+    th.style.background=isActive?'#EBF3FF':'';
   });
 }
 
@@ -6210,10 +6215,10 @@ function openTxFilter(type){
   </div>
   </div>`;
 
-  // ── 버튼 (스크롤 밖 — 항상 보임) ──
-  html+=`<div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--gray-100);margin-top:8px;flex-shrink:0;">
-    <button class="btn btn-secondary" id="txFilterReset" style="flex:1;padding:12px;">초기화</button>
-    <button class="btn btn-primary" id="txFilterApply" style="flex:1;padding:12px;">적용</button>
+  // ── 버튼 (화면 하단 고정 — 항상 보임) ──
+  html+=`<div style="display:flex;gap:10px;padding:14px 0 4px;border-top:2px solid var(--gray-100);margin-top:12px;flex-shrink:0;background:#fff;position:sticky;bottom:0;">
+    <button class="btn btn-secondary" id="txFilterReset" style="flex:1;padding:16px;font-size:14px;font-weight:700;">초기화</button>
+    <button class="btn btn-primary" id="txFilterApply" style="flex:2;padding:16px;font-size:15px;font-weight:800;box-shadow:0 4px 12px rgba(0,80,255,0.25);">✓ 적용</button>
   </div>`;
 
   box.innerHTML=html;
