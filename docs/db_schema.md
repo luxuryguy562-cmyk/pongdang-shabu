@@ -152,6 +152,13 @@ franchises (프랜차이즈/브랜드)
 **UI**: 매출 관리 페이지는 **카드형** (각 일자 1카드, 세로 스크롤). 월 합계 sticky 상단. 카드 탭 → 편집 시트 (7개 결제수단 입력 + 합계 자동).
 **매장 격리**: 모든 쿼리에 `.eq('store_id', currentStore.id)` 필수.
 
+**⚠️ 단일 진실의 원천 (2026-04-23 Part B 통합)**:
+- `sales_daily` = 매출 집계용 **유일한** 테이블
+- 대시보드 매출 차트, 월 요약, 일별정산, MoM 비교 **모두 sales_daily 조회** (`dashSaleSource='settle'`)
+- settlements = 원본 마감정산 로그 (입력/감사 전용). 대시보드는 직접 조회하지 않음
+- daily_sales = 업솔루션 포스 자동 크롤링 (대조 용도, `dashSaleSource='ups'`)
+- 과거 settlements → sales_daily 백필: `docs/sql/backfill_sales_daily_from_settlements_2026_04_23.sql` (1회 실행됨)
+
 ### receipts
 | 컬럼 | 용도 |
 |------|------|

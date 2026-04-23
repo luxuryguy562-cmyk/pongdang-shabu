@@ -4,6 +4,45 @@
 
 ---
 
+## [2026-04-23 후속] 1순위 Part B — 대시보드 매출 차트 sales_daily 통합
+
+### 상태: 구현완료 → 배포 예정 (사장님 백필 SQL 실행 필요)
+### 규모: 대형 (쿼리+집계 4곳 교체 + SQL 백필 파일 2개)
+### 브랜치: `claude/complete-priority-tasks-yRxCN`
+
+### 배경
+todo_next_session.md 1순위 ④ — 대시보드(settlements) ↔ 매출 관리(sales_daily) 데이터 소스 불일치. 사장님이 매출 관리에서 수동 수정해도 대시보드는 옛 숫자 유지되던 문제.
+
+### 변경 요약 — 데이터 소스 통일
+1. **`loadDashboard` 당월 쿼리 (~3848)** — `settlements.items_json` → `sales_daily` (card/cash/cash_receipt/qr/etc/extra_large/extra_small 7 컬럼)
+2. **당월 집계 로직 (~3871)** — items_json 키 매핑 제거, 평탄 컬럼 직접 합산. `salesBreakdown['QR']` 신규
+3. **전월 쿼리 + 집계 (~3860, ~4062)** — 동일 방식 교체
+4. **버튼 레이블** (~975) — `📋 마감정산` → `📊 매출 관리`. DOM ID(`saleSrcSettle`)와 `dashSaleSource` 값('settle')은 유지 — 의미 재정의만
+5. **매출 상세 아코디언 revColors/revOrder (~4326)** — `'QR':'#14B8A6'` 추가
+6. **백필 SQL 2개 파일 신설** — `docs/sql/backfill_sales_daily_from_settlements_2026_04_23{.sql,_rollback.sql}`
+   - `NOT EXISTS` 가드 — 기존 sales_daily(수정본 포함) 건드리지 않음
+   - `memo='과거 마감정산 백필' + source='closing'` 마킹으로 롤백 식별
+   - `items_json ? 'pos_card'` 필터로 구조 있는 행만 이관
+
+### 검증
+- ✅ node --check 통과 (6660 lines 인라인 JS)
+- ✅ 대시보드 매출 집계 구간에서 `settlements|items_json|pos_` grep 0건
+- ✅ 'ups' 분기 무손상 (daily_sales 그대로)
+- ✅ `prevSettleRes`/`settleRes` 변수명 유지 — 회귀 최소화
+- ✅ 단일 파일 유지, 매장 격리 유지
+
+### 사장님 수동 작업 (⚠️ **배포 전 필수**)
+1. Supabase SQL Editor → `docs/sql/backfill_sales_daily_from_settlements_2026_04_23.sql` 복붙 실행 (1초)
+2. 앱 Ctrl+Shift+R → 대시보드 숫자가 매출 관리와 일치하는지 확인
+3. 이상 시 rollback SQL로 즉시 되돌리기 가능
+
+### 기대 효과
+- 매출 관리에서 수동 수정 → 대시보드 자동 반영 (새로고침 1번)
+- "대시보드가 왜 안 맞아?" 혼동 제거
+- 유일한 매출 진실의 원천 = `sales_daily`
+
+---
+
 ## [2026-04-23 후속] 1순위 Part A — 매출 관리 자기-버그 ①②③ 수정
 
 ### 상태: 구현완료 → 배포 예정
