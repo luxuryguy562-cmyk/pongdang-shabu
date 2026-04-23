@@ -6337,10 +6337,24 @@ function findCatId(catName){
   return null;
 }
 
-// 카테고리명(대분류 or 소분류) → {mainId, mainName, subName}
+// 카테고리명(대분류 or 소분류, '대분류>소분류' 형식 지원) → {mainId, mainName, subName}
 // 규칙: mydata_transactions.category_id = 항상 대분류 id, sub_category = 소분류명(text)
 function resolveCatPair(catName){
   if(!catName||!expCategories?.length)return {mainId:null,mainName:catName||'',subName:''};
+  // '대분류>소분류' 형식 처리 (바텀시트가 보내는 값)
+  if(catName.includes('>')){
+    const parts=catName.split('>').map(s=>s.trim());
+    const subName=parts.pop()||'';
+    const mainName=parts.join('>')||'';
+    // 대분류 + 소분류 이름으로 DB 조회
+    const mainCat=expCategories.find(c=>c.name===mainName&&!c.parent_id);
+    const subCat=mainCat?expCategories.find(c=>c.name===subName&&c.parent_id===mainCat.id):null;
+    return {
+      mainId:mainCat?.id||null,
+      mainName:mainCat?.name||mainName,
+      subName:subCat?.name||subName
+    };
+  }
   const found=expCategories.find(c=>c.name===catName);
   if(!found)return {mainId:null,mainName:catName,subName:''}; // 고정 카테고리(매출/카드대금/배당금/미분류) 등
   if(found.parent_id){
@@ -7466,17 +7480,25 @@ function openCatPicker(context){
   document.body.appendChild(sheet);
   const close=()=>sheet.remove();
   const pick=(val,memo)=>{context.onSelect(val,memo||'');close();};
-
-  // ── 1단계: 타입 선택 ──
-  function renderStage1(){
-    let html=`<div style="padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);flex-shrink:0;">
-      <div style="font-size:15px;font-weight:800;">분류 선택</div>
+  // 공통 헤더 HTML
+  const headerHtml=(title,hasBack,onBack)=>
+    `<div style="padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${hasBack?'<div id="catPickerBack" style="font-size:22px;cursor:pointer;color:var(--blue);padding:0 4px;line-height:1;">‹</div>':''}
+        <div style="font-size:15px;font-weight:800;">${title}</div>
+      </div>
       <div style="font-size:22px;cursor:pointer;color:var(--gray-400);padding:0 4px;" id="catPickerClose">✕</div>
     </div>
     <div style="overflow-y:auto;flex:1;padding:10px 16px 20px;">`;
-    // 미분류 (바로 선택)
-    html+=`<div class="cp-item" data-act="misc" style="padding:14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:14px;color:var(--gray-500);display:flex;align-items:center;gap:10px;">
-      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#CBD5E1;"></span>(미분류)
+
+  // ── 1단계: 타입 선택 ──
+  function renderStage1(){
+    let html=headerHtml('분류 선택',false);
+    // 미분류 (바로 선택) — 다른 타입 항목과 동일 스타일
+    html+=`<div class="cp-item" data-act="misc" style="padding:16px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">❓</span>
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#CBD5E1;"></span>
+      미분류
     </div>`;
     // 타입 루프
     typeOrder.forEach(t=>{
@@ -7486,14 +7508,11 @@ function openCatPicker(context){
       const emoji=typeLabel[t].split(' ')[0];
       const label=typeLabel[t].split(' ').slice(1).join(' ');
       if(isDrill){
-        // 드릴다운: 지출/매출/제외
-        const cnt=parents.length+parents.reduce((n,p)=>n+(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false).length,0);
         html+=`<div class="cp-item" data-act="drill" data-type="${t}" style="padding:16px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:space-between;">
-          <span style="display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">${emoji}</span>${label} <span style="color:var(--gray-400);font-weight:400;font-size:12px;">${cnt}개</span></span>
+          <span style="display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">${emoji}</span>${label}</span>
           <span style="color:var(--gray-400);font-size:20px;">›</span>
         </div>`;
       } else {
-        // 바로 선택: 영수증 참조 / 예비비
         parents.forEach(p=>{
           const color=p.color||'#94A3B8';
           html+=`<div class="cp-item" data-act="${t==='reserve'?'reserve':'direct'}" data-val="${p.name}" style="padding:16px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px;">
@@ -7506,7 +7525,7 @@ function openCatPicker(context){
     });
     html+=`</div>`;
     box.innerHTML=html;
-    box.querySelector('#catPickerClose').addEventListener('click',close);
+    bindCommon();
     box.querySelectorAll('.cp-item').forEach(el=>{
       el.addEventListener('click',()=>{
         const act=el.dataset.act;
@@ -7522,48 +7541,77 @@ function openCatPicker(context){
     });
   }
 
-  // ── 2단계: 해당 타입의 카테고리 리스트 ──
+  // ── 2단계: 해당 타입의 대분류 리스트 ──
+  // 자식 있으면 '›' (→ 3단계), 자식 없으면 바로 선택
   function renderStage2(t){
     const parents=(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false&&(c.category_type||'expense')===t)
       .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
     const cur=context.current||'';
-    let html=`<div style="padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);flex-shrink:0;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div id="catPickerBack" style="font-size:22px;cursor:pointer;color:var(--blue);padding:0 4px;line-height:1;">‹</div>
-        <div style="font-size:15px;font-weight:800;">${typeLabel[t]}</div>
-      </div>
-      <div style="font-size:22px;cursor:pointer;color:var(--gray-400);padding:0 4px;" id="catPickerClose">✕</div>
-    </div>
-    <div style="overflow-y:auto;flex:1;padding:10px 16px 20px;">`;
+    let html=headerHtml(typeLabel[t],true);
     if(!parents.length){
       html+=`<div style="padding:40px 20px;text-align:center;color:var(--gray-500);font-size:13px;line-height:1.6;">등록된 카테고리가 없습니다.<br>사이드메뉴 → 지출 카테고리에서 추가하세요.</div>`;
     } else {
       parents.forEach(p=>{
         const color=p.color||'#94A3B8';
-        const pActive=(cur===p.name);
-        html+=`<div class="cp-item" data-val="${p.name}" style="padding:12px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:14px;font-weight:600;color:${pActive?'var(--blue)':'var(--text)'};background:${pActive?'#EBF3FF':''};display:flex;align-items:center;gap:8px;">
-          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-          ${p.name}
+        const children=(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false);
+        const hasChildren=children.length>0;
+        const pActive=(cur===p.name||cur.startsWith(p.name+'>'));
+        html+=`<div class="cp-item" data-act="${hasChildren?'drill':'pick'}" data-val="${p.name}" style="padding:14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:14px;font-weight:600;color:${pActive?'var(--blue)':'var(--text)'};background:${pActive?'#EBF3FF':''};display:flex;align-items:center;justify-content:space-between;">
+          <span style="display:flex;align-items:center;gap:10px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};"></span>${p.name}</span>
+          ${hasChildren?'<span style="color:var(--gray-400);font-size:18px;">›</span>':''}
         </div>`;
-        const children=(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false)
-          .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-        children.forEach(ch=>{
-          const cColor=ch.color||color;
-          const chVal=`${p.name}>${ch.name}`;
-          const chActive=(cur===chVal);
-          html+=`<div class="cp-item" data-val="${chVal}" style="padding:10px 14px 10px 32px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:13px;font-weight:500;color:${chActive?'var(--blue)':'var(--gray-700)'};background:${chActive?'#EBF3FF':''};display:flex;align-items:center;gap:8px;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cColor};flex-shrink:0;"></span>└ ${ch.name}
-          </div>`;
-        });
       });
     }
     html+=`</div>`;
     box.innerHTML=html;
-    box.querySelector('#catPickerClose').addEventListener('click',close);
-    box.querySelector('#catPickerBack').addEventListener('click',renderStage1);
+    bindCommon(renderStage1);
+    box.querySelectorAll('.cp-item').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const act=el.dataset.act;
+        const val=el.dataset.val;
+        if(act==='drill') renderStage3(val);
+        else pick(val,'');
+      });
+    });
+  }
+
+  // ── 3단계: 선택한 대분류의 소분류 리스트 ──
+  function renderStage3(parentName){
+    const parent=(expCategories||[]).find(c=>c.name===parentName&&!c.parent_id);
+    const children=parent?(expCategories||[]).filter(c=>c.parent_id===parent.id&&c.is_active!==false)
+      .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)):[];
+    const cur=context.current||'';
+    const parentColor=parent?.color||'#94A3B8';
+    const type=parent?.category_type||'expense';
+    let html=headerHtml(`${parentName} 소분류`,true);
+    // 대분류 자체 선택 옵션 (소분류 없이 저장)
+    html+=`<div class="cp-item" data-val="${parentName}" style="padding:14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:14px;font-weight:700;color:${cur===parentName?'var(--blue)':'var(--text)'};background:${cur===parentName?'#EBF3FF':''};display:flex;align-items:center;gap:10px;">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${parentColor};"></span>
+      ${parentName} <span style="color:var(--gray-400);font-weight:400;font-size:12px;">(소분류 없이)</span>
+    </div>`;
+    children.forEach(ch=>{
+      const cColor=ch.color||parentColor;
+      const chVal=`${parentName}>${ch.name}`;
+      const chActive=(cur===chVal);
+      html+=`<div class="cp-item" data-val="${chVal}" style="padding:14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:14px;font-weight:500;color:${chActive?'var(--blue)':'var(--gray-700)'};background:${chActive?'#EBF3FF':''};display:flex;align-items:center;gap:10px;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${cColor};"></span>
+        ${ch.name}
+      </div>`;
+    });
+    html+=`</div>`;
+    box.innerHTML=html;
+    // 뒤로가기: 2단계 (해당 타입)로
+    bindCommon(()=>renderStage2(type));
     box.querySelectorAll('.cp-item').forEach(el=>{
       el.addEventListener('click',()=>pick(el.dataset.val,''));
     });
+  }
+
+  // 공통 이벤트 바인딩 (닫기 + 뒤로)
+  function bindCommon(backFn){
+    box.querySelector('#catPickerClose').addEventListener('click',close);
+    const backEl=box.querySelector('#catPickerBack');
+    if(backEl&&backFn)backEl.addEventListener('click',backFn);
   }
 
   sheet.addEventListener('click',e=>{if(e.target===sheet)close();});
