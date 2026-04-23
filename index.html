@@ -186,7 +186,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .tx-row .tx-cat{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray-600);font-size:11px;text-align:center;}
 .tx-row .tx-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .tx-cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0;}
-.tx-date-header td{background:var(--gray-100);font-weight:700;color:var(--gray-600);font-size:11px;padding:8px 12px;letter-spacing:0.2px;text-align:left;}
+.tx-date-header td{background:var(--gray-100);font-weight:700;color:var(--blue);font-size:12px;padding:8px 12px;letter-spacing:0.2px;text-align:left;position:sticky;top:0;z-index:2;box-shadow:0 1px 0 var(--gray-200);}
 
 /* ─ 거래처 */
 .vendor-item{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;}
@@ -5978,16 +5978,15 @@ function getCatDotColor(catName){
   return cat?.color||'#94A3B8';
 }
 // 거래 행 HTML (공통) — 4열: 내용 / 대분류 / 소분류 / 금액
-function renderTxRow(r,type){
+// showDate=true 면 평면 모드 (날짜 정렬 아님) — 내용 앞에 MM-DD 작게 표시
+function renderTxRow(r,type,showDate){
   const isIn=r.amount>0;
   const cat=r.category||'';
   const sub=r.sub_category||'';
   const isReceiptRef=cat==='영수증 참조';
   const dotColor=getCatDotColor(cat);
   const name=type==='bank'?cleanDesc(r.description)||'-':(r.merchant_name||r.description||'-');
-  // 대분류 표시: 영수증 참조면 📸 강조
   const mainDisplay=isReceiptRef?'📸 영수증 참조':(cat||'-');
-  // 소분류 표시: cat===sub면 빈칸 (중복 방지)
   const subDisplay=(sub && sub!==cat)?sub:'';
   const catColor=r.exclude_from_settlement?'var(--gray-400)':isReceiptRef?'var(--blue)':r.needs_review?'var(--warning)':'var(--gray-700)';
   const catWeight=isReceiptRef?'700':'500';
@@ -5996,8 +5995,11 @@ function renderTxRow(r,type){
   const amtSign=isIn?'+':'-';
   const amtVal=fmt(Math.abs(r.amount||0));
   const rowClass=r.is_cancelled?'tx-row row-off':'tx-row';
+  // 평면 모드: 내용 앞에 MM-DD
+  const dt=(r.tx_date||'').slice(5); // MM-DD
+  const datePrefix=showDate?`<span style="color:var(--gray-400);font-size:10px;margin-right:4px;font-weight:500;">${dt}</span>`:'';
   return `<tr class="${rowClass}" data-action="openTxEditSheet|${r.id}|${type}">
-    <td class="tx-desc"><span class="tx-cat-dot" style="background:${dotColor};"></span>${truncDesc(name,8)}</td>
+    <td class="tx-desc">${datePrefix}<span class="tx-cat-dot" style="background:${dotColor};"></span>${truncDesc(name,showDate?6:8)}</td>
     <td class="tx-cat" style="color:${catColor};font-weight:${catWeight};">${mainDisplay}</td>
     <td class="tx-cat" style="color:${subColor};font-weight:400;">${subDisplay||'<span style="color:var(--gray-300);">—</span>'}</td>
     <td class="tx-amt" style="color:${amtColor};">${amtSign}${amtVal}</td>
@@ -6007,8 +6009,8 @@ function renderTxRow(r,type){
 function renderTxGrouped(rows,type,sortCol){
   const isDateGroup=!sortCol||sortCol==='tx_date';
   if(!isDateGroup){
-    // 평면 모드 (다른 컬럼 정렬 시 날짜 헤더 없음)
-    return rows.map(r=>renderTxRow(r,type)).join('');
+    // 평면 모드 (날짜 정렬 아님) — 행에 날짜 표시
+    return rows.map(r=>renderTxRow(r,type,true)).join('');
   }
   const byDate={};
   rows.forEach(r=>{
@@ -6016,7 +6018,6 @@ function renderTxGrouped(rows,type,sortCol){
     if(!byDate[d])byDate[d]=[];
     byDate[d].push(r);
   });
-  // rows는 이미 정렬돼 있으므로 순서 유지
   const seen=new Set();
   let html='';
   rows.forEach(r=>{
@@ -6025,7 +6026,7 @@ function renderTxGrouped(rows,type,sortCol){
     seen.add(d);
     const list=byDate[d];
     html+=`<tr class="tx-date-header"><td colspan="4">📅 ${formatDayHeader(d,list.length)}</td></tr>`;
-    list.forEach(rr=>{html+=renderTxRow(rr,type);});
+    list.forEach(rr=>{html+=renderTxRow(rr,type,false);});
   });
   return html;
 }
