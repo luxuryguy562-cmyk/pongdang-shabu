@@ -176,6 +176,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .drag-handle:active{cursor:grabbing;}
 .drag-ghost{opacity:0.4;background:var(--blue-light)!important;}
 
+/* ─ 거래내역 테이블 (은행/카드 공통) */
+.tx-row{cursor:pointer;}
+.tx-row:active{background:var(--gray-100);}
+.tx-row td{padding:10px 6px;font-size:11.5px;vertical-align:middle;}
+.tx-row td:first-child{padding-left:12px;}
+.tx-row td:last-child{padding-right:12px;}
+.tx-row .tx-desc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
+.tx-row .tx-cat{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray-600);font-size:11px;}
+.tx-row .tx-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.tx-cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0;}
+.tx-date-header td{background:var(--gray-100);font-weight:700;color:var(--gray-600);font-size:11px;padding:8px 12px;letter-spacing:0.2px;}
+
 /* ─ 거래처 */
 .vendor-item{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;}
 .vendor-info .v-name{font-size:14px;font-weight:700;}
@@ -1162,14 +1174,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </div>
       </div>
       <div class="table-wrap" style="margin:0 -20px;">
-        <table style="min-width:320px;">
+        <table style="width:100%;table-layout:fixed;min-width:320px;">
+          <colgroup>
+            <col style="width:42%;">
+            <col style="width:32%;">
+            <col style="width:26%;">
+          </colgroup>
           <thead><tr>
-            <th id="bankThDate" data-col="tx_date" data-label="날짜" style="width:56px;cursor:pointer;">날짜</th>
-            <th id="bankThDesc" data-col="description" data-label="내용" style="width:60px;cursor:pointer;">내용</th>
-            <th id="bankThCat" data-col="sub_category" data-label="분류" style="width:70px;cursor:pointer;">분류</th>
-            <th id="bankThIn" data-col="deposit" data-label="입금" style="cursor:pointer;">입금</th>
-            <th id="bankThOut" data-col="withdraw" data-label="출금" style="cursor:pointer;">출금</th>
-            <th style="width:50px;"></th>
+            <th id="bankThDesc" data-col="description" data-label="내용" style="cursor:pointer;text-align:left;padding-left:12px;">내용</th>
+            <th id="bankThCat" data-col="sub_category" data-label="분류" style="cursor:pointer;text-align:left;">분류</th>
+            <th id="bankThAmt" data-col="amount" data-label="금액" style="cursor:pointer;text-align:right;padding-right:12px;">금액</th>
           </tr></thead>
           <tbody id="bankTxBody"></tbody>
         </table>
@@ -1202,13 +1216,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span style="font-size:14px;font-weight:800;color:var(--danger);" id="cardTxSum">0원</span>
       </div>
       <div class="table-wrap" style="margin:0 -20px;">
-        <table style="min-width:300px;">
+        <table style="width:100%;table-layout:fixed;min-width:300px;">
+          <colgroup>
+            <col style="width:42%;">
+            <col style="width:32%;">
+            <col style="width:26%;">
+          </colgroup>
           <thead><tr>
-            <th id="cardThDate" data-col="tx_date" data-label="날짜" style="width:56px;cursor:pointer;">날짜</th>
-            <th id="cardThMerch" data-col="merchant_name" data-label="가맹점" style="width:60px;cursor:pointer;">가맹점</th>
-            <th id="cardThCat" data-col="sub_category" data-label="분류" style="width:70px;cursor:pointer;">분류</th>
-            <th id="cardThAmt" data-col="amount" data-label="금액" style="cursor:pointer;">금액</th>
-            <th style="width:50px;"></th>
+            <th id="cardThMerch" data-col="merchant_name" data-label="가맹점" style="cursor:pointer;text-align:left;padding-left:12px;">가맹점</th>
+            <th id="cardThCat" data-col="sub_category" data-label="분류" style="cursor:pointer;text-align:left;">분류</th>
+            <th id="cardThAmt" data-col="amount" data-label="금액" style="cursor:pointer;text-align:right;padding-right:12px;">금액</th>
           </tr></thead>
           <tbody id="cardTxBody"></tbody>
         </table>
@@ -5940,6 +5957,77 @@ async function loadBankTransactions(){
   renderBankTxTable();
 }
 
+// ─── 거래 내역 공통 헬퍼 ───
+// 날짜 헤더 포맷: "04-20 (목) · 4건"
+function formatDayHeader(dateStr,count){
+  const d=new Date(dateStr+'T00:00');
+  if(isNaN(d))return `${dateStr} · ${count}건`;
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const dd=String(d.getDate()).padStart(2,'0');
+  const dow=['일','월','화','수','목','금','토'][d.getDay()];
+  return `${mm}-${dd} (${dow}) · ${count}건`;
+}
+// 대분류 색상 도트 찾기 (expense_categories.color)
+function getCatDotColor(catName){
+  if(!catName)return '#CBD5E1';
+  const cat=(expCategories||[]).find(c=>c.name===catName&&!c.parent_id);
+  return cat?.color||'#94A3B8';
+}
+// 분류 텍스트: "대분류 소분류" 1줄, 소분류 없거나 cat===sub면 대분류만
+function formatCatText(cat,sub){
+  if(!cat)return '-';
+  if(cat==='영수증 참조')return '📸 영수증 참조';
+  if(sub && sub!==cat) return `${cat} ${sub}`;
+  return cat;
+}
+// 거래 행 HTML (공통)
+function renderTxRow(r,type){
+  const isIn=r.amount>0;
+  const cat=r.category||'';
+  const sub=r.sub_category||'';
+  const isReceiptRef=cat==='영수증 참조';
+  const dotColor=getCatDotColor(cat);
+  const name=type==='bank'?cleanDesc(r.description)||'-':(r.merchant_name||r.description||'-');
+  const catText=formatCatText(cat,sub);
+  const catColor=r.exclude_from_settlement?'var(--gray-400)':isReceiptRef?'var(--blue)':r.needs_review?'var(--warning)':'var(--gray-700)';
+  const catWeight=isReceiptRef?'700':'500';
+  const amtColor=r.exclude_from_settlement?'var(--gray-400)':(isIn?'var(--blue)':'var(--danger)');
+  const amtSign=isIn?'+':'-';
+  const amtVal=fmt(Math.abs(r.amount||0));
+  const rowClass=r.is_cancelled?'tx-row row-off':'tx-row';
+  return `<tr class="${rowClass}" data-action="openTxEditSheet|${r.id}|${type}">
+    <td class="tx-desc"><span class="tx-cat-dot" style="background:${dotColor};"></span>${truncDesc(name,10)}</td>
+    <td class="tx-cat" style="color:${catColor};font-weight:${catWeight};">${catText}</td>
+    <td class="tx-amt" style="color:${amtColor};">${amtSign}${amtVal}</td>
+  </tr>`;
+}
+// 날짜 그룹 렌더링 (정렬 컬럼이 날짜 계열이거나 없을 때만 그룹핑)
+function renderTxGrouped(rows,type,sortCol){
+  const isDateGroup=!sortCol||sortCol==='tx_date';
+  if(!isDateGroup){
+    // 평면 모드 (다른 컬럼 정렬 시 날짜 헤더 없음)
+    return rows.map(r=>renderTxRow(r,type)).join('');
+  }
+  const byDate={};
+  rows.forEach(r=>{
+    const d=r.tx_date||'';
+    if(!byDate[d])byDate[d]=[];
+    byDate[d].push(r);
+  });
+  // rows는 이미 정렬돼 있으므로 순서 유지
+  const seen=new Set();
+  let html='';
+  rows.forEach(r=>{
+    const d=r.tx_date||'';
+    if(seen.has(d))return;
+    seen.add(d);
+    const list=byDate[d];
+    html+=`<tr class="tx-date-header"><td colspan="3">📅 ${formatDayHeader(d,list.length)}</td></tr>`;
+    list.forEach(rr=>{html+=renderTxRow(rr,type);});
+  });
+  return html;
+}
+
 function renderBankTxTable(){
   let rows=bankTxData;
   // 필터 적용
@@ -5954,51 +6042,29 @@ function renderBankTxTable(){
   const hasFilter=bankFilter.dateFrom||bankFilter.dateTo||bankFilter.cats||bankFilter.direction!=='all';
   const badge=document.getElementById('bankFilterBadge');
   if(badge){badge.style.display=hasFilter?'block':'none';}
-  // 정렬
-  if(bankSortCol){
-    const col=bankSortCol;const asc=bankSortAsc?1:-1;
-    rows=[...rows].sort((a,b)=>{
-      let va,vb;
-      if(col==='deposit'){va=(a.amount||0)>0?a.amount:0;vb=(b.amount||0)>0?b.amount:0;}
-      else if(col==='withdraw'){va=(a.amount||0)<0?Math.abs(a.amount):0;vb=(b.amount||0)<0?Math.abs(b.amount):0;}
-      else{va=a[col];vb=b[col];}
-      if(typeof va==='number'&&typeof vb==='number')return (va-vb)*asc;
-      return String(va||'').localeCompare(String(vb||''))*asc;
-    });
-  }
+  // 정렬: 날짜 기본 내림차순 (별도 정렬 없으면 최신순)
+  const col=bankSortCol||'tx_date';
+  const asc=bankSortCol?bankSortAsc:false;
+  const sign=asc?1:-1;
+  rows=[...rows].sort((a,b)=>{
+    let va,vb;
+    if(col==='deposit'){va=(a.amount||0)>0?a.amount:0;vb=(b.amount||0)>0?b.amount:0;}
+    else if(col==='withdraw'){va=(a.amount||0)<0?Math.abs(a.amount):0;vb=(b.amount||0)<0?Math.abs(b.amount):0;}
+    else if(col==='amount'){va=Math.abs(a.amount||0);vb=Math.abs(b.amount||0);}
+    else{va=a[col];vb=b[col];}
+    if(typeof va==='number'&&typeof vb==='number')return (va-vb)*sign;
+    return String(va||'').localeCompare(String(vb||''))*sign;
+  });
   const body=document.getElementById('bankTxBody');
   const empty=document.getElementById('bankTxEmpty');
   if(!bankTxData.length){body.innerHTML='';empty.style.display='block';document.getElementById('bankTxInSum').innerText='입금 0원';document.getElementById('bankTxOutSum').innerText='출금 0원';return;}
   empty.style.display='none';
+  // 합계 계산
   let inSum=0,outSum=0;
-  body.innerHTML=rows.map(r=>{
-    const isIn=r.amount>0;if(isIn)inSum+=r.amount;else outSum+=Math.abs(r.amount);
-    const cat=r.category||'';
-    const sub=r.sub_category||'';
-    // UI 방어: cat===sub (중복값) 이면 sub 숨기고 1줄로 표시
-    const showSub=sub && sub!==cat;
-    const isReceiptRef=cat==='영수증 참조';
-    const catColor=r.exclude_from_settlement?'var(--gray-400)':isReceiptRef?'var(--blue)':r.needs_review?'var(--warning)':'var(--text)';
-    const catDisplay=isReceiptRef?'📸 영수증 참조':(cat||'-');
-    const catHtml=showSub
-      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${catDisplay}</div><div style="line-height:1.2;font-size:11px;color:${catColor};">${sub}</div>`
-      : `<div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${catDisplay}</div>`;
-    const dt=(r.tx_date||'').slice(2); // YY-MM-DD
-    return `<tr>
-      <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
-      <td class="tx-desc-tip" data-full="${(cleanDesc(r.description)||'').replace(/"/g,'&quot;')}" style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;cursor:pointer;position:relative;">${truncDesc(cleanDesc(r.description),6)}</td>
-      <td style="padding:3px 2px;white-space:nowrap;">${catHtml}</td>
-      <td style="color:var(--success);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${isIn?fmt(r.amount):''}</td>
-      <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${!isIn?fmt(Math.abs(r.amount)):''}</td>
-      <td style="padding:2px;white-space:nowrap;">
-        <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:3px 5px;margin-right:2px;" data-action="openTxEditSheet|${r.id}|bank" title="편집">✎</button>
-        <button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" data-action="deleteTxRow|${r.id}|bank" title="삭제">✕</button>
-      </td>
-    </tr>`;
-  }).join('');
+  rows.forEach(r=>{if(r.amount>0)inSum+=r.amount;else outSum+=Math.abs(r.amount);});
+  body.innerHTML=renderTxGrouped(rows,'bank',bankSortCol);
   document.getElementById('bankTxInSum').innerText='입금 '+fmt(inSum)+'원';
   document.getElementById('bankTxOutSum').innerText='출금 '+fmt(outSum)+'원';
-  // 헤더 정렬 표시 갱신
   updateSortHeaders('bank');
 }
 
@@ -6022,45 +6088,23 @@ function renderCardTxTable(){
   const hasFilter=cardFilter.dateFrom||cardFilter.dateTo||cardFilter.cats;
   const badge=document.getElementById('cardFilterBadge');
   if(badge){badge.style.display=hasFilter?'block':'none';}
-  if(cardSortCol){
-    const col=cardSortCol;const asc=cardSortAsc?1:-1;
-    rows=[...rows].sort((a,b)=>{
-      let va=col==='amount'?Math.abs(a.amount||0):a[col];
-      let vb=col==='amount'?Math.abs(b.amount||0):b[col];
-      if(typeof va==='number'&&typeof vb==='number')return (va-vb)*asc;
-      return String(va||'').localeCompare(String(vb||''))*asc;
-    });
-  }
+  // 정렬: 날짜 기본 내림차순
+  const col=cardSortCol||'tx_date';
+  const asc=cardSortCol?cardSortAsc:false;
+  const sign=asc?1:-1;
+  rows=[...rows].sort((a,b)=>{
+    let va=col==='amount'?Math.abs(a.amount||0):a[col];
+    let vb=col==='amount'?Math.abs(b.amount||0):b[col];
+    if(typeof va==='number'&&typeof vb==='number')return (va-vb)*sign;
+    return String(va||'').localeCompare(String(vb||''))*sign;
+  });
   const body=document.getElementById('cardTxBody');
   const empty=document.getElementById('cardTxEmpty');
   if(!cardTxData.length){body.innerHTML='';empty.style.display='block';document.getElementById('cardTxSum').innerText='0원';return;}
   empty.style.display='none';
   let total=0;
-  body.innerHTML=rows.map(r=>{
-    total+=Math.abs(r.amount);
-    const cat=r.category||'';
-    const sub=r.sub_category||'';
-    // UI 방어: cat===sub (중복값) 이면 sub 숨기고 1줄로 표시
-    const showSub=sub && sub!==cat;
-    const isReceiptRef=cat==='영수증 참조';
-    const catColor=r.exclude_from_settlement?'var(--gray-400)':isReceiptRef?'var(--blue)':r.needs_review?'var(--warning)':'var(--text)';
-    const catDisplay=isReceiptRef?'📸 영수증 참조':(cat||'-');
-    const catHtml=showSub
-      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${catDisplay}</div><div style="line-height:1.2;font-size:11px;color:${catColor};">${sub}</div>`
-      : `<div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${catDisplay}</div>`;
-    const dt=(r.tx_date||'').slice(2); // YY-MM-DD
-    const name=r.merchant_name||r.description||'-';
-    return `<tr${r.is_cancelled?' class="row-off"':''}>
-      <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
-      <td class="tx-desc-tip" data-full="${(name||'').replace(/"/g,'&quot;')}" style="text-align:left;font-size:11px;padding:4px 2px;white-space:nowrap;cursor:pointer;position:relative;">${truncDesc(name,6)}</td>
-      <td style="padding:3px 2px;white-space:nowrap;">${catHtml}</td>
-      <td style="color:var(--danger);font-weight:700;font-size:11px;padding:4px 2px;white-space:nowrap;text-align:right;">${fmt(Math.abs(r.amount))}</td>
-      <td style="padding:2px;white-space:nowrap;">
-        <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:3px 5px;margin-right:2px;" data-action="openTxEditSheet|${r.id}|card" title="편집">✎</button>
-        <button class="btn btn-danger btn-sm" style="font-size:9px;padding:2px 5px;opacity:0.5;" data-action="deleteTxRow|${r.id}|card" title="삭제">✕</button>
-      </td>
-    </tr>`;
-  }).join('');
+  rows.forEach(r=>{total+=Math.abs(r.amount||0);});
+  body.innerHTML=renderTxGrouped(rows,'card',cardSortCol);
   document.getElementById('cardTxSum').innerText=fmt(total)+'원';
   updateSortHeaders('card');
 }
