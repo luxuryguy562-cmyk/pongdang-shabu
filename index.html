@@ -1176,13 +1176,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="table-wrap" style="margin:0 -20px;">
         <table style="width:100%;table-layout:fixed;min-width:320px;">
           <colgroup>
-            <col style="width:42%;">
             <col style="width:32%;">
-            <col style="width:26%;">
+            <col style="width:20%;">
+            <col style="width:20%;">
+            <col style="width:28%;">
           </colgroup>
           <thead><tr>
             <th id="bankThDesc" data-col="description" data-label="내용" style="cursor:pointer;text-align:left;padding-left:12px;">내용</th>
-            <th id="bankThCat" data-col="sub_category" data-label="분류" style="cursor:pointer;text-align:left;">분류</th>
+            <th id="bankThCat" data-col="category" data-label="대분류" style="cursor:pointer;text-align:left;">대분류</th>
+            <th id="bankThSub" data-col="sub_category" data-label="소분류" style="cursor:pointer;text-align:left;">소분류</th>
             <th id="bankThAmt" data-col="amount" data-label="금액" style="cursor:pointer;text-align:right;padding-right:12px;">금액</th>
           </tr></thead>
           <tbody id="bankTxBody"></tbody>
@@ -1218,13 +1220,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="table-wrap" style="margin:0 -20px;">
         <table style="width:100%;table-layout:fixed;min-width:300px;">
           <colgroup>
-            <col style="width:42%;">
             <col style="width:32%;">
-            <col style="width:26%;">
+            <col style="width:20%;">
+            <col style="width:20%;">
+            <col style="width:28%;">
           </colgroup>
           <thead><tr>
             <th id="cardThMerch" data-col="merchant_name" data-label="가맹점" style="cursor:pointer;text-align:left;padding-left:12px;">가맹점</th>
-            <th id="cardThCat" data-col="sub_category" data-label="분류" style="cursor:pointer;text-align:left;">분류</th>
+            <th id="cardThCat" data-col="category" data-label="대분류" style="cursor:pointer;text-align:left;">대분류</th>
+            <th id="cardThSub" data-col="sub_category" data-label="소분류" style="cursor:pointer;text-align:left;">소분류</th>
             <th id="cardThAmt" data-col="amount" data-label="금액" style="cursor:pointer;text-align:right;padding-right:12px;">금액</th>
           </tr></thead>
           <tbody id="cardTxBody"></tbody>
@@ -5973,14 +5977,7 @@ function getCatDotColor(catName){
   const cat=(expCategories||[]).find(c=>c.name===catName&&!c.parent_id);
   return cat?.color||'#94A3B8';
 }
-// 분류 텍스트: "대분류 소분류" 1줄, 소분류 없거나 cat===sub면 대분류만
-function formatCatText(cat,sub){
-  if(!cat)return '-';
-  if(cat==='영수증 참조')return '📸 영수증 참조';
-  if(sub && sub!==cat) return `${cat} ${sub}`;
-  return cat;
-}
-// 거래 행 HTML (공통)
+// 거래 행 HTML (공통) — 4열: 내용 / 대분류 / 소분류 / 금액
 function renderTxRow(r,type){
   const isIn=r.amount>0;
   const cat=r.category||'';
@@ -5988,16 +5985,21 @@ function renderTxRow(r,type){
   const isReceiptRef=cat==='영수증 참조';
   const dotColor=getCatDotColor(cat);
   const name=type==='bank'?cleanDesc(r.description)||'-':(r.merchant_name||r.description||'-');
-  const catText=formatCatText(cat,sub);
+  // 대분류 표시: 영수증 참조면 📸 강조
+  const mainDisplay=isReceiptRef?'📸 영수증 참조':(cat||'-');
+  // 소분류 표시: cat===sub면 빈칸 (중복 방지)
+  const subDisplay=(sub && sub!==cat)?sub:'';
   const catColor=r.exclude_from_settlement?'var(--gray-400)':isReceiptRef?'var(--blue)':r.needs_review?'var(--warning)':'var(--gray-700)';
   const catWeight=isReceiptRef?'700':'500';
+  const subColor=r.exclude_from_settlement?'var(--gray-400)':'var(--gray-500)';
   const amtColor=r.exclude_from_settlement?'var(--gray-400)':(isIn?'var(--blue)':'var(--danger)');
   const amtSign=isIn?'+':'-';
   const amtVal=fmt(Math.abs(r.amount||0));
   const rowClass=r.is_cancelled?'tx-row row-off':'tx-row';
   return `<tr class="${rowClass}" data-action="openTxEditSheet|${r.id}|${type}">
-    <td class="tx-desc"><span class="tx-cat-dot" style="background:${dotColor};"></span>${truncDesc(name,10)}</td>
-    <td class="tx-cat" style="color:${catColor};font-weight:${catWeight};">${catText}</td>
+    <td class="tx-desc"><span class="tx-cat-dot" style="background:${dotColor};"></span>${truncDesc(name,8)}</td>
+    <td class="tx-cat" style="color:${catColor};font-weight:${catWeight};">${mainDisplay}</td>
+    <td class="tx-cat" style="color:${subColor};font-weight:400;">${subDisplay||'<span style="color:var(--gray-300);">—</span>'}</td>
     <td class="tx-amt" style="color:${amtColor};">${amtSign}${amtVal}</td>
   </tr>`;
 }
@@ -6022,7 +6024,7 @@ function renderTxGrouped(rows,type,sortCol){
     if(seen.has(d))return;
     seen.add(d);
     const list=byDate[d];
-    html+=`<tr class="tx-date-header"><td colspan="3">📅 ${formatDayHeader(d,list.length)}</td></tr>`;
+    html+=`<tr class="tx-date-header"><td colspan="4">📅 ${formatDayHeader(d,list.length)}</td></tr>`;
     list.forEach(rr=>{html+=renderTxRow(rr,type);});
   });
   return html;
