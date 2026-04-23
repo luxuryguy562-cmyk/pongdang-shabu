@@ -6408,24 +6408,13 @@ function openTxEditSheet(txId,type){
     outEl.value=fmt(Math.abs(amt));
   }
   document.getElementById('txEditExclude').checked=!!r.exclude_from_settlement;
-  // 분류 칩 UI 렌더
+  // 분류 버튼 (바텀시트로 선택) — dataset.selected: '대분류' 또는 '대분류>소분류'
   const catArea=document.getElementById('txEditCatArea');
-  catArea.innerHTML=buildCatChipsHtml(r.sub_category||r.category||'');
-  catArea.dataset.selected=r.sub_category||r.category||'';
-  catArea.querySelectorAll('.catEditChip').forEach(chip=>{
-    chip.addEventListener('click',()=>{
-      catArea.querySelectorAll('.catEditChip').forEach(c=>{
-        c.style.background='var(--gray-100)';c.style.color='var(--text)';c.style.fontWeight='400';
-      });
-      // 대분류 칩은 gray-200 복원
-      (expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).forEach(p=>{
-        const el=catArea.querySelector(`.catEditChip[data-id="${p.id}"]`);
-        if(el){el.style.background='var(--gray-200)';el.style.color='var(--text)';el.style.fontWeight='500';}
-      });
-      chip.style.background='var(--blue)';chip.style.color='#fff';chip.style.fontWeight='700';
-      catArea.dataset.selected=chip.dataset.val;
-    });
-  });
+  const curSel=r.sub_category&&r.sub_category!==r.category?`${r.category}>${r.sub_category}`:(r.category||'');
+  catArea.dataset.selected=curSel;
+  catArea.dataset.memo=r.sub_category||'';
+  const label=getCatLabel(r.category,r.sub_category);
+  catArea.innerHTML=`<button data-action="openTxEditCatPicker" style="width:100%;padding:14px;text-align:left;font-size:13px;font-weight:600;background:#fff;border:1.5px solid var(--gray-200);border-radius:10px;cursor:pointer;color:var(--text);" id="txEditCatBtn">🏷️ ${label}</button>`;
   // 금액 입력 천단위 포맷 (bind once)
   [inEl,outEl].forEach(el=>{
     el.oninput=e=>{const v=unFmt(el.value);el.value=v?fmt(v):'';};
@@ -6434,6 +6423,36 @@ function openTxEditSheet(txId,type){
 }
 
 function closeTxEdit(){closeSheet('txEditSheet');}
+
+// 편집 시트의 분류 버튼 → 바텀시트 호출
+function openTxEditCatPicker(){
+  const catArea=document.getElementById('txEditCatArea');
+  const cur=catArea.dataset.selected||'';
+  const curMemo=catArea.dataset.memo||'';
+  openCatPicker({
+    current:cur,
+    currentMemo:curMemo,
+    onSelect:(val,memo)=>{
+      const mainName=val.split('>')[0];
+      const type=getCatType(mainName);
+      if(type==='reserve'){
+        catArea.dataset.selected=val;
+        catArea.dataset.memo=memo;
+      } else {
+        catArea.dataset.selected=val;
+        catArea.dataset.memo='';
+      }
+      // 버튼 라벨 갱신
+      const btn=document.getElementById('txEditCatBtn');
+      if(btn){
+        const pair=resolveCatPair(val);
+        const displayCat=pair.mainName||val;
+        const displaySub=type==='reserve'?memo:(pair.subName||'');
+        btn.innerHTML='🏷️ '+getCatLabel(displayCat,displaySub);
+      }
+    }
+  });
+}
 
 async function saveTxEdit(){
   const {id,type,origCat}=txEditContext;
@@ -6463,12 +6482,9 @@ async function saveTxEdit(){
   const catType=getCatType(pair.mainName||selected);
   const autoExclude=['receipt_ref','reserve','exclude'].includes(catType);
   const isReserve=(catType==='reserve');
-  // 예비비면 메모 입력 받기 (기존 sub_category 또는 새로 입력)
-  let subVal=pair.subName||'';
-  if(isReserve){
-    const existingMemo=r.sub_category||'';
-    subVal=prompt('예비비 사용 세부내용 (예: 에어컨 수리)',existingMemo)||existingMemo||'예비비 사용';
-  }
+  // 예비비 메모는 바텀시트에서 이미 입력받음 (dataset.memo)
+  const memoFromPicker=document.getElementById('txEditCatArea').dataset.memo||'';
+  let subVal=isReserve?(memoFromPicker||r.sub_category||'예비비 사용'):(pair.subName||'');
   const payloadCat=pair.mainName||selected;
   // 저장 방어: category === sub_category면 sub 비움
   const payloadSub=(subVal && subVal!==payloadCat)?subVal:'';
@@ -7375,51 +7391,18 @@ function openReviewItems(){
   if(!excelParsedData)return;
   const reviewItems=excelParsedData.filter(i=>i.needs_review);
   let html='';
-  // 타입별 대분류 그룹 (DB 기반 완전 동적 — 하드코딩 없음)
-  const typeLabel={expense:'💸 지출',income:'💰 매출',exclude:'🚫 제외',receipt_ref:'📸 영수증참조',reserve:'🏦 예비비'};
-  const mainsByType={expense:[],income:[],exclude:[],receipt_ref:[],reserve:[]};
-  (expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).forEach(p=>{
-    const t=p.category_type||'expense';
-    if(mainsByType[t]) mainsByType[t].push(p);
-  });
-  reviewItems.forEach((item,idx)=>{
+  reviewItems.forEach((item)=>{
     const desc=item.description||item.merchant_name||'-';
-    const amt=Math.abs(item.amount||0);
     const globalIdx=excelParsedData.indexOf(item);
-    const curMain=item.category||'미분류';
-    const curSub=item.sub_category||'';
-    // 현재 대분류의 타입 파악 (예비비면 메모, 아니면 소분류)
-    const parentCat=(expCategories||[]).find(c=>c.name===curMain&&!c.parent_id);
-    const curType=parentCat?.category_type||'expense';
-    const isReserve=(curType==='reserve');
-    const curChildren=parentCat?(expCategories||[]).filter(c=>c.parent_id===parentCat.id&&c.is_active!==false):[];
-    // 대분류 옵션: optgroup으로 타입별 구분 + '미분류' 추가
-    let mainOpts=`<option value="미분류"${curMain==='미분류'?' selected':''}>미분류</option>`;
-    ['expense','income','exclude','receipt_ref','reserve'].forEach(t=>{
-      if(!mainsByType[t].length) return;
-      mainOpts+=`<optgroup label="${typeLabel[t]}">`;
-      mainsByType[t].forEach(p=>{
-        mainOpts+=`<option value="${p.name}"${p.name===curMain?' selected':''}>${p.name}</option>`;
-      });
-      mainOpts+=`</optgroup>`;
-    });
-    // 두 번째 칸: 예비비면 메모 input, 아니면 소분류 select
-    const subFieldHtml=isReserve
-      ? `<input type="text" class="input-field" id="rvSub${globalIdx}" placeholder="세부 내용 (예: 에어컨 수리)" value="${curSub.replace(/"/g,'&quot;')}" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" data-input="updateReviewItem|${globalIdx}">`
-      : (curChildren.length
-        ? `<select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvSub${globalIdx}" data-change="updateReviewItem|${globalIdx}"><option value="">(소분류 없음)</option>${curChildren.map(ch=>`<option value="${ch.name}"${ch.name===curSub?' selected':''}>${ch.name}</option>`).join('')}</select>`
-        : `<select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvSub${globalIdx}" data-change="updateReviewItem|${globalIdx}" disabled><option value="">(소분류 없음)</option></select>`);
+    const label=getCatLabel(item.category,item.sub_category);
     html+=`<div style="background:var(--warn-light);border-radius:12px;padding:14px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div style="font-size:14px;font-weight:700;">${desc}</div>
         <div style="font-size:14px;font-weight:700;color:var(--danger);">${fmt(item.amount||0)}원</div>
       </div>
       <div style="font-size:12px;color:var(--warn);margin-bottom:8px;">${item.review_reason||'분류 확신 낮음'}</div>
-      <div style="font-size:11px;color:var(--gray-600);margin-bottom:8px;">${item.tx_date} ${item.tx_time||''}</div>
-      <div style="display:flex;gap:6px;">
-        <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvMain${globalIdx}" data-change="onReviewMainChange|${globalIdx}">${mainOpts}</select>
-        ${subFieldHtml}
-      </div>
+      <div style="font-size:11px;color:var(--gray-600);margin-bottom:10px;">${item.tx_date} ${item.tx_time||''}</div>
+      <button id="rvCatBtn${globalIdx}" data-action="openReviewCatPicker|${globalIdx}" style="width:100%;padding:14px;text-align:left;font-size:13px;font-weight:600;background:#fff;border:1.5px solid var(--gray-200);border-radius:10px;cursor:pointer;color:var(--text);">🏷️ ${label}</button>
       ${item.attribution_month?`<div style="margin-top:6px;font-size:11px;color:var(--blue);">귀속월: ${item.attribution_month}</div>`:''}
     </div>`;
   });
@@ -7427,48 +7410,108 @@ function openReviewItems(){
   openSheet('excelReviewSheet');
 }
 
-// 대분류 변경 시 소분류 드롭다운 or 메모 입력으로 전환
-function onReviewMainChange(idx){
+// 확인필요 항목 — 바텀시트 호출 + 선택값 반영
+function openReviewCatPicker(idx){
   if(!excelParsedData||!excelParsedData[idx])return;
-  const mainEl=document.getElementById('rvMain'+idx);
-  const subEl=document.getElementById('rvSub'+idx);
-  if(!mainEl||!subEl)return;
-  const main=mainEl.value;
-  const parent=(expCategories||[]).find(c=>c.name===main&&!c.parent_id);
-  const isReserve=(parent?.category_type==='reserve');
-  // 예비비 대분류면 → input으로 교체 (메모 입력)
-  if(isReserve){
-    if(subEl.tagName!=='INPUT'){
-      const newInput=document.createElement('input');
-      newInput.type='text';
-      newInput.id=subEl.id;
-      newInput.className='input-field';
-      newInput.placeholder='세부 내용 (예: 에어컨 수리)';
-      newInput.value='';
-      newInput.style.cssText='flex:1;margin-bottom:0;padding:8px;font-size:12px;';
-      newInput.setAttribute('data-input','updateReviewItem|'+idx);
-      subEl.parentNode.replaceChild(newInput,subEl);
+  const item=excelParsedData[idx];
+  const curSel=item.sub_category&&item.sub_category!==item.category?`${item.category}>${item.sub_category}`:(item.category||'');
+  openCatPicker({
+    current:curSel,
+    currentMemo:item.sub_category||'',
+    onSelect:(val,memo)=>{
+      const type=getCatType(val.split('>')[0]);
+      if(type==='reserve'){
+        item.category=val;
+        item.sub_category=memo;
+      } else {
+        applyReviewChoice(item,val);
+      }
+      item.needs_review=false;
+      item.confidence='high';
+      const btn=document.getElementById('rvCatBtn'+idx);
+      if(btn)btn.innerHTML='🏷️ '+getCatLabel(item.category,item.sub_category);
     }
-  } else {
-    // 일반 카테고리 → select로 (input이었다면 복귀)
-    if(subEl.tagName==='INPUT'){
-      const newSel=document.createElement('select');
-      newSel.id=subEl.id;
-      newSel.className='input-field';
-      newSel.style.cssText='flex:1;margin-bottom:0;padding:8px;font-size:12px;';
-      newSel.setAttribute('data-change','updateReviewItem|'+idx);
-      subEl.parentNode.replaceChild(newSel,subEl);
-    }
-    const selEl=document.getElementById('rvSub'+idx);
-    const children=parent?(expCategories||[]).filter(c=>c.parent_id===parent.id&&c.is_active!==false):[];
-    selEl.innerHTML='<option value="">(소분류 없음)</option>'+children.map(ch=>`<option value="${ch.name}">${ch.name}</option>`).join('');
-    selEl.disabled=!children.length;
-  }
-  updateReviewItem(idx);
+  });
 }
 
-// 선택값(대분류명 or 소분류명) → category/sub_category 분리 저장
-// 규칙: category_id는 대분류 id 고정 (resolveCatPair) — 실제 id 매핑은 saveExcelBatch에서 수행
+// 거래/확인필요 항목의 분류 라벨 (버튼 표시용)
+function getCatLabel(cat,sub){
+  const c=cat||'미분류';
+  if(c==='영수증 참조')return '📸 영수증 참조';
+  if(!sub||sub===c)return c;
+  return `${c} · ${sub}`;
+}
+
+// ─── 공통 카테고리 선택 바텀시트 (확인필요/편집 공용) ───
+// context: {current:string, onSelect:(val,memo)=>void, currentMemo?:string}
+function openCatPicker(context){
+  const typeLabel={expense:'💸 지출',income:'💰 매출',exclude:'🚫 정산제외',receipt_ref:'📸 영수증참조',reserve:'🏦 예비비'};
+  const typeOrder=['expense','income','exclude','receipt_ref','reserve'];
+  let sheet=document.getElementById('catPickerSheet');
+  if(sheet)sheet.remove();
+  sheet=document.createElement('div');
+  sheet.id='catPickerSheet';
+  sheet.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:1200;display:flex;align-items:end;justify-content:center;';
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:0;max-height:75vh;margin-bottom:72px;display:flex;flex-direction:column;';
+  let html=`<div style="padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);flex-shrink:0;">
+    <div style="font-size:15px;font-weight:800;">분류 선택</div>
+    <div style="font-size:22px;cursor:pointer;color:var(--gray-400);padding:0 4px;" id="catPickerClose">✕</div>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:10px 16px 20px;">`;
+  const cur=context.current||'';
+  const itemHtml=(val,label,color,isSub,isActive,type)=>
+    `<div class="cat-pick-item" data-val="${val}" data-type="${type}" style="padding:${isSub?'10px 14px 10px 32px':'12px 14px'};border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:${isSub?'13px':'14px'};font-weight:${isSub?'500':'600'};color:${isActive?'var(--blue)':'var(--text)'};background:${isActive?'#EBF3FF':''};display:flex;align-items:center;gap:8px;">
+      <span style="display:inline-block;width:${isSub?'8':'10'}px;height:${isSub?'8':'10'}px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+      ${isSub?'└ ':''}${label}
+    </div>`;
+  // 미분류
+  html+=itemHtml('미분류','(미분류)','#CBD5E1',false,cur==='미분류','');
+  // 타입별 섹션
+  const parents=(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false);
+  const byType={};
+  typeOrder.forEach(t=>byType[t]=[]);
+  parents.forEach(p=>{const t=p.category_type||'expense';if(byType[t])byType[t].push(p);});
+  typeOrder.forEach(t=>{
+    if(!byType[t].length)return;
+    html+=`<div style="font-size:11px;font-weight:800;color:var(--gray-500);padding:14px 4px 6px;letter-spacing:0.5px;">${typeLabel[t]}</div>`;
+    byType[t].forEach(p=>{
+      const color=p.color||'#94A3B8';
+      const pActive=(cur===p.name);
+      html+=itemHtml(p.name,p.name,color,false,pActive,t);
+      // 자식 소분류
+      const children=(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false)
+        .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+      children.forEach(ch=>{
+        const cColor=ch.color||color;
+        const chVal=`${p.name}>${ch.name}`;
+        const chActive=(cur===chVal);
+        html+=itemHtml(chVal,ch.name,cColor,true,chActive,t);
+      });
+    });
+  });
+  html+=`</div>`;
+  box.innerHTML=html;
+  sheet.appendChild(box);
+  document.body.appendChild(sheet);
+  box.querySelector('#catPickerClose').addEventListener('click',()=>sheet.remove());
+  sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.remove();});
+  box.querySelectorAll('.cat-pick-item').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const val=el.dataset.val;
+      const type=el.dataset.type||'';
+      if(type==='reserve'){
+        const memo=prompt('예비비 사용 세부내용 (예: 에어컨 수리)',context.currentMemo||'');
+        if(memo===null){sheet.remove();return;} // 취소
+        context.onSelect(val,memo||'예비비 사용');
+      } else {
+        context.onSelect(val,'');
+      }
+      sheet.remove();
+    });
+  });
+}
+
 function applyReviewChoice(item, selected){
   if(!selected){item.category='미분류';item.sub_category='';return;}
   const pair=resolveCatPair(selected);
@@ -7478,52 +7521,26 @@ function applyReviewChoice(item, selected){
   item.sub_category=(sub && sub!==item.category)?sub:'';
 }
 
-// 대분류 카테고리 타입 조회 헬퍼
-function getCatType(mainName){
-  const p=(expCategories||[]).find(c=>c.name===mainName&&!c.parent_id);
-  return p?.category_type||'expense';
-}
-
 function updateReviewItem(idx){
   if(!excelParsedData||!excelParsedData[idx])return;
-  const main=document.getElementById('rvMain'+idx)?.value||'';
-  const sub=document.getElementById('rvSub'+idx)?.value||'';
-  const type=getCatType(main);
-  // 예비비: sub는 메모 (카테고리 연결 X). 일반: sub는 소분류명
-  if(type==='reserve'){
-    excelParsedData[idx].category=main;
-    excelParsedData[idx].sub_category=sub; // 메모
-  } else {
-    const selected=sub?`${main}>${sub}`:main;
-    applyReviewChoice(excelParsedData[idx], selected);
-  }
+  // 바텀시트에서 이미 item에 값 세팅됨. 여기는 백업용(레거시 호출 경로)
   excelParsedData[idx].needs_review=false;
   excelParsedData[idx].confidence='high';
 }
 
 async function confirmReviewAndSave(){
-  // 리뷰 건들 업데이트 + 자동 학습
+  // 바텀시트에서 이미 각 item에 값 저장됨. 여기서는 학습만 수행
   if(excelParsedData){
     const learnPromises=[];
-    excelParsedData.filter(i=>i.needs_review).forEach((item,_)=>{
-      const idx=excelParsedData.indexOf(item);
-      const main=document.getElementById('rvMain'+idx)?.value||'';
-      const sub=document.getElementById('rvSub'+idx)?.value||'';
-      const type=getCatType(main);
-      if(type==='reserve'){
-        item.category=main; item.sub_category=sub; // 메모
-      } else {
-        const selected=sub?`${main}>${sub}`:main;
-        applyReviewChoice(item, selected);
-      }
-      item.needs_review=false;
-      // 자동 학습: 수동 분류한 키워드를 DB에 저장 (다음부터 자동 매칭)
+    excelParsedData.forEach(item=>{
+      if(item.needs_review)return; // 분류 안 한 건은 스킵
+      const type=getCatType(item.category);
+      if(type==='reserve')return; // 예비비는 메모라 학습 제외
       const keyword=item.description||item.merchant_name||'';
       if(keyword&&item.category&&item.category!=='미분류'){
         learnPromises.push(learnClassification(keyword,item.category,item.sub_category||'',excelUploadType,item.exclude_from_settlement));
       }
     });
-    // 학습은 백그라운드로 (저장 차단하지 않음)
     if(learnPromises.length) Promise.all(learnPromises).catch(()=>{});
   }
   closeSheet('excelReviewSheet');
