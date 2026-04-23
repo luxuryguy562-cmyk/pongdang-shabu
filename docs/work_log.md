@@ -4,7 +4,72 @@
 
 ---
 
-## [2026-04-23 말미] #58 매출 관리 페이지 1단계 (sales_records 신설)
+## [2026-04-23 심야] #58 매출 관리 v2 — sales_daily 가로형 + 카드 UI (v1 폐기 재작성)
+
+### 상태: 구현완료, 브랜치 푸시 + main 머지
+### 규모: 중~대형 (이전 v1 거의 전부 철거 + 재작성)
+
+### 배경 — critic 자체 실패
+v1 (sales_records 세로 raw) 만들었더니 사장님 피드백 폭발:
+- "결제수단 드롭다운 직관적이지 못함" → 제가 자의적 12개 라벨, 기존 마감정산 UI 무시
+- "일일이 기록해야 돼?" → 세로 raw 6행/일 × 30일 = 월 180행 쌓임
+- "결산 맞추려면" → 라벨이 mydata_transactions와 매칭 안 됨
+- "가로 표가 안 낫나?" → 사장님 엑셀 마인드
+- "짤려 안 짤려?" → 모바일 7컬럼 표 불가능
+
+critic v2 PD1/PD3를 제가 만들었으면서 **본인이 안 지킨** 결과. (dev_lessons #45 추가)
+
+### 변경 요약 — 전면 교체
+1. **[SQL] v1 롤백 + 가로형 신설**
+   - `migrate_sales_daily_2026_04_23_b.sql`: `DROP TABLE sales_records` + `CREATE TABLE sales_daily` (컬럼 7개 + UNIQUE(store_id,date))
+   - `migrate_sales_daily_2026_04_23_b_rollback.sql`
+   - 기존 v1 SQL 파일(`migrate_sales_records_2026_04_23.sql`)은 히스토리 참고용으로 유지
+2. **[CSS 교체]** `.sales-table` 섹션(17줄) 전부 삭제 → `.sales-card` / `.sc-head` / `.sc-body` / `.sales-edit-row` 등 카드형 스타일 29줄
+3. **[HTML 교체]** salesCont 컨테이너 + salesPasteSheet → 카드형 salesCont + salesEditSheet (편집 시트 신설)
+   - 월 sticky 합계 헤더
+   - 카드 목록 (일자별 1장, 결제수단 7개 리스트, 하루 합계)
+   - + 매출 추가 버튼 1개 (엑셀 paste 제거)
+4. **[JS 교체]** 기존 11개 함수 싹 삭제, 재작성:
+   - `loadSalesDaily` / `renderSalesCards`
+   - `openSalesAdd` / `openSalesEditById` / `_populateSalesEditSheet`
+   - `onSalesEditInput` / `_recalcSeTotal`
+   - `saveSalesDaily` (upsert onConflict:store_id,date)
+   - `onSalesEditDelete`
+   - `salesRowTotal` / `onSalesMonthChange`
+   - 상수 `SALES_COLS`, `SALES_LABELS` (7개 결제수단)
+5. **[마감정산 연동 재작성]** `syncClosingToSalesDaily` — 1회 upsert (이전: 6번 INSERT)
+   - cash_detail_cash → cash (순수 현금)
+   - cash_detail_qr → qr (QR 별도 분리)
+   - pos_etc + cash_detail_transfer → etc (계좌이체 합산)
+6. **[연결부]** nav actions: `sales: loadSalesDaily` / selectStore 캐시: `salesDaily=[]; salesEditCtx=null`
+
+### 설계 근거 (사장님 피드백 수용)
+- **가로형**: 월 30행 (이전 180행), 엑셀 마인드에 맞음
+- **카드형 UI**: 짤림 없음 (세로 스크롤), 결제수단 7개 세로 리스트
+- **UNIQUE(store_id,date)**: 하루 1행 강제, upsert 1번으로 갱신
+- **QR 별도 컬럼**: 현금 상세에서 QR 추적
+- **뽑기 하드코딩**: 퐁당샤브 전용. 동적 추가/삭제는 2단계
+
+### 검증
+- ✅ node --check 통과
+- ✅ 옛 식별자(sales_records, salesPasteSheet 등) grep 0건 (완전 제거)
+- ✅ inline 핸들러 X, data-action/data-change/data-input 패턴
+- ✅ 매장 격리 모든 쿼리 `.eq('store_id', currentStore.id)`
+- ⚠️ 사장님 실사용 피드백 필요
+
+### 사장님 수동 작업
+1. Supabase SQL Editor → `migrate_sales_daily_2026_04_23_b.sql` 실행
+2. (v1 SQL 이미 돌렸으면 sales_records 자동 DROP됨)
+3. 앱 Ctrl+Shift+R 후 사이드메뉴 → 💰 매출 관리
+
+### 다음 단계 (2단계)
+- 결제수단 사장님 UI에서 동적 추가/삭제 (payment_methods 테이블 신설)
+- 대시보드 매출 차트 → sales_daily 집계 전환
+- reconciliation 연결 (card → 카드사 입금, etc → 계좌 입금 매칭)
+
+---
+
+## [2026-04-23 말미] #58 매출 관리 페이지 v1 (sales_records 세로 raw) — 폐기
 
 ### 상태: 구현완료 (브랜치 푸시 + main 머지 예정)
 ### 브랜치: claude/apply-gstack-repo-24Y4m
