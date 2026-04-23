@@ -1442,6 +1442,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- 분류 선택 바텀시트 (공통: 확인필요/편집) -->
+<div class="sheet-overlay" id="catPickerSheet" style="z-index:7000;">
+  <div class="sheet" id="catPickerBox" style="z-index:7001;max-height:85vh;padding:0;display:flex;flex-direction:column;overflow:hidden;"></div>
+</div>
+
 <!-- 거래 전체 편집 시트 (날짜/내용/분류/입금/출금/정산제외) -->
 <div class="sheet-overlay" id="txEditSheet">
   <div class="sheet" style="max-height:85vh;overflow-y:auto;">
@@ -7469,16 +7474,10 @@ function openCatPicker(context){
   const typeLabel={expense:'💸 지출',income:'💰 매출',exclude:'🚫 정산제외',receipt_ref:'📸 영수증 참조',reserve:'🏦 예비비 사용'};
   const typeOrder=['expense','income','exclude','receipt_ref','reserve'];
   const drillTypes=['expense','income','exclude']; // 2단계 진입 대상
-  let sheet=document.getElementById('catPickerSheet');
-  if(sheet)sheet.remove();
-  sheet=document.createElement('div');
-  sheet.id='catPickerSheet';
-  sheet.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:7000;display:flex;align-items:end;justify-content:center;';
-  const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:0;max-height:75vh;margin-bottom:72px;display:flex;flex-direction:column;';
-  sheet.appendChild(box);
-  document.body.appendChild(sheet);
-  const close=()=>sheet.remove();
+  const sheet=document.getElementById('catPickerSheet');
+  const box=document.getElementById('catPickerBox');
+  if(!sheet||!box) return;
+  const close=()=>closeSheet('catPickerSheet');
   const pick=(val,memo)=>{context.onSelect(val,memo||'');close();};
   // 공통 헤더 HTML
   const headerHtml=(title,hasBack,onBack)=>
@@ -7614,8 +7613,13 @@ function openCatPicker(context){
     if(backEl&&backFn)backEl.addEventListener('click',backFn);
   }
 
-  sheet.addEventListener('click',e=>{if(e.target===sheet)close();});
+  // sheet-overlay 바깥(어두운 영역) 탭 시 닫기 (한 번만 바인딩)
+  if(!sheet.dataset.bound){
+    sheet.addEventListener('click',e=>{if(e.target===sheet)close();});
+    sheet.dataset.bound='1';
+  }
   renderStage1();
+  openSheet('catPickerSheet');
 }
 
 function applyReviewChoice(item, selected){
