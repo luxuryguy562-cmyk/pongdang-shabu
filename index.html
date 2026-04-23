@@ -179,14 +179,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* ─ 거래내역 테이블 (은행/카드 공통) */
 .tx-row{cursor:pointer;}
 .tx-row:active{background:var(--gray-100);}
-.tx-row td{padding:10px 6px;font-size:11.5px;vertical-align:middle;}
+.tx-row td{padding:10px 6px;font-size:11.5px;vertical-align:middle;text-align:left;}
 .tx-row td:first-child{padding-left:12px;}
 .tx-row td:last-child{padding-right:12px;}
-.tx-row .tx-desc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
-.tx-row .tx-cat{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray-600);font-size:11px;}
+.tx-row .tx-desc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;text-align:left;}
+.tx-row .tx-cat{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray-600);font-size:11px;text-align:left;}
 .tx-row .tx-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .tx-cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0;}
-.tx-date-header td{background:var(--gray-100);font-weight:700;color:var(--gray-600);font-size:11px;padding:8px 12px;letter-spacing:0.2px;}
+.tx-date-header td{background:var(--gray-100);font-weight:700;color:var(--gray-600);font-size:11px;padding:8px 12px;letter-spacing:0.2px;text-align:left;}
 
 /* ─ 거래처 */
 .vendor-item{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;}
@@ -1176,16 +1176,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="table-wrap" style="margin:0 -20px;">
         <table style="width:100%;table-layout:fixed;min-width:320px;">
           <colgroup>
-            <col style="width:32%;">
-            <col style="width:20%;">
-            <col style="width:20%;">
+            <col style="width:30%;">
+            <col style="width:18%;">
+            <col style="width:24%;">
             <col style="width:28%;">
           </colgroup>
           <thead><tr>
-            <th id="bankThDesc" data-col="description" data-label="내용" style="cursor:pointer;text-align:left;padding-left:12px;">내용</th>
-            <th id="bankThCat" data-col="category" data-label="대분류" style="cursor:pointer;text-align:left;">대분류</th>
-            <th id="bankThSub" data-col="sub_category" data-label="소분류" style="cursor:pointer;text-align:left;">소분류</th>
-            <th id="bankThAmt" data-col="amount" data-label="금액" style="cursor:pointer;text-align:right;padding-right:12px;">금액</th>
+            <th id="bankThDesc" data-col="description" data-label="내용" style="cursor:pointer;text-align:center;">내용</th>
+            <th id="bankThCat" data-col="category" data-label="대분류" style="cursor:pointer;text-align:center;">대분류</th>
+            <th id="bankThSub" data-col="sub_category" data-label="소분류" style="cursor:pointer;text-align:center;">소분류</th>
+            <th id="bankThAmt" data-col="amount" data-label="금액" style="cursor:pointer;text-align:center;">금액</th>
           </tr></thead>
           <tbody id="bankTxBody"></tbody>
         </table>
@@ -1220,16 +1220,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="table-wrap" style="margin:0 -20px;">
         <table style="width:100%;table-layout:fixed;min-width:300px;">
           <colgroup>
-            <col style="width:32%;">
-            <col style="width:20%;">
-            <col style="width:20%;">
+            <col style="width:30%;">
+            <col style="width:18%;">
+            <col style="width:24%;">
             <col style="width:28%;">
           </colgroup>
           <thead><tr>
-            <th id="cardThMerch" data-col="merchant_name" data-label="가맹점" style="cursor:pointer;text-align:left;padding-left:12px;">가맹점</th>
-            <th id="cardThCat" data-col="category" data-label="대분류" style="cursor:pointer;text-align:left;">대분류</th>
-            <th id="cardThSub" data-col="sub_category" data-label="소분류" style="cursor:pointer;text-align:left;">소분류</th>
-            <th id="cardThAmt" data-col="amount" data-label="금액" style="cursor:pointer;text-align:right;padding-right:12px;">금액</th>
+            <th id="cardThMerch" data-col="merchant_name" data-label="가맹점" style="cursor:pointer;text-align:center;">가맹점</th>
+            <th id="cardThCat" data-col="category" data-label="대분류" style="cursor:pointer;text-align:center;">대분류</th>
+            <th id="cardThSub" data-col="sub_category" data-label="소분류" style="cursor:pointer;text-align:center;">소분류</th>
+            <th id="cardThAmt" data-col="amount" data-label="금액" style="cursor:pointer;text-align:center;">금액</th>
           </tr></thead>
           <tbody id="cardTxBody"></tbody>
         </table>
