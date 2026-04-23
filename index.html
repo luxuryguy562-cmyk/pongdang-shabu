@@ -210,6 +210,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 편집 시트 전용 */
 .sales-edit-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);}
 .sales-edit-row:last-child{border-bottom:none;}
+/* 모바일 편집시트: 7개 결제수단 + 메모 + 버튼 공간 확보 (키보드 뜰 때 하단 버튼 가려짐 방지) */
+#salesEditSheet .sheet{max-height:88vh;padding-bottom:100px;}
+#salesEditSheet .sales-edit-row{padding:8px 0;}
 .sales-edit-ic{font-size:18px;width:26px;text-align:center;}
 .sales-edit-label{flex:1;font-size:13px;color:var(--gray-700);}
 .sales-edit-row input{width:120px;text-align:right;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-variant-numeric:tabular-nums;}
@@ -5490,14 +5493,16 @@ function switchDashMode(mode){
 // ── 풀스크린 피벗 테이블 렌더 ──
 let _pivotData=null; // loadDashboard에서 저장
 function openDailyDetail(){
+  setLoad(true,'상세 비교 조회 중...');
   try{
-    if(!_pivotData||!_pivotData.days||!_pivotData.days.length){alert('정산 데이터를 먼저 로드해주세요.');return;}
+    if(!_pivotData||!_pivotData.days||!_pivotData.days.length){setLoad(false);toast('정산 데이터를 먼저 로드해주세요','warn');return;}
     const{days,salesMap,catMap,expMap,catNames,catColors,shortNames,mo,weekGroups,passedDays}=_pivotData;
     const cols=days.filter(d=>salesMap.hasOwnProperty(d));
     if(!cols.length){
       document.getElementById('dailyDetailContent').innerHTML='<div class="empty-state" style="padding:40px;"><p>매출 데이터가 없습니다</p></div>';
       document.getElementById('dailyDetailModal').style.display='block';
       document.body.style.overflow='hidden';
+      setLoad(false);
       return;
     }
 
@@ -5663,9 +5668,11 @@ function openDailyDetail(){
       contentEl.style.height='calc(100% - 90px)';
       modal._rotated=false;
     }
+    setLoad(false);
   }catch(err){
     console.error('상세비교 오류:',err);
-    alert('상세 비교 열기 실패: '+err.message);
+    setLoad(false);
+    toast('상세 비교를 열 수 없어요','error');
     document.body.style.overflow='';
   }
 }
@@ -8664,7 +8671,19 @@ function renderSalesCards(){
     return;
   }
   let monthTotal=0;
-  const cards=salesDaily.map(r=>{
+  // 합계 0원이면서 마감정산 자동 기록인 카드는 숨김 (휴무일 더미 데이터)
+  // 수정본(closing_edited) / 수동(manual)은 0원이어도 표시 — 사장님 의도 존중
+  const visibleRows=salesDaily.filter(r=>{
+    const total=salesRowTotal(r);
+    if(total>0) return true;
+    return (r.source||'manual')!=='closing';
+  });
+  if(!visibleRows.length){
+    wrap.innerHTML='<div class="sales-empty">이번 달 매출 기록이 없습니다<br><br>하단 [+ 매출 추가] 또는 마감정산 저장 시 자동 생성됩니다</div>';
+    totalEl.innerText='0원';
+    return;
+  }
+  const cards=visibleRows.map(r=>{
     const total=salesRowTotal(r);
     monthTotal+=total;
     const d=new Date(r.date+'T00:00:00');

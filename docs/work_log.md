@@ -4,6 +4,28 @@
 
 ---
 
+## [2026-04-23 후속] 2순위 Part C — 소형 UX 버그 묶음 ⑥⑦⑧⑨⑩
+
+### 상태: 구현완료 → 배포 예정
+### 규모: 중형 (5건 묶음, 실변경 ~20줄)
+
+### 변경 요약
+- **⑥ salesEditSheet 모바일 스크롤 여유** — `#salesEditSheet .sheet{max-height:88vh;padding-bottom:100px}` + `.sales-edit-row{padding:8px 0}` (CSS 3줄). 키보드 뜰 때 하단 저장 버튼 가려짐 방지.
+- **⑦ 0원 마감자동 카드 숨김** — `renderSalesCards`에 `visibleRows` 필터 도입. `total===0 && source==='closing'`만 제외. `closing_edited`/`manual`의 0원은 사장님 의도라 표시 유지.
+- **⑧ 상세비교 setLoad 추가** — `openDailyDetail` 시작/완료/빈 데이터/에러 경로 4곳 `setLoad(true/false)`. todo 4건 중 실제 필요 1건만 처리(나머지 3건은 네트워크 호출 없어 불필요).
+- **⑨ 비활성 카테고리 분류 UI** — `openCatPicker` 3단계 전부 이미 `is_active!==false` 필터 적용됨 확인. **수정 불필요**.
+- **⑩ 기술 에러 문구 노출** — `alert('상세 비교 열기 실패: TypeError: ...')` → `toast('상세 비교를 열 수 없어요','error')` + `console.error` 분리 유지.
+
+### 검증
+- ✅ node --check 통과 (6676 lines)
+- ✅ openDailyDetail 내 `alert` grep 0건, `setLoad` 경로 4개 모두 설정됨
+- ✅ DB 스키마 변경 없음, 매장 격리 영향 없음
+
+### 사장님 수동 작업
+- 앱 Ctrl+Shift+R. Supabase 변경 없음.
+
+---
+
 ## [2026-04-23 후속] 1순위 Part B — 대시보드 매출 차트 sales_daily 통합
 
 ### 상태: 구현완료 → 배포 예정 (사장님 백필 SQL 실행 필요)
