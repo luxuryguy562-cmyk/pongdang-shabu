@@ -5975,12 +5975,14 @@ function renderBankTxTable(){
     const isIn=r.amount>0;if(isIn)inSum+=r.amount;else outSum+=Math.abs(r.amount);
     const cat=r.category||'';
     const sub=r.sub_category||'';
-    const isReceiptRef=sub==='영수증 참조';
+    // UI 방어: cat===sub (중복값) 이면 sub 숨기고 1줄로 표시
+    const showSub=sub && sub!==cat;
+    const isReceiptRef=cat==='영수증 참조';
     const catColor=r.exclude_from_settlement?'var(--gray-400)':isReceiptRef?'var(--blue)':r.needs_review?'var(--warning)':'var(--text)';
-    const subDisplay=isReceiptRef?'📸 영수증 참조':sub;
-    const catHtml=sub
-      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${subDisplay}</div>`
-      : `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'-'}</div>`;
+    const catDisplay=isReceiptRef?'📸 영수증 참조':(cat||'-');
+    const catHtml=showSub
+      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${catDisplay}</div><div style="line-height:1.2;font-size:11px;color:${catColor};">${sub}</div>`
+      : `<div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${catDisplay}</div>`;
     const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     return `<tr>
       <td style="font-size:10px;padding:4px 2px;white-space:nowrap;">${dt}</td>
@@ -6038,12 +6040,14 @@ function renderCardTxTable(){
     total+=Math.abs(r.amount);
     const cat=r.category||'';
     const sub=r.sub_category||'';
-    const isReceiptRef=sub==='영수증 참조';
+    // UI 방어: cat===sub (중복값) 이면 sub 숨기고 1줄로 표시
+    const showSub=sub && sub!==cat;
+    const isReceiptRef=cat==='영수증 참조';
     const catColor=r.exclude_from_settlement?'var(--gray-400)':isReceiptRef?'var(--blue)':r.needs_review?'var(--warning)':'var(--text)';
-    const subDisplay=isReceiptRef?'📸 영수증 참조':sub;
-    const catHtml=sub
-      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${subDisplay}</div>`
-      : `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'-'}</div>`;
+    const catDisplay=isReceiptRef?'📸 영수증 참조':(cat||'-');
+    const catHtml=showSub
+      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${catDisplay}</div><div style="line-height:1.2;font-size:11px;color:${catColor};">${sub}</div>`
+      : `<div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${catDisplay}</div>`;
     const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     const name=r.merchant_name||r.description||'-';
     return `<tr${r.is_cancelled?' class="row-off"':''}>
@@ -6402,14 +6406,17 @@ async function saveTxEdit(){
     const existingMemo=r.sub_category||'';
     subVal=prompt('예비비 사용 세부내용 (예: 에어컨 수리)',existingMemo)||existingMemo||'예비비 사용';
   }
+  const payloadCat=pair.mainName||selected;
+  // 저장 방어: category === sub_category면 sub 비움
+  const payloadSub=(subVal && subVal!==payloadCat)?subVal:'';
   const payload={
     tx_date:newDate,
     description:type==='card'?r.description:newDesc,
     merchant_name:type==='card'?newDesc:r.merchant_name,
     amount:newAmount,
-    category:pair.mainName||selected,
+    category:payloadCat,
     category_id:pair.mainId,
-    sub_category:subVal,
+    sub_category:payloadSub,
     exclude_from_settlement:autoExclude||isExcludeChecked,
     needs_review:false,
     confidence:'manual'
@@ -7403,7 +7410,9 @@ function applyReviewChoice(item, selected){
   if(!selected){item.category='미분류';item.sub_category='';return;}
   const pair=resolveCatPair(selected);
   item.category=pair.mainName||selected;
-  item.sub_category=pair.subName||'';
+  const sub=pair.subName||'';
+  // 저장 방어: category === sub_category면 sub 비움 (중복 방지)
+  item.sub_category=(sub && sub!==item.category)?sub:'';
 }
 
 // 대분류 카테고리 타입 조회 헬퍼
@@ -7509,6 +7518,10 @@ async function saveExcelBatch(){
         : resolveCatPayload(item.category, item.sub_category);
       // receipt_ref / reserve / exclude 타입은 지출 집계에서 자동 제외
       const autoExclude=['receipt_ref','reserve','exclude'].includes(itemType);
+      // 저장 방어: cat === sub면 sub 비움 (중복 방지)
+      const finalCat=pair.mainName||item.category||null;
+      const rawSub=itemType==='reserve'?(item.sub_category||null):(pair.subName||null);
+      const finalSub=(rawSub && rawSub!==finalCat)?rawSub:null;
 
       return {
         store_id:currentStore.id,
@@ -7520,10 +7533,9 @@ async function saveExcelBatch(){
         amount:item.amount||0,
         balance:item.balance||null,
         source:'excel_'+type,
-        category:pair.mainName||item.category||null,
+        category:finalCat,
         category_id:pair.mainId,
-        // 예비비 타입은 sub_category에 메모 저장, 일반은 소분류명
-        sub_category:itemType==='reserve'?(item.sub_category||null):(pair.subName||null),
+        sub_category:finalSub,
         confidence:item.confidence||'high',
         needs_review:item.needs_review||false,
         review_reason:item.review_reason||null,
