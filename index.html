@@ -6140,13 +6140,20 @@ async function deleteTxMonth(type){
   if(type==='bank')loadBankTransactions();else loadCardTransactions();
 }
 
-// ─── 컬럼 정렬 토글 ───
+// ─── 컬럼 정렬 토글 (3회 클릭 시 원상태로) ───
+// 1클릭: 오름차순 → 2클릭: 내림차순 → 3클릭: 정렬 해제 (원상태)
 function toggleTxSort(type,col){
   if(type==='bank'){
-    if(bankSortCol===col){bankSortAsc=!bankSortAsc;}else{bankSortCol=col;bankSortAsc=true;}
+    if(bankSortCol===col){
+      if(bankSortAsc){bankSortAsc=false;}       // 오름 → 내림
+      else{bankSortCol=null;bankSortAsc=true;}  // 내림 → 해제
+    }else{bankSortCol=col;bankSortAsc=true;}
     renderBankTxTable();
   }else{
-    if(cardSortCol===col){cardSortAsc=!cardSortAsc;}else{cardSortCol=col;cardSortAsc=true;}
+    if(cardSortCol===col){
+      if(cardSortAsc){cardSortAsc=false;}
+      else{cardSortCol=null;cardSortAsc=true;}
+    }else{cardSortCol=col;cardSortAsc=true;}
     renderCardTxTable();
   }
 }
@@ -6164,6 +6171,8 @@ function updateSortHeaders(type){
     th.style.color=isActive?'var(--blue)':'';
     th.style.fontWeight=isActive?'800':'';
     th.style.background=isActive?'#EBF3FF':'';
+    // 툴팁: 정렬 해제 방법 안내
+    th.title=isActive?'한 번 더 누르면 정렬 해제':'클릭해서 정렬';
   });
 }
 
@@ -6180,9 +6189,11 @@ function openTxFilter(type){
   if(existing)existing.remove();
   const popup=document.createElement('div');
   popup.id='txFilterPopup';
-  popup.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:999;display:flex;align-items:end;justify-content:center;';
+  // z-index 1100 (bottom-nav 1000보다 위)
+  popup.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:1100;display:flex;align-items:end;justify-content:center;';
   const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px;max-height:80vh;display:flex;flex-direction:column;';
+  // margin-bottom:72px로 하단 네비바 위에 붙음 (네비바 높이=72px)
+  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px;max-height:75vh;margin-bottom:72px;display:flex;flex-direction:column;';
 
   let html='<div style="font-size:15px;font-weight:800;margin-bottom:16px;">필터</div><div style="overflow-y:auto;flex:1;">';
 
