@@ -7452,72 +7452,122 @@ function getCatLabel(cat,sub){
 // ─── 공통 카테고리 선택 바텀시트 (확인필요/편집 공용) ───
 // context: {current:string, onSelect:(val,memo)=>void, currentMemo?:string}
 function openCatPicker(context){
-  const typeLabel={expense:'💸 지출',income:'💰 매출',exclude:'🚫 정산제외',receipt_ref:'📸 영수증참조',reserve:'🏦 예비비'};
+  const typeLabel={expense:'💸 지출',income:'💰 매출',exclude:'🚫 정산제외',receipt_ref:'📸 영수증 참조',reserve:'🏦 예비비 사용'};
   const typeOrder=['expense','income','exclude','receipt_ref','reserve'];
+  const drillTypes=['expense','income','exclude']; // 2단계 진입 대상
   let sheet=document.getElementById('catPickerSheet');
   if(sheet)sheet.remove();
   sheet=document.createElement('div');
   sheet.id='catPickerSheet';
-  // z-index 7000: .sheet(6001)보다 높아야 시트 위에 뜸
   sheet.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:7000;display:flex;align-items:end;justify-content:center;';
   const box=document.createElement('div');
   box.style.cssText='background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:0;max-height:75vh;margin-bottom:72px;display:flex;flex-direction:column;';
-  let html=`<div style="padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);flex-shrink:0;">
-    <div style="font-size:15px;font-weight:800;">분류 선택</div>
-    <div style="font-size:22px;cursor:pointer;color:var(--gray-400);padding:0 4px;" id="catPickerClose">✕</div>
-  </div>
-  <div style="overflow-y:auto;flex:1;padding:10px 16px 20px;">`;
-  const cur=context.current||'';
-  const itemHtml=(val,label,color,isSub,isActive,type)=>
-    `<div class="cat-pick-item" data-val="${val}" data-type="${type}" style="padding:${isSub?'10px 14px 10px 32px':'12px 14px'};border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:${isSub?'13px':'14px'};font-weight:${isSub?'500':'600'};color:${isActive?'var(--blue)':'var(--text)'};background:${isActive?'#EBF3FF':''};display:flex;align-items:center;gap:8px;">
-      <span style="display:inline-block;width:${isSub?'8':'10'}px;height:${isSub?'8':'10'}px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-      ${isSub?'└ ':''}${label}
-    </div>`;
-  // 미분류
-  html+=itemHtml('미분류','(미분류)','#CBD5E1',false,cur==='미분류','');
-  // 타입별 섹션
-  const parents=(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false);
-  const byType={};
-  typeOrder.forEach(t=>byType[t]=[]);
-  parents.forEach(p=>{const t=p.category_type||'expense';if(byType[t])byType[t].push(p);});
-  typeOrder.forEach(t=>{
-    if(!byType[t].length)return;
-    html+=`<div style="font-size:11px;font-weight:800;color:var(--gray-500);padding:14px 4px 6px;letter-spacing:0.5px;">${typeLabel[t]}</div>`;
-    byType[t].forEach(p=>{
-      const color=p.color||'#94A3B8';
-      const pActive=(cur===p.name);
-      html+=itemHtml(p.name,p.name,color,false,pActive,t);
-      // 자식 소분류
-      const children=(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false)
-        .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-      children.forEach(ch=>{
-        const cColor=ch.color||color;
-        const chVal=`${p.name}>${ch.name}`;
-        const chActive=(cur===chVal);
-        html+=itemHtml(chVal,ch.name,cColor,true,chActive,t);
-      });
-    });
-  });
-  html+=`</div>`;
-  box.innerHTML=html;
   sheet.appendChild(box);
   document.body.appendChild(sheet);
-  box.querySelector('#catPickerClose').addEventListener('click',()=>sheet.remove());
-  sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.remove();});
-  box.querySelectorAll('.cat-pick-item').forEach(el=>{
-    el.addEventListener('click',()=>{
-      const val=el.dataset.val;
-      const type=el.dataset.type||'';
-      if(type==='reserve'){
-        const memo=prompt('예비비 사용 세부내용 (예: 에어컨 수리)',context.currentMemo||'');
-        if(memo===null){sheet.remove();return;} // 취소
-        context.onSelect(val,memo||'예비비 사용');
+  const close=()=>sheet.remove();
+  const pick=(val,memo)=>{context.onSelect(val,memo||'');close();};
+
+  // ── 1단계: 타입 선택 ──
+  function renderStage1(){
+    let html=`<div style="padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);flex-shrink:0;">
+      <div style="font-size:15px;font-weight:800;">분류 선택</div>
+      <div style="font-size:22px;cursor:pointer;color:var(--gray-400);padding:0 4px;" id="catPickerClose">✕</div>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:10px 16px 20px;">`;
+    // 미분류 (바로 선택)
+    html+=`<div class="cp-item" data-act="misc" style="padding:14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:14px;color:var(--gray-500);display:flex;align-items:center;gap:10px;">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#CBD5E1;"></span>(미분류)
+    </div>`;
+    // 타입 루프
+    typeOrder.forEach(t=>{
+      const parents=(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false&&(c.category_type||'expense')===t);
+      if(!parents.length) return;
+      const isDrill=drillTypes.includes(t);
+      const emoji=typeLabel[t].split(' ')[0];
+      const label=typeLabel[t].split(' ').slice(1).join(' ');
+      if(isDrill){
+        // 드릴다운: 지출/매출/제외
+        const cnt=parents.length+parents.reduce((n,p)=>n+(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false).length,0);
+        html+=`<div class="cp-item" data-act="drill" data-type="${t}" style="padding:16px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:space-between;">
+          <span style="display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">${emoji}</span>${label} <span style="color:var(--gray-400);font-weight:400;font-size:12px;">${cnt}개</span></span>
+          <span style="color:var(--gray-400);font-size:20px;">›</span>
+        </div>`;
       } else {
-        context.onSelect(val,'');
+        // 바로 선택: 영수증 참조 / 예비비
+        parents.forEach(p=>{
+          const color=p.color||'#94A3B8';
+          html+=`<div class="cp-item" data-act="${t==='reserve'?'reserve':'direct'}" data-val="${p.name}" style="padding:16px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:18px;">${emoji}</span>
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};"></span>
+            ${label}
+          </div>`;
+        });
       }
-      sheet.remove();
     });
-  });
+    html+=`</div>`;
+    box.innerHTML=html;
+    box.querySelector('#catPickerClose').addEventListener('click',close);
+    box.querySelectorAll('.cp-item').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const act=el.dataset.act;
+        if(act==='misc') pick('미분류','');
+        else if(act==='drill') renderStage2(el.dataset.type);
+        else if(act==='direct') pick(el.dataset.val,'');
+        else if(act==='reserve'){
+          const memo=prompt('예비비 사용 세부내용 (예: 에어컨 수리)',context.currentMemo||'');
+          if(memo===null){close();return;}
+          pick(el.dataset.val,memo||'예비비 사용');
+        }
+      });
+    });
+  }
+
+  // ── 2단계: 해당 타입의 카테고리 리스트 ──
+  function renderStage2(t){
+    const parents=(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false&&(c.category_type||'expense')===t)
+      .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+    const cur=context.current||'';
+    let html=`<div style="padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="catPickerBack" style="font-size:22px;cursor:pointer;color:var(--blue);padding:0 4px;line-height:1;">‹</div>
+        <div style="font-size:15px;font-weight:800;">${typeLabel[t]}</div>
+      </div>
+      <div style="font-size:22px;cursor:pointer;color:var(--gray-400);padding:0 4px;" id="catPickerClose">✕</div>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:10px 16px 20px;">`;
+    if(!parents.length){
+      html+=`<div style="padding:40px 20px;text-align:center;color:var(--gray-500);font-size:13px;line-height:1.6;">등록된 카테고리가 없습니다.<br>사이드메뉴 → 지출 카테고리에서 추가하세요.</div>`;
+    } else {
+      parents.forEach(p=>{
+        const color=p.color||'#94A3B8';
+        const pActive=(cur===p.name);
+        html+=`<div class="cp-item" data-val="${p.name}" style="padding:12px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:14px;font-weight:600;color:${pActive?'var(--blue)':'var(--text)'};background:${pActive?'#EBF3FF':''};display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+          ${p.name}
+        </div>`;
+        const children=(expCategories||[]).filter(c=>c.parent_id===p.id&&c.is_active!==false)
+          .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+        children.forEach(ch=>{
+          const cColor=ch.color||color;
+          const chVal=`${p.name}>${ch.name}`;
+          const chActive=(cur===chVal);
+          html+=`<div class="cp-item" data-val="${chVal}" style="padding:10px 14px 10px 32px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:13px;font-weight:500;color:${chActive?'var(--blue)':'var(--gray-700)'};background:${chActive?'#EBF3FF':''};display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cColor};flex-shrink:0;"></span>└ ${ch.name}
+          </div>`;
+        });
+      });
+    }
+    html+=`</div>`;
+    box.innerHTML=html;
+    box.querySelector('#catPickerClose').addEventListener('click',close);
+    box.querySelector('#catPickerBack').addEventListener('click',renderStage1);
+    box.querySelectorAll('.cp-item').forEach(el=>{
+      el.addEventListener('click',()=>pick(el.dataset.val,''));
+    });
+  }
+
+  sheet.addEventListener('click',e=>{if(e.target===sheet)close();});
+  renderStage1();
 }
 
 function applyReviewChoice(item, selected){
