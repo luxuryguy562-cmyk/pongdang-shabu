@@ -4,6 +4,44 @@
 
 ---
 
+## [2026-04-22] #54 "영수증 참조" 소분류 + 영수증 기반 집계 대체
+
+### 상태: 구현완료 (배포 대기, SQL 실행 필요)
+### 브랜치: claude/review-docs-assessment-1UF8u
+### 규모: 중형 (약 50줄 수정 + SQL 2건)
+### 배경
+- 카드 거래 1건 = 카테고리 1개 제약 → 이마트 45,000원에 야채/공산품/비품 섞여있을 때 애매
+- 사장님 제안: 카드 거래는 "영수증 참조"로 두고, 실제 집계는 영수증(품목별 분류)에서
+
+### 변경
+1. **expense_categories**: 식자재 대분류 아래 "영수증 참조" 소분류 INSERT (마이그레이션 SQL)
+2. **classification_rules**: sub_category='직구상세' → '영수증 참조' UPDATE (일괄)
+3. **mydata_transactions**: 기존 저장된 sub_category='직구상세' 건도 '영수증 참조'로 UPDATE
+4. **집계 로직** (calcExpenseByCategories + reconcileRender):
+   - `mydata_transactions.sub_category='영수증 참조'` 건은 **지출 집계에서 제외**
+   - 영수증(receipts)은 정상 집계 → 이중 집계 방지
+5. **UI 배지**: 거래내역 테이블에서 "📸 영수증 참조" 파란색 강조 표시
+
+### DB 변경
+- 스키마 변경 없음
+- 마이그레이션 SQL: `docs/sql/migrate_receipt_ref_2026_04_22.sql`
+  1. 백업 (classification_rules_bak_20260422_b)
+  2. 식자재 자식으로 "영수증 참조" INSERT
+  3. classification_rules + mydata_transactions sub_category UPDATE
+- 롤백 SQL: `docs/sql/migrate_receipt_ref_2026_04_22_rollback.sql`
+
+### 사장님 남은 할 일
+1. Supabase SQL Editor에서 `migrate_receipt_ref_2026_04_22.sql` 실행 (Run without RLS)
+2. 앱 하드 리프레시 (Ctrl+Shift+R)
+3. 거래내역 → 쿠팡/이마트/하나로마트 등 건에 📸 영수증 참조 표시 확인
+4. 영수증 촬영해서 품목별 분류 입력 → 실제 집계에 반영
+5. 대시보드 4월 지출에서 "이마트 45,000" 카드건이 더 이상 식자재로 집계되지 않는지 확인
+
+### 주의사항
+- 영수증 참조 건은 **영수증 촬영 안 하면 집계 누락됨** → 향후 알림 기능 필요 (별도 작업)
+
+---
+
 ## [2026-04-22] 매출/제외 카테고리 분리 (#53 category_type 컬럼 추가)
 
 ### 상태: 구현완료 (배포 대기)

@@ -5698,14 +5698,16 @@ async function calcExpenseByCategories(ym, mode){
   const isFinal=(mode==='final');
 
   // 진마감: mydata 전체 한 번에 조회 후 JS 필터 (카테고리별 N*2회 → 2회로 최적화)
+  // 영수증 참조 건은 제외 (실제 집계는 receipts에서 품목별로 처리)
   const[mdByAttrRes,mdByDateRes]=await Promise.all([
-    sb.from('mydata_transactions').select('amount,category_id')
+    sb.from('mydata_transactions').select('amount,category_id,sub_category')
       .eq('store_id',sid).eq('exclude_from_settlement',false).eq('attribution_month',ym),
-    sb.from('mydata_transactions').select('amount,category_id')
+    sb.from('mydata_transactions').select('amount,category_id,sub_category')
       .eq('store_id',sid).eq('exclude_from_settlement',false).is('attribution_month',null)
       .gte('tx_date',start).lte('tx_date',end)
   ]);
-  const allMdTx=[...(mdByAttrRes.data||[]),...(mdByDateRes.data||[])];
+  const allMdTx=[...(mdByAttrRes.data||[]),...(mdByDateRes.data||[])]
+    .filter(t=>t.sub_category!=='영수증 참조'); // 영수증에서 집계되므로 제외
   const getMydataAmount=(catId)=>allMdTx.filter(t=>t.category_id===catId).reduce((a,r)=>a+Math.abs(r.amount||0),0);
 
   // 집계 대상: 활성 카테고리 + 비활성이어도 이번 달 거래 있는 카테고리
@@ -5973,9 +5975,11 @@ function renderBankTxTable(){
     const isIn=r.amount>0;if(isIn)inSum+=r.amount;else outSum+=Math.abs(r.amount);
     const cat=r.category||'';
     const sub=r.sub_category||'';
-    const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--text)';
+    const isReceiptRef=sub==='영수증 참조';
+    const catColor=r.exclude_from_settlement?'var(--gray-400)':isReceiptRef?'var(--blue)':r.needs_review?'var(--warning)':'var(--text)';
+    const subDisplay=isReceiptRef?'📸 영수증 참조':sub;
     const catHtml=sub
-      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};">${sub}</div>`
+      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${subDisplay}</div>`
       : `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'-'}</div>`;
     const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     return `<tr>
@@ -6034,9 +6038,11 @@ function renderCardTxTable(){
     total+=Math.abs(r.amount);
     const cat=r.category||'';
     const sub=r.sub_category||'';
-    const catColor=r.exclude_from_settlement?'var(--gray-400)':r.needs_review?'var(--warning)':'var(--text)';
+    const isReceiptRef=sub==='영수증 참조';
+    const catColor=r.exclude_from_settlement?'var(--gray-400)':isReceiptRef?'var(--blue)':r.needs_review?'var(--warning)':'var(--text)';
+    const subDisplay=isReceiptRef?'📸 영수증 참조':sub;
     const catHtml=sub
-      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};">${sub}</div>`
+      ? `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'&nbsp;'}</div><div style="line-height:1.2;font-size:11px;color:${catColor};font-weight:${isReceiptRef?'700':'400'};">${subDisplay}</div>`
       : `<div style="line-height:1.2;font-size:11px;color:${catColor};">${cat||'-'}</div>`;
     const dt=(r.tx_date||'').slice(2); // YY-MM-DD
     const name=r.merchant_name||r.description||'-';
@@ -7543,7 +7549,8 @@ async function loadReconciliation(){
     const attLogs=attRes.data||[];
     const specialWages=swRes.data||[];
     const fixedCosts=(fcRes.data||[]).filter(a=>a.fixed_costs?.is_active!==false);
-    const transactions=txRes.data||[];
+    // 영수증 참조 거래는 지출 대조에서 제외 (receipts에서 품목별 집계)
+    const transactions=(txRes.data||[]).filter(t=>t.sub_category!=='영수증 참조');
     // 집계 대상: 활성 + 비활성이어도 이번 달 거래 있는 카테고리
     // composite 소분류는 대분류에서 합산하므로 스킵 (중복 방지)
     // category_type='expense'만 집계 (매출/제외는 지출대조 대상 아님)
