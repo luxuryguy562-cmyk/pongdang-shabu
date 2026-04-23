@@ -3647,16 +3647,32 @@ async function finishSettlement2(){
   },{onConflict:'store_id,settle_date'});
   if(error){setLoad(false);return toast('저장 실패: '+error.message,'error');}
   // ─── 새 기능: sales_daily 동시 기록 (매출 관리 페이지용) ───
-  try{ await syncClosingToSalesDaily(settleDate, items); }
-  catch(e){ console.error('[sales_daily sync]',e); /* 실패해도 마감정산은 성공 처리 */ }
+  let syncResult={skipped:false};
+  try{ syncResult=await syncClosingToSalesDaily(settleDate, items)||{skipped:false}; }
+  catch(e){
+    console.error('[sales_daily sync]',e);
+    toast('매출 관리 동기화 실패: '+e.message+' — 매출 관리 탭에서 수동 확인하세요','warn',4000);
+  }
   setLoad(false);
-  toast('마감 저장 완료!','success');location.reload();
+  if(syncResult.skipped){
+    toast('마감 저장 완료! (해당 날짜는 수동 수정본이라 매출 관리는 건너뜀)','info',4000);
+  } else {
+    toast('마감 저장 완료!','success');
+  }
+  location.reload();
 }
 
 // ─── 새 기능: 마감정산 → sales_daily 동기화 (하루 1행 upsert) ───
 // POS 현금 = (순수)현금 + QR + 계좌이체 합친 값이므로, 상세 입력값으로 분리 저장
+// 수동 편집본(source='closing_edited')은 보호 — 스킵하고 {skipped:true} 반환
 async function syncClosingToSalesDaily(settleDate, items){
-  if(!currentStore) return;
+  if(!currentStore) return {skipped:false};
+  // 기존 행의 source 먼저 확인 — 수정본이면 덮어쓰지 않음
+  const{data:existing}=await sb.from('sales_daily').select('source')
+    .eq('store_id',currentStore.id).eq('date',settleDate).maybeSingle();
+  if(existing && existing.source==='closing_edited'){
+    return {skipped:true};
+  }
   const cashDetailCash=items.cash_detail_cash||0;   // 순수 현금
   const cashDetailQr=items.cash_detail_qr||0;       // QR
   const cashDetailTr=items.cash_detail_transfer||0; // 계좌이체
@@ -3676,6 +3692,7 @@ async function syncClosingToSalesDaily(settleDate, items){
   };
   const{error}=await sb.from('sales_daily').upsert(payload,{onConflict:'store_id,date'});
   if(error) throw error;
+  return {skipped:false};
 }
 async function loadSettleList(){
   if(!guardStore()) return;
@@ -8657,7 +8674,7 @@ function renderSalesCards(){
     const dow=['일','월','화','수','목','금','토'][d.getDay()];
     const mmdd=r.date.slice(5);
     const src=r.source||'manual';
-    const srcLabel=src==='closing'?'마감정산 자동':'수동';
+    const srcLabel=src==='closing'?'마감정산 자동':(src==='closing_edited'?'✏️ 수정본':'수동');
     const itemsHtml=SALES_COLS.map(k=>{
       const v=Number(r[k])||0;
       const zero=v===0?'1':'';
@@ -8734,6 +8751,9 @@ async function saveSalesDaily(){
   if(!guardStore()) return;
   const date=document.getElementById('seDate').value;
   if(!date){toast('날짜를 선택하세요','warn');return;}
+  // ─── 수정본 보호 ① : 기존 closing 행을 수정하면 closing_edited 로 승격 ───
+  const prevSource=salesEditCtx?.source||'manual';
+  const nextSource=(salesEditCtx && prevSource==='closing') ? 'closing_edited' : prevSource;
   const payload={
     store_id:currentStore.id,
     date:date,
@@ -8745,10 +8765,24 @@ async function saveSalesDaily(){
     extra_large:unFmt(document.getElementById('seExtraLarge').value),
     extra_small:unFmt(document.getElementById('seExtraSmall').value),
     memo:document.getElementById('seMemo').value||null,
-    source:salesEditCtx?.source||'manual'
+    source:nextSource
   };
   const total=SALES_COLS.reduce((s,k)=>s+payload[k],0);
   if(total<=0){toast('금액을 1개 이상 입력하세요','warn');return;}
+  // ─── 날짜 충돌 확인 ② : 편집 모드에서 날짜를 다른 날로 바꾼 경우 ───
+  // 바뀐 날짜에 이미 다른 카드가 있으면 덮어쓸지 confirm
+  if(salesEditCtx && salesEditCtx.date!==date){
+    const conflict=salesDaily.find(r=>r.date===date && r.id!==salesEditCtx.id);
+    if(conflict){
+      const ok=confirm(`${date}에 이미 매출 카드가 있어요.\n덮어쓸까요?\n(기존 카드는 사라집니다)`);
+      if(!ok) return;
+      // 충돌 행 먼저 삭제해야 UNIQUE(store_id,date)에 걸리지 않음
+      setLoad(true,'기존 카드 정리 중...');
+      const{error:delErr}=await sb.from('sales_daily').delete()
+        .eq('id',conflict.id).eq('store_id',currentStore.id);
+      if(delErr){setLoad(false);toast('덮어쓰기 실패: '+delErr.message,'error');return;}
+    }
+  }
   setLoad(true,'저장 중...');
   // store_id + date UNIQUE 제약 → upsert 사용
   const{error}=await sb.from('sales_daily').upsert(payload,{onConflict:'store_id,date'});

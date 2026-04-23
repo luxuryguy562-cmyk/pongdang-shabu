@@ -4,6 +4,42 @@
 
 ---
 
+## [2026-04-23 후속] 1순위 Part A — 매출 관리 자기-버그 ①②③ 수정
+
+### 상태: 구현완료 → 배포 예정
+### 규모: 중형 (순수 로직 4군데, 약 40줄 추가)
+### 브랜치: `claude/complete-priority-tasks-yRxCN`
+
+### 배경
+2026-04-23 심야 #58 매출 관리 v2 직후, todo_next_session.md 1순위 ①②③ (dev_lessons #46의 근원) 정리.
+
+### 변경 요약 — DB 무변경, 순수 JS
+1. **`syncClosingToSalesDaily` (3665~3696)** — upsert 전 기존 행 `source` 조회. `closing_edited`면 스킵 + `{skipped:true}` 반환.
+2. **`finishSettlement2` (3624~3663)** — sync 에러 시 `toast(..,'warn',4000)`, sync skip 시 `toast('(해당 날짜는 수동 수정본..)','info',4000)`. 성공 시 기존 토스트 유지.
+3. **`saveSalesDaily` (8733~)** —
+   - 편집 모드 + 기존 source='closing' → `source='closing_edited'` 자동 승격
+   - 편집 모드 + 날짜 바뀜 + 새 날짜에 타 카드 존재 → `confirm` → 타 카드 DELETE 후 upsert
+4. **`renderSalesCards` (8677)** — `closing_edited` 뱃지 `✏️ 수정본`
+
+### 검증
+- ✅ node --check 통과 (6663 lines 인라인 JS)
+- ✅ `closing_edited` grep 4건 (db_schema, dev_lessons, index.html 2곳)
+- ✅ DB 스키마 변경 없음, source TEXT 컬럼 값만 확장
+- ✅ docs/db_schema.md, dev_lessons.md #46 추가
+
+### 사장님 수동 작업
+- Supabase 변경 없음
+- 앱에서 Ctrl+Shift+R 후 시나리오:
+  1. 마감정산 저장 → 매출 관리에 카드 생성 확인 (`마감정산 자동`)
+  2. 그 카드 탭 → 금액 수정 → 저장 → `✏️ 수정본` 뱃지 확인
+  3. 같은 날 마감정산 재저장 → 수정본 유지 + `info` 토스트 확인
+  4. 편집 중 날짜를 기존 카드 있는 날짜로 변경 → 덮어쓰기 confirm 뜨는지
+
+### 다음 단계 (Part B)
+- 1순위 ④: 대시보드 매출 차트 데이터 소스 → `sales_daily` 통합 (2~3시간, 별도 계획서 필요)
+
+---
+
 ## 🚦 다음 세션 이어받기 (2026-04-23 말미 기록)
 
 **진입 트리거 (사장님이 칠 말)**: `docs/todo_next_session.md 봐. 1순위부터 진행해줘`
