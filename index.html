@@ -6378,7 +6378,7 @@ async function saveTxEdit(){
   const newDesc=document.getElementById('txEditDesc').value.trim();
   const inVal=unFmt(document.getElementById('txEditIn').value)||0;
   const outVal=unFmt(document.getElementById('txEditOut').value)||0;
-  const isExclude=document.getElementById('txEditExclude').checked;
+  const isExcludeChecked=document.getElementById('txEditExclude').checked;
   const selected=document.getElementById('txEditCatArea').dataset.selected||origCat||'';
   // 금액 부호 결정
   let newAmount;
@@ -6392,6 +6392,16 @@ async function saveTxEdit(){
   }
   // 분류 FK 정합성: 소분류 선택 → 대분류 id + 소분류명
   const pair=resolveCatPair(selected);
+  // linked 타입(receipt_ref/reserve/exclude) 자동 exclude + 메모(예비비) 처리
+  const catType=getCatType(pair.mainName||selected);
+  const autoExclude=['receipt_ref','reserve','exclude'].includes(catType);
+  const isReserve=(catType==='reserve');
+  // 예비비면 메모 입력 받기 (기존 sub_category 또는 새로 입력)
+  let subVal=pair.subName||'';
+  if(isReserve){
+    const existingMemo=r.sub_category||'';
+    subVal=prompt('예비비 사용 세부내용 (예: 에어컨 수리)',existingMemo)||existingMemo||'예비비 사용';
+  }
   const payload={
     tx_date:newDate,
     description:type==='card'?r.description:newDesc,
@@ -6399,23 +6409,44 @@ async function saveTxEdit(){
     amount:newAmount,
     category:pair.mainName||selected,
     category_id:pair.mainId,
-    sub_category:pair.subName||'',
-    exclude_from_settlement:isExclude,
+    sub_category:subVal,
+    exclude_from_settlement:autoExclude||isExcludeChecked,
     needs_review:false,
     confidence:'manual'
     // tx_hash 는 건드리지 않음 (C안: 원본 지문 유지 → 재업로드 중복 차단 정상 작동)
   };
   const{error}=await sb.from('mydata_transactions').update(payload).eq('id',id).eq('store_id',currentStore.id);
   if(error){toast('저장 실패: '+error.message,'error');return;}
+  // 예비비 로그 동기화 (source_tx_id 기준)
+  if(isReserve){
+    const{data:existLog}=await sb.from('reserve_fund_logs').select('id').eq('source_tx_id',id).eq('store_id',currentStore.id);
+    const logPayload={
+      store_id:currentStore.id,
+      log_date:newDate,
+      year_month:(newDate||'').slice(0,7),
+      type:'withdrawal',
+      amount:Math.abs(newAmount),
+      memo:subVal,
+      source_tx_id:id
+    };
+    if(existLog&&existLog.length){
+      await sb.from('reserve_fund_logs').update(logPayload).eq('id',existLog[0].id);
+    } else {
+      await sb.from('reserve_fund_logs').insert(logPayload);
+    }
+  } else if(origCat==='예비비 사용'){
+    // 예비비에서 다른 분류로 변경 → 기존 log 삭제
+    await sb.from('reserve_fund_logs').delete().eq('source_tx_id',id).eq('store_id',currentStore.id);
+  }
   // 로컬 데이터 반영
   Object.assign(r,payload);
   closeTxEdit();
   toast('저장 완료','success');
-  // 자동 학습 (분류가 바뀐 경우)
-  if(selected&&selected!=='미분류'&&selected!==origCat){
+  // 자동 학습 (분류가 바뀐 경우, 단 예비비는 학습 제외 — 메모라서)
+  if(!isReserve && selected&&selected!=='미분류'&&selected!==origCat){
     const kw=r.description||r.merchant_name||'';
     const txType=r.tx_type||type||'both';
-    if(kw) learnClassification(kw,pair.mainName||selected,pair.subName||'',txType,isExclude).catch(()=>{});
+    if(kw) learnClassification(kw,pair.mainName||selected,pair.subName||'',txType,autoExclude||isExcludeChecked).catch(()=>{});
   }
   renderBankTxTable();renderCardTxTable();
 }
@@ -7275,8 +7306,8 @@ function openReviewItems(){
   const reviewItems=excelParsedData.filter(i=>i.needs_review);
   let html='';
   // 타입별 대분류 그룹 (DB 기반 완전 동적 — 하드코딩 없음)
-  const typeLabel={expense:'💸 지출',income:'💰 매출',exclude:'🚫 제외'};
-  const mainsByType={expense:[],income:[],exclude:[]};
+  const typeLabel={expense:'💸 지출',income:'💰 매출',exclude:'🚫 제외',receipt_ref:'📸 영수증참조',reserve:'🏦 예비비'};
+  const mainsByType={expense:[],income:[],exclude:[],receipt_ref:[],reserve:[]};
   (expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false).forEach(p=>{
     const t=p.category_type||'expense';
     if(mainsByType[t]) mainsByType[t].push(p);
@@ -7287,12 +7318,14 @@ function openReviewItems(){
     const globalIdx=excelParsedData.indexOf(item);
     const curMain=item.category||'미분류';
     const curSub=item.sub_category||'';
-    // 현재 대분류의 자식 소분류 목록
+    // 현재 대분류의 타입 파악 (예비비면 메모, 아니면 소분류)
     const parentCat=(expCategories||[]).find(c=>c.name===curMain&&!c.parent_id);
+    const curType=parentCat?.category_type||'expense';
+    const isReserve=(curType==='reserve');
     const curChildren=parentCat?(expCategories||[]).filter(c=>c.parent_id===parentCat.id&&c.is_active!==false):[];
     // 대분류 옵션: optgroup으로 타입별 구분 + '미분류' 추가
     let mainOpts=`<option value="미분류"${curMain==='미분류'?' selected':''}>미분류</option>`;
-    ['expense','income','exclude'].forEach(t=>{
+    ['expense','income','exclude','receipt_ref','reserve'].forEach(t=>{
       if(!mainsByType[t].length) return;
       mainOpts+=`<optgroup label="${typeLabel[t]}">`;
       mainsByType[t].forEach(p=>{
@@ -7300,10 +7333,12 @@ function openReviewItems(){
       });
       mainOpts+=`</optgroup>`;
     });
-    // 소분류 옵션
-    const subOpts=curChildren.length
-      ? `<option value="">(소분류 없음)</option>`+curChildren.map(ch=>`<option value="${ch.name}"${ch.name===curSub?' selected':''}>${ch.name}</option>`).join('')
-      : `<option value="">(소분류 없음)</option>`;
+    // 두 번째 칸: 예비비면 메모 input, 아니면 소분류 select
+    const subFieldHtml=isReserve
+      ? `<input type="text" class="input-field" id="rvSub${globalIdx}" placeholder="세부 내용 (예: 에어컨 수리)" value="${curSub.replace(/"/g,'&quot;')}" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" data-input="updateReviewItem|${globalIdx}">`
+      : (curChildren.length
+        ? `<select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvSub${globalIdx}" data-change="updateReviewItem|${globalIdx}"><option value="">(소분류 없음)</option>${curChildren.map(ch=>`<option value="${ch.name}"${ch.name===curSub?' selected':''}>${ch.name}</option>`).join('')}</select>`
+        : `<select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvSub${globalIdx}" data-change="updateReviewItem|${globalIdx}" disabled><option value="">(소분류 없음)</option></select>`);
     html+=`<div style="background:var(--warn-light);border-radius:12px;padding:14px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div style="font-size:14px;font-weight:700;">${desc}</div>
@@ -7313,7 +7348,7 @@ function openReviewItems(){
       <div style="font-size:11px;color:var(--gray-600);margin-bottom:8px;">${item.tx_date} ${item.tx_time||''}</div>
       <div style="display:flex;gap:6px;">
         <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvMain${globalIdx}" data-change="onReviewMainChange|${globalIdx}">${mainOpts}</select>
-        <select class="input-field" style="flex:1;margin-bottom:0;padding:8px;font-size:12px;" id="rvSub${globalIdx}" data-change="updateReviewItem|${globalIdx}"${curChildren.length?'':' disabled'}>${subOpts}</select>
+        ${subFieldHtml}
       </div>
       ${item.attribution_month?`<div style="margin-top:6px;font-size:11px;color:var(--blue);">귀속월: ${item.attribution_month}</div>`:''}
     </div>`;
@@ -7322,7 +7357,7 @@ function openReviewItems(){
   openSheet('excelReviewSheet');
 }
 
-// 대분류 변경 시 소분류 드롭다운 갱신
+// 대분류 변경 시 소분류 드롭다운 or 메모 입력으로 전환
 function onReviewMainChange(idx){
   if(!excelParsedData||!excelParsedData[idx])return;
   const mainEl=document.getElementById('rvMain'+idx);
@@ -7330,9 +7365,35 @@ function onReviewMainChange(idx){
   if(!mainEl||!subEl)return;
   const main=mainEl.value;
   const parent=(expCategories||[]).find(c=>c.name===main&&!c.parent_id);
-  const children=parent?(expCategories||[]).filter(c=>c.parent_id===parent.id&&c.is_active!==false):[];
-  subEl.innerHTML='<option value="">(소분류 없음)</option>'+children.map(ch=>`<option value="${ch.name}">${ch.name}</option>`).join('');
-  subEl.disabled=!children.length;
+  const isReserve=(parent?.category_type==='reserve');
+  // 예비비 대분류면 → input으로 교체 (메모 입력)
+  if(isReserve){
+    if(subEl.tagName!=='INPUT'){
+      const newInput=document.createElement('input');
+      newInput.type='text';
+      newInput.id=subEl.id;
+      newInput.className='input-field';
+      newInput.placeholder='세부 내용 (예: 에어컨 수리)';
+      newInput.value='';
+      newInput.style.cssText='flex:1;margin-bottom:0;padding:8px;font-size:12px;';
+      newInput.setAttribute('data-input','updateReviewItem|'+idx);
+      subEl.parentNode.replaceChild(newInput,subEl);
+    }
+  } else {
+    // 일반 카테고리 → select로 (input이었다면 복귀)
+    if(subEl.tagName==='INPUT'){
+      const newSel=document.createElement('select');
+      newSel.id=subEl.id;
+      newSel.className='input-field';
+      newSel.style.cssText='flex:1;margin-bottom:0;padding:8px;font-size:12px;';
+      newSel.setAttribute('data-change','updateReviewItem|'+idx);
+      subEl.parentNode.replaceChild(newSel,subEl);
+    }
+    const selEl=document.getElementById('rvSub'+idx);
+    const children=parent?(expCategories||[]).filter(c=>c.parent_id===parent.id&&c.is_active!==false):[];
+    selEl.innerHTML='<option value="">(소분류 없음)</option>'+children.map(ch=>`<option value="${ch.name}">${ch.name}</option>`).join('');
+    selEl.disabled=!children.length;
+  }
   updateReviewItem(idx);
 }
 
@@ -7345,13 +7406,25 @@ function applyReviewChoice(item, selected){
   item.sub_category=pair.subName||'';
 }
 
+// 대분류 카테고리 타입 조회 헬퍼
+function getCatType(mainName){
+  const p=(expCategories||[]).find(c=>c.name===mainName&&!c.parent_id);
+  return p?.category_type||'expense';
+}
+
 function updateReviewItem(idx){
   if(!excelParsedData||!excelParsedData[idx])return;
   const main=document.getElementById('rvMain'+idx)?.value||'';
   const sub=document.getElementById('rvSub'+idx)?.value||'';
-  // 대분류>소분류 조합. sub 비어있으면 대분류만
-  const selected=sub?`${main}>${sub}`:main;
-  applyReviewChoice(excelParsedData[idx], selected);
+  const type=getCatType(main);
+  // 예비비: sub는 메모 (카테고리 연결 X). 일반: sub는 소분류명
+  if(type==='reserve'){
+    excelParsedData[idx].category=main;
+    excelParsedData[idx].sub_category=sub; // 메모
+  } else {
+    const selected=sub?`${main}>${sub}`:main;
+    applyReviewChoice(excelParsedData[idx], selected);
+  }
   excelParsedData[idx].needs_review=false;
   excelParsedData[idx].confidence='high';
 }
@@ -7364,8 +7437,13 @@ async function confirmReviewAndSave(){
       const idx=excelParsedData.indexOf(item);
       const main=document.getElementById('rvMain'+idx)?.value||'';
       const sub=document.getElementById('rvSub'+idx)?.value||'';
-      const selected=sub?`${main}>${sub}`:main;
-      applyReviewChoice(item, selected);
+      const type=getCatType(main);
+      if(type==='reserve'){
+        item.category=main; item.sub_category=sub; // 메모
+      } else {
+        const selected=sub?`${main}>${sub}`:main;
+        applyReviewChoice(item, selected);
+      }
       item.needs_review=false;
       // 자동 학습: 수동 분류한 키워드를 DB에 저장 (다음부터 자동 매칭)
       const keyword=item.description||item.merchant_name||'';
@@ -7388,11 +7466,14 @@ async function saveExcelBatch(){
   const type=excelUploadType;
 
   try{
-    // expense_categories 조회 → expCategories 캐시 미존재 시 로드
+    // expense_categories 조회 → expCategories 캐시 미존재 시 로드 (category_type 포함)
     if(!expCategories?.length){
-      const{data}=await sb.from('expense_categories').select('id,name,parent_id').eq('store_id',currentStore.id).eq('is_active',true);
+      const{data}=await sb.from('expense_categories').select('id,name,parent_id,category_type').eq('store_id',currentStore.id).eq('is_active',true);
       expCategories=data||[];
     }
+    // 카테고리 타입 맵 (이름 → type)
+    const typeByName={};
+    (expCategories||[]).filter(c=>!c.parent_id).forEach(c=>{typeByName[c.name]=c.category_type||'expense';});
     // category(대분류>소분류 or 대분류) + sub_category → {mainId, mainName, subName}
     // 규칙: mydata_transactions.category_id는 항상 대분류 id
     const resolveCatPayload=(catStr,subStr)=>{
@@ -7421,7 +7502,13 @@ async function saveExcelBatch(){
     const rows=excelParsedData.map(item=>{
       const hashSrc=`${item.tx_date}|${item.tx_time||''}|${Math.abs(item.amount||0)}|${item.description||item.merchant_name||''}`;
       const txHash=btoa(unescape(encodeURIComponent(hashSrc))).slice(0,40);
-      const pair=resolveCatPayload(item.category, item.sub_category);
+      // 예비비 타입이면 item.category는 '예비비 사용', item.sub_category는 메모 → resolveCatPayload에 category만 전달
+      const itemType=typeByName[item.category]||'expense';
+      const pair=(itemType==='reserve')
+        ? resolveCatPayload(item.category, '')
+        : resolveCatPayload(item.category, item.sub_category);
+      // receipt_ref / reserve / exclude 타입은 지출 집계에서 자동 제외
+      const autoExclude=['receipt_ref','reserve','exclude'].includes(itemType);
 
       return {
         store_id:currentStore.id,
@@ -7435,11 +7522,12 @@ async function saveExcelBatch(){
         source:'excel_'+type,
         category:pair.mainName||item.category||null,
         category_id:pair.mainId,
-        sub_category:pair.subName||null,
+        // 예비비 타입은 sub_category에 메모 저장, 일반은 소분류명
+        sub_category:itemType==='reserve'?(item.sub_category||null):(pair.subName||null),
         confidence:item.confidence||'high',
         needs_review:item.needs_review||false,
         review_reason:item.review_reason||null,
-        exclude_from_settlement:item.exclude_from_settlement||false,
+        exclude_from_settlement:autoExclude||item.exclude_from_settlement||false,
         attribution_month:item.attribution_month||null,
         supply_amount:item.supply_amount||null,
         vat_amount:item.vat_amount||null,
@@ -7468,15 +7556,34 @@ async function saveExcelBatch(){
       setLoad(false);return;
     }
 
-    // 50건씩 나눠서 저장 (Supabase 제한)
+    // 50건씩 나눠서 저장 (Supabase 제한) + 저장된 id 수집 (예비비 log 동기화용)
+    const insertedIds=[];
     for(let i=0;i<newRows.length;i+=50){
       const chunk=newRows.slice(i,i+50);
-      const{error}=await sb.from('mydata_transactions').insert(chunk);
+      const{data:saved,error}=await sb.from('mydata_transactions').insert(chunk).select('id,category,sub_category,amount,tx_date');
       if(error)throw error;
+      (saved||[]).forEach(s=>insertedIds.push(s));
+    }
+
+    // 예비비 사용 건 → reserve_fund_logs 자동 동기화
+    const reserveTxs=insertedIds.filter(t=>t.category==='예비비 사용');
+    if(reserveTxs.length){
+      const logRows=reserveTxs.map(t=>({
+        store_id:currentStore.id,
+        log_date:t.tx_date,
+        year_month:(t.tx_date||'').slice(0,7),
+        type:'withdrawal',
+        amount:Math.abs(t.amount||0),
+        memo:t.sub_category||'예비비 사용',
+        source_tx_id:t.id
+      }));
+      const{error:logErr}=await sb.from('reserve_fund_logs').insert(logRows);
+      if(logErr) console.error('예비비 로그 동기화 실패:',logErr);
     }
 
     let msg=`${newRows.length}건 저장 완료!`;
     if(dupCount>0) msg+=` (중복 ${dupCount}건 제외)`;
+    if(reserveTxs.length) msg+=` · 예비비 ${reserveTxs.length}건 동기화`;
     toast(msg,'success');
 
     closeSheet('excelUploadSheet');

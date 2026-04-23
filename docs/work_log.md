@@ -4,6 +4,50 @@
 
 ---
 
+## [2026-04-22] #56 영수증참조+예비비 linked 카테고리 분리 (#54 구조 변경)
+
+### 상태: 구현완료 (배포 대기, SQL 실행 필요)
+### 브랜치: claude/review-docs-assessment-1UF8u
+### 규모: 중형 (SQL 2개 + 코드 약 100줄)
+
+### 배경
+- #54에서 "식자재 > 영수증 참조" 소분류로 만들었는데 사장님 지적:
+  - 한 영수증에 식자재+비품 섞여있으면 비품도 식자재로 집계됨 (같은 문제 재발)
+  - 영수증 참조/예비비는 지출 카테고리가 아니라 "다른 시스템 연결용" 플래그
+  - 둘을 하나의 "linked" 타입으로 묶지 말고 분리 (예비비는 메모 필요)
+
+### 변경
+1. **category_type 확장**: expense/income/exclude → + **receipt_ref** + **reserve** (5종)
+2. **#54 구조 취소**: 식자재 > 영수증 참조 소분류 삭제
+3. **신규 대분류 2개 INSERT**:
+   - "영수증 참조" (category_type='receipt_ref', 시스템 상수)
+   - "예비비 사용" (category_type='reserve', 시스템 상수)
+4. **reserve_fund_logs.source_tx_id** 컬럼 추가 (FK→mydata_transactions, ON DELETE SET NULL)
+5. **관리 화면 탭 3개 유지** (지출/매출/제외만 사장님 관리)
+6. **리뷰 드롭다운 optgroup 5개**: 📸 영수증참조, 🏦 예비비 추가
+7. **예비비 선택 시 메모 입력 필드** (확인필요 시트, 거래 편집 시트)
+8. **자동 동기화**: 예비비 거래 저장 시 reserve_fund_logs INSERT (source_tx_id 연결)
+9. **exclude_from_settlement 자동**: receipt_ref/reserve/exclude 타입은 자동 true
+10. **saveTxEdit**: 예비비로 분류 변경 시 log 동기화(INSERT/UPDATE), 다른 분류로 변경 시 기존 log 삭제
+
+### DB 변경
+- 마이그레이션: `docs/sql/migrate_linked_categories_2026_04_22.sql`
+  1. 백업 3개 (expense_categories_bak_20260422_c 등)
+  2. reserve_fund_logs.source_tx_id 컬럼 추가
+  3. 영수증 참조 + 예비비 사용 대분류 INSERT
+  4. classification_rules UPDATE: sub_category='영수증 참조' → category='영수증 참조', sub=''
+  5. mydata_transactions UPDATE: 기존 '식자재>영수증 참조' → 새 대분류로 이동
+  6. 식자재 자식 '영수증 참조' DELETE
+- 롤백 SQL: `migrate_linked_categories_2026_04_22_rollback.sql`
+
+### 사장님 남은 할 일
+1. Supabase SQL Editor에서 `migrate_linked_categories_2026_04_22.sql` 실행 (Run without RLS)
+2. 앱 하드 리프레시
+3. 확인필요 드롭다운에서 📸 영수증참조 / 🏦 예비비 그룹 확인
+4. 예비비 사용 건 테스트: 메모 입력 → 현황>예비비에서 자동 차감 확인
+
+---
+
 ## [2026-04-22] #54 "영수증 참조" 소분류 + 영수증 기반 집계 대체
 
 ### 상태: 구현완료 (배포 대기, SQL 실행 필요)
