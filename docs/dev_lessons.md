@@ -495,6 +495,108 @@ const targetIds = [cat.id, ...childIds];
 
 ---
 
+## 40. 동적 DOM 바텀시트는 sheet-overlay 패턴 사용 (2026-04-22)
+`document.body.appendChild(sheet)` + 인라인 `position:fixed; top:0; bottom:0;`로 바텀시트 만들면 **화면 중간에 떠버리는 버그** 발생.
+
+```
+❌ const sheet=document.createElement('div');
+   sheet.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;...';
+   document.body.appendChild(sheet);
+   → containing block 이슈로 중간에 뜸
+✅ HTML에 미리 <div class="sheet-overlay" id="..."><div class="sheet">...</div></div> 정의
+   → 기존 openSheet/closeSheet 호출
+```
+
+**원인 추정**:
+- body에 `overflow-x:hidden; overflow-y:auto; position:relative; max-width:100vw`
+- 기존 `.sheet`의 transform 조상이 자손 position:fixed의 containing block을 바꿈
+- 이론적으로 body 직접 append면 영향 없어야 하지만, 모바일 브라우저에서 전체 화면 안 덮음
+
+**해결**:
+1. `<div class="sheet-overlay" id="catPickerSheet" style="z-index:7000;"><div class="sheet" id="catPickerBox" style="z-index:7001;...">...</div></div>` HTML에 미리
+2. 동적 함수는 `.sheet` 내부 innerHTML만 갱신
+3. `openSheet('catPickerSheet')` / `closeSheet('catPickerSheet')` 호출
+
+**z-index 위계 (2026-04-22 확정)**:
+- `.bottom-nav`: 1000
+- 필터 팝업: 1100 + margin-bottom:72px (네비바 회피)
+- `.sheet-overlay`: 6000, `.sheet`: 6001 (기본 바텀시트)
+- 중첩 바텀시트 (예: 분류 선택): 7000 / 7001
+
+---
+
+## 41. 정렬 UX는 3단계 토글 (오름 → 내림 → 해제) (2026-04-22)
+사장님 "정렬 걸었을 때 원상태로 가는 방법 없다" 지적.
+
+```
+❌ 2단계: 오름↑ ↔ 내림↓ (해제 불가, 계속 정렬 유지)
+✅ 3단계: 오름↑ → 내림↓ → 해제 (sortCol=null, 원상태)
+```
+
+**구현**:
+```js
+if(sortCol===col){
+  if(sortAsc){sortAsc=false;}        // 오름 → 내림
+  else{sortCol=null;sortAsc=true;}   // 내림 → 해제
+}else{sortCol=col;sortAsc=true;}
+```
+
+**UX 보강**:
+- 활성 헤더 색상 강조 (파란색 + 굵게 + 연한 파랑 배경)
+- 화살표 △▽ → ↑↓ (굵고 명확)
+- title 툴팁: '한 번 더 누르면 정렬 해제'
+
+---
+
+## 42. 카테고리 선택은 3단계 드릴다운 + 시스템 카테고리는 바로 선택 (2026-04-22)
+바텀시트에 모든 카테고리 다 펼치면 가시성 떨어짐. 타입별 드릴다운으로 분리.
+
+```
+1단계: 타입 선택
+  ├ 💸 지출 › (드릴다운)
+  ├ 💰 매출 ›
+  ├ 🚫 정산제외 ›
+  ├ 📸 영수증 참조 (바로 선택)
+  └ 🏦 예비비 사용 (메모 prompt 후 바로 선택)
+
+2단계: 대분류 리스트 (선택한 타입)
+  - 자식 있음 → '›' 표시, 탭 시 3단계
+  - 자식 없음 → 바로 선택
+
+3단계: 소분류 리스트
+  - 최상단 '대분류 (소분류 없이)' 옵션 포함
+  - 각 소분류 선택 → '대분류>소분류' 반환
+```
+
+**교훈**:
+- 시스템 카테고리(영수증 참조/예비비)는 하위 구조 불필요 → 1단계에서 즉시 선택
+- 사용자 관리 카테고리(지출/매출/제외)는 드릴다운으로 정리
+- 개수 힌트("11개") 같은 건 사장님이 불필요하다고 판단 → 제거
+
+---
+
+## 43. resolveCatPair에 '>' 분리 로직 필수 (FK 일관성) (2026-04-22)
+바텀시트가 `대분류>소분류` 형식의 문자열 반환. applyReviewChoice/saveTxEdit/saveExcelBatch 모두 resolveCatPair 호출.
+
+**문제**: resolveCatPair('식자재>육류') → DB에 그 이름 카테고리 없음 → `{mainId:null, mainName:'식자재>육류'}`
+→ item.category='식자재>육류'로 저장 → FK 깨짐 + UI 표시 이상
+
+**해결**: resolveCatPair 입력에 '>' 있으면 **분리 후 DB 조회**:
+```js
+if(catName.includes('>')){
+  const parts=catName.split('>').map(s=>s.trim());
+  const subName=parts.pop();
+  const mainName=parts.join('>');
+  const mainCat=expCategories.find(c=>c.name===mainName&&!c.parent_id);
+  const subCat=mainCat?expCategories.find(c=>c.name===subName&&c.parent_id===mainCat.id):null;
+  return {mainId:mainCat?.id||null, mainName:mainCat?.name||mainName, subName:subCat?.name||subName};
+}
+```
+
+→ 모든 저장 경로에서 **대분류 id 고정** 규칙(dev_lessons #33) 자동 준수.
+
+---
+
 ## 29. 세션 시작 시 `git fetch --all` 필수 (2026-04-17 Phase 2a 사고)
 새 Claude Code 세션이 시작되면 **로컬 git은 이전 세션의 snapshot**. 원격에서 다른 세션/사장님이 push한 커밋은 모른다.
 
