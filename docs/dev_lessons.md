@@ -617,3 +617,23 @@ if(catName.includes('>')){
 2. 로컬 브랜치 behind/ahead 확인 (`git status`, `git log HEAD..origin/main`)
 3. 사장님이 "X 커밋 있음"이라 하면 grep 없으면 **fetch 먼저 의심**
 4. MCP GitHub 도구(`mcp__github__get_file_contents`, `list_commits`)도 원격 fresh 상태 보여줌 — 적극 활용
+
+---
+
+## 44. 외부 프레임워크 흡수는 "사고법만, 인프라는 버린다" (2026-04-23 gstack critic 도입)
+
+**삽질 직전 멈춤:** gstack(garrytan/gstack) 적용 요청 시 원본 `SKILL.md` 2100줄 중 약 800줄이 telemetry/config check/세션 관리 bash 코드. 그걸 그대로 가져왔다면 `~/.claude/skills/gstack/bin/gstack-config` 같은 존재하지 않는 경로 참조로 **전부 실패**.
+
+**원칙**:
+- 외부 AI 프레임워크 흡수 시 **사고법·질문·패턴**만 한국어로 번역해 가져온다.
+- **버릴 것**: preamble bash, telemetry 로깅, config check, 세션 관리, 설치 경로 참조, 외부 CLI 호출
+- **가져올 것**: 6강제질문, 반-아부 규칙, 푸시백 패턴, 4가지 검토 모드, CEO 사고 패턴
+- 비즈니스 맥락도 번역 필요: "founder" → "사장님", "enterprise" → "매장", "waitlist" → "관심 있다고 말만 하는 직원/점장"
+
+**확인 체크리스트**:
+- [ ] 흡수한 문서에 존재하지 않는 경로 참조 있나? (grep `~/.claude`, `bin/`)
+- [ ] 외부 CLI 호출 코드 남아있나? (grep `curl`, `source <(`, `eval`)
+- [ ] 비즈니스 용어가 식당/매장 맥락에 맞게 번역됐나?
+- [ ] 기존 에이전트 역할과 겹치지 않게 경계가 명확한가?
+
+**교훈**: 외부 도구의 **실행 인프라**는 그 도구의 세계에서만 돌아간다. 우리 세계에선 **사고법**만 쓸모 있다.
