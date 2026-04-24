@@ -574,17 +574,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           <div style="font-size:15px;font-weight:800;">🏪 개인 사업자</div>
           <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">매장 1개를 혼자 운영</div>
         </div>
-        <div class="signup-type-item disabled" style="padding:16px;background:var(--gray-100);border-radius:14px;margin-bottom:10px;opacity:.5;">
-          <div style="font-size:15px;font-weight:800;">🏢 다점포 사업자 <span style="font-size:10px;color:var(--gray-500);">(준비 중)</span></div>
-          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">직영 매장 여러 개 운영</div>
+        <div class="signup-type-item" data-action="selectSignupType|multi" style="padding:16px;background:var(--gray-100);border-radius:14px;margin-bottom:10px;cursor:pointer;">
+          <div style="font-size:15px;font-weight:800;">🏢 다점포 사업자</div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">직영 매장 여러 개 운영 (첫 매장만 먼저)</div>
         </div>
-        <div class="signup-type-item disabled" style="padding:16px;background:var(--gray-100);border-radius:14px;margin-bottom:10px;opacity:.5;">
-          <div style="font-size:15px;font-weight:800;">🏯 프랜차이즈 본사 <span style="font-size:10px;color:var(--gray-500);">(준비 중)</span></div>
-          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">가맹점 관리</div>
+        <div class="signup-type-item" data-action="selectSignupType|franchise_hq" style="padding:16px;background:var(--gray-100);border-radius:14px;margin-bottom:10px;cursor:pointer;">
+          <div style="font-size:15px;font-weight:800;">🏯 프랜차이즈 본사</div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">가맹점 초대·관리 (초대 코드 발급)</div>
         </div>
-        <div class="signup-type-item disabled" style="padding:16px;background:var(--gray-100);border-radius:14px;opacity:.5;">
-          <div style="font-size:15px;font-weight:800;">🎫 가맹점주 <span style="font-size:10px;color:var(--gray-500);">(준비 중)</span></div>
-          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">본사 초대 코드로 가입</div>
+        <div class="signup-type-item" data-action="selectSignupType|franchisee" style="padding:16px;background:var(--gray-100);border-radius:14px;cursor:pointer;">
+          <div style="font-size:15px;font-weight:800;">🎫 가맹점주</div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">본사 초대 코드로 가입 또는 혼자 시작</div>
         </div>
       </div>
     </div>
@@ -609,10 +609,21 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="signupNext|2">다음 →</button>
     </div>
 
-    <!-- 3단계: 매장 이름 + 사장님 이름 -->
+    <!-- 3단계: 매장 이름 + 사장님 이름 (+ 타입별 추가 필드) -->
     <div class="signup-step" data-step="3" style="display:none;">
-      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">매장 정보</div>
-      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">기본 정보만 받을게요. 나중에 바꿀 수 있어요.</div>
+      <div id="suStep3Title" style="font-size:22px;font-weight:900;margin-bottom:10px;">매장 정보</div>
+      <div id="suStep3Sub" style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">기본 정보만 받을게요. 나중에 바꿀 수 있어요.</div>
+
+      <!-- 가맹점주 전용: 본사 초대 코드 (선택) -->
+      <div id="suFranchiseeCodeBox" style="display:none;margin-bottom:16px;padding:14px;background:var(--blue-light);border-radius:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px;">🎫 본사 초대 코드가 있나요?</div>
+        <input id="suInviteCode" class="input-field" type="text" placeholder="예: PONG-XXXXXX (비우면 혼자 시작)"
+          style="padding:12px;font-size:14px;border-radius:10px;margin-bottom:0;text-transform:uppercase;">
+        <div style="font-size:11px;color:var(--gray-600);margin-top:6px;line-height:1.5;">
+          비워두면 "혼자 시작"으로 가입돼요. 나중에 본사가 생기면 사이드메뉴에서 연결할 수 있어요.
+        </div>
+      </div>
+
       <input id="suStoreName" class="input-field" type="text" placeholder="매장 이름 (예: 퐁당논산점)"
         style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:10px;">
       <input id="suOwnerName" class="input-field" type="text" placeholder="사장님 이름"
@@ -707,8 +718,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span>📊 현황</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
+        <div class="side-item franchise-admin-only" data-action="navFromSide|franchiseHome" style="display:none;">🏯 본사 홈</div>
         <div class="side-item" data-action="navFromSide|dashboard">대시보드</div>
         <div class="side-item" data-action="navFromSide|reserve">예비비</div>
+        <div class="side-item owner-only" data-action="openJoinFranchise" style="display:none;">🏯 본사 연결</div>
       </div>
     </div>
 
@@ -1219,6 +1232,67 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
   </div>
 
+</div>
+
+<!-- ══ [5-C] 프랜차이즈 본사 홈 (Phase 1-A2) ══ -->
+<div id="franchiseHomeCont" class="container">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <div class="card-title" id="fhBrandTitle">🏯 본사</div>
+      <input type="month" id="fhMonth" class="input-inline" style="width:140px;" data-change="loadFranchiseHome">
+    </div>
+    <div style="font-size:11px;color:var(--gray-500);margin-bottom:12px;" id="fhInviteLine">초대 코드: -</div>
+
+    <!-- 요약 카드 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div style="padding:12px;background:var(--blue-light);border-radius:12px;">
+        <div style="font-size:11px;color:var(--gray-600);font-weight:700;">전체 매출</div>
+        <div style="font-size:16px;font-weight:900;color:var(--blue);margin-top:4px;" id="fhTotalRev">0원</div>
+      </div>
+      <div style="padding:12px;background:var(--gray-100);border-radius:12px;">
+        <div style="font-size:11px;color:var(--gray-600);font-weight:700;">가맹점 수</div>
+        <div style="font-size:16px;font-weight:900;margin-top:4px;" id="fhStoreCount">0개</div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:800;margin-bottom:8px;">🏪 가맹점 순위 (이번달 매출)</div>
+    <div id="fhStoreList">
+      <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">가맹점이 없어요. 아래 초대 코드를 공유해 가맹점주를 초대하세요.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title">🎫 가맹점 초대</div>
+    <div style="padding:14px;background:var(--gray-100);border-radius:12px;margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--gray-600);font-weight:700;margin-bottom:6px;">내 본사 초대 코드</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div id="fhInviteCodeBig" style="flex:1;font-size:20px;font-weight:900;letter-spacing:2px;color:var(--blue);">-</div>
+        <button class="btn btn-secondary btn-sm" data-action="copyInviteCode">📋 복사</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--gray-600);line-height:1.7;">
+      · 가맹점주가 가입 시 <b>가맹점주</b> 유형 선택 → 이 코드 입력 → 자동 연결<br>
+      · 이미 혼자 앱 쓰는 가맹점주는 사이드메뉴 "본사 연결" 에서 이 코드 입력
+    </div>
+  </div>
+</div>
+
+<!-- 본사 연결 시트 (자연빵 흡수) -->
+<div class="sheet-overlay" id="joinFranchiseSheet">
+  <div class="sheet sheet-content">
+    <div class="sheet-header">
+      <div class="sheet-title">🏯 본사 연결</div>
+      <button class="sheet-close" data-action="closeSheet|joinFranchiseSheet">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--gray-600);line-height:1.7;margin-bottom:14px;">
+      본사에서 받은 <b>초대 코드</b>를 입력하면 이 매장이 본사 소속으로 연결돼요.<br>
+      매출·지출 데이터는 <b>그대로 유지</b>되고, 본사가 통합 집계에서 볼 수 있게 돼요.
+    </div>
+    <input id="jfCode" class="input-field" type="text" placeholder="초대 코드 (예: F-XXXXXX)"
+      style="padding:14px;font-size:15px;border-radius:12px;margin-bottom:12px;text-transform:uppercase;">
+    <button class="btn btn-primary btn-full" style="padding:14px;font-size:14px;font-weight:800;" data-action="submitJoinFranchise">연결하기</button>
+    <div id="jfMsg" style="margin-top:12px;font-size:12px;color:var(--danger);min-height:18px;text-align:center;"></div>
+  </div>
 </div>
 
 <!-- ══ [5-B] 예비비 관리 ══ -->
@@ -2566,6 +2640,7 @@ function nav(tab, el) {
     staff: loadEmployees,
     settings: loadAllSettings,
     dashboard: loadDashboard,
+    franchiseHome: loadFranchiseHome,
     reserve: loadReserveFund,
     vendors: loadVendors,
     fixedcost: loadFixedCosts,
@@ -2633,6 +2708,10 @@ function applyPermissionUI() {
   // owner-only: owner만
   document.querySelectorAll('.owner-only').forEach(el => {
     el.style.display = isOwner ? '' : 'none';
+  });
+  // franchise-admin-only: franchise_admin만
+  document.querySelectorAll('.franchise-admin-only').forEach(el => {
+    el.style.display = (authLevel==='franchise_admin') ? '' : 'none';
   });
   // 네비바 탭: 숨겨진 탭 flex 균등분배
   document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
@@ -7506,6 +7585,36 @@ function showSignupStep(step){
   document.getElementById('signupStepLabel').innerText=(step+1)+' / 6';
   document.getElementById('signupBack').style.visibility = step===0 ? 'hidden' : 'visible';
   document.getElementById('suErrorMsg').innerText='';
+  // 3단계 진입 시 타입별 UI 조정
+  if(step===3) applySignupTypeUi();
+}
+function applySignupTypeUi(){
+  const t=signupState.type||'personal';
+  const titleEl=document.getElementById('suStep3Title');
+  const subEl=document.getElementById('suStep3Sub');
+  const storeInput=document.getElementById('suStoreName');
+  const codeBox=document.getElementById('suFranchiseeCodeBox');
+  if(t==='franchise_hq'){
+    titleEl.innerText='본사(브랜드) 정보';
+    subEl.innerText='브랜드명을 입력하세요. 가맹점은 나중에 초대 코드로 초대할 수 있어요.';
+    storeInput.placeholder='브랜드명 (예: 퐁당샤브)';
+    codeBox.style.display='none';
+  } else if(t==='franchisee'){
+    titleEl.innerText='가맹점 정보';
+    subEl.innerText='본사 초대 코드가 있으면 입력하세요 (없어도 OK).';
+    storeInput.placeholder='매장 이름 (예: 퐁당논산점)';
+    codeBox.style.display='block';
+  } else if(t==='multi'){
+    titleEl.innerText='첫 매장 정보';
+    subEl.innerText='매장 추가는 가입 후 본사 홈에서 할 수 있어요.';
+    storeInput.placeholder='매장 이름 (예: 본점)';
+    codeBox.style.display='none';
+  } else {
+    titleEl.innerText='매장 정보';
+    subEl.innerText='기본 정보만 받을게요. 나중에 바꿀 수 있어요.';
+    storeInput.placeholder='매장 이름';
+    codeBox.style.display='none';
+  }
 }
 function selectSignupType(type){
   signupState.type=type;
@@ -7607,10 +7716,12 @@ async function completeSignup(){
   const ownerName=document.getElementById('suOwnerName').value.trim();
   const address=document.getElementById('suAddress').value.trim();
   const bizNo=document.getElementById('suBizNo').value.trim().replace(/\D/g,'');
+  const inviteCode=(document.getElementById('suInviteCode')?.value||'').trim().toUpperCase();
+  const signupType=signupState.type||'personal';
 
   setLoad(true,'가입 중...');
   try {
-    // 1. Supabase Auth 가입 (이메일 인증 즉시 승인 설정 가정)
+    // 1. Supabase Auth 가입
     const { data: authData, error: authErr } = await sb.auth.signUp({
       email, password: pw,
       options:{ data:{ owner_name: ownerName } }
@@ -7619,26 +7730,54 @@ async function completeSignup(){
     const userId = authData.user?.id;
     if(!userId) throw new Error('사용자 ID를 받지 못했어요. 잠시 후 다시 시도해주세요.');
 
-    // 2. 매장 생성 (store_code는 DB trigger 또는 여기서 생성)
+    // 2. 타입별 franchise_id / auth_level 결정
+    let franchiseId = null;
+    let authLevelForEmp = 'owner';
+
+    if(signupType==='franchise_hq'){
+      // 본사 가입: franchises 생성 + invite_code 발급
+      const inv = 'F-'+generateStoreCode();
+      const { data: frRows, error: frErr } = await sb.from('franchises').insert({
+        name: storeName,
+        invite_code: inv,
+        owner_user_id: userId,
+        is_active: true
+      }).select().single();
+      if(frErr) throw new Error('본사 생성 실패: '+frErr.message);
+      franchiseId = frRows.id;
+      authLevelForEmp = 'franchise_admin';
+    } else if(signupType==='franchisee' && inviteCode){
+      // 가맹점주 + 본사 코드: 기존 franchise 찾기
+      const { data: frRows, error: frErr } = await sb.from('franchises')
+        .select('id,name').eq('invite_code', inviteCode).maybeSingle();
+      if(frErr) throw new Error('본사 코드 조회 실패');
+      if(!frRows) throw new Error('초대 코드가 맞지 않아요. 본사에서 받은 코드를 다시 확인하세요.');
+      franchiseId = frRows.id;
+      authLevelForEmp = 'owner';
+    }
+
+    // 3. 매장 생성 (본사면 "브랜드명 본사"용 비활성 매장, 나머지는 실제 매장)
     const storeCode = generateStoreCode();
+    const actualStoreName = signupType==='franchise_hq' ? '['+storeName+'] 본사' : storeName;
     const { data: storeRows, error: storeErr } = await sb.from('stores').insert({
-      name: storeName,
+      name: actualStoreName,
       address: address||null,
       business_no: bizNo||null,
       store_code: storeCode,
       tos_accepted_at: new Date().toISOString(),
-      is_active: true
+      franchise_id: franchiseId,
+      is_active: signupType!=='franchise_hq'  // 본사는 비활성 (드롭다운에 안 뜨게)
     }).select().single();
     if(storeErr) throw new Error('매장 생성 실패: '+storeErr.message);
     const storeId = storeRows.id;
 
-    // 3. owner employee 생성
-    const ownerPin = Math.floor(1000+Math.random()*9000).toString(); // 임시 PIN
+    // 4. owner/franchise_admin employee 생성
+    const ownerPin = Math.floor(1000+Math.random()*9000).toString();
     const { error: empErr } = await sb.from('employees').insert({
       store_id: storeId,
       name: ownerName,
       pin: ownerPin,
-      auth_level: 'owner',
+      auth_level: authLevelForEmp,
       auth_user_id: userId,
       is_active: true,
       is_approved: true,
@@ -7647,33 +7786,58 @@ async function completeSignup(){
     });
     if(empErr) throw new Error('직원(사장님) 생성 실패: '+empErr.message);
 
-    // 4. store_settings 기본값
+    // 5. store_settings + 기본 seed (본사 더미 매장도 에러 방지용으로 기본값만)
     await sb.from('store_settings').upsert({
       store_id: storeId,
       royalty_rate: 0, card_fee_rate: 2.5,
       reserve_rate: 5, reserve_fixed: 400000
     }, { onConflict:'store_id' });
-
-    // 5. 기본 데이터 seed (카테고리 + 결제수단)
-    await seedNewStoreDefaults(storeId);
+    if(signupType!=='franchise_hq'){
+      await seedNewStoreDefaults(storeId);
+    }
 
     setLoad(false);
     closeSignup();
 
     // 자동 로그인
-    currentStore = { id: storeId, name: storeName };
+    currentStore = { id: storeId, name: actualStoreName };
     localStorage.setItem('pd_store', JSON.stringify(currentStore));
     await loadEmployees();
     const emp = employees.find(e=>e.auth_user_id===userId);
     if(emp) completeLogin(emp);
 
-    toast(`🎉 가입 완료! 매장 코드: ${storeCode}`,'success');
-    setTimeout(()=>showWelcomeCard(storeCode), 600);
+    // 본사는 매장 코드 대신 초대 코드 보여주기
+    if(signupType==='franchise_hq'){
+      const invCode = 'F-'+storeCode;
+      toast(`🎉 본사 등록 완료!`,'success');
+      setTimeout(()=>showFranchiseWelcomeCard(storeName, invCode), 600);
+    } else {
+      toast(`🎉 가입 완료! 매장 코드: ${storeCode}`,'success');
+      setTimeout(()=>showWelcomeCard(storeCode), 600);
+    }
   } catch(e) {
     setLoad(false);
     err(e.message||'가입 중 오류가 발생했어요');
     console.error('[signup]',e);
   }
+}
+
+function showFranchiseWelcomeCard(brandName, inviteCode){
+  if(localStorage.getItem('pd_welcomed_franchise')==='1') return;
+  const html=`<div style="padding:20px;background:var(--blue-light);border-radius:16px;margin:16px 0;">
+    <div style="font-size:18px;font-weight:900;margin-bottom:10px;">🏯 ${brandName} 본사에 오신 것을 환영합니다</div>
+    <div style="font-size:13px;color:var(--gray-700);line-height:1.6;margin-bottom:12px;">
+      초대 코드: <b style="font-size:16px;color:var(--blue);letter-spacing:1px;">${inviteCode}</b><br>
+      <span style="font-size:12px;color:var(--gray-600);">가맹점주에게 이 코드를 공유하세요.</span>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-top:14px;margin-bottom:6px;">이것부터 해보세요</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <button class="btn btn-secondary" style="justify-content:flex-start;padding:10px 14px;font-size:12px;" data-action="nav|franchiseHome">🏯 본사 홈 열기</button>
+    </div>
+  </div>`;
+  const dashCont=document.getElementById('dashboardCont');
+  if(dashCont) dashCont.insertAdjacentHTML('afterbegin', html);
+  localStorage.setItem('pd_welcomed_franchise','1');
 }
 
 function generateStoreCode(){
@@ -7726,6 +7890,141 @@ function showWelcomeCard(storeCode){
   const dashCont=document.getElementById('dashboardCont');
   if(dashCont) dashCont.insertAdjacentHTML('afterbegin', html);
   localStorage.setItem('pd_welcomed','1');
+}
+
+// ─── Phase 1-A2: 프랜차이즈 본사 홈 ───
+async function loadFranchiseHome(){
+  if(!currentStore||!currentEmp) return;
+  if(authLevel!=='franchise_admin'){
+    toast('본사 계정만 접근 가능해요','warn');
+    nav('dashboard');
+    return;
+  }
+  // 내 본사 id 찾기 (owner_user_id 기반)
+  const { data: auth } = await sb.auth.getUser();
+  const userId = auth?.user?.id;
+  if(!userId){ toast('세션이 만료됐어요','error'); return; }
+
+  setLoad(true,'본사 정보 로드 중...');
+  try {
+    const { data: frRows, error: frErr } = await sb.from('franchises')
+      .select('id,name,invite_code').eq('owner_user_id', userId).maybeSingle();
+    if(frErr||!frRows){ throw new Error('본사 정보를 찾을 수 없어요'); }
+
+    document.getElementById('fhBrandTitle').innerText='🏯 '+frRows.name;
+    document.getElementById('fhInviteLine').innerText='초대 코드: '+(frRows.invite_code||'-');
+    document.getElementById('fhInviteCodeBig').innerText=frRows.invite_code||'-';
+
+    // 월 초기화
+    const mEl=document.getElementById('fhMonth');
+    const ym=mEl.value||new Date().toISOString().slice(0,7);
+    if(!mEl.value) mEl.value=ym;
+
+    // 가맹점 목록 + 매출 합계
+    const { data: stores } = await sb.from('stores')
+      .select('id,name,is_active,store_code')
+      .eq('franchise_id', frRows.id)
+      .eq('is_active', true); // 본사 더미 매장 제외
+    const storeIds=(stores||[]).map(s=>s.id);
+
+    const [y,m]=ym.split('-').map(Number);
+    const lastDay=new Date(y,m,0).getDate();
+    const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
+
+    let storeRevenues={};
+    if(storeIds.length){
+      const { data: sdRows } = await sb.from('sales_daily')
+        .select('*').in('store_id', storeIds).gte('date',start).lte('date',end);
+      (sdRows||[]).forEach(r=>{
+        storeRevenues[r.store_id]=(storeRevenues[r.store_id]||0)+salesRowTotal(r);
+      });
+    }
+
+    const rows=(stores||[]).map(s=>({ ...s, rev: storeRevenues[s.id]||0 }))
+      .sort((a,b)=>b.rev-a.rev);
+    const totalRev=rows.reduce((a,r)=>a+r.rev,0);
+
+    document.getElementById('fhTotalRev').innerText=fmt(totalRev)+'원';
+    document.getElementById('fhStoreCount').innerText=rows.length+'개';
+
+    const listEl=document.getElementById('fhStoreList');
+    if(!rows.length){
+      listEl.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">가맹점이 없어요. 초대 코드를 공유해 가맹점주를 초대하세요.</div>';
+    } else {
+      listEl.innerHTML=rows.map((r,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--gray-100);border-radius:12px;margin-bottom:8px;cursor:pointer;" data-action="selectStoreFromFranchise|${r.id}|${r.name}">
+          <div style="width:26px;font-size:13px;font-weight:800;color:${i<3?'var(--blue)':'var(--gray-500)'};">${i+1}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</div>
+            <div style="font-size:11px;color:var(--gray-500);margin-top:2px;">코드: ${r.store_code||'-'}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;">${fmt(r.rev)}</div>
+            <div style="font-size:10px;color:var(--gray-400);">${totalRev>0?(r.rev/totalRev*100).toFixed(1):0}%</div>
+          </div>
+          <div style="color:var(--gray-400);">›</div>
+        </div>
+      `).join('');
+    }
+    setLoad(false);
+  } catch(e){
+    setLoad(false);
+    toast('본사 홈 로드 실패: '+e.message,'error');
+    console.error('[franchise-home]',e);
+  }
+}
+
+function selectStoreFromFranchise(storeId, storeName){
+  currentStore={ id:storeId, name:storeName };
+  localStorage.setItem('pd_store', JSON.stringify(currentStore));
+  document.getElementById('headerStore').innerText=storeName;
+  Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories(),loadPaymentMethods()]).then(()=>{
+    nav('dashboard');
+    toast(`${storeName} 진입`,'success');
+  });
+}
+
+function copyInviteCode(){
+  const code=document.getElementById('fhInviteCodeBig').innerText.trim();
+  if(!code||code==='-'){ toast('초대 코드가 없어요','warn'); return; }
+  navigator.clipboard.writeText(code).then(()=>toast('📋 복사됨: '+code,'success')).catch(()=>toast('복사 실패','error'));
+}
+
+// ─── 자연빵 흡수: 본사 연결 ───
+function openJoinFranchise(){
+  if(!guardStore()) return;
+  closeSideMenu();
+  document.getElementById('jfCode').value='';
+  document.getElementById('jfMsg').innerText='';
+  openSheet('joinFranchiseSheet');
+}
+
+async function submitJoinFranchise(){
+  const err = msg => { document.getElementById('jfMsg').innerText=msg; };
+  err('');
+  const code=(document.getElementById('jfCode').value||'').trim().toUpperCase();
+  if(!code) return err('초대 코드를 입력하세요');
+  if(!guardStore()) return;
+
+  setLoad(true,'연결 중...');
+  try {
+    const { data: fr, error: frErr } = await sb.from('franchises')
+      .select('id,name').eq('invite_code', code).maybeSingle();
+    if(frErr) throw new Error('조회 실패');
+    if(!fr) throw new Error('초대 코드가 맞지 않아요');
+
+    const { error: upErr } = await sb.from('stores')
+      .update({ franchise_id: fr.id })
+      .eq('id', currentStore.id);
+    if(upErr) throw new Error('연결 실패: '+upErr.message);
+
+    setLoad(false);
+    closeSheet('joinFranchiseSheet');
+    toast(`🏯 ${fr.name} 본사에 연결됐어요`,'success');
+  } catch(e){
+    setLoad(false);
+    err(e.message);
+  }
 }
 
 // ─── 주인 이메일 로그인 ───
@@ -7857,8 +8156,9 @@ function completeLogin(emp){
   localStorage.setItem('pd_emp',emp.id);
   localStorage.setItem('pd_auth_level',authLevel);
   applyPermissionUI();
-  // 로그인 후 첫 화면: 관리자→대시보드, 직원→근태
-  nav(isManager?'dashboard':'attendance');
+  // 로그인 후 첫 화면: 본사→본사 홈, 관리자→대시보드, 직원→근태
+  if(authLevel==='franchise_admin') nav('franchiseHome');
+  else nav(isManager?'dashboard':'attendance');
   // 나머지 데이터 백그라운드 로드 (화면 차단 없이)
   Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
   // 기기 등록 상태 팝업 (staff만 — 관리자는 여러 기기 사용 가능하므로 스킵)
