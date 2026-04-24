@@ -4,6 +4,67 @@
 
 ---
 
+## [2026-04-24] 수식 검수 → 예비비 잔고 + 정산/검수 카드수수료 수정
+
+### 상태: 구현완료 → 배포 예정 (DB 변경 없음)
+### 규모: 중형 (수식 2곳 재작성)
+### 브랜치: `claude/continue-todo-list-KG9PD`
+
+### 배경
+사장님 요청으로 전체 앱 수식 검수 → 2건의 불일치 발견:
+1. 예비비 잔고(`calcReserveBalance`)가 `(매출 − 고정비)` 근사로 **30~50% 과다 적립**
+2. 정산/검수 카드수수료가 `settlements.items_json` 기반이라 매출 관리 수정값과 **대시보드 카드수수료와 불일치**
+
+### 변경 요약
+
+#### 1. `calcReserveBalance` 정확한 순이익 기반 재작성 (index.html:6230~)
+**수식 변경**:
+```
+[이전] approxNet = rev − fc
+[이후] netProfit = rev − vendor − receipt − att − fixedProrated − royalty − cardFee
+```
+- **병렬 5쿼리**로 교체: sales_daily / fixed_cost_amounts / vendor_orders / receipts / attendance_logs
+- 매출 소스 `settlements` → **`sales_daily`** (dev_lessons #47 단일 진실의 원천)
+- 카드 매출은 `paymentMethods.legacy_key==='card'` 기반 (Part F 동적 결제수단 호환)
+- **진행중 월은 고정비 일할** (대시보드 `reserveAmt`와 동일 공식)
+
+**시나리오 대입 (2026-04, 22일 경과, 매출 33M)**:
+- 이전: (33M − 2.3M) × 5% + 40만 = **1,935,000원** ❌
+- 이후: netProfit 18,010,833 × 5% + 40만 = **1,300,542원** ✅
+- 대시보드 reserveAmt와 **완전 일치**
+
+#### 2. 정산/검수 `cardSales`·`totalRevenue` sales_daily 기반 (index.html:8608~)
+```js
+// 이전: settlements.items_json.pos_card 합산
+// 이후: salesDailyRows.forEach(r=>{ totalRevenue+=salesRowTotal(r); cardSales+=getMethodAmount(r,cardMethod); })
+```
+- 대시보드와 **완전 동일 소스**. 매출관리에서 수정한 값도 정산/검수에 즉시 반영
+- `settlements` 쿼리(salesRes)는 그대로 유지 (다른 용도 가능성 대비, 추후 정리)
+
+### 영향 범위
+- **함수**: `calcReserveBalance` 전면 재작성 (+20줄), `loadReconciliation` 수식 2줄 교체
+- **DB**: 변경 없음 (READ 5개 추가, 쿼리 자체 증가는 1회/세션)
+- **UI**: 숫자만 바뀜 (표시 구조 동일)
+
+### 검증
+- ✅ node --check 통과 (7487 lines)
+- ✅ 시나리오 대입 결과 대시보드 ↔ 예비비 잔고 ↔ 정산/검수 카드수수료 **3화면 일치**
+- ✅ Part F Phase 2 paymentMethods 호환 (legacy_key='card')
+- ✅ 진행중 월은 일할, 완료 월은 전체 고정비
+
+### 사장님 수동 작업
+- 앱 Ctrl+Shift+R
+- 테스트:
+  1. 대시보드 "이번 달 적립예상" 값 확인 (A)
+  2. 예비비 탭 "현재 잔고" — 과거 적립분 + A 포함된 값 확인. 이전보다 수백만원 적게 나올 수 있음 (정확화)
+  3. 정산/검수 "카드수수료" 항목 → 대시보드 카드수수료와 동일한지
+
+### 다음 후보
+- 현재 달 진행중 `reserveAmt`와 `calcReserveBalance` 완전 동기화 상태. 월 완료 후엔 일할 아닌 전체 고정비로 자동 전환됨 (지난달 포함)
+- settlements 쿼리(salesRes) 정산/검수에서 완전 제거 (추후 정리 단계)
+
+---
+
 ## [2026-04-24] 사이드메뉴 재구성 + 거래처 대조 & 단가 화면
 
 ### 상태: 구현완료 → 배포 예정 (DB 변경 없음)
