@@ -4,6 +4,58 @@
 
 ---
 
+## [2026-04-24] Part F Phase 2 — 대시보드/정산검수 결제수단 동적화
+
+### 상태: 구현완료 → 배포 예정 (DB 변경 없음)
+### 규모: 중형 (~70줄 변경, 추가 식별자 12건)
+### 브랜치: `claude/continue-todo-list-KG9PD`
+
+### 배경
+Phase 1(2026-04-23)에서 매출 관리/마감정산만 결제수단 동적화 완료. 사장님이 신규 결제수단(예: 카카오페이) 추가해도 **대시보드 매출 도넛/정산검수 매출 대조에는 안 나오는** 반쪽 상태였음.
+
+### 변경 요약
+1. **`loadDashboard` (settle 경로)**
+   - sales_daily SELECT: 레거시 7컬럼 → `select('*')` (당월/전월 둘 다)
+   - `salesBreakdown` 집계: paymentMethods 동적 루프 + `getMethodAmount(s,m)` + key=`m.name`
+   - `totalRevenue`: `salesRowTotal(s)` 재사용
+   - `cardSales`: `paymentMethods.find(m=>m.legacy_key==='card')` 기반 (이름 변경 내성). ups 경로 폴백 유지
+   - `revColors`/`revOrder`: paymentMethods에서 동적 생성. ups 경로용 '카드/현금/기타' 폴백 보강
+2. **`loadReconciliation` (Part D 매출 대조)**
+   - sales_daily SELECT: 레거시 7컬럼 → `select('*')`
+   - `salesDefs` 하드코딩 제거 → paymentMethods 동적 생성
+   - **method key = `legacy_key || 'm_'+id`** — 기존 `sales_recon_mapping` JSON 키 그대로 호환
+   - `salesTotals`/`depositByMethod` 동적 맵으로 교체
+   - 매출 항목 이름: `getMethodLabel(m)+' 매출'` (예: "💳 신용카드 매출", "💵 현금 매출")
+   - 색상: `m.color` 사용
+3. **`dashSaleSource==='ups'` 경로 미변경** — upsolution 3컬럼 구조(카드/현금/기타) 그대로
+
+### 영향 범위
+- 함수: `loadDashboard`, `loadReconciliation` + 내부 렌더 블록(revColors/revOrder, salesDefs)
+- DOM: 변경 없음
+- DB: 읽기만 (SELECT * 확장)
+
+### 검증
+- ✅ node --check 통과 (7085 lines)
+- ✅ Part F Phase 2 식별자 12건 / `methodKeyOf` 4회 사용
+- ✅ `salesDefs`/`salesTotals.{card,...}` 잔재 0건
+- ✅ 레거시 `sales_recon_mapping` 키({card,cash_receipt,qr,etc}) 호환 — methodKey가 legacy_key 우선
+- ✅ Phase 1 SQL 미실행 매장 안전망 — paymentMethods LEGACY 폴백 + getMethodAmount legacy_key 폴백 둘 다 유지
+
+### 사장님 수동 작업
+- 앱 Ctrl+Shift+R만. Supabase 변경 없음.
+- (Phase 1 SQL 실행 후 결제수단 관리에서 추가한 신규 수단이 대시보드/정산검수에도 자동 반영됨)
+
+### 부수 효과 (사용 시 참고)
+- 매출 대조 섹션에 **현금/뽑기(대형)/뽑기(소형)도 노출**됨 (paymentMethods에 활성으로 있으면). 매핑 안 한 항목은 기존처럼 "⚙️ 입금 카테고리 설정" 안내. 현금처럼 입금 매칭 의미 없는 결제수단은 그냥 미설정 상태로 두면 OK.
+- 시각 노이즈가 부담되면 Phase 3 후보로 "결제수단 관리에 *대조 제외* 토글 추가" 검토.
+
+### Phase 3 (예정, 별도)
+- sales_daily 레거시 7컬럼 DROP — amounts jsonb만 남김
+- 결제수단 관리에 "매출 대조 표시 여부" 토글 (선택)
+- 안전을 위해 Phase 2 배포 후 1~2주 관찰 필요
+
+---
+
 ## 🏁 2026-04-23 세션 마감 (종합)
 
 **처리**: 1순위 4건 + 2순위 6건 + 3순위 3건 = **13건** 완료 + **1건 오진단 판명 스킵**(⑫)

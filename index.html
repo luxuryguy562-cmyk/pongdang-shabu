@@ -3918,9 +3918,10 @@ async function loadDashboard(){
 
     const [settleRes,fcRes,expResults,royaltyTxRes,prevSettleRes,prevFcRes]=await Promise.all([
       // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
+      // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
-        :sb.from('sales_daily').select('date,card,cash,cash_receipt,qr,etc,extra_large,extra_small').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
+        :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
       // 당월 고정비
       sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(name,is_active,is_variable)').eq('store_id',sid).eq('year_month',ym),
       // 당월 지출 (병렬)
@@ -3930,9 +3931,10 @@ async function loadDashboard(){
         ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
         :Promise.resolve({data:null}),
       // ── 전월 매출 ──
+      // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
-        :sb.from('sales_daily').select('date,card,cash,cash_receipt,qr,etc,extra_large,extra_small').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
+        :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
       // ── 전월 고정비 ──
       sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid).eq('year_month',pYm)
     ]);
@@ -3951,17 +3953,15 @@ async function loadDashboard(){
       salesBreakdown['기타']=totalRevenue-salesBreakdown['카드']-salesBreakdown['현금'];
     } else {
       // sales_daily 기준 (매출 관리 페이지와 동일 소스 — 수동 수정본 반영)
+      // Part F Phase 2: paymentMethods 동적 집계. 신규 결제수단 자동 노출. (salesRowTotal+getMethodAmount 재사용)
       settle.forEach(s=>{
         const day=s.date?.slice(8);
-        const ds=(s.card||0)+(s.cash||0)+(s.cash_receipt||0)+(s.qr||0)+(s.etc||0)+(s.extra_large||0)+(s.extra_small||0);
+        const ds=salesRowTotal(s);
         totalRevenue+=ds;dailySalesMap[day]=ds;
-        salesBreakdown['신용카드']=(salesBreakdown['신용카드']||0)+(s.card||0);
-        salesBreakdown['현금']=(salesBreakdown['현금']||0)+(s.cash||0);
-        salesBreakdown['현금영수증']=(salesBreakdown['현금영수증']||0)+(s.cash_receipt||0);
-        if(s.qr)salesBreakdown['QR']=(salesBreakdown['QR']||0)+s.qr;
-        if(s.etc)salesBreakdown['기타결제']=(salesBreakdown['기타결제']||0)+s.etc;
-        if(s.extra_large)salesBreakdown['뽑기(대형)']=(salesBreakdown['뽑기(대형)']||0)+s.extra_large;
-        if(s.extra_small)salesBreakdown['뽑기(소형)']=(salesBreakdown['뽑기(소형)']||0)+s.extra_small;
+        (paymentMethods||[]).forEach(m=>{
+          const v=getMethodAmount(s,m);
+          if(v) salesBreakdown[m.name]=(salesBreakdown[m.name]||0)+v;
+        });
       });
     }
     receiptCount=Object.keys(dailySalesMap).length;
@@ -3985,7 +3985,10 @@ async function loadDashboard(){
     const cardFeeRate=parseFloat(settings.card_fee_rate||0)/100;
     const reserveRate=parseFloat(settings.reserve_rate||5)/100;
     const reserveFixed=parseInt(settings.reserve_fixed||400000);
-    const cardSales=salesBreakdown['신용카드']||salesBreakdown['카드']||0;
+    // Part F Phase 2: 카드 매출은 legacy_key==='card' 결제수단 이름으로 찾기 (이름 변경 내성)
+    // 'ups' 경로 호환을 위해 '카드' 폴백 유지
+    const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
+    const cardSales=(cardMethod?salesBreakdown[cardMethod.name]:0)||salesBreakdown['신용카드']||salesBreakdown['카드']||0;
 
     // 로열티/카드수수료 (로열티 쿼리는 위 Promise.all에서 병렬 완료)
     let royalty,cardFee;
@@ -4393,8 +4396,15 @@ async function loadDashboard(){
     // ══ A-1b. 매출 상세 아코디언 (도넛차트 + 결제수단 테이블) ══
     const revBody=document.getElementById('revAccordionBody');
     if(revBody){
-      const revColors={'신용카드':'#0050FF','카드':'#0050FF','현금':'#05C072','현금영수증':'#10B981','QR':'#14B8A6','기타결제':'#FF9500','기타':'#FF9500','뽑기(대형)':'#7C3AED','뽑기(소형)':'#A78BFA'};
-      const revOrder=['신용카드','카드','현금','현금영수증','QR','기타결제','기타','뽑기(대형)','뽑기(소형)'];
+      // Part F Phase 2: paymentMethods 동적 색상/순서. 'ups' 경로 폴백(카드/현금/기타) 유지.
+      const revColors={'카드':'#0050FF','현금':'#05C072','기타':'#FF9500'};
+      const revOrder=[];
+      (paymentMethods||[]).forEach(m=>{
+        revColors[m.name]=m.color||'#4E5968';
+        revOrder.push(m.name);
+      });
+      // 'ups' 경로용 폴백 순서 보강
+      ['카드','현금','기타'].forEach(k=>{if(!revOrder.includes(k)) revOrder.push(k);});
       const revDonutLabels=[],revDonutData=[],revDonutColors=[];
       let revListHtml='<table style="width:100%;border-collapse:collapse;">';
       // salesBreakdown에서 0 초과 항목만
@@ -8096,7 +8106,8 @@ async function loadReconciliation(){
       sb.from('store_settings').select('royalty_rate,card_fee_rate,sales_recon_mapping').eq('store_id',sid).maybeSingle(),
       sb.from('reconciliation').select('*').eq('store_id',sid).eq('year_month',ym),
       // Part D: 매출 대조용 sales_daily
-      sb.from('sales_daily').select('card,cash,cash_receipt,qr,etc,extra_large,extra_small').eq('store_id',sid).gte('date',start).lte('date',end)
+      // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
+      sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end)
     ]);
 
     const allCategories=catRes.data||[];
@@ -8135,29 +8146,26 @@ async function loadReconciliation(){
     // 항목별 기록 합산
     const summary=[];
 
-    // ─── Part D: 매출 대조 섹션 (지출 항목보다 먼저 추가되어 상단에 표시됨) ───
+    // ─── Part D + Part F Phase 2: 매출 대조 섹션 (paymentMethods 동적 생성) ───
+    // method key = legacy_key 우선 (기존 sales_recon_mapping {card,cash_receipt,qr,etc} 호환)
+    //              없으면 'm_'+id (신규 결제수단)
     const salesDailyRows=salesDailyRes.data||[];
-    const salesTotals={card:0,cash_receipt:0,qr:0,etc:0};
-    salesDailyRows.forEach(r=>{
-      salesTotals.card+=(r.card||0);
-      salesTotals.cash_receipt+=(r.cash_receipt||0);
-      salesTotals.qr+=(r.qr||0);
-      salesTotals.etc+=(r.etc||0);
+    const methodKeyOf=m=>m.legacy_key||('m_'+m.id);
+    const salesTotals={};  // {[methodKey]: sum}
+    (paymentMethods||[]).forEach(m=>{
+      const k=methodKeyOf(m);
+      salesTotals[k]=salesDailyRows.reduce((a,r)=>a+getMethodAmount(r,m),0);
     });
-    const salesDefs=[
-      {key:'card',         name:'💳 신용카드 매출',   color:'#0050FF'},
-      {key:'cash_receipt', name:'🧾 현금영수증 매출', color:'#10B981'},
-      {key:'qr',           name:'📱 QR 매출',         color:'#14B8A6'},
-      {key:'etc',          name:'📲 기타결제 매출',   color:'#FF9500'}
-    ];
-    salesDefs.forEach(def=>{
-      const subKey='_sales_'+def.key;
+    (paymentMethods||[]).forEach(m=>{
+      const key=methodKeyOf(m);
+      const subKey='_sales_'+key;
       const s=savedRecon.find(r=>r.sub_key===subKey);
-      const recorded=salesTotals[def.key]||0;
+      const recorded=salesTotals[key]||0;
+      const name=getMethodLabel(m)+' 매출'; // ex: "💳 신용카드 매출"
       summary.push({
-        categoryId:subKey,name:def.name,source:'sales',type:'sales',method:def.key,
-        color:def.color,recorded,actual:s?.actual_total||0,
-        details:[{subKey,label:def.name,recorded,actual:s?.actual_total||0,
+        categoryId:subKey,name,source:'sales',type:'sales',method:key,
+        color:m.color||'#4E5968',recorded,actual:s?.actual_total||0,
+        details:[{subKey,label:name,recorded,actual:s?.actual_total||0,
           status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''}]
       });
     });
@@ -8285,10 +8293,11 @@ async function loadReconciliation(){
       }
     });
 
-    // ─── Part D: 입금 거래 → 매출 결제수단별 자동 매칭 ───
-    // store_settings.sales_recon_mapping: {card:[category_id,...], cash_receipt:[...], qr:[...], etc:[...]}
+    // ─── Part D + Part F Phase 2: 입금 거래 → 매출 결제수단별 자동 매칭 ───
+    // store_settings.sales_recon_mapping: {[methodKey]:[category_id,...]} (methodKey = legacy_key || 'm_'+id)
     const salesMapping=(storeSettings.sales_recon_mapping)||{};
-    const depositByMethod={card:0,cash_receipt:0,qr:0,etc:0};
+    const depositByMethod={};  // {[methodKey]: sum}
+    (paymentMethods||[]).forEach(m=>{depositByMethod[methodKeyOf(m)]=0;});
     const matchedDepositIds=new Set();
     transactions.filter(tx=>tx.amount>0&&!tx.exclude_from_settlement).forEach(tx=>{
       if(!tx.category_id) return;
