@@ -1445,6 +1445,23 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- Part E ⑭: 예비비 사용 이력 팝업 시트 -->
+<div class="sheet-overlay" id="reserveHistorySheet">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
+    <div class="sheet-header">
+      <div class="sheet-title">🏦 예비비 사용 이력</div>
+      <button class="sheet-close" data-action="closeSheet|reserveHistorySheet">✕</button>
+    </div>
+    <div style="background:linear-gradient(135deg,#0050FF 0%,#3B82F6 100%);color:#fff;border-radius:14px;padding:16px;margin-bottom:14px;">
+      <div style="font-size:12px;opacity:0.8;margin-bottom:4px;">현재 잔고</div>
+      <div id="rhsBalance" style="font-size:26px;font-weight:900;letter-spacing:-1px;">-</div>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">최근 사용 내역</div>
+    <div id="rhsList" style="margin-bottom:14px;"></div>
+    <button class="btn btn-secondary btn-full" data-action="gotoReserveTab">예비비 탭에서 자세히 보기 ›</button>
+  </div>
+</div>
+
 <!-- Part D: 매출 대조 매핑 편집 시트 -->
 <div class="sheet-overlay" id="salesReconMappingSheet">
   <div class="sheet" style="max-height:85vh;overflow-y:auto;">
@@ -8490,6 +8507,43 @@ function openSalesReconMapping(method, label){
   openSheet('salesReconMappingSheet');
 }
 
+// Part E ⑭: 예비비 사용 이력 팝업
+async function openReserveHistorySheet(){
+  if(!currentStore)return;
+  const sheet=document.getElementById('reserveHistorySheet');
+  // 먼저 시트 열고 로딩 표시 (속도 체감 ↑)
+  document.getElementById('rhsBalance').innerText='…';
+  document.getElementById('rhsList').innerHTML='<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">조회 중...</div>';
+  openSheet('reserveHistorySheet');
+  // 잔고 + 사용 이력 병렬 로드
+  const sid=currentStore.id;
+  const [balance, logsRes]=await Promise.all([
+    calcReserveBalance(),
+    sb.from('reserve_fund_logs').select('log_date,amount,memo').eq('store_id',sid).eq('type','withdrawal').order('log_date',{ascending:false}).limit(20)
+  ]);
+  document.getElementById('rhsBalance').innerText=fmt(balance)+'원';
+  const logs=logsRes.data||[];
+  const listEl=document.getElementById('rhsList');
+  if(!logs.length){
+    listEl.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">아직 예비비 사용 기록이 없습니다</div>';
+    return;
+  }
+  listEl.innerHTML=logs.map(l=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray-100);">
+      <div>
+        <div style="font-size:13px;font-weight:700;">${l.memo||'예비비 사용'}</div>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:2px;">${l.log_date||'-'}</div>
+      </div>
+      <div style="font-size:14px;font-weight:800;color:var(--danger);">-${fmt(l.amount||0)}원</div>
+    </div>
+  `).join('');
+}
+
+function gotoReserveTab(){
+  closeSheet('reserveHistorySheet');
+  nav('reserve');
+}
+
 async function saveSalesReconMapping(){
   if(!currentStore)return;
   const method=document.getElementById('srmMethod').value;
@@ -8648,7 +8702,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('crawlBtn').addEventListener('click',()=>manualCrawl());
   document.getElementById('dashModeProvisional').addEventListener('click',()=>switchDashMode('provisional'));
   document.getElementById('dashModeFinal').addEventListener('click',()=>switchDashMode('final'));
-  document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>{closeSideMenu();nav('reserve');});
+  document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>openReserveHistorySheet());
   document.getElementById('openDailyDetailBtn').addEventListener('click',()=>openDailyDetail());
   document.getElementById('closeDailyDetailBtn').addEventListener('click',()=>closeDailyDetail());
 
@@ -8834,7 +8888,13 @@ function renderSalesCards(){
   const totalEl=document.getElementById('salesMonthTotal');
   if(!wrap || !totalEl) return;
   if(!salesDaily.length){
-    wrap.innerHTML='<div class="sales-empty">이번 달 매출 기록이 없습니다<br><br>하단 [+ 매출 추가] 또는 마감정산 저장 시 자동 생성됩니다</div>';
+    // 빈 상태: 중앙에 큰 버튼 + 안내 (todo ⑬)
+    wrap.innerHTML=`<div class="sales-empty" style="padding:60px 20px 40px;">
+      <div style="font-size:48px;margin-bottom:12px;">📊</div>
+      <div style="font-size:15px;font-weight:700;color:var(--gray-700);margin-bottom:6px;">이번 달 매출이 아직 없어요</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:24px;line-height:1.5;">마감정산 저장 시 자동 생성되거나<br>아래 버튼으로 직접 추가할 수 있어요</div>
+      <button class="btn btn-primary" style="padding:14px 32px;font-size:15px;font-weight:700;border-radius:12px;" data-action="openSalesAdd">＋ 매출 추가</button>
+    </div>`;
     totalEl.innerText='0원';
     return;
   }
@@ -8847,7 +8907,13 @@ function renderSalesCards(){
     return (r.source||'manual')!=='closing';
   });
   if(!visibleRows.length){
-    wrap.innerHTML='<div class="sales-empty">이번 달 매출 기록이 없습니다<br><br>하단 [+ 매출 추가] 또는 마감정산 저장 시 자동 생성됩니다</div>';
+    // 빈 상태: 중앙에 큰 버튼 + 안내 (todo ⑬)
+    wrap.innerHTML=`<div class="sales-empty" style="padding:60px 20px 40px;">
+      <div style="font-size:48px;margin-bottom:12px;">📊</div>
+      <div style="font-size:15px;font-weight:700;color:var(--gray-700);margin-bottom:6px;">이번 달 매출이 아직 없어요</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:24px;line-height:1.5;">마감정산 저장 시 자동 생성되거나<br>아래 버튼으로 직접 추가할 수 있어요</div>
+      <button class="btn btn-primary" style="padding:14px 32px;font-size:15px;font-weight:700;border-radius:12px;" data-action="openSalesAdd">＋ 매출 추가</button>
+    </div>`;
     totalEl.innerText='0원';
     return;
   }
