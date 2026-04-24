@@ -659,33 +659,103 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [1] 영수증 ══ -->
 <div id="receiptCont" class="container active">
-  <div class="card">
-    <div class="card-title">영수증 등록</div>
-    <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:14px;">
-    <div id="uploadGroup" class="action-group" style="margin-top:0;">
-      <label class="btn btn-primary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-        📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" data-change="handleImg|this">
-      </label>
-      <label class="btn btn-secondary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-        🖼 업로드<input type="file" accept="image/*" style="display:none" data-change="handleImg|this">
-      </label>
+  <div class="card" style="padding-top:10px;">
+    <div class="sub-tabs">
+      <button class="sub-tab active" data-action="rcpTab|new|this">📸 새 영수증</button>
+      <button class="sub-tab" data-action="rcpTab|list|this">📋 기록 내역</button>
     </div>
-    <div id="actionGroup" style="display:none;" class="action-group">
-      <button class="btn btn-primary" style="flex:4;padding:15px;font-size:14px;" data-action="runAI">✨ AI 분석</button>
-      <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">취소</button>
+
+    <!-- 📸 새 영수증 (기본 탭) -->
+    <div id="rcpNew">
+      <div class="card-title" style="margin-top:4px;">영수증 등록</div>
+      <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:14px;">
+      <div id="uploadGroup" class="action-group" style="margin-top:0;">
+        <label class="btn btn-primary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+          📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" data-change="handleImg|this">
+        </label>
+        <label class="btn btn-secondary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+          🖼 업로드<input type="file" accept="image/*" style="display:none" data-change="handleImg|this">
+        </label>
+      </div>
+      <div id="actionGroup" style="display:none;" class="action-group">
+        <button class="btn btn-primary" style="flex:4;padding:15px;font-size:14px;" data-action="runAI">✨ AI 분석</button>
+        <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">취소</button>
+      </div>
+      <div id="resultArea" style="display:none;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:30px">X</th><th style="width:65px">거래처</th><th>품목</th><th style="width:70px">금액</th><th style="width:55px">분류</th></tr></thead>
+            <tbody id="resTable"></tbody>
+          </table>
+        </div>
+        <div class="add-row-btn" data-action="addReceiptRow">＋ 행 추가</div>
+        <div class="action-group">
+          <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">초기화</button>
+          <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveReceipt">저장하기</button>
+        </div>
+      </div>
     </div>
-    <div id="resultArea" style="display:none;">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th style="width:30px">X</th><th style="width:65px">거래처</th><th>품목</th><th style="width:70px">금액</th><th style="width:55px">분류</th></tr></thead>
-          <tbody id="resTable"></tbody>
-        </table>
+
+    <!-- 📋 기록 내역 -->
+    <div id="rcpList" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0 12px;border-bottom:1px solid var(--gray-100);margin-bottom:10px;">
+        <div>
+          <div style="font-size:11px;color:var(--gray-600);font-weight:700;">월 합계</div>
+          <div style="font-size:18px;font-weight:900;" id="rcpListTotal">0원</div>
+        </div>
+        <input type="month" id="rcpListMonth" class="input-inline" style="width:140px;" data-change="onRcpListMonthChange|this">
       </div>
-      <div class="add-row-btn" data-action="addReceiptRow">＋ 행 추가</div>
-      <div class="action-group">
-        <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">초기화</button>
-        <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveReceipt">저장하기</button>
+      <div id="rcpListBody">
+        <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 영수증 편집 시트 -->
+<div class="sheet-overlay" id="receiptEditSheet">
+  <div class="sheet sheet-content" style="max-height:88vh;padding-bottom:100px;">
+    <div class="sheet-header">
+      <div class="sheet-title">영수증 수정</div>
+      <button class="sheet-close" data-action="closeSheet|receiptEditSheet">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:12px;color:var(--gray-600);width:56px;">📅 날짜</span>
+      <input type="date" id="reDate" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:12px;color:var(--gray-600);width:56px;">🏪 거래처</span>
+      <input type="text" id="reVendor" placeholder="거래처명" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:12px;color:var(--gray-600);width:56px;">📦 품목</span>
+      <input type="text" id="reItem" placeholder="품목명" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:12px;color:var(--gray-600);width:56px;">💰 금액</span>
+      <input type="number" id="reAmount" placeholder="0" inputmode="numeric" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
+      <span style="font-size:12px;color:var(--gray-600);">원</span>
+    </div>
+    <div style="padding:10px 0;border-bottom:1px solid var(--gray-100);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:var(--gray-600);width:56px;">🏷 분류</span>
+        <button class="btn btn-secondary" style="flex:1;text-align:left;padding:10px 12px;font-weight:600;" id="reCatBtn" data-action="openReceiptEditCat">미분류 ▸</button>
+      </div>
+    </div>
+    <div style="padding:12px 0;border-bottom:1px solid var(--gray-100);">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:8px;">📝 상태</div>
+      <div style="display:flex;gap:14px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+          <input type="radio" name="reNote" value="정상" checked style="width:16px;height:16px;"> 정상
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+          <input type="radio" name="reNote" value="오답" style="width:16px;height:16px;"> 오답 (집계 제외)
+        </label>
+      </div>
+    </div>
+    <div class="action-group" style="margin-top:16px;">
+      <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="deleteReceiptRow">🗑 삭제</button>
+      <button class="btn btn-primary" style="flex:2;padding:14px;" data-action="saveReceiptEdit">💾 저장</button>
     </div>
   </div>
 </div>
@@ -2539,6 +2609,19 @@ function getCatListForPrompt(){
     return children.length?children.map(ch=>`${p.name}>${ch.name}`).join(',')+`,${p.name}`:p.name;
   }).join(',');
 }
+// ─── 품목명 → 학습 키워드 추출 (첫 단어, 2자 이상) ───
+// "양파 10kg 2봉" → "양파", "삼겹살2kg" → "삼겹살", "생수500ml 12입" → "생수"
+// contains 매칭이 성립하려면 keyword가 짧고 핵심적이어야 함 (dev_lessons #49)
+function normalizeItemKeyword(item){
+  if(!item) return '';
+  const trimmed=String(item).trim();
+  // 한글/영문 연속 문자 첫 덩어리 추출 (숫자/단위/공백 앞에서 끊김)
+  const m=trimmed.match(/^([가-힣a-zA-Z]{2,})/);
+  if(m) return m[1];
+  // 한글/영문으로 시작 안 하면 첫 공백 전까지, 최대 8자
+  return trimmed.split(/\s+/)[0].slice(0,8);
+}
+
 // ─── 영수증 품목에 DB 규칙 덮어쓰기 (학습된 품목은 AI 결과 무시) ───
 async function applyRulesToReceipt(list){
   if(!storeClassRules?.length) await loadClassificationRules();
@@ -2663,14 +2746,188 @@ async function saveReceipt(){
   setLoad(false);
   if(error) return toast('저장 실패: '+error.message,'error');
   // 자동 학습: 품목→카테고리 규칙 저장 (정상 행만, 매장별)
+  // 학습 키워드는 품목의 첫 단어만 추출 (예: "양파 10kg 2봉" → "양파")
+  // 품목 전체 문자열을 keyword로 넣으면 contains 매칭이 실패해 학습이 무력화됨 (dev_lessons #49)
   rows.filter(r=>r.note==='정상'&&r.item&&r.category).forEach(r=>{
-    // "식자재>야채" 형식 파싱 (대분류>소분류)
     const parts=String(r.category).split('>').map(s=>s.trim());
     const mainCat=parts[0]||'';
     const subCat=parts[1]||'';
-    if(mainCat) learnClassification(r.item.trim(),mainCat,subCat,'receipt',false).catch(()=>{});
+    const kw=normalizeItemKeyword(r.item);
+    if(mainCat&&kw) learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{});
   });
   toast('저장 완료!','success');resetReceipt();
+}
+
+// ══════════════════════════════════════════
+// 영수증 기록 내역 + 편집 (2026-04-24)
+// ══════════════════════════════════════════
+let rcpListMonth=(new Date()).toISOString().slice(0,7); // YYYY-MM
+let rcpRecords=[];                                      // 현재 월 영수증 배열
+let rcpEditingId=null;                                  // 편집 중 id
+let rcpEditingCategory='';                              // 편집 중 카테고리 (대분류>소분류)
+
+function rcpTab(tab,el){
+  document.querySelectorAll('#receiptCont .sub-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById('rcpNew').style.display=(tab==='new')?'block':'none';
+  document.getElementById('rcpList').style.display=(tab==='list')?'block':'none';
+  if(tab==='list'){
+    const mEl=document.getElementById('rcpListMonth');
+    if(mEl && !mEl.value) mEl.value=rcpListMonth;
+    loadReceiptList();
+  }
+}
+
+function onRcpListMonthChange(el){
+  rcpListMonth=el.value||rcpListMonth;
+  loadReceiptList();
+}
+
+async function loadReceiptList(){
+  if(!guardStore()) return;
+  const body=document.getElementById('rcpListBody');
+  body.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
+  const [y,m]=rcpListMonth.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const start=rcpListMonth+'-01', end=rcpListMonth+'-'+String(lastDay).padStart(2,'0');
+  const {data,error}=await sb.from('receipts')
+    .select('id,receipt_date,vendor,item,total_price,category,category_id,note,price,count')
+    .eq('store_id',currentStore.id)
+    .gte('receipt_date',start).lte('receipt_date',end)
+    .order('receipt_date',{ascending:false})
+    .order('created_at',{ascending:false});
+  if(error){
+    body.innerHTML='<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;">불러오기 실패</div>';
+    return;
+  }
+  rcpRecords=data||[];
+  renderReceiptList();
+}
+
+function renderReceiptList(){
+  const body=document.getElementById('rcpListBody');
+  const totalEl=document.getElementById('rcpListTotal');
+  if(!rcpRecords.length){
+    body.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">이번 달 영수증이 없어요.<br>📸 새 영수증 탭에서 추가해보세요.</div>';
+    totalEl.innerText='0원';
+    return;
+  }
+  // 날짜 그룹핑
+  const groups={};
+  let total=0;
+  rcpRecords.forEach(r=>{
+    const d=r.receipt_date||'-';
+    if(!groups[d]) groups[d]=[];
+    groups[d].push(r);
+    if(r.note==='정상') total+=(r.total_price||0);
+  });
+  totalEl.innerText=fmt(total)+'원';
+  const dates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+  let html='';
+  dates.forEach(d=>{
+    html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);padding:10px 2px 6px;position:sticky;top:0;background:#fff;z-index:2;">📅 ${d}</div>`;
+    groups[d].forEach(r=>{
+      const isErr=r.note!=='정상';
+      const catLabel=r.category||'미분류';
+      html+=`<div data-action="openReceiptEdit|${r.id}" style="display:flex;gap:10px;padding:12px;border:1px solid var(--gray-200);border-radius:10px;margin-bottom:8px;cursor:pointer;background:${isErr?'var(--gray-50)':'#fff'};opacity:${isErr?0.65:1};">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.vendor||'(거래처 없음)'}${isErr?' <span style="font-size:10px;color:var(--gray-500);">· 오답</span>':''}</div>
+            <div style="font-size:11px;color:var(--blue);font-weight:700;white-space:nowrap;">✏ 수정</div>
+          </div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.item||'-'}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+            <div style="font-size:11px;color:var(--gray-500);">🏷 ${catLabel}</div>
+            <div style="font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;">${fmt(r.total_price||0)}원</div>
+          </div>
+        </div>
+      </div>`;
+    });
+  });
+  body.innerHTML=html;
+}
+
+function openReceiptEdit(id){
+  const r=rcpRecords.find(x=>String(x.id)===String(id));
+  if(!r){toast('영수증을 찾을 수 없어요','error');return;}
+  rcpEditingId=r.id;
+  rcpEditingCategory=r.category||'';
+  document.getElementById('reDate').value=r.receipt_date||new Date().toISOString().split('T')[0];
+  document.getElementById('reVendor').value=r.vendor||'';
+  document.getElementById('reItem').value=r.item||'';
+  document.getElementById('reAmount').value=r.total_price||0;
+  document.getElementById('reCatBtn').innerHTML=(r.category?'🏷️ '+getCatLabel(r.category,''):'미분류 ▸');
+  const noteVal=(r.note==='정상')?'정상':'오답';
+  document.querySelectorAll('input[name="reNote"]').forEach(i=>{i.checked=(i.value===noteVal);});
+  openSheet('receiptEditSheet');
+}
+
+function openReceiptEditCat(){
+  openCatPicker({
+    current:rcpEditingCategory,
+    onSelect:(val)=>{
+      rcpEditingCategory=val||'';
+      document.getElementById('reCatBtn').innerHTML=val?('🏷️ '+getCatLabel(val,'')):'미분류 ▸';
+    }
+  });
+}
+
+async function saveReceiptEdit(){
+  if(!guardStore()||!rcpEditingId) return;
+  const date=document.getElementById('reDate').value;
+  const vendor=document.getElementById('reVendor').value.trim();
+  const item=document.getElementById('reItem').value.trim();
+  const amount=parseInt(document.getElementById('reAmount').value)||0;
+  const note=document.querySelector('input[name="reNote"]:checked')?.value||'정상';
+  const cat=rcpEditingCategory||'';
+  if(!date) return toast('날짜를 입력하세요','warn');
+  if(!amount&&note==='정상') return toast('금액을 입력하세요','warn');
+
+  // 카테고리 이름 → category_id 해결
+  const catById={};
+  (expCategories||[]).forEach(c=>{catById[c.name]=c.id;});
+  const resolveRcpCatId=c=>{
+    if(!c) return null;
+    const parts=String(c).split('>').map(s=>s.trim());
+    const target=parts[parts.length-1];
+    return catById[target]||catById[parts[0]]||null;
+  };
+
+  setLoad(true,'저장 중...');
+  const {error}=await sb.from('receipts').update({
+    receipt_date:date,vendor,item,total_price:amount,
+    category:cat||null,category_id:resolveRcpCatId(cat),
+    note
+  }).eq('id',rcpEditingId).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return toast('저장 실패: '+error.message,'error');
+
+  // 학습 규칙 갱신 (정상이면서 카테고리 있을 때만, 첫 단어 keyword)
+  if(note==='정상'&&item&&cat){
+    const parts=String(cat).split('>').map(s=>s.trim());
+    const mainCat=parts[0]||'';
+    const subCat=parts[1]||'';
+    const kw=normalizeItemKeyword(item);
+    if(mainCat&&kw) learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{});
+  }
+
+  toast('저장 완료!','success');
+  closeSheet('receiptEditSheet');
+  rcpEditingId=null;rcpEditingCategory='';
+  await loadReceiptList();
+}
+
+async function deleteReceiptRow(){
+  if(!guardStore()||!rcpEditingId) return;
+  if(!confirm('이 영수증을 삭제할까요? 되돌릴 수 없어요.')) return;
+  setLoad(true,'삭제 중...');
+  const {error}=await sb.from('receipts').delete().eq('id',rcpEditingId).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return toast('삭제 실패: '+error.message,'error');
+  toast('삭제 완료','success');
+  closeSheet('receiptEditSheet');
+  rcpEditingId=null;rcpEditingCategory='';
+  await loadReceiptList();
 }
 
 // ══════════════════════════════════════════
