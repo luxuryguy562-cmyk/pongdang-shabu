@@ -1445,6 +1445,23 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- Part D: 매출 대조 매핑 편집 시트 -->
+<div class="sheet-overlay" id="salesReconMappingSheet">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
+    <div class="sheet-header">
+      <div class="sheet-title" id="srmTitle">매출 매칭 설정</div>
+      <button class="sheet-close" data-action="closeSheet|salesReconMappingSheet">✕</button>
+    </div>
+    <input type="hidden" id="srmMethod">
+    <div style="font-size:12px;color:var(--gray-600);margin-bottom:12px;line-height:1.5;">
+      이 매출과 **같이 보고 싶은 입금 카테고리**를 고르세요.<br>
+      (예: 💳 신용카드 매출 → "삼성카드 입금", "신한카드 입금")
+    </div>
+    <div id="srmCategoryList" style="margin-bottom:16px;"></div>
+    <button class="btn btn-primary btn-full" data-action="saveSalesReconMapping">저장</button>
+  </div>
+</div>
+
 <!-- 기기 등록 상태 팝업 (로그인 시 자동 표시) -->
 <div class="sheet-overlay" id="deviceStatusSheet">
   <div class="sheet">
@@ -8014,7 +8031,7 @@ async function loadReconciliation(){
   const start=ym+'-01',end=ym+'-'+lastDay;
 
   try{
-    const [catRes,voRes,rcpRes,attRes,swRes,fcRes,txRes,salesRes,settingsRes,matchRes]=await Promise.all([
+    const [catRes,voRes,rcpRes,attRes,swRes,fcRes,txRes,salesRes,settingsRes,matchRes,salesDailyRes]=await Promise.all([
       sb.from('expense_categories').select('*').eq('store_id',sid).order('sort_order'),
       sb.from('vendor_orders').select('amount,vendor_id,vendors(name,category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
       sb.from('receipts').select('id,vendor,total_price,category').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
@@ -8023,8 +8040,10 @@ async function loadReconciliation(){
       sb.from('fixed_cost_amounts').select('amount,fixed_cost_id,fixed_costs(name,is_active)').eq('store_id',sid).eq('year_month',ym),
       sb.from('mydata_transactions').select('*').eq('store_id',sid).gte('tx_date',start).lte('tx_date',end).order('tx_date',{ascending:false}),
       sb.from('settlements').select('settle_date,sales_total,expected_total,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end),
-      sb.from('store_settings').select('royalty_rate,card_fee_rate').eq('store_id',sid).maybeSingle(),
-      sb.from('reconciliation').select('*').eq('store_id',sid).eq('year_month',ym)
+      sb.from('store_settings').select('royalty_rate,card_fee_rate,sales_recon_mapping').eq('store_id',sid).maybeSingle(),
+      sb.from('reconciliation').select('*').eq('store_id',sid).eq('year_month',ym),
+      // Part D: 매출 대조용 sales_daily
+      sb.from('sales_daily').select('card,cash,cash_receipt,qr,etc,extra_large,extra_small').eq('store_id',sid).gte('date',start).lte('date',end)
     ]);
 
     const allCategories=catRes.data||[];
@@ -8063,8 +8082,35 @@ async function loadReconciliation(){
     // 항목별 기록 합산
     const summary=[];
 
+    // ─── Part D: 매출 대조 섹션 (지출 항목보다 먼저 추가되어 상단에 표시됨) ───
+    const salesDailyRows=salesDailyRes.data||[];
+    const salesTotals={card:0,cash_receipt:0,qr:0,etc:0};
+    salesDailyRows.forEach(r=>{
+      salesTotals.card+=(r.card||0);
+      salesTotals.cash_receipt+=(r.cash_receipt||0);
+      salesTotals.qr+=(r.qr||0);
+      salesTotals.etc+=(r.etc||0);
+    });
+    const salesDefs=[
+      {key:'card',         name:'💳 신용카드 매출',   color:'#0050FF'},
+      {key:'cash_receipt', name:'🧾 현금영수증 매출', color:'#10B981'},
+      {key:'qr',           name:'📱 QR 매출',         color:'#14B8A6'},
+      {key:'etc',          name:'📲 기타결제 매출',   color:'#FF9500'}
+    ];
+    salesDefs.forEach(def=>{
+      const subKey='_sales_'+def.key;
+      const s=savedRecon.find(r=>r.sub_key===subKey);
+      const recorded=salesTotals[def.key]||0;
+      summary.push({
+        categoryId:subKey,name:def.name,source:'sales',type:'sales',method:def.key,
+        color:def.color,recorded,actual:s?.actual_total||0,
+        details:[{subKey,label:def.name,recorded,actual:s?.actual_total||0,
+          status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''}]
+      });
+    });
+
     categories.forEach(cat=>{
-      const entry={categoryId:cat.id,name:cat.name,source:cat.data_source,color:cat.color||'#0050FF',recorded:0,actual:0,details:[]};
+      const entry={categoryId:cat.id,name:cat.name,source:cat.data_source,type:'expense',color:cat.color||'#0050FF',recorded:0,actual:0,details:[]};
       const saved=savedRecon.filter(r=>r.category_id===cat.id);
 
       if(cat.data_source==='vendor_orders'){
@@ -8155,13 +8201,13 @@ async function loadReconciliation(){
     if(royaltyRate>0){
       const royaltyAmt=Math.round(totalRevenue*royaltyRate);
       const s=savedRecon.find(r=>r.sub_key==='_royalty');
-      summary.push({categoryId:'_royalty',name:`로열티 (${(royaltyRate*100).toFixed(1)}%)`,source:'auto',color:'#EF4444',recorded:royaltyAmt,actual:s?.actual_total||0,
+      summary.push({categoryId:'_royalty',name:`로열티 (${(royaltyRate*100).toFixed(1)}%)`,source:'auto',type:'expense',color:'#EF4444',recorded:royaltyAmt,actual:s?.actual_total||0,
         details:[{subKey:'_royalty',label:'로열티',recorded:royaltyAmt,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''}]});
     }
     if(cardFeeRate>0){
       const cardFeeAmt=Math.round(cardSales*cardFeeRate);
       const s=savedRecon.find(r=>r.sub_key==='_cardfee');
-      summary.push({categoryId:'_cardfee',name:`카드수수료 (${(cardFeeRate*100).toFixed(1)}%)`,source:'auto',color:'#EF4444',recorded:cardFeeAmt,actual:s?.actual_total||0,
+      summary.push({categoryId:'_cardfee',name:`카드수수료 (${(cardFeeRate*100).toFixed(1)}%)`,source:'auto',type:'expense',color:'#EF4444',recorded:cardFeeAmt,actual:s?.actual_total||0,
         details:[{subKey:'_cardfee',label:'카드수수료',recorded:cardFeeAmt,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''}]});
     }
 
@@ -8174,7 +8220,7 @@ async function loadReconciliation(){
       }
     }
 
-    // ─── mydata_transactions → 실제 출금 자동 매칭 ───
+    // ─── mydata_transactions → 실제 출금 자동 매칭 (지출) ───
     // category_id가 있는 출금 거래를 카테고리별로 합산하여 actual에 반영
     const txByCategory={};
     const matchedTxIds=new Set();
@@ -8186,9 +8232,32 @@ async function loadReconciliation(){
       }
     });
 
+    // ─── Part D: 입금 거래 → 매출 결제수단별 자동 매칭 ───
+    // store_settings.sales_recon_mapping: {card:[category_id,...], cash_receipt:[...], qr:[...], etc:[...]}
+    const salesMapping=(storeSettings.sales_recon_mapping)||{};
+    const depositByMethod={card:0,cash_receipt:0,qr:0,etc:0};
+    const matchedDepositIds=new Set();
+    transactions.filter(tx=>tx.amount>0&&!tx.exclude_from_settlement).forEach(tx=>{
+      if(!tx.category_id) return;
+      for(const method of Object.keys(depositByMethod)){
+        const ids=salesMapping[method]||[];
+        if(ids.includes(tx.category_id)){
+          depositByMethod[method]+=tx.amount;
+          matchedDepositIds.add(tx.id);
+          break;
+        }
+      }
+    });
+
     // summary에 actual 자동 반영 (수동 입력 없는 항목만)
     summary.forEach(entry=>{
-      const autoActual=txByCategory[entry.categoryId]||0;
+      // 매출은 depositByMethod로 자동 반영
+      let autoActual=0;
+      if(entry.type==='sales' && entry.method){
+        autoActual=depositByMethod[entry.method]||0;
+      } else {
+        autoActual=txByCategory[entry.categoryId]||0;
+      }
       if(autoActual>0){
         // 수동 입력(saved recon)이 없는 경우에만 자동 반영
         const hasManualActual=entry.details.some(d=>d.actual>0);
@@ -8203,10 +8272,11 @@ async function loadReconciliation(){
       }
     });
 
-    // 미매칭: 출금 거래 중 category_id 없거나 매칭 안 된 건
+    // 미매칭: 출금 중 category_id 없거나 매칭 안 된 건 + 입금 중 매출 매핑에 안 걸린 건
     const unmatchedTx=transactions.filter(tx=>tx.amount<0&&!tx.exclude_from_settlement&&!matchedTxIds.has(tx.id));
+    const unmatchedDeposits=transactions.filter(tx=>tx.amount>0&&!tx.exclude_from_settlement&&!matchedDepositIds.has(tx.id));
 
-    reconData={summary,transactions,unmatched:unmatchedTx,savedRecon};
+    reconData={summary,transactions,unmatched:unmatchedTx,unmatchedDeposits,savedRecon,salesMapping};
     renderReconSummary();
   }catch(e){
     console.error('정산 로드 오류:',e);
@@ -8218,41 +8288,57 @@ async function loadReconciliation(){
 function renderReconSummary(){
   if(!reconData)return;
   const{summary}=reconData;
-  let totalRecorded=0,totalActual=0;
 
-  let html='<div class="recon-header"><span style="width:8px;flex-shrink:0;"></span><span>항목</span><span>기록</span><span>출금</span><span>차이</span><span></span></div>';
-
-  summary.forEach(entry=>{
-    totalRecorded+=entry.recorded;totalActual+=entry.actual;
-    const diff=entry.actual-entry.recorded;
-    const allConfirmed=entry.details.every(d=>d.confirmed);
-    const hasActual=entry.actual>0;
-    let statusBadge='';
-    if(allConfirmed&&hasActual) statusBadge='<span class="badge badge-green">확인</span>';
-    else if(diff===0&&hasActual) statusBadge='<span class="badge badge-green">일치</span>';
-    else if(diff>0) statusBadge='<span class="badge badge-red">초과</span>';
-    else if(diff<0&&hasActual) statusBadge='<span class="badge badge-warn">부족</span>';
-    else statusBadge='<span class="badge badge-gray">미입력</span>';
-
-    html+=`<div class="recon-row" data-action="showReconDetail|${entry.categoryId}">
-      <div style="width:8px;height:8px;border-radius:50%;background:${entry.color};flex-shrink:0;"></div>
-      <div class="rr-name">${entry.name}</div>
-      <div class="rr-amt">${fmt(entry.recorded)}</div>
-      <div class="rr-amt">${hasActual?fmt(entry.actual):'-'}</div>
-      <div class="rr-diff" style="color:var(--${diff>0?'danger':diff<0?'warn':'success'});">${hasActual?(diff>0?'+':'')+fmt(diff):'-'}</div>
-      <div class="rr-badge">${statusBadge}</div>
+  // Part D: 섹션별 렌더 (sales / expense)
+  const renderSection=(entries,sectionLabel,actualLabel)=>{
+    let secRecorded=0,secActual=0;
+    let html=`<div class="card-title" style="margin-top:14px;margin-bottom:8px;">${sectionLabel}</div>`;
+    html+=`<div class="recon-header"><span style="width:8px;flex-shrink:0;"></span><span>항목</span><span>기록</span><span>${actualLabel}</span><span>차이</span><span></span></div>`;
+    entries.forEach(entry=>{
+      secRecorded+=entry.recorded;secActual+=entry.actual;
+      const diff=entry.actual-entry.recorded;
+      const allConfirmed=entry.details.every(d=>d.confirmed);
+      const hasActual=entry.actual>0;
+      let statusBadge='';
+      if(allConfirmed&&hasActual) statusBadge='<span class="badge badge-green">확인</span>';
+      else if(diff===0&&hasActual) statusBadge='<span class="badge badge-green">일치</span>';
+      else if(diff>0) statusBadge='<span class="badge badge-red">초과</span>';
+      else if(diff<0&&hasActual) statusBadge='<span class="badge badge-warn">부족</span>';
+      else statusBadge='<span class="badge badge-gray">미입력</span>';
+      html+=`<div class="recon-row" data-action="showReconDetail|${entry.categoryId}">
+        <div style="width:8px;height:8px;border-radius:50%;background:${entry.color};flex-shrink:0;"></div>
+        <div class="rr-name">${entry.name}</div>
+        <div class="rr-amt">${fmt(entry.recorded)}</div>
+        <div class="rr-amt">${hasActual?fmt(entry.actual):'-'}</div>
+        <div class="rr-diff" style="color:var(--${diff>0?'danger':diff<0?'warn':'success'});">${hasActual?(diff>0?'+':'')+fmt(diff):'-'}</div>
+        <div class="rr-badge">${statusBadge}</div>
+      </div>`;
+    });
+    const secDiff=secActual-secRecorded;
+    const hasSecActual=secActual>0;
+    html+=`<div class="recon-total">
+      <div class="rt-label">소계</div>
+      <div class="rt-vals">
+        <div style="font-size:11px;color:var(--gray-600);">기록 ${fmt(secRecorded)}원 / ${actualLabel} ${hasSecActual?fmt(secActual)+'원':'-'}</div>
+        <div class="rt-val" style="color:var(--${secDiff>0?'danger':secDiff<0?'warn':'success'});">${hasSecActual?'차이 '+(secDiff>0?'+':'')+fmt(secDiff)+'원':actualLabel+' 미입력'}</div>
+      </div>
     </div>`;
-  });
+    return {html, recorded:secRecorded, actual:secActual};
+  };
 
-  const totalDiff=totalActual-totalRecorded;
-  const hasTotalActual=totalActual>0;
-  html+=`<div class="recon-total">
-    <div class="rt-label">총합</div>
-    <div class="rt-vals">
-      <div style="font-size:11px;color:var(--gray-600);">기록 ${fmt(totalRecorded)}원 / 출금 ${hasTotalActual?fmt(totalActual)+'원':'-'}</div>
-      <div class="rt-val" style="color:var(--${totalDiff>0?'danger':totalDiff<0?'warn':'success'});">${hasTotalActual?'차이 '+(totalDiff>0?'+':'')+fmt(totalDiff)+'원':'출금 미입력'}</div>
-    </div>
-  </div>`;
+  const salesEntries=summary.filter(e=>e.type==='sales');
+  const expenseEntries=summary.filter(e=>e.type!=='sales');
+
+  let html='';
+  let salesRec=0,salesAct=0,expRec=0,expAct=0;
+  if(salesEntries.length){
+    const r=renderSection(salesEntries,'📊 매출 대조 (sales_daily ↔ 입금)','입금');
+    html+=r.html; salesRec=r.recorded; salesAct=r.actual;
+  }
+  if(expenseEntries.length){
+    const r=renderSection(expenseEntries,'💸 지출 대조 (기록 ↔ 출금)','출금');
+    html+=r.html; expRec=r.recorded; expAct=r.actual;
+  }
 
   document.getElementById('reconSummaryTable').innerHTML=html;
 }
@@ -8323,30 +8409,112 @@ function renderReconDetailFor(categoryId){
     html+=`<button class="btn btn-success btn-full" data-action="confirmReconCategory|${entry.categoryId}">전체 확인 처리</button>`;
   }
 
+  // Part D: 매출 섹션이면 매핑 편집 버튼
+  if(entry.type==='sales' && entry.method){
+    html+=`<button class="btn btn-secondary btn-full" style="margin-top:8px;" data-action="openSalesReconMapping|${entry.method}|${entry.name}">⚙️ 입금 카테고리 설정</button>`;
+    const mapped=(reconData?.salesMapping?.[entry.method]||[]).length;
+    if(!mapped){
+      html+=`<div style="margin-top:10px;padding:10px 12px;background:var(--gray-50);border-radius:8px;font-size:12px;color:var(--gray-600);line-height:1.5;">⚠️ 입금 카테고리를 아직 설정하지 않으셨어요. 위 버튼을 눌러 매칭할 카테고리를 고르세요.</div>`;
+    }
+  }
+
   document.getElementById('reconDetailTable').innerHTML=html;
 }
 
 function renderReconUnmatched(){
   if(!reconData)return;
-  const txs=reconData.unmatched||[];
+  const outTxs=reconData.unmatched||[];
+  const inTxs=reconData.unmatchedDeposits||[];
   const c=document.getElementById('reconUnmatchedList');
-  if(!txs.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><p>미매칭 출금이 없습니다</p></div>';return;}
 
-  let totalOut=0;
-  let html=txs.map(tx=>{
-    const amt=Math.abs(tx.amount||0);totalOut+=amt;
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray-100);">
-      <div><div style="font-size:13px;font-weight:700;">${tx.description||tx.merchant_name||'-'}</div>
-      <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">${tx.tx_date} ${tx.tx_time||''} · ${tx.tx_type==='bank'?'계좌':'카드'}</div></div>
-      <div style="font-size:14px;font-weight:800;color:var(--danger);">-${fmt(amt)}원</div>
-    </div>`;
-  }).join('');
-
-  html+=`<div class="recon-total"><div class="rt-label">미매칭 출금 합계</div><div class="rt-val" style="color:var(--danger);">${fmt(totalOut)}원</div></div>`;
+  // Part D: 미매칭 출금 + 미매칭 입금 병렬 표시
+  let html='';
+  // ── 미매칭 출금 ──
+  html+=`<div class="card-title" style="margin-top:4px;margin-bottom:8px;">💸 미매칭 출금</div>`;
+  if(!outTxs.length){
+    html+='<div style="text-align:center;padding:14px;color:var(--gray-400);font-size:12px;">✅ 미매칭 출금 없음</div>';
+  } else {
+    let totalOut=0;
+    html+=outTxs.map(tx=>{
+      const amt=Math.abs(tx.amount||0);totalOut+=amt;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray-100);">
+        <div><div style="font-size:13px;font-weight:700;">${tx.description||tx.merchant_name||'-'}</div>
+        <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">${tx.tx_date} ${tx.tx_time||''} · ${tx.tx_type==='bank'?'계좌':'카드'}</div></div>
+        <div style="font-size:14px;font-weight:800;color:var(--danger);">-${fmt(amt)}원</div>
+      </div>`;
+    }).join('');
+    html+=`<div class="recon-total"><div class="rt-label">미매칭 출금 합계</div><div class="rt-val" style="color:var(--danger);">${fmt(totalOut)}원</div></div>`;
+  }
+  // ── 미매칭 입금 (Part D) ──
+  html+=`<div class="card-title" style="margin-top:18px;margin-bottom:8px;">💰 미매칭 입금</div>`;
+  if(!inTxs.length){
+    html+='<div style="text-align:center;padding:14px;color:var(--gray-400);font-size:12px;">✅ 미매칭 입금 없음</div>';
+  } else {
+    let totalIn=0;
+    html+=inTxs.map(tx=>{
+      const amt=tx.amount||0;totalIn+=amt;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray-100);">
+        <div><div style="font-size:13px;font-weight:700;">${tx.description||tx.merchant_name||'-'}</div>
+        <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">${tx.tx_date} ${tx.tx_time||''} · ${tx.tx_type==='bank'?'계좌':'카드'}</div></div>
+        <div style="font-size:14px;font-weight:800;color:var(--success);">+${fmt(amt)}원</div>
+      </div>`;
+    }).join('');
+    html+=`<div class="recon-total"><div class="rt-label">미매칭 입금 합계</div><div class="rt-val" style="color:var(--success);">${fmt(totalIn)}원</div></div>`;
+  }
   c.innerHTML=html;
 }
 
+// Part D: 매출 매핑 편집 시트
+function openSalesReconMapping(method, label){
+  if(!currentStore)return;
+  document.getElementById('srmMethod').value=method;
+  document.getElementById('srmTitle').innerText=label+' 매칭 설정';
+  // category_type='income' 카테고리 목록 (대분류만, is_active)
+  const incomeCats=(expCategories||[]).filter(c=>!c.parent_id && c.is_active!==false && (c.category_type||'expense')==='income')
+    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const currentMapping=(reconData?.salesMapping?.[method])||[];
+  const list=document.getElementById('srmCategoryList');
+  if(!incomeCats.length){
+    list.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;line-height:1.6;">매출 카테고리가 없습니다.<br>사이드메뉴 → 지출 카테고리에서<br>매출(💰) 타입 카테고리를 먼저 만드세요.</div>';
+  } else {
+    list.innerHTML=incomeCats.map(c=>{
+      const checked=currentMapping.includes(c.id)?'checked':'';
+      const color=c.color||'#05C072';
+      return `<label style="display:flex;align-items:center;gap:10px;padding:12px 8px;border-bottom:1px solid var(--gray-100);cursor:pointer;">
+        <input type="checkbox" class="srm-cat" value="${c.id}" ${checked} style="width:18px;height:18px;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};"></span>
+        <span style="font-size:14px;font-weight:600;">${c.name}</span>
+      </label>`;
+    }).join('');
+  }
+  openSheet('salesReconMappingSheet');
+}
+
+async function saveSalesReconMapping(){
+  if(!currentStore)return;
+  const method=document.getElementById('srmMethod').value;
+  if(!method)return;
+  const checked=Array.from(document.querySelectorAll('.srm-cat:checked')).map(i=>i.value);
+  // 기존 mapping 불러와서 해당 method만 업데이트
+  setLoad(true,'저장 중...');
+  const{data:cur}=await sb.from('store_settings').select('sales_recon_mapping').eq('store_id',currentStore.id).maybeSingle();
+  const mapping=(cur?.sales_recon_mapping)||{};
+  mapping[method]=checked;
+  const{error}=await sb.from('store_settings').upsert({
+    store_id:currentStore.id, sales_recon_mapping:mapping
+  },{onConflict:'store_id'});
+  setLoad(false);
+  if(error)return toast('저장 실패: '+error.message,'error');
+  toast('매출 매칭 설정 저장!','success');
+  closeSheet('salesReconMappingSheet');
+  await loadReconciliation();
+}
+
 function openManualPayment(categoryId,subKey,label,recorded,actual){
+  // Part D: 매출 항목(_sales_*)은 "수동 입금 입력"으로 표시
+  const isSales=typeof categoryId==='string' && categoryId.startsWith('_sales_');
+  document.querySelector('#manualPaymentSheet .sheet-title').innerText=isSales?'수동 입금 입력':'수동 출금 입력';
+  document.getElementById('mpAmount').placeholder=isSales?'실제 입금 금액':'실제 출금 금액';
   document.getElementById('mpCategoryId').value=categoryId;
   document.getElementById('mpSubKey').value=subKey;
   document.getElementById('mpTargetLabel').innerText=label;

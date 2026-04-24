@@ -4,6 +4,48 @@
 
 ---
 
+## [2026-04-23 후속] 2순위 Part D — 정산/검수 매출 대조 섹션 추가 ⑤
+
+### 상태: 구현완료 → 배포 예정 (사장님 SQL + 매핑 설정 필요)
+### 규모: 대형 (loadReconciliation 확장 + 신규 시트/함수, ~150줄)
+### 브랜치: `claude/complete-priority-tasks-yRxCN`
+
+### 변경 요약
+1. **DB 마이그레이션** — `store_settings.sales_recon_mapping jsonb` 컬럼 추가
+   - SQL 파일: `docs/sql/migrate_sales_recon_mapping_2026_04_23{.sql,_rollback.sql}`
+2. **`loadReconciliation`** — sales_daily 쿼리 추가, 입금(amount>0) 매칭 로직 신규
+   - summary에 매출 4항목 추가: `_sales_card / _sales_cash_receipt / _sales_qr / _sales_etc`
+   - 각 entry에 `type:'sales'|'expense'` 필드 도입 (섹션 구분용)
+   - `depositByMethod`/`matchedDepositIds`/`unmatchedDeposits` 신규 맵
+3. **`renderReconSummary`** — 섹션 2개 분리 렌더
+   - 📊 매출 대조 (sales_daily ↔ 입금)
+   - 💸 지출 대조 (기록 ↔ 출금)
+   - 각 섹션별 소계. 매출은 "입금" 컬럼, 지출은 "출금" 컬럼
+4. **`renderReconDetailFor`** — 매출 entry면 "⚙️ 입금 카테고리 설정" 버튼 + 미설정 안내
+5. **`renderReconUnmatched`** — 미매칭 출금 + 미매칭 입금 병렬 렌더
+6. **신규 시트 `salesReconMappingSheet`** — 매출 수단별 매칭 카테고리 선택 UI
+7. **`openSalesReconMapping` / `saveSalesReconMapping`** — 매핑 편집/저장 함수
+8. **`openManualPayment`** — 매출 항목일 때 타이틀 "수동 입금 입력"으로 전환
+
+### 자동 매칭 로직
+- `mydata_transactions.amount>0` 거래 중 `category_id`가 `sales_recon_mapping[method]` 배열에 있으면 해당 매출 수단의 `actual`에 합산
+- 수동 입력(`reconciliation.actual_total`)이 있으면 수동 우선
+
+### 검증
+- ✅ node --check 통과 (6827 lines)
+- ✅ Part D 식별자 20건 존재
+- ✅ 기존 지출 9개 로직 한 줄도 안 건드림 (분기 추가만)
+- ✅ sales_recon_mapping 미설정 graceful fallback (크래시 없음)
+
+### 사장님 수동 작업 (⚠️ **배포 전 필수**)
+1. Supabase SQL Editor → `migrate_sales_recon_mapping_2026_04_23.sql` 실행 (1초)
+2. 앱 Ctrl+Shift+R → 정산/검수 탭 → 매출 대조 섹션 확인
+3. 💳 신용카드 매출 → 탭 → 상세 → "⚙️ 입금 카테고리 설정" → 카드사 입금 카테고리 체크
+4. 📲 기타결제 매출도 동일하게 배달앱/계좌이체 카테고리 체크
+5. 한 번 설정하면 이후 자동 매칭
+
+---
+
 ## [2026-04-23 후속] 2순위 Part C — 소형 UX 버그 묶음 ⑥⑦⑧⑨⑩
 
 ### 상태: 구현완료 → 배포 예정
