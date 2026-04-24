@@ -6233,39 +6233,62 @@ async function calcReserveBalance(){
   const rvRate=parseFloat(settings.reserve_rate||5)/100;
   const rvFixed=parseInt(settings.reserve_fixed||400000);
   const rvInitial=parseInt(settings.reserve_initial_balance||0);
+  const royaltyRate=parseFloat(settings.royalty_rate||0)/100;
+  const cardFeeRate=parseFloat(settings.card_fee_rate||0)/100;
 
-  // 모든 월의 순수익으로부터 적립금 합산
-  // settlements 전체에서 월별 매출 집계
-  const{data:allSettles}=await sb.from('settlements').select('settle_date,items_json,sales_total,expected_total').eq('store_id',sid).order('settle_date');
-  const{data:allFc}=await sb.from('fixed_cost_amounts').select('year_month,amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid);
-  const{data:allExp}=await sb.from('expense_category_amounts').select('year_month,amount,category_id').eq('store_id',sid);
+  // dev_lessons #47: sales_daily 단일 진실의 원천 — 매출관리 수정본 반영
+  // 순이익 = 매출 − (vendor_orders + receipts + attendance + fixed + 로열티 + 카드수수료)
+  // 적립금 = max(0, round(순이익 × rate) + fixed)
+  const [sdRes, fcRes, voRes, rcpRes, attRes] = await Promise.all([
+    sb.from('sales_daily').select('*').eq('store_id',sid),
+    sb.from('fixed_cost_amounts').select('year_month,amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid),
+    sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid),
+    sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상'),
+    sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid)
+  ]);
 
-  // 월별 매출 집계
-  const monthlyRevenue={};
-  (allSettles||[]).forEach(s=>{
-    const ym=s.settle_date?.slice(0,7);
-    if(!ym) return;
-    const j=s.items_json||{};
-    let ds=0;
-    if(j.pos_card!==undefined) ds=(j.pos_cash||0)+(j.pos_cash_receipt||0)+(j.pos_card||0)+(j.pos_etc||0)+(j.extra_draw_large||0)+(j.extra_draw_small||0);
-    else ds=s.sales_total||s.expected_total||0;
-    monthlyRevenue[ym]=(monthlyRevenue[ym]||0)+ds;
+  // 월별 매출 + 카드매출 (sales_daily 기준, Part F paymentMethods 동적)
+  const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
+  const monthly={};  // {ym: {rev, card, vendor, receipt, att, fixed}}
+  const bucket=ym=>{ if(!monthly[ym]) monthly[ym]={rev:0,card:0,vendor:0,receipt:0,att:0,fixed:0}; return monthly[ym]; };
+  (sdRes.data||[]).forEach(r=>{
+    const ym=r.date?.slice(0,7); if(!ym) return;
+    const b=bucket(ym);
+    b.rev+=salesRowTotal(r);
+    if(cardMethod) b.card+=getMethodAmount(r,cardMethod);
+  });
+  (fcRes.data||[]).filter(a=>a.fixed_costs?.is_active!==false).forEach(a=>{
+    bucket(a.year_month).fixed+=(a.is_confirmed?a.amount:(a.estimated_amount||a.amount||0));
+  });
+  (voRes.data||[]).forEach(o=>{
+    const ym=o.order_date?.slice(0,7); if(!ym) return;
+    bucket(ym).vendor+=(o.amount||0);
+  });
+  (rcpRes.data||[]).forEach(r=>{
+    const ym=r.receipt_date?.slice(0,7); if(!ym) return;
+    bucket(ym).receipt+=(r.total_price||0);
+  });
+  (attRes.data||[]).forEach(a=>{
+    const ym=a.work_date?.slice(0,7); if(!ym) return;
+    bucket(ym).att+=(a.calculated_wage||0);
   });
 
-  // 월별 고정비 집계
-  const monthlyFc={};
-  (allFc||[]).filter(a=>a.fixed_costs?.is_active!==false).forEach(a=>{
-    monthlyFc[a.year_month]=(monthlyFc[a.year_month]||0)+(a.is_confirmed?a.amount:(a.estimated_amount||a.amount||0));
-  });
-
-  // 총 적립 계산 (각 월의 순수익 × 비율 + 고정)
+  // 총 적립 계산 (각 월의 실제 순이익 × 비율 + 고정액)
+  // 진행중인 달은 고정비 일할(대시보드 reserveAmt 공식과 일치)
+  const today=new Date();
+  const todayYm=today.toISOString().slice(0,7);
   let totalDeposit=0;
-  Object.keys(monthlyRevenue).forEach(ym=>{
-    const rev=monthlyRevenue[ym]||0;
-    const fc=monthlyFc[ym]||0;
-    // 간단히 매출-고정비를 순수익 근사치로
-    const approxNet=rev-fc;
-    const dep=Math.max(0,Math.round(approxNet*rvRate)+rvFixed);
+  Object.keys(monthly).forEach(ym=>{
+    const b=monthly[ym];
+    if(b.rev<=0) return; // 매출 없는 달은 적립 안 함
+    const [yy,mm]=ym.split('-').map(Number);
+    const lastDay=new Date(yy,mm,0).getDate();
+    const passedDays=(ym===todayYm)?today.getDate():lastDay;
+    const fixedProrated=Math.round(b.fixed/lastDay*passedDays);
+    const royalty=Math.round(b.rev*royaltyRate);
+    const cardFee=Math.round(b.card*cardFeeRate);
+    const netProfit=b.rev-b.vendor-b.receipt-b.att-fixedProrated-royalty-cardFee;
+    const dep=Math.max(0,Math.round(netProfit*rvRate)+rvFixed);
     totalDeposit+=dep;
   });
 
@@ -6273,8 +6296,7 @@ async function calcReserveBalance(){
   const{data:withdrawals}=await sb.from('reserve_fund_logs').select('amount').eq('store_id',sid).eq('type','withdrawal');
   const totalWithdraw=(withdrawals||[]).reduce((a,r)=>a+(r.amount||0),0);
 
-  const balance=rvInitial+totalDeposit-totalWithdraw;
-  return balance;
+  return rvInitial+totalDeposit-totalWithdraw;
 }
 
 // ── 예비비 탭 로드 ──
@@ -8590,16 +8612,6 @@ async function loadReconciliation(){
     const storeSettings=settingsRes.data||{};
     const savedRecon=matchRes.data||[];
 
-    // 매출 계산 (로열티/카드수수료용)
-    let totalRevenue=0,cardSales=0;
-    settlements.forEach(s=>{
-      if(s.sales_total)totalRevenue+=s.sales_total;
-      else if(s.expected_total)totalRevenue+=s.expected_total;
-      if(s.items_json){
-        try{const items=typeof s.items_json==='string'?JSON.parse(s.items_json):s.items_json;cardSales+=(items.pos_card||0);}catch(e){}
-      }
-    });
-
     // 항목별 기록 합산
     const summary=[];
 
@@ -8607,6 +8619,15 @@ async function loadReconciliation(){
     // method key = legacy_key 우선 (기존 sales_recon_mapping {card,cash_receipt,qr,etc} 호환)
     //              없으면 'm_'+id (신규 결제수단)
     const salesDailyRows=salesDailyRes.data||[];
+
+    // 매출 계산 (로열티/카드수수료용) — dev_lessons #47: sales_daily 단일 진실
+    // 대시보드·매출관리와 동일한 기준. 매출관리에서 수동 수정한 값도 반영됨.
+    let totalRevenue=0,cardSales=0;
+    const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
+    salesDailyRows.forEach(r=>{
+      totalRevenue+=salesRowTotal(r);
+      if(cardMethod) cardSales+=getMethodAmount(r,cardMethod);
+    });
     const methodKeyOf=m=>m.legacy_key||('m_'+m.id);
     const salesTotals={};  // {[methodKey]: sum}
     (paymentMethods||[]).forEach(m=>{
