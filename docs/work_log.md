@@ -4,6 +4,70 @@
 
 ---
 
+## [2026-04-24] 영수증 학습 버그 수정 + 기록 내역/편집 화면 추가
+
+### 상태: 구현완료 → 배포 예정 (DB 변경 없음)
+### 규모: 중형 (HTML ~100줄 + JS ~150줄)
+### 브랜치: `claude/continue-todo-list-KG9PD`
+
+### 배경
+사장님 보고:
+1. 영수증 저장 시 카테고리 학습이 **제대로 작동 안 함** (같은 품목 반복 오분류)
+2. 영수증 저장 후 **수정 불가** — 기록 내역을 보거나 고칠 UI 없음
+
+### 변경 요약
+
+#### A. 학습 버그 수정 (핵심)
+**원인**: `saveReceipt`가 품목명 전체(예: "양파 10kg 2봉")를 `learnClassification` keyword로 저장. `classification_rules.match_type='contains'`라 **키워드가 길면 다음 영수증("양파 5kg")에서 contains 매칭 실패** → 학습이 실질적으로 무력화됨.
+
+**해결**:
+- 신규 함수 `normalizeItemKeyword(item)` — 품목의 **첫 한글/영문 덩어리**(2자 이상) 추출
+  - "양파 10kg 2봉" → "양파", "삼겹살2kg" → "삼겹살", "생수500ml 12입" → "생수"
+- `saveReceipt` 학습 호출부 1곳을 이 정규화 경유로 변경
+
+#### B. 영수증 탭 서브탭 + 기록 내역/편집 화면 신설
+**HTML** (index.html 660~763, ~100줄):
+1. `receiptCont` 내부에 `.sub-tabs` 2개 — `📸 새 영수증` / `📋 기록 내역`
+2. 기존 영수증 등록 UI를 `<div id="rcpNew">`로 감싸기
+3. 신규 `<div id="rcpList">` — 월 선택 + 합계 + 날짜 그룹 리스트(`rcpListBody`)
+4. 신규 `<div id="receiptEditSheet">` — 날짜/거래처/품목/금액/분류/정상↔오답/삭제/저장
+
+**JS** (index.html 2760~ 신규 섹션, ~150줄):
+- 전역: `rcpListMonth`, `rcpRecords`, `rcpEditingId`, `rcpEditingCategory`
+- `rcpTab(tab,el)` — 서브탭 전환, list 진입 시 loadReceiptList
+- `onRcpListMonthChange(el)` — 월 변경 트리거
+- `loadReceiptList()` — 월별 receipts 조회 (id,receipt_date,vendor,item,total_price,category,category_id,note 포함)
+- `renderReceiptList()` — 날짜 그룹 카드 리스트. 오답은 회색/65%. 카드 어디든 탭하면 편집.
+- `openReceiptEdit(id)` — 편집 시트 오픈, 기존 값 채움
+- `openReceiptEditCat()` — `openCatPicker` 재사용 (거래내역 편집과 동일 UI)
+- `saveReceiptEdit()` — UPDATE + 정상이면 `learnClassification` 자동 호출 (수정한 분류로 규칙 갱신)
+- `deleteReceiptRow()` — confirm 후 DELETE
+
+### 영향 범위
+- 함수: `saveReceipt` (학습부 1곳), 신규 8개 함수
+- DOM 신규 id: rcpNew, rcpList, rcpListMonth, rcpListBody, rcpListTotal, receiptEditSheet, reDate, reVendor, reItem, reAmount, reCatBtn + name="reNote" 라디오
+- DB: 변경 없음 (읽기 + update/delete만)
+
+### 검증
+- ✅ node --check 통과 (7272 lines)
+- ✅ 신규 DOM id 모두 유니크 (1건씩)
+- ✅ 기존 `saveReceipt` / `applyRulesToReceipt` 로직 보존 (learn keyword만 정규화)
+- ✅ `openCatPicker` 재사용 — 거래내역 편집과 동일 경험
+- ✅ 행별 매장 격리 — `.eq('store_id',currentStore.id)` 유지
+
+### 사장님 수동 작업
+- 앱 Ctrl+Shift+R. Supabase 변경 없음.
+- 테스트:
+  1. 영수증 탭 → `📋 기록 내역` → 이번 달 영수증 리스트 나오는지
+  2. 아무 카드 탭 → 편집 시트 → 분류 바꾸고 💾 저장 → 토스트 + 리스트 갱신 확인
+  3. 같은 품목(예: "양파")으로 다시 새 영수증 찍어보면 **이번엔 학습된 분류로 자동 매칭되는지** (✨ 배지 표시)
+  4. 🗑 삭제 버튼도 동작하는지
+
+### dev_lessons 신규 #49
+"학습 규칙 keyword는 **짧게 정규화** — contains 매칭 성립 조건" (별도 추가 예정)
+
+---
+
 ## [2026-04-24] Part F Phase 2 — 대시보드/정산검수 결제수단 동적화
 
 ### 상태: 구현완료 → 배포 예정 (DB 변경 없음)
