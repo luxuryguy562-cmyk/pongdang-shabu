@@ -52,6 +52,7 @@ franchises (프랜차이즈/브랜드)
 | ups_store_code | 업솔루션 매장 코드 |
 | ups_id / ups_pw | 업솔루션 로그인 정보 |
 | expense_thresholds (jsonb, default '{}') | 상세비교 기준% (카테고리명→%) |
+| **sales_recon_mapping** (jsonb, default '{}') | 매출 대조 매핑 (2026-04-23 Part D). `{"card":[category_id,...], "cash_receipt":[], "qr":[], "etc":[]}`. category_type='income' 카테고리 id 배열 |
 - upsert onConflict: `store_id`
 
 ### employees
