@@ -526,9 +526,152 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="submitAdminLogin">관리자 로그인</button>
   </div>
   <!-- 하단 버튼 -->
-  <div style="margin-top:24px;display:flex;gap:10px;">
+  <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
     <button class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);" data-action="toggleAdminLogin">관리자</button>
+    <button class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);" data-action="toggleOwnerLogin">주인 (이메일)</button>
     <button id="loginStoreBtn" class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);display:none;" data-action="openStoreSheet">매장 변경</button>
+  </div>
+  <!-- 주인(이메일) 로그인 영역 -->
+  <div id="loginOwnerArea" style="display:none;width:100%;max-width:320px;margin-top:16px;">
+    <input id="loginOwnerEmail" class="input-field" placeholder="이메일" type="email" autocomplete="email"
+      style="text-align:center;font-size:14px;font-weight:600;padding:16px;border-radius:14px;margin-bottom:10px;">
+    <input id="loginOwnerPw" class="input-field" placeholder="비밀번호" type="password" autocomplete="current-password"
+      style="text-align:center;font-size:14px;font-weight:600;padding:16px;border-radius:14px;margin-bottom:12px;">
+    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="submitOwnerLogin">로그인</button>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;">
+      <button class="btn btn-secondary" style="padding:6px 10px;font-size:11px;color:var(--gray-500);" data-action="openResetPw">비번 찾기</button>
+      <button class="btn btn-secondary" style="padding:6px 10px;font-size:11px;color:var(--gray-500);" data-action="toggleOwnerLogin">뒤로</button>
+    </div>
+  </div>
+  <!-- 신규 가입 안내 -->
+  <div style="margin-top:28px;text-align:center;">
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">처음이신가요?</div>
+    <button class="btn btn-primary" style="padding:12px 20px;font-size:13px;font-weight:800;border-radius:12px;" data-action="openSignup">🏪 매장 시작하기 →</button>
+  </div>
+</div>
+
+<!-- ══ 신규 매장 가입 시트 (Phase 1-A1, 2026-04-24) ══ -->
+<div id="signupOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:5500;overflow-y:auto;padding:24px 20px 40px;">
+  <div style="max-width:420px;margin:0 auto;">
+    <!-- 상단: 진행바 + 닫기 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <button id="signupBack" class="btn btn-secondary" style="padding:8px 10px;font-size:12px;color:var(--gray-500);" data-action="signupPrev">‹ 이전</button>
+      <div style="flex:1;margin:0 12px;">
+        <div style="height:6px;background:var(--gray-200);border-radius:3px;overflow:hidden;">
+          <div id="signupProgress" style="height:100%;background:var(--blue);width:16.7%;transition:width .25s;"></div>
+        </div>
+      </div>
+      <button class="btn btn-secondary" style="padding:8px 10px;font-size:14px;color:var(--gray-500);" data-action="closeSignup">✕</button>
+    </div>
+    <div id="signupStepLabel" style="text-align:center;font-size:11px;color:var(--gray-500);margin-bottom:20px;font-weight:700;">1 / 6</div>
+
+    <!-- 0단계: 사업자 유형 -->
+    <div class="signup-step" data-step="0">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">어떤 사업자세요?</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">유형에 맞춰 설정을 준비해드릴게요.</div>
+      <div id="signupTypeList">
+        <div class="signup-type-item" data-action="selectSignupType|personal" style="padding:16px;background:var(--gray-100);border-radius:14px;margin-bottom:10px;cursor:pointer;">
+          <div style="font-size:15px;font-weight:800;">🏪 개인 사업자</div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">매장 1개를 혼자 운영</div>
+        </div>
+        <div class="signup-type-item disabled" style="padding:16px;background:var(--gray-100);border-radius:14px;margin-bottom:10px;opacity:.5;">
+          <div style="font-size:15px;font-weight:800;">🏢 다점포 사업자 <span style="font-size:10px;color:var(--gray-500);">(준비 중)</span></div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">직영 매장 여러 개 운영</div>
+        </div>
+        <div class="signup-type-item disabled" style="padding:16px;background:var(--gray-100);border-radius:14px;margin-bottom:10px;opacity:.5;">
+          <div style="font-size:15px;font-weight:800;">🏯 프랜차이즈 본사 <span style="font-size:10px;color:var(--gray-500);">(준비 중)</span></div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">가맹점 관리</div>
+        </div>
+        <div class="signup-type-item disabled" style="padding:16px;background:var(--gray-100);border-radius:14px;opacity:.5;">
+          <div style="font-size:15px;font-weight:800;">🎫 가맹점주 <span style="font-size:10px;color:var(--gray-500);">(준비 중)</span></div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">본사 초대 코드로 가입</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1단계: 이메일 -->
+    <div class="signup-step" data-step="1" style="display:none;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">이메일을 알려주세요</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">로그인과 비밀번호 복구에 써요.</div>
+      <input id="suEmail" class="input-field" type="email" autocomplete="email" placeholder="boss@example.com"
+        style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:16px;">
+      <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="signupNext|1">다음 →</button>
+    </div>
+
+    <!-- 2단계: 비밀번호 -->
+    <div class="signup-step" data-step="2" style="display:none;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">비밀번호를 만들어주세요</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">영문+숫자 8자 이상을 권장해요.</div>
+      <input id="suPw" class="input-field" type="password" autocomplete="new-password" placeholder="비밀번호"
+        style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:10px;">
+      <input id="suPw2" class="input-field" type="password" autocomplete="new-password" placeholder="비밀번호 확인"
+        style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:16px;">
+      <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="signupNext|2">다음 →</button>
+    </div>
+
+    <!-- 3단계: 매장 이름 + 사장님 이름 -->
+    <div class="signup-step" data-step="3" style="display:none;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">매장 정보</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">기본 정보만 받을게요. 나중에 바꿀 수 있어요.</div>
+      <input id="suStoreName" class="input-field" type="text" placeholder="매장 이름 (예: 퐁당논산점)"
+        style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:10px;">
+      <input id="suOwnerName" class="input-field" type="text" placeholder="사장님 이름"
+        style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:10px;">
+      <input id="suAddress" class="input-field" type="text" placeholder="주소 (선택)"
+        style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:16px;">
+      <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="signupNext|3">다음 →</button>
+    </div>
+
+    <!-- 4단계: 사업자번호 -->
+    <div class="signup-step" data-step="4" style="display:none;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">사업자번호 <span style="font-size:13px;color:var(--gray-500);font-weight:600;">(선택)</span></div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">세금계산서·세무 자동화에 써요. 나중에 입력해도 돼요.</div>
+      <input id="suBizNo" class="input-field" type="text" inputmode="numeric" placeholder="000-00-00000"
+        style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:16px;">
+      <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="signupNext|4">다음 →</button>
+      <button class="btn btn-secondary btn-full" style="padding:14px;font-size:13px;margin-top:8px;" data-action="signupNext|4|skip">건너뛰기</button>
+    </div>
+
+    <!-- 5단계: 약관 동의 -->
+    <div class="signup-step" data-step="5" style="display:none;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">약관에 동의해주세요</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">최종 단계예요. 동의 후 바로 시작할 수 있어요.</div>
+      <label style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--blue-light);border-radius:12px;margin-bottom:12px;cursor:pointer;">
+        <input type="checkbox" id="suAllAgree" style="width:20px;height:20px;" data-change="signupToggleAll|this">
+        <span style="font-size:14px;font-weight:800;">전체 동의</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;">
+        <input type="checkbox" class="su-agree" id="suAgreeTos" style="width:18px;height:18px;">
+        <span style="flex:1;font-size:13px;">(필수) 이용약관 동의</span>
+        <button class="btn btn-secondary" style="padding:4px 8px;font-size:11px;" data-action="showLegalDoc|tos">보기</button>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;">
+        <input type="checkbox" class="su-agree" id="suAgreePrivacy" style="width:18px;height:18px;">
+        <span style="flex:1;font-size:13px;">(필수) 개인정보 처리방침 동의</span>
+        <button class="btn btn-secondary" style="padding:4px 8px;font-size:11px;" data-action="showLegalDoc|privacy">보기</button>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:20px;cursor:pointer;">
+        <input type="checkbox" class="su-agree-optional" id="suAgreeMarketing" style="width:18px;height:18px;">
+        <span style="flex:1;font-size:13px;color:var(--gray-600);">(선택) 마케팅 정보 수신 동의</span>
+      </label>
+      <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="completeSignup">🎉 가입 완료</button>
+    </div>
+
+    <div id="suErrorMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- 법률 문서 간이 시트 (템플릿) -->
+<div class="sheet-overlay" id="legalDocSheet">
+  <div class="sheet sheet-content" style="max-height:85vh;padding-bottom:80px;">
+    <div class="sheet-header">
+      <div class="sheet-title" id="legalDocTitle">이용약관</div>
+      <button class="sheet-close" data-action="closeSheet|legalDocSheet">✕</button>
+    </div>
+    <div id="legalDocBody" style="font-size:12px;line-height:1.7;color:var(--gray-700);white-space:pre-line;padding:10px 4px;"></div>
+    <div style="margin-top:14px;padding:10px;background:var(--gray-100);border-radius:8px;font-size:11px;color:var(--gray-500);line-height:1.6;">
+      ⚠️ 현재 표시된 약관은 <b>초안 템플릿</b>입니다. 실제 서비스 개시 전 법률 검토를 받은 정식 약관으로 교체될 예정입니다.
+    </div>
   </div>
 </div>
 
@@ -7331,6 +7474,315 @@ function showLoginScreen(){
   // PIN에 포커스 (이름 이미 선택됐으면)
   setTimeout(()=>{if(lastLoginName&&pinInput)pinInput.focus();},300);
 }
+// ═══════════════════════════════════════════════════════════════
+// Phase 1-A1: 신규 매장 가입 플로우 (2026-04-24)
+// ═══════════════════════════════════════════════════════════════
+let signupState = { step:0, type:'personal' };
+
+function openSignup(){
+  signupState = { step:0, type:'personal' };
+  document.getElementById('signupOverlay').style.display='block';
+  document.body.style.overflow='hidden';
+  // 모든 input 초기화
+  ['suEmail','suPw','suPw2','suStoreName','suOwnerName','suAddress','suBizNo'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  ['suAllAgree','suAgreeTos','suAgreePrivacy','suAgreeMarketing'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.checked=false;
+  });
+  document.getElementById('suErrorMsg').innerText='';
+  showSignupStep(0);
+}
+function closeSignup(){
+  document.getElementById('signupOverlay').style.display='none';
+  document.body.style.overflow='';
+}
+function showSignupStep(step){
+  signupState.step=step;
+  document.querySelectorAll('.signup-step').forEach(el=>{
+    el.style.display = (parseInt(el.dataset.step)===step) ? 'block' : 'none';
+  });
+  document.getElementById('signupProgress').style.width=((step+1)/6*100)+'%';
+  document.getElementById('signupStepLabel').innerText=(step+1)+' / 6';
+  document.getElementById('signupBack').style.visibility = step===0 ? 'hidden' : 'visible';
+  document.getElementById('suErrorMsg').innerText='';
+}
+function selectSignupType(type){
+  signupState.type=type;
+  showSignupStep(1);
+}
+function signupPrev(){
+  if(signupState.step>0) showSignupStep(signupState.step-1);
+}
+function signupNext(curStep, flag){
+  const err = msg => { document.getElementById('suErrorMsg').innerText=msg; };
+  err('');
+  if(curStep===1){
+    const email=document.getElementById('suEmail').value.trim();
+    if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return err('이메일 형식을 확인해주세요');
+  } else if(curStep===2){
+    const pw=document.getElementById('suPw').value;
+    const pw2=document.getElementById('suPw2').value;
+    if(!pw||pw.length<8) return err('비밀번호 8자 이상');
+    if(pw!==pw2) return err('비밀번호가 일치하지 않아요');
+    if(!/[a-zA-Z]/.test(pw)||!/[0-9]/.test(pw)) return err('영문+숫자 조합을 권장해요');
+  } else if(curStep===3){
+    const storeName=document.getElementById('suStoreName').value.trim();
+    const ownerName=document.getElementById('suOwnerName').value.trim();
+    if(!storeName) return err('매장 이름을 입력해주세요');
+    if(!ownerName) return err('사장님 이름을 입력해주세요');
+  } else if(curStep===4 && flag!=='skip'){
+    const biz=document.getElementById('suBizNo').value.trim();
+    if(biz && biz.replace(/\D/g,'').length!==10) return err('사업자번호는 10자리 숫자예요 (- 포함 OK)');
+  }
+  showSignupStep(curStep+1);
+}
+function signupToggleAll(el){
+  const checked=el.checked;
+  document.querySelectorAll('#suAgreeTos, #suAgreePrivacy, #suAgreeMarketing').forEach(c=>c.checked=checked);
+}
+
+function showLegalDoc(type){
+  const title = type==='tos' ? '이용약관 (초안)' : '개인정보 처리방침 (초안)';
+  document.getElementById('legalDocTitle').innerText=title;
+  // 법률 검토 전 초안 템플릿
+  const tosText = `제1조 (목적)
+본 약관은 "퐁당샤브 관리 시스템"(이하 "서비스")의 이용조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.
+
+제2조 (서비스 내용)
+회사는 다음과 같은 서비스를 제공합니다.
+  - 매출/지출 관리
+  - 근태 관리
+  - 영수증/엑셀 분석
+  - 정산 및 검수 리포트
+  - 기타 회사가 추가 개발하는 서비스
+
+제3조 (이용계약 체결)
+이용계약은 이용자가 본 약관에 동의하고 회사가 제공하는 양식에 따라 가입신청을 완료하고 회사가 이를 승인함으로써 체결됩니다.
+
+제4조 (개인정보보호)
+회사는 관련법령이 정하는 바에 따라 이용자의 개인정보를 보호하기 위해 노력합니다. 개인정보 보호 및 사용에 대해서는 별도의 "개인정보 처리방침"에 따릅니다.
+
+제5조 (책임제한)
+회사는 천재지변, 불가항력, 이용자의 귀책사유로 인한 서비스 장애에 대해 책임을 지지 않습니다.
+
+※ 본 약관은 초안이며, 정식 서비스 개시 전 법률 검토를 거쳐 확정됩니다.`;
+  const privacyText = `제1조 (수집하는 개인정보)
+서비스 이용을 위해 다음의 정보를 수집합니다.
+  - 필수: 이메일, 비밀번호(암호화), 매장명, 사장님 이름
+  - 선택: 사업자등록번호, 주소, 연락처
+
+제2조 (수집 목적)
+  - 회원 식별 및 서비스 제공
+  - 매출·지출·근태 데이터 관리
+  - 법령상 의무 이행 (세무 신고 등)
+
+제3조 (보유 기간)
+회원 탈퇴 시 즉시 파기합니다. 단, 관련 법령에 따라 일정 기간 보관이 필요한 정보는 해당 기간 동안 보관합니다.
+  - 계약 또는 청약철회 관련 기록: 5년 (전자상거래법)
+  - 세금계산서 관련 기록: 5년 (세법)
+
+제4조 (제3자 제공)
+회사는 이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다.
+
+제5조 (이용자의 권리)
+이용자는 언제든지 본인의 개인정보를 조회·수정·삭제·처리정지를 요청할 수 있습니다.
+
+※ 본 방침은 초안이며, 정식 서비스 개시 전 법률 검토를 거쳐 확정됩니다.`;
+  document.getElementById('legalDocBody').innerText = type==='tos' ? tosText : privacyText;
+  openSheet('legalDocSheet');
+}
+
+// ─── 가입 완료: Supabase Auth + stores + employees + 기본 데이터 seed ───
+async function completeSignup(){
+  const err = msg => { document.getElementById('suErrorMsg').innerText=msg; };
+  err('');
+  const tosOk=document.getElementById('suAgreeTos').checked;
+  const privacyOk=document.getElementById('suAgreePrivacy').checked;
+  if(!tosOk||!privacyOk) return err('필수 약관에 동의해주세요');
+
+  const email=document.getElementById('suEmail').value.trim();
+  const pw=document.getElementById('suPw').value;
+  const storeName=document.getElementById('suStoreName').value.trim();
+  const ownerName=document.getElementById('suOwnerName').value.trim();
+  const address=document.getElementById('suAddress').value.trim();
+  const bizNo=document.getElementById('suBizNo').value.trim().replace(/\D/g,'');
+
+  setLoad(true,'가입 중...');
+  try {
+    // 1. Supabase Auth 가입 (이메일 인증 즉시 승인 설정 가정)
+    const { data: authData, error: authErr } = await sb.auth.signUp({
+      email, password: pw,
+      options:{ data:{ owner_name: ownerName } }
+    });
+    if(authErr) throw new Error('계정 생성 실패: '+authErr.message);
+    const userId = authData.user?.id;
+    if(!userId) throw new Error('사용자 ID를 받지 못했어요. 잠시 후 다시 시도해주세요.');
+
+    // 2. 매장 생성 (store_code는 DB trigger 또는 여기서 생성)
+    const storeCode = generateStoreCode();
+    const { data: storeRows, error: storeErr } = await sb.from('stores').insert({
+      name: storeName,
+      address: address||null,
+      business_no: bizNo||null,
+      store_code: storeCode,
+      tos_accepted_at: new Date().toISOString(),
+      is_active: true
+    }).select().single();
+    if(storeErr) throw new Error('매장 생성 실패: '+storeErr.message);
+    const storeId = storeRows.id;
+
+    // 3. owner employee 생성
+    const ownerPin = Math.floor(1000+Math.random()*9000).toString(); // 임시 PIN
+    const { error: empErr } = await sb.from('employees').insert({
+      store_id: storeId,
+      name: ownerName,
+      pin: ownerPin,
+      auth_level: 'owner',
+      auth_user_id: userId,
+      is_active: true,
+      is_approved: true,
+      is_manager: true,
+      base_wage: 0
+    });
+    if(empErr) throw new Error('직원(사장님) 생성 실패: '+empErr.message);
+
+    // 4. store_settings 기본값
+    await sb.from('store_settings').upsert({
+      store_id: storeId,
+      royalty_rate: 0, card_fee_rate: 2.5,
+      reserve_rate: 5, reserve_fixed: 400000
+    }, { onConflict:'store_id' });
+
+    // 5. 기본 데이터 seed (카테고리 + 결제수단)
+    await seedNewStoreDefaults(storeId);
+
+    setLoad(false);
+    closeSignup();
+
+    // 자동 로그인
+    currentStore = { id: storeId, name: storeName };
+    localStorage.setItem('pd_store', JSON.stringify(currentStore));
+    await loadEmployees();
+    const emp = employees.find(e=>e.auth_user_id===userId);
+    if(emp) completeLogin(emp);
+
+    toast(`🎉 가입 완료! 매장 코드: ${storeCode}`,'success');
+    setTimeout(()=>showWelcomeCard(storeCode), 600);
+  } catch(e) {
+    setLoad(false);
+    err(e.message||'가입 중 오류가 발생했어요');
+    console.error('[signup]',e);
+  }
+}
+
+function generateStoreCode(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 0/O/1/I 제외
+  let s=''; for(let i=0;i<6;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+async function seedNewStoreDefaults(storeId){
+  // 기본 지출 카테고리 (대분류만, 소분류는 사장님이 나중에 추가)
+  const defaultCats=[
+    { name:'식자재', color:'#059669', data_source:'composite', sort_order:1 },
+    { name:'인건비', color:'#DC2626', data_source:'attendance', sort_order:2 },
+    { name:'고정비', color:'#7C3AED', data_source:'fixed_costs', sort_order:3 },
+    { name:'세금',   color:'#EA580C', data_source:'manual', sort_order:4 },
+    { name:'마케팅', color:'#DB2777', data_source:'manual', sort_order:5 },
+    { name:'비품',   color:'#0891B2', data_source:'receipts', sort_order:6 },
+    { name:'기타',   color:'#6B7280', data_source:'manual', sort_order:7 }
+  ];
+  await sb.from('expense_categories').insert(
+    defaultCats.map(c=>({ ...c, store_id:storeId, category_type:'expense', is_active:true }))
+  );
+
+  // 기본 결제수단 (payment_methods 테이블 있을 때만)
+  try {
+    const pms=LEGACY_SALES_DEFS.map(d=>({
+      store_id:storeId, name:d.name, icon:d.icon, color:d.color,
+      sort_order:d.sort_order, legacy_key:d.legacy_key, is_active:true
+    }));
+    await sb.from('payment_methods').insert(pms);
+  } catch(e){ console.warn('[signup] payment_methods seed skip:',e.message); }
+}
+
+function showWelcomeCard(storeCode){
+  const html=`<div style="padding:20px;background:var(--blue-light);border-radius:16px;margin:16px 0;">
+    <div style="font-size:18px;font-weight:900;margin-bottom:10px;">👋 환영해요!</div>
+    <div style="font-size:13px;color:var(--gray-700);line-height:1.6;margin-bottom:12px;">
+      매장 코드: <b style="font-size:16px;color:var(--blue);letter-spacing:2px;">${storeCode}</b><br>
+      <span style="font-size:12px;color:var(--gray-600);">직원에게 이 코드를 공유하면 로그인할 수 있어요.</span>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-top:14px;margin-bottom:6px;">이것부터 해보세요</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <button class="btn btn-secondary" style="justify-content:flex-start;padding:10px 14px;font-size:12px;" data-action="nav|receipt">🧾 첫 영수증 찍어보기</button>
+      <button class="btn btn-secondary" style="justify-content:flex-start;padding:10px 14px;font-size:12px;" data-action="nav|settle">💰 오늘 매출 기록</button>
+      <button class="btn btn-secondary" style="justify-content:flex-start;padding:10px 14px;font-size:12px;" data-action="nav|vendors">🏪 거래처 추가</button>
+    </div>
+  </div>`;
+  // 대시보드 최상단에 환영 카드 임시 표시 (localStorage로 1회만)
+  if(localStorage.getItem('pd_welcomed')==='1') return;
+  const dashCont=document.getElementById('dashboardCont');
+  if(dashCont) dashCont.insertAdjacentHTML('afterbegin', html);
+  localStorage.setItem('pd_welcomed','1');
+}
+
+// ─── 주인 이메일 로그인 ───
+function toggleOwnerLogin(){
+  const area=document.getElementById('loginOwnerArea');
+  const form=document.getElementById('loginFormArea');
+  const adminArea=document.getElementById('loginAdminArea');
+  if(area.style.display==='none'){
+    area.style.display='block';
+    form.style.display='none';
+    adminArea.style.display='none';
+    document.getElementById('loginOwnerEmail').value='';
+    document.getElementById('loginOwnerPw').value='';
+  } else {
+    area.style.display='none';
+    form.style.display='block';
+  }
+}
+async function submitOwnerLogin(){
+  const email=(document.getElementById('loginOwnerEmail')?.value||'').trim();
+  const pw=document.getElementById('loginOwnerPw')?.value||'';
+  const msgEl=document.getElementById('loginMsg');
+  if(!email||!pw){msgEl.innerText='이메일과 비밀번호를 입력하세요';return;}
+  setLoad(true,'로그인 중...');
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if(error) throw new Error('로그인 실패: '+error.message);
+    const userId = data.user?.id;
+    // auth_user_id로 employee 찾기
+    const { data: empRows, error: empErr } = await sb.from('employees').select('*, stores(id,name)').eq('auth_user_id', userId).eq('is_active', true);
+    if(empErr) throw new Error('직원 정보 조회 실패');
+    if(!empRows?.length) throw new Error('연결된 매장이 없어요. 회원가입이 완료됐나요?');
+    // 여러 매장 중 하나 선택 (첫 번째, 추후 Phase 1-A2에서 선택 UI)
+    const emp = empRows[0];
+    currentStore = { id: emp.stores.id, name: emp.stores.name };
+    localStorage.setItem('pd_store', JSON.stringify(currentStore));
+    await loadEmployees();
+    const fullEmp = employees.find(e=>e.id===emp.id) || emp;
+    setLoad(false);
+    completeLogin(fullEmp);
+  } catch(e) {
+    setLoad(false);
+    msgEl.innerText = e.message;
+    console.error('[owner-login]',e);
+  }
+}
+async function openResetPw(){
+  const email=(document.getElementById('loginOwnerEmail')?.value||'').trim();
+  if(!email) {document.getElementById('loginMsg').innerText='이메일을 먼저 입력하세요';return;}
+  if(!confirm(email+' 로 비밀번호 재설정 링크를 보낼까요?')) return;
+  setLoad(true,'발송 중...');
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  setLoad(false);
+  if(error) return toast('발송 실패: '+error.message,'error');
+  toast('이메일을 확인해주세요!','success');
+}
+
 // ─── 이름+PIN 로그인 ───
 function submitLogin(){
   const nameVal=(document.getElementById('loginNameInput')?.value||'').trim();
