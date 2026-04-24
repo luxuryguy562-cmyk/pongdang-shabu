@@ -4,6 +4,110 @@
 
 ---
 
+## [2026-04-24] Phase 1-A1 — 매장 가입 플로우 (개인 사업자 MVP)
+
+### 상태: 구현완료 → 배포 예정 (**사장님 SQL 실행 필요**)
+### 규모: 대형 (HTML ~150줄 + JS ~330줄 + SQL 1개)
+### 브랜치: `claude/continue-todo-list-KG9PD`
+
+### 배경
+출시 로드맵 Phase 1-A의 첫 세션. "신규 매장 주인이 앱을 열어 스스로 가입 → 기본 세팅 자동 → 바로 사용" 플로우 구축. Supabase Auth 도입.
+
+### 변경 요약
+
+#### 1. DB 마이그레이션 — `docs/sql/migrate_signup_2026_04_24.sql`
+- `employees.auth_user_id UUID REFERENCES auth.users(id)` (이미 있을 수 있음, IF NOT EXISTS)
+- `stores.store_code TEXT UNIQUE` (직원 로그인용 6자리 고유 코드)
+- `stores.tos_accepted_at TIMESTAMPTZ`
+- `stores.business_no TEXT`
+- `franchises.invite_code TEXT UNIQUE`, `franchises.owner_user_id UUID REFERENCES auth.users(id)` (Phase 1-A2 대비 미리 준비)
+- 기존 stores에 store_code 자동 발급 (`md5(id) 앞 6자`)
+- 전체 `IF NOT EXISTS` + DO 블록으로 **여러 번 실행 안전**
+
+#### 2. 로그인 오버레이 업그레이드 (index.html:498~)
+- 기존: 매장 선택 → 직원 이름+PIN
+- 신규 추가:
+  - 하단에 **"🏪 매장 시작하기 →"** 큰 버튼 (신규 사장님용)
+  - **"주인 (이메일)"** 토글 — 이메일/비번 로그인 + "비번 찾기" 버튼
+  - 관리자 PIN 로그인 + 매장 변경 버튼은 기존대로 유지
+
+#### 3. 신규 가입 시트 `#signupOverlay` — 6단계 마법사
+- 0/6: 사업자 유형 선택 (개인만 활성, 다른 3종은 Phase 1-A2 대비 "준비 중" 비활성화)
+- 1/6: 이메일
+- 2/6: 비밀번호 (8자↑ + 영문+숫자 권장)
+- 3/6: 매장 이름 + 사장님 이름 + 주소(선택)
+- 4/6: 사업자번호 (선택, 건너뛰기 가능)
+- 5/6: 약관 동의 (전체 동의 + 이용약관/개인정보(필수) + 마케팅(선택))
+- 진행바, 이전/다음, 실시간 검증
+
+#### 4. 법률 문서 템플릿 시트 `#legalDocSheet`
+- 이용약관·개인정보 처리방침 **초안 템플릿** 삽입
+- "법률 검토 전" 명시 안내 배너
+- 정식 서비스 개시 전 법무 검토 예정
+
+#### 5. JS 가입 로직
+- `openSignup` / `closeSignup` / `showSignupStep` / `selectSignupType`
+- `signupPrev` / `signupNext` (단계별 검증 포함)
+- `signupToggleAll` (약관 전체 동의 체크)
+- `showLegalDoc(type)` — 약관/개인정보 초안 표시
+- `completeSignup()` — 통합 트랜잭션:
+  1. `sb.auth.signUp` (Supabase Auth)
+  2. `stores` INSERT (store_code 자동 생성)
+  3. `employees` INSERT (auth_level='owner', auth_user_id 연결)
+  4. `store_settings` 기본값 upsert
+  5. `seedNewStoreDefaults(storeId)` — 지출 카테고리 7종 + 결제수단 7종
+  6. 자동 로그인 + 환영 카드
+- `generateStoreCode()` — 헷갈리는 0/O/1/I 제외 6자리 (ABCDEFGHJKLMNPQRSTUVWXYZ23456789)
+- `showWelcomeCard(storeCode)` — 가입 후 대시보드에 "환영+첫 액션 3개" 카드 (localStorage로 1회만)
+
+#### 6. 이메일 로그인 JS
+- `toggleOwnerLogin` — 이메일 로그인 영역 토글
+- `submitOwnerLogin` — `sb.auth.signInWithPassword` + auth_user_id로 employee 찾기 → 매장 자동 선택 → completeLogin
+- `openResetPw` — `sb.auth.resetPasswordForEmail` (비밀번호 재설정 이메일 발송)
+
+### 기본 seed 데이터
+- **지출 카테고리** 7개: 식자재(composite) / 인건비(attendance) / 고정비(fixed_costs) / 세금(manual) / 마케팅(manual) / 비품(receipts) / 기타(manual)
+- **결제수단** 7개: 신용카드/현금/현금영수증/QR/기타결제/뽑기(대)/뽑기(소) — LEGACY_SALES_DEFS 재사용
+- **store_settings**: royalty 0%, cardFee 2.5%, reserve 5% + 40만원
+
+### 영향 범위
+- **HTML**: 로그인 오버레이 하단 버튼 3개 추가 + 이메일 로그인 영역 + 신규 시트 2개
+- **JS**: 신규 15개 함수, 전역 `signupState` 1개
+- **DB**: 컬럼 5개 추가 (멱등성 IF NOT EXISTS)
+
+### 검증
+- ✅ node --check 통과 (7800 lines)
+- ✅ 신규 DOM id 전부 유니크 (22개)
+- ✅ 기존 PIN 로그인 경로 변경 없음 (하위 호환)
+- ✅ SQL 여러 번 실행 안전 (IF NOT EXISTS + DO 블록)
+- ✅ 기존 사장님 계정도 기존 PIN 방식 유지
+
+### 사장님 수동 작업 (⚠️ 순서대로)
+1. **Supabase Dashboard → Authentication → Providers → Email** 활성화 확인
+   - 개발 단계: "Confirm email" OFF 권장 (즉시 가입 가능)
+2. **Supabase SQL Editor → `migrate_signup_2026_04_24.sql`** 실행
+3. 앱 Ctrl+Shift+R
+4. 테스트:
+   - 로그인 화면 하단에 "🏪 매장 시작하기" 보이는지
+   - 버튼 클릭 → 6단계 가입 마법사 정상 작동
+   - 새 이메일로 가입 → 대시보드 환영 카드 + 매장 코드 표시
+   - 로그아웃 → "주인 (이메일)" 버튼 → 이메일 로그인 성공
+
+### 한계 (알려진)
+- **법률 문서는 초안 템플릿**. 정식 출시 전 변호사 검토 필수
+- **사업자번호 진위 검증 없음** (국세청 API 연동 미구현 — Phase 2)
+- **이메일 인증 메일**: Supabase 설정에 따라 즉시 가입 or 메일 확인 필요
+- **프랜차이즈/다점포/가맹점주** 유형은 UI만 있고 비활성화 → Phase 1-A2에서 구현
+- **기존 owner 계정 업그레이드 UI 없음** — 사장님 계정은 기존 PIN 로그인 유지
+
+### 다음 단계
+- **Phase 1-A2**: 프랜차이즈 본사/가맹점 가입 + 흡수(자연빵) 로직
+- **Phase 1-A3**: 직원 매장 코드 로그인 + 카톡 초대 링크
+- **Phase 1-B**: Sentry 에러 모니터링
+- **Phase 1-C**: FAQ + 문의 채널
+
+---
+
 ## [2026-04-24] 수식 검수 → 예비비 잔고 + 정산/검수 카드수수료 수정
 
 ### 상태: 구현완료 → 배포 예정 (DB 변경 없음)
