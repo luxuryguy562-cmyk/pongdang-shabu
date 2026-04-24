@@ -566,18 +566,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="side-group-body">
         <div class="side-item" data-action="navFromSide|dashboard">대시보드</div>
         <div class="side-item" data-action="navFromSide|reserve">예비비</div>
-        <div class="side-item" data-action="navFromSide|wage">급여 집계</div>
-      </div>
-    </div>
-
-    <!-- 지출내역 -->
-    <div class="side-group">
-      <div class="side-group-header" data-action="toggleSideGroup|this">
-        <span>📑 지출내역</span><span class="side-arrow">›</span>
-      </div>
-      <div class="side-group-body">
-        <div class="side-item" data-action="navFromSide|explist">계좌내역 · 카드내역</div>
-        <div class="side-item" data-action="navFromSide|expcat">지출 카테고리 설정</div>
       </div>
     </div>
 
@@ -587,19 +575,22 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span>💰 매출 관리</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" data-action="navFromSide|sales">매출 기록 (raw)</div>
+        <div class="side-item" data-action="navFromSide|sales">매출 기록</div>
         <div class="side-item" data-action="openPaymentMethodsSheet">결제수단 관리</div>
       </div>
     </div>
 
-    <!-- 거래처 -->
+    <!-- 지출 관리 (통합) -->
     <div class="side-group">
       <div class="side-group-header" data-action="toggleSideGroup|this">
-        <span>🏪 거래처 관리</span><span class="side-arrow">›</span>
+        <span>📑 지출 관리</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
-        <div class="side-item" data-action="navFromSide|vendors">거래처 매입 관리</div>
-        <div class="side-item" data-action="navFromSide|vendorUpload">파일 업로드</div>
+        <div class="side-item" data-action="navFromSide|explist">계좌내역 · 카드내역</div>
+        <div class="side-item" data-action="navFromSide|expcat">지출 카테고리 설정</div>
+        <div class="side-item" data-action="navFromSide|fixedcost">📋 고정비</div>
+        <div class="side-item" data-action="navFromSide|vendors">🏪 거래처 관리</div>
+        <div class="side-item" data-action="navFromSide|wage">💵 급여 집계</div>
       </div>
     </div>
 
@@ -610,16 +601,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <div class="side-group-body">
         <div class="side-item" data-action="navFromSide|recon">지출 대조표</div>
-      </div>
-    </div>
-
-    <!-- 고정비 -->
-    <div class="side-group">
-      <div class="side-group-header" data-action="toggleSideGroup|this">
-        <span>📋 고정비</span><span class="side-arrow">›</span>
-      </div>
-      <div class="side-group-body">
-        <div class="side-item" data-action="navFromSide|fixedcost">항목 & 월별 금액</div>
       </div>
     </div>
 
@@ -1156,6 +1137,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="sub-tab active" data-sub="list" data-action="vendorTab|list|this">거래처 목록</button>
     <button class="sub-tab" data-sub="orders" data-action="vendorTab|orders|this">주문 내역</button>
     <button class="sub-tab" data-sub="upload" data-action="vendorTab|upload|this">파일 업로드</button>
+    <button class="sub-tab" data-sub="compare" data-action="vendorTab|compare|this">📊 대조 & 단가</button>
   </div>
   <div id="vendorList">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:6px;">
@@ -1184,6 +1166,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div id="orderListData"></div>
     <button class="btn btn-primary btn-full" style="margin-top:4px;" data-action="openAddOrderSheet">+ 주문 수동 입력</button>
   </div>
+  <!-- 📊 대조 & 단가 (거래처 장표 ↔ 내 송금 일별 대조 + 품목별 월 비교) -->
+  <div id="vendorCompare" style="display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <select id="vcVendorSel" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="loadVendorCompare">
+        <option value="">거래처를 선택하세요</option>
+      </select>
+      <input type="month" id="vcMonth" class="input-inline" style="width:140px;" data-change="loadVendorCompare">
+    </div>
+    <div id="vcBody">
+      <div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">
+        📌 거래처와 월을 고르면<br>주문 장표 ↔ 실 송금 대조 + 품목 단가 추세가 나와요.
+      </div>
+    </div>
+    <div style="margin-top:14px;padding:10px;background:var(--gray-100);border-radius:8px;font-size:11px;color:var(--gray-600);line-height:1.8;">
+      <b>안내</b> · 장표 데이터는 <b>파일 업로드</b> 탭에서 거래처 명세서를 올리거나 <b>주문 내역</b> 탭에서 수동 입력하면 쌓입니다.<br>
+      · 실 송금은 계좌내역·카드내역에서 거래처 분류가 된 건만 매칭돼요.<br>
+      · 품목명이 달라도 같은 품목이면 학습 규칙으로 합쳐집니다 (예: "배추"·"봄배추").
+    </div>
+  </div>
+
   <div id="vendorUpload" style="display:none;">
     <div class="card">
       <div class="card-title">파일로 주문 내역 가져오기</div>
@@ -4751,10 +4753,208 @@ async function loadVendors(){
   sels.forEach(id=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML=(id==='orderVendorFilter'?'<option value="">전체 거래처</option>':'')+vendors.map(v=>`<option value="${v.id}"${!v.is_active?' (거래종료)':''}>${v.name}</option>`).join('');if(cur)el.value=cur;});
 }
 function vendorTab(tab,el){
-  document.querySelectorAll('#vendorsCont .sub-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
-  ['list','orders','upload'].forEach(t=>document.getElementById('vendor'+t.charAt(0).toUpperCase()+t.slice(1)).style.display='none');
-  document.getElementById('vendor'+tab.charAt(0).toUpperCase()+tab.slice(1)).style.display='block';
-  if(tab==='orders')loadVendorOrders();
+  document.querySelectorAll('#vendorsCont .sub-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  ['list','orders','upload','compare'].forEach(t=>{
+    const el2=document.getElementById('vendor'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(el2) el2.style.display='none';
+  });
+  const panel=document.getElementById('vendor'+tab.charAt(0).toUpperCase()+tab.slice(1));
+  if(panel) panel.style.display='block';
+  if(tab==='orders') loadVendorOrders();
+  if(tab==='compare') initVendorCompare();
+}
+
+// ─── 거래처 대조 & 단가 (2026-04-24) ───
+// 소스: vendor_orders(장표) ↔ mydata_transactions(송금). 이름 기반 매칭 (vendor_id FK 없는 mydata 한계).
+function initVendorCompare(){
+  if(!guardStore()) return;
+  const sel=document.getElementById('vcVendorSel');
+  if(sel){
+    const active=(vendors||[]).filter(v=>v.is_active!==false);
+    const cur=sel.value;
+    sel.innerHTML='<option value="">거래처를 선택하세요</option>'+
+      active.map(v=>`<option value="${v.id}">${v.name}${v.category?' · '+v.category:''}</option>`).join('');
+    if(cur) sel.value=cur;
+  }
+  const mEl=document.getElementById('vcMonth');
+  if(mEl && !mEl.value) mEl.value=new Date().toISOString().slice(0,7);
+  if(sel?.value) loadVendorCompare();
+}
+
+async function loadVendorCompare(){
+  if(!guardStore()) return;
+  const vendorId=document.getElementById('vcVendorSel')?.value||'';
+  const ym=document.getElementById('vcMonth')?.value||new Date().toISOString().slice(0,7);
+  const body=document.getElementById('vcBody');
+  if(!vendorId){
+    body.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">📌 거래처를 선택하세요</div>';
+    return;
+  }
+  const vendor=(vendors||[]).find(v=>v.id===vendorId);
+  if(!vendor){body.innerHTML='<div style="text-align:center;padding:24px;color:var(--danger);">거래처를 찾을 수 없습니다</div>';return;}
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
+  // 지난 달
+  const prev=new Date(y,m-2,1);
+  const pYm=prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0');
+  const pLast=new Date(prev.getFullYear(),prev.getMonth()+1,0).getDate();
+  const pStart=pYm+'-01', pEnd=pYm+'-'+String(pLast).padStart(2,'0');
+
+  body.innerHTML='<div style="text-align:center;padding:24px;color:var(--gray-500);">불러오는 중...</div>';
+  const sid=currentStore.id;
+  // PostgREST .or() 파서는 ','와 '()'에 민감 — 거래처명에서 해당 문자 제거한 안전 버전 사용
+  const safeName=(vendor.name||'').replace(/[,()]/g,'').trim();
+  // select('*') 로 가져와 quantity 컬럼이 있으면 자동 활용, 없으면 총액 기준 폴백
+  const [voRes,voPrevRes,txRes]=await Promise.all([
+    sb.from('vendor_orders').select('*').eq('store_id',sid).eq('vendor_id',vendorId).gte('order_date',start).lte('order_date',end).order('order_date'),
+    sb.from('vendor_orders').select('*').eq('store_id',sid).eq('vendor_id',vendorId).gte('order_date',pStart).lte('order_date',pEnd),
+    // mydata 이름 매칭: sub_category 또는 description에 거래처명 포함. 출금만.
+    safeName
+      ? sb.from('mydata_transactions').select('tx_date,tx_type,amount,description,merchant_name,sub_category').eq('store_id',sid).lt('amount',0).gte('tx_date',start).lte('tx_date',end).or(`sub_category.eq.${safeName},description.ilike.%${safeName}%,merchant_name.ilike.%${safeName}%`)
+      : Promise.resolve({data:[]})
+  ]);
+  const orders=voRes.data||[];
+  const prevOrders=voPrevRes.data||[];
+  const mydata=txRes.data||[];
+  renderVendorCompare(vendor, ym, pYm, orders, prevOrders, mydata);
+}
+
+function renderVendorCompare(vendor, ym, pYm, orders, prevOrders, mydata){
+  const body=document.getElementById('vcBody');
+  // ── 합계 ──
+  const orderTotal=orders.reduce((a,o)=>a+(o.amount||0),0);
+  const sendTotal=mydata.reduce((a,t)=>a+Math.abs(t.amount||0),0);
+  const diff=sendTotal-orderTotal; // +: 초과 송금, -: 미지급
+
+  let html=`<div style="padding:14px;background:var(--gray-100);border-radius:12px;margin-bottom:14px;">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;">📊 ${ym} 요약 · ${vendor.name}</div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span style="color:var(--gray-600);">거래처 장표(주문 합)</span><span style="font-weight:700;">${fmt(orderTotal)}원</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span style="color:var(--gray-600);">실 송금(출금 합)</span><span style="font-weight:700;">${fmt(sendTotal)}원</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0 0;margin-top:6px;border-top:1px solid var(--gray-200);font-size:14px;">
+      <span style="color:var(--gray-600);font-weight:600;">차액</span>
+      <span style="font-weight:800;color:var(--${diff===0?'success':diff>0?'danger':'warn'});">${diff>0?'+':''}${fmt(diff)}원 ${diff===0?'✓ 일치':diff>0?'(초과 송금)':'(미지급 의심)'}</span>
+    </div>
+  </div>`;
+
+  // ── 일별 대조 ──
+  const daily={};
+  orders.forEach(o=>{
+    const d=o.order_date;if(!d)return;
+    if(!daily[d]) daily[d]={ord:0,send:0};
+    daily[d].ord+=(o.amount||0);
+  });
+  mydata.forEach(t=>{
+    const d=t.tx_date;if(!d)return;
+    if(!daily[d]) daily[d]={ord:0,send:0};
+    daily[d].send+=Math.abs(t.amount||0);
+  });
+  const days=Object.keys(daily).sort();
+  html+=`<div style="margin-bottom:14px;">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;">📅 일별 대조</div>`;
+  if(!days.length){
+    html+='<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">이번 달 거래가 없어요</div>';
+  } else {
+    html+=`<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="border-bottom:1px solid var(--gray-200);color:var(--gray-600);">
+        <th style="padding:8px 6px;text-align:left;">날짜</th>
+        <th style="padding:8px 6px;text-align:right;">장표</th>
+        <th style="padding:8px 6px;text-align:right;">송금</th>
+        <th style="padding:8px 6px;text-align:right;">차액</th>
+      </tr></thead><tbody>`;
+    days.forEach(d=>{
+      const row=daily[d];
+      const rdiff=row.send-row.ord;
+      const dayMMDD=d.slice(5); // MM-DD
+      html+=`<tr style="border-bottom:1px solid var(--gray-100);">
+        <td style="padding:8px 6px;white-space:nowrap;">${dayMMDD}</td>
+        <td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;color:${row.ord?'var(--text)':'var(--gray-300)'};">${row.ord?fmt(row.ord):'-'}</td>
+        <td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;color:${row.send?'var(--text)':'var(--gray-300)'};">${row.send?fmt(row.send):'-'}</td>
+        <td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--${rdiff===0?'success':rdiff>0?'danger':'warn'});">${rdiff===0?'✓':(rdiff>0?'+':'')+fmt(rdiff)}</td>
+      </tr>`;
+    });
+    html+='</tbody></table></div>';
+  }
+  html+='</div>';
+
+  // ── 품목 단가/지출 추세 ──
+  // quantity 있으면 평균 단가(amount/qty), 없으면 품목별 월 총지출
+  const itemAgg=(list)=>{
+    const map={};
+    list.forEach(o=>{
+      const key=(o.item||'(미지정)').trim();
+      if(!map[key]) map[key]={sum:0,qty:0,count:0};
+      map[key].sum+=(o.amount||0);
+      map[key].qty+=(Number(o.quantity)||0);
+      map[key].count++;
+    });
+    // 평균 단가: qty>0인 건만. 없으면 null.
+    Object.keys(map).forEach(k=>{
+      map[k].unitPrice=map[k].qty>0?Math.round(map[k].sum/map[k].qty):null;
+    });
+    return map;
+  };
+  const curAgg=itemAgg(orders);
+  const prevAgg=itemAgg(prevOrders);
+  const itemKeys=[...new Set([...Object.keys(curAgg),...Object.keys(prevAgg)])];
+
+  html+=`<div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;">💹 품목 추세 (${ym} vs ${pYm})</div>`;
+  if(!itemKeys.length){
+    html+='<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">품목 데이터가 없어요</div>';
+  } else {
+    // 변화율 큰 순 정렬 (이번 달 있는 것 우선)
+    const rows=itemKeys.map(k=>{
+      const cur=curAgg[k]||{sum:0,qty:0,unitPrice:null};
+      const prev=prevAgg[k]||{sum:0,qty:0,unitPrice:null};
+      // 단가 있으면 단가 기준, 없으면 총액 기준
+      const curVal=cur.unitPrice??cur.sum;
+      const prevVal=prev.unitPrice??prev.sum;
+      const hasUnit=cur.unitPrice!=null||prev.unitPrice!=null;
+      const delta=prevVal>0?((curVal-prevVal)/prevVal*100):null;
+      return {k,cur,prev,curVal,prevVal,hasUnit,delta};
+    }).sort((a,b)=>{
+      // 이번 달 있는 거 우선, 그 안에서 변화율 절댓값 큰 순
+      const aHas=a.cur.sum>0?1:0, bHas=b.cur.sum>0?1:0;
+      if(aHas!==bHas) return bHas-aHas;
+      const ad=a.delta==null?-1:Math.abs(a.delta);
+      const bd=b.delta==null?-1:Math.abs(b.delta);
+      return bd-ad;
+    });
+    html+=`<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="border-bottom:1px solid var(--gray-200);color:var(--gray-600);">
+        <th style="padding:8px 6px;text-align:left;">품목</th>
+        <th style="padding:8px 6px;text-align:right;">이번달</th>
+        <th style="padding:8px 6px;text-align:right;">지난달</th>
+        <th style="padding:8px 6px;text-align:right;">변화</th>
+      </tr></thead><tbody>`;
+    rows.forEach(r=>{
+      const curLabel=r.hasUnit?(r.cur.unitPrice!=null?fmt(r.cur.unitPrice)+'원/단위':'-'):(r.cur.sum?fmt(r.cur.sum):'-');
+      const prevLabel=r.hasUnit?(r.prev.unitPrice!=null?fmt(r.prev.unitPrice)+'원/단위':'-'):(r.prev.sum?fmt(r.prev.sum):'-');
+      let deltaLabel='-', deltaColor='var(--gray-400)';
+      if(r.delta!=null){
+        const sign=r.delta>0?'📈 +':'📉 ';
+        deltaLabel=sign+r.delta.toFixed(1)+'%';
+        deltaColor=r.delta>0?'var(--danger)':r.delta<0?'var(--success)':'var(--gray-500)';
+      } else if(r.cur.sum>0 && r.prev.sum===0){
+        deltaLabel='🆕 신규';deltaColor='var(--blue)';
+      } else if(r.cur.sum===0 && r.prev.sum>0){
+        deltaLabel='❌ 중단';deltaColor='var(--gray-500)';
+      }
+      html+=`<tr style="border-bottom:1px solid var(--gray-100);">
+        <td style="padding:8px 6px;">${r.k}</td>
+        <td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;">${curLabel}</td>
+        <td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;color:var(--gray-500);">${prevLabel}</td>
+        <td style="padding:8px 6px;text-align:right;font-weight:700;color:${deltaColor};">${deltaLabel}</td>
+      </tr>`;
+    });
+    html+='</tbody></table></div>';
+    html+='<div style="margin-top:6px;font-size:10px;color:var(--gray-400);line-height:1.5;">※ 수량(quantity)이 기록된 품목은 <b>원/단위</b> 기준, 아니면 <b>총 지출</b> 기준으로 비교합니다.</div>';
+  }
+  html+='</div>';
+
+  body.innerHTML=html;
 }
 function renderVendorList(){
   const cat=document.getElementById('vendorCatFilter')?.value||'';
