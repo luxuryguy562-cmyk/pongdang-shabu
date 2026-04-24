@@ -588,6 +588,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <div class="side-group-body">
         <div class="side-item" data-action="navFromSide|sales">매출 기록 (raw)</div>
+        <div class="side-item" data-action="openPaymentMethodsSheet">결제수단 관리</div>
       </div>
     </div>
 
@@ -1462,6 +1463,55 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- Part F: 결제수단 관리 시트 (목록 + 추가/수정/삭제) -->
+<div class="sheet-overlay" id="paymentMethodsSheet">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
+    <div class="sheet-header">
+      <div class="sheet-title">💳 결제수단 관리</div>
+      <button class="sheet-close" data-action="closeSheet|paymentMethodsSheet">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;line-height:1.5;">
+      매출 관리에서 쓰는 결제수단 목록.<br>
+      기본 7개는 유지한 채 추가·이름 변경·삭제할 수 있어요.
+    </div>
+    <div id="pmList" style="margin-bottom:14px;"></div>
+    <button class="btn btn-primary btn-full" data-action="openPaymentMethodEdit|new">＋ 새 결제수단 추가</button>
+  </div>
+</div>
+
+<!-- Part F: 결제수단 추가/수정 시트 -->
+<div class="sheet-overlay" id="paymentMethodEditSheet">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title" id="pmeTitle">결제수단 추가</div>
+      <button class="sheet-close" data-action="closeSheet|paymentMethodEditSheet">✕</button>
+    </div>
+    <input type="hidden" id="pmeId">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:12px;color:var(--gray-600);width:50px;">아이콘</span>
+      <input type="text" id="pmeIcon" placeholder="💳 (이모지 1자)" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:12px;color:var(--gray-600);width:50px;">이름</span>
+      <input type="text" id="pmeName" placeholder="예: 카카오페이" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:12px;color:var(--gray-600);width:50px;">색상</span>
+      <input type="color" id="pmeColor" value="#0050FF" style="width:50px;height:36px;border:1px solid var(--gray-300);border-radius:6px;padding:2px;">
+      <input type="text" id="pmeColorHex" placeholder="#0050FF" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <span style="font-size:12px;color:var(--gray-600);width:50px;">순서</span>
+      <input type="number" id="pmeSort" value="99" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" style="flex:1;" data-action="deletePaymentMethod" id="pmeDeleteBtn">🗑 삭제</button>
+      <button class="btn btn-primary" style="flex:2;" data-action="savePaymentMethod">💾 저장</button>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--gray-500);line-height:1.5;" id="pmeLegacyHint"></div>
+  </div>
+</div>
+
 <!-- Part D: 매출 대조 매핑 편집 시트 -->
 <div class="sheet-overlay" id="salesReconMappingSheet">
   <div class="sheet" style="max-height:85vh;overflow-y:auto;">
@@ -1619,34 +1669,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <input type="date" id="seDate" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
     </div>
 
-    <div class="sales-edit-row">
-      <span class="sales-edit-ic">💳</span><span class="sales-edit-label">신용카드</span>
-      <input type="text" id="seCard" inputmode="numeric" placeholder="0" data-input="onSalesEditInput|this">
-    </div>
-    <div class="sales-edit-row">
-      <span class="sales-edit-ic">💵</span><span class="sales-edit-label">현금</span>
-      <input type="text" id="seCash" inputmode="numeric" placeholder="0" data-input="onSalesEditInput|this">
-    </div>
-    <div class="sales-edit-row">
-      <span class="sales-edit-ic">🧾</span><span class="sales-edit-label">현금영수증</span>
-      <input type="text" id="seCashReceipt" inputmode="numeric" placeholder="0" data-input="onSalesEditInput|this">
-    </div>
-    <div class="sales-edit-row">
-      <span class="sales-edit-ic">📱</span><span class="sales-edit-label">QR</span>
-      <input type="text" id="seQr" inputmode="numeric" placeholder="0" data-input="onSalesEditInput|this">
-    </div>
-    <div class="sales-edit-row">
-      <span class="sales-edit-ic">📲</span><span class="sales-edit-label">기타결제</span>
-      <input type="text" id="seEtc" inputmode="numeric" placeholder="0" data-input="onSalesEditInput|this">
-    </div>
-    <div class="sales-edit-row">
-      <span class="sales-edit-ic">🎰</span><span class="sales-edit-label">뽑기(대형)</span>
-      <input type="text" id="seExtraLarge" inputmode="numeric" placeholder="0" data-input="onSalesEditInput|this">
-    </div>
-    <div class="sales-edit-row">
-      <span class="sales-edit-ic">🎲</span><span class="sales-edit-label">뽑기(소형)</span>
-      <input type="text" id="seExtraSmall" inputmode="numeric" placeholder="0" data-input="onSalesEditInput|this">
-    </div>
+    <!-- Part F: 결제수단 입력 행을 JS로 동적 생성 -->
+    <div id="seRowsContainer"></div>
 
     <div class="sales-edit-total">
       <span>합계</span>
@@ -2464,7 +2488,7 @@ async function selectStore(id, name) {
     await loadEmployees();
     showLoginScreen();
   } else {
-    await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories()]);
+    await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories(), loadPaymentMethods()]);
     // 매출 캐시 클리어 (매장 바꾸면 새로 로드)
     salesDaily = []; salesEditCtx = null;
     recalcSettle2();
@@ -3714,16 +3738,28 @@ async function syncClosingToSalesDaily(settleDate, items){
   const cashDetailQr=items.cash_detail_qr||0;       // QR
   const cashDetailTr=items.cash_detail_transfer||0; // 계좌이체
   // cash_detail 합이 pos_cash와 불일치해도 상세 기준으로 분리 (UI 검증에서 이미 일치 확인)
-  const payload={
-    store_id:currentStore.id,
-    date:settleDate,
+  const legacyVals={
     card:items.pos_card||0,
     cash:cashDetailCash,
     cash_receipt:items.pos_cash_receipt||0,
     qr:cashDetailQr,
-    etc:(items.pos_etc||0)+cashDetailTr,  // POS 기타 + 계좌이체
+    etc:(items.pos_etc||0)+cashDetailTr,
     extra_large:items.extra_draw_large||0,
-    extra_small:items.extra_draw_small||0,
+    extra_small:items.extra_draw_small||0
+  };
+  // Part F: amounts jsonb에도 동시 저장 (legacy_key 매핑된 결제수단만)
+  const amounts={};
+  (paymentMethods||[]).forEach(m=>{
+    if(m.legacy_key && legacyVals.hasOwnProperty(m.legacy_key)){
+      const v=legacyVals[m.legacy_key];
+      if(v>0) amounts[m.id]=v;
+    }
+  });
+  const payload={
+    store_id:currentStore.id,
+    date:settleDate,
+    ...legacyVals,
+    amounts,
     memo:'마감정산 자동',
     source:'closing'
   };
@@ -8507,6 +8543,113 @@ function openSalesReconMapping(method, label){
   openSheet('salesReconMappingSheet');
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Part F: 결제수단 관리 UI (CRUD)
+// ═══════════════════════════════════════════════════════════════
+async function openPaymentMethodsSheet(){
+  if(!guardStore()) return;
+  closeSideMenu();
+  await loadPaymentMethods();
+  renderPaymentMethodList();
+  openSheet('paymentMethodsSheet');
+}
+
+function renderPaymentMethodList(){
+  const list=document.getElementById('pmList');
+  if(!list) return;
+  if(!paymentMethods.length){
+    list.innerHTML='<div style="text-align:center;padding:20px;color:var(--gray-500);font-size:13px;">결제수단이 없습니다. 아래 버튼으로 추가하세요.</div>';
+    return;
+  }
+  list.innerHTML=paymentMethods.map(m=>{
+    const legacyBadge=m.legacy_key?' <span style="font-size:10px;color:var(--gray-400);">(기본)</span>':'';
+    const color=m.color||'#94A3B8';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:12px 8px;border-bottom:1px solid var(--gray-100);cursor:pointer;" data-action="openPaymentMethodEdit|${m.id}">
+      <span style="font-size:20px;width:30px;text-align:center;">${m.icon||'💰'}</span>
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};"></span>
+      <span style="flex:1;font-size:14px;font-weight:600;">${m.name}${legacyBadge}</span>
+      <span style="font-size:11px;color:var(--gray-400);">순서 ${m.sort_order??0}</span>
+      <span style="color:var(--gray-400);font-size:18px;">›</span>
+    </div>`;
+  }).join('');
+}
+
+function openPaymentMethodEdit(id){
+  const isNew=(id==='new');
+  const m=isNew?null:paymentMethods.find(x=>x.id===id);
+  document.getElementById('pmeTitle').innerText=isNew?'결제수단 추가':'결제수단 수정';
+  document.getElementById('pmeId').value=isNew?'':id;
+  document.getElementById('pmeIcon').value=m?.icon||'💰';
+  document.getElementById('pmeName').value=m?.name||'';
+  const color=m?.color||'#0050FF';
+  document.getElementById('pmeColor').value=color;
+  document.getElementById('pmeColorHex').value=color;
+  document.getElementById('pmeSort').value=m?.sort_order??((paymentMethods[paymentMethods.length-1]?.sort_order||0)+1);
+  // 삭제 버튼: 신규면 숨김, 레거시면 "기본(삭제 권장 X)" 경고
+  const delBtn=document.getElementById('pmeDeleteBtn');
+  const hint=document.getElementById('pmeLegacyHint');
+  if(isNew){
+    delBtn.style.display='none';
+    hint.innerText='';
+  } else if(m?.legacy_key){
+    delBtn.style.display='';
+    hint.innerText='⚠️ 기본 결제수단입니다. 삭제하면 마감정산 자동 기록에서 해당 결제수단이 빠집니다.';
+  } else {
+    delBtn.style.display='';
+    hint.innerText='';
+  }
+  openSheet('paymentMethodEditSheet');
+}
+
+async function savePaymentMethod(){
+  if(!guardStore()) return;
+  const id=document.getElementById('pmeId').value.trim();
+  const icon=document.getElementById('pmeIcon').value.trim()||'💰';
+  const name=document.getElementById('pmeName').value.trim();
+  const color=document.getElementById('pmeColorHex').value.trim()||document.getElementById('pmeColor').value;
+  const sort_order=parseInt(document.getElementById('pmeSort').value)||0;
+  if(!name){toast('이름을 입력하세요','warn');return;}
+  setLoad(true,'저장 중...');
+  if(id){
+    // 수정
+    const{error}=await sb.from('payment_methods').update({icon,name,color,sort_order})
+      .eq('id',id).eq('store_id',currentStore.id);
+    setLoad(false);
+    if(error){toast('저장 실패: '+error.message,'error');return;}
+  } else {
+    // 신규
+    const{error}=await sb.from('payment_methods').insert({
+      store_id:currentStore.id, name, icon, color, sort_order, is_active:true
+    });
+    setLoad(false);
+    if(error){toast('저장 실패: '+error.message,'error');return;}
+  }
+  toast('저장 완료','success');
+  closeSheet('paymentMethodEditSheet');
+  await loadPaymentMethods();
+  renderPaymentMethodList();
+  // 매출 관리 탭 보고 있으면 재렌더
+  if(document.getElementById('salesCont')?.style.display!=='none') renderSalesCards();
+}
+
+async function deletePaymentMethod(){
+  const id=document.getElementById('pmeId').value.trim();
+  if(!id){toast('신규는 삭제할 수 없습니다','info');return;}
+  const m=paymentMethods.find(x=>x.id===id);
+  if(!confirm(`"${m?.name||'결제수단'}"을 삭제할까요?\n(기존 매출 데이터의 금액 값은 그대로 남습니다 — 화면에서만 보이지 않음)`)) return;
+  setLoad(true,'삭제 중...');
+  // soft-delete: is_active=false로 비활성 처리 (기존 데이터 보호)
+  const{error}=await sb.from('payment_methods').update({is_active:false})
+    .eq('id',id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error){toast('삭제 실패: '+error.message,'error');return;}
+  toast('삭제 완료','success');
+  closeSheet('paymentMethodEditSheet');
+  await loadPaymentMethods();
+  renderPaymentMethodList();
+  if(document.getElementById('salesCont')?.style.display!=='none') renderSalesCards();
+}
+
 // Part E ⑭: 예비비 사용 이력 팝업
 async function openReserveHistorySheet(){
   if(!currentStore)return;
@@ -8703,6 +8846,16 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('dashModeProvisional').addEventListener('click',()=>switchDashMode('provisional'));
   document.getElementById('dashModeFinal').addEventListener('click',()=>switchDashMode('final'));
   document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>openReserveHistorySheet());
+  // Part F: 결제수단 색상 피커 ↔ hex 입력 양방향 동기화
+  const pmePicker=document.getElementById('pmeColor');
+  const pmeHex=document.getElementById('pmeColorHex');
+  if(pmePicker && pmeHex){
+    pmePicker.addEventListener('input',()=>{pmeHex.value=pmePicker.value;});
+    pmeHex.addEventListener('input',()=>{
+      const v=pmeHex.value.trim();
+      if(/^#[0-9a-fA-F]{6}$/.test(v)) pmePicker.value=v;
+    });
+  }
   document.getElementById('openDailyDetailBtn').addEventListener('click',()=>openDailyDetail());
   document.getElementById('closeDailyDetailBtn').addEventListener('click',()=>closeDailyDetail());
 
@@ -8840,12 +8993,55 @@ document.addEventListener('DOMContentLoaded', async()=>{
 let salesDaily=[];       // 이번 달 sales_daily 행 배열
 let salesEditCtx=null;   // 현재 편집 중인 행 컨텍스트 (null이면 신규)
 
-const SALES_COLS=['card','cash','cash_receipt','qr','etc','extra_large','extra_small'];
-const SALES_LABELS={
-  card:'💳 신용카드', cash:'💵 현금', cash_receipt:'🧾 현금영수증',
-  qr:'📱 QR', etc:'📲 기타결제',
-  extra_large:'🎰 뽑기(대형)', extra_small:'🎲 뽑기(소형)'
-};
+// ─── Part F: 동적 결제수단 (payment_methods 테이블) ───
+// selectStore 시 loadPaymentMethods()로 채워짐. 활성(is_active=true)만, sort_order 정렬
+let paymentMethods=[];
+
+// 레거시 폴백 (payment_methods 비어있을 때만 사용 — SQL 미실행 시 안전망)
+const LEGACY_SALES_DEFS=[
+  {legacy_key:'card',         name:'신용카드',   icon:'💳', color:'#0050FF', sort_order:1},
+  {legacy_key:'cash',         name:'현금',       icon:'💵', color:'#05C072', sort_order:2},
+  {legacy_key:'cash_receipt', name:'현금영수증', icon:'🧾', color:'#10B981', sort_order:3},
+  {legacy_key:'qr',           name:'QR',         icon:'📱', color:'#14B8A6', sort_order:4},
+  {legacy_key:'etc',          name:'기타결제',   icon:'📲', color:'#FF9500', sort_order:5},
+  {legacy_key:'extra_large',  name:'뽑기(대형)', icon:'🎰', color:'#7C3AED', sort_order:6},
+  {legacy_key:'extra_small',  name:'뽑기(소형)', icon:'🎲', color:'#A78BFA', sort_order:7}
+];
+
+async function loadPaymentMethods(){
+  if(!currentStore){paymentMethods=[];return;}
+  const{data,error}=await sb.from('payment_methods')
+    .select('*').eq('store_id',currentStore.id).eq('is_active',true)
+    .order('sort_order');
+  if(error){
+    // 테이블 미존재(SQL 미실행) 시 레거시로 폴백
+    console.warn('[payment_methods] 로드 실패, 레거시 7개 사용:', error.message);
+    paymentMethods=LEGACY_SALES_DEFS.map(d=>({id:'legacy_'+d.legacy_key,...d,is_active:true}));
+    return;
+  }
+  paymentMethods=data||[];
+  // 빈 배열이면 레거시 기본값 사용 (seed SQL 아직 실행 안 했을 때)
+  if(!paymentMethods.length){
+    paymentMethods=LEGACY_SALES_DEFS.map(d=>({id:'legacy_'+d.legacy_key,...d,is_active:true}));
+  }
+}
+
+// 결제수단 행에서 금액 조회 (amounts 우선, 레거시 컬럼 폴백)
+function getMethodAmount(row, method){
+  if(!row || !method) return 0;
+  if(row.amounts && typeof row.amounts==='object'){
+    const v=row.amounts[method.id];
+    if(v!=null) return Number(v)||0;
+  }
+  // 레거시 폴백: legacy_key 컬럼 직접 읽기
+  if(method.legacy_key && row[method.legacy_key]!=null) return Number(row[method.legacy_key])||0;
+  return 0;
+}
+
+// 결제수단 라벨 (아이콘 + 이름)
+function getMethodLabel(method){
+  return (method.icon||'💰')+' '+method.name;
+}
 
 function getSalesMonthStr(){
   const el=document.getElementById('salesMonth');
@@ -8856,7 +9052,14 @@ function getSalesMonthStr(){
 
 function salesRowTotal(r){
   if(!r) return 0;
-  return SALES_COLS.reduce((s,k)=>s+(Number(r[k])||0),0);
+  // Part F: paymentMethods 기반 동적 합산
+  // amounts(jsonb) 있으면 그 값만 합산, 없으면 레거시 컬럼 폴백
+  if(r.amounts && typeof r.amounts==='object' && Object.keys(r.amounts).length){
+    return Object.values(r.amounts).reduce((s,v)=>s+(Number(v)||0),0);
+  }
+  // 레거시 폴백: 기존 7개 컬럼 합산
+  const LEGACY_KEYS=['card','cash','cash_receipt','qr','etc','extra_large','extra_small'];
+  return LEGACY_KEYS.reduce((s,k)=>s+(Number(r[k])||0),0);
 }
 
 async function loadSalesDaily(){
@@ -8925,10 +9128,11 @@ function renderSalesCards(){
     const mmdd=r.date.slice(5);
     const src=r.source||'manual';
     const srcLabel=src==='closing'?'마감정산 자동':(src==='closing_edited'?'✏️ 수정본':'수동');
-    const itemsHtml=SALES_COLS.map(k=>{
-      const v=Number(r[k])||0;
+    // Part F: paymentMethods 기반 동적 렌더. 0원 항목은 '—' 회색 처리.
+    const itemsHtml=paymentMethods.map(m=>{
+      const v=getMethodAmount(r,m);
       const zero=v===0?'1':'';
-      return `<div class="sc-item"><span class="sc-item-label">${SALES_LABELS[k]}</span><span class="sc-item-val" data-zero="${zero}">${v?fmt(v):'—'}</span></div>`;
+      return `<div class="sc-item"><span class="sc-item-label">${getMethodLabel(m)}</span><span class="sc-item-val" data-zero="${zero}">${v?fmt(v):'—'}</span></div>`;
     }).join('');
     return `<div class="sales-card" data-src="${src}" data-action="openSalesEditById|${r.id}">
       <div class="sc-head">
@@ -8973,13 +9177,17 @@ function openSalesEditById(id){
 
 function _populateSalesEditSheet(r){
   document.getElementById('seDate').value=r.date||'';
-  document.getElementById('seCard').value=r.card?fmt(r.card):'';
-  document.getElementById('seCash').value=r.cash?fmt(r.cash):'';
-  document.getElementById('seCashReceipt').value=r.cash_receipt?fmt(r.cash_receipt):'';
-  document.getElementById('seQr').value=r.qr?fmt(r.qr):'';
-  document.getElementById('seEtc').value=r.etc?fmt(r.etc):'';
-  document.getElementById('seExtraLarge').value=r.extra_large?fmt(r.extra_large):'';
-  document.getElementById('seExtraSmall').value=r.extra_small?fmt(r.extra_small):'';
+  // Part F: paymentMethods 기반 동적 생성 (결제수단별 input 행)
+  const cont=document.getElementById('seRowsContainer');
+  cont.innerHTML=paymentMethods.map(m=>{
+    const v=getMethodAmount(r,m);
+    const valStr=v?fmt(v):'';
+    return `<div class="sales-edit-row">
+      <span class="sales-edit-ic">${m.icon||'💰'}</span>
+      <span class="sales-edit-label">${m.name}</span>
+      <input type="text" inputmode="numeric" placeholder="0" value="${valStr}" data-method-id="${m.id}" data-input="onSalesEditInput|this">
+    </div>`;
+  }).join('');
   document.getElementById('seMemo').value=r.memo||'';
   _recalcSeTotal();
 }
@@ -8992,8 +9200,10 @@ function onSalesEditInput(el){
 }
 
 function _recalcSeTotal(){
-  const ids=['seCard','seCash','seCashReceipt','seQr','seEtc','seExtraLarge','seExtraSmall'];
-  const total=ids.reduce((s,id)=>s+unFmt(document.getElementById(id).value),0);
+  // Part F: data-method-id 있는 input 전부 합산
+  const inputs=document.querySelectorAll('#seRowsContainer input[data-method-id]');
+  let total=0;
+  inputs.forEach(el=>{ total+=unFmt(el.value)||0; });
   document.getElementById('seTotal').innerText=fmt(total)+'원';
 }
 
@@ -9004,20 +9214,33 @@ async function saveSalesDaily(){
   // ─── 수정본 보호 ① : 기존 closing 행을 수정하면 closing_edited 로 승격 ───
   const prevSource=salesEditCtx?.source||'manual';
   const nextSource=(salesEditCtx && prevSource==='closing') ? 'closing_edited' : prevSource;
+
+  // Part F: paymentMethods 기반 동적 수집
+  const amounts={};
+  const legacy={card:0,cash:0,cash_receipt:0,qr:0,etc:0,extra_large:0,extra_small:0};
+  let total=0;
+  document.querySelectorAll('#seRowsContainer input[data-method-id]').forEach(el=>{
+    const mid=el.dataset.methodId;
+    const v=unFmt(el.value)||0;
+    if(v>0){
+      amounts[mid]=v;
+      total+=v;
+      // legacy_key 매핑 있으면 레거시 컬럼에도 동시 저장 (호환성)
+      const m=paymentMethods.find(pm=>pm.id===mid);
+      if(m && m.legacy_key && legacy.hasOwnProperty(m.legacy_key)){
+        legacy[m.legacy_key]+=v;
+      }
+    }
+  });
+
   const payload={
     store_id:currentStore.id,
     date:date,
-    card:unFmt(document.getElementById('seCard').value),
-    cash:unFmt(document.getElementById('seCash').value),
-    cash_receipt:unFmt(document.getElementById('seCashReceipt').value),
-    qr:unFmt(document.getElementById('seQr').value),
-    etc:unFmt(document.getElementById('seEtc').value),
-    extra_large:unFmt(document.getElementById('seExtraLarge').value),
-    extra_small:unFmt(document.getElementById('seExtraSmall').value),
+    ...legacy,
+    amounts,
     memo:document.getElementById('seMemo').value||null,
     source:nextSource
   };
-  const total=SALES_COLS.reduce((s,k)=>s+payload[k],0);
   if(total<=0){toast('금액을 1개 이상 입력하세요','warn');return;}
   // ─── 날짜 충돌 확인 ② : 편집 모드에서 날짜를 다른 날로 바꾼 경우 ───
   // 바뀐 날짜에 이미 다른 카드가 있으면 덮어쓸지 confirm

@@ -90,10 +90,10 @@
 
 ## 🟢 3순위 — 개선 (여유되면)
 
-### ⑪ 동적 결제수단 추가/삭제 (`sales_daily` 2단계)
-- 뽑기 같은 매장별 특수 매출을 사장님이 UI에서 직접 관리
-- `payment_methods` 테이블 신설 → `sales_daily` 구조 동적화
-- 규모: 대형. `plan.md #58` 2단계로 이미 계획됨.
+### ⑪ 🟡 [2026-04-23 Phase 1 완료, Phase 2 예정] 동적 결제수단 추가/삭제
+- Phase 1 ✅: payment_methods 테이블 + sales_daily.amounts jsonb + 매출 관리 UI 동적화 + 결제수단 CRUD UI
+- Phase 2 (예정): 대시보드 salesBreakdown + 정산/검수 매출 대조도 paymentMethods 기반 동적화
+- Phase 2는 사장님 Phase 1 실사용 피드백 후 착수
 
 ### ⑫ ❌ [2026-04-23 오진단 판명 — 스킵]
 - 원문: "거래내역 테이블에 📸 영수증 배지 추가 — 마감정산엔 있고 거래내역엔 빠짐"

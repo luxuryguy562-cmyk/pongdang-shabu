@@ -119,6 +119,24 @@ franchises (프랜차이즈/브랜드)
 | store_id, sale_date | 매장/날짜 |
 | total_sales, card_sales, cash_sales (int) | 매출 |
 
+### payment_methods (신규 2026-04-23 Part F)
+매장별 결제수단 동적 관리 테이블. 사장님이 UI에서 추가/수정/삭제 가능.
+| 컬럼 | 타입 | 용도 |
+|------|------|------|
+| id | UUID PK | |
+| store_id | UUID FK→stores (CASCADE) | 매장 격리 |
+| name | TEXT | 이름 ("신용카드", "카카오페이") |
+| icon | TEXT | 이모지 ("💳") |
+| color | TEXT | "#0050FF" |
+| sort_order | INT | 표시 순서 (오름차순) |
+| is_active | BOOL | 소프트 삭제 (false면 UI 미표시) |
+| legacy_key | TEXT | 기존 sales_daily 컬럼과 매핑용. 'card'/'cash'/'cash_receipt'/'qr'/'etc'/'extra_large'/'extra_small' 또는 NULL(커스텀) |
+| created_at | TIMESTAMPTZ | |
+| **UNIQUE(store_id, name)** | | |
+
+**기본 seed**: 7개 (신용카드/현금/현금영수증/QR/기타결제/뽑기대/뽑기소) — 모든 매장에 자동 생성
+**레거시 호환**: `sales_daily.card/cash/...` 컬럼은 유지. amounts jsonb가 비어있으면 레거시 컬럼을 읽음 (SQL 미실행 안전망)
+
 ### sales_daily (신규 2026-04-23)
 ⚠️ 이전 설계 `sales_records` (세로 raw)는 **폐기**. 세로로 풀면 월 180행 → 결산 비효율 + 모바일 짤림. **가로형 피벗**으로 재설계 (하루 1행, 결제수단 컬럼 7개).
 
@@ -136,6 +154,7 @@ franchises (프랜차이즈/브랜드)
 | extra_small | NUMERIC | 🎲 뽑기(소형) (extra_draw_small) |
 | memo | TEXT | 비고 |
 | source | TEXT | 'manual'/'closing'/'closing_edited'/'pos_api'/'card_api' — `closing_edited`는 마감자동 행을 사장님이 손으로 고친 후. 이후 마감정산 재저장 시 **보호(skip)** |
+| **amounts** (신규 Part F) | JSONB | `{"<payment_method_id>": 금액, ...}`. 동적 결제수단용. 2026-04-23 기존 7 컬럼은 유지 (안전망). 앱은 amounts 우선 읽기, 비어있으면 legacy_key 컬럼 폴백 |
 | created_at, updated_at | TIMESTAMPTZ | |
 | **UNIQUE(store_id, date)** | | 하루 1행 강제 |
 

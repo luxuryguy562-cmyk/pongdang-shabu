@@ -4,6 +4,62 @@
 
 ---
 
+## [2026-04-23 후속] 3순위 Part F Phase 1 — 결제수단 동적 관리 ⑪
+
+### 상태: 구현완료 → 배포 예정 (사장님 SQL 실행 필요)
+### 규모: 대형 (DB 테이블 신설 + ~300줄)
+### 브랜치: `claude/complete-priority-tasks-yRxCN`
+
+### 변경 요약
+1. **DB 마이그레이션** — `payment_methods` 테이블 + `sales_daily.amounts jsonb` 추가
+   - SQL: `docs/sql/migrate_payment_methods_2026_04_23{.sql,_rollback.sql}`
+   - seed: 모든 매장에 기본 7개 결제수단 자동 입력 (legacy_key 매핑)
+   - 백필: 기존 sales_daily 7컬럼 → amounts jsonb 이동
+2. **전역 `paymentMethods` 배열 + `loadPaymentMethods`** — selectStore 시 자동 로드
+   - 테이블 없거나 비어있으면 `LEGACY_SALES_DEFS` 7개로 폴백 (SQL 미실행 안전망)
+3. **헬퍼 함수 신규**
+   - `getMethodAmount(row, method)` — amounts 우선, legacy_key 폴백
+   - `getMethodLabel(method)` — 아이콘+이름
+4. **매출 관리 UI 동적화**
+   - `salesRowTotal` — amounts 기반 합산 + legacy 폴백
+   - `renderSalesCards` itemsHtml — paymentMethods 루프
+   - 편집 시트 HTML: 7개 고정 input 제거 → `#seRowsContainer` 동적 생성
+   - `_populateSalesEditSheet` — paymentMethods 순회하여 input 생성
+   - `_recalcSeTotal` — `data-method-id` input 합산
+   - `saveSalesDaily` — amounts + legacy 컬럼 **동시 저장** (호환)
+5. **`syncClosingToSalesDaily`** — amounts에도 동시 저장 (legacy_key 있는 method만)
+6. **결제수단 관리 UI 신규** — 사이드메뉴 `💰 매출 관리 › 결제수단 관리`
+   - `paymentMethodsSheet`: 목록 + 추가 버튼
+   - `paymentMethodEditSheet`: 아이콘/이름/색상/순서 편집, 삭제 (soft-delete: is_active=false)
+   - 색상 피커 ↔ hex 입력 양방향 동기화
+
+### 검증
+- ✅ node --check 통과 (7075 lines)
+- ✅ Part F 식별자 42건 존재
+- ✅ 기존 `SALES_COLS`/`SALES_LABELS` 제거, `seCard` 등 하드코딩 id 0건
+- ✅ 레거시 폴백 존재 (SQL 미실행 시에도 앱 정상 동작)
+- ✅ 기존 sales_daily 컬럼 유지 (롤백 가능)
+
+### 사장님 수동 작업 (⚠️ 배포 전)
+1. Supabase SQL Editor → `migrate_payment_methods_2026_04_23.sql` 실행 (1초)
+2. 앱 Ctrl+Shift+R → 사이드메뉴 → 💰 매출 관리 → "결제수단 관리"
+3. 테스트:
+   - 기본 7개 목록 보이는지
+   - "카카오페이" 같은 신규 추가 → 매출 관리 편집 시트에 새 행 나타나는지
+   - 이름 변경 → 매출 카드에 반영되는지
+   - 매출 입력 → 저장 → 데이터 정상 저장되는지
+
+### Phase 2 (예정, 별도)
+- 대시보드 `loadDashboard` salesBreakdown → paymentMethods.name 기반 집계
+- 정산/검수 `loadReconciliation` 매출 대조 4항목 → paymentMethods 기반
+- 신규 결제수단 추가해도 대시보드/정산검수에 자동 반영되도록
+
+### 한계 (Phase 1)
+- 신규 추가한 결제수단(legacy_key 없음)은 **마감정산 자동 기록 대상 아님** — 마감정산은 POS 기반 고정 구조라 의도적. 사장님이 매출 관리에서 수동 입력 필요
+- 대시보드 매출 상세 아코디언은 아직 legacy_key 기준 (Phase 2에서 동적화)
+
+---
+
 ## [2026-04-23 후속] 3순위 Part E — 소형 UX 2건 + ⑫ 오진단 반성
 
 ### 상태: 구현완료 → 배포
