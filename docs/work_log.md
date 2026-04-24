@@ -4,6 +4,84 @@
 
 ---
 
+## [2026-04-24] Phase 1-A2 — 프랜차이즈 본사/가맹점주 가입 + 본사 홈 + 자연빵 흡수
+
+### 상태: 구현완료 → 배포 예정 (**DB 변경 없음**, Phase 1-A1 SQL만 실행돼 있으면 됨)
+### 규모: 대형 (HTML ~150줄 + JS ~230줄)
+### 브랜치: `claude/continue-todo-list-KG9PD`
+
+### 배경
+사장님 지적: "프랜차이즈는 모든 매장의 정보를 봐야 의미가 있는데 그런 창이 없잖아". Phase 1-A1의 나머지 3종 사업자 유형(다점포/본사/가맹점) 활성화 + 본사 통합 홈 신설.
+
+### 변경 요약
+
+#### 1. 가입 유형 4종 전부 활성화
+- `personal` (개인): 매장 1개 (기존)
+- `multi` (다점포): 첫 매장만 먼저 등록, 추후 추가
+- `franchise_hq` (본사): franchises 행 생성 + 초대 코드(`F-XXXXXX`) 자동 발급 + 비활성 더미 매장 `[브랜드] 본사`
+- `franchisee` (가맹점주): 본사 초대 코드 입력 시 franchise_id 자동 연결, 비우면 혼자 시작(자연빵 흡수 대기)
+
+#### 2. 타입별 3단계 UI 동적 조정 (`applySignupTypeUi`)
+- franchise_hq: 타이틀 "본사(브랜드) 정보", placeholder "브랜드명"
+- franchisee: 초대 코드 입력 박스 표시, 타이틀 "가맹점 정보"
+- multi: 타이틀 "첫 매장 정보"
+
+#### 3. `completeSignup` 타입별 분기
+- franchise_hq: `franchises` INSERT → 비활성 더미 stores → `franchise_admin` employees
+- franchisee: 초대 코드로 franchises 조회 → store.franchise_id 설정
+- 본사는 `seedNewStoreDefaults` 스킵 (카테고리/결제수단 불필요)
+- 본사는 "초대 코드" 환영 카드, 나머지는 "매장 코드" 환영 카드
+
+#### 4. 신규 본사 홈 `#franchiseHomeCont` (container [5-C])
+- 브랜드명 + 초대 코드 표시
+- 이번 달 전체 매출 + 가맹점 수 요약 카드
+- **가맹점 순위 리스트** (매출 내림차순, 매출 %)
+- 카드 탭 → `selectStoreFromFranchise(storeId)` → currentStore 전환 + 기존 대시보드 재사용
+- 초대 코드 복사 버튼 (`copyInviteCode`)
+- 월 선택기 (`fhMonth`)
+
+#### 5. 자연빵 흡수 — 사이드메뉴 "🏯 본사 연결" (owner-only)
+- 혼자 쓰던 매장 주인 → 본사가 주는 초대 코드 입력 → `stores.franchise_id` UPDATE
+- 매출/지출 데이터 그대로 유지, 연결만 바뀜
+- `joinFranchiseSheet` + `openJoinFranchise` + `submitJoinFranchise`
+
+#### 6. 자동 라우팅
+- 로그인 후 `authLevel==='franchise_admin'`이면 `franchiseHome`으로 자동 이동
+- 사이드메뉴 `🏯 본사 홈`은 franchise_admin만 노출 (`.franchise-admin-only` 클래스 + applyPermissionUI 확장)
+
+### 영향 범위
+- **HTML**: 신규 container(franchiseHomeCont) + 신규 sheet(joinFranchiseSheet) + 사이드메뉴 2개 항목 추가 + 가입 시트 3단계 UI 조건부
+- **JS**: 6개 신규 함수 (loadFranchiseHome, selectStoreFromFranchise, copyInviteCode, openJoinFranchise, submitJoinFranchise, applySignupTypeUi), completeSignup 분기 확장, nav actions 확장, applyPermissionUI 확장
+- **DB**: 변경 없음 (Phase 1-A1의 franchises.invite_code, owner_user_id 재사용)
+
+### 검증
+- ✅ node --check 통과 (8026 lines)
+- ✅ 신규 DOM id 전부 유니크 (15개)
+- ✅ 가입 타입 4종 selectSignupType 바인딩
+- ✅ franchise_admin 자동 라우팅
+- ✅ 기존 PIN 로그인 / 개인 사업자 가입 경로 영향 없음
+
+### 사장님 수동 작업
+- 앱 Ctrl+Shift+R. **SQL 추가 실행 불필요** (Phase 1-A1 SQL 이미 실행됨).
+- 테스트 시나리오:
+  1. **본사 가입**: 로그인 오버레이 → 매장 시작하기 → "🏯 프랜차이즈 본사" 선택 → 6단계 완료 → 본사 홈 자동 진입 + 초대 코드 보임
+  2. **가맹점주 가입(코드 있음)**: 새 이메일로 → "🎫 가맹점주" → 3단계에서 본사 코드 입력 → 가입 완료 → 본사 홈에 자동 집계
+  3. **자연빵 흡수**: 기존 개인 가입 계정 로그인 → 사이드메뉴 → "🏯 본사 연결" → 코드 입력 → 본사에 연결됨
+
+### 한계 (알려진)
+- **RLS 정책**: 현재 RLS가 본사 계정의 여러 store 읽기를 막을 수 있음. 문제 시 `policies` 추가 SQL 별도 제공 필요
+- **다점포 사업자 매장 추가 UI**: 이번엔 첫 매장만 등록. 추가 매장은 추후 (본사 홈 형태 재사용 검토)
+- **가맹점 승인/해지**: 본사가 가맹점을 자동 승인. 거부 워크플로우는 Phase 1-A2b
+- **매장별 매출 상세**: 본사 홈은 이번달 매출 합계만. 차트/추세는 매장 전환 후 대시보드에서
+
+### 다음 단계
+- **Phase 1-A3**: 직원 매장 코드 로그인 + 카톡 초대 링크
+- **Phase 1-B**: Sentry 에러 모니터링
+- **Phase 1-C**: FAQ + 문의 채널
+- 필요 시 본사용 RLS 정책 SQL 추가
+
+---
+
 ## [2026-04-24] Phase 1-A1 — 매장 가입 플로우 (개인 사업자 MVP)
 
 ### 상태: 구현완료 → 배포 예정 (**사장님 SQL 실행 필요**)
