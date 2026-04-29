@@ -4442,8 +4442,11 @@ async function loadSettleCard(d){
       html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);display:flex;align-items:center;gap:6px;">${ri(def.role)} ${def.icon} ${def.name}</span><span style="font-size:14px;font-weight:700;">${fmt(val)}원</span></div>`;
     });
   }
-  // 매출 합계 표시
-  if(data.sales_total) html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid var(--gray-200);"><span style="font-size:13px;font-weight:700;color:var(--blue);">매출 합계</span><span style="font-size:14px;font-weight:800;color:var(--blue);">${fmt(data.sales_total)}원</span></div>`;
+  // 매출 합계 표시 (옛 마감은 sales_total에 뽑기 포함됐으므로 차감해서 본 매출만)
+  const lgOld=(data.items_json?.extra_draw_large)||0;
+  const smOld=(data.items_json?.extra_draw_small)||0;
+  const displaySalesTotal=(data.sales_total||0)-lgOld-smOld;
+  if(displaySalesTotal>0) html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid var(--gray-200);"><span style="font-size:13px;font-weight:700;color:var(--blue);">매출 합계</span><span style="font-size:14px;font-weight:800;color:var(--blue);">${fmt(displaySalesTotal)}원</span></div>`;
   // ─── 새 기능: 기타매출 섹션 (logs 기반 + items_json 폴백) ───
   html+=await renderSettleCardExtraSection(data);
   html+='<div style="height:1px;background:var(--gray-200);margin:8px 0;"></div>';
@@ -4836,10 +4839,10 @@ async function loadDashboard(){
     if(dashSaleSource==='ups'){
       prevSettle.forEach(s=>{const d=s.sale_date?.slice(8);prevTotalRevenue+=(s.total_sales||0);if(d)prevDailySalesMap[d]=s.total_sales||0;});
     } else {
-      // sales_daily 기준
+      // sales_daily 기준 (본 매출만 — 기타매출 분리)
       prevSettle.forEach(s=>{
         const d=s.date?.slice(8);
-        const ds=(s.card||0)+(s.cash||0)+(s.cash_receipt||0)+(s.qr||0)+(s.etc||0)+(s.extra_large||0)+(s.extra_small||0);
+        const ds=salesRowTotal(s);
         prevTotalRevenue+=ds;if(d)prevDailySalesMap[d]=ds;
       });
     }
@@ -10719,8 +10722,8 @@ function salesRowTotal(r){
   if(r.amounts && typeof r.amounts==='object' && Object.keys(r.amounts).length){
     return Object.values(r.amounts).reduce((s,v)=>s+(Number(v)||0),0);
   }
-  // 레거시 폴백: 기존 7개 컬럼 합산
-  const LEGACY_KEYS=['card','cash','cash_receipt','qr','etc','extra_large','extra_small'];
+  // 레거시 폴백: 본 매출 5개만 합산 (2026-04-29: extra_large/small은 기타매출로 분리)
+  const LEGACY_KEYS=['card','cash','cash_receipt','qr','etc'];
   return LEGACY_KEYS.reduce((s,k)=>s+(Number(r[k])||0),0);
 }
 
