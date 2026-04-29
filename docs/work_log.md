@@ -4,6 +4,40 @@
 
 ---
 
+## 🏁 2026-04-29 세션 마감 — 기타매출 분리 관리 + 동적 항목
+
+**브랜치**: `claude/review-todo-notes-EOjM7`
+**규모**: 대형 (DB 2테이블 신규 + UI 5곳 변경 + 백필 마이그레이션)
+**승인**: 2026-04-29 사장님 "ok" 확정 (계획서 v2)
+
+**핵심 결정**:
+- 뽑기 등 기타매출을 **장부합계에서 분리** (지금까지는 합산 → 매장별 항목이 달라 부적절)
+- 매장별 동적 항목 관리 (payment_methods 패턴 차용)
+- 회수 입력 **없음** — "회수"는 기계 구매원가 ROI 의미였음 (누적 매출만 보면 판단 가능)
+- 마감 카드 + 대시보드 둘 다 누적 표시
+
+**완료 단계**:
+- [x] Phase 0 백업 커밋 (작업트리 clean → `5aaa8e3` 자체가 백업)
+- [x] Phase 1 마이그레이션 SQL 작성 (`migrate_extra_revenue_2026_04_29.sql` + rollback)
+- [x] Phase 2 항목 관리 UI (사이드메뉴 + 시트 2개)
+- [x] Phase 3 마감 입력 동적화 + recalc 로직 (장부에서 뽑기 제외, sales_daily 동기화 변경)
+- [x] Phase 4 마감 카드 + 대시보드 누적 표시
+- [x] Phase 5 docs 동기화 + 구문 검증
+
+**신규 함수**: loadExtraItems, loadExtraItemSums, openExtraItemsSheet, renderExtraItemList, openExtraItemEdit, saveExtraItem, deleteExtraItem, renderExtraRevenueInputs, recalcExtraRevenuePanel, renderSettleCardExtraSection, renderExtraRevenueDashboard
+
+**변경 함수**: recalcSettle2, finishSettlement2, resetSettleView, syncClosingToSalesDaily, loadSettleCard, editSettlement, parseClosingExcel(?fillExtra), createDefaultSeeds(signup)
+
+**신규 DB 테이블**: extra_revenue_items, extra_revenue_logs
+
+**사장님 SQL 실행 필요**:
+- `docs/sql/migrate_extra_revenue_2026_04_29.sql` (Supabase에서 실행)
+- 실행 후 매장에 뽑기 대/소 자동 시드 + 옛 마감의 뽑기 매출이 logs로 자동 백필됨
+
+**검증 통과**: `node --check` ✅ / DOM ID 잔재 0건 ✅ / 호환용 `extra_draw_*` 키는 의도된 보존
+
+---
+
 ## 🏁 2026-04-24 세션 마감 (종합)
 
 **처리**: 큰 덩어리 **11건** 완료 (단일 세션 최다 기록)
