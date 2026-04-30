@@ -113,6 +113,12 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-item.empty .s-input::placeholder{color:#EF4444;font-weight:600;}
 .settle-item.empty .si-label{color:#EF4444;}
 .v-input.empty{box-shadow:inset 0 0 0 1.5px #EF4444;}
+/* ─── 새 기능: 차액 0원 저장 가능 강조 ─── */
+.settle-ready{background:linear-gradient(135deg,#10B981,#059669) !important;box-shadow:0 6px 20px rgba(16,185,129,0.45) !important;transform:translateY(-1px);transition:all 0.2s;}
+.settle-guide{text-align:center;font-size:13px;font-weight:700;padding:10px 0 4px;min-height:14px;}
+.settle-guide.ok{color:#10B981;}
+.settle-guide.warn{color:#F59E0B;}
+.settle-guide.danger{color:#EF4444;}
 .settle-card-group{background:var(--white);border-radius:18px;padding:4px 16px;margin-bottom:12px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
 .settle-card-group .card-title{font-size:16px;font-weight:800;padding:16px 0 4px;margin:0;}
 .settle-card-group .card-sub{font-size:12px;color:var(--gray-400);margin:0 0 8px;padding:0;}
@@ -1170,7 +1176,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div style="font-size:12px;font-weight:700;color:#6B21A8;margin-bottom:6px;">기타매출 (오늘 / 누적)</div>
       <div id="extraRevenueSummary"></div>
     </div>
-    <button class="btn btn-secondary btn-full" style="margin-top:8px;border-radius:14px;padding:12px;font-size:13px;" data-action="fillEmptyWithZero">⚡ 공란 0으로 채우기</button>
+    <div id="settleGuide" class="settle-guide"></div>
+    <button class="btn btn-secondary btn-full" style="margin-top:4px;border-radius:14px;padding:12px;font-size:13px;" data-action="fillEmptyWithZero">⚡ 공란 0으로 채우기</button>
     <button class="btn btn-primary btn-full" style="margin-top:8px;border-radius:16px;padding:18px;font-size:16px;" data-action="finishSettlement2">마감 저장하기</button>
   </div>
   <div id="settleList" style="display:none;">
@@ -3345,6 +3352,9 @@ async function checkIn(){
   const{error}=await sb.from('attendance_logs').insert({store_id:currentStore.id,employee_id:empId,work_date:today,app_in:now.toISOString(),caps_match_status:'앱전용',check_in_ip:ipCheck.ip||null});
   setLoad(false);
   if(error) return toast('출근 처리 실패: '+error.message,'error');
+  // ─── 새 기능: 출근 즉시 피드백 ───
+  const _t=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
+  toast(`🌅 출근 완료! ${_t} · 좋은 하루 보내세요`,'success',3500);
   await loadTodayRecord();
 }
 async function checkOut(){
@@ -3390,6 +3400,11 @@ async function checkOut(){
   const{error}=await sb.from('attendance_logs').update({app_out:now.toISOString(),rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage,check_out_ip:ipCheck.ip||null}).eq('id',record.id).eq('store_id',currentStore.id);
   setLoad(false);
   if(error) return toast('퇴근 처리 실패: '+error.message,'error');
+  // ─── 새 기능: 퇴근 즉시 피드백 (근무시간 + 일급) ───
+  const _totalMin=w.totalMin||0;
+  const _h=Math.floor(_totalMin/60), _m=_totalMin%60;
+  const _wageStr=w.wage?` · 오늘 ${fmt(w.wage)}원`:'';
+  toast(`👏 오늘 ${_h}시간 ${_m}분 일하셨어요${_wageStr}. 수고하셨습니다!`,'success',4500);
   await loadTodayRecord();
 }
 async function openEmpSheet(ctx='att'){
@@ -4263,6 +4278,30 @@ function recalcSettle2(){
 
   // 공란 빨간 강조 갱신
   refreshSettleEmptyHighlight();
+
+  // ─── 새 기능: 차액 0원 저장 가능 강조 ───
+  refreshSaveButtonState(diff);
+}
+// 저장 버튼 상태 + 가이드 메시지 (필수 다 채워짐 + 차액 0 → 초록 강조)
+function refreshSaveButtonState(diff){
+  const saveBtn=document.querySelector('[data-action="finishSettlement2"]');
+  const guide=document.getElementById('settleGuide');
+  if(!saveBtn||!guide) return;
+  const allFilled=SETTLE_REQUIRED_IDS.every(id=>!isInputEmpty(document.getElementById(id)));
+  if(!allFilled){
+    saveBtn.classList.remove('settle-ready');
+    guide.textContent='🔴 빨간 칸을 먼저 채워주세요';
+    guide.className='settle-guide danger';
+  } else if(diff===0){
+    saveBtn.classList.add('settle-ready');
+    guide.textContent='✅ 차액 0원 — 마감 저장 가능합니다';
+    guide.className='settle-guide ok';
+  } else {
+    saveBtn.classList.remove('settle-ready');
+    const sign=diff>0?'+':'';
+    guide.textContent=`💡 차액 ${sign}${fmt(diff)}원 — 한 번 더 확인해주세요`;
+    guide.className='settle-guide warn';
+  }
 }
 
 // 기타매출 입력칸 동적 렌더링
@@ -4343,6 +4382,16 @@ async function finishSettlement2(){
   if(!guardStore()) return;
   // 공란 가드 — 필수 8칸 빈 칸 있으면 차단
   if(!validateSettleInputs()) return;
+  // ─── 새 기능: 마감 중복 저장 가드 ───
+  // 같은 매장+날짜에 마감이 이미 있으면 사용자에게 인지+동의 후 덮어쓰기 (upsert)
+  const _settleDate=getSettleDate();
+  const{data:_existSettle}=await sb.from('settlements')
+    .select('id,actual_total,sales_total').eq('store_id',currentStore.id).eq('settle_date',_settleDate).maybeSingle();
+  if(_existSettle){
+    const dateStr=new Date(_settleDate).toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+    const msg=`⚠️ 이미 ${dateStr} 마감 기록이 있습니다.\n저장된 매출: ${fmt(_existSettle.sales_total||0)}원\n저장된 금고: ${fmt(_existSettle.actual_total||0)}원\n\n새 입력으로 덮어쓸까요?`;
+    if(!confirm(msg)) return;
+  }
   const items={
     opening:gv('siOpening'),
     pos_cash:gv('siPosCash'), pos_cash_receipt:gv('siPosCashReceipt'),
