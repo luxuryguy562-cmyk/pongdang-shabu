@@ -4,6 +4,75 @@
 
 ---
 
+## 🏁 2026-04-30 세션 마감 — 마감정산 공란 가드 + 빨간 강조
+
+**브랜치**: `claude/store-testing-checklist-n1YIk`
+**규모**: 소형 (CSS 5줄 + HTML 1줄 + JS 약 50줄)
+**승인**: 2026-04-30 사장님 "ok" — 5월 매장 테스팅 시작 전 누락 방지용
+
+**배경**: 5월부터 본인 매장(논산) 실서비스 테스팅 진입. 사장님 우려 — "한 화면에 다 나오니 직원들이 누락 가능". critic으로 단계 마법사 대신 더 가벼운 패턴 추천 → 채택.
+
+**핵심 결정**:
+- 단계 마법사로 풀 리팩터링 X (마감 시간 늘어남, 직원 스트레스)
+- 대신 빨간 강조 + 저장 가드 + 0 일괄 채우기 버튼
+- 필수 차단 영역: 전일이월 + 매출 4 + 현금상세 3 = **8칸**
+- 권장 강조: 차감 2칸, 기타매출 동적, 금고 8칸 (저장 통과)
+
+**신규 함수**:
+- `refreshSettleEmptyHighlight` — recalcSettle2 끝에서 빈 칸 빨간 토글
+- `validateSettleInputs` — 필수 8칸 빈 칸 있으면 차단 + 알림 + 자동 스크롤
+- `fillEmptyWithZero` — 모든 빈 칸 0 일괄 채우기 (직원 단축 버튼)
+
+**변경 함수**: `recalcSettle2`(끝부분 1줄 추가), `finishSettlement2`(시작 1줄 추가)
+
+**신규 CSS**: `.settle-item.empty`, `.v-input.empty` (빨간 인셋 1.5px + placeholder 빨간색)
+
+**HTML 변경**: 마감 저장 버튼 위에 "⚡ 공란 0으로 채우기" 보조 버튼
+
+**검증 통과**: `node --check` ✅ / 통합 지점 6개 grep 매칭 ✅ / DB 변경 없음
+
+**골든패스 시뮬**:
+- 빈 칸 → 빨간 테두리 ✅
+- 0 입력 → 정상색 복귀 ✅
+- 매출 1칸 빈 채로 저장 시도 → 알림 + 차단 + 첫 빈 칸으로 스크롤 ✅
+- "공란 0으로 채우기" 클릭 → 모든 빈 칸 0 → 저장 가능 ✅
+
+---
+
+## 🏁 2026-04-29 세션 마감 — 기타매출 분리 관리 + 동적 항목
+
+**브랜치**: `claude/review-todo-notes-EOjM7`
+**규모**: 대형 (DB 2테이블 신규 + UI 5곳 변경 + 백필 마이그레이션)
+**승인**: 2026-04-29 사장님 "ok" 확정 (계획서 v2)
+
+**핵심 결정**:
+- 뽑기 등 기타매출을 **장부합계에서 분리** (지금까지는 합산 → 매장별 항목이 달라 부적절)
+- 매장별 동적 항목 관리 (payment_methods 패턴 차용)
+- 회수 입력 **없음** — "회수"는 기계 구매원가 ROI 의미였음 (누적 매출만 보면 판단 가능)
+- 마감 카드 + 대시보드 둘 다 누적 표시
+
+**완료 단계**:
+- [x] Phase 0 백업 커밋 (작업트리 clean → `5aaa8e3` 자체가 백업)
+- [x] Phase 1 마이그레이션 SQL 작성 (`migrate_extra_revenue_2026_04_29.sql` + rollback)
+- [x] Phase 2 항목 관리 UI (사이드메뉴 + 시트 2개)
+- [x] Phase 3 마감 입력 동적화 + recalc 로직 (장부에서 뽑기 제외, sales_daily 동기화 변경)
+- [x] Phase 4 마감 카드 + 대시보드 누적 표시
+- [x] Phase 5 docs 동기화 + 구문 검증
+
+**신규 함수**: loadExtraItems, loadExtraItemSums, openExtraItemsSheet, renderExtraItemList, openExtraItemEdit, saveExtraItem, deleteExtraItem, renderExtraRevenueInputs, recalcExtraRevenuePanel, renderSettleCardExtraSection, renderExtraRevenueDashboard
+
+**변경 함수**: recalcSettle2, finishSettlement2, resetSettleView, syncClosingToSalesDaily, loadSettleCard, editSettlement, parseClosingExcel(?fillExtra), createDefaultSeeds(signup)
+
+**신규 DB 테이블**: extra_revenue_items, extra_revenue_logs
+
+**사장님 SQL 실행 필요**:
+- `docs/sql/migrate_extra_revenue_2026_04_29.sql` (Supabase에서 실행)
+- 실행 후 매장에 뽑기 대/소 자동 시드 + 옛 마감의 뽑기 매출이 logs로 자동 백필됨
+
+**검증 통과**: `node --check` ✅ / DOM ID 잔재 0건 ✅ / 호환용 `extra_draw_*` 키는 의도된 보존
+
+---
+
 ## 🏁 2026-04-24 세션 마감 (종합)
 
 **처리**: 큰 덩어리 **11건** 완료 (단일 세션 최다 기록)

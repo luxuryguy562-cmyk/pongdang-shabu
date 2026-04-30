@@ -1,8 +1,23 @@
 # 다음 세션 TODO 리스트
 
-> **최종 업데이트**: 2026-04-24 Phase 1-A2 배포
-> **이전 세션 완료 내역**: `docs/work_log.md` 2026-04-24 세션 마감 섹션 참조
+> **최종 업데이트**: 2026-04-29 기타매출 분리 관리 배포
+> **이전 세션 완료 내역**: `docs/work_log.md` 2026-04-29 세션 마감 섹션 참조
 > **다음 세션은 신규 `claude/...` 브랜치 생성**
+
+---
+
+## 🚨 사장님 실행 필요 SQL (2026-04-29)
+
+```
+docs/sql/migrate_extra_revenue_2026_04_29.sql
+```
+Supabase SQL Editor에서 실행. 효과:
+- `extra_revenue_items`, `extra_revenue_logs` 테이블 생성
+- 모든 매장에 뽑기(대/소) 자동 시드
+- 옛 마감의 뽑기 매출이 `extra_revenue_logs`로 자동 백필
+- `payment_methods`의 뽑기 항목은 비활성화(soft-delete)
+
+**미실행 시**: 앱은 레거시 폴백으로 화면만 보이고 저장은 실패. 결제수단 관리에 뽑기가 그대로 남음.
 
 ---
 
@@ -23,6 +38,7 @@
 | `migrate_sales_recon_mapping_2026_04_23.sql` | 사장님 확인 필요 |
 | `migrate_payment_methods_2026_04_23.sql` | 사장님 확인 필요 |
 | `migrate_signup_2026_04_24.sql` | ✅ 실행 완료 |
+| `migrate_extra_revenue_2026_04_29.sql` | ⚠️ **사장님 실행 대기** |
 
 > 미실행 확인: `SELECT count(*) FROM payment_methods;` / `SELECT sales_recon_mapping FROM store_settings LIMIT 1;`
 

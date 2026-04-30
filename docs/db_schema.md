@@ -137,6 +137,44 @@ franchises (프랜차이즈/브랜드)
 **기본 seed**: 7개 (신용카드/현금/현금영수증/QR/기타결제/뽑기대/뽑기소) — 모든 매장에 자동 생성
 **레거시 호환**: `sales_daily.card/cash/...` 컬럼은 유지. amounts jsonb가 비어있으면 레거시 컬럼을 읽음 (SQL 미실행 안전망)
 
+> ⚠️ **2026-04-29 변경**: 뽑기(대형)/뽑기(소형)은 `extra_revenue_items`로 이관. payment_methods의 `legacy_key='extra_large'/'extra_small'` 행은 `is_active=false`로 비활성화 (기존 sales_daily 데이터 보존).
+
+### extra_revenue_items (신규 2026-04-29)
+매장별 기타매출 항목 동적 관리. 뽑기·인형뽑기·오락기 등 매장마다 다른 부가 매출원.
+**장부합계와 분리** — 기계 안 현금 등 금고와 무관한 매출이라 별도 패널로 표시.
+| 컬럼 | 타입 | 용도 |
+|------|------|------|
+| id | UUID PK | |
+| store_id | UUID FK→stores (CASCADE) | 매장 격리 |
+| name | TEXT | 항목명 |
+| icon | TEXT | 이모지 (기본 '🎰') |
+| color | TEXT | (기본 '#7C3AED') |
+| sort_order | INT | 표시 순서 |
+| is_active | BOOL | 소프트 삭제 |
+| legacy_key | TEXT | 'draw_large'/'draw_small'/NULL(커스텀) |
+| created_at | TIMESTAMPTZ | |
+| **UNIQUE(store_id, name)** | | |
+
+**기본 seed**: 2개 (뽑기 대/소) — 모든 매장에 자동 생성
+**인덱스**: `(store_id, sort_order)`
+
+### extra_revenue_logs (신규 2026-04-29)
+기타매출 항목별 매출 기록 (날짜/마감 단위). 누적 = `SUM(amount) GROUP BY item_id`.
+| 컬럼 | 타입 | 용도 |
+|------|------|------|
+| id | UUID PK | |
+| store_id | UUID FK→stores (CASCADE) | 매장 격리 |
+| item_id | UUID FK→extra_revenue_items (CASCADE) | 항목 |
+| log_date | DATE | 매출일 |
+| amount | INT | 금액 (CHECK >= 0) |
+| settlement_id | UUID FK→settlements (SET NULL) | 마감과 연결 (마감 삭제돼도 로그는 보존) |
+| memo | TEXT | 비고 (백필 행은 '백필(2026-04-29)') |
+| created_at | TIMESTAMPTZ | |
+
+**인덱스**: `(store_id, log_date DESC)`, `item_id`, `settlement_id`
+**백필**: 기존 `settlements.items_json.extra_draw_large/small` → 동일 settlement_id로 INSERT (이중 백필 방지: NOT EXISTS 가드)
+**과거 기록 보존**: `settlements.items_json`의 `extra_draw_*` 키는 그대로 유지 (마감 카드 옛 형태 표시).
+
 ### sales_daily (신규 2026-04-23)
 ⚠️ 이전 설계 `sales_records` (세로 raw)는 **폐기**. 세로로 풀면 월 180행 → 결산 비효율 + 모바일 짤림. **가로형 피벗**으로 재설계 (하루 1행, 결제수단 컬럼 7개).
 
