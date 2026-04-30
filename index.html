@@ -912,7 +912,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [2] 근태관리 ══ -->
 <div id="attendanceCont" class="container">
   <div class="card">
-    <div class="card-title">근태 기록</div>
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>근태 기록</span>
+      <button class="btn btn-secondary manager-only" data-action="openLaborExportSheet" style="font-size:12px;padding:6px 10px;font-weight:700;">📥 노무제출</button>
+    </div>
     <div class="sub-tabs">
       <button class="sub-tab active" data-action="attTab|manual|this">수동 입력</button>
       <button class="sub-tab manager-only" data-action="attTab|caps|this">캡스 업로드</button>
@@ -1893,6 +1896,49 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div id="srmCategoryList" style="margin-bottom:16px;"></div>
     <button class="btn btn-primary btn-full" data-action="saveSalesReconMapping">저장</button>
+  </div>
+</div>
+
+<!-- ─── 새 기능: 노무 제출용 엑셀 다운로드 시트 ─── -->
+<div class="sheet-overlay" id="laborExportSheet">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📥 노무 제출 다운로드</div>
+    <p style="font-size:12px;color:var(--gray-500);margin:0 0 14px;">근로기준법 표준 양식 — 노무사·노동청 점검 모두 사용 가능</p>
+
+    <!-- 월 선택 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--gray-100);border-radius:12px;padding:10px 14px;margin-bottom:14px;">
+      <button class="btn btn-secondary btn-sm" data-action="moveLaborExportMonth|-1" style="padding:6px 10px;">◀</button>
+      <div id="lxMonthLabel" style="font-size:16px;font-weight:800;">2026-05</div>
+      <button class="btn btn-secondary btn-sm" data-action="moveLaborExportMonth|1" style="padding:6px 10px;">▶</button>
+    </div>
+
+    <!-- 양식 선택 (체크박스 3종) -->
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">어떤 양식이 필요하세요?</div>
+    <label class="lx-check" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:8px;cursor:pointer;">
+      <input type="checkbox" id="lxOptAtt" checked style="width:18px;height:18px;">
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;">출퇴근부</div>
+        <div style="font-size:11px;color:var(--gray-500);">일자별 출근/퇴근 기록 (근기법 §42)</div>
+      </div>
+    </label>
+    <label class="lx-check" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:8px;cursor:pointer;">
+      <input type="checkbox" id="lxOptPayroll" checked style="width:18px;height:18px;">
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;">임금대장 ⭐</div>
+        <div style="font-size:11px;color:var(--gray-500);">월 합계, 노무사 매월 제출용 (근기법 §48)</div>
+      </div>
+    </label>
+    <label class="lx-check" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:14px;cursor:pointer;">
+      <input type="checkbox" id="lxOptEmp" checked style="width:18px;height:18px;">
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;">근로자명부</div>
+        <div style="font-size:11px;color:var(--gray-500);">활성 직원 명부 (근기법 §41)</div>
+      </div>
+    </label>
+
+    <button class="btn btn-primary btn-full" data-action="downloadLaborExport" style="padding:14px;font-size:15px;">⬇️ 선택 항목 다운로드</button>
+    <button class="btn btn-secondary btn-full" data-action="closeAllSheets" style="margin-top:8px;padding:12px;font-size:13px;">취소</button>
   </div>
 </div>
 
@@ -6219,6 +6265,156 @@ function toggleSideGroup(header){
   header.classList.toggle('open');
   const body=header.nextElementSibling;
   body.classList.toggle('show');
+}
+// ══════════════════════════════════════════
+// ─── 새 기능: 노무 제출용 엑셀 다운로드 (3종 양식) ───
+// 근로기준법 §41(근로자명부) §42(출퇴근부) §48(임금대장) 표준 양식
+// ══════════════════════════════════════════
+let laborExportYm=new Date().toISOString().slice(0,7);
+function openLaborExportSheet(){
+  if(!guardStore()) return;
+  if(!isManager) return toast('관리자만 다운로드할 수 있습니다.','warn');
+  laborExportYm=new Date().toISOString().slice(0,7);
+  document.getElementById('lxMonthLabel').innerText=laborExportYm;
+  ['lxOptAtt','lxOptPayroll','lxOptEmp'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true;});
+  openSheet('laborExportSheet');
+}
+function moveLaborExportMonth(dir){
+  const d=new Date(laborExportYm+'-01');d.setMonth(d.getMonth()+parseInt(dir));
+  laborExportYm=d.toISOString().slice(0,7);
+  document.getElementById('lxMonthLabel').innerText=laborExportYm;
+}
+// 주민번호 마스킹 (뒷자리 6자리만)
+function maskRRN(rrn){
+  if(!rrn) return '';
+  const s=String(rrn).replace(/[^0-9]/g,'');
+  if(s.length<7) return rrn;
+  return s.slice(0,6)+'-'+s.slice(6,7)+'******';
+}
+// HH:MM 포맷
+function fmtTime(iso){
+  if(!iso) return '';
+  const d=new Date(iso);return d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
+}
+// 메인 다운로드: 체크된 양식만 워크북에 시트로 추가 → 1파일로 저장
+async function downloadLaborExport(){
+  if(!guardStore()) return;
+  if(!isManager) return toast('관리자만 다운로드할 수 있습니다.','warn');
+  if(typeof XLSX==='undefined') return toast('엑셀 라이브러리 로드 안 됨','error');
+  const optAtt=document.getElementById('lxOptAtt').checked;
+  const optPay=document.getElementById('lxOptPayroll').checked;
+  const optEmp=document.getElementById('lxOptEmp').checked;
+  if(!optAtt && !optPay && !optEmp) return toast('1개 이상 선택하세요','warn');
+
+  setLoad(true,'데이터 조회 중...');
+  try{
+    const ym=laborExportYm;
+    const start=ym+'-01';
+    const endD=new Date(ym+'-01');endD.setMonth(endD.getMonth()+1);
+    const end=endD.toISOString().slice(0,10);
+    // 활성 직원 + 해당월 근태 + 특별수당 동시 조회
+    const[{data:emps},{data:logs},{data:sw}]=await Promise.all([
+      sb.from('employees').select('*').eq('store_id',currentStore.id).eq('is_active',true).order('name'),
+      sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).gte('work_date',start).lt('work_date',end).order('work_date'),
+      sb.from('special_wages').select('*').eq('store_id',currentStore.id).gte('target_date',start).lt('target_date',end)
+    ]);
+    if(!emps||emps.length===0){setLoad(false);return toast('등록된 직원이 없습니다','warn');}
+
+    const wb=XLSX.utils.book_new();
+    if(optAtt){
+      const ws=buildAttendanceSheet(ym, emps, logs||[]);
+      XLSX.utils.book_append_sheet(wb, ws, '출퇴근부');
+    }
+    if(optPay){
+      const ws=buildPayrollSheet(ym, emps, logs||[], sw||[]);
+      XLSX.utils.book_append_sheet(wb, ws, '임금대장');
+    }
+    if(optEmp){
+      const ws=buildEmployeeSheet(emps);
+      XLSX.utils.book_append_sheet(wb, ws, '근로자명부');
+    }
+
+    const cnt=[optAtt,optPay,optEmp].filter(Boolean).length;
+    const stem=cnt===1?(optAtt?'출퇴근부':optPay?'임금대장':'근로자명부'):'노무제출';
+    const safeName=(currentStore?.name||'매장').replace(/[\\/:*?"<>|]/g,'_');
+    const filename=`${stem}_${safeName}_${ym}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    setLoad(false);
+    toast(`📥 ${filename} 다운로드 완료`,'success',3500);
+    closeAllSheets();
+  } catch(e){
+    setLoad(false);
+    console.error('[laborExport]',e);
+    toast('다운로드 실패: '+e.message,'error');
+  }
+}
+// 출퇴근부 시트 (일자 × 직원, 빈 날도 행 채움)
+function buildAttendanceSheet(ym, emps, logs){
+  const header=['날짜','요일','직원명','출근시간','퇴근시간','휴게(분)','실근무(시간)','주말','비고'];
+  const rows=[[`${ym} 출퇴근부 — ${currentStore?.name||''}`],[],header];
+  // 월 1일~말일
+  const dates=[];const sd=new Date(ym+'-01');const ed=new Date(ym+'-01');ed.setMonth(ed.getMonth()+1);
+  for(let d=new Date(sd); d<ed; d.setDate(d.getDate()+1)){dates.push(d.toISOString().slice(0,10));}
+  const dayNames=['일','월','화','수','목','금','토'];
+  // 직원별로 묶고, 날짜순 정렬
+  emps.forEach(e=>{
+    const empLogs=logs.filter(l=>l.employee_id===e.id);
+    const byDate=Object.fromEntries(empLogs.map(l=>[l.work_date,l]));
+    dates.forEach(date=>{
+      const l=byDate[date];
+      const dt=new Date(date);
+      const dn=dayNames[dt.getDay()];
+      const isWeekend=dt.getDay()===0||dt.getDay()===6;
+      if(l && l.app_in){
+        const hrs=((l.total_work_min||0)/60).toFixed(1);
+        rows.push([date.slice(5), dn, e.name, fmtTime(l.app_in), fmtTime(l.app_out), l.rest_min||0, parseFloat(hrs), isWeekend?'O':'', l.app_out?'':'미퇴근']);
+      } else {
+        rows.push([date.slice(5), dn, e.name, '', '', '', '', isWeekend?'O':'', '결근/휴무']);
+      }
+    });
+    rows.push([]);  // 직원 사이 빈 행
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:8},{wch:5},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:6},{wch:14}];
+  return ws;
+}
+// 임금대장 시트 (직원별 1행, 월 합계 — 근기법 §27 16개 필수항목)
+function buildPayrollSheet(ym, emps, logs, sw){
+  const header=['성명','주민번호','고용일','직무','시급','근로일수','총근로시간(h)','주말근무(h)','연장(h)','기본급','주휴수당','식대','특별수당','공제','실수령액','비고'];
+  const rows=[[`${ym} 임금대장 — ${currentStore?.name||''} (근로기준법 §48)`],[],header];
+  emps.forEach(e=>{
+    const empLogs=logs.filter(l=>l.employee_id===e.id && l.app_in);
+    const days=empLogs.length;
+    const totalMin=empLogs.reduce((s,l)=>s+(l.total_work_min||0),0);
+    const weekendMin=empLogs.filter(l=>l.weekend_flag).reduce((s,l)=>s+(l.total_work_min||0),0);
+    const totalH=+(totalMin/60).toFixed(1);
+    const weekendH=+(weekendMin/60).toFixed(1);
+    // 연장근로: 일 8시간 초과분 합 (간이 계산)
+    const overMin=empLogs.reduce((s,l)=>s+Math.max(0,(l.total_work_min||0)-480),0);
+    const overH=+(overMin/60).toFixed(1);
+    const baseWage=empLogs.reduce((s,l)=>s+(l.calculated_wage||0),0);
+    const extra=sw.filter(x=>x.employee_id===e.id).reduce((s,x)=>s+(x.extra_amount||0),0);
+    rows.push([e.name, maskRRN(e.id_number), e.hire_date||'', e.role||'', e.base_wage||'', days, totalH, weekendH, overH, baseWage, '', '', extra, '', baseWage+extra, e.is_foreign?'외국인':'']);
+  });
+  // 합계 행
+  rows.push([]);
+  const sumBase=emps.reduce((s,e)=>s+logs.filter(l=>l.employee_id===e.id&&l.app_in).reduce((s2,l)=>s2+(l.calculated_wage||0),0),0);
+  const sumExtra=(sw||[]).reduce((s,x)=>s+(x.extra_amount||0),0);
+  rows.push(['합계','','','','','','','','',sumBase,'','',sumExtra,'',sumBase+sumExtra,'']);
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:10},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:10},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10}];
+  return ws;
+}
+// 근로자명부 시트 (활성 직원, 근기법 §20 필수항목)
+function buildEmployeeSheet(emps){
+  const header=['성명','주민번호','생년월일','고용일','직무','시급','주소','연락처','은행','계좌','외국인','비자/신고','비고'];
+  const rows=[[`근로자명부 — ${currentStore?.name||''} (근로기준법 §41)`],[],header];
+  emps.forEach(e=>{
+    rows.push([e.name, maskRRN(e.id_number), e.birth_date||'', e.hire_date||'', e.role||'', e.base_wage||'', e.address||'', e.phone||'', e.bank_name||'', e.account_number||'', e.is_foreign?'O':'', e.report_status||'', '']);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:12},{wch:10},{wch:10},{wch:24},{wch:14},{wch:10},{wch:18},{wch:6},{wch:10},{wch:10}];
+  return ws;
 }
 // ══════════════════════════════════════════
 // 급여 집계 (임시 플레이스홀더)
