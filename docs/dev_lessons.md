@@ -4,6 +4,33 @@
 
 ---
 
+## 54. 기기 식별은 변동 요소 빼라 — localStorage UUID가 정답 (2026-05-04)
+
+**사건**: 사장님 "출퇴근 오류 난다, 기기초기화 해도 되다가 또 오류". 점검해보니 `getDeviceFingerprint`가 canvas 픽셀 + `screen.width/height` + `navigator.userAgent` + `hardwareConcurrency` 조합 해시. 같은 폰에서도 **화면 회전**(가로↔세로), **브라우저 자동 업데이트**(UA 버전 변경), GPU 캐시 변동으로 해시가 달라져 "등록 안 된 기기" 차단. 관리자가 초기화 → 새 해시로 등록 → 또 변동 → 또 차단. **무한 반복**.
+
+**원인**:
+- "기기 고유성"을 **불안정한 환경 변수**로 만들려 함 — fingerprint.js 류 진보적 알고리즘은 광고 추적용이지 출퇴근 식별용이 아님
+- dev_lessons #32에서 등록 UX(팝업)는 개선했으나 **fingerprint 자체의 안정성**은 그대로 둠 → 후속 사고
+- 사용자가 보고한 "오류" 패턴(되다 안 되다)은 **fingerprint 변동성의 명확한 signal**이었지만 즉각 못 짚음
+
+**해법 패턴 (재사용)**:
+1. **localStorage UUID 우선**: 첫 호출 시 `crypto.randomUUID()` 1회 생성 → 영구 보관. 이후 항상 동일값
+   - 화면 회전·브라우저 업데이트·GPU 변동 영향 0
+2. **fallback fingerprint**(localStorage 차단 환경): canvas 제거, UA 버전 숫자 제거, screen 정렬해서 회전 무관화
+3. **옛 형식 호환**: 기존 DB 등록값(`DF…`)이 있으면 첫 시도에서 자동으로 새 형식(`UUID-…`)으로 silent migration. 사용자·관리자 별도 조작 0
+4. **`reset` 시 localStorage는 보존**: DB만 null → 같은 폰에서 재등록 시 동일 UUID 유지(다른 직원이 이 폰을 쓰는 경우도 자연스럽게 처리)
+
+**체크리스트 (기기/세션 식별 만들 때)**:
+- [ ] 식별자 구성요소 중 사용자가 의도하지 않게 변하는 게 있나? (화면 회전, 브라우저 업데이트, OS 폰트 변경)
+- [ ] localStorage/IndexedDB로 영구 저장 가능한 환경인가? → 가능하면 **무조건 우선**
+- [ ] fingerprint류는 fallback **2순위**로만 사용
+- [ ] 사용자가 "되다 안 되다"라고 호소하면 → **변동성 의심**이 1순위
+- [ ] 형식 전환 시 기존 데이터 자동 마이그레이션 경로(silent migration) 있나
+
+**관련**: dev_lessons #32(기기 등록 UX), 헌법 10조-3(자가 치유 — 사용자에게 반복 오류 떠넘기지 말 것)
+
+---
+
 ## 53. main 브랜치 직접 작업 실수 → claude 브랜치 fast-forward로 정리 (2026-04-30)
 
 **사건**: 사용자 편의성 Phase 1(A+D+E) 작업 중 직전 main 머지 흐름 때문에 `git checkout` 안 한 상태로 코드 수정·커밋 → 헌법 1-2 위반(main 직접 커밋). 다행히 `git push origin claude/...`는 "Everything up-to-date"로 차단됨 (local main에만 새 커밋, claude 브랜치엔 변경 없음).

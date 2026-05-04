@@ -4,6 +4,31 @@
 
 ---
 
+## 🏁 2026-05-04 세션 — 출퇴근 기기 인식 오류 수정 (fingerprint 안정화)
+
+**브랜치**: `claude/fix-attendance-errors-hwHYE`
+**규모**: 중형 (JS 약 30줄, DB 변경 없음)
+**승인**: 2026-05-04 사장님 "안정적인거로 해 / 엄청난 걸 할 이유는 없음"
+
+**증상**: 직원이 출퇴근 시도 → "등록되지 않은 기기" 차단. 관리자가 기기 초기화 → 한동안 정상 → 또 차단. 무한 반복.
+
+**원인**: `getDeviceFingerprint`가 canvas 픽셀 + screen.width/height + userAgent + hardwareConcurrency 등 **변동 큰 요소**로 해시 생성. 화면 회전(가로↔세로 swap), 브라우저 자동 업데이트(UA 버전 변경), GPU 캐시 변동만으로 해시가 달라져 차단.
+
+**해법 (단순·안정)**:
+- 1순위: `localStorage.pd_device_id` 에 `crypto.randomUUID()` 영구 저장 → 환경 변동에 영향 0
+- fallback: localStorage 차단 환경에서만 정제 fingerprint (canvas 제거, UA 버전 제거, screen 정렬 → 회전 무관)
+- 옛 `DF…` 형식 보유 직원: 첫 출근 시 자동 silent migration (DB 값을 새 UUID 형식으로 갱신)
+
+**변경 함수**: `getDeviceFingerprint`, `checkDeviceForAttendance` (DF 호환 분기 추가), `showDeviceStatusPopup` (DF 보유자 "일치" 표시)
+
+**바뀌는 DB**: 없음 (`employees.device_fingerprint` 컬럼 그대로, 값 형식만 점진 전환)
+
+**검증 통과**: `node --check` ✅ / 골든패스 6종 시뮬 통과
+
+**dev_lessons #54 추가** (예정): "fingerprint는 변동 요소를 빼라 — localStorage UUID가 정답"
+
+---
+
 ## 🏁 2026-04-30 세션 #3 — 노무 제출용 엑셀 다운로드 3종
 
 **브랜치**: `claude/store-testing-checklist-n1YIk` (이어서)

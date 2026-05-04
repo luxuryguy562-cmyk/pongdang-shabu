@@ -8744,32 +8744,28 @@ async function checkIPForAttendance(){
 }
 
 // ─── 새 기능: 기기 지문(Device Fingerprint) ───
+// localStorage에 영구 보관하는 UUID를 1순위로 사용.
+// 화면 회전·브라우저 업데이트로도 안 변함. (옛 'DF…' 형식은 호환 비교만.)
 async function getDeviceFingerprint(){
   try{
-    // canvas + screen + userAgent 조합으로 기기 고유 해시 생성
-    const canvas=document.createElement('canvas');
-    const ctx=canvas.getContext('2d');
-    canvas.width=200;canvas.height=50;
-    ctx.textBaseline='top';
-    ctx.font='14px Arial';ctx.fillText('퐁당샤브FP',2,2);
-    ctx.font='18px Georgia';ctx.fillStyle='#0050FF';ctx.fillText('Device',50,10);
-    ctx.strokeStyle='#FF0000';ctx.beginPath();ctx.arc(100,25,15,0,Math.PI*2);ctx.stroke();
-    const canvasData=canvas.toDataURL();
-    // 기기 특성 조합
-    const raw=[
-      canvasData,
-      screen.width+'x'+screen.height,
-      screen.colorDepth,
-      navigator.userAgent,
-      navigator.language,
-      navigator.hardwareConcurrency||'',
-      new Date().getTimezoneOffset()
-    ].join('|||');
-    // 간단한 해시 (djb2)
-    let hash=5381;
-    for(let i=0;i<raw.length;i++) hash=((hash<<5)+hash)+raw.charCodeAt(i);
-    return 'DF'+Math.abs(hash).toString(36).toUpperCase();
-  }catch(e){console.error('기기 지문 생성 실패:',e);return null;}
+    let id=localStorage.getItem('pd_device_id');
+    if(!id){
+      id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID()
+        :('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16);}));
+      localStorage.setItem('pd_device_id',id);
+    }
+    return 'UUID-'+id;
+  }catch(e){
+    // localStorage 차단 환경 (시크릿 모드 등) — 회전 무관 fallback
+    try{
+      const dim=[screen.width,screen.height].sort((a,b)=>a-b).join('x');
+      const ua=(navigator.userAgent||'').replace(/[\d.]+/g,''); // 버전 숫자 제거 → 자동 업데이트 영향 차단
+      const raw=[dim,screen.colorDepth,ua,navigator.language,navigator.hardwareConcurrency||''].join('|||');
+      let hash=5381;
+      for(let i=0;i<raw.length;i++) hash=((hash<<5)+hash)+raw.charCodeAt(i);
+      return 'FB-'+Math.abs(hash).toString(36).toUpperCase();
+    }catch(e2){console.error('기기 지문 생성 실패:',e2);return null;}
+  }
 }
 async function checkDeviceForAttendance(empId){
   // 기기 지문 검증 — 최초 출근 시 자동 등록, 이후 불일치 시 차단
@@ -8780,11 +8776,17 @@ async function checkDeviceForAttendance(empId){
   // 미등록 상태 → 자동 등록
   if(!emp.device_fingerprint){
     const{error}=await sb.from('employees').update({device_fingerprint:fp}).eq('id',empId).eq('store_id',currentStore.id);
-    if(!error) emp.device_fingerprint=fp; // 로컬 캐시도 업데이트
+    if(!error) emp.device_fingerprint=fp;
     return {ok:true,fp,msg:'기기 최초 등록 완료',firstReg:true};
   }
-  // 등록된 기기와 비교
+  // 등록된 기기와 비교 (정상 케이스)
   if(emp.device_fingerprint===fp) return {ok:true,fp,msg:'등록된 기기 확인됨'};
+  // 옛 'DF…' 형식 보유자 — 새 UUID 체계로 silent migration (한 번만 이동)
+  if(emp.device_fingerprint.startsWith('DF')){
+    const{error}=await sb.from('employees').update({device_fingerprint:fp}).eq('id',empId).eq('store_id',currentStore.id);
+    if(!error) emp.device_fingerprint=fp;
+    return {ok:true,fp,msg:'기기 정보 갱신됨',firstReg:true};
+  }
   return {ok:false,fp,msg:`등록되지 않은 기기입니다.\n본인 휴대폰에서 다시 시도하세요.`};
 }
 async function resetDeviceFingerprint(empId){
@@ -8829,8 +8831,8 @@ async function showDeviceStatusPopup(emp){
       btns.innerHTML=`
         <button class="btn btn-primary btn-full" style="padding:13px;" data-action="registerDeviceFromPopup">✅ 이 기기로 등록</button>
         <button class="btn btn-secondary btn-full" style="padding:13px;" data-action="closeDevicePopup">나중에 하기</button>`;
-    } else if(emp.device_fingerprint===fp){
-      // 일치
+    } else if(emp.device_fingerprint===fp||emp.device_fingerprint.startsWith('DF')){
+      // 일치 (옛 'DF…' 형식 보유자도 첫 출근 시 silent migration 되므로 일치로 안내)
       icon.innerText='✅';
       title.innerText='등록된 기기입니다';
       desc.innerHTML='출퇴근 전용 기기로 확인됐어요.<br>안심하고 근무하세요!';
