@@ -4,6 +4,36 @@
 
 ---
 
+## 53. main 브랜치 직접 작업 실수 → claude 브랜치 fast-forward로 정리 (2026-04-30)
+
+**사건**: 사용자 편의성 Phase 1(A+D+E) 작업 중 직전 main 머지 흐름 때문에 `git checkout` 안 한 상태로 코드 수정·커밋 → 헌법 1-2 위반(main 직접 커밋). 다행히 `git push origin claude/...`는 "Everything up-to-date"로 차단됨 (local main에만 새 커밋, claude 브랜치엔 변경 없음).
+
+**원인**:
+- 직전 main 머지 후 `git checkout claude/...` 누락
+- 작업 시작 전 `git branch --show-current` 점검 안 함
+
+**해법 패턴 (재사용, destructive op 없이)**:
+```bash
+# 1. claude 브랜치로 이동 + main의 새 커밋 fast-forward
+git checkout claude/store-testing-checklist-XXX
+git merge main --ff-only
+# 2. claude push (정상)
+git push origin claude/store-testing-checklist-XXX
+# 3. main도 그대로 push (이미 같은 커밋)
+git checkout main && git push origin main
+```
+
+**체크리스트 (모든 코드 작업 시작 전)**:
+- [ ] `git branch --show-current` 출력이 `claude/...`인가
+- [ ] 아니면 `git checkout claude/...` 먼저
+- [ ] 커밋 직전 `git status`로 브랜치 한 번 더 확인
+
+**교훈**: `reset --hard`/`push --force` 같은 destructive op 안 쓰고도 정리 가능. 새 커밋이 다른 브랜치에 보존되는 한, fast-forward 머지로 깔끔하게 흡수.
+
+**관련**: 헌법 1-2(main 직접 push 금지), 헌법 11-2(백업 커밋), CLAUDE.md "Executing actions with care"
+
+---
+
 ## 52. "분리 관리" 요청 받으면 차액 검증이 깨지는지 먼저 확인 (2026-04-29 기타매출)
 
 **사건**: 사장님이 "마감정산에서 뽑기 매출 합산되면 안 될 것 같다, 따로 관리하자"고 요청. 즉시 코드 짜기 전에 **critic으로 모순 짚기**: "현금이 금고에 들어오는 매출인데 장부에서 빼면 차액이 항상 +가 됨". → 사장님이 설명 → "뽑기는 **기계 안 현금**이라 금고와 별개" → 모순 해소.

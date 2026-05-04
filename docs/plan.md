@@ -1,6 +1,6 @@
 # 퐁당샤브 관리 시스템 — 전체 설계 현황
 
-> 최종 업데이트: 2026-04-22 (#57 거래내역 UI 전면 개편 + 분류 선택 바텀시트 3단계 드릴다운)
+> 최종 업데이트: 2026-04-30 (#65~67 5월 테스팅 진입 — 공란 가드 + 편의성 + 노무 다운로드)
 
 ---
 
@@ -77,6 +77,9 @@
 | 62 | 수식 검수 → 예비비 잔고 정확화 + 정산검수 카드수수료 통일 | ✅ 완료 (2026-04-24) | 가상 시나리오로 전 화면 수식 검수. `calcReserveBalance`가 (매출−고정비)×5% 근사로 30~50% 과다 적립 → 실제 순이익(매출−vendor−receipt−att−fixed일할−royalty−cardFee) 기반으로 재작성. 소스도 settlements→sales_daily. 정산/검수 cardSales도 settlements→sales_daily. dev_lessons #50 ("소스 통일+공식 통일"). DB 변경 없음 |
 | 63 | Phase 1-A1 신규 매장 가입 플로우 (개인 사업자 MVP) | ✅ 완료 (2026-04-24) — **SQL 실행 필요** | 출시 로드맵 Phase 1-A 첫 세션. Supabase Auth 도입. 로그인 오버레이에 "🏪 매장 시작하기" 버튼 + 6단계 가입 마법사(유형→이메일→비번→매장→사업자번호→약관). 주인 이메일+비번 로그인 + "비번 찾기". 가입 시 stores/employees/store_settings/카테고리7종/결제수단7종 자동 seed. 매장 고유 6자리 코드(store_code) 자동 발급. 약관 초안 템플릿 (법률 검토 플레이스홀더). DB 마이그레이션: auth_user_id/store_code/tos_accepted_at/business_no/invite_code/owner_user_id 추가. 한계: 다른 3종 유형은 Phase 1-A2, 기존 계정 업그레이드 UI 없음 |
 | 64 | Phase 1-A2 프랜차이즈 본사/가맹점주 + 본사 홈 + 자연빵 흡수 | ✅ 완료 (2026-04-24) | 가입 유형 4종 전부 활성화(개인/다점포/본사/가맹점주). 본사 가입 시 `franchises` 생성 + 초대 코드(F-XXXXXX) 자동 발급 + 비활성 더미 매장. 가맹점주 가입 시 초대 코드 입력으로 franchise_id 자동 연결(비우면 혼자 시작). 신규 본사 홈(`franchiseHomeCont`): 브랜드명·초대코드·전체 매출·가맹점 순위 리스트·매장 전환 버튼·코드 복사. 로그인 후 franchise_admin 자동 라우팅. **자연빵 흡수**: 사이드메뉴 "🏯 본사 연결" 시트 → 코드 입력 → `stores.franchise_id` UPDATE (데이터 보존). `.franchise-admin-only` CSS 클래스 + applyPermissionUI 확장. DB 변경 없음. 한계: RLS 정책 추가 필요시 별도 SQL, 다점포 매장 추가 UI 미구현 |
+| 65 | 마감정산 공란 가드 + 빨간 강조 | ✅ 완료 (2026-04-30) | 5월 매장 테스팅 진입 직전. 빈 입력칸 빨간 테두리 + 빨간 placeholder. 필수 8칸(전일이월·매출4·현금상세3) 빈 채로 저장 시 차단 + 알림 + 첫 빈 칸 자동 스크롤. 차감/금고/기타매출은 강조만(저장 통과). "⚡ 공란 0으로 채우기" 보조 버튼(직원 단축). 신규: refreshSettleEmptyHighlight, validateSettleInputs, fillEmptyWithZero. CSS .settle-item.empty + .v-input.empty. DB 변경 없음 |
+| 66 | 사용자 편의성 Phase 1 (마감 중복 가드 + 차액 강조 + 출퇴근 토스트) | ✅ 완료 (2026-04-30) | **A. 마감 중복 저장 가드**: finishSettlement2 시작에 같은 매장+날짜 settlements SELECT → 있으면 저장된 매출/금고 보여주고 "덮어쓸까요?" confirm. **D. 차액 0원 강조**: 신규 refreshSaveButtonState(diff) + #settleGuide DOM. 차액=0 + 필수칸 채워짐 → 저장 버튼 초록 그라데이션 + ✅. 차액 있음 → 노란 가이드, 빈칸 → 빨간 가이드. **E. 출퇴근 즉시 피드백**: checkIn → "🌅 출근 완료! HH:MM" / checkOut → "👏 오늘 N시간 M분 일하셨어요 · 오늘 X원" (calcWageData 활용). DB 변경 없음. 남은 항목 B/C/F는 Phase 2 |
+| 67 | 노무 제출용 엑셀 다운로드 3종 (근기법 §41/§42/§48) | ✅ 완료 (2026-04-30) | 첫 다운로드 기능. 근태 탭 헤더 "📥 노무제출" 버튼(관리자만) → 시트: 월 ◀▶ + 체크박스 3종(출퇴근부/임금대장⭐/근로자명부) + 다운로드. 1개 선택→단일 시트, 복수→1파일 다중 시트. 출퇴근부(§42): 일자×직원, 빈 날도 결근/휴무 행. 임금대장(§48 시행령 §27 16개 필수항목 + 합계행). 근로자명부(§41 시행령 §20). 가드: isManager + 직원 0명 토스트. 주민번호 마스킹(951010-1******). 신규 8개 함수(openLaborExportSheet, downloadLaborExport, build{Att,Pay,Emp}Sheet, maskRRN, fmtTime, moveLaborExportMonth). SheetJS 재사용. DB 변경 없음. 한계: 식대/주휴/공제 컬럼 빈 칸(DB 미관리), 결근/휴무 자동 구분 X |
 
 ---
 
