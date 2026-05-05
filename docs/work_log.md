@@ -23,9 +23,17 @@
 
 **바뀌는 DB**: 없음 (`employees.device_fingerprint` 컬럼 그대로, 값 형식만 점진 전환)
 
-**검증 통과**: `node --check` ✅ / 골든패스 6종 시뮬 통과
+**검증 통과**:
+- `node --check` ✅
+- **Node 가상 시나리오 18종 통과** (`/tmp/test_fp.js`, `/tmp/test_check.js`):
+  - 핵심: 같은 폰 두 번째 호출 동일 / 화면 회전 후 동일 / 브라우저 업데이트 후 동일 / 다른 폰 다름
+  - Fallback: 시크릿 모드 `FB-` prefix / 시크릿+회전 동일 / 시크릿+iOS 마이너 업데이트 동일 / `crypto.randomUUID` 미지원 시 정규식 fallback
+  - 운영: 매장 폰 1대 직원 2명 공유 OK / 옛 DF 첫 출근 silent migration / 그 직원 두 번째 일치 분기 / 도용자 차단 + DB 보호 / 관리자 초기화 후 같은 UUID 복귀
+  - 트레이드오프(인지): 옛 DF 보유자에 한정해 1회 다른 폰도 통과 가능 (마이그레이션 비용, 첫 출근 직후 새 UUID 박힘)
 
-**dev_lessons #54 추가** (예정): "fingerprint는 변동 요소를 빼라 — localStorage UUID가 정답"
+**dev_lessons #54 추가**: "기기 식별은 변동 요소 빼라 — localStorage UUID가 정답"
+
+**남은 액션**: 사장님 실기 테스트 (특히 폰 가로↔세로 회전 후 출근 — 예전 차단 케이스)
 
 ---
 
