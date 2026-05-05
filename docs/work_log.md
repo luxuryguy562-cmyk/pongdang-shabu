@@ -4,6 +4,49 @@
 
 ---
 
+## 🏁 2026-05-05 세션 — 로그인 화면 결함 묶음 수정 + 호칭 정정
+
+**브랜치**: `claude/debug-login-access-0Zifq`
+**규모**: 중형 (HTML 약 12줄, JS 약 110줄, DB UPDATE 1줄(사용자 직접 실행))
+**승인**: 2026-05-05 사용자 "1.했음 / 2.가 / 3.진행"
+
+**증상**: 김은성(=총관리자) 본인 로그인 안 됨, [관리자] 버튼 눌러도 "아무 반응 없음", [주인 이메일] 갔다 [뒤로] 누르면 일반 로그인 + 관리자 로그인 두 영역이 동시 표시되는 비정상 화면.
+
+**원인 (4개 결함 동시 작용)**:
+1. **메시지 영역 누락** — `loginAdminArea`/`loginOwnerArea`에 에러 메시지 표시 div가 없어 `loginMsg`(form 내부)에 출력 → form hide되면 메시지도 같이 숨겨짐 → "아무 반응 없음"
+2. **토글 책임 분산** — `toggleAdminLogin`/`toggleOwnerLogin`가 서로의 영역 안 만짐 → 호출 순서에 따라 두 영역 동시 표시
+3. **owner 진입 경로 불명** — owner는 dropdown 필터 제외, [관리자] 버튼 안내 없음
+4. **호칭 혼용** — "사장님" 표현이 owner를 가리키는 듯 박혀있어 사용자(=총관리자) 분노
+
+**해법**:
+- HTML: `loginAdminMsg` + `loginOwnerMsg` 신규 / 로고에 `id="brandLogo"` / [관리자] 버튼 제거 / [뒤로] 통일(`loginPanelBack`)
+- JS: `showLoginPanel('form'|'admin'|'owner')` 신규 — 1개만 보이게 + 메시지/입력 초기화
+- 토글 함수 단순화: `showLoginPanel` 호출만
+- `submitLogin`/`submitAdminLogin`/`submitOwnerLogin`이 각자 패널 메시지 출력 + 동명이인 PIN 매칭 (`filter` + `find by pin`)
+- `shakeLogin`은 현재 표시 패널만 흔듦
+- 엔터키: 현재 표시 패널의 submit 호출
+- 시크릿 트리거: 로고 1초 길게 누르면 admin 패널 (직원 호기심 클릭 차단)
+- 매장 변경 버튼 모든 권한 노출 (F4 결함 수정)
+- 호칭: UI 3곳 "사장님" → "총관리자" / `business_rules.md` #7 호칭 절대 규칙 / `dev_lessons.md` #55 신설
+
+**검증**:
+- `node --check` ✅
+- 행동 시뮬레이션 12/12 통과 (`/tmp/sim_login.js`):
+  패널 전환 / owner→뒤로 시 admin 안 뜸(사용자 케이스) / 정상 로그인 / 잘못된 PIN 메시지 해당 패널 표시 + 해당 패널만 흔들림 / 동명이인 PIN 매칭 / 매장 미선택 가드
+
+**남은 작업 (별도 세션)**:
+- PIN brute-force 제한 (5회 실패 시 60초 잠금)
+- PIN 평문 → bcrypt 마이그레이션
+- empAuthLevel 셀렉트에 'owner' 옵션 추가 + owner 카드 권한 readonly (강등 시한폭탄 차단)
+
+**사용자가 직접 실행한 SQL**: 김은성 owner 권한 복원
+```sql
+UPDATE employees SET auth_level='owner', is_manager=true
+WHERE name='김은성' AND store_id='4ae03341-e5dc-4933-b746-29728cbc685f';
+```
+
+---
+
 ## 🏁 2026-05-04 세션 — 출퇴근 기기 인식 오류 수정 (fingerprint 안정화)
 
 **브랜치**: `claude/fix-attendance-errors-hwHYE`
