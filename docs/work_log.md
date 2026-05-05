@@ -4,6 +4,52 @@
 
 ---
 
+## 🏁 2026-05-05 세션 #3 — 로그인 화면 갈아엎기 (헌법 1-6 신설 적용)
+
+**브랜치**: `claude/debug-login-access-0Zifq` (이어서)
+**규모**: 중형 갈아엎기 (HTML 약 -40줄, JS 약 -160줄, docs 갱신)
+**승인**: 2026-05-05 사용자 "다 ok" (헌법 1-6 + dev_lessons #51 보완 + 단순화 안 통째 승인)
+
+**배경**: 사용자가 로그인 화면 분기 5개(드롭다운/관리자/이메일/시크릿/매장변경)에 분노. 헌법 1-5 "기존 기능 보호" 원칙을 무한 적용한 결과 잔재 누적. 사용자: "최대한 건드리지 않되, 갈아엎을 필요가 정당할 때는 한다"는 명시 요청.
+
+**헌법 변경**:
+- **CLAUDE.md 제1조 1-6 신설**: "정당한 갈아엎기" — 잘못된 전제·잔재 누적·구조 충돌 시 통째로 정리할 수 있는 근거 명시
+- **dev_lessons.md #51 보완**: "추가만, 수정 금지"는 하위 호환 위험이 큰 특수 상황의 권고일 뿐, 잘못된 설계까지 보존하라는 일반 원칙 아님 (헌법 1-6 우선)
+
+**갈아엎기 내역**:
+| 제거 | 이유 |
+|---|---|
+| `loginAdminArea` HTML 패널 (+`loginAdminMsg`,`loginAdminName`,`loginAdminPin`) | 김은성=owner 시절 잔재. 김은성 employees row 삭제(세션 #2)로 불필요 |
+| `loginOwnerArea` HTML 패널 (이메일 로그인) | Phase 1-A2 가맹점주용. 사용 안 함 |
+| 하단 [관리자] / [주인 (이메일)] 버튼 | 위 패널과 함께 제거 |
+| 로고 long-press 시크릿 트리거 (`brandLogo`) | 김은성 숨김용 시크릿 통로 — 김은성 빠지면 불필요 |
+| `showLoginPanel` / `_currentLoginPanel` / `_panelMsgEl` / `_panelAreaEl` | 3패널 토글용. 1패널만 남으면 불필요 |
+| `toggleAdminLogin` / `toggleOwnerLogin` / `submitAdminLogin` / `submitOwnerLogin` / `openResetPw` / `loginPanelBack` | 위와 동시 사용 |
+| dropdown 필터의 `auth_level !== 'owner'` 조건 | owner=이송은=매장 사장이 매일 들어와야 할 사람이라 dropdown 노출이 자연스러움 |
+
+**남긴 것 (단순화 후 진입 경로 1개)**:
+- 드롭다운(👑 사장 / 🔑 관리자 배지) + PIN 4자리 + [로그인] + [매장 선택](미선택 시만)
+- `submitLogin` (동명이인 PIN 매칭) + `shakeLogin` (form 영역만) + 엔터키 → submitLogin
+
+**자동 로그인 변경**:
+- 이전: owner만 자동 로그인, 나머지는 매번 PIN
+- 이후: **본인 폰 가정** (dev_lessons #54 fingerprint 안정화) → 모든 권한 자동 로그인. 직원이 자기 폰에서 한 번 PIN 입력하면 다음부터 자동 진입.
+
+**UI 라벨**:
+- 드롭다운 옵션: `👑 이송은 (사장)` / `🔑 김미지 (점장)` / `권채현 (아르바이트)` 식으로 권한 표시
+
+**검증**:
+- `node --check` ✅
+- 행동 시뮬레이션 10/10 통과 (`/tmp/sim_login2.js`):
+  드롭다운에 owner 노출 / 비활성 직원 미노출 / 정상 로그인 / owner 드롭다운 직접 로그인 / PIN 미설정 거절 / 잘못된 PIN 거절 / owner+staff 모두 자동 로그인 / 비활성 직원 자동 로그인 거절 / 매장 미선택 자동 로그인 거절
+
+**남은 작업 (별도 세션)**:
+- 시급/월급 + 직급 4개 본 작업 (사용자가 시작한 다음 큰 트랙)
+- PIN brute-force 제한 (5회 실패 시 60초 잠금)
+- empAuthLevel 셀렉트에 'owner' 옵션 추가 + readonly
+
+---
+
 ## 🏁 2026-05-05 세션 #2 — 매장 직원 테이블에서 앱 개발자 분리 + 호칭 재확정
 
 **브랜치**: `claude/debug-login-access-0Zifq` (이어서)
