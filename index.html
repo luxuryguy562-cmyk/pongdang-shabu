@@ -8050,10 +8050,16 @@ function showLoginScreen(){
       const k=sortKey(a)-sortKey(b);
       return k!==0 ? k : (a.name||'').localeCompare(b.name||'','ko');
     });
+    // 직급별 배지: 👑 사장 / ⭐ 팀장 / 🔑 점장 / 📋 매니저 / (아르바이트·기타는 없음)
+    const roleBadge=(e)=>{
+      if(e.auth_level==='owner') return '👑';
+      if(e.role==='팀장') return '⭐';
+      if(e.role==='점장') return '🔑';
+      if(e.role==='매니저') return '📋';
+      return '';
+    };
     nameSelect.innerHTML='<option value="">직원 선택</option>'+active.map(e=>{
-      const isOwn=e.auth_level==='owner';
-      const isMgr=e.auth_level==='store_manager'||e.is_manager;
-      const badge=isOwn?'👑':(isMgr?'🔑':'');
+      const badge=roleBadge(e);
       const role=e.role?' ('+e.role+')':'';
       return `<option value="${e.name}"${e.name===lastLoginName?' selected':''}>${badge?badge+' ':''}${e.name}${role}</option>`;
     }).join('');
