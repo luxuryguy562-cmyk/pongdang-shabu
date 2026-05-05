@@ -74,6 +74,8 @@ franchises (프랜차이즈/브랜드)
 | hire_date, resign_date | 입퇴사일 |
 | is_active, is_approved, is_manager | 상태 플래그 |
 | auth_level (text, default 'staff') | 권한: owner/franchise_admin/store_manager/staff |
+| wage_type (text, default 'hourly') | 급여 종류: hourly(시급제) / monthly(월급제). 2026-05-05 추가 |
+| monthly_wage (int, nullable) | **만원 단위** 월급액 (예: 280 = 280만원). 시급제면 NULL. 일별 분배 시 ×10000으로 원 단위 변환. 2026-05-05 추가 |
 | visa_type (text, nullable) | 비자 유형 (E-9, F-2 등) |
 | visa_expires_at (date, nullable) | 비자 만료일 |
 | doc_contract (text, nullable) | 근로계약서 파일 URL (null=미첨부) |

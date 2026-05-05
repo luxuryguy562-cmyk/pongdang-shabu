@@ -4,6 +4,41 @@
 
 ---
 
+## 🏁 2026-05-05 세션 #4 — 시급/월급 + 직급 4개 + 인건비 일별 분배
+
+**브랜치**: `claude/debug-login-access-0Zifq` (이어서)
+**규모**: 대형 (DB 컬럼 2개 추가, JS 약 +90줄, HTML +20줄)
+**승인**: 2026-05-05 사용자 "응 해 sql 햇음 / 매니저 잔류"
+
+**완료 항목**:
+1. **DB 컬럼 추가** (사용자가 SQL 직접 실행 완료):
+   - `employees.wage_type text DEFAULT 'hourly'` — 시급제 / 월급제
+   - `employees.monthly_wage int` (nullable, **만원 단위**) — 월급액 (예: 280=280만원)
+2. **기존 직원 직급 마이그레이션** (사용자 SQL 실행 완료): role='시급제'/null/그외 → ' 아르바이트'
+3. **직원 편집 시트 UI**:
+   - 급여 종류 셀렉트 (시급제/월급제) → 토글 시 입력칸 자동 전환 (`onEmpWageTypeChange`)
+   - 시급(원) / 월급(만원) 입력칸 분리
+   - 직급 셀렉트 4개 고정: 점장/팀장/매니저/아르바이트 + 선택안함
+   - 기존 chips 시스템(`renderRoleChips`/`selectRoleChip`/`promptAddRole` + `selectedRoleName`) 폐기 (헌법 1-6)
+4. **직원 카드 표시**: 월급제면 "월급 280만원", 시급제면 "시급 10030원"
+5. **대시보드 일별 인건비 분배**:
+   - 시급제: `attendance_logs.calculated_wage` 그대로 (출퇴근한 날만)
+   - 월급제: 매일 `monthly_wage * 10000 / 해당월일수` (쉬는 날도 1/N 박음, hire_date/resign_date 고려)
+   - `monthlyEmpIds` 셋으로 시급 합산 시 월급제 직원 제외 (이중 합산 방지)
+   - 전월(MoM) 비교 데이터에도 동일 적용
+6. **단위 규칙**: `base_wage`=원 단위(시급), `monthly_wage`=**만원 단위**(월급, business_rules #7과 일치). 일별 분배 시만 ×10000 원 단위 변환.
+
+**검증**:
+- node --check ✅
+- 행동 시뮬레이션 (다음 단계)
+
+**남은 작업 (별도 세션)**:
+- 출퇴근 시 월급제 직원의 `calculated_wage` 박기 막기 (현재는 박혀도 대시보드에서 무시되지만, attendance_logs 데이터 정합성 위해 출퇴근 코드도 정리 권장)
+- PIN brute-force 제한
+- empAuthLevel 셀렉트에 'owner' 옵션
+
+---
+
 ## 🏁 2026-05-05 세션 #3 — 로그인 화면 갈아엎기 (헌법 1-6 신설 적용)
 
 **브랜치**: `claude/debug-login-access-0Zifq` (이어서)
