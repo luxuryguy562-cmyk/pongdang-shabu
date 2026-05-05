@@ -2310,11 +2310,28 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <input id="empBankInput" class="input-field" placeholder="신한" type="text">
   <label class="emp-label">계좌번호</label>
   <input id="empAccountInput" class="input-field" placeholder="110-123-456789" type="text" inputmode="numeric">
-  <label class="emp-label">시급 (원)</label>
-  <input id="empWageInput" class="input-field" placeholder="10030" type="number" inputmode="numeric">
+  <label class="emp-label">급여 종류</label>
+  <select id="empWageType" class="input-field" style="appearance:auto;margin-bottom:9px;" data-change="onEmpWageTypeChange">
+    <option value="hourly">시급제</option>
+    <option value="monthly">월급제</option>
+  </select>
+  <div id="empWageHourlyWrap">
+    <label class="emp-label">시급 (원)</label>
+    <input id="empWageInput" class="input-field" placeholder="10030" type="number" inputmode="numeric">
+  </div>
+  <div id="empWageMonthlyWrap" style="display:none;">
+    <label class="emp-label">월급 (만원)</label>
+    <input id="empMonthlyWageInput" class="input-field" placeholder="280" type="number" inputmode="numeric">
+  </div>
   <p class="card-sub-title">근무 설정</p>
   <label class="emp-label">직급</label>
-  <div id="empRoleChips" class="role-chips-wrap"></div>
+  <select id="empRoleSelect" class="input-field" style="appearance:auto;margin-bottom:9px;">
+    <option value="">선택 안 함</option>
+    <option value="점장">점장</option>
+    <option value="팀장">팀장</option>
+    <option value="매니저">매니저</option>
+    <option value="아르바이트">아르바이트</option>
+  </select>
   <div id="empAuthLevelWrap" class="manager-only">
     <label class="emp-label">권한</label>
     <select id="empAuthLevel" class="input-field" style="appearance:auto;">
@@ -2633,7 +2650,6 @@ let currentStore = null;
 let employees = [], roles = [], vendors = [], fixedCosts = [];
 let settings = {};
 let selectedEmpId = null, selectedEmpCtx = 'att';
-let selectedRoleName = '';
 let currentTargetRowIdx = -1, currentMatchStagingIdx = -1;
 let datePickerCtx = '', timePickerCtx = '';
 let b64 = '', rowCount = 0, stagingData = [];
@@ -4918,16 +4934,19 @@ async function loadDashboard(){
     catNames.push('로열티/수수료');catColors['로열티/수수료']='#EF4444';shortNames['로열티/수수료']='로열티';
 
     // 일별 카테고리 데이터 (병렬 조회 — 전월 포함)
+    // employee_id 함께 조회 (월급제 직원의 attendance_logs는 별도 분배에서 무시)
     const[voRes2,rcRes2,attRes2,prevVoRes,prevAttRes,prevRcRes]=await Promise.all([
       sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
       sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
-      sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
       // ── 전월 일별 식자재/인건비/영수증 ──
       sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
-      sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
+      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
       sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',pStart).lte('receipt_date',pEnd)
     ]);
     const voDaily=voRes2.data,rcDaily=rcRes2.data,attDaily=attRes2.data;
+    // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
+    const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
     (voDaily||[]).forEach(v=>{
       const d=v.order_date?.slice(8);if(!d)return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
@@ -4939,10 +4958,32 @@ async function loadDashboard(){
       const k=srcToCat['receipts'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
     });
     (attDaily||[]).forEach(a=>{
+      if(monthlyEmpIds.has(a.employee_id)) return; // 월급제는 별도 분배
       const d=a.work_date?.slice(8);if(!d)return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
       const k=srcToCat['attendance'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(a.calculated_wage||0);
     });
+    // ─── 새 기능: 월급제 직원 일별 인건비 분배 (헌법 1-6, 2026-05-05) ───
+    // 시급제는 attendance_logs.calculated_wage 그대로(위), 월급제는 매일 monthly_wage(만원)*10000/해당월일수
+    // 쉬는 날도 1/N 박음 (월급은 변동 없음). hire_date/resign_date 고려.
+    const monthlyEmps=(employees||[]).filter(e=>e.is_active&&e.wage_type==='monthly'&&e.monthly_wage>0);
+    if(monthlyEmps.length){
+      monthlyEmps.forEach(emp=>{
+        const dailyWage=Math.round((emp.monthly_wage*10000)/lastDay); // 만원→원, 월급/N
+        const hire=emp.hire_date?new Date(emp.hire_date+'T00:00:00'):null;
+        const resign=emp.resign_date?new Date(emp.resign_date+'T00:00:00'):null;
+        allDays.forEach(d=>{
+          const dayNum=parseInt(d);
+          if(dayNum>passedDays) return; // 미래 날짜 제외
+          const date=new Date(ym+'-'+d+'T00:00:00');
+          if(hire&&date<hire) return; // 입사 전
+          if(resign&&date>resign) return; // 퇴사 후
+          if(!dailyCatMap[d])dailyCatMap[d]={};
+          const k=srcToCat['attendance'];
+          dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+dailyWage;
+        });
+      });
+    }
     // 고정비 (일할 균등배분)
     const dailyFixedShare=Math.round(fixedMonthly/lastDay);
 
@@ -4978,21 +5019,40 @@ async function loadDashboard(){
         prevTotalRevenue+=ds;if(d)prevDailySalesMap[d]=ds;
       });
     }
-    // 전월 일별 식자재/인건비/영수증
+    // 전월 일별 식자재/인건비/영수증 (월급제 직원은 별도 분배)
     let prevVendorTotal=0,prevAttTotal=0,prevReceiptTotal=0;
     const prevDailyVendor={},prevDailyAtt={},prevDailyReceipt={};
     (prevVoRes.data||[]).forEach(v=>{const d=v.order_date?.slice(8);if(!d)return;prevVendorTotal+=(v.amount||0);prevDailyVendor[d]=(prevDailyVendor[d]||0)+(v.amount||0);});
-    (prevAttRes.data||[]).forEach(a=>{const d=a.work_date?.slice(8);if(!d)return;prevAttTotal+=(a.calculated_wage||0);prevDailyAtt[d]=(prevDailyAtt[d]||0)+(a.calculated_wage||0);});
+    (prevAttRes.data||[]).forEach(a=>{
+      if(monthlyEmpIds.has(a.employee_id)) return; // 월급제는 별도 분배
+      const d=a.work_date?.slice(8);if(!d)return;
+      prevAttTotal+=(a.calculated_wage||0);prevDailyAtt[d]=(prevDailyAtt[d]||0)+(a.calculated_wage||0);
+    });
     (prevRcRes.data||[]).forEach(r=>{const d=r.receipt_date?.slice(8);if(!d)return;prevReceiptTotal+=(r.total_price||0);prevDailyReceipt[d]=(prevDailyReceipt[d]||0)+(r.total_price||0);});
+    // 전월 주차 그룹 + 일자 배열
+    const prevAllDays=Array.from({length:pLastDay},(_,i)=>String(i+1).padStart(2,'0'));
+    const prevWeekGroups=[];let pCurW=[];
+    prevAllDays.forEach(d=>{const dt=new Date(pY,pMo-1,parseInt(d));pCurW.push(d);if(dt.getDay()===0||d===prevAllDays[prevAllDays.length-1]){prevWeekGroups.push([...pCurW]);pCurW=[];}});
+    // 전월 월급제 분배 (이번달과 동일 로직, pLastDay 기준)
+    if(monthlyEmps.length){
+      monthlyEmps.forEach(emp=>{
+        const dailyWage=Math.round((emp.monthly_wage*10000)/pLastDay);
+        const hire=emp.hire_date?new Date(emp.hire_date+'T00:00:00'):null;
+        const resign=emp.resign_date?new Date(emp.resign_date+'T00:00:00'):null;
+        prevAllDays.forEach(d=>{
+          const date=new Date(`${pY}-${String(pMo).padStart(2,'0')}-${d}T00:00:00`);
+          if(hire&&date<hire) return;
+          if(resign&&date>resign) return;
+          prevAttTotal+=dailyWage;
+          prevDailyAtt[d]=(prevDailyAtt[d]||0)+dailyWage;
+        });
+      });
+    }
     // 전월 고정비/로열티/카드수수료
     const prevFcMonthly=(prevFcRes.data||[]).filter(a=>a.fixed_costs?.is_active!==false).reduce((a,r)=>a+(r.is_confirmed?r.amount:(r.estimated_amount||r.amount||0)),0);
     const prevRoyalty=Math.round(prevTotalRevenue*royaltyRate);
     const prevCardFee=Math.round(prevTotalRevenue*cardFeeRate);
     const prevTotalCostFull=prevVendorTotal+prevReceiptTotal+prevAttTotal+prevFcMonthly+prevRoyalty+prevCardFee;
-    // 전월 주차 그룹
-    const prevAllDays=Array.from({length:pLastDay},(_,i)=>String(i+1).padStart(2,'0'));
-    const prevWeekGroups=[];let pCurW=[];
-    prevAllDays.forEach(d=>{const dt=new Date(pY,pMo-1,parseInt(d));pCurW.push(d);if(dt.getDay()===0||d===prevAllDays[prevAllDays.length-1]){prevWeekGroups.push([...pCurW]);pCurW=[];}});
     // 전월 주차별 매출/지출/식자재/인건비
     const prevWeekData=prevWeekGroups.map(wk=>{
       let wS=0,wV=0,wA=0,wR=0;
@@ -5824,8 +5884,8 @@ function renderEmpList(){
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${docBadges}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">
         <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
-          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">시급</div>
-          <div style="font-size:13px;font-weight:800;color:var(--blue);">${fmt(e.base_wage)}원</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">${e.wage_type==='monthly'?'월급':'시급'}</div>
+          <div style="font-size:13px;font-weight:800;color:var(--blue);">${e.wage_type==='monthly'?fmt(e.monthly_wage||0)+'만원':fmt(e.base_wage)+'원'}</div>
         </div>
         <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
           <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">입사일</div>
@@ -5838,11 +5898,67 @@ function renderEmpList(){
       </div>`:''}
     </div>`}).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
 }
-async function openAddEmpSheet(){if(!guardStore())return;if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');document.getElementById('addEmpTitle').innerText='직원 추가';['empNameInput','empIdNumInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput'].forEach(id=>document.getElementById(id).value='');document.getElementById('empWageInput').value='10030';document.getElementById('editEmpId').value='';document.getElementById('empAuthLevel').value='staff';document.getElementById('empForeignCheck').checked=false;document.getElementById('empIdNumLabel').innerText='주민등록번호';document.getElementById('empIdNumInput').placeholder='960315-1234567';document.getElementById('empReportStatus').value='미신고';document.getElementById('empReportWrap').style.display='none';
+// 급여 종류 셀렉트 변경 → 시급/월급 입력칸 토글
+function onEmpWageTypeChange(){
+  const t=document.getElementById('empWageType').value;
+  document.getElementById('empWageHourlyWrap').style.display=t==='monthly'?'none':'block';
+  document.getElementById('empWageMonthlyWrap').style.display=t==='monthly'?'block':'none';
+}
+async function openAddEmpSheet(){
+  if(!guardStore())return;
+  if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');
+  document.getElementById('addEmpTitle').innerText='직원 추가';
+  ['empNameInput','empIdNumInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput','empMonthlyWageInput'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('empWageInput').value='10030';
+  document.getElementById('empWageType').value='hourly';
+  onEmpWageTypeChange();
+  document.getElementById('empRoleSelect').value='';
+  document.getElementById('editEmpId').value='';
+  document.getElementById('empAuthLevel').value='staff';
+  document.getElementById('empForeignCheck').checked=false;
+  document.getElementById('empIdNumLabel').innerText='주민등록번호';
+  document.getElementById('empIdNumInput').placeholder='960315-1234567';
+  document.getElementById('empReportStatus').value='미신고';
+  document.getElementById('empReportWrap').style.display='none';
   // 서류/비자 초기화
-  updateDocStatus('Contract',null);updateDocStatus('Health',null);updateDocStatus('Minor',null);updateDocStatus('Foreigner',null);document.getElementById('empDocHealthExpires').value='';document.getElementById('empDocHealthExpiresWrap').style.display='none';document.getElementById('empDocMinorWrap').style.display='none';document.getElementById('empDocForeignerWrap').style.display='none';document.getElementById('empVisaWrap').style.display='none';document.getElementById('empVisaType').value='';document.getElementById('empVisaExpires').value='';
-  selectedRoleName='';await renderRoleChips('');const drWrap=document.getElementById('deviceResetWrap');if(drWrap)drWrap.style.display='none';openSheet('addEmpSheet');}
-async function openEditEmpSheet(id){if(!isManager)return toast('관리자만 편집할 수 있습니다.','warn');const e=employees.find(x=>x.id===id);if(!e)return;document.getElementById('addEmpTitle').innerText='직원 편집';document.getElementById('empNameInput').value=e.name||'';document.getElementById('empIdNumInput').value=e.id_number||'';document.getElementById('empForeignCheck').checked=!!e.is_foreign;document.getElementById('empIdNumLabel').innerText=e.is_foreign?'외국인등록번호':'주민등록번호';document.getElementById('empIdNumInput').placeholder=e.is_foreign?'960315-5234567':'960315-1234567';document.getElementById('empReportStatus').value=e.report_status||'미신고';document.getElementById('empReportWrap').style.display=e.is_foreign?'block':'none';document.getElementById('empPhoneInput').value=e.phone||'';document.getElementById('empAddressInput').value=e.address||'';document.getElementById('empBankInput').value=e.bank_name||'';document.getElementById('empAccountInput').value=e.account_number||'';document.getElementById('empWageInput').value=e.base_wage||10030;document.getElementById('empPinInput').value=e.pin||'';document.getElementById('empCapsIdInput').value=e.caps_id||'';document.getElementById('empHireDateInput').value=e.hire_date||'';document.getElementById('empAuthLevel').value=e.auth_level||'staff';document.getElementById('editEmpId').value=e.id;selectedRoleName=e.role||'';await renderRoleChips(e.role||'');
+  updateDocStatus('Contract',null);updateDocStatus('Health',null);updateDocStatus('Minor',null);updateDocStatus('Foreigner',null);
+  document.getElementById('empDocHealthExpires').value='';
+  document.getElementById('empDocHealthExpiresWrap').style.display='none';
+  document.getElementById('empDocMinorWrap').style.display='none';
+  document.getElementById('empDocForeignerWrap').style.display='none';
+  document.getElementById('empVisaWrap').style.display='none';
+  document.getElementById('empVisaType').value='';
+  document.getElementById('empVisaExpires').value='';
+  const drWrap=document.getElementById('deviceResetWrap');if(drWrap)drWrap.style.display='none';
+  openSheet('addEmpSheet');
+}
+async function openEditEmpSheet(id){
+  if(!isManager)return toast('관리자만 편집할 수 있습니다.','warn');
+  const e=employees.find(x=>x.id===id);if(!e)return;
+  document.getElementById('addEmpTitle').innerText='직원 편집';
+  document.getElementById('empNameInput').value=e.name||'';
+  document.getElementById('empIdNumInput').value=e.id_number||'';
+  document.getElementById('empForeignCheck').checked=!!e.is_foreign;
+  document.getElementById('empIdNumLabel').innerText=e.is_foreign?'외국인등록번호':'주민등록번호';
+  document.getElementById('empIdNumInput').placeholder=e.is_foreign?'960315-5234567':'960315-1234567';
+  document.getElementById('empReportStatus').value=e.report_status||'미신고';
+  document.getElementById('empReportWrap').style.display=e.is_foreign?'block':'none';
+  document.getElementById('empPhoneInput').value=e.phone||'';
+  document.getElementById('empAddressInput').value=e.address||'';
+  document.getElementById('empBankInput').value=e.bank_name||'';
+  document.getElementById('empAccountInput').value=e.account_number||'';
+  document.getElementById('empWageInput').value=e.base_wage||10030;
+  document.getElementById('empMonthlyWageInput').value=e.monthly_wage||'';
+  document.getElementById('empWageType').value=e.wage_type||'hourly';
+  onEmpWageTypeChange();
+  document.getElementById('empPinInput').value=e.pin||'';
+  document.getElementById('empCapsIdInput').value=e.caps_id||'';
+  document.getElementById('empHireDateInput').value=e.hire_date||'';
+  document.getElementById('empAuthLevel').value=e.auth_level||'staff';
+  // 직급: 4개 옵션 외 값이면 빈값으로 (예: 옛 '시급제' — 마이그레이션에서 '아르바이트'로 통일됨)
+  const roleOpts=['점장','팀장','매니저','아르바이트'];
+  document.getElementById('empRoleSelect').value=roleOpts.includes(e.role)?e.role:'';
+  document.getElementById('editEmpId').value=e.id;
   // 서류 첨부 상태 표시
   updateDocStatus('Contract',e.doc_contract);
   updateDocStatus('Health',e.doc_health_cert);
@@ -5862,21 +5978,42 @@ async function openEditEmpSheet(id){if(!isManager)return toast('관리자만 편
   const drWrap=document.getElementById('deviceResetWrap');const dsEl=document.getElementById('deviceStatus');
   if(drWrap){drWrap.style.display='block';dsEl.innerText=e.device_fingerprint?'등록된 기기: '+e.device_fingerprint.slice(0,12)+'...':'등록된 기기 없음 (다음 출근 시 자동 등록)';}
   openSheet('addEmpSheet');}
-async function renderRoleChips(sel){await loadRoles(false);const wrap=document.getElementById('empRoleChips');if(!wrap)return;wrap.innerHTML=(roles.map(r=>`<span class="role-chip${r.name===sel?' selected':''}" data-action="selectRoleChip|${r.name}|this">${r.name}</span>`).join(''))+`<span class="role-chip" style="border:1px dashed var(--gray-300);color:var(--gray-400);" data-action="promptAddRole">+ 추가</span>`;}
-function selectRoleChip(name,el){selectedRoleName=selectedRoleName===name?'':name;document.querySelectorAll('#empRoleChips .role-chip').forEach(c=>c.classList.remove('selected'));if(selectedRoleName)el.classList.add('selected');}
-async function promptAddRole(){const name=prompt('새 직급명을 입력하세요');if(!name||!name.trim())return;setLoad(true,'추가 중...');const{error}=await sb.from('roles').insert({store_id:currentStore.id,name:name.trim(),level:roles.length+1});setLoad(false);if(error)return toast('추가 실패: '+error.message,'error');toast(name.trim()+' 직급 추가!','success');await renderRoleChips(name.trim());selectedRoleName=name.trim();}
+// 직급 chips 시스템(renderRoleChips/selectRoleChip/promptAddRole) — 2026-05-05 헌법 1-6에 따라 폐기
+// 직급은 4개 고정 셀렉트(empRoleSelect)로 통일. roles 테이블은 그대로 두되 코드는 무시.
 async function saveEmployee(){
-  if(!guardStore())return;const name=document.getElementById('empNameInput').value.trim();if(!name)return toast('이름을 입력하세요.','warn');
+  if(!guardStore())return;
+  const name=document.getElementById('empNameInput').value.trim();
+  if(!name)return toast('이름을 입력하세요.','warn');
   const pinVal=document.getElementById('empPinInput').value.trim()||null;
   // PIN 필수 검증 (4자리 숫자)
   if(!pinVal||!/^\d{4}$/.test(pinVal)) return toast('PIN 4자리 숫자를 입력하세요.','warn');
+  // 급여 종류 + 금액 검증
+  const wageType=document.getElementById('empWageType').value||'hourly';
+  const baseWage=parseInt(document.getElementById('empWageInput').value)||10030;
+  const monthlyWageManwon=parseInt(document.getElementById('empMonthlyWageInput').value)||null;
+  if(wageType==='monthly' && (!monthlyWageManwon || monthlyWageManwon<=0))
+    return toast('월급(만원)을 입력하세요.','warn');
   const idNumRaw=document.getElementById('empIdNumInput').value.trim()||null;
   // 주민번호에서 생년월일 추출 (호환용)
   let birthDate=null;
   if(idNumRaw){const digits=idNumRaw.replace(/[^\d]/g,'');if(digits.length>=6){const yy=digits.slice(0,2);const mm=parseInt(digits.slice(2,4));const dd=parseInt(digits.slice(4,6));if(mm>=1&&mm<=12&&dd>=1&&dd<=31){const g=digits.length>=7?parseInt(digits[6]):1;const century=(g<=2)?'19':'20';birthDate=century+yy+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');}}}
   const isForeign=document.getElementById('empForeignCheck').checked;
-  const payload={store_id:currentStore.id,name,id_number:idNumRaw,birth_date:birthDate,is_foreign:isForeign,report_status:document.getElementById('empReportStatus').value||'미신고',phone:document.getElementById('empPhoneInput').value.trim()||null,address:document.getElementById('empAddressInput').value.trim()||null,bank_name:document.getElementById('empBankInput').value.trim()||null,account_number:document.getElementById('empAccountInput').value.trim()||null,base_wage:parseInt(document.getElementById('empWageInput').value)||10030,pin:pinVal,caps_id:document.getElementById('empCapsIdInput').value.trim()||null,hire_date:document.getElementById('empHireDateInput').value.trim()||null,role:selectedRoleName||null,
-    // 서류 URL은 업로드 시 직접 저장되므로 여기서는 만료일+비자만
+  const payload={
+    store_id:currentStore.id,name,
+    id_number:idNumRaw,birth_date:birthDate,
+    is_foreign:isForeign,
+    report_status:document.getElementById('empReportStatus').value||'미신고',
+    phone:document.getElementById('empPhoneInput').value.trim()||null,
+    address:document.getElementById('empAddressInput').value.trim()||null,
+    bank_name:document.getElementById('empBankInput').value.trim()||null,
+    account_number:document.getElementById('empAccountInput').value.trim()||null,
+    base_wage:baseWage,
+    wage_type:wageType,
+    monthly_wage:wageType==='monthly'?monthlyWageManwon:null,
+    pin:pinVal,
+    caps_id:document.getElementById('empCapsIdInput').value.trim()||null,
+    hire_date:document.getElementById('empHireDateInput').value.trim()||null,
+    role:document.getElementById('empRoleSelect').value||null,
     doc_health_expires:document.getElementById('empDocHealthExpires').value||null,
     visa_type:isForeign?(document.getElementById('empVisaType').value||null):null,
     visa_expires_at:isForeign?(document.getElementById('empVisaExpires').value||null):null
