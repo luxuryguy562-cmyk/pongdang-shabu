@@ -4,6 +4,37 @@
 
 ---
 
+## 🏁 2026-05-05 세션 #2 — 매장 직원 테이블에서 앱 개발자 분리 + 호칭 재확정
+
+**브랜치**: `claude/debug-login-access-0Zifq` (이어서)
+**규모**: 소형 (DB UPDATE/DELETE 사용자 직접 실행, JS 라벨 5곳 + docs)
+**승인**: 2026-05-05 사용자 "(가) 사장으로 / SQL 실행완료"
+
+**핵심 결정**: 앱 개발자(=김은성=사용자)는 매장 employees 테이블에 있어야 할 사람이 아님 → row 삭제. 매장 운영 사장(이송은) owner 승격. super_admin 메커니즘은 신설하지 않음 (사용자 통찰: "어플 만든 사람이 매장 들어가서 데이터 수정해줄 일이 없는데 매장 UI 로그인 만들 이유가 없다 — 시스템 고칠 일 있으면 코드 수정 / Supabase 콘솔 직접 사용").
+
+**변경 사항**:
+- DB (사용자가 직접 실행 완료):
+  ```sql
+  UPDATE employees SET auth_level='owner', is_manager=true
+  WHERE name='이송은' AND store_id='4ae03341-e5dc-4933-b746-29728cbc685f';
+  DELETE FROM employees
+  WHERE name='김은성' AND store_id='4ae03341-e5dc-4933-b746-29728cbc685f';
+  ```
+- UI 라벨: "👑 총관리자" → "**👑 사장**" (배지 2곳 / 가입 placeholder / 에러 메시지 2곳)
+- `business_rules.md` #7: owner 호칭 "총관리자"→"사장" 재확정 + 이력 박음 (1차/2차 정정 명시)
+- `dev_lessons.md` #56 신설: "앱 개발자는 매장 직원 테이블에 없어야 한다"
+
+**검증**: `node --check` ✅ / UI 노출 "총관리자" 잔재 0건
+
+**효과**: 김은성(사용자)의 개인정보(주민번호/계좌/PIN)가 어떤 매장에도 박히지 않음. 매장 직원 명단에서도 사라짐. 매장 추가될 때마다 김은성을 직원으로 박을 필요 없음.
+
+**남은 이슈** (별도 세션):
+- 시급/월급 + 직급 4개 본 작업 (사용자가 시작한 다음 큰 트랙)
+- PIN brute-force 제한
+- empAuthLevel 셀렉트에 'owner' 옵션 추가 + readonly
+
+---
+
 ## 🏁 2026-05-05 세션 — 로그인 화면 결함 묶음 수정 + 호칭 정정
 
 **브랜치**: `claude/debug-login-access-0Zifq`

@@ -622,7 +622,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="signupNext|2">다음 →</button>
     </div>
 
-    <!-- 3단계: 매장 이름 + 총관리자 이름 (+ 타입별 추가 필드) -->
+    <!-- 3단계: 매장 이름 + 사장 이름 (+ 타입별 추가 필드) -->
     <div class="signup-step" data-step="3" style="display:none;">
       <div id="suStep3Title" style="font-size:22px;font-weight:900;margin-bottom:10px;">매장 정보</div>
       <div id="suStep3Sub" style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">기본 정보만 받을게요. 나중에 바꿀 수 있어요.</div>
@@ -639,7 +639,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
       <input id="suStoreName" class="input-field" type="text" placeholder="매장 이름 (예: 퐁당논산점)"
         style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:10px;">
-      <input id="suOwnerName" class="input-field" type="text" placeholder="총관리자 이름"
+      <input id="suOwnerName" class="input-field" type="text" placeholder="사장 이름"
         style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:10px;">
       <input id="suAddress" class="input-field" type="text" placeholder="주소 (선택)"
         style="padding:16px;font-size:15px;border-radius:14px;margin-bottom:16px;">
@@ -2845,7 +2845,7 @@ function applyPermissionUI() {
     else el.style.display='';
   });
   // 내 정보 배지 업데이트
-  const badge=isOwner?'👑 총관리자':isManager?'🔑 관리자':'';
+  const badge=isOwner?'👑 사장':isManager?'🔑 관리자':'';
   const badgeEl=document.getElementById('authBadge');
   if(badgeEl) badgeEl.innerHTML=badge?`<span class="badge badge-warn">${badge}</span>`:'';
 }
@@ -2868,7 +2868,7 @@ function openMyInfoSheet() {
         <div><div style="font-size:19px;font-weight:800;">${emp.name}</div>
           <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;" id="authBadge">
             ${emp.role?`<span class="badge badge-blue">${emp.role}</span>`:''}
-            ${isOwner?'<span class="badge badge-warn">👑 총관리자</span>':isManager?'<span class="badge badge-warn">🔑 관리자</span>':''}
+            ${isOwner?'<span class="badge badge-warn">👑 사장</span>':isManager?'<span class="badge badge-warn">🔑 관리자</span>':''}
           </div>
         </div>
       </div>
@@ -8198,7 +8198,7 @@ function signupNext(curStep, flag){
     const storeName=document.getElementById('suStoreName').value.trim();
     const ownerName=document.getElementById('suOwnerName').value.trim();
     if(!storeName) return err('매장 이름을 입력해주세요');
-    if(!ownerName) return err('총관리자 이름을 입력해주세요');
+    if(!ownerName) return err('사장 이름을 입력해주세요');
   } else if(curStep===4 && flag!=='skip'){
     const biz=document.getElementById('suBizNo').value.trim();
     if(biz && biz.replace(/\D/g,'').length!==10) return err('사업자번호는 10자리 숫자예요 (- 포함 OK)');
@@ -8343,7 +8343,7 @@ async function completeSignup(){
       is_manager: true,
       base_wage: 0
     });
-    if(empErr) throw new Error('직원(총관리자) 생성 실패: '+empErr.message);
+    if(empErr) throw new Error('사장 직원 생성 실패: '+empErr.message);
 
     // 5. store_settings + 기본 seed (본사 더미 매장도 에러 방지용으로 기본값만)
     await sb.from('store_settings').upsert({
@@ -10806,7 +10806,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
 
   // ─── 시크릿 트리거: 브랜드 로고 1초 길게 누르면 관리자 로그인 영역 활성화 ───
   // [관리자] 버튼을 화면에서 제거 → 일반 직원 호기심 클릭 차단
-  // 총관리자(=김은성)만 로고 길게 누르는 방법을 알고 사용
+  // 매장 사장(owner)만 로고 길게 누르는 방법을 알고 사용
   (function(){
     const logo=document.getElementById('brandLogo');
     if(!logo) return;
