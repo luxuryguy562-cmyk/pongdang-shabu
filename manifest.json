@@ -1,6 +1,6 @@
 {
-  "name": "퐁당 앱",
-  "short_name": "퐁당",
+  "name": "캐쉬플로우",
+  "short_name": "캐쉬플로우",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
