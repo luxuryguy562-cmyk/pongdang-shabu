@@ -4,6 +4,43 @@
 
 ---
 
+## 58. 금액 입력란은 무조건 세자리 콤마 자동 (2026-05-06)
+
+**사건**: 고정비 편집 시트의 예상 월 금액 입력란을 `type="number"`로 만들어 `3190000` 그대로 표시. 사장님 "금액은 세자리쉼표가 필수인데 왜 자꾸 이런식으로 하는지 모르겠어".
+
+**원인**:
+- `type="number"`는 콤마 입력 거부 → 미적용
+- dev_lessons #22가 "**리스트 표시**는 tabular-nums + table" 명시 — 입력란 콤마 자동은 별도 규칙으로 못박혀있지 않았음
+- 마감정산 입력란들은 이미 `type="text" inputmode="numeric" data-input="onSInput|this"` 패턴으로 콤마 자동 (line 1050~) — 알고 있었지만 새 입력란에 재적용 누락
+
+**규칙 (이후 모든 금액 입력란에 적용)**:
+1. **`type="number"` 금지** — 콤마 표시 못 함
+2. **표준 패턴**:
+   ```html
+   <input type="text" inputmode="numeric" data-input="formatNumberInput|this" placeholder="예: 2,000,000">
+   ```
+3. **공용 함수** `formatNumberInput(el)` (index.html line 2800 부근):
+   ```js
+   function formatNumberInput(el){
+     const raw=(el.value||'').replace(/[^\d]/g,'');
+     el.value=raw?parseInt(raw).toLocaleString():'';
+   }
+   ```
+4. **값 set 시 콤마 적용**: `el.value = fmt(num)` (예: openEditFcSheet)
+5. **저장 시 콤마 제거**: `unFmt(el.value)` (예: saveFc)
+6. **금액 외 숫자(예정일·일수·등)는 `type="number"` OK** — 콤마 불필요한 작은 숫자
+
+**체크리스트 (입력란 만들 때)**:
+- [ ] 이 입력란이 **금액**(원·만원·천원 등)인가
+- [ ] 그렇다면 `type="text" + inputmode="numeric" + data-input="formatNumberInput|this"`
+- [ ] 초기값 set 시 `fmt()` 거쳤나
+- [ ] 저장 로직에서 `unFmt()` 거쳤나
+- [ ] placeholder에 콤마 포함 (예: "2,000,000")
+
+**관련**: dev_lessons #22(금액 리스트는 tabular-nums + table), #57(사장님께 코드 용어 금지). 사장님 분노 트리거: "왜 자꾸 이런식으로 하는지" — 같은 류 실수 반복 신호.
+
+---
+
 ## 57. 사장님께는 코드 용어 금지, 화면 단어 + 비유로 설명 (2026-05-06)
 
 **사건**: 고정비 집계 진단 보고 시 `fixed_cost_amounts.year_month`, `default_amount INT`, `loadFixedCosts`, "fallback 우선순위 1번" 같은 DB 테이블명·컬럼명·함수명·영어 IT 용어를 그대로 사장님께 노출 → 사장님 "전문가 아니라 가독성 떨어진다"고 지적.

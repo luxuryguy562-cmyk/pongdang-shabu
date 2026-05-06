@@ -2519,7 +2519,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <option value="세금">세금</option>
   </select>
   <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">예상 월 금액 (가마감 자동 집계)</div>
-  <input id="fcEstimatedMonthly" class="input-field" type="number" min="0" placeholder="예: 2000000 (월 200만원)" inputmode="numeric">
+  <input id="fcEstimatedMonthly" class="input-field" type="text" inputmode="numeric" placeholder="예: 2,000,000 (월 200만원)" data-input="formatNumberInput|this">
   <div style="display:flex;gap:8px;align-items:center;">
     <div style="flex:1;">
       <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">자동이체 예정일</div>
@@ -2797,6 +2797,8 @@ function closeAllSheets() {
 }
 const fmt = n => (n||0).toLocaleString();
 const unFmt = s => parseInt((s||'0').replace(/,/g,''))||0;
+// 금액 입력란 공용: 입력 중 세자리 콤마 자동 (dev_lessons #58)
+function formatNumberInput(el){const raw=(el.value||'').replace(/[^\d]/g,'');el.value=raw?parseInt(raw).toLocaleString():'';}
 const guardStore = () => { if(!currentStore){toast('매장을 먼저 선택하세요.','warn');openStoreSheet();return false;}return true; };
 function maskAccount(a) { const c=a.replace(/[^0-9]/g,''); return c.length>=4?'****-****-'+c.slice(-4):a; }
 function applyPermissionUI() {
@@ -5762,11 +5764,11 @@ function renderFcList(){
   }).join(''):'<div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div>';
 }
 function openAddFcSheet(){if(!guardStore())return;document.getElementById('addFcTitle').innerText='고정비 추가';document.getElementById('fcNameInput').value='';document.getElementById('fcCatInput').value='고정비';document.getElementById('editFcId').value='';document.getElementById('fcEstimatedMonthly').value='';document.getElementById('fcExpectedDay').value='';document.getElementById('fcToleranceDays').value='3';openSheet('addFcSheet');}
-function openEditFcSheet(id){const fc=fixedCosts.find(x=>x.id===id);if(!fc)return;document.getElementById('addFcTitle').innerText='고정비 편집';document.getElementById('fcNameInput').value=fc.name;document.getElementById('fcCatInput').value=fc.category||'고정비';document.getElementById('editFcId').value=fc.id;document.getElementById('fcEstimatedMonthly').value=fc.estimated_monthly||'';document.getElementById('fcExpectedDay').value=fc.expected_day||'';document.getElementById('fcToleranceDays').value=fc.tolerance_days||3;openSheet('addFcSheet');}
+function openEditFcSheet(id){const fc=fixedCosts.find(x=>x.id===id);if(!fc)return;document.getElementById('addFcTitle').innerText='고정비 편집';document.getElementById('fcNameInput').value=fc.name;document.getElementById('fcCatInput').value=fc.category||'고정비';document.getElementById('editFcId').value=fc.id;document.getElementById('fcEstimatedMonthly').value=fc.estimated_monthly?fmt(fc.estimated_monthly):'';document.getElementById('fcExpectedDay').value=fc.expected_day||'';document.getElementById('fcToleranceDays').value=fc.tolerance_days||3;openSheet('addFcSheet');}
 async function saveFc(){
   if(!guardStore())return;const name=document.getElementById('fcNameInput').value.trim();if(!name)return toast('항목명을 입력하세요.','warn');
   const cat=document.getElementById('fcCatInput').value;const eid=document.getElementById('editFcId').value;
-  const estimatedMonthly=parseInt(document.getElementById('fcEstimatedMonthly').value)||0;
+  const estimatedMonthly=unFmt(document.getElementById('fcEstimatedMonthly').value);
   const expectedDay=parseInt(document.getElementById('fcExpectedDay').value)||null;
   const toleranceDays=parseInt(document.getElementById('fcToleranceDays').value)||3;
   setLoad(true,'저장 중...');
