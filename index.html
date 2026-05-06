@@ -1431,26 +1431,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [7] 고정비 ══ -->
 <div id="fixedcostCont" class="container">
-  <div class="sub-tabs">
-    <button class="sub-tab active" data-action="fcTab|list|this">항목 관리</button>
-    <button class="sub-tab" data-action="fcTab|monthly|this">월별 금액</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <p style="font-size:12px;color:var(--gray-600);margin:0;">예상 월 금액을 적어두면 모든 달 가마감에 자동 반영됩니다.</p>
+    <button class="btn btn-primary btn-sm" data-action="openAddFcSheet">+ 추가</button>
   </div>
-  <div id="fcList">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <p style="font-size:12px;color:var(--gray-600);margin:0;">고정비는 월 금액 ÷ 일수로 매일 자동 반영됩니다.</p>
-      <button class="btn btn-primary btn-sm" data-action="openAddFcSheet">+ 추가</button>
-    </div>
-    <div id="fcListData"><div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div></div>
-  </div>
-  <div id="fcMonthly" style="display:none;">
-    <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
-      <button class="btn btn-secondary btn-sm" data-action="moveFcMonth|-1">‹</button>
-      <span id="fcMonthLabel" style="flex:1;text-align:center;font-size:15px;font-weight:700;">-</span>
-      <button class="btn btn-secondary btn-sm" data-action="moveFcMonth|1">›</button>
-    </div>
-    <div id="fcMonthlyData"></div>
-    <button class="btn btn-primary btn-full" data-action="saveFcAmounts">월별 금액 저장</button>
-  </div>
+  <div id="fcListData"><div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div></div>
 </div>
 
 <!-- ══ [8] 직원관리 ══ -->
@@ -2533,6 +2518,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <option value="마케팅">마케팅</option>
     <option value="세금">세금</option>
   </select>
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">예상 월 금액 (가마감 자동 집계)</div>
+  <input id="fcEstimatedMonthly" class="input-field" type="number" min="0" placeholder="예: 2000000 (월 200만원)" inputmode="numeric">
   <div style="display:flex;gap:8px;align-items:center;">
     <div style="flex:1;">
       <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">자동이체 예정일</div>
@@ -2658,9 +2645,7 @@ let currentEmp = null, isManager = false, isOwner = false;
 // auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
 let authLevel = 'staff';
 let dashMonthStr = new Date().toISOString().slice(0,7);
-let fcMonthStr = dashMonthStr;
 let schedEmpId = null;
-let fcAmountsEditing = {};
 let chartInstances = {};
 
 // ══════════════════════════════════════════
@@ -2701,7 +2686,6 @@ function setGanttAllDays(){ ganttSelectedDay='all'; renderGanttFiltered(); }
 function removeParent(el){ el.parentElement&&el.parentElement.remove(); }
 function openEditAttByIdx(i){ openEditAttSheet(window._attListData[i]); }
 function saveVendorUploadGlobal(){ saveVendorUpload(window._vendorUploadList, window._vendorUploadVendorId); }
-function setFcAmount(fcid, el){ fcAmountsEditing[fcid]=parseInt(el.value)||0; updateFcDaily(el); }
 function setSpecialWageDate(i, el){ specialWageRows[i].date=el.value; }
 function setSpecialWageAmount(i, el){ specialWageRows[i].amount=parseInt(el.value)||0; }
 function toggleRolePermEvt(roleId, roleName, el){ toggleRolePerm(roleId, roleName, el.checked); }
@@ -4769,14 +4753,14 @@ async function loadDashboard(){
     await loadExpCategories();
     const sid=currentStore.id;
 
-    const [settleRes,fcRes,expResults,royaltyTxRes,prevSettleRes,prevFcRes]=await Promise.all([
+    const [settleRes,fcRes,expResults,royaltyTxRes,prevSettleRes]=await Promise.all([
       // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
       // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
         :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
-      // 당월 고정비
-      sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(name,is_active,is_variable)').eq('store_id',sid).eq('year_month',ym),
+      // 고정비 — 항목별 예상 월 금액 1회 입력 (모든 달 동일 적용)
+      sb.from('fixed_costs').select('estimated_monthly,is_active').eq('store_id',sid),
       // 당월 지출 (병렬)
       calcExpenseByCategories(ym, dashMode),
       // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
@@ -4787,9 +4771,7 @@ async function loadDashboard(){
       // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
-        :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
-      // ── 전월 고정비 ──
-      sb.from('fixed_cost_amounts').select('amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid).eq('year_month',pYm)
+        :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd)
     ]);
 
     // ══ 1. 일별 매출 맵 + 매출 집계 ══
@@ -4821,11 +4803,10 @@ async function loadDashboard(){
 
     // ══ 2. 지출 집계 ══
     const expData=expResults;
-    const fcAmounts=fcRes.data||[];
+    const fcRows=fcRes.data||[];
 
-    // 고정비 일할계산
-    const fixedMonthly=(fcAmounts).filter(a=>a.fixed_costs?.is_active!==false)
-      .reduce((a,r)=>a+(r.is_confirmed?r.amount:(r.estimated_amount||r.amount||0)),0);
+    // 고정비 일할계산 — 항목별 예상 월 금액 합산 (활성 항목만)
+    const fixedMonthly=fcRows.filter(r=>r.is_active!==false).reduce((a,r)=>a+(r.estimated_monthly||0),0);
     const fixedProrated=Math.round(fixedMonthly/lastDay*passedDays);
 
     // 지출에서 고정비를 일할계산으로 교체
@@ -5048,8 +5029,8 @@ async function loadDashboard(){
         });
       });
     }
-    // 전월 고정비/로열티/카드수수료
-    const prevFcMonthly=(prevFcRes.data||[]).filter(a=>a.fixed_costs?.is_active!==false).reduce((a,r)=>a+(r.is_confirmed?r.amount:(r.estimated_amount||r.amount||0)),0);
+    // 전월 고정비/로열티/카드수수료 — 모든 달 동일한 예상 월 금액 사용
+    const prevFcMonthly=fixedMonthly;
     const prevRoyalty=Math.round(prevTotalRevenue*royaltyRate);
     const prevCardFee=Math.round(prevTotalRevenue*cardFeeRate);
     const prevTotalCostFull=prevVendorTotal+prevReceiptTotal+prevAttTotal+prevFcMonthly+prevRoyalty+prevCardFee;
@@ -5762,63 +5743,40 @@ async function loadFixedCosts(){
   const{data}=await sb.from('fixed_costs').select('*').eq('store_id',currentStore.id).order('sort_order');
   fixedCosts=data||[];renderFcList();
 }
-function fcTab(tab,el){
-  document.querySelectorAll('#fixedcostCont .sub-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
-  document.getElementById('fcList').style.display=tab==='list'?'block':'none';
-  document.getElementById('fcMonthly').style.display=tab==='monthly'?'block':'none';
-  if(tab==='monthly')loadFcMonthly();
-}
 function renderFcList(){
-  document.getElementById('fcListData').innerHTML=fixedCosts.length?fixedCosts.map(fc=>`
-    <div class="fixedcost-item ${fc.is_active?'':'inactive'}">
-      <span class="fc-name">${fc.name}</span>
-      <span class="badge badge-gray">${fc.category}</span>
-      ${!fc.is_active?'<span class="badge badge-red">숨김</span>':''}
+  document.getElementById('fcListData').innerHTML=fixedCosts.length?fixedCosts.map(fc=>{
+    const est=fc.estimated_monthly||0;
+    return `
+    <div class="fixedcost-item ${fc.is_active?'':'inactive'}" style="display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--gray-100);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;">${fc.name}</div>
+        <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">${fc.category||'고정비'}${!fc.is_active?' · <span style="color:#F04452;">숨김</span>':''}</div>
+      </div>
+      <div style="text-align:right;font-variant-numeric:tabular-nums;">
+        <div style="font-size:13px;font-weight:700;color:${est>0?'var(--gray-900)':'var(--gray-400)'};">${est>0?fmt(est)+'원':'금액 미입력'}</div>
+        <div style="font-size:10px;color:var(--gray-500);margin-top:2px;">예상 월 금액</div>
+      </div>
       <button class="btn btn-secondary btn-sm" data-action="openEditFcSheet|${fc.id}">편집</button>
       ${fc.is_active?`<button class="btn btn-danger btn-sm" data-action="toggleFc|${fc.id}|false">숨김</button>`:`<button class="btn btn-success btn-sm" data-action="toggleFc|${fc.id}|true">복원</button>`}
-    </div>`).join(''):'<div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div>';
+    </div>`;
+  }).join(''):'<div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div>';
 }
-function openAddFcSheet(){if(!guardStore())return;document.getElementById('addFcTitle').innerText='고정비 추가';document.getElementById('fcNameInput').value='';document.getElementById('fcCatInput').value='고정비';document.getElementById('editFcId').value='';document.getElementById('fcExpectedDay').value='';document.getElementById('fcToleranceDays').value='3';openSheet('addFcSheet');}
-function openEditFcSheet(id){const fc=fixedCosts.find(x=>x.id===id);if(!fc)return;document.getElementById('addFcTitle').innerText='고정비 편집';document.getElementById('fcNameInput').value=fc.name;document.getElementById('fcCatInput').value=fc.category||'고정비';document.getElementById('editFcId').value=fc.id;document.getElementById('fcExpectedDay').value=fc.expected_day||'';document.getElementById('fcToleranceDays').value=fc.tolerance_days||3;openSheet('addFcSheet');}
+function openAddFcSheet(){if(!guardStore())return;document.getElementById('addFcTitle').innerText='고정비 추가';document.getElementById('fcNameInput').value='';document.getElementById('fcCatInput').value='고정비';document.getElementById('editFcId').value='';document.getElementById('fcEstimatedMonthly').value='';document.getElementById('fcExpectedDay').value='';document.getElementById('fcToleranceDays').value='3';openSheet('addFcSheet');}
+function openEditFcSheet(id){const fc=fixedCosts.find(x=>x.id===id);if(!fc)return;document.getElementById('addFcTitle').innerText='고정비 편집';document.getElementById('fcNameInput').value=fc.name;document.getElementById('fcCatInput').value=fc.category||'고정비';document.getElementById('editFcId').value=fc.id;document.getElementById('fcEstimatedMonthly').value=fc.estimated_monthly||'';document.getElementById('fcExpectedDay').value=fc.expected_day||'';document.getElementById('fcToleranceDays').value=fc.tolerance_days||3;openSheet('addFcSheet');}
 async function saveFc(){
   if(!guardStore())return;const name=document.getElementById('fcNameInput').value.trim();if(!name)return toast('항목명을 입력하세요.','warn');
   const cat=document.getElementById('fcCatInput').value;const eid=document.getElementById('editFcId').value;
+  const estimatedMonthly=parseInt(document.getElementById('fcEstimatedMonthly').value)||0;
   const expectedDay=parseInt(document.getElementById('fcExpectedDay').value)||null;
   const toleranceDays=parseInt(document.getElementById('fcToleranceDays').value)||3;
   setLoad(true,'저장 중...');
-  const payload={name,category:cat,expected_day:expectedDay,tolerance_days:toleranceDays};
+  const payload={name,category:cat,estimated_monthly:estimatedMonthly,expected_day:expectedDay,tolerance_days:toleranceDays};
   const{error}=eid?await sb.from('fixed_costs').update(payload).eq('id',eid):await sb.from('fixed_costs').insert({...payload,store_id:currentStore.id,sort_order:fixedCosts.length});
   setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadFixedCosts();
 }
 async function toggleFc(id,active){
   if(!confirm(active?'복원하시겠습니까?':'숨김 처리하시겠습니까?\n(과거 데이터는 유지됩니다)'))return;
   await sb.from('fixed_costs').update({is_active:active}).eq('id',id).eq('store_id',currentStore.id);await loadFixedCosts();
-}
-let fcMonthStr2=new Date().toISOString().slice(0,7);
-function moveFcMonth(dir){const d=new Date(fcMonthStr2+'-01');d.setMonth(d.getMonth()+dir);fcMonthStr2=d.toISOString().slice(0,7);loadFcMonthly();}
-async function loadFcMonthly(){
-  if(!guardStore())return;
-  document.getElementById('fcMonthLabel').innerText=fcMonthStr2;
-  const{data}=await sb.from('fixed_cost_amounts').select('amount,fixed_cost_id').eq('store_id',currentStore.id).eq('year_month',fcMonthStr2);
-  const amtMap={};(data||[]).forEach(r=>amtMap[r.fixed_cost_id]=r.amount);
-  fcAmountsEditing={...amtMap};
-  const days=daysInMonth(fcMonthStr2);
-  document.getElementById('fcMonthlyData').innerHTML=fixedCosts.filter(fc=>fc.is_active).map(fc=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
-      <div style="flex:1;"><div style="font-size:13px;font-weight:700;">${fc.name}</div><div style="font-size:11px;color:var(--gray-600);">${fc.category}</div></div>
-      <div style="text-align:right;">
-        <input type="number" value="${amtMap[fc.id]||0}" min="0" data-fcid="${fc.id}" data-input="setFcAmount|${fc.id}|this" style="width:110px;text-align:right;border:none;background:var(--gray-100);border-radius:9px;padding:7px 10px;font-size:13px;font-weight:700;outline:none;">
-        <div id="fc-daily-${fc.id}" style="font-size:11px;color:var(--gray-600);margin-top:2px;">일 ${fmt(Math.round((amtMap[fc.id]||0)/days))}원</div>
-      </div>
-    </div>`).join('')||'<div class="empty-state"><p>활성 고정비 항목이 없습니다</p></div>';
-}
-function updateFcDaily(el){const fcid=el.dataset.fcid;const amt=parseInt(el.value)||0;const days=daysInMonth(fcMonthStr2);const dailyEl=document.getElementById('fc-daily-'+fcid);if(dailyEl)dailyEl.innerText='일 '+fmt(Math.round(amt/days))+'원';}
-async function saveFcAmounts(){
-  if(!guardStore())return;setLoad(true,'저장 중...');
-  const upserts=Object.entries(fcAmountsEditing).map(([fcid,amt])=>({store_id:currentStore.id,fixed_cost_id:fcid,year_month:fcMonthStr2,amount:amt}));
-  if(!upserts.length){setLoad(false);return toast('저장할 항목이 없습니다.','warn');}
-  const{error}=await sb.from('fixed_cost_amounts').upsert(upserts,{onConflict:'fixed_cost_id,year_month'});
-  setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');toast('월별 금액 저장 완료!','success');
 }
 
 // ══════════════════════════════════════════
@@ -7106,7 +7064,7 @@ async function calcReserveBalance(){
   // 적립금 = max(0, round(순이익 × rate) + fixed)
   const [sdRes, fcRes, voRes, rcpRes, attRes] = await Promise.all([
     sb.from('sales_daily').select('*').eq('store_id',sid),
-    sb.from('fixed_cost_amounts').select('year_month,amount,estimated_amount,is_confirmed,fixed_costs(is_active)').eq('store_id',sid),
+    sb.from('fixed_costs').select('estimated_monthly,is_active').eq('store_id',sid),
     sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid),
     sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상'),
     sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid)
@@ -7114,16 +7072,15 @@ async function calcReserveBalance(){
 
   // 월별 매출 + 카드매출 (sales_daily 기준, Part F paymentMethods 동적)
   const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
+  // 고정비 — 항목별 예상 월 금액 합산 (활성 항목만, 모든 달 동일 적용)
+  const fixedMonthlyAll=(fcRes.data||[]).filter(r=>r.is_active!==false).reduce((a,r)=>a+(r.estimated_monthly||0),0);
   const monthly={};  // {ym: {rev, card, vendor, receipt, att, fixed}}
-  const bucket=ym=>{ if(!monthly[ym]) monthly[ym]={rev:0,card:0,vendor:0,receipt:0,att:0,fixed:0}; return monthly[ym]; };
+  const bucket=ym=>{ if(!monthly[ym]) monthly[ym]={rev:0,card:0,vendor:0,receipt:0,att:0,fixed:fixedMonthlyAll}; return monthly[ym]; };
   (sdRes.data||[]).forEach(r=>{
     const ym=r.date?.slice(0,7); if(!ym) return;
     const b=bucket(ym);
     b.rev+=salesRowTotal(r);
     if(cardMethod) b.card+=getMethodAmount(r,cardMethod);
-  });
-  (fcRes.data||[]).filter(a=>a.fixed_costs?.is_active!==false).forEach(a=>{
-    bucket(a.year_month).fixed+=(a.is_confirmed?a.amount:(a.estimated_amount||a.amount||0));
   });
   (voRes.data||[]).forEach(o=>{
     const ym=o.order_date?.slice(0,7); if(!ym) return;
@@ -7393,8 +7350,9 @@ async function calcExpenseByCategories(ym, mode){
           if(confirmed?.amount){amount=confirmed.amount;isConfirmed=true;}
           else{const{data}=await sb.from('attendance_logs').select('calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end);amount=(data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);laborAutoAmount=amount;}
         } else if(cat.data_source==='fixed_costs'){
-          const{data}=await sb.from('fixed_cost_amounts').select('amount').eq('store_id',sid).eq('year_month',ym);
-          amount=(data||[]).reduce((a,r)=>a+(r.amount||0),0);
+          // 항목별 예상 월 금액 합산 (활성 항목만, 모든 달 동일 적용)
+          const{data}=await sb.from('fixed_costs').select('estimated_monthly').eq('store_id',sid).neq('is_active',false);
+          amount=(data||[]).reduce((a,r)=>a+(r.estimated_monthly||0),0);
         } else if(cat.data_source==='manual'){
           const{data}=await sb.from('expense_category_amounts').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
           amount=data?.amount||0;
@@ -9936,7 +9894,7 @@ async function loadReconciliation(){
       sb.from('receipts').select('id,vendor,total_price,category').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
       sb.from('attendance_logs').select('employee_id,calculated_wage,employees(name)').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
       sb.from('special_wages').select('extra_amount').eq('store_id',sid).gte('target_date',start).lte('target_date',end),
-      sb.from('fixed_cost_amounts').select('amount,fixed_cost_id,fixed_costs(name,is_active)').eq('store_id',sid).eq('year_month',ym),
+      sb.from('fixed_costs').select('id,name,estimated_monthly,is_active').eq('store_id',sid),
       sb.from('mydata_transactions').select('*').eq('store_id',sid).gte('tx_date',start).lte('tx_date',end).order('tx_date',{ascending:false}),
       sb.from('settlements').select('settle_date,sales_total,expected_total,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end),
       sb.from('store_settings').select('royalty_rate,card_fee_rate,sales_recon_mapping').eq('store_id',sid).maybeSingle(),
@@ -9951,7 +9909,7 @@ async function loadReconciliation(){
     const receipts=rcpRes.data||[];
     const attLogs=attRes.data||[];
     const specialWages=swRes.data||[];
-    const fixedCosts=(fcRes.data||[]).filter(a=>a.fixed_costs?.is_active!==false);
+    const fixedCosts=(fcRes.data||[]).filter(fc=>fc.is_active!==false);
     // 영수증 참조 거래는 지출 대조에서 제외 (receipts에서 품목별 집계)
     const transactions=(txRes.data||[]).filter(t=>t.sub_category!=='영수증 참조');
     // 집계 대상: 활성 + 비활성이어도 이번 달 거래 있는 카테고리
@@ -10075,9 +10033,9 @@ async function loadReconciliation(){
 
       } else if(cat.data_source==='fixed_costs'){
         fixedCosts.forEach(fc=>{
-          const fcid=fc.fixed_cost_id;
-          const fname=fc.fixed_costs?.name||'미지정';
-          const amt=fc.amount||0;
+          const fcid=fc.id;
+          const fname=fc.name||'미지정';
+          const amt=fc.estimated_monthly||0;
           const s=saved.find(r=>r.sub_key===fcid);
           entry.details.push({subKey:fcid,label:fname,recorded:amt,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''});
           entry.recorded+=amt;entry.actual+=(s?.actual_total||0);
