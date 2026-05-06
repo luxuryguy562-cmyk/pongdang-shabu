@@ -4845,7 +4845,8 @@ async function loadDashboard(){
     // ══ 핵심 수치 계산 ══
     const totalCostFull=totalCost+royalty+cardFee;
     const netProfit=totalRevenue-totalCostFull;
-    const reserveAmt=Math.max(0,Math.round(netProfit*reserveRate)+reserveFixed);
+    // 예비비: 순수익 양수일 때만 적립 (음수면 적립할 돈 없음 — 사장님 규칙)
+    const reserveAmt=netProfit>0?Math.max(0,Math.round(netProfit*reserveRate)+reserveFixed):0;
     const realProfit=netProfit-reserveAmt;
 
     // 마감예상 계산
@@ -4858,7 +4859,8 @@ async function loadDashboard(){
     const estCardFee=Math.round(estCardSales*cardFeeRate);
     const estTotalCostFull=estTotalCost+estRoyalty+estCardFee;
     const estNetProfit=estRevenue-estTotalCostFull;
-    const estReserve=Math.max(0,Math.round(estNetProfit*reserveRate)+reserveFixed);
+    // 마감예상 예비비: 순수익 양수일 때만 적립 (대시보드 reserveAmt와 공식 일치 — dev_lessons #50)
+    const estReserve=estNetProfit>0?Math.max(0,Math.round(estNetProfit*reserveRate)+reserveFixed):0;
     const estRealProfit=estNetProfit-estReserve;
 
     // ══ A-1. 월 요약 렌더 (토스 스타일) ══
@@ -5060,7 +5062,8 @@ async function loadDashboard(){
     };
 
     // ── 전월대비 문구 (월 요약) — DOM 삽입 ──
-    if(prevTotalRevenue>0){
+    // 당월 매출 0이면 비교 의미 없음 → 숨김 (사장님 요청 2026-05-06)
+    if(prevTotalRevenue>0 && totalRevenue>0){
       const mRev=momTxt(totalRevenue,prevTotalRevenue,true);
       const mExp=momTxt(totalCostFull,prevTotalCostFull,false);
       let momLine='지난달보다 ';
@@ -5247,7 +5250,8 @@ async function loadDashboard(){
     const accBody=document.getElementById('expAccordionBody');
     if(accBody){
       accBody.innerHTML=`${expSegHtml}${catListHtml}${(()=>{
-        if(prevTotalRevenue<=0)return '';
+        // 당월 매출 0이면 매출대비 비교 의미 없음 → 숨김 (사장님 요청 2026-05-06)
+        if(prevTotalRevenue<=0 || totalRevenue<=0)return '';
         const currVendor=expByGroup['식자재']||0,currAtt=expByGroup['인건비']||0;
         const mV=momTxt(currVendor,prevVendorTotal,false),mA=momTxt(currAtt,prevAttTotal,false);
         let h='';
@@ -7082,7 +7086,8 @@ async function calcReserveBalance(){
     const royalty=Math.round(b.rev*royaltyRate);
     const cardFee=Math.round(b.card*cardFeeRate);
     const netProfit=b.rev-b.vendor-b.receipt-b.att-fixedProrated-royalty-cardFee;
-    const dep=Math.max(0,Math.round(netProfit*rvRate)+rvFixed);
+    // 적립금: 순수익 양수일 때만 (대시보드 reserveAmt 공식과 일치 — dev_lessons #50)
+    const dep=netProfit>0?Math.max(0,Math.round(netProfit*rvRate)+rvFixed):0;
     totalDeposit+=dep;
   });
 
