@@ -2753,6 +2753,11 @@ function toast(msg, type='info', duration=2500){
   requestAnimationFrame(()=>el.classList.add('show'));
   setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),300);},duration);
 }
+// 에러 토스트 공용 — 사용자에겐 친근한 한국어, 원본 에러는 콘솔 백업 (dev_lessons #5)
+function errToast(action, err){
+  if(err) console.error(action+'하지 못함:', err);
+  toast(action+'하지 못했어요. 잠시 후 다시 시도해주세요','error');
+}
 const setLoad = (on, t='처리 중...') => {
   document.getElementById('loading').style.display = on ? 'flex' : 'none';
   document.getElementById('loadText').innerText = t;
@@ -3120,7 +3125,7 @@ async function saveReceipt(){
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').insert(rows);
   setLoad(false);
-  if(error) return toast('저장 실패: '+error.message,'error');
+  if(error) return errToast('저장', error);
   // 자동 학습: 품목→카테고리 규칙 저장 (정상 행만, 매장별)
   // 학습 키워드는 품목의 첫 단어만 추출 (예: "양파 10kg 2봉" → "양파")
   // 품목 전체 문자열을 keyword로 넣으면 contains 매칭이 실패해 학습이 무력화됨 (dev_lessons #49)
@@ -3276,7 +3281,7 @@ async function saveReceiptEdit(){
     note
   }).eq('id',rcpEditingId).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error) return toast('저장 실패: '+error.message,'error');
+  if(error) return errToast('저장', error);
 
   // 학습 규칙 갱신 (정상이면서 카테고리 있을 때만, 첫 단어 keyword)
   if(note==='정상'&&item&&cat){
@@ -3299,7 +3304,7 @@ async function deleteReceiptRow(){
   setLoad(true,'삭제 중...');
   const {error}=await sb.from('receipts').delete().eq('id',rcpEditingId).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error) return toast('삭제 실패: '+error.message,'error');
+  if(error) return errToast('삭제', error);
   toast('삭제 완료','success');
   closeSheet('receiptEditSheet');
   rcpEditingId=null;rcpEditingCategory='';
@@ -3425,7 +3430,7 @@ async function checkIn(){
   setLoad(true,'출근 처리 중...');
   const{error}=await sb.from('attendance_logs').insert({store_id:currentStore.id,employee_id:empId,work_date:today,app_in:now.toISOString(),caps_match_status:'앱전용',check_in_ip:ipCheck.ip||null});
   setLoad(false);
-  if(error) return toast('출근 처리 실패: '+error.message,'error');
+  if(error) return errToast('출근 처리', error);
   // ─── 새 기능: 출근 즉시 피드백 ───
   const _t=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
   toast(`🌅 출근 완료! ${_t} · 좋은 하루 보내세요`,'success',3500);
@@ -3473,7 +3478,7 @@ async function checkOut(){
   setLoad(true,'퇴근 처리 중...');
   const{error}=await sb.from('attendance_logs').update({app_out:now.toISOString(),rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage,check_out_ip:ipCheck.ip||null}).eq('id',record.id).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error) return toast('퇴근 처리 실패: '+error.message,'error');
+  if(error) return errToast('퇴근 처리', error);
   // ─── 새 기능: 퇴근 즉시 피드백 (근무시간 + 일급) ───
   const _totalMin=w.totalMin||0;
   const _h=Math.floor(_totalMin/60), _m=_totalMin%60;
@@ -3519,7 +3524,7 @@ async function saveAttendance(){
     weekend_flag:w.isWeekend,calculated_wage:w.wage,caps_match_status:'앱전용'
   });
   setLoad(false);
-  if(error) return toast('저장 실패: '+error.message,'error');
+  if(error) return errToast('저장', error);
   toast('기록 완료!','success');
   selectedEmpId=null;
   ['vEmpName','vStart','vEnd'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerText=id==='vEmpName'?'선택':'-';el.classList.add('empty');}});
@@ -3719,7 +3724,7 @@ async function saveEditAttendance(){
   const payload={app_in:appIn.toISOString(),app_out:appOut?.toISOString()||null,rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage};
   const{error}=await sb.from('attendance_logs').update(payload).eq('id',attId).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error) return toast('수정 실패: '+error.message,'error');
+  if(error) return errToast('수정', error);
   toast('근태 기록 수정 완료!','success');
   closeAllSheets();loadAttList(true);loadAttList(false);
 }
@@ -3729,7 +3734,7 @@ async function deleteAttendance(){
   setLoad(true,'삭제 중...');
   const{error}=await sb.from('attendance_logs').delete().eq('id',attId).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error) return toast('삭제 실패: '+error.message,'error');
+  if(error) return errToast('삭제', error);
   toast('기록 삭제 완료','success');
   closeAllSheets();loadAttList(true);loadAttList(false);
 }
@@ -3974,7 +3979,7 @@ async function saveSchedule(){
   };
   const{error}=await sb.from('work_schedules').upsert(payload,{onConflict:'store_id,employee_id,work_date'});
   setLoad(false);
-  if(error) return toast('저장 실패: '+error.message,'error');
+  if(error) return errToast('저장', error);
   ganttWeekStart=getWeekStart(date);ganttSelectedDay=date;
   document.getElementById('vSchedMemo').value='';
   // 일정보기 탭으로 이동해서 바로 확인
@@ -4504,7 +4509,7 @@ async function finishSettlement2(){
     diff_amount:diff,diff_status:diffStatus,
     sales_total:salesTotal
   },{onConflict:'store_id,settle_date'}).select('id').maybeSingle();
-  if(error){setLoad(false);return toast('저장 실패: '+error.message,'error');}
+  if(error){setLoad(false);return errToast('저장', error);}
   // ─── 새 기능: 기타매출 로그 기록 (extra_revenue_logs) ───
   // 같은 마감의 기존 로그는 삭제 후 새로 INSERT (재저장 안전)
   if(savedRow?.id){
@@ -4758,7 +4763,7 @@ async function deleteSettlement(dateStr){
   setLoad(true,'삭제 중...');
   const{error}=await sb.from('settlements').delete().eq('store_id',currentStore.id).eq('settle_date',dateStr);
   setLoad(false);
-  if(error) return toast('삭제 실패: '+error.message,'error');
+  if(error) return errToast('삭제', error);
   toast('정산 기록 삭제 완료','success');
   loadSettleCard(dateStr);
 }
@@ -5618,7 +5623,7 @@ async function saveVendor(){
   const cat=document.getElementById('vendorCatInput').value;const eid=document.getElementById('editVendorId').value;
   setLoad(true,'저장 중...');
   const{error}=eid?await sb.from('vendors').update({name,category:cat}).eq('id',eid):await sb.from('vendors').insert({store_id:currentStore.id,name,category:cat});
-  setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadVendors();
+  setLoad(false);if(error)return errToast('저장', error);closeAllSheets();await loadVendors();
 }
 
 // ─── 거래처 재분류 도우미 (2026-04-22 식자재 개편) ───
@@ -5702,7 +5707,7 @@ async function saveOrder(){
   if(!vendorId||!date||!amt)return toast('거래처, 날짜, 금액은 필수입니다.','warn');
   setLoad(true,'저장 중...');
   const{error}=await sb.from('vendor_orders').insert({store_id:currentStore.id,vendor_id:vendorId,order_date:date,item:item||null,amount:amt,memo:memo||null,source:'manual'});
-  setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();loadVendorOrders();
+  setLoad(false);if(error)return errToast('저장', error);closeAllSheets();loadVendorOrders();
 }
 
 // 거래처 파일 업로드 (컬럼 매칭)
@@ -5752,7 +5757,7 @@ async function saveVendorUpload(list, vendorId){
   if(!guardStore())return;setLoad(true,'저장 중...');
   const rows=list.map(r=>({store_id:currentStore.id,vendor_id:vendorId,order_date:r.order_date,item:r.item||null,amount:r.amount||0,quantity:r.quantity||null,memo:r.memo||null,source:'upload'}));
   const{error}=await sb.from('vendor_orders').insert(rows);
-  setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');
+  setLoad(false);if(error)return errToast('저장', error);
   toast(`${rows.length}건 저장 완료!`,'success');document.getElementById('uploadPreview').innerHTML='';
 }
 
@@ -5793,7 +5798,7 @@ async function saveFc(){
   setLoad(true,'저장 중...');
   const payload={name,category:cat,estimated_monthly:estimatedMonthly,expected_day:expectedDay,tolerance_days:toleranceDays};
   const{error}=eid?await sb.from('fixed_costs').update(payload).eq('id',eid):await sb.from('fixed_costs').insert({...payload,store_id:currentStore.id,sort_order:fixedCosts.length});
-  setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadFixedCosts();
+  setLoad(false);if(error)return errToast('저장', error);closeAllSheets();await loadFixedCosts();
 }
 async function toggleFc(id,active){
   if(!confirm(active?'복원하시겠습니까?':'숨김 처리하시겠습니까?\n(과거 데이터는 유지됩니다)'))return;
@@ -6001,7 +6006,7 @@ async function saveEmployee(){
   if(isManager){const selAuth=document.getElementById('empAuthLevel').value||'staff';payload.auth_level=selAuth;payload.is_manager=selAuth!=='staff';}
   setLoad(true,'저장 중...');const eid=document.getElementById('editEmpId').value;
   const{error}=eid?await sb.from('employees').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('employees').insert(payload);
-  setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadEmployees();
+  setLoad(false);if(error)return errToast('저장', error);closeAllSheets();await loadEmployees();
 }
 async function toggleEmp(id,active){if(!confirm(active?'복직?':'퇴사?'))return;await sb.from('employees').update({is_active:active,resign_date:active?null:new Date().toISOString().split('T')[0]}).eq('id',id).eq('store_id',currentStore.id);await loadEmployees();}
 
@@ -6073,7 +6078,7 @@ async function loadRoles(render=true){
 function renderRoleList(){const c=document.getElementById('roleList');if(!c)return;c.innerHTML=roles.length?roles.map(r=>`<div class="role-manage-item"><div><span style="font-size:14px;font-weight:700;">${r.name}</span><span style="font-size:12px;color:var(--gray-600);margin-left:8px;">우선순위 ${r.level}</span></div><div style="display:flex;gap:6px;"><button class="btn btn-secondary btn-sm" data-action="openEditRoleSheet|${r.id}">편집</button><button class="btn btn-danger btn-sm" data-action="deleteRole|${r.id}|${r.name}">삭제</button></div></div>`).join(''):'<div class="empty-state"><div class="empty-icon">🏷️</div><p>등록된 직급이 없습니다</p></div>';}
 function openAddRoleSheet(){if(!guardStore())return;document.getElementById('addRoleTitle').innerText='직급 추가';document.getElementById('roleNameInput').value='';document.getElementById('roleLevelInput').value=roles.length+1;document.getElementById('editRoleId').value='';openSheet('addRoleSheet');}
 function openEditRoleSheet(id){const r=roles.find(x=>x.id===id);if(!r)return;document.getElementById('addRoleTitle').innerText='직급 편집';document.getElementById('roleNameInput').value=r.name;document.getElementById('roleLevelInput').value=r.level;document.getElementById('editRoleId').value=r.id;openSheet('addRoleSheet');}
-async function saveRole(){if(!guardStore())return;const name=document.getElementById('roleNameInput').value.trim();const level=parseInt(document.getElementById('roleLevelInput').value)||9;if(!name)return toast('직급명을 입력하세요.','warn');const rid=document.getElementById('editRoleId').value;setLoad(true,'저장 중...');const{error}=rid?await sb.from('roles').update({name,level}).eq('id',rid):await sb.from('roles').insert({store_id:currentStore.id,name,level});setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');closeAllSheets();await loadRoles(true);}
+async function saveRole(){if(!guardStore())return;const name=document.getElementById('roleNameInput').value.trim();const level=parseInt(document.getElementById('roleLevelInput').value)||9;if(!name)return toast('직급명을 입력하세요.','warn');const rid=document.getElementById('editRoleId').value;setLoad(true,'저장 중...');const{error}=rid?await sb.from('roles').update({name,level}).eq('id',rid):await sb.from('roles').insert({store_id:currentStore.id,name,level});setLoad(false);if(error)return errToast('저장', error);closeAllSheets();await loadRoles(true);}
 async function deleteRole(id,name){if(employees.some(e=>e.role===name))return toast(`'${name}' 직급 사용 중인 직원이 있습니다.`,'warn');if(!confirm(`'${name}' 직급을 삭제하시겠습니까?`))return;await sb.from('roles').delete().eq('id',id).eq('store_id',currentStore.id);await loadRoles(true);}
 
 // 권한 관리
@@ -6189,7 +6194,7 @@ async function saveBasicSettings(){
   };
   const{error}=await sb.from('store_settings').upsert(payload,{onConflict:'store_id'});
   setLoad(false);
-  if(error)return toast('저장 실패: '+error.message,'error');
+  if(error)return errToast('저장', error);
   // 화면 갱신
   const cuEl=document.getElementById('sv-crawler-url');
   if(cuEl)cuEl.innerText=settings.crawler_url||'미설정';
@@ -6216,7 +6221,7 @@ async function saveWageSettings(){
   const{error}=await sb.from('store_settings').upsert(payload,{onConflict:'store_id'});
   // 특별수당 저장
   await saveSpecialWages();
-  if(error){setLoad(false);return toast('저장 실패: '+error.message,'error');}
+  if(error){setLoad(false);return errToast('저장', error);}
   settings={...settings,...payload};setLoad(false);toast('수당 & 휴게 저장 완료!','success');
 }
 
@@ -6827,7 +6832,7 @@ async function saveExpCat(){
     payload.sort_order=sameGroup.length?Math.max(...sameGroup.map(c=>c.sort_order||0))+1:0;
   }
   const{error}=eid?await sb.from('expense_categories').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('expense_categories').insert(payload);
-  setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');
+  setLoad(false);if(error)return errToast('저장', error);
   closeAllSheets();await loadExpCategories();
 }
 
@@ -7202,7 +7207,7 @@ async function saveReserveSettings(){
     store_id:currentStore.id,reserve_rate:rate,reserve_fixed:fixed,reserve_initial_balance:initial
   },{onConflict:'store_id'});
   setLoad(false);
-  if(error) return toast('저장 실패: '+error.message,'error');
+  if(error) return errToast('저장', error);
   settings.reserve_rate=rate;settings.reserve_fixed=fixed;settings.reserve_initial_balance=initial;
   toast('예비비 설정 저장 완료!','success');
   loadReserveFund();
@@ -7223,7 +7228,7 @@ async function saveReserveUsage(){
     store_id:currentStore.id,log_date:dt,year_month:ym,type:'withdrawal',amount:amt,memo
   });
   setLoad(false);
-  if(error) return toast('등록 실패: '+error.message,'error');
+  if(error) return errToast('등록', error);
   closeAllSheets();
   toast('예비비 사용 등록 완료!','success');
   loadReserveFund();
@@ -7274,7 +7279,7 @@ async function saveUpsSettings(){
   setLoad(true,'저장 중...');
   const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,ups_store_code:upsStoreCode||null,ups_id:upsId||null,ups_pw:upsPw||null},{onConflict:'store_id'});
   setLoad(false);
-  if(error) return toast('저장 실패: '+error.message,'error');
+  if(error) return errToast('저장', error);
   settings.ups_store_code=upsStoreCode;settings.ups_id=upsId;settings.ups_pw=upsPw;
   toast('업솔루션 계정 저장 완료!','success');
 }
@@ -7288,7 +7293,7 @@ async function saveLaborConfirm(){
   const{error}=await sb.from('expense_category_amounts').upsert({
     category_id:laborCat.id,store_id:currentStore.id,year_month:dashMonthStr,amount:amt,memo:'확정 인건비'
   },{onConflict:'category_id,year_month'});
-  setLoad(false);if(error)return toast('저장 실패: '+error.message,'error');
+  setLoad(false);if(error)return errToast('저장', error);
   toast('확정 인건비 저장 완료!','success');loadDashboard();
 }
 
@@ -7439,7 +7444,7 @@ async function saveMyDataConfig(){
   setLoad(true,'저장 중...');
   const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,mydata_client_id:clientId,mydata_client_secret:clientSecret},{onConflict:'store_id'});
   setLoad(false);
-  if(error)return toast('저장 실패: '+error.message,'error');
+  if(error)return errToast('저장', error);
   mydataConfig={mydata_client_id:clientId,mydata_client_secret:clientSecret};
   toast('API 키 저장 완료!','success');
 }
@@ -7485,7 +7490,7 @@ async function addBankAccount(){
     account_number:accNum,account_alias:bankNames[bankCode]+' '+accNum.slice(-4),is_active:true
   });
   setLoad(false);
-  if(error)return toast('연결 실패: '+error.message,'error');
+  if(error)return errToast('연결', error);
   toast('계좌 연결 완료!','success');
   document.getElementById('mydataBankAccount').value='';document.getElementById('mydataBankPw').value='';
   await loadMyDataStatus();checkMyDataConnection();
@@ -7504,7 +7509,7 @@ async function addCardAccount(){
     account_alias:cardNames[cardCode]+' 카드',is_active:true
   });
   setLoad(false);
-  if(error)return toast('연결 실패: '+error.message,'error');
+  if(error)return errToast('연결', error);
   toast('카드 연결 완료!','success');
   document.getElementById('mydataCardId').value='';document.getElementById('mydataCardPw').value='';
   await loadMyDataStatus();checkMyDataConnection();
@@ -7700,7 +7705,7 @@ function renderCardTxTable(){
 async function deleteTxRow(id,type){
   if(!confirm('이 거래 1건을 삭제할까요?'))return;
   const{error}=await sb.from('mydata_transactions').delete().eq('id',id).eq('store_id',currentStore.id);
-  if(error){toast('삭제 실패: '+error.message,'error');return;}
+  if(error){errToast('삭제', error);return;}
   if(type==='bank'){bankTxData=bankTxData.filter(r=>r.id!==id);renderBankTxTable();}
   else{cardTxData=cardTxData.filter(r=>r.id!==id);renderCardTxTable();}
   toast('1건 삭제 완료','success');
@@ -7717,7 +7722,7 @@ async function deleteTxMonth(type){
   for(let i=0;i<ids.length;i+=100){
     const chunk=ids.slice(i,i+100);
     const{error}=await sb.from('mydata_transactions').delete().in('id',chunk).eq('store_id',currentStore.id);
-    if(error){setLoad(false);toast('삭제 실패: '+error.message,'error');return;}
+    if(error){setLoad(false);errToast('삭제', error);return;}
   }
   setLoad(false);
   toast(`${ym} ${data.length}건 삭제 완료`,'success');
@@ -8100,7 +8105,7 @@ async function saveTxEdit(){
     // tx_hash 는 건드리지 않음 (C안: 원본 지문 유지 → 재업로드 중복 차단 정상 작동)
   };
   const{error}=await sb.from('mydata_transactions').update(payload).eq('id',id).eq('store_id',currentStore.id);
-  if(error){toast('저장 실패: '+error.message,'error');return;}
+  if(error){errToast('저장', error);return;}
   // 예비비 로그 동기화 (source_tx_id 기준)
   if(isReserve){
     const{data:existLog}=await sb.from('reserve_fund_logs').select('id').eq('source_tx_id',id).eq('store_id',currentStore.id);
@@ -8835,7 +8840,7 @@ async function resetDeviceFingerprint(empId){
   setLoad(true,'초기화 중...');
   const{error}=await sb.from('employees').update({device_fingerprint:null}).eq('id',empId).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error) return toast('초기화 실패: '+error.message,'error');
+  if(error) return errToast('초기화', error);
   const emp=employees.find(e=>e.id===empId);
   if(emp) emp.device_fingerprint=null;
   // 편집 시트의 기기 상태 라벨도 즉시 갱신
@@ -8905,7 +8910,7 @@ async function registerDeviceFromPopup(){
   setLoad(true,'등록 중...');
   const{error}=await sb.from('employees').update({device_fingerprint:fp}).eq('id',currentEmp.id).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error){toast('등록 실패: '+error.message,'error');return;}
+  if(error){errToast('등록', error);return;}
   currentEmp.device_fingerprint=fp;
   const e=employees.find(x=>x.id===currentEmp.id);if(e) e.device_fingerprint=fp;
   closeDevicePopup();
@@ -10439,14 +10444,14 @@ async function savePaymentMethod(){
     const{error}=await sb.from('payment_methods').update({icon,name,color,sort_order})
       .eq('id',id).eq('store_id',currentStore.id);
     setLoad(false);
-    if(error){toast('저장 실패: '+error.message,'error');return;}
+    if(error){errToast('저장', error);return;}
   } else {
     // 신규
     const{error}=await sb.from('payment_methods').insert({
       store_id:currentStore.id, name, icon, color, sort_order, is_active:true
     });
     setLoad(false);
-    if(error){toast('저장 실패: '+error.message,'error');return;}
+    if(error){errToast('저장', error);return;}
   }
   toast('저장 완료','success');
   closeSheet('paymentMethodEditSheet');
@@ -10466,7 +10471,7 @@ async function deletePaymentMethod(){
   const{error}=await sb.from('payment_methods').update({is_active:false})
     .eq('id',id).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error){toast('삭제 실패: '+error.message,'error');return;}
+  if(error){errToast('삭제', error);return;}
   toast('삭제 완료','success');
   closeSheet('paymentMethodEditSheet');
   await loadPaymentMethods();
@@ -10579,13 +10584,13 @@ async function saveExtraItem(){
     const{error}=await sb.from('extra_revenue_items').update({icon,name,color,sort_order})
       .eq('id',id).eq('store_id',currentStore.id);
     setLoad(false);
-    if(error){toast('저장 실패: '+error.message,'error');return;}
+    if(error){errToast('저장', error);return;}
   } else {
     const{error}=await sb.from('extra_revenue_items').insert({
       store_id:currentStore.id, name, icon, color, sort_order, is_active:true
     });
     setLoad(false);
-    if(error){toast('저장 실패: '+error.message,'error');return;}
+    if(error){errToast('저장', error);return;}
   }
   toast('저장 완료','success');
   closeSheet('extraItemEditSheet');
@@ -10605,7 +10610,7 @@ async function deleteExtraItem(){
   const{error}=await sb.from('extra_revenue_items').update({is_active:false})
     .eq('id',id).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error){toast('삭제 실패: '+error.message,'error');return;}
+  if(error){errToast('삭제', error);return;}
   toast('삭제 완료','success');
   closeSheet('extraItemEditSheet');
   await loadExtraItems();
@@ -10704,7 +10709,7 @@ async function saveSalesReconMapping(){
     store_id:currentStore.id, sales_recon_mapping:mapping
   },{onConflict:'store_id'});
   setLoad(false);
-  if(error)return toast('저장 실패: '+error.message,'error');
+  if(error)return errToast('저장', error);
   toast('매출 매칭 설정 저장!','success');
   closeSheet('salesReconMappingSheet');
   await loadReconciliation();
@@ -10753,7 +10758,7 @@ async function saveManualPayment(){
     diff_amount:diff,status,memo:memo||null
   },{onConflict:'store_id,year_month,sub_key'});
   setLoad(false);
-  if(error)return toast('저장 실패: '+error.message,'error');
+  if(error)return errToast('저장', error);
   toast('출금 금액 저장!','success');
   closeSheet('manualPaymentSheet');
   await loadReconciliation();
@@ -11092,7 +11097,7 @@ async function loadSalesDaily(){
     .eq('store_id',currentStore.id).gte('date',start).lte('date',end)
     .order('date',{ascending:false});
   setLoad(false);
-  if(error){toast('매출 로드 실패: '+error.message,'error');return;}
+  if(error){errToast('매출 로드', error);return;}
   salesDaily=data||[];
   renderSalesCards();
 }
@@ -11275,7 +11280,7 @@ async function saveSalesDaily(){
   // store_id + date UNIQUE 제약 → upsert 사용
   const{error}=await sb.from('sales_daily').upsert(payload,{onConflict:'store_id,date'});
   setLoad(false);
-  if(error){toast('저장 실패: '+error.message,'error');return;}
+  if(error){errToast('저장', error);return;}
   closeSheet('salesEditSheet');
   toast('저장 완료','success');
   await loadSalesDaily();
@@ -11288,7 +11293,7 @@ async function onSalesEditDelete(){
   const{error}=await sb.from('sales_daily').delete()
     .eq('id',salesEditCtx.id).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error){toast('삭제 실패: '+error.message,'error');return;}
+  if(error){errToast('삭제', error);return;}
   closeSheet('salesEditSheet');
   toast('삭제 완료','success');
   await loadSalesDaily();
