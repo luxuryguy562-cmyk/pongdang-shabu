@@ -2,8 +2,21 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>캐쉬플로우</title>
+
+<!-- ═══ PWA / 앱스토어 패키징 대비 메타 ═══ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0050FF">
+<meta name="description" content="매장 운영을 한 화면에서 — 매출·지출·인건비 자동 정리">
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="캐쉬플로우">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+
 <!-- Pretendard 폰트 (토스/카뱅/당근 표준) — dev_lessons #57 톤 통일 일환 -->
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -29,13 +42,13 @@ input,select,textarea,button{font-family:inherit;}
 .logo-row{display:inline-flex;align-items:center;gap:8px;}
 
 /* ─ 헤더 */
-.header{position:fixed;top:0;width:100%;height:60px;background:rgba(255,255,255,0.9);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:100;gap:8px;}
+.header{position:fixed;top:0;width:100%;height:60px;background:rgba(255,255,255,0.9);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;padding:0 16px;padding-top:env(safe-area-inset-top,0);z-index:100;gap:8px;box-sizing:content-box;}
 .header-title{font-size:18px;font-weight:900;color:var(--blue);flex-shrink:0;}
 .header-store{font-size:12px;font-weight:600;color:var(--gray-600);background:var(--gray-100);padding:6px 12px;border-radius:20px;cursor:pointer;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .header-user{font-size:12px;font-weight:700;color:var(--gray-600);cursor:pointer;padding:6px 10px;background:var(--gray-100);border-radius:20px;white-space:nowrap;flex-shrink:0;}
 
 /* ─ 네비 */
-.bottom-nav{position:fixed;bottom:0;width:100%;height:72px;background:var(--white);display:flex;border-top:1px solid var(--gray-200);z-index:1000;overflow-x:auto;scrollbar-width:none;}
+.bottom-nav{position:fixed;bottom:0;width:100%;height:72px;padding-bottom:env(safe-area-inset-bottom,0);background:var(--white);display:flex;border-top:1px solid var(--gray-200);z-index:1000;overflow-x:auto;scrollbar-width:none;box-sizing:content-box;}
 .bottom-nav::-webkit-scrollbar{display:none;}
 .nav-item{flex:1 1 0;min-width:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--gray-400);cursor:pointer;transition:color .2s;padding:0 2px;}
 .nav-item .ni{font-size:19px;margin-bottom:2px;line-height:1;display:inline-flex;align-items:center;justify-content:center;}
@@ -137,10 +150,12 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-summary .ss-label{font-size:14px;font-weight:700;color:var(--blue);}
 .settle-summary .ss-val{font-size:20px;font-weight:800;color:var(--blue);}
 .settle-result{background:var(--white);border-radius:18px;padding:20px;margin-top:0;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
-.sr-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100);}
-.sr-row:last-child{border-bottom:none;}
-.sr-row .sr-label{font-size:14px;color:var(--gray-600);font-weight:500;}
-.sr-row .sr-val{font-size:18px;font-weight:800;color:var(--text);}
+.sr-row{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--gray-100);}
+.sr-row:last-child{border-bottom:none;padding-top:14px;border-top:2px solid var(--text);margin-top:4px;}
+.sr-row .sr-label{font-size:14px;color:var(--gray-600);font-weight:600;}
+.sr-row:last-child .sr-label{font-size:15px;font-weight:800;color:var(--text);}
+.sr-row .sr-val{font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
+.sr-row:last-child .sr-val{font-size:28px;font-weight:900;letter-spacing:-1px;}
 .sr-row.diff-ok .sr-val{color:var(--success);}
 .sr-row.diff-bad .sr-val{color:var(--danger);}
 .add-item-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;background:var(--blue-light);border-radius:11px;margin-bottom:8px;}
@@ -449,9 +464,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 /* ─ 오버레이/시트 */
 .overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.42);display:none;z-index:6000;}
-.sheet{position:fixed;bottom:-100%;left:0;width:100%;background:#fff;border-radius:26px 26px 0 0;padding:24px 20px 40px;z-index:6001;transition:bottom .3s cubic-bezier(0.2,.8,.4,1);max-height:90vh;overflow-y:auto;}
-.sheet-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:6000;align-items:flex-end;justify-content:center;}
-.sheet-overlay .sheet{position:relative;bottom:0;width:100%;z-index:6001;transform:translateY(100%);transition:transform .3s cubic-bezier(0.2,.8,.4,1);}
+.sheet{position:fixed;bottom:-100%;left:0;width:100%;background:#fff;border-radius:26px 26px 0 0;padding:24px 20px 40px;padding-bottom:calc(40px + env(safe-area-inset-bottom,0));z-index:6001;transition:bottom .42s cubic-bezier(0.32,.72,0,1);max-height:90vh;overflow-y:auto;}
+.sheet-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:6000;align-items:flex-end;justify-content:center;transition:background .3s ease;}
+.sheet-overlay .sheet{position:relative;bottom:0;width:100%;z-index:6001;transform:translateY(100%);transition:transform .42s cubic-bezier(0.32,.72,0,1);}
 .sheet-overlay .sheet.show{transform:translateY(0);}
 .sheet.show{bottom:0;}
 .sheet-handle{width:38px;height:4px;background:var(--gray-200);border-radius:2px;margin:-6px auto 18px;}
@@ -10835,6 +10850,13 @@ async function confirmReconCategory(categoryId){
 // ══════════════════════════════════════════
 // 초기화
 // ══════════════════════════════════════════
+// ─── Service Worker 등록 (오프라인 + 빠른 재진입, Capacitor 전환 대비) ───
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('[SW] 등록 실패:',err));
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async()=>{
   // ─── 중앙 이벤트 위임 (CSP 인라인 핸들러 대체) ───
   document.addEventListener('click',e=>{
