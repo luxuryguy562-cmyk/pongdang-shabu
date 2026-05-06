@@ -445,6 +445,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .sheet.show{bottom:0;}
 .sheet-handle{width:38px;height:4px;background:var(--gray-200);border-radius:2px;margin:-6px auto 18px;}
 .sheet-title{font-size:17px;font-weight:700;margin-bottom:16px;}
+/* 시트 헤더 (제목 + 닫기 X) — 토스 스타일 */
+.sheet-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;}
+.sheet-header .sheet-title{margin-bottom:0;flex:1;min-width:0;}
+.sheet-close{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:var(--gray-100);color:var(--gray-600);border:none;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;transition:background .15s,color .15s,transform .1s;}
+.sheet-close:hover{background:var(--gray-200);color:var(--gray-800);}
+.sheet-close:active{transform:scale(.92);}
 
 /* ─ 피커 */
 .picker-wrap{display:flex;justify-content:center;height:210px;overflow:hidden;position:relative;}
