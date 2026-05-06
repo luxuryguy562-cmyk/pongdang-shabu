@@ -471,8 +471,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 #loading{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
 .spinner{width:34px;height:34px;border:3px solid var(--gray-200);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.empty-state{text-align:center;padding:32px 20px;color:var(--gray-400);}
-.empty-icon{font-size:36px;margin-bottom:10px;}
+.empty-state{text-align:center;padding:48px 20px;color:var(--gray-500);}
+.empty-icon{width:72px;height:72px;margin:0 auto 14px;background:var(--gray-100);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;}
+.empty-state p{font-size:14px;font-weight:600;color:var(--gray-500);margin:0;line-height:1.5;}
+.empty-state .empty-sub{font-size:12px;font-weight:500;color:var(--gray-400);margin-top:6px;line-height:1.5;}
 /* ─ 토스트 알림 */
 .toast-container{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9998;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;width:90%;max-width:400px;}
 .toast{padding:14px 20px;border-radius:14px;font-size:13px;font-weight:700;color:#fff;opacity:0;transform:translateY(20px);transition:all .3s ease;pointer-events:auto;text-align:center;word-break:keep-all;box-shadow:0 4px 16px rgba(0,0,0,0.15);}
