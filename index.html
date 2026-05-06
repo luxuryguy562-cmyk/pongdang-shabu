@@ -10851,11 +10851,16 @@ async function confirmReconCategory(categoryId){
 // ══════════════════════════════════════════
 // 초기화
 // ══════════════════════════════════════════
-// ─── Service Worker 등록 (오프라인 + 빠른 재진입, Capacitor 전환 대비) ───
+// ─── Service Worker 임시 비활성화 + 이미 등록된 캐시 강제 정리 ───
+// 2026-05-06: iOS Chrome에서 부작용 의심 (직원 선택 안 보이는 증상)
+// 안정화 후 다시 도입 예정. 그동안 기존 SW가 깔린 사용자도 자동 정리.
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('[SW] 등록 실패:',err));
-  });
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>r.unregister().catch(()=>{}));
+  }).catch(()=>{});
+  if(window.caches){
+    caches.keys().then(keys=>keys.forEach(k=>caches.delete(k))).catch(()=>{});
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async()=>{
