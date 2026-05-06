@@ -119,11 +119,11 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-item .s-input{border:none;background:transparent;font-size:18px;font-weight:700;text-align:right;outline:none;color:var(--text);width:130px;padding:16px 0;}
 .settle-item .s-input::placeholder{color:var(--gray-400);font-weight:500;}
 .settle-item .s-input:focus{color:var(--blue);}
-/* ─── 새 기능: 마감정산 공란 가드 빨간 강조 ─── */
-.settle-item.empty{box-shadow:inset 0 0 0 1.5px #EF4444;border-radius:8px;}
-.settle-item.empty .s-input::placeholder{color:#EF4444;font-weight:600;}
-.settle-item.empty .si-label{color:#EF4444;}
-.v-input.empty{box-shadow:inset 0 0 0 1.5px #EF4444;}
+/* ─── 마감정산 공란 가드 (토스 스타일 — 옅은 노란 배경) ─── */
+.settle-item.empty{background:#FFF8E1;border-radius:10px;padding-left:8px;}
+.settle-item.empty .s-input::placeholder{color:#F59E0B;font-weight:600;}
+.settle-item.empty .si-label{color:var(--text);font-weight:600;}
+.v-input.empty{background:#FFF8E1;}
 /* ─── 새 기능: 차액 0원 저장 가능 강조 ─── */
 .settle-ready{background:linear-gradient(135deg,#10B981,#059669) !important;box-shadow:0 6px 20px rgba(16,185,129,0.45) !important;transform:translateY(-1px);transition:all 0.2s;}
 .settle-guide{text-align:center;font-size:13px;font-weight:700;padding:10px 0 4px;min-height:14px;}
