@@ -280,7 +280,16 @@ franchises (프랜차이즈/브랜드)
 |------------|-------------------|
 | id, store_id, name, category | fixed_cost_id(FK) |
 | sort_order, is_active, is_variable | year_month, amount, estimated_amount, is_confirmed |
+| **estimated_monthly** (int, default 0) — 항목별 예상 월 금액. 모든 달 가마감 자동 집계 (2026-05-06 신설) | |
+| expected_day, tolerance_days | |
 - upsert onConflict: `fixed_cost_id, year_month`
+
+**⚠️ 2026-05-06 변경 (`estimated_monthly` 도입)**:
+- 가마감 고정비 집계는 이제 `fixed_costs.estimated_monthly` 합산 (활성 항목만)
+- `fixed_cost_amounts` 테이블/UI는 **사용 중단** (월별 입력 화면 제거됨)
+- 기존 `fixed_cost_amounts` 데이터는 보존 (역사용, 안 씀)
+- 진마감 = `mydata_transactions` 출금 그대로 (변경 없음)
+- 코드 변경: `loadDashboard`, `calcReserveBalance`, `calcExpenseByCategories`, `monthSummary` 모두 `fixed_costs.estimated_monthly` 직접 합산
 
 ### special_wages
 | 컬럼 | 용도 |

@@ -4,6 +4,51 @@
 
 ---
 
+## 🏁 2026-05-06 세션 — 고정비 월별 입력 → 항목별 예상 월 금액 1회 입력으로 단순화
+
+**브랜치**: `claude/fix-fixed-costs-aggregation-QmsL8`
+**규모**: 중형 (DB 컬럼 1개 추가, JS 약 -40줄/+15줄, HTML 탭 1개 제거 + 입력란 1개 추가)
+**승인**: 2026-05-06 사용자 "sql 실행완료 진행해"
+
+**문제 인식 (사장님 지적)**:
+- 월 바뀌면 대시보드 고정비 0원 처리 → "월마다 입력해줘야 되는 상황인가 현재?"
+- 사장님 통찰: "고정비는 어차피 예상액. 가마감 = 예상치, 진마감 = 출금. 굳이 매월 입력?"
+- 가스비처럼 변동되는 항목도 가마감은 예상치니까 평균값 1회면 충분
+
+**완료 항목**:
+1. **DB 컬럼 추가** (사용자가 SQL 직접 실행 완료):
+   - `fixed_costs.estimated_monthly INT DEFAULT 0` — 항목별 예상 월 금액
+   - 백필 쿼리로 가장 최근 입력 월 금액 자동 복사
+2. **HTML**:
+   - 고정비 화면 (`fixedcostCont`) — `항목 관리` / `월별 금액` 2탭 → 단일 화면으로 단순화
+   - `addFcSheet` — `예상 월 금액` 입력란 1개 추가
+3. **JS 함수 변경**:
+   - `loadFixedCosts`/`renderFcList` — 항목 카드에 예상 월 금액 표시
+   - `openAddFcSheet`/`openEditFcSheet`/`saveFc` — `estimated_monthly` 처리
+4. **JS 함수 제거** (헌법 1-6 정당한 갈아엎기):
+   - `fcTab`, `loadFcMonthly`, `saveFcAmounts`, `moveFcMonth`, `updateFcDaily`, `setFcAmount`
+   - 전역 변수 `fcMonthStr`, `fcMonthStr2`, `fcAmountsEditing`
+5. **집계 로직 통일** (모든 화면 `fixed_costs.estimated_monthly` 기준):
+   - `loadDashboard` 당월/전월 고정비 → `estimated_monthly` 합산
+   - `calcReserveBalance` 월별 적립 계산 → 모든 달 동일 `fixedMonthlyAll`
+   - `calcExpenseByCategories` `fixed_costs` 분기 → `estimated_monthly` 합산
+   - `monthSummary` 지출 대조 → 항목별 `estimated_monthly` 표시
+6. **데이터 보존**: 기존 `fixed_cost_amounts` 6개월치 데이터 삭제 안 함 (역사용)
+
+**검증**:
+- node --check 통과 (sed extract 2599~11273)
+- grep 잔재 0건 (`fixed_cost_amounts`, `loadFcMonthly`, `fcMonthly`, `fcAmountsEditing` 등)
+
+**골든패스 (사장님 테스트)**:
+1. 사이드메뉴 → 고정비 → 항목 카드에 예상 월 금액 표시되는지
+2. 항목 편집 → 예상 월 금액 수정 → 저장 → 카드 갱신 확인
+3. 대시보드 → 6월(미래 달)로 이동 → 고정비 0원 아닌지
+4. 마감예상/지출대조 → 고정비 합계 일치하는지
+
+**dev_lessons 갱신**: #57 (사장님께 코드 용어 금지) — 본 세션에서 신설
+
+---
+
 ## 🏁 2026-05-05 세션 #4 — 시급/월급 + 직급 4개 + 인건비 일별 분배
 
 **브랜치**: `claude/debug-login-access-0Zifq` (이어서)
