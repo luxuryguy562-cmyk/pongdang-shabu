@@ -5747,34 +5747,19 @@ function renderFcList(){
   document.getElementById('fcListData').innerHTML=fixedCosts.length?fixedCosts.map(fc=>{
     const est=fc.estimated_monthly||0;
     return `
-    <div class="fixedcost-item ${fc.is_active?'':'inactive'}" style="display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--gray-100);">
+    <div class="fixedcost-item ${fc.is_active?'':'inactive'}" style="display:flex;align-items:center;gap:8px;padding:14px 12px;border-bottom:1px solid var(--gray-100);">
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:700;">${fc.name}</div>
         <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">${fc.category||'고정비'}${!fc.is_active?' · <span style="color:#F04452;">숨김</span>':''}</div>
       </div>
-      <div style="text-align:right;">
-        <input type="number" value="${est}" min="0" inputmode="numeric"
-          data-change="saveFcInline|${fc.id}|this"
-          style="width:120px;text-align:right;border:1px solid var(--gray-200);background:#fff;border-radius:9px;padding:7px 10px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;outline:none;">
-        <div style="font-size:10px;color:var(--gray-500);margin-top:2px;">예상 월 금액(원)</div>
+      <div style="text-align:right;font-variant-numeric:tabular-nums;min-width:100px;">
+        <div style="font-size:14px;font-weight:700;color:${est>0?'var(--gray-900)':'var(--gray-400)'};">${est>0?fmt(est)+'원':'미입력'}</div>
+        <div style="font-size:10px;color:var(--gray-500);margin-top:2px;">예상 월 금액</div>
       </div>
       <button class="btn btn-secondary btn-sm" data-action="openEditFcSheet|${fc.id}">편집</button>
       ${fc.is_active?`<button class="btn btn-danger btn-sm" data-action="toggleFc|${fc.id}|false">숨김</button>`:`<button class="btn btn-success btn-sm" data-action="toggleFc|${fc.id}|true">복원</button>`}
     </div>`;
   }).join(''):'<div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div>';
-}
-async function saveFcInline(fcid,el){
-  if(!guardStore())return;
-  const amt=parseInt(el.value)||0;
-  const fc=fixedCosts.find(x=>x.id===fcid);
-  if(!fc) return;
-  if((fc.estimated_monthly||0)===amt) return; // 변경 없으면 스킵
-  el.style.background='#FFF8E1';
-  const{error}=await sb.from('fixed_costs').update({estimated_monthly:amt}).eq('id',fcid).eq('store_id',currentStore.id);
-  if(error){el.style.background='#FFEBEE';return toast('저장 실패: '+error.message,'error');}
-  fc.estimated_monthly=amt;
-  el.style.background='#fff';
-  toast(`${fc.name} 저장됨`,'success');
 }
 function openAddFcSheet(){if(!guardStore())return;document.getElementById('addFcTitle').innerText='고정비 추가';document.getElementById('fcNameInput').value='';document.getElementById('fcCatInput').value='고정비';document.getElementById('editFcId').value='';document.getElementById('fcEstimatedMonthly').value='';document.getElementById('fcExpectedDay').value='';document.getElementById('fcToleranceDays').value='3';openSheet('addFcSheet');}
 function openEditFcSheet(id){const fc=fixedCosts.find(x=>x.id===id);if(!fc)return;document.getElementById('addFcTitle').innerText='고정비 편집';document.getElementById('fcNameInput').value=fc.name;document.getElementById('fcCatInput').value=fc.category||'고정비';document.getElementById('editFcId').value=fc.id;document.getElementById('fcEstimatedMonthly').value=fc.estimated_monthly||'';document.getElementById('fcExpectedDay').value=fc.expected_day||'';document.getElementById('fcToleranceDays').value=fc.tolerance_days||3;openSheet('addFcSheet');}
