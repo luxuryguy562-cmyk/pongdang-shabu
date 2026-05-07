@@ -618,10 +618,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="logo-mark" style="width:56px;height:56px;font-size:28px;border-radius:14px;">₩</span>
       <span style="font-size:32px;font-weight:900;color:var(--text);letter-spacing:-1.2px;">캐쉬플로우</span>
     </div>
-    <div style="font-size:14px;color:var(--gray-600);margin-top:8px;font-weight:600;" id="loginStoreName">매장을 먼저 선택하세요</div>
+    <div style="font-size:15px;color:var(--gray-700);margin-top:10px;font-weight:700;" id="loginStoreName">매장을 먼저 선택하세요</div>
   </div>
-  <!-- 이름(드롭다운) + PIN 입력 — 단일 진입 경로 -->
-  <div id="loginFormArea" style="width:100%;max-width:320px;">
+
+  <!-- 매장 미선택 시: 매장 선택 큰 버튼 강조 -->
+  <button id="loginStoreBigBtn" class="btn btn-primary btn-full" style="max-width:320px;padding:16px;font-size:15px;font-weight:800;border-radius:14px;display:none;" data-action="openStoreSheet">🏪 매장 선택하기</button>
+
+  <!-- 이름(드롭다운) + PIN 입력 — 매장 선택 후 활성 -->
+  <div id="loginFormArea" style="width:100%;max-width:320px;opacity:0.4;pointer-events:none;">
     <select id="loginNameInput" class="input-field"
       style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;appearance:auto;">
       <option value="">직원 선택</option>
@@ -633,9 +637,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="submitLogin">로그인</button>
     <div id="loginMsg" style="margin-top:12px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
   </div>
-  <!-- 매장 변경 (매장 미선택일 때만 표시) -->
+  <!-- 매장 변경 (매장 선택 후 작게 표시) -->
   <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-    <button id="loginStoreBtn" class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);display:none;" data-action="openStoreSheet">매장 선택</button>
+    <button id="loginStoreBtn" class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);display:none;" data-action="openStoreSheet">매장 변경</button>
   </div>
   <!-- 신규 가입 안내 -->
   <div style="margin-top:28px;text-align:center;">
@@ -2300,8 +2304,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <div class="sheet" id="storeSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title">매장 선택</div>
-  <div id="storeList"></div>
-  <button class="btn btn-secondary btn-full" data-action="closeAllSheets">취소</button>
+  <input id="storeSearchInput" class="input-field" type="text" placeholder="🔍 매장명·브랜드명으로 찾기" data-input="filterStoreList|this" style="margin-bottom:14px;">
+  <div id="storeList" style="max-height:55vh;overflow-y:auto;"></div>
+  <button class="btn btn-secondary btn-full" style="margin-top:12px;" data-action="closeAllSheets">취소</button>
 </div>
 
 <!-- 직원 선택 -->
@@ -2973,16 +2978,57 @@ function openMyInfoSheet() {
 // doLogout는 PIN 로그인 섹션에서 정의됨
 
 // ══════════════════════════════════════════
-// 매장 선택
+// 매장 선택 — 검색 + 브랜드 그룹 (2026-05-06: SaaS 확장 대비)
 // ══════════════════════════════════════════
+let _storeListCache = []; // 검색용 원본 캐시
 async function openStoreSheet() {
   openSheet('storeSheet');
-  const {data} = await sb.from('stores').select('*').eq('is_active',true);
-  document.getElementById('storeList').innerHTML = (data||[]).map(s=>`
-    <div class="store-item" data-action="selectStore|${s.id}|${s.name}">
-      <div class="store-dot"></div>
-      <div><div style="font-size:15px;font-weight:700;">${s.name}</div><div style="font-size:12px;color:var(--gray-600);">${s.address||''}</div></div>
-    </div>`).join('')||'<div class="empty-state"><p>등록된 매장이 없습니다</p></div>';
+  // 검색 입력창 비우고 시작
+  const searchEl = document.getElementById('storeSearchInput');
+  if(searchEl) searchEl.value = '';
+  const {data} = await sb.from('stores').select('*, franchises(name)').eq('is_active',true).order('name');
+  _storeListCache = data || [];
+  renderStoreList(_storeListCache);
+}
+function renderStoreList(stores){
+  const listEl = document.getElementById('storeList');
+  if(!stores.length){
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 매장이 없습니다</p></div>';
+    return;
+  }
+  // 브랜드별 그룹 (franchises.name 없으면 '기타')
+  const grouped = {};
+  stores.forEach(s => {
+    const brand = s.franchises?.name || '기타';
+    if(!grouped[brand]) grouped[brand] = [];
+    grouped[brand].push(s);
+  });
+  const brands = Object.keys(grouped).sort((a,b)=>a==='기타'?1:b==='기타'?-1:a.localeCompare(b,'ko'));
+  // 매장 1개고 브랜드도 1개면 단순 리스트 (그룹 헤더 생략)
+  const flatMode = stores.length<=3 && brands.length===1;
+  listEl.innerHTML = brands.map(brand=>{
+    const items = grouped[brand].map(s=>`
+      <div class="store-item" data-action="selectStore|${s.id}|${s.name}">
+        <div class="store-dot"></div>
+        <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;">${s.name}</div><div style="font-size:12px;color:var(--gray-600);">${s.address||''}</div></div>
+      </div>`).join('');
+    if(flatMode) return items;
+    return `<div style="margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:800;color:var(--gray-500);padding:6px 4px;letter-spacing:-0.3px;">${brand} <span style="color:var(--gray-400);font-weight:600;">${grouped[brand].length}</span></div>
+      ${items}
+    </div>`;
+  }).join('');
+}
+function filterStoreList(el){
+  const q = (el.value||'').trim().toLowerCase();
+  if(!q) return renderStoreList(_storeListCache);
+  const filtered = _storeListCache.filter(s => {
+    const name = (s.name||'').toLowerCase();
+    const brand = (s.franchises?.name||'').toLowerCase();
+    const addr = (s.address||'').toLowerCase();
+    return name.includes(q) || brand.includes(q) || addr.includes(q);
+  });
+  renderStoreList(filtered);
 }
 async function selectStore(id, name) {
   currentStore = {id, name};
@@ -8248,11 +8294,19 @@ function showLoginScreen(){
   } else {
     document.getElementById('loginStoreName').innerText='매장을 먼저 선택하세요';
   }
-  // 매장 변경 버튼: 매장 미선택일 때만 노출 (선택 후엔 사이드메뉴에서 변경)
+  // 매장 선택 여부에 따라 영역 토글:
+  //   매장 미선택 → 큰 파란 "매장 선택하기" 버튼 강조 + 직원/PIN 흐리게
+  //   매장 선택   → 직원/PIN 활성 + "매장 변경" 작은 버튼만 노출
   const needStore=!currentStore;
-  document.getElementById('loginStoreBtn').style.display=needStore?'inline-block':'none';
-  // PIN에 포커스 (이름 이미 선택됐으면)
-  setTimeout(()=>{if(lastLoginName&&pinInput)pinInput.focus();},300);
+  const formArea=document.getElementById('loginFormArea');
+  if(formArea){
+    formArea.style.opacity = needStore ? '0.4' : '1';
+    formArea.style.pointerEvents = needStore ? 'none' : '';
+  }
+  document.getElementById('loginStoreBigBtn').style.display = needStore ? 'block' : 'none';
+  document.getElementById('loginStoreBtn').style.display = needStore ? 'none' : 'inline-block';
+  // PIN에 포커스 (이름 이미 선택됐으면, 매장 선택된 상태에서만)
+  setTimeout(()=>{if(!needStore&&lastLoginName&&pinInput)pinInput.focus();},300);
 }
 // ═══════════════════════════════════════════════════════════════
 // Phase 1-A1: 신규 매장 가입 플로우 (2026-04-24)
