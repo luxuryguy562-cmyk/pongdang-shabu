@@ -869,6 +869,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
+    <!-- 자료 다운로드 (정부 제출·세무·보고서 등 — 미래 확장) -->
+    <div class="side-group">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
+        <span><svg class="icon-inline"><use href="#i-download"/></svg>자료 다운로드</span><span class="side-arrow">›</span>
+      </div>
+      <div class="side-group-body">
+        <div class="side-item" data-action="openLaborExportSheet">노무 제출 양식</div>
+      </div>
+    </div>
+
     <!-- 설정 -->
     <div class="side-group">
       <div class="side-group-header" data-action="toggleSideGroup|this">
@@ -1000,10 +1010,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [2] 근태관리 ══ -->
 <div id="attendanceCont" class="container">
   <div class="card">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-      <span>근태 기록</span>
-      <button class="btn btn-secondary manager-only" data-action="openLaborExportSheet" style="font-size:12px;padding:6px 10px;font-weight:700;">📥 노무제출</button>
-    </div>
+    <div class="card-title">근태 기록</div>
     <div class="sub-tabs">
       <button class="sub-tab active" data-action="attTab|manual|this">수동 입력</button>
       <button class="sub-tab manager-only" data-action="attTab|caps|this">캡스 업로드</button>
@@ -6474,6 +6481,7 @@ let laborExportYm=new Date().toISOString().slice(0,7);
 function openLaborExportSheet(){
   if(!guardStore()) return;
   if(!isManager) return toast('관리자만 다운로드할 수 있습니다.','warn');
+  closeSideMenu(); // 사이드메뉴에서 호출됐을 때 자동 닫기
   laborExportYm=new Date().toISOString().slice(0,7);
   document.getElementById('lxMonthLabel').innerText=laborExportYm;
   ['lxOptAtt','lxOptPayroll','lxOptEmp'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true;});
