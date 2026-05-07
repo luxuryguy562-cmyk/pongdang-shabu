@@ -63,6 +63,8 @@ input,select,textarea,button{font-family:inherit;}
 .container.active{display:block;}
 .card{background:var(--white);border-radius:22px;padding:20px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,0,0,0.04);}
 .card-title{font-size:18px;font-weight:700;margin-bottom:16px;}
+.card-title svg.icon-inline{width:18px;height:18px;vertical-align:-4px;margin-right:8px;}
+.card-sub{font-size:12px;font-weight:500;color:var(--gray-500);margin:-12px 0 12px;line-height:1.5;}
 .card-sub-title{font-size:13px;font-weight:700;color:var(--gray-600);margin:16px 0 10px;letter-spacing:.3px;}
 
 /* ─ 공통 입력 */
@@ -134,8 +136,9 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-item .s-input::placeholder{color:var(--gray-400);font-weight:500;}
 .settle-item .s-input:focus{color:var(--blue);}
 /* ─── 마감정산 공란 가드 (토스 스타일 — 옅은 노란 배경) ─── */
-.settle-item.empty{background:#FFF8E1;border-radius:10px;padding-left:8px;}
-.settle-item.empty .s-input::placeholder{color:#F59E0B;font-weight:600;}
+.settle-item.empty{background:#FFF8E1;border-radius:10px;padding-left:10px;padding-right:10px;margin:3px 0;}
+.settle-item.empty + .settle-item.empty{margin-top:3px;}
+.settle-item.empty .s-input::placeholder{color:#D97706;font-weight:500;font-size:14px;}
 .settle-item.empty .si-label{color:var(--text);font-weight:600;}
 .v-input.empty{background:#FFF8E1;}
 /* ─── 새 기능: 차액 0원 저장 가능 강조 ─── */
