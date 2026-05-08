@@ -4,6 +4,43 @@
 
 ---
 
+## [2026-05-08] 마감정산 계산기 sticky + 입력 가이드 잔재 정리
+
+**브랜치**: `claude/fix-admin-permissions-3HiCm` → main 머지 완료
+**규모**: 중형 (11줄 추가 / 94줄 삭제 = 순제거 83줄)
+**근거**: 헌법 1-6 정당한 갈아엎기 (잔재 누적으로 사장님 헷갈림 호소)
+
+### 발단 (사장님 인사이트)
+- "빨간칸을 먼저 채워주세요"는 이제 의미 없는 설명
+- "계산기를 맨 위에 행고정하고 입력하면서 실시간으로 보이면 빨간걸 채워라 0을 채워라가 필요없을 거 같다"
+- "오케이 저리해놓으면 불일치면 바로 알 거 아냐"
+
+### 변경
+- **HTML**: `.settle-result`(매출/금고/차액 3줄)을 `#settleInput` 최상단으로 이동, `.settle-sticky` 클래스 부여 → 헤더(60px+safe-area) 아래 sticky 고정
+- **CSS**: `.settle-item.empty`, `.v-input.empty`, `.settle-guide*` 9줄 제거. `.settle-sticky{position:sticky;top:calc(60px + env(safe-area-inset-top,0px));z-index:50;margin-bottom:10px;}` 추가. `.settle-ready`는 유지(차액 0 → 저장 버튼 초록 강조)
+- **JS 제거**: `SETTLE_REQUIRED_IDS`, `SETTLE_OPTIONAL_IDS`, `isInputEmpty`, `refreshSettleEmptyHighlight`, `validateSettleInputs`, `fillEmptyWithZero`
+- **JS 단순화**: `refreshSaveButtonState`는 settleGuide 참조 제거 → `saveBtn.classList.toggle('settle-ready', diff===0)` 한 줄
+- **JS 정리**: `recalcSettle2`에서 `refreshSettleEmptyHighlight()` 호출 제거, `finishSettlement2`에서 `validateSettleInputs()` 가드 제거
+- **빈 칸 안전성**: `gv(id)=unFmt(value||'0')`이 이미 빈 칸을 0으로 폴백 처리 → 가드 alert 제거해도 저장 안전
+
+### 검증
+- ✅ grep 잔재 0건 (SETTLE_REQUIRED_IDS / fillEmptyWithZero / settleGuide / .settle-item.empty 모두 부재)
+- ✅ node --check 통과 (인라인 JS 428,685자)
+- ✅ HTML diff 깔끔 (이동/삭제만, 신규 코드 최소)
+
+### 결과
+- 사용자 시야: 어떤 카드 입력해도 화면 위 차액이 실시간 변동
+- 잔소리(주황 강조 / 빨간 칸 메시지 / 0 채우기 버튼) 사라짐
+- 차액 0 되면 저장 버튼이 초록으로 변하는 시각 보조만 남김
+
+### 골든패스 (사장님 테스트)
+1. 마감정산 → 입력 탭 진입 → 화면 위에 매출/금고/차액 박스가 항상 보여야 함
+2. 매출 입력하다가 스크롤 내려도 차액 박스 따라옴
+3. 빈 칸 둔 채로 저장 시도 → alert 없이 그대로 저장되고 빈 칸은 0 처리
+4. 차액 0 되면 저장 버튼 초록색으로 변함
+
+---
+
 ## [2026-05-08] 희망근무 등록 권한 누수 수정
 
 **브랜치**: `claude/fix-admin-permissions-3HiCm` → main 머지 완료
