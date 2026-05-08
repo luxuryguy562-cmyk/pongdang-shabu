@@ -21,10 +21,28 @@
 | 항목 | 값 |
 |------|---|
 | **플랫폼** | Cloudflare Pages |
-| **도메인** | `pongdang-shabu.pages.dev` |
+| **운영 도메인** | `pongdang-shabu.pages.dev` (main 브랜치) |
+| **테스트 미리보기** | `<branch>.pongdang-shabu.pages.dev` (claude/* 등 비-main 브랜치 자동 생성) |
 | **배포 브랜치** | `main` (push 시 자동 배포) |
 | **레포** | `luxuryguy562-cmyk/pongdang-shabu` |
 | **CSP 주의** | inline 이벤트 핸들러 차단됨 → addEventListener 사용 (→ dev_lessons.md #1) |
+
+### 테스트 → 운영 흐름 (2026-05-06 결정)
+1. claude/<task> 브랜치에 push
+2. 1~2분 후 자동 미리보기 URL 생성 (`<branch>.pongdang-shabu.pages.dev`)
+3. 사장님이 미리보기에서 검증
+4. OK → main 머지 → 운영 반영
+5. 별로 → 미리보기에서 추가 수정 (운영 안전)
+6. **DB(Supabase)는 같음** — UI/UX 변경에는 충분, DB 작업 시점에 staging 환경 도입 검토
+
+### Capacitor 전환 대비 자산 (2026-05-06)
+| 자산 | 위치 | 용도 |
+|---|---|---|
+| `icon.svg` | `/icon.svg` | 앱 아이콘 (벡터, Capacitor가 모든 사이즈 자동 변환) |
+| `manifest.json` | `/manifest.json` | PWA + 앱스토어 메타 |
+| `sw.js` | `/sw.js` | Service Worker (현재 OFF, 안정화 후 재도입) |
+| `<meta theme-color>` | `index.html` head | iOS 상태바·앱스토어 splash 색 |
+| `safe-area-inset` CSS | `.header`, `.bottom-nav` | iOS 노치/홈 인디케이터 자동 회피 |
 
 ## Cloudflare Workers
 
