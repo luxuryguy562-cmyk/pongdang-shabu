@@ -135,18 +135,9 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-item .s-input{border:none;background:transparent;font-size:18px;font-weight:700;text-align:right;outline:none;color:var(--text);width:130px;padding:16px 0;}
 .settle-item .s-input::placeholder{color:var(--gray-400);font-weight:500;}
 .settle-item .s-input:focus{color:var(--blue);}
-/* ─── 마감정산 공란 가드 (토스 스타일 — 옅은 노란 배경) ─── */
-.settle-item.empty{background:#FFF8E1;border-radius:10px;padding-left:10px;padding-right:10px;margin:3px 0;}
-.settle-item.empty + .settle-item.empty{margin-top:3px;}
-.settle-item.empty .s-input::placeholder{color:#D97706;font-weight:500;font-size:14px;}
-.settle-item.empty .si-label{color:var(--text);font-weight:600;}
-.v-input.empty{background:#FFF8E1;}
-/* ─── 새 기능: 차액 0원 저장 가능 강조 ─── */
+/* ─── 차액 0원 저장 버튼 강조 + 계산기 sticky ─── */
 .settle-ready{background:linear-gradient(135deg,#10B981,#059669) !important;box-shadow:0 6px 20px rgba(16,185,129,0.45) !important;transform:translateY(-1px);transition:all 0.2s;}
-.settle-guide{text-align:center;font-size:13px;font-weight:700;padding:10px 0 4px;min-height:14px;}
-.settle-guide.ok{color:#10B981;}
-.settle-guide.warn{color:#F59E0B;}
-.settle-guide.danger{color:#EF4444;}
+.settle-sticky{position:sticky;top:calc(60px + env(safe-area-inset-top,0px));z-index:50;margin-bottom:10px;}
 .settle-card-group{background:var(--white);border-radius:18px;padding:4px 16px;margin-bottom:12px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
 .settle-card-group .card-title{font-size:16px;font-weight:800;padding:16px 0 4px;margin:0;}
 .settle-card-group .card-sub{font-size:12px;color:var(--gray-400);margin:0 0 8px;padding:0;}
@@ -1147,6 +1138,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="sub-tab" data-action="settleTab|card|this">일별 카드</button>
   </div>
   <div id="settleInput">
+    <!-- 계산기 (sticky — 입력하면서 차액 실시간 확인) -->
+    <div class="settle-result settle-sticky">
+      <div class="sr-row"><span class="sr-label">장부 합계</span><span class="sr-val" id="calcBook">0원</span></div>
+      <div class="sr-row"><span class="sr-label">금고 합계</span><span class="sr-val" id="calcVault">0원</span></div>
+      <div class="sr-row" id="diffRow"><span class="sr-label">차액</span><span class="sr-val" id="calcDiff">-</span></div>
+    </div>
     <!-- 정산 날짜 선택 (관리자만 변경 가능) -->
     <div class="settle-card-group" id="settleDateGroup" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1263,19 +1260,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
-    <!-- 결과 (본 매출 = 장부 vs 금고 검증) -->
-    <div class="settle-result">
-      <div class="sr-row"><span class="sr-label">장부 합계</span><span class="sr-val" id="calcBook">0원</span></div>
-      <div class="sr-row"><span class="sr-label">금고 합계</span><span class="sr-val" id="calcVault">0원</span></div>
-      <div class="sr-row" id="diffRow"><span class="sr-label">차액</span><span class="sr-val" id="calcDiff">-</span></div>
-    </div>
     <!-- 기타매출 패널 (장부와 별도) -->
     <div class="settle-result" id="extraRevenuePanel" style="margin-top:8px;background:var(--purple-light,#F3E8FF);border:1px solid #D8B4FE;display:none;">
       <div style="font-size:12px;font-weight:700;color:#6B21A8;margin-bottom:6px;">기타매출 (오늘 / 누적)</div>
       <div id="extraRevenueSummary"></div>
     </div>
-    <div id="settleGuide" class="settle-guide"></div>
-    <button class="btn btn-secondary btn-full" style="margin-top:4px;border-radius:14px;padding:12px;font-size:13px;" data-action="fillEmptyWithZero">⚡ 공란 0으로 채우기</button>
     <button class="btn btn-primary btn-full" style="margin-top:8px;border-radius:16px;padding:18px;font-size:16px;" data-action="finishSettlement2">마감 저장하기</button>
   </div>
   <div id="settleList" style="display:none;">
@@ -4372,57 +4361,6 @@ async function handleSalesUpload(input){
   }finally{setLoad(false);input.value='';}
 }
 
-// ─── 새 기능: 마감정산 공란 가드 ───
-// 필수 차단 대상 (전일이월·매출4·현금상세3 = 8칸). 빈 칸이면 저장 차단.
-const SETTLE_REQUIRED_IDS=['siOpening','siPosCash','siPosCashReceipt','siPosCard','siPosEtc','siCashCash','siCashQr','siCashTransfer'];
-// 권장 강조 대상 (차감 2칸). 빨간 강조만, 저장은 통과.
-const SETTLE_OPTIONAL_IDS=['siDeductEtc','siDeductBank'];
-function isInputEmpty(el){return !el || (el.value||'').trim()==='';}
-// 입력칸 빨간 강조 토글 (recalcSettle2에서 호출)
-function refreshSettleEmptyHighlight(){
-  [...SETTLE_REQUIRED_IDS, ...SETTLE_OPTIONAL_IDS].forEach(id=>{
-    const el=document.getElementById(id); if(!el) return;
-    const item=el.closest('.settle-item');
-    if(item) item.classList.toggle('empty', isInputEmpty(el));
-  });
-  document.querySelectorAll('.s-extra-input').forEach(el=>{
-    const item=el.closest('.settle-item'); if(item) item.classList.toggle('empty', isInputEmpty(el));
-  });
-  // 금고 계수 8칸은 모두 비어있을 때만 빨간 강조 (지폐 단위는 일부 비는 게 정상)
-  const vInputs=[...document.querySelectorAll('.v-input')];
-  const allVaultEmpty=vInputs.length>0 && vInputs.every(isInputEmpty);
-  vInputs.forEach(el=>el.classList.toggle('empty', allVaultEmpty));
-}
-// 저장 가드 — 필수 8칸 중 빈 칸 있으면 차단 + 알림 + 첫 빈 칸으로 스크롤
-function validateSettleInputs(){
-  const empties=SETTLE_REQUIRED_IDS.filter(id=>isInputEmpty(document.getElementById(id)));
-  if(empties.length===0) return true;
-  const labelMap={
-    siOpening:'전일 이월금',
-    siPosCash:'매출 - 현금', siPosCashReceipt:'매출 - 현금영수증',
-    siPosCard:'매출 - 신용카드', siPosEtc:'매출 - 기타결제',
-    siCashCash:'현금 상세 - 현금', siCashQr:'현금 상세 - QR', siCashTransfer:'현금 상세 - 계좌이체'
-  };
-  const names=empties.map(id=>labelMap[id]||id).join('\n• ');
-  alert('아직 입력 안 한 항목이 있습니다:\n\n• '+names+'\n\n0이라도 직접 입력해주세요.\n(아래 "공란 0으로 채우기" 버튼을 누르면 한번에 채워집니다)');
-  const first=document.getElementById(empties[0]);
-  if(first){first.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>first.focus(),300);}
-  return false;
-}
-// 모든 빈 칸을 0으로 일괄 채우기 (직원 단축 버튼)
-function fillEmptyWithZero(){
-  let n=0;
-  [...SETTLE_REQUIRED_IDS, ...SETTLE_OPTIONAL_IDS].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el && isInputEmpty(el)){el.value='0';n++;}
-  });
-  document.querySelectorAll('.s-extra-input').forEach(el=>{
-    if(isInputEmpty(el)){el.value='0';n++;}
-  });
-  recalcSettle2();
-  toast(n>0?(n+'개 공란을 0으로 채웠어요'):'채울 공란이 없어요','success');
-}
-
 function recalcSettle2(){
   const opening=gv('siOpening');
   const posCash=gv('siPosCash'), posCR=gv('siPosCashReceipt'), posCard=gv('siPosCard'), posEtc=gv('siPosEtc');
@@ -4466,32 +4404,13 @@ function recalcSettle2(){
   // 기타매출 패널 (오늘 입력 + 누적)
   recalcExtraRevenuePanel();
 
-  // 공란 빨간 강조 갱신
-  refreshSettleEmptyHighlight();
-
-  // ─── 새 기능: 차액 0원 저장 가능 강조 ───
   refreshSaveButtonState(diff);
 }
-// 저장 버튼 상태 + 가이드 메시지 (필수 다 채워짐 + 차액 0 → 초록 강조)
+// 차액 0이면 저장 버튼 초록 강조 (sticky 차액 패널과 동기)
 function refreshSaveButtonState(diff){
   const saveBtn=document.querySelector('[data-action="finishSettlement2"]');
-  const guide=document.getElementById('settleGuide');
-  if(!saveBtn||!guide) return;
-  const allFilled=SETTLE_REQUIRED_IDS.every(id=>!isInputEmpty(document.getElementById(id)));
-  if(!allFilled){
-    saveBtn.classList.remove('settle-ready');
-    guide.textContent='🔴 빨간 칸을 먼저 채워주세요';
-    guide.className='settle-guide danger';
-  } else if(diff===0){
-    saveBtn.classList.add('settle-ready');
-    guide.textContent='✅ 차액 0원 — 마감 저장 가능합니다';
-    guide.className='settle-guide ok';
-  } else {
-    saveBtn.classList.remove('settle-ready');
-    const sign=diff>0?'+':'';
-    guide.textContent=`💡 차액 ${sign}${fmt(diff)}원 — 한 번 더 확인해주세요`;
-    guide.className='settle-guide warn';
-  }
+  if(!saveBtn) return;
+  saveBtn.classList.toggle('settle-ready', diff===0);
 }
 
 // 기타매출 입력칸 동적 렌더링
@@ -4570,8 +4489,6 @@ function resetSettleView(){
 }
 async function finishSettlement2(){
   if(!guardStore()) return;
-  // 공란 가드 — 필수 8칸 빈 칸 있으면 차단
-  if(!validateSettleInputs()) return;
   // ─── 새 기능: 마감 중복 저장 가드 ───
   // 같은 매장+날짜에 마감이 이미 있으면 사용자에게 인지+동의 후 덮어쓰기 (upsert)
   const _settleDate=getSettleDate();
