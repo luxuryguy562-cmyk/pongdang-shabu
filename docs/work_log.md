@@ -4,6 +4,29 @@
 
 ---
 
+## [2026-05-08] 희망근무 등록 권한 누수 수정
+
+**브랜치**: `claude/fix-admin-permissions-3HiCm` → main 머지 완료
+**규모**: 소형 (1줄)
+
+### 문제
+- 사장님 지적: 근무계획 → 희망근무 등록에서 직원 누르면 모든 직원이 다 나옴.
+- 일반 staff가 다른 직원(점장 포함) 이름으로 희망근무를 임의 등록 가능 = 권한 누수.
+
+### 원인
+- `index.html:1113` 직원 선택 input-row에 `manager-only` 클래스가 빠져 있었음.
+- 근태 탭(1022)은 같은 패턴으로 manager-only 처리되어 있어 일관성 깨짐.
+
+### 수정
+- `<div class="input-row" data-action="openEmpSheet|sched">` → `<div class="input-row manager-only" data-action="openEmpSheet|sched">`
+- `saveSchedule`(4077)은 `empId = schedEmpId || currentEmp?.id` 로직이 이미 있어 staff는 자동으로 본인으로 등록됨. 추가 수정 불필요.
+
+### 결과
+- staff 로그인 시 직원 선택 행이 안 보임 → 본인 희망근무만 등록 가능.
+- 관리자(store_manager 이상)는 기존대로 모든 직원 선택 가능.
+
+---
+
 ## 🏁 2026-05-06 세션 — 큰 사이클: 고정비 단순화 + 전수 UX 점검 + 캐쉬플로우 리브랜딩 + PWA 강화
 
 **브랜치**: `claude/fix-fixed-costs-aggregation-QmsL8`
