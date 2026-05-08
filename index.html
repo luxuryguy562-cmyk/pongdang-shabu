@@ -153,6 +153,10 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .sr-row:last-child .sr-val{font-size:28px;font-weight:900;letter-spacing:-1px;}
 .sr-row.diff-ok .sr-val{color:var(--success);}
 .sr-row.diff-bad .sr-val{color:var(--danger);}
+.sr-row.diff-ok{background:var(--success-light);border-radius:12px;padding-left:14px;padding-right:14px;}
+.sr-row.diff-bad{background:var(--danger-light);border-radius:12px;padding-left:14px;padding-right:14px;}
+.settle-result.diff-ok{border:2px solid var(--success);}
+.settle-result.diff-bad{border:2px solid var(--danger);}
 .add-item-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;background:var(--blue-light);border-radius:11px;margin-bottom:8px;}
 .vault-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
 .vault-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;}
@@ -4396,10 +4400,19 @@ function recalcSettle2(){
   document.getElementById('calcVault').innerText=fmt(vault)+'원';
   document.getElementById('vaultTotal').innerText=fmt(vault)+'원';
 
-  // 차액
+  // 차액 (입력 전 = 모두 0이면 중립 '-' 유지, 그 외엔 일치/불일치 강조)
   const diff=vault-book;const diffEl=document.getElementById('calcDiff');
-  diffEl.innerText=diff===0?'일치':(diff>0?'+':'')+fmt(diff)+'원';
-  document.getElementById('diffRow').className='sr-row '+(diff===0?'diff-ok':'diff-bad');
+  const stickyBox=document.querySelector('.settle-result.settle-sticky');
+  const inputStarted=salesTotal>0||vault>0||opening>0;
+  if(!inputStarted){
+    diffEl.innerText='-';
+    document.getElementById('diffRow').className='sr-row';
+    if(stickyBox) stickyBox.classList.remove('diff-ok','diff-bad');
+  } else {
+    diffEl.innerText=diff===0?'✅ 일치':`❌ ${diff>0?'+':''}${fmt(diff)}원`;
+    document.getElementById('diffRow').className='sr-row '+(diff===0?'diff-ok':'diff-bad');
+    if(stickyBox){stickyBox.classList.toggle('diff-ok',diff===0);stickyBox.classList.toggle('diff-bad',diff!==0);}
+  }
 
   // 기타매출 패널 (오늘 입력 + 누적)
   recalcExtraRevenuePanel();
