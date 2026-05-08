@@ -4,6 +4,109 @@
 
 ---
 
+## 🏁 2026-05-06 세션 — 큰 사이클: 고정비 단순화 + 전수 UX 점검 + 캐쉬플로우 리브랜딩 + PWA 강화
+
+**브랜치**: `claude/fix-fixed-costs-aggregation-QmsL8`
+**규모**: 초대형 (HTML+CSS+JS 다수, DB 컬럼 1개 추가, 새 파일 2개)
+**커밋**: 약 25건 / 주요 머지 18건
+
+### A. 고정비 시스템 갈아엎기 (헌법 1-6 정당한 갈아엎기)
+- 사장님 인사이트: "고정비는 가마감 예상치니까 매월 입력 불필요"
+- DB: `fixed_costs.estimated_monthly INT DEFAULT 0` 신설 (사용자 SQL 직접 실행)
+- `fixed_cost_amounts` 테이블·UI 사용 중단 (데이터는 보존)
+- 영향 함수: loadDashboard, calcReserveBalance, calcExpenseByCategories, monthSummary
+- 인라인 금액 편집 도입 → 시트 방식으로 환원 (사장님 "적용됐는지 모름" 피드백)
+- 금액 입력란 세자리 콤마 자동 (`formatNumberInput` 공용 함수)
+
+### B. 캐쉬플로우 리브랜딩 (전 화면)
+- 앱 이름 "퐁당샤브" → "캐쉬플로우" (헤더·로그인·약관·manifest)
+- 가입 placeholder "퐁당논산점" → "본죽 강남점" 일반 예시
+- ₩ 마크 + 파란 그라디언트 로고 (헤더 26px, 로그인 56px)
+- D안 토스 스타일: 앱 자체는 캐쉬플로우 고정, 매장은 헤더 옆 동적
+
+### C. UX 전수 점검 9단계
+1. **Pretendard 폰트** 도입 (Pretendard Variable CDN)
+2. **SVG 아이콘 도입** — 탭바 4개 (i-receipt/clock/calendar/wallet) + 사이드메뉴 (i-building/link)
+3. **에러 메시지 친근화** — `errToast(action, err)` 헬퍼 + 43곳 일괄 치환
+4. **토스트 어미 통일** — "완료/성공/되었습니다" → "됐어요" (34곳)
+5. **자동 로그인 규칙** — 코드 검증 결과 모든 권한 이미 적용. business_rules.md 동기화
+6. **햄버거 → 하단 "더보기" 탭** (i-grid 아이콘)
+7. **핵심 숫자 큰 글씨** — 월 요약 ds-amt 16→22px / summ-total 20→28px
+8. **빈 상태 토스 스타일** — 회색 원형 박스 + padding 늘림
+9. **시트/카드 제목 SVG** 6곳 (i-piggy/card/coins/download/money)
+
+### D. PWA 강화 + Capacitor 전환 대비
+- `icon.svg` 신설 (벡터, 모든 사이즈 대응 — Capacitor가 자동 변환)
+- `manifest.json` 풍부화 (description, theme_color, lang, categories, maskable icon)
+- 메타 보강: `mobile-web-app-capable`, `apple-mobile-web-app-capable`, status-bar-style, title
+- `viewport-fit=cover` (iOS 노치)
+- `<meta theme-color="#0050FF">` (상태바 색 통합)
+- `apple-touch-icon` 추가
+- `<header>·<bottom-nav>` safe-area inset 적용
+- `sw.js` 신설 → iOS Chrome 부작용 의심으로 **임시 OFF + 기존 등록 unregister 코드** 추가
+- 시트 애니메이션 cubic-bezier(0.32,0.72,0,1) iOS 표준 + duration 0.3→0.42s
+
+### E. 디자인 디테일
+- X 버튼 토스 스타일 통일 (`.sheet-close` 32×32 원형, gray-100, hover/active)
+- 월 요약 도넛 → 세그먼트 바 (가로 색깔 띠 + 항목 표) + 매출/지출 항상 펼침
+- 마감정산 빨간 박스 → 노란 배경 (#FFF8E1, warn 톤)
+  - placeholder "0" → "입력", 색·크기 차분히 (#D97706, 14px, weight 500)
+  - 노란 박스끼리 3px margin (구분감)
+- 마감정산 합계 큰 숫자 (.sr-row .sr-val 22px, last-child 28px + 굵은 가로선)
+- `*:not(.account-masked){font-family:inherit;}` 강제 폰트 상속 (input/select 누락 케이스 fix)
+- `.card-sub` 클래스 신규 정의 (12px gray-500, 카드 부연설명)
+
+### F. 데이터/로직 버그 fix
+- 예비비 음수 버그 (순수익 음수일 때 reserveAmt=0 강제, 3곳 일관 — dev_lessons #50 적용)
+- 매출 0일 때 MoM 비교 문구 숨김 (월 요약 + 지출 상세)
+- 예비비 "-0" 표시 → "0" (강제 부호 제거)
+- 화면 하단 잘림 → safe-area를 height에 흡수
+- deprecated 메타 경고 해소
+
+### G. 매장 선택 + 로그인 흐름
+- 매장 미선택 시 큰 파란 "매장 선택하기" 버튼 강조
+- 직원/PIN 영역 흐림(opacity 0.4) + 비활성
+- 매장 선택 시트: 검색 + 브랜드 그룹 (franchises.name 조인) + flat 모드 (≤3개)
+- _storeListCache 캐시 (매번 DB 안 치고 검색)
+
+### H. 정보 구조 정리
+- 사이드메뉴 "📥 자료 다운로드" 그룹 신설
+- 근태 화면의 "노무제출" 버튼 → 사이드메뉴로 이동
+- 미래 매출/지출/세무 보고서 추가 시 그 그룹 안에 항목만 추가
+
+### I. dev_lessons 신규 (4건)
+- #57 사장님께는 코드 용어 금지 (DB 컬럼명·함수명·영어 IT 용어 → 화면 단어 + 비유)
+- #58 금액 입력란은 무조건 세자리 콤마 자동 (`formatNumberInput` 표준 패턴)
+
+### J. 환경/배포
+- Cloudflare Pages **자동 preview URL** 사용 결정 — main 머지 전 `claude/xxx.pongdang-shabu.pages.dev`로 사장님 검증
+- DB 분리 staging은 보류 (UI/UX 변경에는 preview URL로 충분, DB 변경 시점에 staging 환경 도입 검토)
+
+### K. 미해결/보류 항목
+- **Service Worker 재도입**: 안정화 후 iOS 호환 형태로 재시도 필요
+- **Capacitor 전환**: 사장님 맥북 구비 후 진행 (코드 100% 재사용 가능)
+- **본인 식별 우선 로그인 (토스 스타일)**: SaaS 매장 5~10개 확장 시점에 1단계 (이메일+초대코드+승인) 도입
+
+### L. 사장님 피드백 정리
+- "큰 차이 못 느끼겠어" → 폰트·아이콘은 무의식 효과. 임팩트 큰 변화(햄버거→하단탭, 큰 숫자, 노란 박스)로 체감 만들어야
+- "고퀄 느낌이 안 나" → PWA 본질적 한계. Capacitor wrapper로 80~90% 따라잡기 가능
+- "토스같은 어플과 괴리" → 디자인보다 패러다임 (시트 애니메이션, 본인 식별 로그인 등)이 진짜 차이
+
+### 검증
+- 모든 단계마다 `node --check` 통과
+- grep 잔재 검증 (제거 함수·변수 0건 확인)
+- 기능 회귀 0건 (사장님 보고 기준)
+
+### 골든패스 (사장님 최종 검증 부탁)
+1. 마감정산 미입력 노란 박스 (사이즈 차분, 박스 사이 구분)
+2. 대시보드 월 요약 매출/지출 항상 펼침 + 큰 숫자
+3. 고정비 항목 추가 → 예상 월 금액 입력 → 카드에 표시
+4. 사이드메뉴 "더보기" 탭 → 자료 다운로드 → 노무 제출
+5. 매장 선택 시트 검색 (매장 1개라 단순 리스트)
+6. 폰 홈에 추가 후 ₩ 로고 + "캐쉬플로우" 이름 (PWA)
+
+---
+
 ## 🏁 2026-05-06 세션 — 고정비 월별 입력 → 항목별 예상 월 금액 1회 입력으로 단순화
 
 **브랜치**: `claude/fix-fixed-costs-aggregation-QmsL8`
