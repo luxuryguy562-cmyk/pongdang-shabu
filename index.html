@@ -2824,7 +2824,12 @@ function toast(msg, type='info', duration=2500){
 // 에러 토스트 공용 — 사용자에겐 친근한 한국어, 원본 에러는 콘솔 백업 (dev_lessons #5)
 function errToast(action, err){
   if(err) console.error(action+'하지 못함:', err);
-  toast(action+'하지 못했어요. 잠시 후 다시 시도해주세요','error');
+  // 진단용: Supabase 에러 코드와 짧은 메시지를 토스트에도 노출 (디버깅 추적용)
+  const code=err?.code||err?.status||'';
+  const msg=err?.message||err?.error_description||'';
+  const tag=code?` [${code}]`:'';
+  const detail=msg?` ${String(msg).slice(0,60)}`:'';
+  toast(action+'하지 못했어요'+tag+detail+(tag||detail?'':' 잠시 후 다시 시도해주세요'),'error',7000);
 }
 const setLoad = (on, t='처리 중...') => {
   document.getElementById('loading').style.display = on ? 'flex' : 'none';
