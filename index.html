@@ -901,9 +901,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- 하단 네비: 직원용 4개 고정 -->
 <div class="bottom-nav" id="bottomNav">
-  <div class="nav-item active" data-tab="receipt" data-action="nav|receipt|this"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
-  <div class="nav-item" data-tab="attendance" data-action="nav|attendance|this"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태</div>
+  <div class="nav-item active" data-tab="attendance" data-action="nav|attendance|this"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태</div>
+  <div class="nav-item" data-tab="opening" data-action="nav|opening|this"><span class="ni">💼</span>영업개시</div>
   <div class="nav-item" data-tab="settle" data-action="nav|settle|this"><span class="ni"><svg><use href="#i-wallet"/></svg></span>마감정산</div>
+  <div class="nav-item" data-tab="receipt" data-action="nav|receipt|this"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
   <div class="nav-item manager-only" data-action="toggleSideMenu" style="display:none;"><span class="ni"><svg><use href="#i-grid"/></svg></span>더보기</div>
 </div>
 
@@ -1141,6 +1142,52 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="ganttChart"></div>
     </div>
   </div>
+</div>
+
+<!-- ══ [3.5] 영업개시 보고 ══ -->
+<div id="openingCont" class="container">
+  <!-- 어제 마감 결과 -->
+  <div class="card">
+    <div class="card-title">📌 어제 마감 결과</div>
+    <div id="opPrevSummary">
+      <div class="empty-state" style="padding:14px;"><p style="margin:0;font-size:13px;">불러오는 중...</p></div>
+    </div>
+  </div>
+
+  <!-- 오늘 출근 시 실제 금고 -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="card-title">💰 오늘 출근 시 실제 금고</div>
+      <span id="opVaultTotal" style="font-size:20px;font-weight:800;color:var(--blue);">0원</span>
+    </div>
+    <p class="card-sub">아침에 금고 열어서 화폐별로 세어 입력하세요</p>
+    <div class="vault-section">
+      <div class="vault-calc" id="opDiffRow">
+        <div class="vc-row"><span class="vc-label">어제 마감</span><span class="vc-val" id="opPrevClose">0원</span></div>
+        <div class="vc-row"><span class="vc-label">오늘 시작</span><span class="vc-val" id="opActualTotal">0원</span></div>
+        <div class="vc-row"><span class="vc-label">영업개시 차액</span><span class="vc-val" id="opDiff">-</span></div>
+      </div>
+      <div class="vault-grid">
+        <div class="vault-item"><label>50,000원</label><input type="number" data-unit="50000" class="op-v-input" placeholder="0"></div>
+        <div class="vault-item"><label>10,000원</label><input type="number" data-unit="10000" class="op-v-input" placeholder="0"></div>
+        <div class="vault-item"><label>5,000원</label><input type="number" data-unit="5000" class="op-v-input" placeholder="0"></div>
+        <div class="vault-item"><label>1,000원</label><input type="number" data-unit="1000" class="op-v-input" placeholder="0"></div>
+        <div class="vault-item"><label>500원</label><input type="number" data-unit="500" class="op-v-input" placeholder="0"></div>
+        <div class="vault-item"><label>100원</label><input type="number" data-unit="100" class="op-v-input" placeholder="0"></div>
+        <div class="vault-item"><label>50원</label><input type="number" data-unit="50" class="op-v-input" placeholder="0"></div>
+        <div class="vault-item"><label>10원</label><input type="number" data-unit="10" class="op-v-input" placeholder="0"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 메모 (차액 있을 때 권장) -->
+  <div class="card" id="opMemoCard" style="display:none;">
+    <div class="card-title">📝 메모 (차액 사유)</div>
+    <p class="card-sub">차액이 발생했어요. 알고 있는 사유를 적어주세요 (선택)</p>
+    <input id="opMemo" class="input-field" placeholder="예: 어제 사장님이 5만원 가져가심" type="text">
+  </div>
+
+  <button class="btn btn-primary btn-full" style="margin-top:8px;border-radius:16px;padding:18px;font-size:16px;" data-action="saveOpening">📝 영업개시 보고하기</button>
 </div>
 
 <!-- ══ [4] 마감정산 ══ -->
@@ -2884,6 +2931,7 @@ function nav(tab, el) {
     expcat: loadExpCategories,
     recon: initRecon,
     sales: loadSalesDaily,
+    opening: loadOpeningPage,
   };
   if (actions[tab]) actions[tab]();
   if (tab === 'settle') { resetSettleView(); renderExtraRevenueInputs(); recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
@@ -4498,7 +4546,101 @@ function recalcExtraRevenuePanel(){
     <span>오늘 기타매출 합계</span><span>${fmt(todayTotal)}원</span></div>`;
   panel.style.display='block';
 }
-document.addEventListener('input',e=>{if(e.target.classList.contains('v-input'))recalcSettle2();});
+document.addEventListener('input',e=>{
+  if(e.target.classList.contains('v-input')) recalcSettle2();
+  if(e.target.classList.contains('op-v-input')) recalcOpening();
+});
+
+// ══════════════════════════════════════════
+// 영업개시 보고 (B안: 익일 검증)
+// ══════════════════════════════════════════
+let opPrevCloseTotal = 0;  // 어제 마감 금고 (스냅샷용)
+
+async function loadOpeningPage(){
+  if(!guardStore()) return;
+  const today = new Date().toISOString().split('T')[0];
+  // 어제 날짜 (settle_date 기준)
+  const yest = new Date(); yest.setDate(yest.getDate()-1);
+  const yestStr = yest.toISOString().split('T')[0];
+  // 어제 마감 결과 조회 (실패해도 0원으로 진행)
+  const [{data: prev}, {data: today_op}] = await Promise.all([
+    sb.from('settlements').select('actual_total,settle_date,sales_total,diff_amount').eq('store_id',currentStore.id).eq('settle_date',yestStr).maybeSingle(),
+    sb.from('daily_opening').select('vault_json,actual_total,memo,created_at').eq('store_id',currentStore.id).eq('opening_date',today).maybeSingle()
+  ]);
+  opPrevCloseTotal = prev?.actual_total || 0;
+  // 어제 마감 결과 카드 채우기
+  const sum = document.getElementById('opPrevSummary');
+  if(prev){
+    sum.innerHTML = `<div style="padding:4px 0;">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">날짜</span><span style="font-size:14px;font-weight:700;">${prev.settle_date}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">매출</span><span style="font-size:14px;font-weight:700;">${fmt(prev.sales_total||0)}원</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">마감 차액</span><span style="font-size:14px;font-weight:700;color:${prev.diff_amount===0?'var(--success)':'var(--danger)'};">${prev.diff_amount===0?'✅ 일치':(prev.diff_amount>0?'+':'')+fmt(prev.diff_amount||0)+'원'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:2px solid var(--text);margin-top:4px;"><span style="font-size:14px;font-weight:800;">마감 금고</span><span style="font-size:18px;font-weight:900;color:var(--blue);">${fmt(opPrevCloseTotal)}원</span></div>
+    </div>`;
+  } else {
+    sum.innerHTML = `<div class="empty-state" style="padding:14px;"><p style="margin:0;font-size:13px;">어제 마감 기록이 없어요. (오늘 시작 금고만 기록됩니다)</p></div>`;
+  }
+  // 이미 오늘 보고했으면 복원, 아니면 초기화
+  document.getElementById('opPrevClose').innerText = fmt(opPrevCloseTotal)+'원';
+  const vMap = today_op?.vault_json || {};
+  document.querySelectorAll('.op-v-input').forEach(i=>{ i.value = vMap[i.dataset.unit] || ''; });
+  document.getElementById('opMemo').value = today_op?.memo || '';
+  recalcOpening();
+}
+
+function recalcOpening(){
+  let actual = 0;
+  document.querySelectorAll('.op-v-input').forEach(i=>{
+    actual += parseInt(i.dataset.unit) * (parseInt(i.value)||0);
+  });
+  document.getElementById('opActualTotal').innerText = fmt(actual)+'원';
+  document.getElementById('opVaultTotal').innerText = fmt(actual)+'원';
+  const diff = actual - opPrevCloseTotal;
+  const diffEl = document.getElementById('opDiff');
+  const box = document.getElementById('opDiffRow');
+  const memoCard = document.getElementById('opMemoCard');
+  if(actual===0 && opPrevCloseTotal===0){
+    diffEl.innerText = '-';
+    box.classList.remove('diff-ok','diff-bad');
+    if(memoCard) memoCard.style.display = 'none';
+  } else {
+    diffEl.innerText = diff===0 ? '✅ 일치' : `❌ ${diff>0?'+':''}${fmt(diff)}원`;
+    box.classList.toggle('diff-ok', diff===0);
+    box.classList.toggle('diff-bad', diff!==0);
+    // 차액 있을 때만 메모 카드 노출
+    if(memoCard) memoCard.style.display = diff===0 ? 'none' : 'block';
+  }
+}
+
+async function saveOpening(){
+  if(!guardStore()) return;
+  const today = new Date().toISOString().split('T')[0];
+  let actual = 0;
+  const vMap = {};
+  document.querySelectorAll('.op-v-input').forEach(i=>{
+    const cnt = parseInt(i.value)||0;
+    const unit = parseInt(i.dataset.unit);
+    if(cnt>0) vMap[unit] = cnt;
+    actual += unit * cnt;
+  });
+  const memo = document.getElementById('opMemo').value || null;
+  const diff = actual - opPrevCloseTotal;
+  const diffStatus = diff===0 ? '일치' : `차액 ${diff>0?'+':''}${fmt(diff)}원`;
+  if(!confirm(`오늘 금고: ${fmt(actual)}원\n어제 마감: ${fmt(opPrevCloseTotal)}원\n결과: ${diffStatus}\n\n영업개시 보고하시겠습니까?`)) return;
+  setLoad(true,'영업개시 보고 중...');
+  const {error} = await sb.from('daily_opening').upsert({
+    store_id: currentStore.id,
+    opening_date: today,
+    vault_json: vMap,
+    actual_total: actual,
+    previous_close_total: opPrevCloseTotal,
+    memo: memo,
+    created_by: currentEmp?.id || null
+  }, { onConflict: 'store_id,opening_date' });
+  setLoad(false);
+  if(error) return errToast('보고', error);
+  toast('영업개시 보고 완료','success');
+}
 
 // 영업개시보고서 자동 로드 (전일 마감금액)
 async function loadOpeningAmount(){
