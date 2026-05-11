@@ -137,17 +137,17 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-item .s-input:focus{color:var(--blue);}
 /* ─── 차액 0원 저장 버튼 강조 ─── */
 .settle-ready{background:linear-gradient(135deg,#10B981,#059669) !important;box-shadow:0 6px 20px rgba(16,185,129,0.45) !important;transform:translateY(-1px);transition:all 0.2s;}
-/* 금고 계수 카드 — 왼쪽 계산기 + 오른쪽 화폐 세로 한 줄 */
-.vault-section{display:flex;gap:10px;align-items:flex-start;}
-.vault-section .vault-calc{flex:1;min-width:0;padding:12px;background:var(--gray-100);border-radius:14px;}
+/* 금고 계수 카드 — 위 계산기 풀폭 + 아래 화폐 2x4 grid */
+.vault-section{display:block;}
+.vault-section .vault-calc{padding:14px 18px;background:var(--gray-100);border-radius:14px;margin-bottom:10px;}
 .vault-section .vault-calc.diff-ok{background:var(--success-light);border:2px solid var(--success);}
 .vault-section .vault-calc.diff-bad{background:var(--danger-light);border:2px solid var(--danger);}
-.vault-section .vault-calc .vc-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--gray-200);font-size:13px;}
-.vault-section .vault-calc .vc-row:last-child{border-bottom:none;padding-top:8px;margin-top:4px;border-top:2px solid var(--text);}
+.vault-section .vault-calc .vc-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--gray-200);font-size:14px;}
+.vault-section .vault-calc .vc-row:last-child{border-bottom:none;padding-top:12px;margin-top:4px;border-top:2px solid var(--text);}
 .vault-section .vault-calc .vc-label{color:var(--gray-600);font-weight:600;}
-.vault-section .vault-calc .vc-val{font-weight:800;font-variant-numeric:tabular-nums;}
-.vault-section .vault-calc .vc-row:last-child .vc-label{font-size:13px;font-weight:800;color:var(--text);}
-.vault-section .vault-calc .vc-row:last-child .vc-val{font-size:18px;font-weight:900;letter-spacing:-0.5px;}
+.vault-section .vault-calc .vc-val{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;}
+.vault-section .vault-calc .vc-row:last-child .vc-label{font-size:15px;font-weight:800;color:var(--text);}
+.vault-section .vault-calc .vc-row:last-child .vc-val{font-size:24px;font-weight:900;letter-spacing:-0.5px;}
 .vault-section .vault-calc.diff-ok .vc-row:last-child .vc-val{color:var(--success);}
 .vault-section .vault-calc.diff-bad .vc-row:last-child .vc-val{color:var(--danger);}
 .settle-card-group{background:var(--white);border-radius:18px;padding:4px 16px;margin-bottom:12px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
@@ -171,10 +171,6 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-result.diff-bad{border:2px solid var(--danger);}
 .add-item-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;background:var(--blue-light);border-radius:11px;margin-bottom:8px;}
 .vault-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
-.vault-section .vault-grid{flex:1;min-width:0;grid-template-columns:1fr;gap:5px;}
-.vault-section .vault-item{padding:8px 10px;}
-.vault-section .vault-item label{font-size:11px;}
-.vault-section .vault-item input{width:60px;font-size:13px;}
 .vault-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;}
 .vault-item label{font-size:13px;font-weight:600;color:var(--gray-600);}
 .vault-item input{width:50px;border:none;background:transparent;font-size:16px;font-weight:700;text-align:right;outline:none;color:var(--text);}
