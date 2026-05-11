@@ -4917,8 +4917,21 @@ async function renderSettleCardExtraSection(data){
 // ─── 새 기능: 정산 수정 ───
 async function editSettlement(dateStr){
   // 기존 정산 데이터를 입력 폼에 로드하고 입력 탭으로 전환
-  if(!currentStore) return;
-  const{data}=await sb.from('settlements').select('*').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
+  if(!currentStore){toast('매장이 선택되지 않았어요','warn');return;}
+  if(!currentEmp){toast('로그인 정보가 없어요. 다시 로그인 해주세요','warn');return;}
+  let data, error;
+  try{
+    setLoad(true,'기존 마감 불러오는 중...');
+    const res = await sb.from('settlements').select('*').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
+    data = res.data; error = res.error;
+    setLoad(false);
+  }catch(e){
+    setLoad(false);
+    console.error('[editSettlement] catch:', e);
+    toast('수정 불러오기 실패: '+(e?.message||String(e)).slice(0,60),'error',7000);
+    return;
+  }
+  if(error){errToast('수정 불러오기', error); return;}
   if(!data) return toast('정산 데이터를 찾을 수 없습니다.','warn');
   // 날짜 설정
   const picker=document.getElementById('settleDatePicker');
