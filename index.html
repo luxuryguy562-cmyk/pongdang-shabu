@@ -4681,23 +4681,28 @@ async function loadSettleCard(d){
   };
   // extra_draw_* 키는 신규/옛 형식 모두 무시 (아래 별도 섹션에서 통합 처리)
   const SKIP_KEYS=new Set(['extra_draw_large','extra_draw_small']);
+  // 매출 4칸 + 현금 상세 3칸은 0이어도 강제 표시 (직원이 입력 빠뜨렸는지 진단용)
+  const ALWAYS_SHOW=new Set(['pos_cash','pos_cash_receipt','pos_card','pos_etc','cash_detail_cash','cash_detail_qr','cash_detail_transfer']);
   const ri=r=>r==='plus'?'<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--success-light);color:var(--success);font-size:10px;font-weight:800;">+</span>':r==='minus'?'<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--danger-light);color:var(--danger);font-size:10px;font-weight:800;">-</span>':'<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--blue-light);color:var(--blue);font-size:10px;font-weight:800;">i</span>';
   let html='';
-  // items_json 렌더링
+  // items_json 렌더링 — itemDefs 순서대로 (정의된 항목 항상 같은 순서로 표시)
   if(data.items_json){
     const items=data.items_json;
-    Object.entries(items).forEach(([key,val])=>{
-      if(val===0||val==null) return; // 0원 항목 생략
-      if(SKIP_KEYS.has(key)) return;  // 기타매출은 별도 섹션
-      const def=itemDefs[key]||{name:key,icon:'📋',role:'info'};
+    Object.keys(itemDefs).forEach(key=>{
+      if(SKIP_KEYS.has(key)) return;
+      const val=items[key];
+      if(val==null) return;
+      if(val===0 && !ALWAYS_SHOW.has(key)) return; // 매출/현금상세 외 항목만 0 생략
+      const def=itemDefs[key];
       html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);display:flex;align-items:center;gap:6px;">${ri(def.role)} ${def.icon} ${def.name}</span><span style="font-size:14px;font-weight:700;">${fmt(val)}원</span></div>`;
     });
   }
   // 매출 합계 표시 (옛 마감은 sales_total에 뽑기 포함됐으므로 차감해서 본 매출만)
+  // 항상 표시 (0이어도 — 사장님이 매출 입력 누락 확인 가능)
   const lgOld=(data.items_json?.extra_draw_large)||0;
   const smOld=(data.items_json?.extra_draw_small)||0;
   const displaySalesTotal=(data.sales_total||0)-lgOld-smOld;
-  if(displaySalesTotal>0) html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid var(--gray-200);"><span style="font-size:13px;font-weight:700;color:var(--blue);">매출 합계</span><span style="font-size:14px;font-weight:800;color:var(--blue);">${fmt(displaySalesTotal)}원</span></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid var(--gray-200);"><span style="font-size:13px;font-weight:700;color:var(--blue);">매출 합계</span><span style="font-size:14px;font-weight:800;color:var(--blue);">${fmt(displaySalesTotal)}원</span></div>`;
   // ─── 새 기능: 기타매출 섹션 (logs 기반 + items_json 폴백) ───
   html+=await renderSettleCardExtraSection(data);
   html+='<div style="height:1px;background:var(--gray-200);margin:8px 0;"></div>';
