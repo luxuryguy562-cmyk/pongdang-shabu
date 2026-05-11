@@ -102,7 +102,8 @@ input,select,textarea,button{font-family:inherit;}
 
 /* ─ 서브탭 */
 .sub-tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;}
-#attendanceCont .sub-tabs{flex-wrap:wrap;overflow-x:visible;}
+#attendanceCont .sub-tabs{overflow-x:visible;}
+#attendanceCont .sub-tab{padding:9px 10px;font-size:12px;}
 .sub-tabs::-webkit-scrollbar{display:none;}
 .sub-tab{flex:0 0 auto;padding:9px 14px;border-radius:11px;text-align:center;font-size:12px;font-weight:700;cursor:pointer;background:var(--gray-100);color:var(--gray-600);border:none;white-space:nowrap;}
 .sub-tab.active{background:var(--blue);color:#fff;}
@@ -1020,11 +1021,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="card">
     <div class="card-title">근태 기록</div>
     <div class="sub-tabs">
-      <button class="sub-tab active" data-action="attTab|manual|this">수동 입력</button>
-      <button class="sub-tab manager-only" data-action="attTab|caps|this">캡스 업로드</button>
+      <button class="sub-tab active" data-action="attTab|manual|this">수동</button>
+      <button class="sub-tab manager-only" data-action="attTab|caps|this">캡스</button>
       <button class="sub-tab" data-action="attTab|list|this">내 기록</button>
-      <button class="sub-tab manager-only" data-action="attTab|all|this">전체 조회</button>
-      <button class="sub-tab" data-action="attTab|sched|this">📅 근무계획</button>
+      <button class="sub-tab manager-only" data-action="attTab|all|this">전체</button>
+      <button class="sub-tab" data-action="attTab|sched|this">📅 계획</button>
     </div>
     <div id="attManual">
       <!-- 직원 선택 (관리자만 다른 직원 선택 가능) -->
