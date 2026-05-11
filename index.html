@@ -137,7 +137,7 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-item .s-input:focus{color:var(--blue);}
 /* ─── 차액 0원 저장 버튼 강조 + 계산기 sticky ─── */
 .settle-ready{background:linear-gradient(135deg,#10B981,#059669) !important;box-shadow:0 6px 20px rgba(16,185,129,0.45) !important;transform:translateY(-1px);transition:all 0.2s;}
-.settle-sticky{position:fixed;top:calc(60px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:calc(100% - 28px);max-width:612px;z-index:50;padding:12px 16px;}
+.settle-sticky{position:fixed;top:calc(60px + env(safe-area-inset-top,0px) + 56px);left:50%;transform:translateX(-50%);width:calc(100% - 28px);max-width:612px;z-index:50;padding:12px 16px;}
 .settle-sticky .sr-row{padding:6px 0;}
 .settle-sticky .sr-row:last-child{padding-top:10px;margin-top:2px;}
 .settle-sticky .sr-val{font-size:18px;}
@@ -2824,7 +2824,12 @@ function toast(msg, type='info', duration=2500){
 // 에러 토스트 공용 — 사용자에겐 친근한 한국어, 원본 에러는 콘솔 백업 (dev_lessons #5)
 function errToast(action, err){
   if(err) console.error(action+'하지 못함:', err);
-  toast(action+'하지 못했어요. 잠시 후 다시 시도해주세요','error');
+  // 진단용: Supabase 에러 코드와 짧은 메시지를 토스트에도 노출 (디버깅 추적용)
+  const code=err?.code||err?.status||'';
+  const msg=err?.message||err?.error_description||'';
+  const tag=code?` [${code}]`:'';
+  const detail=msg?` ${String(msg).slice(0,60)}`:'';
+  toast(action+'하지 못했어요'+tag+detail+(tag||detail?'':' 잠시 후 다시 시도해주세요'),'error',7000);
 }
 const setLoad = (on, t='처리 중...') => {
   document.getElementById('loading').style.display = on ? 'flex' : 'none';
@@ -3218,11 +3223,12 @@ async function saveReceipt(){
     const target=parts[parts.length-1]; // 마지막 = 최하위 소분류
     return catById[target]||catById[parts[0]]||null;
   };
-  const rows=Array.from(document.querySelectorAll('#resTable tr')).map(tr=>{
+  const rows=Array.from(document.querySelectorAll('#resTable tr')).map((tr,idx)=>{
     const cat=tr.querySelector('.c-c').value;
     const unit=parseInt(tr.querySelector('.c-u')?.value)||null;
     const qty=parseInt(tr.querySelector('.c-q')?.value)||1;
     return {
+      _idx:idx+1, _cat:cat,
       store_id:currentStore.id,receipt_date:tr.querySelector('.c-d').value,
       vendor:tr.querySelector('.c-v').value,item:tr.querySelector('.c-i').value,
       price:unit,count:qty,
@@ -3231,14 +3237,22 @@ async function saveReceipt(){
       note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
     };
   });
+  // 사전 가드: 정상 행 중 분류가 expense_categories에 매칭 안 되는 건 안내 (오답은 통과)
+  const missing=rows.filter(r=>r.note==='정상'&&r._cat&&!r.category_id);
+  if(missing.length){
+    const detail=missing.map(r=>`${r._idx}행 "${r._cat}"`).join('\n• ');
+    if(!confirm(`아래 분류는 카테고리 목록에 없어요:\n• ${detail}\n\n그래도 저장할까요?\n(분류명은 텍스트로 들어가지만 집계가 안 잡힐 수 있어요)`)) return;
+  }
+  // 임시 진단 필드 제거 후 insert
+  const cleaned=rows.map(({_idx,_cat,...rest})=>rest);
   setLoad(true,'저장 중...');
-  const {error}=await sb.from('receipts').insert(rows);
+  const {error}=await sb.from('receipts').insert(cleaned);
   setLoad(false);
   if(error) return errToast('저장', error);
   // 자동 학습: 품목→카테고리 규칙 저장 (정상 행만, 매장별)
   // 학습 키워드는 품목의 첫 단어만 추출 (예: "양파 10kg 2봉" → "양파")
   // 품목 전체 문자열을 keyword로 넣으면 contains 매칭이 실패해 학습이 무력화됨 (dev_lessons #49)
-  rows.filter(r=>r.note==='정상'&&r.item&&r.category).forEach(r=>{
+  cleaned.filter(r=>r.note==='정상'&&r.item&&r.category).forEach(r=>{
     const parts=String(r.category).split('>').map(s=>s.trim());
     const mainCat=parts[0]||'';
     const subCat=parts[1]||'';
