@@ -903,7 +903,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <div class="bottom-nav" id="bottomNav">
   <div class="nav-item active" data-tab="receipt" data-action="nav|receipt|this"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
   <div class="nav-item" data-tab="attendance" data-action="nav|attendance|this"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태</div>
-  <div class="nav-item" data-tab="schedule" data-action="nav|schedule|this"><span class="ni"><svg><use href="#i-calendar"/></svg></span>근무계획</div>
   <div class="nav-item" data-tab="settle" data-action="nav|settle|this"><span class="ni"><svg><use href="#i-wallet"/></svg></span>마감정산</div>
   <div class="nav-item manager-only" data-action="toggleSideMenu" style="display:none;"><span class="ni"><svg><use href="#i-grid"/></svg></span>더보기</div>
 </div>
@@ -1023,6 +1022,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <button class="sub-tab manager-only" data-action="attTab|caps|this">캡스 업로드</button>
       <button class="sub-tab" data-action="attTab|list|this">내 기록</button>
       <button class="sub-tab manager-only" data-action="attTab|all|this">전체 조회</button>
+      <button class="sub-tab" data-action="attTab|sched|this">📅 근무계획</button>
     </div>
     <div id="attManual">
       <!-- 직원 선택 (관리자만 다른 직원 선택 가능) -->
@@ -1106,11 +1106,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="attAllData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div>
     </div>
   </div>
-</div>
-
-<!-- ══ [3] 근무계획 ══ -->
-<div id="scheduleCont" class="container">
-  <div class="card">
+  <!-- ── 근무계획 (근태 서브탭으로 통합, attTab('sched') 시 표시) ── -->
+  <div class="card" id="schedCard" style="display:none;">
     <div class="card-title">근무 계획</div>
     <div class="sub-tabs">
       <button class="sub-tab active" data-sub="input" data-action="schedTab|input|this">희망근무 등록</button>
@@ -3448,13 +3445,23 @@ async function deleteReceiptRow(){
 function attTab(tab,el){
   document.querySelectorAll('#attendanceCont .sub-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  const schedCard=document.getElementById('schedCard');
+  const attCard=document.querySelector('#attendanceCont > .card:first-of-type');
+  if(tab==='sched'){
+    // 근태 카드 본문(서브탭 제외) 숨김 + 근무계획 카드 표시
+    if(attCard) attCard.querySelectorAll(':scope > div:not(.sub-tabs)').forEach(d=>d.style.display='none');
+    if(schedCard) schedCard.style.display='block';
+    return;
+  }
+  // 그 외 탭 — 근무계획 카드 숨김, 근태 카드 본문 복원
+  if(schedCard) schedCard.style.display='none';
+  if(attCard) attCard.querySelectorAll(':scope > div:not(.sub-tabs)').forEach(d=>d.style.display='');
+  // att 카드 안 4개 div 토글
   ['Manual','Caps','List','All'].forEach(t=>{const d=document.getElementById('att'+t);if(d)d.style.display='none';});
   const panel = document.getElementById('att'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(panel) panel.style.display='block';
   if(tab==='list'){
-    // 주간 간트 로드
     loadMyAttGantt();
-    // 월 표시 초기화 후 조회
     document.getElementById('vListMonth').innerText = attListMonth;
     loadAttList(false);
   }
@@ -4081,7 +4088,7 @@ async function commitCaps(){
 // 근무계획
 // ══════════════════════════════════════════
 function schedTab(tab,el){
-  document.querySelectorAll('#scheduleCont .sub-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#schedCard .sub-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   ['Input','Gantt','Confirm'].forEach(t=>{const el2=document.getElementById('sched'+t);if(el2)el2.style.display='none';});
   const target=document.getElementById('sched'+tab.charAt(0).toUpperCase()+tab.slice(1));
@@ -4114,7 +4121,7 @@ async function saveSchedule(){
   ganttWeekStart=getWeekStart(date);ganttSelectedDay=date;
   document.getElementById('vSchedMemo').value='';
   // 일정보기 탭으로 이동해서 바로 확인
-  const ganttTab=document.querySelector('#scheduleCont .sub-tab[data-sub="gantt"]');
+  const ganttTab=document.querySelector('#schedCard .sub-tab[data-sub="gantt"]');
   if(ganttTab) schedTab('gantt',ganttTab);
   else renderGanttWeek();
   toast('희망근무가 등록됐습니다!','success');
