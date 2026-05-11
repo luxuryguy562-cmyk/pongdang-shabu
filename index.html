@@ -902,7 +902,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- 하단 네비: 직원용 4개 고정 -->
 <div class="bottom-nav" id="bottomNav">
   <div class="nav-item active" data-tab="attendance" data-action="nav|attendance|this"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태</div>
-  <div class="nav-item" data-tab="opening" data-action="nav|opening|this"><span class="ni">💼</span>영업개시</div>
+  <div class="nav-item" data-tab="opening" data-action="nav|opening|this"><span class="ni"><svg><use href="#i-piggy"/></svg></span>영업개시</div>
   <div class="nav-item" data-tab="settle" data-action="nav|settle|this"><span class="ni"><svg><use href="#i-wallet"/></svg></span>마감정산</div>
   <div class="nav-item" data-tab="receipt" data-action="nav|receipt|this"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
   <div class="nav-item manager-only" data-action="toggleSideMenu" style="display:none;"><span class="ni"><svg><use href="#i-grid"/></svg></span>더보기</div>
@@ -4769,18 +4769,16 @@ async function syncClosingToSalesDaily(settleDate, items){
   if(existing && existing.source==='closing_edited'){
     return {skipped:true};
   }
-  const cashDetailCash=items.cash_detail_cash||0;   // 순수 현금
-  const cashDetailQr=items.cash_detail_qr||0;       // QR
-  const cashDetailTr=items.cash_detail_transfer||0; // 계좌이체
-  // cash_detail 합이 pos_cash와 불일치해도 상세 기준으로 분리 (UI 검증에서 이미 일치 확인)
-  // 2026-04-29: extra_large/extra_small은 더 이상 sales_daily에 기록 안 함
-  // (기타매출은 extra_revenue_logs로 분리). 호환을 위해 0으로 명시
+  // 2026-05-12: 매출 = 마감 매출 4칸(현금/현금영수증/신용카드/기타결제) 그대로.
+  // 현금 상세(cash_detail_*)는 금고 검증용이라 매출에 포함 안 함.
+  // 옛 코드는 현금상세를 분해해서 cash/qr 컬럼에 넣었으나, 직원이 매출 4칸 안 채우고
+  // 현금상세만 채우면 가짜 매출이 잡히는 문제 발생 → 매출 4칸 기준으로 단순화.
   const legacyVals={
     card:items.pos_card||0,
-    cash:cashDetailCash,
+    cash:items.pos_cash||0,
     cash_receipt:items.pos_cash_receipt||0,
-    qr:cashDetailQr,
-    etc:(items.pos_etc||0)+cashDetailTr,
+    qr:0,
+    etc:items.pos_etc||0,
     extra_large:0,
     extra_small:0
   };
