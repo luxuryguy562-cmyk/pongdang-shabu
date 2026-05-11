@@ -137,15 +137,16 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-item .s-input:focus{color:var(--blue);}
 /* ─── 차액 0원 저장 버튼 강조 + 계산기 sticky ─── */
 .settle-ready{background:linear-gradient(135deg,#10B981,#059669) !important;box-shadow:0 6px 20px rgba(16,185,129,0.45) !important;transform:translateY(-1px);transition:all 0.2s;}
-.settle-sticky{position:fixed;top:calc(60px + env(safe-area-inset-top,0px) + 64px);left:0;right:0;z-index:50;border-radius:0;padding:12px 14px;}
+/* sub-tabs 도 fixed — 헤더 바로 아래 */
+#settleCont .sub-tabs{position:fixed;top:calc(60px + env(safe-area-inset-top,0px));left:0;right:0;background:var(--bg);z-index:51;margin:0;padding:8px 14px;}
+/* 차액 박스 — sub-tabs 바로 아래 (엑셀 행고정 느낌) */
+.settle-sticky{position:fixed;top:calc(60px + env(safe-area-inset-top,0px) + 50px);left:0;right:0;z-index:50;border-radius:0;padding:12px 14px;}
 .settle-sticky .sr-row{padding:6px 0;}
 .settle-sticky .sr-row:last-child{padding-top:10px;margin-top:2px;}
 .settle-sticky .sr-val{font-size:18px;}
 .settle-sticky .sr-row:last-child .sr-val{font-size:22px;}
-/* fixed 박스 자리 확보 */
-#settleInput{padding-top:130px;}
-/* 마감정산만 sticky 정상 동작 위해 overflow 해제 (다른 탭 영향 없음) */
-#settleCont.container{overflow:visible;}
+/* 마감정산 — fixed 영역(헤더+sub-tabs+차액박스) 자리 확보 */
+#settleCont.container{padding-top:180px;overflow:visible;}
 .settle-card-group{background:var(--white);border-radius:18px;padding:4px 16px;margin-bottom:12px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
 .settle-card-group .card-title{font-size:16px;font-weight:800;padding:16px 0 4px;margin:0;}
 .settle-card-group .card-sub{font-size:12px;color:var(--gray-400);margin:0 0 8px;padding:0;}
