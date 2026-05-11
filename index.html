@@ -135,18 +135,21 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-item .s-input{border:none;background:transparent;font-size:18px;font-weight:700;text-align:right;outline:none;color:var(--text);width:130px;padding:16px 0;}
 .settle-item .s-input::placeholder{color:var(--gray-400);font-weight:500;}
 .settle-item .s-input:focus{color:var(--blue);}
-/* ─── 차액 0원 저장 버튼 강조 + 계산기 sticky ─── */
+/* ─── 차액 0원 저장 버튼 강조 ─── */
 .settle-ready{background:linear-gradient(135deg,#10B981,#059669) !important;box-shadow:0 6px 20px rgba(16,185,129,0.45) !important;transform:translateY(-1px);transition:all 0.2s;}
-/* sub-tabs 도 fixed — 헤더 바로 아래 */
-#settleCont .sub-tabs{position:fixed;top:calc(60px + env(safe-area-inset-top,0px));left:0;right:0;background:var(--bg);z-index:51;margin:0;padding:8px 14px;}
-/* 차액 박스 — sub-tabs 바로 아래 (엑셀 행고정 느낌) */
-.settle-sticky{position:fixed;top:calc(60px + env(safe-area-inset-top,0px) + 50px);left:0;right:0;z-index:50;border-radius:0;padding:12px 14px;}
-.settle-sticky .sr-row{padding:6px 0;}
-.settle-sticky .sr-row:last-child{padding-top:10px;margin-top:2px;}
-.settle-sticky .sr-val{font-size:18px;}
-.settle-sticky .sr-row:last-child .sr-val{font-size:22px;}
-/* 마감정산 — fixed 영역(헤더+sub-tabs+차액박스) 자리 확보 */
-#settleCont.container{padding-top:180px;overflow:visible;}
+/* 금고 계수 카드 — 왼쪽 계산기 + 오른쪽 화폐 세로 한 줄 */
+.vault-section{display:flex;gap:10px;align-items:flex-start;}
+.vault-section .vault-calc{flex:1;min-width:0;padding:12px;background:var(--gray-100);border-radius:14px;}
+.vault-section .vault-calc.diff-ok{background:var(--success-light);border:2px solid var(--success);}
+.vault-section .vault-calc.diff-bad{background:var(--danger-light);border:2px solid var(--danger);}
+.vault-section .vault-calc .vc-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--gray-200);font-size:13px;}
+.vault-section .vault-calc .vc-row:last-child{border-bottom:none;padding-top:8px;margin-top:4px;border-top:2px solid var(--text);}
+.vault-section .vault-calc .vc-label{color:var(--gray-600);font-weight:600;}
+.vault-section .vault-calc .vc-val{font-weight:800;font-variant-numeric:tabular-nums;}
+.vault-section .vault-calc .vc-row:last-child .vc-label{font-size:13px;font-weight:800;color:var(--text);}
+.vault-section .vault-calc .vc-row:last-child .vc-val{font-size:18px;font-weight:900;letter-spacing:-0.5px;}
+.vault-section .vault-calc.diff-ok .vc-row:last-child .vc-val{color:var(--success);}
+.vault-section .vault-calc.diff-bad .vc-row:last-child .vc-val{color:var(--danger);}
 .settle-card-group{background:var(--white);border-radius:18px;padding:4px 16px;margin-bottom:12px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
 .settle-card-group .card-title{font-size:16px;font-weight:800;padding:16px 0 4px;margin:0;}
 .settle-card-group .card-sub{font-size:12px;color:var(--gray-400);margin:0 0 8px;padding:0;}
@@ -168,6 +171,10 @@ td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;backg
 .settle-result.diff-bad{border:2px solid var(--danger);}
 .add-item-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;background:var(--blue-light);border-radius:11px;margin-bottom:8px;}
 .vault-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.vault-section .vault-grid{flex:1;min-width:0;grid-template-columns:1fr;gap:5px;}
+.vault-section .vault-item{padding:8px 10px;}
+.vault-section .vault-item label{font-size:11px;}
+.vault-section .vault-item input{width:60px;font-size:13px;}
 .vault-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;}
 .vault-item label{font-size:13px;font-weight:600;color:var(--gray-600);}
 .vault-item input{width:50px;border:none;background:transparent;font-size:16px;font-weight:700;text-align:right;outline:none;color:var(--text);}
@@ -1151,12 +1158,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="sub-tab" data-action="settleTab|card|this">일별 카드</button>
   </div>
   <div id="settleInput">
-    <!-- 계산기 (sticky — 입력하면서 차액 실시간 확인) -->
-    <div class="settle-result settle-sticky">
-      <div class="sr-row"><span class="sr-label">장부 합계</span><span class="sr-val" id="calcBook">0원</span></div>
-      <div class="sr-row"><span class="sr-label">금고 합계</span><span class="sr-val" id="calcVault">0원</span></div>
-      <div class="sr-row" id="diffRow"><span class="sr-label">차액</span><span class="sr-val" id="calcDiff">-</span></div>
-    </div>
     <!-- 정산 날짜 선택 (관리자만 변경 가능) -->
     <div class="settle-card-group" id="settleDateGroup" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1255,21 +1256,28 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="settle-item"><span class="si-icon">🏧</span><span class="si-label">통장입금</span><input type="text" class="s-input" id="siDeductBank" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
     </div>
 
-    <!-- 금고 계수 -->
+    <!-- 금고 계수 (좌: 계산기 / 우: 화폐 입력) -->
     <div class="settle-card-group">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div class="card-title">금고 계수</div>
         <span id="vaultTotal" style="font-size:20px;font-weight:800;color:var(--blue);">0원</span>
       </div>
-      <div class="vault-grid">
-        <div class="vault-item"><label>50,000원</label><input type="number" data-unit="50000" class="v-input" placeholder="0"></div>
-        <div class="vault-item"><label>10,000원</label><input type="number" data-unit="10000" class="v-input" placeholder="0"></div>
-        <div class="vault-item"><label>5,000원</label><input type="number" data-unit="5000" class="v-input" placeholder="0"></div>
-        <div class="vault-item"><label>1,000원</label><input type="number" data-unit="1000" class="v-input" placeholder="0"></div>
-        <div class="vault-item"><label>500원</label><input type="number" data-unit="500" class="v-input" placeholder="0"></div>
-        <div class="vault-item"><label>100원</label><input type="number" data-unit="100" class="v-input" placeholder="0"></div>
-        <div class="vault-item"><label>50원</label><input type="number" data-unit="50" class="v-input" placeholder="0"></div>
-        <div class="vault-item"><label>10원</label><input type="number" data-unit="10" class="v-input" placeholder="0"></div>
+      <div class="vault-section">
+        <div class="vault-calc" id="diffRow">
+          <div class="vc-row"><span class="vc-label">장부</span><span class="vc-val" id="calcBook">0원</span></div>
+          <div class="vc-row"><span class="vc-label">금고</span><span class="vc-val" id="calcVault">0원</span></div>
+          <div class="vc-row"><span class="vc-label">차액</span><span class="vc-val" id="calcDiff">-</span></div>
+        </div>
+        <div class="vault-grid">
+          <div class="vault-item"><label>50,000원</label><input type="number" data-unit="50000" class="v-input" placeholder="0"></div>
+          <div class="vault-item"><label>10,000원</label><input type="number" data-unit="10000" class="v-input" placeholder="0"></div>
+          <div class="vault-item"><label>5,000원</label><input type="number" data-unit="5000" class="v-input" placeholder="0"></div>
+          <div class="vault-item"><label>1,000원</label><input type="number" data-unit="1000" class="v-input" placeholder="0"></div>
+          <div class="vault-item"><label>500원</label><input type="number" data-unit="500" class="v-input" placeholder="0"></div>
+          <div class="vault-item"><label>100원</label><input type="number" data-unit="100" class="v-input" placeholder="0"></div>
+          <div class="vault-item"><label>50원</label><input type="number" data-unit="50" class="v-input" placeholder="0"></div>
+          <div class="vault-item"><label>10원</label><input type="number" data-unit="10" class="v-input" placeholder="0"></div>
+        </div>
       </div>
     </div>
 
@@ -4425,16 +4433,14 @@ function recalcSettle2(){
 
   // 차액 (입력 전 = 모두 0이면 중립 '-' 유지, 그 외엔 일치/불일치 강조)
   const diff=vault-book;const diffEl=document.getElementById('calcDiff');
-  const stickyBox=document.querySelector('.settle-result.settle-sticky');
+  const calcBox=document.getElementById('diffRow');  // 금고 계수 카드 안 .vault-calc
   const inputStarted=salesTotal>0||vault>0||opening>0;
   if(!inputStarted){
     diffEl.innerText='-';
-    document.getElementById('diffRow').className='sr-row';
-    if(stickyBox) stickyBox.classList.remove('diff-ok','diff-bad');
+    if(calcBox) calcBox.classList.remove('diff-ok','diff-bad');
   } else {
     diffEl.innerText=diff===0?'✅ 일치':`❌ ${diff>0?'+':''}${fmt(diff)}원`;
-    document.getElementById('diffRow').className='sr-row '+(diff===0?'diff-ok':'diff-bad');
-    if(stickyBox){stickyBox.classList.toggle('diff-ok',diff===0);stickyBox.classList.toggle('diff-bad',diff!==0);}
+    if(calcBox){calcBox.classList.toggle('diff-ok',diff===0);calcBox.classList.toggle('diff-bad',diff!==0);}
   }
 
   // 기타매출 패널 (오늘 입력 + 누적)
