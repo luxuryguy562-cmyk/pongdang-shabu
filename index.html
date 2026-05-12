@@ -123,7 +123,7 @@ th{padding:9px 6px;font-size:11px;font-weight:700;color:var(--gray-600);backgrou
 td{padding:10px 5px;font-size:12px;border-bottom:1px solid var(--gray-100);text-align:center;vertical-align:middle;}
 td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 tr.row-off{opacity:.35;filter:grayscale(1);}
-td input.c-v,td input.c-i,td input.c-p,td input.c-c{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
+td input.c-v,td input.c-i,td input.c-p{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 .add-row-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-weight:700;font-size:13px;cursor:pointer;background:var(--blue-light);border-radius:10px;margin:8px 0;}
 /* 내용 말풍선 툴팁 */
 .tx-tooltip{position:absolute;left:0;bottom:100%;background:var(--text);color:#fff;font-size:12px;padding:5px 10px;border-radius:8px;white-space:nowrap;z-index:50;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.2);}
@@ -3303,15 +3303,73 @@ async function runAI() {
   } catch(e){toast('분석 실패: '+e.message,'error');}
   finally{setLoad(false);}
 }
+// ─── 분류 셀렉트 옵션 생성 (대분류) ───
+// expCategories 활성 대분류를 옵션으로. selectedName이 목록에 없으면 ⚠ 옵션으로 보존.
+function buildMainCatOptions(selectedName){
+  const parents=(expCategories||[]).filter(c=>!c.parent_id&&c.is_active!==false)
+    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const opts=['<option value="">(분류선택)</option>'];
+  let found=!selectedName;
+  parents.forEach(p=>{
+    const sel=(p.name===selectedName)?' selected':'';
+    if(sel) found=true;
+    opts.push(`<option value="${p.name}"${sel}>${p.name}</option>`);
+  });
+  if(!found&&selectedName){
+    opts.splice(1,0,`<option value="${selectedName}" selected style="color:#DC2626;">⚠ ${selectedName} (목록없음)</option>`);
+  }
+  return opts.join('');
+}
+// ─── 분류 셀렉트 옵션 생성 (소분류) ───
+// parentName의 자식만 옵션으로. 자식 없으면 '-' 한 개 반환.
+function buildSubCatOptions(parentName, selectedSubName){
+  const parent=(expCategories||[]).find(c=>c.name===parentName&&!c.parent_id);
+  if(!parent) return '<option value="">-</option>';
+  const children=(expCategories||[]).filter(c=>c.parent_id===parent.id&&c.is_active!==false)
+    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  if(!children.length) return '<option value="">-</option>';
+  const opts=['<option value="">(소분류 없이)</option>'];
+  let found=!selectedSubName;
+  children.forEach(ch=>{
+    const sel=(ch.name===selectedSubName)?' selected':'';
+    if(sel) found=true;
+    opts.push(`<option value="${ch.name}"${sel}>${ch.name}</option>`);
+  });
+  if(!found&&selectedSubName){
+    opts.splice(1,0,`<option value="${selectedSubName}" selected style="color:#DC2626;">⚠ ${selectedSubName} (목록없음)</option>`);
+  }
+  return opts.join('');
+}
+// ─── 대분류 변경 시 소분류 옵션 자동 갱신 ───
+function onReceiptMainCatChange(selectEl){
+  const tr=selectEl.closest('tr');
+  if(!tr) return;
+  const subSel=tr.querySelector('.c-cSub');
+  if(!subSel) return;
+  const parentName=selectEl.value;
+  subSel.innerHTML=buildSubCatOptions(parentName,'');
+  const hasSubs=!!subSel.querySelector('option[value]:not([value=""])');
+  subSel.style.display=hasSubs?'':'none';
+}
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
   const ruleBadge=i._ruleMatched?'<span title="학습된 분류" style="font-size:10px;color:var(--success);margin-right:2px;">✨</span>':'';
+  // AI 결과 cat 파싱: "식자재>야채" → main, sub 분리
+  const parts=String(i.category||'').split('>').map(s=>s.trim());
+  const mainCat=parts[0]||'';
+  const subCat=parts[1]||'';
+  const parent=(expCategories||[]).find(c=>c.name===mainCat&&!c.parent_id);
+  const hasSubs=parent&&(expCategories||[]).some(c=>c.parent_id===parent.id&&c.is_active!==false);
+  const subStyle=(mainCat&&!hasSubs)?'display:none;':'';
   return `<tr id="row-${idx}">
     <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" data-action="openReasonSheet|${idx}">X</button></td>
     <td><input type="text" class="c-v" value="${i.vendor||''}"></td>
     <td><input type="text" class="c-i" value="${i.item||''}"></td>
     <td><input type="number" class="c-p" value="${i.totalPrice||0}"></td>
-    <td>${ruleBadge}<input type="text" class="c-c" value="${i.category||''}"></td>
+    <td>${ruleBadge}
+      <select class="c-cMain" data-change="onReceiptMainCatChange|this" style="width:100%;padding:4px 2px;font-size:12px;border:1px solid var(--gray-300);border-radius:4px;">${buildMainCatOptions(mainCat)}</select>
+      <select class="c-cSub" style="width:100%;padding:4px 2px;font-size:12px;margin-top:4px;border:1px solid var(--gray-300);border-radius:4px;${subStyle}">${buildSubCatOptions(mainCat,subCat)}</select>
+    </td>
     <input type="hidden" class="c-u" value="${i.unitPrice||''}">
     <input type="hidden" class="c-q" value="${i.qty||1}">
     <input type="hidden" class="c-d" value="${i.date||new Date().toISOString().split('T')[0]}">
@@ -3329,18 +3387,23 @@ function selectReason(r){
 }
 async function saveReceipt(){
   if(!guardStore()) return;
-  // DB 카테고리 이름→id 맵 (대분류>소분류 경로 포함)
-  const catById={};
-  (expCategories||[]).forEach(c=>{catById[c.name]=c.id;});
-  const resolveRcpCatId=cat=>{
-    if(!cat)return null;
-    // "식자재>야채" 형식이면 소분류명 추출
-    const parts=String(cat).split('>').map(s=>s.trim());
-    const target=parts[parts.length-1]; // 마지막 = 최하위 소분류
-    return catById[target]||catById[parts[0]]||null;
-  };
   const rows=Array.from(document.querySelectorAll('#resTable tr')).map((tr,idx)=>{
-    const cat=tr.querySelector('.c-c').value;
+    const mainCat=(tr.querySelector('.c-cMain')?.value||'').trim();
+    const subCatRaw=(tr.querySelector('.c-cSub')?.value||'').trim();
+    const subSel=tr.querySelector('.c-cSub');
+    const subVisible=subSel&&subSel.style.display!=='none';
+    const subCat=subVisible?subCatRaw:'';
+    const cat=mainCat?(subCat?`${mainCat}>${subCat}`:mainCat):'';
+    // category_id: 소분류 우선(소분류 행 id), 없으면 대분류 id
+    let category_id=null;
+    if(subCat){
+      const sub=(expCategories||[]).find(c=>c.name===subCat&&c.parent_id);
+      if(sub) category_id=sub.id;
+    }
+    if(!category_id&&mainCat){
+      const main=(expCategories||[]).find(c=>c.name===mainCat&&!c.parent_id);
+      if(main) category_id=main.id;
+    }
     const unit=parseInt(tr.querySelector('.c-u')?.value)||null;
     const qty=parseInt(tr.querySelector('.c-q')?.value)||1;
     return {
@@ -3349,7 +3412,7 @@ async function saveReceipt(){
       vendor:tr.querySelector('.c-v').value,item:tr.querySelector('.c-i').value,
       price:unit,count:qty,
       total_price:parseInt(tr.querySelector('.c-p').value)||0,
-      category:cat,category_id:resolveRcpCatId(cat),
+      category:cat,category_id,
       note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
     };
   });
@@ -3414,8 +3477,7 @@ async function loadReceiptList(){
     .select('id,receipt_date,vendor,item,total_price,category,category_id,note,price,count')
     .eq('store_id',currentStore.id)
     .gte('receipt_date',start).lte('receipt_date',end)
-    .order('receipt_date',{ascending:false})
-    .order('created_at',{ascending:false});
+    .order('receipt_date',{ascending:false});
   if(error){
     body.innerHTML='<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;">불러오기 실패</div>';
     return;

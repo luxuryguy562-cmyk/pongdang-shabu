@@ -4,6 +4,36 @@
 
 ---
 
+## [2026-05-12] 영수증 분류 드롭다운 + 기록내역 400 수정 + FK 검토
+
+**브랜치**: `claude/check-receipt-category-fk-AtZHf`
+**규모**: 중형 (JS ~70줄 추가, CSS 1줄 정리). DB 변경 없음.
+**발단**: 사장님 지적 — "분류가 드롭박스로 나와야지 수기 기재하면 깨지는 거 아냐?"
+
+### 작업 내용
+1. **영수증 촬영 결과 표**: `<input type="text">` 자유 입력 → 대분류 `<select>` + 소분류 `<select>` 두 칸 (세로 2단)
+   - 대분류 변경 시 소분류 옵션 자동 갱신 (`onReceiptMainCatChange`)
+   - 비품·인건비처럼 자식 없는 대분류 → 소분류 셀렉트 숨김
+   - AI 미매칭/옛 분류명 → ⚠ 빨간색 옵션으로 보존 (사장님이 인지 가능)
+2. **saveReceipt 재작성**: 두 셀렉트에서 mainCat/subCat 읽어 `category_id` 결정 (소분류 우선, 없으면 대분류)
+3. **기록내역 400 에러 수정** (`index.html:3417-3418`): `.order('created_at')` 한 줄 삭제. `receipt_date` 단일 정렬.
+4. **편집 시트는 그대로 유지**: 이미 `openCatPicker` 3단계 드릴다운 사용 중. 텍스트 오타 불가능.
+
+### FK 검토 결과 (사장님 요청)
+`receipts.category_id` (FK→expense_categories) 활용처 전수 점검:
+- `calcExpenseByCategories` (가마감 지출 집계): composite 대분류는 자식 id 전부 + 본인 id 검색 ✅
+- 마감 지출 대조 (`reconciliation`): 동일 패턴 ✅
+- 대시보드 매출 차트/순이익: `total_price`만 사용, FK 영향 없음 ✅
+- 옛 영수증(소분류 없이 대분류만 저장) 케이스: 본인 id 검색에 잡힘 ✅
+- AI 미매칭/오타: 기존 `confirm` 가드 + ⚠ 옵션 표시로 2중 방어 ✅
+
+### 검증
+- node --check 통과 (JS 9295줄)
+- grep 잔재 0건 (.c-c 텍스트 input 사용처 모두 제거, CSS도 정리)
+- saveReceipt missing 가드 유지
+
+---
+
 ## [2026-05-12] 출퇴근 탭 큰 변신 + 사후 등록 시트 이전 (G안)
 
 **브랜치**: `claude/improve-attendance-display-xKUUb` (E·F안 연속 작업)
