@@ -1298,14 +1298,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
     <!-- 차감 -->
     <div class="settle-card-group">
-      <div class="card-title">차감</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title">차감</div>
+        <span id="settleDeductTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
+      </div>
       <p class="card-sub">금고에서 빠진 금액을 입력하세요</p>
       <!-- 오늘 영업개시에서 입력한 차감 자동 표시 (read-only, 정보용) -->
       <div id="settleOpDedReadonly" style="display:none;"></div>
-      <div class="settle-item"><span class="si-icon">📤</span><span class="si-label">기타사용</span><input type="text" class="s-input" id="siDeductEtc" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-      <input type="text" id="siDeductEtcMemo" placeholder="메모 (선택)" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;margin-bottom:6px;">
-      <div class="settle-item"><span class="si-icon">🏧</span><span class="si-label">통장입금</span><input type="text" class="s-input" id="siDeductBank" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-      <input type="text" id="siDeductBankMemo" placeholder="메모 (선택)" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;margin-bottom:6px;">
+      <div id="settleDeductRows"></div>
+      <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 차감 추가</button>
     </div>
 
     <!-- 금고 계수 (좌: 계산기 / 우: 화폐 입력) -->
@@ -2947,7 +2948,7 @@ function nav(tab, el) {
     opening: loadOpeningPage,
   };
   if (actions[tab]) actions[tab]();
-  if (tab === 'settle') { resetSettleView(); renderExtraRevenueInputs(); recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
+  if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); renderExtraRevenueInputs(); recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
   // 서브탭 초기화: 탭 진입 시 첫 번째 서브탭을 active로
   if (!subTab) {
     const firstSub = document.querySelector(`#${tab}Cont .sub-tabs .sub-tab:first-child`);
@@ -4464,7 +4465,11 @@ function recalcSettle2(){
   const opening=gv('siOpening');
   const posCash=gv('siPosCash'), posCR=gv('siPosCashReceipt'), posCard=gv('siPosCard'), posEtc=gv('siPosEtc');
   const cashCash=gv('siCashCash'), cashQr=gv('siCashQr'), cashTr=gv('siCashTransfer');
-  const deductEtc=gv('siDeductEtc'), deductBank=gv('siDeductBank');
+  // 차감: 동적 행에서 합산
+  const _ded=getSettleDeductTotals();
+  const deductEtc=_ded.etcSum, deductBank=_ded.bankSum;
+  const _dedTotalEl=document.getElementById('settleDeductTotal');
+  if(_dedTotalEl) _dedTotalEl.innerText=fmt(_ded.total)+'원';
 
   // 매출합계 (본 매출만 — 기타매출은 장부와 별개)
   const salesTotal=posCash+posCR+posCard+posEtc;
@@ -4645,6 +4650,62 @@ function getOpDeductTotal(){
   return total;
 }
 
+// ─── 마감정산 차감 (영업개시와 동일 패턴) ───
+function addSettleDeductRow(type, amount, memo){
+  type = type || 'etc'; amount = parseInt(amount)||0; memo = memo || '';
+  const cont = document.getElementById('settleDeductRows');
+  if(!cont) return;
+  const id = 'stDed_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  cont.insertAdjacentHTML('beforeend', `
+    <div class="st-deduct-row" data-id="${id}" style="display:grid;grid-template-columns:96px 1fr 28px;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+      <select class="st-ded-type" style="padding:8px 4px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;background:var(--white);min-width:0;" data-change="recalcSettle2">
+        <option value="etc" ${type==='etc'?'selected':''}>📤 기타사용</option>
+        <option value="bank" ${type==='bank'?'selected':''}>🏧 통장입금</option>
+      </select>
+      <input type="text" class="st-ded-amount" placeholder="금액" value="${amount?fmt(amount):''}" inputmode="numeric" style="padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;text-align:right;min-width:0;" data-input="onStDedAmountInput|this">
+      <button class="x-btn" data-action="removeSettleDeductRow|${id}" style="width:26px;height:26px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-size:14px;font-weight:800;cursor:pointer;padding:0;">×</button>
+      <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo}" style="grid-column:1 / 4;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
+    </div>
+  `);
+  recalcSettle2();
+}
+function removeSettleDeductRow(id){
+  const row = document.querySelector(`#settleDeductRows .st-deduct-row[data-id="${id}"]`);
+  if(row){row.remove();recalcSettle2();}
+}
+function onStDedAmountInput(el){
+  const raw = (el.value||'').replace(/,/g,'');
+  if(/^\d*$/.test(raw)) el.value = raw ? parseInt(raw).toLocaleString() : '';
+  recalcSettle2();
+}
+function getSettleDeductTotals(){
+  let etcSum=0, bankSum=0;
+  document.querySelectorAll('#settleDeductRows .st-deduct-row').forEach(row=>{
+    const t = row.querySelector('.st-ded-type').value;
+    const v = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
+    if(t==='bank') bankSum += v; else etcSum += v;
+  });
+  return {etcSum, bankSum, total: etcSum+bankSum};
+}
+function getSettleDeductRows(){
+  const out = [];
+  document.querySelectorAll('#settleDeductRows .st-deduct-row').forEach(row=>{
+    const type = row.querySelector('.st-ded-type').value;
+    const amount = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
+    const memo = row.querySelector('.st-ded-memo').value || '';
+    if(amount>0) out.push({type, amount, memo});
+  });
+  return out;
+}
+function ensureSettleDeductDefaultRows(){
+  const cont = document.getElementById('settleDeductRows');
+  if(!cont) return;
+  if(cont.children.length===0){
+    addSettleDeductRow('etc', 0, '');
+    addSettleDeductRow('bank', 0, '');
+  }
+}
+
 function recalcOpening(){
   let actual = 0;
   document.querySelectorAll('.op-v-input').forEach(i=>{
@@ -4762,9 +4823,12 @@ function settleTab(tab,el){
 }
 // 마감정산 입력폼 초기화 (탭 진입 시)
 function resetSettleView(){
-  ['siPosCash','siPosCashReceipt','siPosCard','siPosEtc','siCashCash','siCashQr','siCashTransfer','siDeductEtc','siDeductBank','siDeductEtcMemo','siDeductBankMemo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['siPosCash','siPosCashReceipt','siPosCard','siPosEtc','siCashCash','siCashQr','siCashTransfer'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.querySelectorAll('.v-input').forEach(i=>i.value='');
   document.querySelectorAll('.s-extra-input').forEach(i=>i.value='');
+  // 차감 행 초기화 → 기본 2행
+  const dedCont=document.getElementById('settleDeductRows');
+  if(dedCont){dedCont.innerHTML='';addSettleDeductRow('etc',0,'');addSettleDeductRow('bank',0,'');}
   const statusEl=document.getElementById('settleDateStatus');if(statusEl)statusEl.innerText='관리자 전용';
 }
 async function finishSettlement2(){
@@ -4779,14 +4843,16 @@ async function finishSettlement2(){
     const msg=`⚠️ 이미 ${dateStr} 마감 기록이 있습니다.\n저장된 매출: ${fmt(_existSettle.sales_total||0)}원\n저장된 금고: ${fmt(_existSettle.actual_total||0)}원\n\n새 입력으로 덮어쓸까요?`;
     if(!confirm(msg)) return;
   }
+  // 차감: 동적 행 → deductions[] + 호환 합산값(deduct_etc/bank)
+  const _stDed=getSettleDeductTotals();
+  const _stDedRows=getSettleDeductRows();
   const items={
     opening:gv('siOpening'),
     pos_cash:gv('siPosCash'), pos_cash_receipt:gv('siPosCashReceipt'),
     pos_card:gv('siPosCard'), pos_etc:gv('siPosEtc'),
     cash_detail_cash:gv('siCashCash'), cash_detail_qr:gv('siCashQr'), cash_detail_transfer:gv('siCashTransfer'),
-    deduct_etc:gv('siDeductEtc'), deduct_bank:gv('siDeductBank'),
-    deduct_etc_memo:(document.getElementById('siDeductEtcMemo')?.value||'').trim()||null,
-    deduct_bank_memo:(document.getElementById('siDeductBankMemo')?.value||'').trim()||null
+    deductions:_stDedRows,
+    deduct_etc:_stDed.etcSum, deduct_bank:_stDed.bankSum
   };
   // 기타매출 입력값 수집 (legacy_key='draw_large/small'는 items_json에도 호환용 저장)
   const extraInputs={};  // {item_id: amount}
@@ -5142,21 +5208,29 @@ async function editSettlement(dateStr){
   document.getElementById('settleInput').style.display='block';
   document.getElementById('settleList').style.display='none';
   document.getElementById('settleCard').style.display='none';
-  // items_json → 입력 필드에 채우기
+  // items_json → 입력 필드에 채우기 (차감 제외, 차감은 동적 행으로 별도 처리)
   const fieldMap={
     opening:'siOpening',pos_cash:'siPosCash',pos_cash_receipt:'siPosCashReceipt',
     pos_card:'siPosCard',pos_etc:'siPosEtc',
-    cash_detail_cash:'siCashCash',cash_detail_qr:'siCashQr',cash_detail_transfer:'siCashTransfer',
-    deduct_etc:'siDeductEtc',deduct_bank:'siDeductBank'
+    cash_detail_cash:'siCashCash',cash_detail_qr:'siCashQr',cash_detail_transfer:'siCashTransfer'
   };
   const items=data.items_json||{};
   Object.entries(fieldMap).forEach(([key,elId])=>{
     const el=document.getElementById(elId);
     if(el) el.value=items[key]?parseInt(items[key]).toLocaleString():'';
   });
-  // 차감 메모 복원
-  const memoEtc=document.getElementById('siDeductEtcMemo'); if(memoEtc) memoEtc.value=items.deduct_etc_memo||'';
-  const memoBank=document.getElementById('siDeductBankMemo'); if(memoBank) memoBank.value=items.deduct_bank_memo||'';
+  // 차감 행 복원 (deductions 신규 우선, 없으면 옛 deduct_etc/bank+memo 로 변환)
+  const dedCont=document.getElementById('settleDeductRows');
+  if(dedCont){
+    dedCont.innerHTML='';
+    if(Array.isArray(items.deductions) && items.deductions.length){
+      items.deductions.forEach(d=>addSettleDeductRow(d.type||'etc', d.amount||0, d.memo||''));
+    } else {
+      // 옛 데이터: 단일 값 → 2행 변환
+      addSettleDeductRow('etc', items.deduct_etc||0, items.deduct_etc_memo||'');
+      addSettleDeductRow('bank', items.deduct_bank||0, items.deduct_bank_memo||'');
+    }
+  }
   // 기타매출 입력칸 동적 렌더링 + 기존 logs 채우기
   renderExtraRevenueInputs();
   if(data.id){
