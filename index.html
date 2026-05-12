@@ -948,20 +948,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
-    <!-- 지출 관리 (통합) -->
-    <div class="side-group">
-      <div class="side-group-header" data-action="toggleSideGroup|this">
-        <span>📑 지출 관리</span><span class="side-arrow">›</span>
-      </div>
-      <div class="side-group-body">
-        <div class="side-item" data-action="navFromSide|explist">계좌내역 · 카드내역</div>
-        <div class="side-item" data-action="navFromSide|expcat">지출 카테고리 설정</div>
-        <div class="side-item" data-action="navFromSide|fixedcost">고정비</div>
-        <div class="side-item" data-action="navFromSide|vendors">거래처 관리</div>
-        <div class="side-item" data-action="navFromSide|wage">급여 집계</div>
-      </div>
-    </div>
-
     <!-- 정산/검수 -->
     <div class="side-group">
       <div class="side-group-header" data-action="toggleSideGroup|this">
@@ -1034,6 +1020,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <!-- 📸 새 영수증 (기본 탭) -->
     <div id="rcpNew">
       <div class="card-title" style="margin-top:4px;">영수증 등록</div>
+      <div style="background:#EBF3FF;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#1E40AF;line-height:1.5;">
+        📷 사진 찍으면 AI가 거래처·품목·금액·분류를 자동 분석해요.
+      </div>
       <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:14px;">
       <div id="uploadGroup" class="action-group" style="margin-top:0;">
         <label class="btn btn-primary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
