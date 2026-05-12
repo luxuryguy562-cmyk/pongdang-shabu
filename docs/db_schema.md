@@ -238,6 +238,39 @@ franchises (프랜차이즈/브랜드)
 | diff_status | 과부족 상태 |
 | sales_total (int) | 매출 합계 |
 - upsert onConflict: `store_id, settle_date`
+- `items_json` 구조 (2026-05-12 업데이트):
+  - `opening` — 전일 이월금
+  - `pos_cash / pos_cash_receipt / pos_card / pos_etc` — 매출 4칸
+  - `cash_detail_cash / cash_detail_qr / cash_detail_transfer` — 현금 분해(검증용)
+  - **`deductions: [{type, amount, memo}, ...]`** — 차감 동적 행 (신규)
+  - `deduct_etc / deduct_bank` — 위 deductions 의 type별 합산값 (옛 코드 호환)
+  - `extra_draw_large / extra_draw_small` — 기타매출 호환 (현재는 extra_revenue_logs 로 분리)
+
+### daily_opening (2026-05-12 신규)
+영업개시 보고 (아침 출근 시 금고 계수 + 차감 처리)
+
+| 컬럼 | 용도 |
+|---|---|
+| id (BIGSERIAL PK) | |
+| store_id (UUID FK→stores) | 매장 |
+| opening_date (DATE) | 영업개시 날짜 |
+| vault_json (JSONB) | 화폐별 장수 {50000:N, 10000:N, ...} |
+| actual_total (INT) | 오늘 출근 시 실제 금고 합계 |
+| previous_close_total (INT) | 어제 마감 금고 (스냅샷) |
+| **deductions (JSONB)** | 차감 동적 행 `[{type:'bank'|'etc', amount, memo}]` |
+| diff_amount (INT, GENERATED) | `actual_total - previous_close_total` (단순 차이, **차감 미반영**) |
+| memo (TEXT) | 보고 메모 (deprecated — 차감별 메모 사용) |
+| created_at, created_by | |
+
+- UNIQUE: `(store_id, opening_date)` → upsert 가능
+- RLS: `USING(true) WITH CHECK (store_id IS NOT NULL)`
+
+**핵심 수식 (JS에서 보정 계산)**:
+```
+영업개시 차액 = actual_total − (previous_close_total − Σdeductions.amount)
+0 = 정상 / ≠0 = 진짜 사라진 돈 (도난·실수 의심)
+```
+- DB `diff_amount` 는 generated 라 차감 미반영. JS 에서 deductions 합 같이 가져와 보정.
 
 ### vendors / vendor_orders
 | vendors | vendor_orders |
