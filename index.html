@@ -321,6 +321,31 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-kpi-lbl{font-size:10px;color:var(--gray-400);font-weight:600;margin-bottom:3px;}
 .att-kpi-val{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px;}
 .att-kpi-cell.wage .att-kpi-val{color:var(--blue);}
+
+/* ─ 출퇴근 상태 변환 카드 (G안: 출근 전/근무 중/퇴근 후 3색) */
+.att-status-card{border-radius:18px;padding:24px 18px;text-align:center;transition:background 0.25s ease;margin-top:8px;}
+.att-status-card.before{background:var(--gray-100);}
+.att-status-card.during{background:var(--blue-light);}
+.att-status-card.after{background:var(--success-light);}
+.att-status-date{font-size:13px;font-weight:600;color:var(--gray-600);margin-bottom:6px;}
+.att-status-time{font-size:48px;font-weight:900;color:var(--text);letter-spacing:-2px;line-height:1;margin-bottom:14px;}
+.att-status-card.after .att-status-time{font-size:22px;font-weight:800;color:var(--gray-600);}
+.att-status-badge{display:inline-block;padding:7px 14px;border-radius:99px;font-size:13px;font-weight:700;margin-bottom:18px;}
+.att-status-card.before .att-status-badge{background:#fff;color:var(--gray-600);border:1px solid var(--gray-200);}
+.att-status-card.during .att-status-badge{background:var(--blue);color:#fff;}
+.att-status-card.after .att-status-badge{background:var(--success);color:#fff;}
+.att-status-action{margin-bottom:12px;}
+.att-big-btn{width:100%;padding:18px;font-size:16px;font-weight:800;border-radius:13px;}
+.att-status-card.after .att-status-action{display:none;}
+.att-status-meta{font-size:12px;color:var(--gray-600);font-weight:600;line-height:1.5;}
+.att-status-meta .wage{color:var(--blue);font-weight:800;font-size:14px;}
+
+/* ─ 캘린더 빈 셀에 + 아이콘 (관리자만) */
+.att-cal-empty-add{font-size:14px;color:var(--gray-400);font-weight:700;line-height:1;}
+.att-cal-cell.add-mode{cursor:pointer;}
+.att-cal-cell.add-mode:hover .att-cal-empty-add{color:var(--blue);}
+/* 일별 상세 + 직원 추가 버튼 */
+.att-day-add-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:var(--blue-light);color:var(--blue);border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px;}
 .att-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;}
 .att-cal-head{font-size:10px;font-weight:700;color:var(--gray-600);text-align:center;padding:4px 0;}
 .att-cal-head.sun{color:var(--danger);}
@@ -1047,48 +1072,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [2] 근태관리 ══ -->
 <div id="attendanceCont" class="container">
   <div class="card">
-    <div class="card-title">근태 기록</div>
+    <div class="card-title">근태</div>
     <div class="sub-tabs">
-      <button class="sub-tab active" data-action="attTab|manual|this">수동 입력</button>
-      <button class="sub-tab manager-only" data-action="attTab|caps|this" style="display:none !important;">캡스 업로드</button>
-      <button class="sub-tab" data-action="attTab|all|this">📋 기록</button>
-      <button class="sub-tab" data-action="attTab|sched|this">📅 근무계획</button>
+      <button class="sub-tab active" data-action="attTab|manual|this">⏰ 출퇴근</button>
+      <button class="sub-tab" data-action="attTab|caps|this" style="display:none !important;">캡스 업로드</button>
+      <button class="sub-tab" data-action="attTab|all|this">📋 근무 기록</button>
+      <button class="sub-tab" data-action="attTab|sched|this">📅 근무 계획</button>
     </div>
     <div id="attManual">
-      <!-- 직원 선택 (관리자만 다른 직원 선택 가능) -->
-      <div class="input-row manager-only" data-action="openEmpSheet">
-        <label>직원 선택</label><span id="vEmpName" class="val empty">선택</span>
-      </div>
-      <!-- 현재 시간 표시 -->
-      <div style="text-align:center;padding:24px 0 8px;">
-        <div style="font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:8px;" id="attTodayDate">-</div>
-        <div style="font-size:48px;font-weight:900;color:var(--text);letter-spacing:-2px;" id="attNowTime">--:--</div>
-        <div style="font-size:12px;color:var(--gray-400);margin-top:4px;" id="attStatusMsg">출근 전</div>
-      </div>
-      <!-- 출근/퇴근 버튼 -->
-      <div class="action-group" style="margin-top:8px;">
-        <button class="btn btn-primary" id="btnCheckIn" style="flex:1;padding:20px;font-size:16px;" data-action="checkIn">🟢 출근</button>
-        <button class="btn btn-secondary" id="btnCheckOut" style="flex:1;padding:20px;font-size:16px;" data-action="checkOut" disabled>🔴 퇴근</button>
-      </div>
-      <!-- 오늘 기록 미리보기 -->
-      <div id="todayRecord" style="margin-top:16px;"></div>
-      <!-- 수동 시간 조정 (관리자용) -->
-      <div class="manager-only" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-200);">
-        <div style="font-size:12px;font-weight:700;color:var(--gray-400);margin-bottom:10px;">수동 입력 (관리자)</div>
-        <div class="input-row" data-action="openDatePicker|att">
-          <label>날짜</label><span id="vDate" class="val">-</span>
+      <!-- ⏰ 상태 변환 카드 (G안: 출근 전 / 근무 중 / 퇴근 후 3색)
+           ※ 관리자가 다른 직원 출퇴근을 찍거나 누락된 출퇴근을 등록하려면
+              📋 근무 기록 캘린더의 빈 셀 '+' 또는 일별 헤더 '+ 직원' 버튼 사용 -->
+      <div id="attStatusCard" class="att-status-card before">
+        <div class="att-status-date" id="attTodayDate">-</div>
+        <div class="att-status-time" id="attNowTime">--:--</div>
+        <div class="att-status-badge" id="attStatusBadge">⚪ 아직 출근 안 했어요</div>
+        <div class="att-status-action" id="attStatusAction">
+          <button class="btn btn-primary att-big-btn" id="btnCheckIn" data-action="checkIn">🟢 출근 찍기</button>
+          <button class="btn btn-danger att-big-btn" id="btnCheckOut" data-action="checkOut" style="display:none;">🔴 퇴근 찍기</button>
         </div>
-        <div class="input-row" data-action="openTimePicker|start">
-          <label>출근 시간</label><span id="vStart" class="val empty">-</span>
-        </div>
-        <div class="input-row" data-action="openTimePicker|end">
-          <label>퇴근 시간</label><span id="vEnd" class="val empty">-</span>
-        </div>
-        <div class="input-row" style="cursor:default;">
-          <label>휴게시간 (분)</label>
-          <input type="number" id="vRest" value="0" min="0" style="width:60px;text-align:right;border:none;background:none;font-size:15px;font-weight:700;color:var(--blue);outline:none;">
-        </div>
-        <button class="btn btn-secondary btn-full" data-action="saveAttendance">수동 기록 저장</button>
+        <div class="att-status-meta" id="attStatusMeta"></div>
       </div>
     </div>
     <div id="attCaps" style="display:none;">
@@ -2593,6 +2596,33 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <button class="btn btn-danger btn-full" style="margin-top:8px;padding:12px;" data-action="deleteAttendance">이 기록 삭제</button>
 </div>
 
+<!-- 출퇴근 사후 등록 (관리자) -->
+<div class="sheet" id="attManualSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">출퇴근 사후 등록</div>
+  <div style="font-size:11px;color:var(--gray-600);margin-bottom:14px;line-height:1.5;">캡스·앱으로 안 찍힌 출퇴근을 사후에 직접 입력합니다.</div>
+  <div class="input-row" data-action="openEmpSheet">
+    <label>직원</label><span id="vEmpName" class="val empty">선택</span>
+  </div>
+  <div class="input-row" data-action="openDatePicker|att">
+    <label>날짜</label><span id="vDate" class="val">-</span>
+  </div>
+  <div class="input-row" data-action="openTimePicker|start">
+    <label>출근 시간</label><span id="vStart" class="val empty">-</span>
+  </div>
+  <div class="input-row" data-action="openTimePicker|end">
+    <label>퇴근 시간</label><span id="vEnd" class="val empty">-</span>
+  </div>
+  <div class="input-row" style="cursor:default;">
+    <label>휴게시간 (분)</label>
+    <input type="number" id="vRest" value="0" min="0" style="width:60px;text-align:right;border:none;background:none;font-size:15px;font-weight:700;color:var(--blue);outline:none;">
+  </div>
+  <div class="action-group" style="margin-top:14px;">
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveAttendance">💾 저장</button>
+  </div>
+</div>
+
 <!-- 거래처 추가/편집 -->
 <div class="sheet" id="addVendorSheet">
   <div class="sheet-handle"></div>
@@ -3588,30 +3618,70 @@ async function loadTodayRecord(){
   updateCheckInOutUI(data);
 }
 function updateCheckInOutUI(record){
-  const inBtn=document.getElementById('btnCheckIn');
-  const outBtn=document.getElementById('btnCheckOut');
-  const statusEl=document.getElementById('attStatusMsg');
-  const recEl=document.getElementById('todayRecord');
-  if(!inBtn) return;
-  if(!record||!record.app_in){
-    inBtn.disabled=false;inBtn.className='btn btn-primary';
-    if(outBtn){outBtn.disabled=true;outBtn.className='btn btn-secondary';}
-    if(statusEl) statusEl.innerText='출근 전';
-    if(recEl) recEl.innerHTML='';
-  } else if(record.app_in&&!record.app_out){
-    inBtn.disabled=true;inBtn.className='btn btn-secondary';
-    if(outBtn){outBtn.disabled=false;outBtn.className='btn btn-danger';}
-    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
-    if(statusEl) statusEl.innerText=`근무 중 (출근 ${inTime})`;
-    if(recEl) recEl.innerHTML=`<div style="background:var(--success-light);border-radius:12px;padding:14px;text-align:center;"><div style="font-size:12px;color:var(--success);font-weight:700;">✅ 출근 완료</div><div style="font-size:20px;font-weight:800;margin-top:4px;">${inTime}</div></div>`;
+  // G안: 상태 변환 카드 (before / during / after)
+  const card  = document.getElementById('attStatusCard');
+  const badge = document.getElementById('attStatusBadge');
+  const meta  = document.getElementById('attStatusMeta');
+  const inBtn = document.getElementById('btnCheckIn');
+  const outBtn= document.getElementById('btnCheckOut');
+  if(!card) return;
+  card.classList.remove('before','during','after');
+  const fmtT = d => d.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
+  if(!record || !record.app_in){
+    card.classList.add('before');
+    if(badge) badge.innerText = '⚪ 아직 출근 안 했어요';
+    if(meta)  meta.innerHTML  = '';
+    if(inBtn){ inBtn.style.display=''; inBtn.disabled=false; }
+    if(outBtn){ outBtn.style.display='none'; }
+  } else if(record.app_in && !record.app_out){
+    card.classList.add('during');
+    const inT = new Date(record.app_in);
+    const elapsedMin = Math.max(0, Math.round((new Date()-inT)/60000));
+    const eh = Math.floor(elapsedMin/60), em = elapsedMin%60;
+    if(badge) badge.innerText = `🔵 근무 중  ${eh>0?eh+'시간 ':''}${em}분 째`;
+    if(meta)  meta.innerHTML  = `출근 ${fmtT(inT)}`;
+    if(inBtn){ inBtn.style.display='none'; }
+    if(outBtn){ outBtn.style.display=''; outBtn.disabled=false; }
   } else {
-    inBtn.disabled=true;inBtn.className='btn btn-secondary';
-    if(outBtn){outBtn.disabled=true;outBtn.className='btn btn-secondary';}
-    const inTime=new Date(record.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
-    const outTime=new Date(record.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
-    if(statusEl) statusEl.innerText='오늘 근무 완료';
-    if(recEl) recEl.innerHTML=`<div style="background:var(--blue-light);border-radius:12px;padding:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--gray-600);">출근</span><span style="font-size:14px;font-weight:700;">${inTime}</span></div><div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--gray-600);">퇴근</span><span style="font-size:14px;font-weight:700;">${outTime}</span></div><div style="text-align:center;margin-top:10px;font-size:13px;color:var(--gray-600);">근무 ${record.total_work_min!=null?record.total_work_min+'분':'-'} · 급여 ${record.calculated_wage!=null?fmt(record.calculated_wage)+'원':'-'}</div></div>`;
+    card.classList.add('after');
+    const inT  = new Date(record.app_in);
+    const outT = new Date(record.app_out);
+    const work = record.total_work_min || 0;
+    const wh = Math.floor(work/60), wm = work%60;
+    const wageStr = record.calculated_wage!=null ? fmt(record.calculated_wage)+'원' : '-';
+    if(badge) badge.innerText = `🟢 오늘 수고하셨어요  ${wh}시간 ${wm}분`;
+    if(meta)  meta.innerHTML  = `${fmtT(inT)} ~ ${fmtT(outT)} · 휴게 ${record.rest_min||0}분<br><span class="wage">오늘 ${wageStr}</span>`;
+    if(inBtn){ inBtn.style.display='none'; }
+    if(outBtn){ outBtn.style.display='none'; }
   }
+}
+
+// ─── 새 기능: 출퇴근 사후 등록 시트 (관리자) ───
+function openAttManualSheet(date, empId){
+  if(!isManager){ toast('출퇴근 누락 시 관리자에게 등록을 요청하세요.','warn'); return; }
+  // 직원 자동 채우기 (있으면)
+  if(empId){
+    const e = (employees||[]).find(x=>x.id===empId);
+    selectedEmpId = empId;
+    const empEl = document.getElementById('vEmpName');
+    if(empEl){ empEl.innerText = e?.name || '직원'; empEl.classList.remove('empty'); }
+  } else {
+    selectedEmpId = null;
+    const empEl = document.getElementById('vEmpName');
+    if(empEl){ empEl.innerText = '선택'; empEl.classList.add('empty'); }
+  }
+  // 날짜
+  const dateEl = document.getElementById('vDate');
+  if(dateEl){ dateEl.innerText = date || new Date().toISOString().slice(0,10); dateEl.classList.remove('empty'); }
+  // 시간 리셋
+  ['vStart','vEnd'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.innerText='-'; el.classList.add('empty'); }
+  });
+  const rEl = document.getElementById('vRest');
+  if(rEl) rEl.value = (typeof settings!=='undefined' && settings.auto_rest_min) || 0;
+  selectedEmpCtx='att'; // 직원 선택 시 vEmpName 갱신용
+  openSheet('attManualSheet');
 }
 async function checkIn(){
   if(!guardStore()) return;
@@ -3713,8 +3783,11 @@ async function openEmpSheet(ctx='att'){
 }
 function selectEmpFromSheet(id,name){
   if(selectedEmpCtx==='att'){
+    // 사후 등록 시트에서 호출된 경우: 직원 시트만 닫고 사후 등록 시트는 유지
     selectedEmpId=id;
     const el=document.getElementById('vEmpName');el.innerText=name;el.classList.remove('empty');
+    closeSheet('empSheet');
+    return;
   } else if(selectedEmpCtx==='sched'){
     schedEmpId=id;
     const el=document.getElementById('vSchedEmp');el.innerText=name;el.classList.remove('empty');
@@ -3744,6 +3817,9 @@ async function saveAttendance(){
   toast('기록됐어요','success');
   selectedEmpId=null;
   ['vEmpName','vStart','vEnd'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerText=id==='vEmpName'?'선택':'-';el.classList.add('empty');}});
+  closeAllSheets();
+  // 📋 근무 기록 캘린더 갱신 (사후 등록 후 즉시 반영)
+  if(typeof loadAttList==='function') loadAttList();
 }
 function calcNightMin(inT,outT,date,ns,ne){
   const [nh,nm]=ns.split(':').map(Number);const [eh,em]=ne.split(':').map(Number);
@@ -3901,6 +3977,7 @@ function loadAttAll(){ loadAttList(); }
 function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
   const target = document.getElementById('attCalendar');
   if(!target) return;
+  const empF = document.getElementById('attEmpFilter')?.value || (currentEmp && !isManager ? currentEmp.id : '');
   const [y,m] = monthStr.split('-').map(Number);
   const lastDay  = new Date(y,m,0).getDate();
   const startDow = new Date(y,m-1,1).getDay(); // 0=일
@@ -3925,7 +4002,6 @@ function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
     let dotsHtml = '<div class="att-cal-dots"></div>';
     // 1인 모드: 색점 숨기고 시간을 크게 / 다인 모드: 색점 + 합계
     if(isSingleView){
-      // 색점 슬롯은 빈 상태로 (높이 유지), 시간 더 큰 폰트
       dotsHtml = '<div class="att-cal-dots"></div>';
     } else if(logs.length){
       const sorted = [...logs].sort((a,b)=>(b.total_work_min||0)-(a.total_work_min||0));
@@ -3935,10 +4011,19 @@ function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
       if(more>0) dots += `<span class="att-cal-more">+${more}</span>`;
       dotsHtml = `<div class="att-cal-dots">${dots}</div>`;
     }
+    // 빈 날 + 관리자 → + 아이콘 + 사후 등록 액션
+    const isEmpty = !logs.length;
+    if(isEmpty && isManager){
+      dotsHtml = '<div class="att-cal-dots"><span class="att-cal-empty-add">+</span></div>';
+      cls.push('add-mode');
+    }
     const sumHtml = totalMin>0
       ? `<div class="att-cal-sum" style="${isSingleView?'font-size:13px;':''}">${fmtHourDecimal(totalMin)}</div>`
       : `<div class="att-cal-sum">&nbsp;</div>`;
-    html += `<div class="att-cal-cell ${cls.join(' ')}" data-action="pickAttDay|${dateStr}">
+    const action = (isEmpty && isManager)
+      ? `openAttManualSheet|${dateStr}${empF?'|'+empF:''}`
+      : `pickAttDay|${dateStr}`;
+    html += `<div class="att-cal-cell ${cls.join(' ')}" data-action="${action}">
       <div class="att-cal-day">${d}</div>
       ${dotsHtml}
       ${sumHtml}
@@ -3957,17 +4042,24 @@ function renderAttDayDetail(date, logs, isSingleView){
     return;
   }
   const dow = ['일','월','화','수','목','금','토'][new Date(date+'T00:00:00').getDay()];
+  const empF = document.getElementById('attEmpFilter')?.value || (currentEmp && !isManager ? currentEmp.id : '');
   if(!logs || !logs.length){
-    target.innerHTML = `<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})</span><span style="font-size:10px;color:var(--gray-400);">기록 없음</span></div>`;
+    const extra = isManager
+      ? `<div style="margin-top:10px;text-align:center;"><span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 출퇴근 등록</span></div>`
+      : `<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--gray-400);">출퇴근 누락 시 관리자에게 등록을 요청하세요</div>`;
+    target.innerHTML = `<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})</span><span style="font-size:10px;color:var(--gray-400);">기록 없음</span></div>${extra}`;
     return;
   }
   const totalMin  = logs.reduce((a,r)=>a+(r.total_work_min||0),0);
   const totalWage = logs.reduce((a,r)=>a+(r.calculated_wage||0),0);
   const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const allData = window._attListData || [];
+  const addBtnHtml = isManager
+    ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 직원</span>`
+    : '';
 
   let html = `<div class="gantt-day-label">
-    <span>📅 ${date.slice(5)} (${dow})</span>
+    <span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span>
     <span style="font-size:11px;color:var(--blue);font-weight:700;">${fmtHourDecimal(totalMin)} · ${fmt(totalWage)}원</span>
   </div>`;
   html += `<div class="gantt-header"><div class="att-row-label" style="visibility:hidden;">x</div>${ganttHours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
@@ -6950,7 +7042,8 @@ function confirmDate(){
       el.classList.remove('empty');
     }
   }
-  closeAllSheets();
+  // 'att' (사후 등록 시트)는 시트가 열려 있어야 하므로 dateSheet만 닫음
+  if(datePickerCtx==='att') closeSheet('dateSheet'); else closeAllSheets();
   if(datePickerCtx==='orderMonth') loadVendorOrders();
 }
 function openTimePicker(ctx){
@@ -6987,7 +7080,8 @@ function confirmTime(){
   const targets={start:'vStart',end:'vEnd',schedStart:'vSchedStart',schedEnd:'vSchedEnd'};
   const id=targets[timePickerCtx];
   if(id){const el=document.getElementById(id);if(el){el.innerText=`${h}:${m}`;el.classList.remove('empty');}}
-  closeAllSheets();
+  // 'start'/'end' (사후 등록 시트)는 시트가 열려 있어야 하므로 timeSheet만 닫음
+  if(timePickerCtx==='start'||timePickerCtx==='end') closeSheet('timeSheet'); else closeAllSheets();
 }
 
 
