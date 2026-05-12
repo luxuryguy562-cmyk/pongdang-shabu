@@ -133,7 +133,24 @@ td input.c-v,td input.c-i,td input.c-p{width:100%;border:none;background:var(--g
 td .c-cBtn{width:100%;min-height:38px;padding:6px 4px;border:1px solid var(--gray-300);border-radius:7px;background:#fff;font-size:11px;line-height:1.25;cursor:pointer;text-align:center;white-space:normal;word-break:keep-all;color:var(--gray-700);font-weight:600;}
 td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50);}
 .add-row-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-weight:700;font-size:13px;cursor:pointer;background:var(--blue-light);border-radius:10px;margin:8px 0;}
-/* 허브 화면 카드 (영업 / 지출 탭 안 카드 메뉴) */
+/* 허브 화면 카드 (영업 / 지출 탭) — D안 hero + grid + full */
+.hub-hero{position:relative;display:block;width:100%;text-align:left;background:linear-gradient(135deg,#0050FF,#0066FF);color:#fff;border:none;border-radius:14px;padding:20px 20px 16px 26px;margin-bottom:12px;cursor:pointer;overflow:hidden;}
+.hub-hero::before{content:'';position:absolute;top:0;left:0;width:6px;height:100%;background:#FBBF24;}
+.hub-hero-title{font-size:18px;font-weight:800;margin-bottom:4px;line-height:1.3;}
+.hub-hero-sub{font-size:12px;opacity:0.85;margin-bottom:14px;}
+.hub-hero-info{font-size:13px;font-weight:700;opacity:0.98;display:flex;align-items:center;justify-content:flex-end;gap:4px;}
+.hub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.hub-mini{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;outline:none;min-height:96px;}
+.hub-mini:active{background:var(--gray-100);}
+.hub-mini-dot{width:8px;height:8px;border-radius:50%;margin-bottom:4px;}
+.hub-mini-title{font-size:13px;font-weight:700;color:var(--text);line-height:1.2;}
+.hub-mini-amt{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);margin-top:2px;}
+.hub-mini-sub{font-size:11px;color:var(--gray-500);}
+.hub-full{width:100%;background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-top:8px;outline:none;}
+.hub-full:active{background:var(--gray-100);}
+.hub-full-title{font-size:14px;font-weight:700;color:var(--text);}
+.hub-full-sub{font-size:11px;color:var(--gray-500);margin-top:2px;}
+/* 옛 hub-card 호환 잔재 — 향후 제거 가능 */
 .hub-card{width:100%;text-align:left;padding:16px 14px;background:#fff;border:1px solid var(--gray-200);border-radius:12px;cursor:pointer;display:block;outline:none;transition:background .15s;}
 .hub-card:active{background:var(--gray-100);}
 .hub-card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;}
@@ -1120,64 +1137,82 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [Hub] 영업 허브 ══ -->
 <div id="busHubCont" class="container">
-  <div class="card">
-    <div class="card-title">영업</div>
-    <div style="display:grid;gap:10px;">
-      <button type="button" class="hub-card" data-action="nav|opening">
-        <div class="hub-card-title">🌅 영업개시</div>
-        <div class="hub-card-sub">아침 금고 계수, 차감 처리</div>
-      </button>
-      <button type="button" class="hub-card" data-action="nav|settle">
-        <div class="hub-card-title">🌙 마감정산</div>
-        <div class="hub-card-sub">저녁 매출 입력, 금고 정산, 차액 확인</div>
-      </button>
-      <button type="button" class="hub-card manager-only" data-action="nav|sales" style="display:none;">
-        <div class="hub-card-title">📊 매출 일별 관리</div>
-        <div class="hub-card-sub">일별 매출 카드 조회·수정</div>
-      </button>
-    </div>
+  <div class="hub-grid">
+    <button type="button" class="hub-mini" data-action="nav|opening">
+      <span class="hub-mini-dot" style="background:#F59E0B;"></span>
+      <span class="hub-mini-title">영업개시</span>
+      <span class="hub-mini-amt" id="busMiniOpAmt">-</span>
+      <span class="hub-mini-sub" id="busMiniOpSub">아침 금고</span>
+    </button>
+    <button type="button" class="hub-mini" data-action="nav|settle">
+      <span class="hub-mini-dot" style="background:#6366F1;"></span>
+      <span class="hub-mini-title">마감정산</span>
+      <span class="hub-mini-amt" id="busMiniStAmt">-</span>
+      <span class="hub-mini-sub" id="busMiniStSub">저녁 정산</span>
+    </button>
+    <button type="button" class="hub-mini manager-only" data-action="nav|sales">
+      <span class="hub-mini-dot" style="background:#10B981;"></span>
+      <span class="hub-mini-title">매출 일별</span>
+      <span class="hub-mini-amt" id="busMiniSaAmt">-</span>
+      <span class="hub-mini-sub" id="busMiniSaSub">이번달 합계</span>
+    </button>
   </div>
 </div>
 
 <!-- ══ [Hub] 지출 허브 (관리자 전용) ══ -->
 <div id="expHubCont" class="container">
-  <div class="card">
-    <div class="card-title">지출</div>
-    <div style="display:grid;gap:10px;">
-      <button type="button" class="hub-card" data-action="nav|receipt">
-        <div class="hub-card-title">📷 영수증 등록·내역</div>
-        <div class="hub-card-sub">사진 찍으면 AI가 자동 분석</div>
-      </button>
-      <button type="button" class="hub-card" data-action="nav|vendors">
-        <div class="hub-card-title">거래처 내역</div>
-        <div class="hub-card-sub">납품처 추가, 주문·금액 기록</div>
-      </button>
-      <button type="button" class="hub-card" data-action="nav|fixedcost">
-        <div class="hub-card-title">고정비</div>
-        <div class="hub-card-sub">매달 빠지는 임대료·공과금</div>
-      </button>
-      <button type="button" class="hub-card" data-action="nav|wage">
-        <div class="hub-card-title">인건비</div>
-        <div class="hub-card-sub">직원별 급여 합계</div>
-      </button>
-      <button type="button" class="hub-card" data-action="nav|explist">
-        <div class="hub-card-title">계좌·카드 내역</div>
-        <div class="hub-card-sub">실제 출금 기록 (진마감)</div>
-      </button>
-      <button type="button" class="hub-card" data-action="nav|recon">
-        <div class="hub-card-title">정산 대조</div>
-        <div class="hub-card-sub">가마감(예측) vs 진마감(실제) 차이</div>
-      </button>
-      <button type="button" class="hub-card" data-action="nav|reserve">
-        <div class="hub-card-title">예비비</div>
-        <div class="hub-card-sub">비상금 잔고·사용 기록</div>
-      </button>
-      <button type="button" class="hub-card" data-action="nav|expcat">
-        <div class="hub-card-title">지출 카테고리 관리</div>
-        <div class="hub-card-sub">분류 추가·수정·삭제</div>
-      </button>
-    </div>
+  <button type="button" class="hub-hero" data-action="nav|receipt">
+    <div class="hub-hero-title">영수증 등록·내역</div>
+    <div class="hub-hero-sub">사진 찍으면 AI가 거래처·품목·금액·분류를 자동 분석</div>
+    <div class="hub-hero-info" id="expHeroInfo">불러오는 중…  ›</div>
+  </button>
+  <div class="hub-grid">
+    <button type="button" class="hub-mini" data-action="nav|vendors">
+      <span class="hub-mini-dot" style="background:#10B981;"></span>
+      <span class="hub-mini-title">거래처</span>
+      <span class="hub-mini-amt" id="expMiniVendor">-</span>
+      <span class="hub-mini-sub" id="expMiniVendorSub">이번달</span>
+    </button>
+    <button type="button" class="hub-mini" data-action="nav|fixedcost">
+      <span class="hub-mini-dot" style="background:#F59E0B;"></span>
+      <span class="hub-mini-title">고정비</span>
+      <span class="hub-mini-amt" id="expMiniFixed">-</span>
+      <span class="hub-mini-sub" id="expMiniFixedSub">월 예상</span>
+    </button>
+    <button type="button" class="hub-mini" data-action="nav|wage">
+      <span class="hub-mini-dot" style="background:#8B5CF6;"></span>
+      <span class="hub-mini-title">인건비</span>
+      <span class="hub-mini-amt" id="expMiniWage">-</span>
+      <span class="hub-mini-sub" id="expMiniWageSub">이번달</span>
+    </button>
   </div>
+  <div class="hub-grid">
+    <button type="button" class="hub-mini" data-action="nav|explist">
+      <span class="hub-mini-dot" style="background:#06B6D4;"></span>
+      <span class="hub-mini-title">계좌·카드</span>
+      <span class="hub-mini-amt" id="expMiniMydata">-</span>
+      <span class="hub-mini-sub" id="expMiniMydataSub">이번달 출입</span>
+    </button>
+    <button type="button" class="hub-mini" data-action="nav|recon">
+      <span class="hub-mini-dot" style="background:#EF4444;"></span>
+      <span class="hub-mini-title">정산 대조</span>
+      <span class="hub-mini-amt" id="expMiniRecon">-</span>
+      <span class="hub-mini-sub" id="expMiniReconSub">검토 필요</span>
+    </button>
+    <button type="button" class="hub-mini" data-action="nav|reserve">
+      <span class="hub-mini-dot" style="background:#3B82F6;"></span>
+      <span class="hub-mini-title">예비비</span>
+      <span class="hub-mini-amt" id="expMiniReserve">-</span>
+      <span class="hub-mini-sub" id="expMiniReserveSub">잔고</span>
+    </button>
+  </div>
+  <button type="button" class="hub-full" data-action="nav|expcat">
+    <div>
+      <div class="hub-full-title">카테고리 관리</div>
+      <div class="hub-full-sub" id="expFullCat">분류 추가·수정·삭제</div>
+    </div>
+    <span style="color:var(--gray-400);font-size:20px;">›</span>
+  </button>
 </div>
 
 <!-- ══ [Hub] 내 정보 (직원 전용) ══ -->
@@ -3161,6 +3196,8 @@ function nav(tab, el) {
     sales: loadSalesDaily,
     opening: loadOpeningPage,
     myinfo: loadMyInfo,
+    busHub: loadBusHubData,
+    expHub: loadExpHubData,
   };
   if (actions[tab]) actions[tab]();
   if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); renderExtraRevenueInputs(); recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
@@ -9820,6 +9857,101 @@ function updateViewAsUI(){
   document.body.classList.toggle('viewas-on',!!viewAsLevel);
 }
 // ─── VIEWAS-END ────────────────────────────────────────────────────
+
+// ─── 영업 허브: 카드별 동적 정보 ───
+async function loadBusHubData(){
+  if(!currentStore) return;
+  const sid=currentStore.id;
+  const today=new Date().toISOString().slice(0,10);
+  const ym=today.slice(0,7);
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
+  // 영업개시: 오늘 daily_opening 존재 여부
+  const setAmt=(id,v)=>{const el=document.getElementById(id);if(el) el.textContent=v;};
+  const setSub=(id,v)=>{const el=document.getElementById(id);if(el) el.textContent=v;};
+  try{
+    const{data:op}=await sb.from('daily_opening').select('id').eq('store_id',sid).eq('opening_date',today).maybeSingle();
+    setAmt('busMiniOpAmt', op?'✓ 완료':'미완료');
+    setSub('busMiniOpSub', op?'오늘 기록됨':'오늘 입력 필요');
+  }catch(e){setAmt('busMiniOpAmt','-');}
+  try{
+    const{data:st}=await sb.from('settlements').select('id').eq('store_id',sid).eq('settle_date',today).maybeSingle();
+    setAmt('busMiniStAmt', st?'✓ 완료':'미완료');
+    setSub('busMiniStSub', st?'오늘 기록됨':'오늘 입력 필요');
+  }catch(e){setAmt('busMiniStAmt','-');}
+  try{
+    const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end);
+    const total=(sd||[]).reduce((a,r)=>a+(typeof salesRowTotal==='function'?salesRowTotal(r):(r.card||0)+(r.cash||0)+(r.cash_receipt||0)+(r.qr||0)+(r.etc||0)+(r.extra_large||0)+(r.extra_small||0)),0);
+    setAmt('busMiniSaAmt', fmt(total));
+    setSub('busMiniSaSub', `${(sd||[]).length}일 기록`);
+  }catch(e){setAmt('busMiniSaAmt','-');}
+}
+// ─── 지출 허브: 카드별 동적 정보 ───
+async function loadExpHubData(){
+  if(!currentStore) return;
+  const sid=currentStore.id;
+  const ym=new Date().toISOString().slice(0,7);
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
+  const setText=(id,v)=>{const el=document.getElementById(id);if(el) el.textContent=v;};
+  // 영수증
+  try{
+    const{data:rc}=await sb.from('receipts').select('total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end);
+    const cnt=(rc||[]).length, sum=(rc||[]).reduce((a,r)=>a+(r.total_price||0),0);
+    setText('expHeroInfo', `이번달 ${cnt}건 · ${fmt(sum)}원  ›`);
+  }catch(e){setText('expHeroInfo','이번달 -  ›');}
+  // 거래처: vendorMonthTotals 활용
+  try{
+    const totals=Object.values(vendorMonthTotals||{});
+    const sum=totals.reduce((a,t)=>a+(t.total||0),0);
+    const cnt=totals.reduce((a,t)=>a+(t.count||0),0);
+    setText('expMiniVendor', sum?fmt(sum):'0');
+    setText('expMiniVendorSub', cnt?`${cnt}건`:'주문 없음');
+  }catch(e){setText('expMiniVendor','-');}
+  // 고정비: fixed_costs.estimated_monthly 합 (활성)
+  try{
+    const{data:fc}=await sb.from('fixed_costs').select('estimated_monthly,is_active').eq('store_id',sid);
+    const rows=(fc||[]).filter(r=>r.is_active!==false);
+    const sum=rows.reduce((a,r)=>a+(r.estimated_monthly||0),0);
+    setText('expMiniFixed', fmt(sum));
+    setText('expMiniFixedSub', `${rows.length}개 항목`);
+  }catch(e){setText('expMiniFixed','-');}
+  // 인건비: attendance_logs.calculated_wage 합
+  try{
+    const{data:al}=await sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end);
+    const sum=(al||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);
+    const emps=new Set((al||[]).map(r=>r.employee_id).filter(Boolean));
+    setText('expMiniWage', fmt(sum));
+    setText('expMiniWageSub', `${emps.size}명`);
+  }catch(e){setText('expMiniWage','-');}
+  // 계좌·카드: mydata_transactions 이번달
+  try{
+    const{count}=await sb.from('mydata_transactions').select('id',{count:'exact',head:true}).eq('store_id',sid).gte('tx_date',start).lte('tx_date',end);
+    setText('expMiniMydata', String(count||0));
+    setText('expMiniMydataSub', '건');
+  }catch(e){setText('expMiniMydata','-');}
+  // 정산 대조: reconciliation status='pending' count
+  try{
+    const{count}=await sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending');
+    setText('expMiniRecon', String(count||0));
+    setText('expMiniReconSub', '건 검토 필요');
+  }catch(e){setText('expMiniRecon','-');}
+  // 예비비 잔고
+  try{
+    if(typeof calcReserveBalance==='function'){
+      const bal=await calcReserveBalance();
+      setText('expMiniReserve', fmt(bal||0));
+      setText('expMiniReserveSub','잔고');
+    }
+  }catch(e){setText('expMiniReserve','-');}
+  // 카테고리: 활성 개수
+  try{
+    const list=(expCategories||[]).filter(c=>c.is_active!==false);
+    setText('expFullCat', `활성 ${list.length}개`);
+  }catch(e){}
+}
 
 // ─── 내 정보 탭 로드 (직원용) ───
 async function loadMyInfo(){
