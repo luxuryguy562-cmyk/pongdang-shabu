@@ -133,6 +133,11 @@ td input.c-v,td input.c-i,td input.c-p{width:100%;border:none;background:var(--g
 td .c-cBtn{width:100%;min-height:38px;padding:6px 4px;border:1px solid var(--gray-300);border-radius:7px;background:#fff;font-size:11px;line-height:1.25;cursor:pointer;text-align:center;white-space:normal;word-break:keep-all;color:var(--gray-700);font-weight:600;}
 td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50);}
 .add-row-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-weight:700;font-size:13px;cursor:pointer;background:var(--blue-light);border-radius:10px;margin:8px 0;}
+/* 허브 화면 카드 (영업 / 지출 탭 안 카드 메뉴) */
+.hub-card{width:100%;text-align:left;padding:16px 14px;background:#fff;border:1px solid var(--gray-200);border-radius:12px;cursor:pointer;display:block;outline:none;transition:background .15s;}
+.hub-card:active{background:var(--gray-100);}
+.hub-card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.hub-card-sub{font-size:11px;color:var(--gray-500);line-height:1.4;}
 /* 내용 말풍선 툴팁 */
 .tx-tooltip{position:absolute;left:0;bottom:100%;background:var(--text);color:#fff;font-size:12px;padding:5px 10px;border-radius:8px;white-space:nowrap;z-index:50;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.2);}
 .tx-tooltip::after{content:'';position:absolute;top:100%;left:12px;border:5px solid transparent;border-top-color:var(--text);}
@@ -656,6 +661,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <rect width="7" height="7" x="3" y="14" rx="1"/>
       <rect width="7" height="7" x="14" y="14" rx="1"/>
     </symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12L12 3l9 9"/>
+      <path d="M5 10v10h14V10"/>
+    </symbol>
     <symbol id="i-piggy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-7.5-1-10 1-3 2.5-3 7 0 9.5 1 1 2.5 2 4 2.5L11 21h2l1-1h2l1 1h2l1-2c2-1 3-3.5 3-5.5 0-1.5-.5-3-1.5-4 .5-1.5 0-3-.5-4-.5-1-1.5-1.5-2-1.5z"/>
       <path d="M16 11h.01"/>
@@ -998,11 +1007,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- 하단 네비: 직원용 4개 고정 -->
 <div class="bottom-nav" id="bottomNav">
-  <div class="nav-item active" data-tab="attendance" data-action="nav|attendance|this"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태</div>
-  <div class="nav-item" data-tab="opening" data-action="nav|opening|this"><span class="ni"><svg><use href="#i-piggy"/></svg></span>영업개시</div>
-  <div class="nav-item" data-tab="settle" data-action="nav|settle|this"><span class="ni"><svg><use href="#i-wallet"/></svg></span>마감정산</div>
-  <div class="nav-item" data-tab="receipt" data-action="nav|receipt|this"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
+  <!-- 사장(관리자) nav: 홈/근태/영업/지출/더보기 -->
+  <div class="nav-item manager-only" data-tab="dashboard" data-action="nav|dashboard|this" style="display:none;"><span class="ni"><svg><use href="#i-home"/></svg></span>홈</div>
+  <div class="nav-item manager-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태</div>
+  <div class="nav-item manager-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>영업</div>
+  <div class="nav-item manager-only" data-tab="expHub" data-action="nav|expHub|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>지출</div>
   <div class="nav-item manager-only" data-action="toggleSideMenu" style="display:none;"><span class="ni"><svg><use href="#i-grid"/></svg></span>더보기</div>
+  <!-- 직원 nav: 근태/영업/영수증/내정보 -->
+  <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태</div>
+  <div class="nav-item staff-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>영업</div>
+  <div class="nav-item staff-only" data-tab="receipt" data-action="nav|receipt|this" style="display:none;"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
+  <div class="nav-item staff-only" data-tab="myinfo" data-action="nav|myinfo|this" style="display:none;"><span class="ni"><svg><use href="#i-card"/></svg></span>내 정보</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -1108,6 +1123,89 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="deleteReceiptRow">🗑 삭제</button>
       <button class="btn btn-primary" style="flex:2;padding:14px;" data-action="saveReceiptEdit">💾 저장</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ [Hub] 영업 허브 ══ -->
+<div id="busHubCont" class="container">
+  <div class="card">
+    <div class="card-title">영업</div>
+    <div style="display:grid;gap:10px;">
+      <button type="button" class="hub-card" data-action="nav|opening">
+        <div class="hub-card-title">🌅 영업개시</div>
+        <div class="hub-card-sub">아침 금고 계수, 차감 처리</div>
+      </button>
+      <button type="button" class="hub-card" data-action="nav|settle">
+        <div class="hub-card-title">🌙 마감정산</div>
+        <div class="hub-card-sub">저녁 매출 입력, 금고 정산, 차액 확인</div>
+      </button>
+      <button type="button" class="hub-card manager-only" data-action="nav|sales" style="display:none;">
+        <div class="hub-card-title">📊 매출 일별 관리</div>
+        <div class="hub-card-sub">일별 매출 카드 조회·수정</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ [Hub] 지출 허브 (관리자 전용) ══ -->
+<div id="expHubCont" class="container">
+  <div class="card">
+    <div class="card-title">지출</div>
+    <div style="display:grid;gap:10px;">
+      <button type="button" class="hub-card" data-action="nav|receipt">
+        <div class="hub-card-title">📷 영수증 등록·내역</div>
+        <div class="hub-card-sub">사진 찍으면 AI가 자동 분석</div>
+      </button>
+      <button type="button" class="hub-card" data-action="nav|vendors">
+        <div class="hub-card-title">거래처 내역</div>
+        <div class="hub-card-sub">납품처 추가, 주문·금액 기록</div>
+      </button>
+      <button type="button" class="hub-card" data-action="nav|fixedcost">
+        <div class="hub-card-title">고정비</div>
+        <div class="hub-card-sub">매달 빠지는 임대료·공과금</div>
+      </button>
+      <button type="button" class="hub-card" data-action="nav|wage">
+        <div class="hub-card-title">인건비</div>
+        <div class="hub-card-sub">직원별 급여 합계</div>
+      </button>
+      <button type="button" class="hub-card" data-action="nav|explist">
+        <div class="hub-card-title">계좌·카드 내역</div>
+        <div class="hub-card-sub">실제 출금 기록 (진마감)</div>
+      </button>
+      <button type="button" class="hub-card" data-action="nav|recon">
+        <div class="hub-card-title">정산 대조</div>
+        <div class="hub-card-sub">가마감(예측) vs 진마감(실제) 차이</div>
+      </button>
+      <button type="button" class="hub-card" data-action="nav|reserve">
+        <div class="hub-card-title">예비비</div>
+        <div class="hub-card-sub">비상금 잔고·사용 기록</div>
+      </button>
+      <button type="button" class="hub-card" data-action="nav|expcat">
+        <div class="hub-card-title">지출 카테고리 관리</div>
+        <div class="hub-card-sub">분류 추가·수정·삭제</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ [Hub] 내 정보 (직원 전용) ══ -->
+<div id="myinfoCont" class="container">
+  <div class="card">
+    <div class="card-title">내 정보</div>
+    <div style="padding:14px 0;border-bottom:1px solid var(--gray-100);">
+      <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px;">이름</div>
+      <div id="myinfoName" style="font-size:16px;font-weight:800;">-</div>
+    </div>
+    <div style="padding:14px 0;border-bottom:1px solid var(--gray-100);">
+      <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px;">직급</div>
+      <div id="myinfoRole" style="font-size:14px;">-</div>
+    </div>
+    <div style="padding:14px 0;border-bottom:1px solid var(--gray-100);">
+      <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px;">이번 달 누적 급여</div>
+      <div id="myinfoWage" style="font-size:18px;font-weight:800;color:var(--blue);">-</div>
+    </div>
+    <button class="btn btn-secondary btn-full" style="margin-top:16px;" data-action="openMyInfoSheet">PIN·기기 변경</button>
+    <button class="btn btn-danger btn-full" style="margin-top:8px;" data-action="doLogout">로그아웃</button>
   </div>
 </div>
 
@@ -3024,11 +3122,23 @@ function nav(tab, el) {
   if (target) target.classList.add('active');
   // 스크롤 최상단으로 초기화
   window.scrollTo(0, 0);
-  // 하단 탭 active 표시 (하단 탭에 있는 항목만)
+  // 하단 탭 active 표시 (허브 카드에서 진입한 경우 부모 탭이 active 유지)
+  const parentTabMap = {
+    opening:'busHub', settle:'busHub', sales:'busHub',
+    receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
+    explist:'expHub', recon:'expHub', reserve:'expHub', expcat:'expHub',
+  };
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
   else {
-    const navEl = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+    // 1순위: 보이는 nav-item 직접 매칭
+    let navEl = document.querySelector(`.nav-item[data-tab="${tab}"]:not([style*="display:none"]):not([style*="display: none"])`);
+    // 2순위: 부모 탭 (허브 카드에서 진입한 경우 부모 탭 active 유지)
+    if (!navEl && parentTabMap[tab]) {
+      navEl = document.querySelector(`.nav-item[data-tab="${parentTabMap[tab]}"]:not([style*="display:none"]):not([style*="display: none"])`);
+    }
+    // 3순위: 숨겨진 nav-item 매칭 (fallback)
+    if (!navEl) navEl = document.querySelector(`.nav-item[data-tab="${tab}"]`);
     if (navEl) navEl.classList.add('active');
   }
   // 페이지별 초기 로딩
@@ -3048,6 +3158,7 @@ function nav(tab, el) {
     recon: initRecon,
     sales: loadSalesDaily,
     opening: loadOpeningPage,
+    myinfo: loadMyInfo,
   };
   if (actions[tab]) actions[tab]();
   if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); renderExtraRevenueInputs(); recalcSettle2(); loadOpeningAmount(); initSettleDate(); }
@@ -3103,6 +3214,10 @@ function applyPermissionUI() {
   // manager-only: store_manager 이상 (owner, franchise_admin, store_manager)
   document.querySelectorAll('.manager-only').forEach(el => {
     el.style.display = isManager ? '' : 'none';
+  });
+  // staff-only: staff만 (관리자는 안 보임)
+  document.querySelectorAll('.staff-only').forEach(el => {
+    el.style.display = (!isManager && currentEmp) ? '' : 'none';
   });
   // owner-only: owner만
   document.querySelectorAll('.owner-only').forEach(el => {
@@ -9618,6 +9733,38 @@ function updateViewAsUI(){
   document.body.classList.toggle('viewas-on',!!viewAsLevel);
 }
 // ─── VIEWAS-END ────────────────────────────────────────────────────
+
+// ─── 내 정보 탭 로드 (직원용) ───
+async function loadMyInfo(){
+  if(!currentEmp) return;
+  const nm=document.getElementById('myinfoName');
+  const role=document.getElementById('myinfoRole');
+  const wage=document.getElementById('myinfoWage');
+  if(nm) nm.textContent=currentEmp.name||'-';
+  if(role){
+    const labelMap={owner:'사장',franchise_admin:'본사 관리자',store_manager:'점장',staff:'직원'};
+    role.textContent=labelMap[currentEmp.auth_level]||currentEmp.role||'-';
+  }
+  if(wage){
+    wage.textContent='계산 중...';
+    try{
+      const ym=new Date().toISOString().slice(0,7);
+      const [y,m]=ym.split('-').map(Number);
+      const last=new Date(y,m,0).getDate();
+      const start=ym+'-01', end=ym+'-'+String(last).padStart(2,'0');
+      const {data}=await sb.from('attendance_logs')
+        .select('calculated_wage')
+        .eq('store_id',currentStore.id)
+        .eq('employee_id',currentEmp.id)
+        .gte('work_date',start).lte('work_date',end);
+      const total=(data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);
+      wage.textContent=fmt(total)+'원';
+    }catch(e){
+      wage.textContent='-';
+    }
+  }
+}
+
 function completeLogin(emp){
   currentEmp=emp;
   // auth_level 기반 권한 (is_manager와 동기화)
@@ -9660,9 +9807,9 @@ function doLogout(){
   localStorage.removeItem('pd_emp');
   // 모든 컨테이너 내용 초기화 (이전 세션 데이터 잔류 방지)
   document.querySelectorAll('.container').forEach(c=>{c.classList.remove('active');});
-  document.getElementById('receiptCont').classList.add('active');
+  document.getElementById('attendanceCont').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>{n.classList.remove('active');});
-  const firstNav=document.querySelector('.nav-item[data-tab="receipt"]');
+  const firstNav=document.querySelector('.nav-item[data-tab="attendance"]');
   if(firstNav) firstNav.classList.add('active');
   applyPermissionUI();
   // ─── VIEWAS-START ───
