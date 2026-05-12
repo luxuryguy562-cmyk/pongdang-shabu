@@ -4,6 +4,57 @@
 
 ---
 
+## [2026-05-12] 근태 "내 기록"+"전체 조회" → 단일 "📋 기록" 통합 (F안)
+
+**브랜치**: `claude/improve-attendance-display-xKUUb` (E안 연속 작업)
+**규모**: 중형~대형 (HTML -33줄/+19줄, JS -76줄/+85줄, CSS +6줄. DB 변경 없음)
+**근거**: 헌법 1-6 정당한 갈아엎기 — E안 후 사장님이 "내 기록과 전체조회가 같은 계열인데 탭이 나뉘어 있다, 합치자" 요청
+
+### 발단 (사장님 인사이트)
+- E안 후 KPI 헤더 `💰 이번달` 부분이 캘린더와 한 줄 차지해 답답
+- "내 기록은 시간단위로 보는, 전체조회는 일별로 종합적으로 보는 — KPI(출근일/시간/인건비)도 내 기록에서 보고 싶으니 전체 조회로 합치자"
+- 결정: 직원 필터를 "시점 스위치"로 활용 → 필터에 따라 동일 컴포넌트가 자동 변환
+
+### 변경
+- **서브탭** (1048~1052): "내 기록" 폐기 + "전체 조회" → "📋 기록" + `manager-only` 제거 (누구나 봄)
+- **HTML** `#attList` div 통째 제거. 안에 있던 주간 간트(myAttGantt + myAttTodayStatus + myAttWarning + myAttWeekLabel) 블록은 `#attWeeklySection`으로 `#attAll` 내부로 이전
+- **HTML** `#attAll`: `#attMonSummary` → `#attKpi` (3분할 셀), `#attWeeklySection` 신규 슬롯 추가
+- **CSS** `.att-mon-summary` 폐기 → `.att-kpi-row` / `.att-kpi-cell` / `.att-kpi-lbl` / `.att-kpi-val` / `.att-kpi-cell.wage` 신규
+- **JS 신규**: `fmtMan(won)` — 10만 이상이면 만 단위 반올림 ("385만"), 미만이면 "9,500원"
+- **JS 변경**: `attTab` — 'list' 호환 매핑 ('all'로) + 패널 토글 배열에서 'List' 제거, `moveAttMonth` — mode 인자 무시·단일 진입, `loadAttList` — allMode 인자 무시·통합 단일 진입·KPI 3분할 렌더·주간 간트 본인 모드 조건부·내 기록 카드형 분기 폐기·staff 필터 자동 잠금
+- **JS 시그니처**: `renderAttCalendar`/`renderAttDayDetail`에 `isSingleView` 인자 추가, `pickAttDay`는 필터값으로 자동 판정
+- **JS 1인 모드 표현**:
+  - 캘린더 셀: 색점 숨기고 시간 폰트 크게(13px)
+  - 일별 상세: 막대 아래 caps_match_status 작은 색점+텍스트 표시
+- **변수 정리**: `attListMonth` 변수 삭제 (`attAllMonth` 단일 사용)
+- **호출 잔재 정리**: `closeAllSheets();loadAttList(true);loadAttList(false);` → `closeAllSheets();loadAttList();` (수정·삭제 후 갱신)
+
+### 영향
+- DB: 변경 없음 (SELECT 그대로)
+- 권한: 모든 권한이 "📋 기록" 탭 접근. staff 진입 시 필터 자동 본인 ID + disabled
+- 본인 모드: 관리자가 자신을 필터링한 경우만 (= empF === currentEmp.id) → 주간 간트 노출
+- 편집 핸들러: `openEditAttByIdx` 그대로 호출, `window._attListData` 이름은 옛 잔재지만 동작 OK
+
+### 검증
+- ✅ `node --check` 통과 (1 script block)
+- ✅ grep 잔재 0건: `attListMonth`/`vListMonth`/`attMonSummary`/`att-mon-summary`/`loadAttList(true)`/`loadAttList(false)`/`id="attList"`
+- ✅ HTML row count: 11974 (전 12077 대비 -103줄 순감)
+
+### 골든패스 (사장님 테스트)
+1. 근태 → "📋 기록" 서브탭 (모든 권한이 봄)
+2. 상단 KPI 3분할: `출근일 N │ 근무시간 X.5h │ 인건비 N만`
+3. (관리자) 필터 "전체 직원" → 캘린더 셀에 직원 색점 + 일 합계 시간
+4. (관리자) 필터 한 명 선택 → 셀에서 색점 사라지고 시간 글자 커짐, KPI는 그 직원 1인분
+5. (관리자) 본인 선택 → 추가로 상단에 이번주 주간 간트 노출
+6. (staff 로그인) 필터 = 본인 자동 잠금 (회색 disabled), 주간 간트 자동 노출
+7. 월 ‹/› 이동: KPI / 캘린더 / 상세 모두 갱신, 선택일 자동
+8. 셀 탭 → 일별 간트, 1인 모드에선 막대 아래 ⚪🟠 매칭 상태 텍스트
+
+### 다음 시리즈 후보 (사장님 사양 결정용)
+- 노트북 M5 24GB 1TB = 오버스펙. M4 에어 16GB 512GB 권장 (CTO 대행 의견)
+
+---
+
 ## [2026-05-12] 근태 전체조회 → 월 캘린더 + 일별 간트 (E안)
 
 **브랜치**: `claude/improve-attendance-display-xKUUb`
