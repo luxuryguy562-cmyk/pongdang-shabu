@@ -4066,8 +4066,11 @@ function selectEmpFromSheet(id,name){
     closeSheet('empSheet');
     return;
   } else if(selectedEmpCtx==='sched'){
+    // 근무 계획 시트에서 호출된 경우: 직원 시트만 닫고 sched 시트는 유지 (2026-05-12 fix)
     schedEmpId=id;
     const el=document.getElementById('vSchedEmp');el.innerText=name;el.classList.remove('empty');
+    closeSheet('empSheet');
+    return;
   }
   closeAllSheets();
 }
