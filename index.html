@@ -1156,6 +1156,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
   </div>
 
+  <!-- 차감 (어제 마감 후 ~ 오늘 출근 사이 출금) -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="card-title">📤 차감 (어제 마감 후 출금)</div>
+      <span id="opDeductTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
+    </div>
+    <p class="card-sub">어제 마감 이후 ~ 오늘 출근 사이 사장님 출금/통장입금 등</p>
+    <div id="opDeductRows"></div>
+    <button class="add-item-btn" data-action="addOpDeductRow|etc|0|" style="margin-top:8px;">+ 차감 추가</button>
+  </div>
+
   <!-- 오늘 출근 시 실제 금고 -->
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1166,7 +1177,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="vault-section">
       <div class="vault-calc" id="opDiffRow">
         <div class="vc-row"><span class="vc-label">어제 마감</span><span class="vc-val" id="opPrevClose">0원</span></div>
-        <div class="vc-row"><span class="vc-label">오늘 시작</span><span class="vc-val" id="opActualTotal">0원</span></div>
+        <div class="vc-row"><span class="vc-label">− 차감</span><span class="vc-val" id="opExpectedAfterDeduct">0원</span></div>
+        <div class="vc-row"><span class="vc-label">오늘 실제 금고</span><span class="vc-val" id="opActualTotal">0원</span></div>
         <div class="vc-row"><span class="vc-label">영업개시 차액</span><span class="vc-val" id="opDiff">-</span></div>
       </div>
       <div class="vault-grid">
@@ -1180,13 +1192,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <div class="vault-item"><label>10원</label><input type="number" data-unit="10" class="op-v-input" placeholder="0"></div>
       </div>
     </div>
-  </div>
-
-  <!-- 메모 (차액 있을 때 권장) -->
-  <div class="card" id="opMemoCard" style="display:none;">
-    <div class="card-title">📝 메모 (차액 사유)</div>
-    <p class="card-sub">차액이 발생했어요. 알고 있는 사유를 적어주세요 (선택)</p>
-    <input id="opMemo" class="input-field" placeholder="예: 어제 사장님이 5만원 가져가심" type="text">
   </div>
 
   <button class="btn btn-primary btn-full" style="margin-top:8px;border-radius:16px;padding:18px;font-size:16px;" data-action="saveOpening">📝 영업개시 보고하기</button>
@@ -1294,6 +1299,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="settle-card-group">
       <div class="card-title">차감</div>
       <p class="card-sub">금고에서 빠진 금액을 입력하세요</p>
+      <!-- 오늘 영업개시에서 입력한 차감 자동 표시 (read-only, 정보용) -->
+      <div id="settleOpDedReadonly" style="display:none;"></div>
       <div class="settle-item"><span class="si-icon">📤</span><span class="si-label">기타사용</span><input type="text" class="s-input" id="siDeductEtc" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
       <div class="settle-item"><span class="si-icon">🏧</span><span class="si-label">통장입금</span><input type="text" class="s-input" id="siDeductBank" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
     </div>
@@ -4568,7 +4575,7 @@ async function loadOpeningPage(){
   // 어제 마감 결과 조회 (실패해도 0원으로 진행)
   const [{data: prev}, {data: today_op}] = await Promise.all([
     sb.from('settlements').select('actual_total,settle_date,sales_total,diff_amount').eq('store_id',currentStore.id).eq('settle_date',yestStr).maybeSingle(),
-    sb.from('daily_opening').select('vault_json,actual_total,memo,created_at').eq('store_id',currentStore.id).eq('opening_date',today).maybeSingle()
+    sb.from('daily_opening').select('vault_json,actual_total,deductions,memo,created_at').eq('store_id',currentStore.id).eq('opening_date',today).maybeSingle()
   ]);
   opPrevCloseTotal = prev?.actual_total || 0;
   // 어제 마감 결과 카드 채우기
@@ -4587,8 +4594,47 @@ async function loadOpeningPage(){
   document.getElementById('opPrevClose').innerText = fmt(opPrevCloseTotal)+'원';
   const vMap = today_op?.vault_json || {};
   document.querySelectorAll('.op-v-input').forEach(i=>{ i.value = vMap[i.dataset.unit] || ''; });
-  document.getElementById('opMemo').value = today_op?.memo || '';
+  // 차감 행 복원 (없으면 비어둠)
+  const rowsCont = document.getElementById('opDeductRows');
+  rowsCont.innerHTML = '';
+  const deds = today_op?.deductions || [];
+  deds.forEach(d=>addOpDeductRow(d.type||'etc', d.amount||0, d.memo||''));
   recalcOpening();
+}
+
+// 영업개시 차감 행 추가/삭제
+function addOpDeductRow(type, amount, memo){
+  type = type || 'etc'; amount = parseInt(amount)||0; memo = memo || '';
+  const cont = document.getElementById('opDeductRows');
+  const id = 'opDed_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  cont.insertAdjacentHTML('beforeend', `
+    <div class="op-deduct-row" data-id="${id}" style="display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray-100);">
+      <select class="op-ded-type" style="flex:0 0 96px;padding:8px 6px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;background:var(--white);" data-change="recalcOpening">
+        <option value="bank" ${type==='bank'?'selected':''}>🏧 통장입금</option>
+        <option value="etc" ${type==='etc'?'selected':''}>📤 기타사용</option>
+      </select>
+      <input type="text" class="op-ded-amount" placeholder="금액" value="${amount?fmt(amount):''}" inputmode="numeric" style="flex:1;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;text-align:right;" data-input="onOpDedAmountInput|this">
+      <input type="text" class="op-ded-memo" placeholder="메모" value="${memo}" style="flex:1.1;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
+      <button class="x-btn" data-action="removeOpDeductRow|${id}" style="width:26px;height:26px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-size:14px;font-weight:800;cursor:pointer;flex-shrink:0;">×</button>
+    </div>
+  `);
+  recalcOpening();
+}
+function removeOpDeductRow(id){
+  const row = document.querySelector(`#opDeductRows .op-deduct-row[data-id="${id}"]`);
+  if(row){row.remove();recalcOpening();}
+}
+function onOpDedAmountInput(el){
+  const raw = (el.value||'').replace(/,/g,'');
+  if(/^\d*$/.test(raw)) el.value = raw ? parseInt(raw).toLocaleString() : '';
+  recalcOpening();
+}
+function getOpDeductTotal(){
+  let total = 0;
+  document.querySelectorAll('#opDeductRows .op-ded-amount').forEach(inp=>{
+    total += parseInt((inp.value||'').replace(/,/g,''))||0;
+  });
+  return total;
 }
 
 function recalcOpening(){
@@ -4598,20 +4644,22 @@ function recalcOpening(){
   });
   document.getElementById('opActualTotal').innerText = fmt(actual)+'원';
   document.getElementById('opVaultTotal').innerText = fmt(actual)+'원';
-  const diff = actual - opPrevCloseTotal;
+  // 차감 합 + 장부(어제 마감 - 차감)
+  const deductTotal = getOpDeductTotal();
+  const expected = opPrevCloseTotal - deductTotal;
+  document.getElementById('opDeductTotal').innerText = fmt(deductTotal)+'원';
+  document.getElementById('opExpectedAfterDeduct').innerText = fmt(expected)+'원';
+  // 검증: 오늘 실제 금고 vs 장부 (= 어제 마감 - 차감)
+  const diff = actual - expected;
   const diffEl = document.getElementById('opDiff');
   const box = document.getElementById('opDiffRow');
-  const memoCard = document.getElementById('opMemoCard');
-  if(actual===0 && opPrevCloseTotal===0){
+  if(actual===0 && opPrevCloseTotal===0 && deductTotal===0){
     diffEl.innerText = '-';
     box.classList.remove('diff-ok','diff-bad');
-    if(memoCard) memoCard.style.display = 'none';
   } else {
     diffEl.innerText = diff===0 ? '✅ 일치' : `❌ ${diff>0?'+':''}${fmt(diff)}원`;
     box.classList.toggle('diff-ok', diff===0);
     box.classList.toggle('diff-bad', diff!==0);
-    // 차액 있을 때만 메모 카드 노출
-    if(memoCard) memoCard.style.display = diff===0 ? 'none' : 'block';
   }
 }
 
@@ -4626,10 +4674,19 @@ async function saveOpening(){
     if(cnt>0) vMap[unit] = cnt;
     actual += unit * cnt;
   });
-  const memo = document.getElementById('opMemo').value || null;
-  const diff = actual - opPrevCloseTotal;
+  // 차감 행 수집
+  const deductions = [];
+  document.querySelectorAll('#opDeductRows .op-deduct-row').forEach(row=>{
+    const type = row.querySelector('.op-ded-type').value;
+    const amount = parseInt((row.querySelector('.op-ded-amount').value||'').replace(/,/g,''))||0;
+    const memo = row.querySelector('.op-ded-memo').value || '';
+    if(amount>0) deductions.push({type, amount, memo});
+  });
+  const deductTotal = deductions.reduce((s,d)=>s+(d.amount||0),0);
+  const expected = opPrevCloseTotal - deductTotal;
+  const diff = actual - expected;
   const diffStatus = diff===0 ? '일치' : `차액 ${diff>0?'+':''}${fmt(diff)}원`;
-  if(!confirm(`오늘 금고: ${fmt(actual)}원\n어제 마감: ${fmt(opPrevCloseTotal)}원\n결과: ${diffStatus}\n\n영업개시 보고하시겠습니까?`)) return;
+  if(!confirm(`어제 마감: ${fmt(opPrevCloseTotal)}원\n차감: ${fmt(deductTotal)}원\n장부(어제-차감): ${fmt(expected)}원\n오늘 실제: ${fmt(actual)}원\n결과: ${diffStatus}\n\n영업개시 보고하시겠습니까?`)) return;
   setLoad(true,'영업개시 보고 중...');
   const {error} = await sb.from('daily_opening').upsert({
     store_id: currentStore.id,
@@ -4637,7 +4694,8 @@ async function saveOpening(){
     vault_json: vMap,
     actual_total: actual,
     previous_close_total: opPrevCloseTotal,
-    memo: memo,
+    deductions: deductions,
+    memo: null,
     created_by: currentEmp?.id || null
   }, { onConflict: 'store_id,opening_date' });
   setLoad(false);
@@ -4649,9 +4707,13 @@ async function saveOpening(){
 async function loadOpeningAmount(){
   if(!currentStore) return;
   const today=new Date();
+  const todayStr=today.toISOString().split('T')[0];
   const yesterday=new Date(today);yesterday.setDate(today.getDate()-1);
   const yd=yesterday.toISOString().split('T')[0];
-  const{data}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
+  const [{data}, {data: op}] = await Promise.all([
+    sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle(),
+    sb.from('daily_opening').select('deductions').eq('store_id',currentStore.id).eq('opening_date',todayStr).maybeSingle()
+  ]);
   const el=document.getElementById('siOpening');
   const statusEl=document.getElementById('openingStatus');
   if(data?.actual_total!=null){
@@ -4660,6 +4722,24 @@ async function loadOpeningAmount(){
     if(!isManager) el.readOnly=true;
   } else {
     statusEl.innerText='전일 마감 데이터 없음';
+  }
+  // 오늘 영업개시 차감 자동 표시 (read-only)
+  const opDedBox = document.getElementById('settleOpDedReadonly');
+  const deds = op?.deductions || [];
+  if(opDedBox){
+    if(deds.length){
+      opDedBox.style.display='block';
+      const typeLabel = t => t==='bank' ? '🏧 통장입금' : '📤 기타사용';
+      const total = deds.reduce((s,d)=>s+(d.amount||0),0);
+      opDedBox.innerHTML = `<div style="background:var(--blue-light);border-radius:10px;padding:10px;margin-bottom:8px;font-size:12px;">
+        <div style="font-weight:700;color:var(--blue);margin-bottom:6px;">🚨 오늘 영업개시 차감 (정보 표시 · 합산 X)</div>
+        ${deds.map(d=>`<div style="display:flex;justify-content:space-between;padding:3px 0;"><span style="color:var(--gray-600);">${typeLabel(d.type)} ${d.memo?`<span style="color:var(--gray-500);font-size:11px;">· ${d.memo}</span>`:''}</span><span style="font-weight:700;color:var(--danger);">−${fmt(d.amount)}원</span></div>`).join('')}
+        <div style="display:flex;justify-content:space-between;padding-top:6px;border-top:1px solid var(--gray-200);margin-top:4px;font-weight:800;"><span>합계</span><span style="color:var(--danger);">−${fmt(total)}원</span></div>
+      </div>`;
+    } else {
+      opDedBox.style.display='none';
+      opDedBox.innerHTML='';
+    }
   }
   recalcSettle2();
 }
