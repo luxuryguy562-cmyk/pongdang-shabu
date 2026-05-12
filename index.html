@@ -4731,21 +4731,16 @@ function renderSchedCalendar(){
     if(dow===6) cls.push('sat');
     if(dateStr===todayStr) cls.push('today');
     if(dateStr===schedSelectedDate) cls.push('active');
-    // 빈 셀: [+] → 직접 시트 진입 / 일정 있는 셀: 색점 + 일별 상세 보기
+    // 모든 셀 탭 = 시트 진입 (사장님 의견 2026-05-12) — [+] 마크 없이 셀 자체가 액션
     let dotsHtml='<div class="att-cal-dots"></div>';
-    let action=`pickSchedDay|${dateStr}`;
-    if(!scheds.length){
-      dotsHtml='<div class="att-cal-dots"><span class="att-cal-empty-add">+</span></div>';
-      cls.push('add-mode');
-      action=`openSchedSheet|${dateStr}`;
-    } else {
+    if(scheds.length){
       const visible=scheds.slice(0,3);
       const more=scheds.length-3;
       let dots=visible.map(s=>`<span class="att-cal-dot" style="background:${typeof empColor==='function'?empColor(s.employee_id):'#94A3B8'}"></span>`).join('');
       if(more>0) dots+=`<span class="att-cal-more">+${more}</span>`;
       dotsHtml=`<div class="att-cal-dots">${dots}</div>`;
     }
-    html+=`<div class="att-cal-cell ${cls.join(' ')}" data-action="${action}">
+    html+=`<div class="att-cal-cell ${cls.join(' ')}" data-action="openSchedSheet|${dateStr}">
       <div class="att-cal-day">${d}</div>
       ${dotsHtml}
       <div class="att-cal-sum">&nbsp;</div>
@@ -4768,12 +4763,12 @@ function renderSchedDayDetail(date){
   }
   const dow=['일','월','화','수','목','금','토'][new Date(date+'T00:00:00').getDay()];
   const scheds=schedDayMap[date]||[];
-  const addBtnHtml=` <span class="att-day-add-btn" data-action="openSchedSheet|${date}">＋ 직원</span>`;
+  // [+ 직원] 제거 — 셀 탭으로 직접 시트 진입 (사장님 의견 2026-05-12)
   if(!scheds.length){
-    target.innerHTML=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span><span style="font-size:10px;color:var(--gray-400);">예정 없음</span></div>`;
+    target.innerHTML=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})</span><span style="font-size:10px;color:var(--gray-400);">예정 없음</span></div>`;
     return;
   }
-  let html=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span><span style="font-size:11px;color:var(--blue);font-weight:700;">${scheds.length}명</span></div>`;
+  let html=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})</span><span style="font-size:11px;color:var(--blue);font-weight:700;">${scheds.length}명</span></div>`;
   scheds.forEach(s=>{
     const empName=s.employees?.name||'-';
     const start=s.wish_start?s.wish_start.slice(0,5):'-';
@@ -4785,13 +4780,22 @@ function renderSchedDayDetail(date){
         <div style="font-size:12px;color:var(--gray-600);">${start} ~ ${end}</div>
         ${memo}
       </div>
-      <button class="btn btn-secondary btn-sm" style="padding:6px 10px;font-size:12px;" data-action="openSchedSheet|${date}|${s.id}">편집</button>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="btn btn-secondary btn-sm" style="padding:6px 10px;font-size:12px;" data-action="openSchedSheet|${date}|${s.id}">편집</button>
+        <button class="btn btn-danger btn-sm" style="padding:6px 8px;font-size:12px;" data-action="deleteSchedule|${s.id}">🗑</button>
+      </div>
     </div>`;
   });
   target.innerHTML=html;
 }
 function openSchedSheet(date, schedId){
   if(!guardStore()) return;
+  // 셀 탭 시 일별 상세도 갱신 (selected 셀 동기화)
+  if(date){
+    schedSelectedDate=date;
+    renderSchedCalendar();
+    renderSchedDayDetail(date);
+  }
   document.getElementById('vSchedDate').innerText=date||'-';
   if(schedId){
     const s=(schedDayMap[date]||[]).find(x=>String(x.id)===String(schedId));
@@ -4817,6 +4821,16 @@ function openSchedSheet(date, schedId){
     document.getElementById('vSchedMemo').value='';
   }
   openSheet('addSchedSheet');
+}
+async function deleteSchedule(schedId){
+  if(!guardStore()||!schedId) return;
+  if(!confirm('이 일정을 삭제할까요?')) return;
+  setLoad(true,'삭제 중...');
+  const {error}=await sb.from('work_schedules').delete().eq('id',schedId).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('삭제', error);
+  toast('삭제됐어요','success');
+  await loadScheduleMonth();
 }
 async function saveSchedule(){
   if(!guardStore()) return;
