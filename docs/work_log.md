@@ -4,6 +4,49 @@
 
 ---
 
+## [2026-05-12] 근태 전체조회 → 월 캘린더 + 일별 간트 (E안)
+
+**브랜치**: `claude/improve-attendance-display-xKUUb`
+**규모**: 중형 (CSS +25줄 / JS +120줄 / HTML 4줄 교체, DB 변경 없음)
+**근거**: 헌법 1-6 정당한 갈아엎기 (사장님 호소: "엑셀처럼 쭉 나열돼서 불편" + "근무계획과 통일감 없음")
+
+### 발단 (사장님 인사이트)
+- 기존 전체조회 = 5컬럼 테이블, 시간 `8h00m` 표기, 직원·날짜 뒤섞여 나열
+- "이게 정말 더 편할지 확신 안 섬" → 단계 분리 제시 → "일별 총합계 없고 근무계획과 통일감 없는 레이아웃이라 그런 듯"
+- 보스몬 앱의 월 캘린더 + 일별 상세를 사장님이 좋다고 지적
+- 결정: 근무계획 `.gantt-*` CSS 재활용 + 보스몬 월 캘린더 시점 → E안
+
+### 변경
+- **HTML** `index.html#attAll` (1100~1112): `attAllData` 단일 테이블 → `attMonSummary` + `attCalendar` + `attDayDetail` 3섹션으로 교체
+- **CSS** (316 다음): `.att-mon-summary`, `.att-cal*`, `.att-cal-cell.{today,active,empty,sun,sat}`, `.att-cal-{day,dots,dot,more,sum}`, `.att-day-{detail,empty}`, `.att-row-{label,meta}` 신규
+- **JS 신규**: `empColor(empId)` 8색 ID 해시, `fmtHourDecimal(min)` 0.5h 단위, `renderAttCalendar(monthStr, dayMap, selectedDate)`, `renderAttDayDetail(date, logs)`, `pickAttDay(date)`, 모듈 변수 `attAllSelectedDate`/`attAllDayMap`
+- **JS 변경**: `loadAttList(allMode=true)` 분기 갈아엎기 (테이블 HTML 제거 → dayMap 빌드 + 합계 + 캘린더/상세 렌더 호출 + early return), `moveAttMonth(dir,'all')`에서 `attAllSelectedDate=null` 리셋
+- **재활용**: 근무계획의 `.gantt-day-label`/`.gantt-header`/`.gantt-hour`/`.gantt-bar`/`.gantt-bar-area`/`.gantt-bg-col`/`.gantt-row`, `GANTT_START`/`GANTT_END`/`GANTT_SPAN`/`ganttHours` 상수
+- **시간 표기**: 전체조회만 `8h00m → 8.5h` (Math.round(min/30)/2). "내 기록"은 기존 `${total_work_min}분` 유지
+
+### 영향
+- DB: 변경 없음 (SELECT만, `attendance_logs` 그대로)
+- DOM 제거: `#attAllData`
+- DOM 추가: `#attMonSummary`, `#attCalendar`, `#attDayDetail`
+- 권한: 기존 `manager-only` 서브탭 유지 (staff에겐 "전체 조회" 자체가 안 보임)
+- 편집 핸들러: 일별 상세의 `gantt-row`에 `openEditAttByIdx|${idx}` 그대로 연결 (관리자만)
+
+### 검증
+- ✅ `node --check` 통과 (1 script block, 454k 문자)
+- ✅ grep 잔재 0건 (`attAllData` 0개, 새 함수 모두 호출 연결)
+
+### 골든패스 (사장님 테스트)
+1. 근태 → 전체 조회 → 상단 "💰 이번달 N일 · X.5h · ₩" 한 줄
+2. 월 ‹/› 화살표 → 캘린더 갱신 + 선택일 자동 (오늘 or 가장 최근 근무일)
+3. 캘린더 셀에 직원 색점 최대 3개 + "+N", 일 합계 시간 (0.5h 단위)
+4. 일·토 색 구분 (일=빨강, 토=파랑), 오늘 셀 = 연파랑, 선택 셀 = 파란 테두리
+5. 셀 탭 → 하단 일별 간트 (가로 9~22h 시간축 + 직원별 막대 + `9:00~18:00 · 8.5h` + 급여)
+6. 관리자 막대 탭 → 기존 편집 시트 열림
+7. 직원 필터 변경 → 캘린더+상세 동시 갱신
+8. 비관리자(staff) → "전체 조회" 서브탭 자체가 안 보임 (기존 `manager-only` 유지)
+
+---
+
 ## 🏁 [2026-05-12] 큰 사이클: 영업개시 시스템 + 마감정산 UX 갈아엎기 + 차액 통합 추적
 
 **브랜치**: `claude/fix-admin-permissions-3HiCm` → main 머지 (PR 10~25)
