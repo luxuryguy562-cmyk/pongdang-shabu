@@ -140,7 +140,7 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-hero-sub{font-size:12px;opacity:0.85;margin-bottom:14px;}
 .hub-hero-info{font-size:13px;font-weight:700;opacity:0.98;display:flex;align-items:center;justify-content:flex-end;gap:4px;}
 .hub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
-.hub-mini{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;outline:none;min-height:96px;}
+.hub-mini{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;outline:none;min-height:100px;}
 .hub-mini:active{background:var(--gray-100);}
 .hub-mini-dot{width:8px;height:8px;border-radius:50%;margin-bottom:4px;}
 /* 아이콘 배경 통일 — 모든 카드 같은 톤 (사장님 의견 2026-05-12) */
@@ -148,13 +148,15 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-mini-icon svg{width:17px;height:17px;color:var(--blue);stroke:var(--blue);fill:none;}
 .hub-full-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#EBF3FF;margin-right:12px;}
 .hub-full-icon svg{width:17px;height:17px;color:var(--blue);stroke:var(--blue);fill:none;}
-.hub-mini-title{font-size:13px;font-weight:700;color:var(--text);line-height:1.2;}
-.hub-mini-amt{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);margin-top:2px;}
-.hub-mini-sub{font-size:11px;color:var(--gray-500);}
-.hub-full{width:100%;background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-top:8px;outline:none;}
+.hub-mini-title{font-size:15px;font-weight:700;color:var(--text);line-height:1.2;}
+.hub-mini-amt{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--gray-500);margin-top:2px;}
+.hub-mini-sub{font-size:11px;color:var(--blue);font-weight:600;}
+/* 영업 탭: 동적 정보 강조 (사장님 의견 — 영업은 운영 상태가 메인) */
+.hub-mini.emphasized .hub-mini-amt{font-size:15px;color:var(--blue);}
+.hub-full{width:100%;background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;outline:none;}
 .hub-full:active{background:var(--gray-100);}
-.hub-full-title{font-size:14px;font-weight:700;color:var(--text);}
-.hub-full-sub{font-size:11px;color:var(--gray-500);margin-top:2px;}
+.hub-full-title{font-size:15px;font-weight:700;color:var(--text);}
+.hub-full-sub{font-size:12px;color:var(--blue);font-weight:600;margin-top:2px;}
 /* 옛 hub-card 호환 잔재 — 향후 제거 가능 */
 .hub-card{width:100%;text-align:left;padding:16px 14px;background:#fff;border:1px solid var(--gray-200);border-radius:12px;cursor:pointer;display:block;outline:none;transition:background .15s;}
 .hub-card:active{background:var(--gray-100);}
@@ -1147,19 +1149,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [Hub] 영업 허브 ══ -->
 <div id="busHubCont" class="container">
   <div class="hub-grid">
-    <button type="button" class="hub-mini" data-action="nav|opening">
+    <button type="button" class="hub-mini emphasized" data-action="nav|opening">
       <span class="hub-mini-icon"><svg><use href="#i-piggy"/></svg></span>
       <span class="hub-mini-title">영업개시</span>
       <span class="hub-mini-amt" id="busMiniOpAmt">-</span>
       <span class="hub-mini-sub" id="busMiniOpSub">아침 금고</span>
     </button>
-    <button type="button" class="hub-mini" data-action="nav|settle">
+    <button type="button" class="hub-mini emphasized" data-action="nav|settle">
       <span class="hub-mini-icon"><svg><use href="#i-wallet"/></svg></span>
       <span class="hub-mini-title">마감정산</span>
       <span class="hub-mini-amt" id="busMiniStAmt">-</span>
       <span class="hub-mini-sub" id="busMiniStSub">저녁 정산</span>
     </button>
-    <button type="button" class="hub-mini manager-only" data-action="nav|sales">
+    <button type="button" class="hub-mini emphasized manager-only" data-action="nav|sales">
       <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
       <span class="hub-mini-title">매출 일별</span>
       <span class="hub-mini-amt" id="busMiniSaAmt">-</span>
