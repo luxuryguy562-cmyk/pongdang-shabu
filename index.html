@@ -4218,7 +4218,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
       kpiEl.innerHTML = `
         <div class="att-kpi-cell"><div class="att-kpi-lbl">출근일</div><div class="att-kpi-val">${totalDays}</div></div>
         <div class="att-kpi-cell"><div class="att-kpi-lbl">근무시간</div><div class="att-kpi-val">${fmtHourDecimal(totalMin)}</div></div>
-        <div class="att-kpi-cell wage"><div class="att-kpi-lbl">인건비</div><div class="att-kpi-val">${fmtMan(totalWage)}</div></div>`;
+        <div class="att-kpi-cell wage"><div class="att-kpi-lbl">인건비</div><div class="att-kpi-val">${fmtMan(totalWage)}만원</div></div>`;
     } else {
       kpiEl.style.display='none';
     }
@@ -4728,15 +4728,21 @@ function renderSchedCalendar(){
     if(dow===6) cls.push('sat');
     if(dateStr===todayStr) cls.push('today');
     if(dateStr===schedSelectedDate) cls.push('active');
+    // 빈 셀: [+] → 직접 시트 진입 / 일정 있는 셀: 색점 + 일별 상세 보기
     let dotsHtml='<div class="att-cal-dots"></div>';
-    if(scheds.length){
+    let action=`pickSchedDay|${dateStr}`;
+    if(!scheds.length){
+      dotsHtml='<div class="att-cal-dots"><span class="att-cal-empty-add">+</span></div>';
+      cls.push('add-mode');
+      action=`openSchedSheet|${dateStr}`;
+    } else {
       const visible=scheds.slice(0,3);
       const more=scheds.length-3;
       let dots=visible.map(s=>`<span class="att-cal-dot" style="background:${typeof empColor==='function'?empColor(s.employee_id):'#94A3B8'}"></span>`).join('');
       if(more>0) dots+=`<span class="att-cal-more">+${more}</span>`;
       dotsHtml=`<div class="att-cal-dots">${dots}</div>`;
     }
-    html+=`<div class="att-cal-cell ${cls.join(' ')}" data-action="pickSchedDay|${dateStr}">
+    html+=`<div class="att-cal-cell ${cls.join(' ')}" data-action="${action}">
       <div class="att-cal-day">${d}</div>
       ${dotsHtml}
       <div class="att-cal-sum">&nbsp;</div>
