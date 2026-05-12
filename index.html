@@ -149,10 +149,11 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-full-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#EBF3FF;margin-right:12px;}
 .hub-full-icon svg{width:17px;height:17px;color:var(--blue);stroke:var(--blue);fill:none;}
 .hub-mini-title{font-size:15px;font-weight:700;color:var(--text);line-height:1.2;}
-.hub-mini-amt{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--gray-500);margin-top:2px;}
+.hub-mini-amt{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--gray-600);margin-top:2px;}
 .hub-mini-sub{font-size:11px;color:var(--blue);font-weight:600;}
 /* 영업 탭: 동적 정보 강조 (사장님 의견 — 영업은 운영 상태가 메인) */
 .hub-mini.emphasized .hub-mini-amt{font-size:15px;color:var(--blue);}
+.hub-mini.emphasized .hub-mini-amt.miss{color:var(--danger);}
 .hub-full{width:100%;background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;outline:none;}
 .hub-full:active{background:var(--gray-100);}
 .hub-full-title{font-size:15px;font-weight:700;color:var(--text);}
@@ -9883,16 +9884,16 @@ async function loadBusHubData(){
   const lastDay=new Date(y,m,0).getDate();
   const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
   // 영업개시: 오늘 daily_opening 존재 여부
-  const setAmt=(id,v)=>{const el=document.getElementById(id);if(el) el.textContent=v;};
+  const setAmt=(id,v,missing)=>{const el=document.getElementById(id);if(!el) return;el.textContent=v;el.classList.toggle('miss',!!missing);};
   const setSub=(id,v)=>{const el=document.getElementById(id);if(el) el.textContent=v;};
   try{
     const{data:op}=await sb.from('daily_opening').select('id').eq('store_id',sid).eq('opening_date',today).maybeSingle();
-    setAmt('busMiniOpAmt', op?'✓ 완료':'미완료');
+    setAmt('busMiniOpAmt', op?'✓ 완료':'미완료', !op);
     setSub('busMiniOpSub', op?'오늘 기록됨':'오늘 입력 필요');
   }catch(e){setAmt('busMiniOpAmt','-');}
   try{
     const{data:st}=await sb.from('settlements').select('id').eq('store_id',sid).eq('settle_date',today).maybeSingle();
-    setAmt('busMiniStAmt', st?'✓ 완료':'미완료');
+    setAmt('busMiniStAmt', st?'✓ 완료':'미완료', !st);
     setSub('busMiniStSub', st?'오늘 기록됨':'오늘 입력 필요');
   }catch(e){setAmt('busMiniStAmt','-');}
   try{
