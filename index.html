@@ -4221,16 +4221,10 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
     }
   }
 
-  // 주간 간트 (본인 모드에서만)
+  // 주간 간트 — 본인 모드에서 중복 정보(달력+일별과 겹침)라 사장님 요청으로 항상 숨김.
+  // 살리려면: weeklyEl.style.display='block' + loadMyAttGantt() 호출 복원.
   const weeklyEl = document.getElementById('attWeeklySection');
-  if(weeklyEl){
-    if(isOwnView){
-      weeklyEl.style.display='block';
-      if(typeof loadMyAttGantt==='function') loadMyAttGantt();
-    } else {
-      weeklyEl.style.display='none';
-    }
-  }
+  if(weeklyEl) weeklyEl.style.display='none';
 
   // 선택일: 다른 달이면 리셋, 비었으면 오늘(이번달+데이터) > 가장 최근 근무일
   if(attAllSelectedDate && !attAllSelectedDate.startsWith(monthStr)) attAllSelectedDate = null;
