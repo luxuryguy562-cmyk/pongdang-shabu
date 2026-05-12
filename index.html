@@ -143,6 +143,8 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-mini{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;outline:none;min-height:96px;}
 .hub-mini:active{background:var(--gray-100);}
 .hub-mini-dot{width:8px;height:8px;border-radius:50%;margin-bottom:4px;}
+.hub-mini-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:8px;flex-shrink:0;}
+.hub-mini-icon svg{width:17px;height:17px;color:#fff;stroke:#fff;fill:none;}
 .hub-mini-title{font-size:13px;font-weight:700;color:var(--text);line-height:1.2;}
 .hub-mini-amt{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);margin-top:2px;}
 .hub-mini-sub{font-size:11px;color:var(--gray-500);}
@@ -1139,19 +1141,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <div id="busHubCont" class="container">
   <div class="hub-grid">
     <button type="button" class="hub-mini" data-action="nav|opening">
-      <span class="hub-mini-dot" style="background:#F59E0B;"></span>
+      <span class="hub-mini-icon" style="background:#F59E0B;"><svg><use href="#i-piggy"/></svg></span>
       <span class="hub-mini-title">영업개시</span>
       <span class="hub-mini-amt" id="busMiniOpAmt">-</span>
       <span class="hub-mini-sub" id="busMiniOpSub">아침 금고</span>
     </button>
     <button type="button" class="hub-mini" data-action="nav|settle">
-      <span class="hub-mini-dot" style="background:#6366F1;"></span>
+      <span class="hub-mini-icon" style="background:#6366F1;"><svg><use href="#i-wallet"/></svg></span>
       <span class="hub-mini-title">마감정산</span>
       <span class="hub-mini-amt" id="busMiniStAmt">-</span>
       <span class="hub-mini-sub" id="busMiniStSub">저녁 정산</span>
     </button>
     <button type="button" class="hub-mini manager-only" data-action="nav|sales">
-      <span class="hub-mini-dot" style="background:#10B981;"></span>
+      <span class="hub-mini-icon" style="background:#10B981;"><svg><use href="#i-coins"/></svg></span>
       <span class="hub-mini-title">매출 일별</span>
       <span class="hub-mini-amt" id="busMiniSaAmt">-</span>
       <span class="hub-mini-sub" id="busMiniSaSub">이번달 합계</span>
@@ -1168,19 +1170,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </button>
   <div class="hub-grid">
     <button type="button" class="hub-mini" data-action="nav|vendors">
-      <span class="hub-mini-dot" style="background:#10B981;"></span>
+      <span class="hub-mini-icon" style="background:#10B981;"><svg><use href="#i-building"/></svg></span>
       <span class="hub-mini-title">거래처</span>
       <span class="hub-mini-amt" id="expMiniVendor">-</span>
       <span class="hub-mini-sub" id="expMiniVendorSub">이번달</span>
     </button>
     <button type="button" class="hub-mini" data-action="nav|fixedcost">
-      <span class="hub-mini-dot" style="background:#F59E0B;"></span>
+      <span class="hub-mini-icon" style="background:#F59E0B;"><svg><use href="#i-home"/></svg></span>
       <span class="hub-mini-title">고정비</span>
       <span class="hub-mini-amt" id="expMiniFixed">-</span>
       <span class="hub-mini-sub" id="expMiniFixedSub">월 예상</span>
     </button>
     <button type="button" class="hub-mini" data-action="nav|wage">
-      <span class="hub-mini-dot" style="background:#8B5CF6;"></span>
+      <span class="hub-mini-icon" style="background:#8B5CF6;"><svg><use href="#i-clock"/></svg></span>
       <span class="hub-mini-title">인건비</span>
       <span class="hub-mini-amt" id="expMiniWage">-</span>
       <span class="hub-mini-sub" id="expMiniWageSub">이번달</span>
@@ -1188,19 +1190,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
   <div class="hub-grid">
     <button type="button" class="hub-mini" data-action="nav|explist">
-      <span class="hub-mini-dot" style="background:#06B6D4;"></span>
+      <span class="hub-mini-icon" style="background:#06B6D4;"><svg><use href="#i-card"/></svg></span>
       <span class="hub-mini-title">계좌·카드</span>
       <span class="hub-mini-amt" id="expMiniMydata">-</span>
       <span class="hub-mini-sub" id="expMiniMydataSub">이번달 출입</span>
     </button>
     <button type="button" class="hub-mini" data-action="nav|recon">
-      <span class="hub-mini-dot" style="background:#EF4444;"></span>
+      <span class="hub-mini-icon" style="background:#EF4444;"><svg><use href="#i-coins"/></svg></span>
       <span class="hub-mini-title">정산 대조</span>
       <span class="hub-mini-amt" id="expMiniRecon">-</span>
       <span class="hub-mini-sub" id="expMiniReconSub">검토 필요</span>
     </button>
     <button type="button" class="hub-mini" data-action="nav|reserve">
-      <span class="hub-mini-dot" style="background:#3B82F6;"></span>
+      <span class="hub-mini-icon" style="background:#3B82F6;"><svg><use href="#i-piggy"/></svg></span>
       <span class="hub-mini-title">예비비</span>
       <span class="hub-mini-amt" id="expMiniReserve">-</span>
       <span class="hub-mini-sub" id="expMiniReserveSub">잔고</span>
