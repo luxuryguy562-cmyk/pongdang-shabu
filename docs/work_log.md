@@ -4,6 +4,31 @@
 
 ---
 
+## [2026-05-12] 영수증 분류 picker 통일 + 금액 콤마 + 400 진짜 수정
+
+**브랜치**: `claude/check-receipt-category-fk-AtZHf` (PR #31 머지 후 추가 작업)
+**규모**: 중형 (JS ~50줄 교체, CSS 2줄 추가, HTML 헤더 폭 조정).
+**발단**: 사장님 캡쳐 보고 — 셀렉트 두 칸 짤림 + 콤마 없음 + 400 여전히 발생
+
+### 작업 내용
+1. **분류 셀렉트 두 칸 → 버튼 1개로 통일**: 누르면 바텀시트 picker 올라옴 (편집 시트와 동일 UX)
+2. **openCatPicker 확장**: `startType:'expense'` 옵션 — 영수증용은 stage1(타입선택) 생략하고 바로 대분류 리스트부터. 사장님이 두 번만 누르면 끝 (대분류 → 소분류)
+3. **분류 표시**: "식자재 · 야채" 형식. CSS `white-space:normal`로 2줄 자동 줄바꿈 → 짤림 방지
+4. **표 컬럼 폭 조정**: 분류 55px → 88px (품목에서 일부 양보)
+5. **금액 천단위 콤마**: `<input type="text" inputmode="numeric">` + `onReceiptAmountInput` (입력할 때마다 콤마 자동, 커서 위치 보정)
+6. **기록내역 400 진짜 원인**: select에서 `count` 컬럼 제거 (PostgREST 예약어 충돌 추정. 렌더링/집계에서 안 씀)
+7. **행별 상태 저장 방식 변경**: select value → `tr.dataset.cat` / `tr.dataset.catId` (picker 콜백에서 갱신)
+
+### 정리
+- 이전 헬퍼 제거: `buildMainCatOptions`, `buildSubCatOptions`, `onReceiptMainCatChange` (셀렉트용)
+- 신규 헬퍼: `formatRcpCatLabel`, `resolveReceiptCatId`, `openReceiptCatPicker`, `onReceiptAmountInput`
+
+### 검증
+- node --check 통과
+- 잔재 0건 (`.c-cMain`, `.c-cSub`, `buildMainCatOptions` 등 모두 제거)
+
+---
+
 ## [2026-05-12] 영수증 분류 드롭다운 + 기록내역 400 수정 + FK 검토
 
 **브랜치**: `claude/check-receipt-category-fk-AtZHf`
