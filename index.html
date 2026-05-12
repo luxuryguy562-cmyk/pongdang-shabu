@@ -288,6 +288,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .vendor-info .v-name{font-size:14px;font-weight:700;}
 .vendor-info .v-sub{font-size:12px;color:var(--gray-600);margin-top:2px;}
 .vendor-item.inactive{opacity:.45;}
+.vendor-card{display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border:1px solid var(--gray-200);border-radius:12px;margin-bottom:9px;cursor:pointer;transition:background .15s;}
+.vendor-card:active{background:var(--gray-100);}
+.vendor-card.inactive{opacity:.5;}
 
 /* ─ 고정비 */
 .fixedcost-item{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:7px;}
@@ -1693,10 +1696,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [6] 거래처 관리 ══ -->
 <div id="vendorsCont" class="container">
   <div class="sub-tabs">
-    <button class="sub-tab active" data-sub="list" data-action="vendorTab|list|this">거래처 목록</button>
-    <button class="sub-tab" data-sub="orders" data-action="vendorTab|orders|this">주문 내역</button>
+    <button class="sub-tab active" data-sub="list" data-action="vendorTab|list|this">거래처</button>
     <button class="sub-tab" data-sub="upload" data-action="vendorTab|upload|this">파일 업로드</button>
-    <button class="sub-tab" data-sub="compare" data-action="vendorTab|compare|this">📊 대조 & 단가</button>
+    <button class="sub-tab" data-sub="compare" data-action="vendorTab|compare|this">대조 & 단가</button>
   </div>
   <div id="vendorList">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:6px;">
@@ -1714,6 +1716,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div id="vendorListData"><div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div></div>
   </div>
   <div id="vendorOrders" style="display:none;">
+    <!-- 거래처 상세 헤더 (카드에서 진입 시 채워짐) -->
+    <div id="vendorDetailHeader" style="display:flex;align-items:center;gap:10px;padding:10px 0 14px;margin-bottom:8px;border-bottom:1px solid var(--gray-100);">
+      <button class="btn btn-secondary btn-sm" data-action="vendorTab|list|null" style="padding:6px 10px;font-size:13px;">‹ 목록</button>
+      <div style="flex:1;min-width:0;">
+        <div id="vdName" style="font-size:15px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">전체 거래처</div>
+        <div id="vdCategory" style="font-size:11px;color:var(--gray-500);"></div>
+      </div>
+      <button id="vdEditBtn" class="btn btn-secondary btn-sm" style="padding:6px 10px;font-size:12px;display:none;" data-action="editVendorFromDetail">편집</button>
+      <button id="vdToggleBtn" class="btn btn-danger btn-sm" style="padding:6px 10px;font-size:12px;display:none;" data-action="toggleVendorFromDetail">거래종료</button>
+    </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <select id="orderVendorFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="loadVendorOrders">
         <option value="">전체 거래처</option>
@@ -2998,6 +3010,7 @@ async function callGemini(parts, timeoutSec=30){
 // ══════════════════════════════════════════
 let currentStore = null;
 let employees = [], roles = [], vendors = [], fixedCosts = [];
+let vendorMonthTotals = {}; // {vendor_id: {total, count}} — 이번달 거래처별 주문 합계 (카드 표시용)
 let settings = {};
 let selectedEmpId = null, selectedEmpCtx = 'att';
 let currentTargetRowIdx = -1, currentMatchStagingIdx = -1;
@@ -6342,6 +6355,23 @@ async function loadVendors(){
   if(!currentStore) return;
   const{data}=await sb.from('vendors').select('*').eq('store_id',currentStore.id).order('name');
   vendors=data||[];
+  // 이번달 vendor별 주문 합계·건수 캐시 (카드 표시용)
+  const ym=new Date().toISOString().slice(0,7);
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
+  vendorMonthTotals={};
+  try{
+    const{data:od}=await sb.from('vendor_orders').select('vendor_id,amount')
+      .eq('store_id',currentStore.id)
+      .gte('order_date',start).lte('order_date',end);
+    (od||[]).forEach(o=>{
+      if(!o.vendor_id) return;
+      if(!vendorMonthTotals[o.vendor_id]) vendorMonthTotals[o.vendor_id]={total:0,count:0};
+      vendorMonthTotals[o.vendor_id].total+=(o.amount||0);
+      vendorMonthTotals[o.vendor_id].count+=1;
+    });
+  }catch(e){/* 조회 실패는 무시 — 카드에서 합계 안 보일 뿐 */}
   renderVendorList();
   // 드롭다운 채우기
   const sels=['orderVendorFilter','uploadVendorSel','orderVendorInput'];
@@ -6349,13 +6379,29 @@ async function loadVendors(){
 }
 function vendorTab(tab,el){
   document.querySelectorAll('#vendorsCont .sub-tab').forEach(t=>t.classList.remove('active'));
+  // 'orders' 탭은 sub-tab UI에서 제거됨 — list sub-tab을 활성으로 표시
   if(el) el.classList.add('active');
+  else if(tab==='orders'){
+    const listTab=document.querySelector('#vendorsCont .sub-tab[data-sub="list"]');
+    if(listTab) listTab.classList.add('active');
+  }
   ['list','orders','upload','compare'].forEach(t=>{
     const el2=document.getElementById('vendor'+t.charAt(0).toUpperCase()+t.slice(1));
     if(el2) el2.style.display='none';
   });
   const panel=document.getElementById('vendor'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(panel) panel.style.display='block';
+  // 목록으로 복귀 시 거래처 상세 헤더 초기화 (사장이 ‹ 목록 누른 경우)
+  if(tab==='list'){
+    const nm=document.getElementById('vdName');
+    const cat=document.getElementById('vdCategory');
+    const editBtn=document.getElementById('vdEditBtn');
+    if(nm) nm.textContent='전체 거래처';
+    if(cat) cat.textContent='';
+    if(editBtn) editBtn.style.display='none';
+    const sel=document.getElementById('orderVendorFilter');
+    if(sel) sel.value='';
+  }
   if(tab==='orders') loadVendorOrders();
   if(tab==='compare') initVendorCompare();
 }
@@ -6554,17 +6600,68 @@ function renderVendorCompare(vendor, ym, pYm, orders, prevOrders, mydata){
 function renderVendorList(){
   const cat=document.getElementById('vendorCatFilter')?.value||'';
   let list=vendors;if(cat)list=list.filter(v=>v.category===cat);
-  document.getElementById('vendorListData').innerHTML=list.length?list.map(v=>`
-    <div class="vendor-item ${v.is_active?'':'inactive'}">
-      <div class="vendor-info">
-        <div class="v-name">${v.name} ${!v.is_active?'<span class="badge badge-gray">거래종료</span>':''}</div>
-        <div class="v-sub">${v.category||''}</div>
+  // 이번달 전체 합계 헤더
+  const monthTotal=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.total||0),0);
+  const monthCount=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.count||0),0);
+  const ymStr=new Date().toISOString().slice(0,7);
+  const headerHtml=list.length?`<div style="background:var(--gray-100);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+    <span style="font-size:12px;color:var(--gray-600);">${ymStr} 주문 합계</span>
+    <span style="font-size:14px;font-weight:800;color:var(--text);">${fmt(monthTotal)}원 · ${monthCount}건</span>
+  </div>`:'';
+  document.getElementById('vendorListData').innerHTML=headerHtml+(list.length?list.map(v=>{
+    const t=vendorMonthTotals[v.id];
+    const monthLine=t&&t.count?`<div style="font-size:13px;color:var(--blue);font-weight:700;margin-top:4px;">이번달 ${fmt(t.total)}원 · ${t.count}건</div>`:`<div style="font-size:12px;color:var(--gray-400);margin-top:4px;">이번달 주문 없음</div>`;
+    return `<div class="vendor-card ${v.is_active?'':'inactive'}" data-action="openVendorDetail|${v.id}">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;color:var(--gray-500);font-weight:600;margin-bottom:2px;">${v.category||'기타'}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);">${v.name} ${!v.is_active?'<span class="badge badge-gray">거래종료</span>':''}</div>
+        ${monthLine}
       </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" data-action="openEditVendorSheet|${v.id}">편집</button>
-        ${v.is_active?`<button class="btn btn-danger btn-sm" data-action="toggleVendor|${v.id}|false">거래종료</button>`:`<button class="btn btn-success btn-sm" data-action="toggleVendor|${v.id}|true">재개</button>`}
-      </div>
-    </div>`).join(''):'<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div>';
+      <div style="font-size:20px;color:var(--gray-400);">›</div>
+    </div>`;
+  }).join(''):'<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div>');
+}
+// 거래처 카드 ↘ 진입 → 주문 내역 패널로 이동 (그 거래처만 필터 + 헤더 갱신)
+function openVendorDetail(vendorId){
+  vendorTab('orders', null);
+  const sel=document.getElementById('orderVendorFilter');
+  if(sel) sel.value=vendorId;
+  const v=vendors.find(x=>x.id===vendorId);
+  const nm=document.getElementById('vdName');
+  const cat=document.getElementById('vdCategory');
+  const editBtn=document.getElementById('vdEditBtn');
+  const toggleBtn=document.getElementById('vdToggleBtn');
+  if(nm) nm.textContent=v?.name||'-';
+  if(cat) cat.textContent=v?.category||'-';
+  if(editBtn){
+    editBtn.style.display='';
+    editBtn.dataset.vid=vendorId;
+  }
+  if(toggleBtn){
+    toggleBtn.style.display='';
+    toggleBtn.dataset.vid=vendorId;
+    if(v?.is_active){
+      toggleBtn.textContent='거래종료';
+      toggleBtn.classList.remove('btn-success');
+      toggleBtn.classList.add('btn-danger');
+    } else {
+      toggleBtn.textContent='재개';
+      toggleBtn.classList.remove('btn-danger');
+      toggleBtn.classList.add('btn-success');
+    }
+  }
+  if(typeof loadVendorOrders==='function') loadVendorOrders();
+}
+function editVendorFromDetail(){
+  const btn=document.getElementById('vdEditBtn');
+  if(btn?.dataset.vid) openEditVendorSheet(btn.dataset.vid);
+}
+function toggleVendorFromDetail(){
+  const btn=document.getElementById('vdToggleBtn');
+  if(!btn?.dataset.vid) return;
+  const v=vendors.find(x=>x.id===btn.dataset.vid);
+  if(!v) return;
+  toggleVendor(v.id, !v.is_active);
 }
 function openAddVendorSheet(){if(!guardStore())return;document.getElementById('addVendorTitle').innerText='거래처 추가';document.getElementById('vendorNameInput').value='';document.getElementById('editVendorId').value='';openSheet('addVendorSheet');}
 function openEditVendorSheet(id){const v=vendors.find(x=>x.id===id);if(!v)return;document.getElementById('addVendorTitle').innerText='거래처 편집';document.getElementById('vendorNameInput').value=v.name;document.getElementById('vendorCatInput').value=v.category||'식자재';document.getElementById('editVendorId').value=v.id;openSheet('addVendorSheet');}
