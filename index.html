@@ -3227,9 +3227,10 @@ function applyPermissionUI() {
   document.querySelectorAll('.franchise-admin-only').forEach(el => {
     el.style.display = (authLevel==='franchise_admin') ? '' : 'none';
   });
-  // 네비바 탭: 숨겨진 탭 flex 균등분배
+  // 네비바 탭: 권한별 표시 (manager-only / staff-only 분기)
   document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
-    if(el.classList.contains('manager-only')&&!isManager) el.style.display='none';
+    if(el.classList.contains('manager-only')) el.style.display = isManager ? '' : 'none';
+    else if(el.classList.contains('staff-only')) el.style.display = (!isManager && currentEmp) ? '' : 'none';
     else el.style.display='';
   });
   // 내 정보 배지 업데이트
