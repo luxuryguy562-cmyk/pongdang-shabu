@@ -2577,11 +2577,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 </div>
 
 <!-- 직원 선택 -->
-<div class="sheet" id="empSheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-title">직원 선택</div>
-  <div id="empSheetList"></div>
-  <button class="btn btn-secondary btn-full" style="margin-top:8px;" data-action="closeAllSheets">취소</button>
+<!-- 직원 선택 (sheet-overlay로 감싸 모달처럼 다른 시트 위에 뜸) -->
+<div class="sheet-overlay" id="empSheet" style="z-index:6100;">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">직원 선택</div>
+    <div id="empSheetList"></div>
+    <button class="btn btn-secondary btn-full" style="margin-top:8px;" data-action="closeSheet|empSheet">취소</button>
+  </div>
 </div>
 
 <!-- 직원 추가/편집 -->
