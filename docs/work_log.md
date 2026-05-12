@@ -4,6 +4,80 @@
 
 ---
 
+## [2026-05-12] 출퇴근 탭 큰 변신 + 사후 등록 시트 이전 (G안)
+
+**브랜치**: `claude/improve-attendance-display-xKUUb` (E·F안 연속 작업)
+**규모**: 대형 (HTML +33/-43, CSS +25, JS +50/-29). DB 변경 없음
+**근거**: 헌법 1-6 정당한 갈아엎기 — 사장님 호소: "와닿다 마는 느낌"·"수동 입력이 두 군데"·"누락된 출퇴근 어디서 입력?"
+
+### 발단 (사장님 인사이트)
+- F안 직후 사장님 캡쳐 분석: 카드 타이틀 "근태 기록" + 서브탭 "수동 입력" + 그 안에 또 "수동 입력 (관리자)" 섹션 = 명칭·흐름 혼란
+- "캡스 업로드 빼" — manager-only 클래스가 inline display:none을 덮어써서 사장님 화면에 보임
+- "출퇴근 누락 시 어디서 입력?" — 기능은 있으나 "수동 입력" 섹션에 묻혀서 발견 어려움
+- "탭 이름이 직관적이지 못함" — 📋 기록·📅 근무계획 → 📋 근무 기록·📅 근무 계획 (짝꿍 통일)
+- 결정: 출퇴근 탭 = "지금 찍기" 전용으로 큰 변화, 사후 등록은 📋 근무 기록 캘린더 빈 셀 + 일별 헤더 + 버튼으로 이동
+
+### 변경
+
+#### A. 명칭 정리
+- 카드 타이틀: `근태 기록` → `근태`
+- 서브탭: `수동 입력` / `캡스 업로드` / `📋 기록` / `📅 근무계획` → `⏰ 출퇴근` / `(캡스 숨김)` / `📋 근무 기록` / `📅 근무 계획`
+- 캡스 서브탭: `manager-only` 클래스 제거 (JS가 display 인라인을 덮어쓰던 문제 해결), `style="display:none !important;"` 유지 — 코드는 살림
+
+#### B. 출퇴근 탭 상태 변환 카드 (G안 본체)
+- `#attManual` 안 "직원 선택 행" + "현재시간 div" + "출근/퇴근 버튼 두 개" + "todayRecord" + "수동 입력 (관리자) 섹션" 통째 폐기
+- 신규 `#attStatusCard` 단일 큰 카드 (3색 변환: `.before` 회색 / `.during` 연파랑 / `.after` 연초록)
+  - 큰 날짜 + 48px 시계 (`#attTodayDate`, `#attNowTime`)
+  - 색 변환 상태 뱃지 (`#attStatusBadge`)
+  - 1개 풀폭 버튼 (`.att-big-btn`): 출근 전엔 출근만, 근무 중엔 퇴근만, 퇴근 후엔 둘 다 숨김
+  - 메타 영역 (`#attStatusMeta`): 근무 중=`출근 09:00`, 퇴근 후=`09:00~17:30 휴게 30분`+`오늘 93,500원`(파랑 강조)
+- `updateCheckInOutUI(record)` 갈아엎기: `attStatusMsg`/`todayRecord` 참조 제거, 카드 클래스·뱃지·메타·버튼 토글로 통합
+
+#### C. 사후 등록 시트 (📋 근무 기록 캘린더 진입)
+- 신규 `#attManualSheet` (editAttSheet 아래에 위치): 직원(`vEmpName`)/날짜(`vDate`)/출근(`vStart`)/퇴근(`vEnd`)/휴게(`vRest`) + 저장/취소
+- 기존 attManual의 vDate/vStart/vEnd/vRest/vEmpName ID들이 시트로 이동 (DOM 1개로 통일)
+- 새 함수 `openAttManualSheet(date, empId?)`: 날짜/직원 자동 채우기 + 시트 열기 + `selectedEmpCtx='att'` + staff 호출 시 토스트
+- `saveAttendance` 마지막에 `closeAllSheets()` + `loadAttList()` 추가 (시트 닫고 캘린더 즉시 반영)
+
+#### D. 📋 근무 기록 캘린더 + 직원 추가 흐름
+- `renderAttCalendar`: 빈 셀(근무 0건) + 관리자면 셀에 `+` 아이콘 + 액션을 `openAttManualSheet|YYYY-MM-DD[|empId]`로 매핑 (1인 필터일 때 직원 자동), staff는 기존 `pickAttDay` 유지 (안내 메시지)
+- `renderAttDayDetail`: 데이터 있는 날 헤더에 관리자만 `+ 직원` 작은 버튼, 빈 날엔 관리자=`+ 출퇴근 등록` 버튼 / staff=`출퇴근 누락 시 관리자에게 등록을 요청하세요` 안내
+
+#### E. 시트 UX 버그 픽스 (G안 진행 중 발견)
+- `selectEmpFromSheet`: `ctx==='att'`면 `closeAllSheets()` → `closeSheet('empSheet')`만. 사후 등록 시트가 같이 닫히던 버그 차단
+- `confirmDate`: `datePickerCtx==='att'`면 `closeSheet('dateSheet')`만
+- `confirmTime`: `timePickerCtx==='start'||'end'`면 `closeSheet('timeSheet')`만
+- 이전엔 출퇴근 탭에 인라인 attManual이 있어서 시트가 같이 닫혀도 문제 없었음 (입력 폼이 화면에 그대로 노출). 시트로 이전 후엔 같이 닫히면 입력 자체가 사라지는 회귀
+
+### 영향
+- DB: 변경 없음
+- 호출 잔재: `saveAttendance` 호출 위치는 시트 안 1곳만 (기존 attManual 버튼은 폐기)
+- `selectedEmpId`/`selectedEmpCtx` 그대로 활용 (사후 등록 시트 안에서)
+- `loadTodayRecord`/`checkIn`/`checkOut`: 변경 없음 (currentEmp 우선 로직 그대로)
+- staff 화면: 빈 셀은 그대로 `pickAttDay` → 일별 상세에 안내 텍스트
+
+### 검증
+- ✅ `node --check` 통과 (1 script block)
+- ✅ grep 잔재 0건: `attStatusMsg` / `todayRecord` / `attListData` / `loadAttList\((true|false)\)`
+- ✅ ID 중복 0건: vEmpName/vDate/vStart/vEnd/vRest 각 1개 (시트로 통합)
+- ✅ 캡스 서브탭: manager-only 제거됐고 inline `display:none !important` 단독 → 모든 권한 안 보임
+
+### 골든패스 (사장님 테스트)
+1. 근태 탭 → 카드 타이틀 "근태" 확인
+2. 서브탭 ⏰ 출퇴근 / 📋 근무 기록 / 📅 근무 계획 — 3개만 보임 (캡스 안 보임)
+3. ⏰ 출퇴근 — 회색 카드 + 시계 + "⚪ 아직 출근 안 했어요" + [🟢 출근 찍기]
+4. 출근 찍기 → 카드가 연파랑으로 변환 + 뱃지 "🔵 근무 중 N시간 N분 째" + [🔴 퇴근 찍기]만 노출
+5. 퇴근 찍기 → 카드가 연초록 + 뱃지 "🟢 오늘 수고하셨어요" + 출퇴근시각 + 오늘 급여 파랑 강조 (버튼 없음)
+6. 📋 근무 기록 → 캘린더 빈 셀에 "+" (관리자) → 탭 → 사후 등록 시트 (날짜 자동)
+7. 시트에서 직원 탭 → 직원 시트 열림 → 직원 선택 → 직원 시트만 닫힘, 사후 등록 시트 유지
+8. 시트에서 날짜 탭 → 날짜 시트만 닫힘
+9. 시트에서 시간 탭 → 시간 시트만 닫힘
+10. 저장 → 시트 닫힘 + 캘린더 즉시 갱신 (해당 날짜에 직원 색점/막대 표시)
+11. (관리자) 일별 상세 헤더에 "+ 직원" 작은 버튼 → 사후 등록 시트 (날짜 자동)
+12. (staff) 빈 날 탭 → 일별 상세에 "관리자에게 등록 요청" 안내
+
+---
+
 ## [2026-05-12] 근태 "내 기록"+"전체 조회" → 단일 "📋 기록" 통합 (F안)
 
 **브랜치**: `claude/improve-attendance-display-xKUUb` (E안 연속 작업)
