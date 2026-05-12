@@ -4,6 +4,56 @@
 
 ---
 
+## 68. 시트 안에서 다른 시트 띄울 때 closeAllSheets 호출하면 부모 시트도 닫힘 (2026-05-12)
+
+**사건**: 출퇴근 사후 등록 시트(`attManualSheet`)에서 직원/날짜/시간 피커를 띄우고 선택했더니 사후 등록 시트까지 같이 닫혀 입력이 통째로 사라지는 회귀.
+
+**원인**: 기존 `selectEmpFromSheet` / `confirmDate` / `confirmTime` 모두 마지막에 무조건 `closeAllSheets()`. 이전엔 부모가 인라인 폼이라 닫혀도 화면에 그대로 보였지만, 부모를 시트로 옮긴 순간 부모까지 사라짐.
+
+**해법**: ctx 분기로 자식 시트만 닫음.
+```js
+// selectEmpFromSheet: ctx==='att' → closeSheet('empSheet')만
+// confirmDate: ctx==='att' → closeSheet('dateSheet')만
+// confirmTime: ctx==='start'|'end' → closeSheet('timeSheet')만
+```
+
+**일반 원칙**: 모달(시트)을 중첩하는 흐름이라면 자식 닫기는 `closeSheet(id)`로 정확히 명시한다. `closeAllSheets()`는 "전부 종료" 의미. 자식 모달 흐름에서 쓰면 회귀.
+
+---
+
+## 67. `.manager-only` 클래스가 인라인 `display:none !important`를 덮어쓴다 (2026-05-12)
+
+**사건**: 캡스 업로드 서브탭에 `class="sub-tab manager-only"` + `style="display:none !important;"` 인데 사장님(관리자) 화면에 그대로 보임.
+
+**원인**: `applyPermissionUI()` 안에서
+```js
+document.querySelectorAll('.manager-only').forEach(el => {
+  el.style.display = isManager ? '' : 'none';
+});
+```
+관리자면 인라인 display를 빈 문자열로 설정 → 인라인 속성 자체가 제거됨 → 외부 CSS의 `.sub-tab { display: ... }` 가 살아남. `!important`도 인라인이 제거됐으니 무력.
+
+**해법**: 정말 안 보이게 하려면 `.manager-only` 클래스를 빼고 `style="display:none !important;"` 단독으로 두거나, 별도 클래스 사용. JS의 일괄 제어 대상에서 제외해야 인라인이 보존됨.
+
+**일반 원칙**: JS가 `style.display` 를 일괄 제어하는 클래스에는 `!important`도 안 통한다. 권한 클래스를 뗀 단독 inline 스타일이 가장 안정.
+
+---
+
+## 66. "갈아엎기"는 시각 구조까지 가야 와닿는다 — 텍스트 수정으로 그치면 "와닿다 마는 느낌" 호소 (2026-05-12)
+
+**사건**: 사장님이 출퇴근 화면 1차 안을 보고 *"전체적으로 나쁘진 않은데 큰 변화가 없어서 와닿다가 마는 느낌이야"* 호소. → 상태 변환 카드 + 사후 등록 시트 이전이라는 패러다임 변경으로 재제안하니 OK.
+
+**원인**: 두 시나리오("지금 출퇴근" + "관리자 사후 등록")가 한 카드에 무차별 섞여 흐름이 안 와닿음. 텍스트 수정만으로는 잡티가 그대로 → 임팩트 0.
+
+**해법 (이번 세션)**:
+- **출퇴근 = "지금 찍기" 전용** 큰 카드 (3색 상태 변환, 단일 버튼, 메타 영역)
+- **사후 등록은 📋 근무 기록 캘린더 빈 셀 + "+"**로 이전 (자연스러운 진입점)
+- 잡티 0% → 사장님 "와닿는다" 확인
+
+**일반 원칙**: 사장님이 "와닿다 마는 느낌"·"감이 안 잡힘" 호소하면 = 시각 패러다임 변경이 필요한 신호. 명칭 수정·헤더 분리 같은 텍스트 레벨로 답하지 말고, 화면 구조 자체를 다른 메타포로 갈아엎는 안을 함께 제시할 것. dev_lessons #60(디자인 변화 = 무의식 효과)과 짝.
+
+---
+
 ## 65. `location.reload()` 후처리는 자동 로그인 흐름 발동 → 화면 점프 (2026-05-12)
 
 **사건**: `finishSettlement2` 마지막에 `location.reload()` 로 페이지 새로고침해서 마감 결과 갱신. 사장님 보고 "마감 저장 누르면 로그인 화면 잠깐 떴다가 대시보드로 점프".
