@@ -4971,9 +4971,10 @@ async function loadSettleList(){
   if(!guardStore()) return;
   setLoad(true,'조회 중...');
   // 마감 차액 + 영업개시 차액 동시 조회 → 통합 표
+  // (영업개시 차액은 DB diff_amount 가 차감 미반영이라 JS 에서 보정)
   const [{data:settles}, {data:openings}] = await Promise.all([
     sb.from('settlements').select('settle_date,actual_total,expected_total,diff_amount,sales_total').eq('store_id',currentStore.id).order('settle_date',{ascending:false}).limit(60),
-    sb.from('daily_opening').select('opening_date,actual_total,previous_close_total,diff_amount').eq('store_id',currentStore.id).order('opening_date',{ascending:false}).limit(60)
+    sb.from('daily_opening').select('opening_date,actual_total,previous_close_total,deductions').eq('store_id',currentStore.id).order('opening_date',{ascending:false}).limit(60)
   ]);
   setLoad(false);
   const c=document.getElementById('settleListData');
@@ -4984,11 +4985,17 @@ async function loadSettleList(){
   const dates = Object.keys(map).sort().reverse();
   if(!dates.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div>';return;}
   // 이번달 합 (절댓값)
+  // 영업개시 차액 보정 함수: actual − (previous − 차감합) = 차감 반영된 진짜 차액
+  const calcOpDiff = (op) => {
+    if(!op) return null;
+    const dedTotal = (op.deductions||[]).reduce((s,d)=>s+(d.amount||0),0);
+    return (op.actual_total||0) - ((op.previous_close_total||0) - dedTotal);
+  };
   const nowYM = (new Date()).toISOString().slice(0,7);
   let sumOp=0, sumSt=0, sumAbs=0;
   dates.forEach(d=>{
     if(!d.startsWith(nowYM)) return;
-    const op = map[d].opening?.diff_amount || 0;
+    const op = calcOpDiff(map[d].opening) || 0;
     const st = map[d].settle?.diff_amount || 0;
     sumOp += op; sumSt += st;
     sumAbs += Math.abs(op) + Math.abs(st);
@@ -5010,7 +5017,7 @@ async function loadSettleList(){
   html += dates.map(d=>{
     const op = map[d].opening;
     const st = map[d].settle;
-    const opDiff = op?.diff_amount||0;
+    const opDiff = calcOpDiff(op) || 0;
     const stDiff = st?.diff_amount||0;
     const abs = Math.abs(opDiff)+Math.abs(stDiff);
     const dow=['일','월','화','수','목','금','토'][new Date(d+'T00:00:00').getDay()];
