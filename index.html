@@ -4279,19 +4279,12 @@ function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
       if(more>0) dots += `<span class="att-cal-more">+${more}</span>`;
       dotsHtml = `<div class="att-cal-dots">${dots}</div>`;
     }
-    // 빈 날 + 관리자 → + 아이콘 + 사후 등록 액션
+    // 빈 날도 일별 상세로 이동 — '+' 별도 표시 없이 통일 (사장님 의견 2026-05-12)
     const isEmpty = !logs.length;
-    if(isEmpty && isManager){
-      dotsHtml = '<div class="att-cal-dots"><span class="att-cal-empty-add">+</span></div>';
-      cls.push('add-mode');
-    }
     const sumHtml = totalMin>0
       ? `<div class="att-cal-sum" style="${isSingleView?'font-size:13px;':''}">${fmtHourDecimal(totalMin)}</div>`
       : `<div class="att-cal-sum">&nbsp;</div>`;
-    const action = (isEmpty && isManager)
-      ? `openAttManualSheet|${dateStr}${empF?'|'+empF:''}`
-      : `pickAttDay|${dateStr}`;
-    html += `<div class="att-cal-cell ${cls.join(' ')}" data-action="${action}">
+    html += `<div class="att-cal-cell ${cls.join(' ')}" data-action="pickAttDay|${dateStr}">
       <div class="att-cal-day">${d}</div>
       ${dotsHtml}
       ${sumHtml}
@@ -4312,10 +4305,13 @@ function renderAttDayDetail(date, logs, isSingleView){
   const dow = ['일','월','화','수','목','금','토'][new Date(date+'T00:00:00').getDay()];
   const empF = document.getElementById('attEmpFilter')?.value || (currentEmp && !isManager ? currentEmp.id : '');
   if(!logs || !logs.length){
-    const extra = isManager
-      ? `<div style="margin-top:10px;text-align:center;"><span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 출퇴근 등록</span></div>`
+    const addBtnEmpty = isManager
+      ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 직원</span>`
+      : '';
+    const note = isManager
+      ? ''
       : `<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--gray-400);">출퇴근 누락 시 관리자에게 등록을 요청하세요</div>`;
-    target.innerHTML = `<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})</span><span style="font-size:10px;color:var(--gray-400);">기록 없음</span></div>${extra}`;
+    target.innerHTML = `<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnEmpty}</span><span style="font-size:10px;color:var(--gray-400);">기록 없음</span></div>${note}`;
     return;
   }
   const totalMin  = logs.reduce((a,r)=>a+(r.total_work_min||0),0);
