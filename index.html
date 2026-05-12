@@ -546,11 +546,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 /* ─ 오버레이/시트 */
 .overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.42);display:none;z-index:6000;}
-.sheet{position:fixed;bottom:-100%;left:0;width:100%;background:#fff;border-radius:26px 26px 0 0;padding:24px 20px 40px;padding-bottom:calc(40px + env(safe-area-inset-bottom,0));z-index:6001;transition:bottom .42s cubic-bezier(0.32,.72,0,1);max-height:90vh;overflow-y:auto;}
+.sheet{position:fixed;bottom:0;left:0;width:100%;background:#fff;border-radius:26px 26px 0 0;padding:24px 20px 40px;padding-bottom:calc(40px + env(safe-area-inset-bottom,0));z-index:6001;transform:translateY(100%);transition:transform .42s cubic-bezier(0.32,.72,0,1);max-height:90vh;overflow-y:auto;}
 .sheet-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:6000;align-items:flex-end;justify-content:center;transition:background .3s ease;}
 .sheet-overlay .sheet{position:relative;bottom:0;width:100%;z-index:6001;transform:translateY(100%);transition:transform .42s cubic-bezier(0.32,.72,0,1);}
 .sheet-overlay .sheet.show{transform:translateY(0);}
-.sheet.show{bottom:0;}
+.sheet.show{transform:translateY(0);}
 .sheet-handle{width:38px;height:4px;background:var(--gray-200);border-radius:2px;margin:-6px auto 18px;}
 .sheet-title{font-size:17px;font-weight:700;margin-bottom:16px;}
 /* 시트 헤더 (제목 + 닫기 X) — 토스 스타일 */
