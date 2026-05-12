@@ -1177,7 +1177,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="vault-section">
       <div class="vault-calc" id="opDiffRow">
         <div class="vc-row"><span class="vc-label">어제 마감</span><span class="vc-val" id="opPrevClose">0원</span></div>
-        <div class="vc-row"><span class="vc-label">− 차감</span><span class="vc-val" id="opExpectedAfterDeduct">0원</span></div>
+        <div class="vc-row"><span class="vc-label">차감 합계</span><span class="vc-val" id="opDeductTotalRow">−0원</span></div>
+        <div class="vc-row"><span class="vc-label">장부 (어제−차감)</span><span class="vc-val" id="opExpectedAfterDeduct">0원</span></div>
         <div class="vc-row"><span class="vc-label">오늘 실제 금고</span><span class="vc-val" id="opActualTotal">0원</span></div>
         <div class="vc-row"><span class="vc-label">영업개시 차액</span><span class="vc-val" id="opDiff">-</span></div>
       </div>
@@ -4594,11 +4595,16 @@ async function loadOpeningPage(){
   document.getElementById('opPrevClose').innerText = fmt(opPrevCloseTotal)+'원';
   const vMap = today_op?.vault_json || {};
   document.querySelectorAll('.op-v-input').forEach(i=>{ i.value = vMap[i.dataset.unit] || ''; });
-  // 차감 행 복원 (없으면 비어둠)
+  // 차감 행 복원 — 저장된 데이터가 있으면 그대로, 없으면 기본 2행(통장입금+기타사용)
   const rowsCont = document.getElementById('opDeductRows');
   rowsCont.innerHTML = '';
   const deds = today_op?.deductions || [];
-  deds.forEach(d=>addOpDeductRow(d.type||'etc', d.amount||0, d.memo||''));
+  if(deds.length){
+    deds.forEach(d=>addOpDeductRow(d.type||'etc', d.amount||0, d.memo||''));
+  } else {
+    addOpDeductRow('bank', 0, '');
+    addOpDeductRow('etc', 0, '');
+  }
   recalcOpening();
 }
 
@@ -4648,6 +4654,8 @@ function recalcOpening(){
   const deductTotal = getOpDeductTotal();
   const expected = opPrevCloseTotal - deductTotal;
   document.getElementById('opDeductTotal').innerText = fmt(deductTotal)+'원';
+  const dedRowEl = document.getElementById('opDeductTotalRow');
+  if(dedRowEl) dedRowEl.innerText = (deductTotal>0?'−':'')+fmt(deductTotal)+'원';
   document.getElementById('opExpectedAfterDeduct').innerText = fmt(expected)+'원';
   // 검증: 오늘 실제 금고 vs 장부 (= 어제 마감 - 차감)
   const diff = actual - expected;
