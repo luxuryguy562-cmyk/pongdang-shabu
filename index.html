@@ -315,8 +315,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .gantt-day-label .day-date{color:var(--gray-600);font-weight:600;}
 .gantt-day-label .day-count{font-size:10px;color:var(--gray-400);}
 
-/* ─ 근태 전체조회: 월 캘린더 + 일별 상세 (E안) */
-.att-mon-summary{display:flex;justify-content:space-between;align-items:center;background:var(--blue-light);border-radius:9px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700;color:var(--blue);}
+/* ─ 근태 통합 기록 탭 (F안: 내 기록 + 전체 조회 합침) */
+.att-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--gray-200);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+.att-kpi-cell{background:#fff;padding:10px 6px;text-align:center;}
+.att-kpi-lbl{font-size:10px;color:var(--gray-400);font-weight:600;margin-bottom:3px;}
+.att-kpi-val{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px;}
+.att-kpi-cell.wage .att-kpi-val{color:var(--blue);}
 .att-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;}
 .att-cal-head{font-size:10px;font-weight:700;color:var(--gray-600);text-align:center;padding:4px 0;}
 .att-cal-head.sun{color:var(--danger);}
@@ -1047,8 +1051,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="sub-tabs">
       <button class="sub-tab active" data-action="attTab|manual|this">수동 입력</button>
       <button class="sub-tab manager-only" data-action="attTab|caps|this" style="display:none !important;">캡스 업로드</button>
-      <button class="sub-tab" data-action="attTab|list|this">내 기록</button>
-      <button class="sub-tab manager-only" data-action="attTab|all|this">전체 조회</button>
+      <button class="sub-tab" data-action="attTab|all|this">📋 기록</button>
       <button class="sub-tab" data-action="attTab|sched|this">📅 근무계획</button>
     </div>
     <div id="attManual">
@@ -1098,29 +1101,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <div id="stagingList" style="margin-top:14px;"></div>
     </div>
-    <div id="attList" style="display:none;">
-      <!-- 주간 간트차트 뷰 -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-        <button class="btn btn-secondary btn-sm" data-action="moveMyAttWeek|-1">‹ 이전주</button>
-        <div style="flex:1;text-align:center;font-size:14px;font-weight:700;" id="myAttWeekLabel">-</div>
-        <button class="btn btn-secondary btn-sm" data-action="moveMyAttWeek|1">다음주 ›</button>
-      </div>
-      <!-- 오늘 근태 상태 요약 -->
-      <div id="myAttTodayStatus" style="margin-bottom:12px;"></div>
-      <!-- 주간 간트 -->
-      <div id="myAttGantt"></div>
-      <!-- 이번주 누락 경고 -->
-      <div id="myAttWarning"></div>
-      <!-- 월별 카드 리스트 (기존) -->
-      <div style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:12px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-          <button class="btn btn-secondary btn-sm" data-action="moveAttMonth|-1|list">‹</button>
-          <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vListMonth">-</div>
-          <button class="btn btn-secondary btn-sm" data-action="moveAttMonth|1|list">›</button>
-        </div>
-        <div id="attListData"><div class="empty-state"><div class="empty-icon">📭</div><p>기록이 없습니다</p></div></div>
-      </div>
-    </div>
+    <!-- 📋 기록 (내 기록 + 전체 조회 통합, F안) -->
     <div id="attAll" style="display:none;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <button class="btn btn-secondary btn-sm" data-action="moveAttMonth|-1|all">‹</button>
@@ -1130,7 +1111,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <select id="attEmpFilter" class="input-field" style="padding:10px 14px;font-size:13px;margin-bottom:10px;" data-change="loadAttAll">
         <option value="">전체 직원</option>
       </select>
-      <div id="attMonSummary" class="att-mon-summary" style="display:none;"></div>
+      <!-- KPI 3분할 (출근일 / 근무시간 / 인건비) -->
+      <div id="attKpi" class="att-kpi-row" style="display:none;"></div>
+      <!-- 본인 모드 전용: 이번주 간트 -->
+      <div id="attWeeklySection" style="display:none;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <button class="btn btn-secondary btn-sm" data-action="moveMyAttWeek|-1">‹ 이전주</button>
+          <div style="flex:1;text-align:center;font-size:13px;font-weight:700;" id="myAttWeekLabel">-</div>
+          <button class="btn btn-secondary btn-sm" data-action="moveMyAttWeek|1">다음주 ›</button>
+        </div>
+        <div id="myAttTodayStatus" style="margin-bottom:10px;"></div>
+        <div id="myAttGantt"></div>
+        <div id="myAttWarning"></div>
+      </div>
       <div id="attCalendar"></div>
       <div id="attDayDetail" class="att-day-detail"></div>
     </div>
@@ -3533,6 +3526,8 @@ async function deleteReceiptRow(){
 function attTab(tab,el){
   document.querySelectorAll('#attendanceCont .sub-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  // 호환: 'list'(폐기됨) → 'all' 통합 매핑
+  if(tab==='list') tab='all';
   const schedCard=document.getElementById('schedCard');
   const attCard=document.querySelector('#attendanceCont > .card:first-of-type');
   if(tab==='sched'){
@@ -3544,18 +3539,13 @@ function attTab(tab,el){
   // 그 외 탭 — 근무계획 카드 숨김, 근태 카드 본문 복원
   if(schedCard) schedCard.style.display='none';
   if(attCard) attCard.querySelectorAll(':scope > div:not(.sub-tabs)').forEach(d=>d.style.display='');
-  // att 카드 안 4개 div 토글
-  ['Manual','Caps','List','All'].forEach(t=>{const d=document.getElementById('att'+t);if(d)d.style.display='none';});
+  // att 카드 안 패널 토글 (List 패널은 F안에서 폐기됨)
+  ['Manual','Caps','All'].forEach(t=>{const d=document.getElementById('att'+t);if(d)d.style.display='none';});
   const panel = document.getElementById('att'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(panel) panel.style.display='block';
-  if(tab==='list'){
-    loadMyAttGantt();
-    document.getElementById('vListMonth').innerText = attListMonth;
-    loadAttList(false);
-  }
   if(tab==='all'){
     document.getElementById('vAllMonth').innerText = attAllMonth;
-    loadAttAll();
+    loadAttAll(); // 안에서 본인 모드면 주간 간트도 호출
   }
 }
 function initAttDate(){
@@ -3779,9 +3769,8 @@ async function calcWageData(empId, appIn, appOut, date, restMinOverride){
   }
   return{restMin,isWeekend,totalMin,nightMin,wage};
 }
-// 근태 조회 월 상태
-let attListMonth = new Date().toISOString().slice(0,7);
-let attAllMonth  = new Date().toISOString().slice(0,7);
+// 근태 조회 월 상태 (F안 통합: attAllMonth 단일)
+let attAllMonth = new Date().toISOString().slice(0,7);
 // ─── 새 기능: 근태 전체조회 E안 (월 캘린더 + 일별 간트) ───
 let attAllSelectedDate = null;
 let attAllDayMap = {};
@@ -3797,24 +3786,38 @@ function fmtHourDecimal(min){
   const h2 = Math.round(min/30)/2;
   return (Number.isInteger(h2)?h2.toFixed(0):h2.toFixed(1))+'h';
 }
-
-function moveAttMonth(dir, mode){
-  const cur = mode==='list' ? attListMonth : attAllMonth;
-  const d = new Date(cur+'-01'); d.setMonth(d.getMonth()+dir);
-  const str = d.toISOString().slice(0,7);
-  if(mode==='list'){ attListMonth=str; document.getElementById('vListMonth').innerText=str; loadAttList(false); }
-  else             { attAllMonth=str;  document.getElementById('vAllMonth').innerText=str;  attAllSelectedDate=null; loadAttList(true); }
+// 인건비 컴팩트 표기: 10만 이상이면 만 단위 반올림 "385만", 미만이면 "9,500원"
+function fmtMan(won){
+  if(!won) return '0';
+  if(won >= 100000) return Math.round(won/10000).toLocaleString('ko')+'만';
+  return won.toLocaleString('ko')+'원';
 }
 
-async function loadAttList(allMode=false){
+function moveAttMonth(dir, mode){
+  // F안 통합: mode 인자 무시, attAllMonth 단일 사용
+  const d = new Date(attAllMonth+'-01'); d.setMonth(d.getMonth()+dir);
+  attAllMonth = d.toISOString().slice(0,7);
+  const lbl=document.getElementById('vAllMonth'); if(lbl) lbl.innerText=attAllMonth;
+  attAllSelectedDate=null;
+  loadAttList();
+}
+
+async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
   if(!currentStore){ toast('매장을 먼저 선택하세요.','warn'); openStoreSheet(); return; }
-  const monthStr = allMode ? attAllMonth : attListMonth;
-  // 헤더 날짜 표시
-  const labelId = allMode ? 'vAllMonth' : 'vListMonth';
-  const labelEl = document.getElementById(labelId);
+  const monthStr = attAllMonth;
+  const labelEl = document.getElementById('vAllMonth');
   if(labelEl) labelEl.innerText = monthStr;
 
-  // 해당 월의 실제 말일 계산
+  // staff 자동 본인 필터 잠금
+  const sel = document.getElementById('attEmpFilter');
+  if(sel && currentEmp && !isManager){
+    if(sel.value !== currentEmp.id) sel.value = currentEmp.id;
+    sel.disabled = true;
+  } else if(sel){
+    sel.disabled = false;
+  }
+
+  // 해당 월 말일
   const [y,m] = monthStr.split('-').map(Number);
   const lastDay = new Date(y,m,0).getDate();
   const startDate = monthStr+'-01';
@@ -3826,105 +3829,76 @@ async function loadAttList(allMode=false){
     .gte('work_date', startDate)
     .lte('work_date', endDate)
     .order('work_date', {ascending:false})
-    .limit(200);
+    .limit(500);
 
-  // 내 기록: 비관리자면 본인만
-  if(!allMode && currentEmp && !isManager){
-    query = query.eq('employee_id', currentEmp.id);
-  }
-  // 전체 조회: 직원 필터
-  if(allMode){
-    const empF = document.getElementById('attEmpFilter')?.value;
-    if(empF) query = query.eq('employee_id', empF);
-  }
+  // 필터값 = 1인 모드 키
+  const empF = (sel?.value) || (currentEmp && !isManager ? currentEmp.id : '');
+  if(empF) query = query.eq('employee_id', empF);
 
   setLoad(true,'조회 중...');
   const {data, error} = await query;
   setLoad(false);
+  if(error) console.error('근태 조회 오류:',error);
 
-  if(error){ console.error('근태 조회 오류:',error); }
+  // 편집용 인덱스 데이터
+  window._attListData = data||[];
 
-  const tK = (r,key) => r[key] ? new Date(r[key]).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
-  const statusDot = s => {
-    const m={'정상매칭':'#05C072','앱전용':'#0050FF','캡스전용':'#FF9500','시간오차':'#FF9500','출근누락':'#F04452','퇴근누락':'#F04452'};
-    return `<span style="width:7px;height:7px;border-radius:50%;background:${m[s]||'#B0B8C1'};display:inline-block;margin-right:2px;"></span>`;
-  };
+  // dayMap 빌드
+  attAllDayMap = {};
+  (data||[]).forEach(r=>{
+    if(!r.work_date) return;
+    (attAllDayMap[r.work_date] = attAllDayMap[r.work_date]||[]).push(r);
+  });
 
-  // 편집용 데이터 저장 (관리자 터치→편집)
-  window._attListData=data||[];
+  // 모드 판정
+  const isSingleView = !!empF;
+  const isOwnView    = !!currentEmp && empF === currentEmp.id;
 
-  if(allMode){
-    // ─── E안: 월 캘린더 + 일별 간트 ───
-    attAllDayMap = {};
-    (data||[]).forEach(r=>{
-      if(!r.work_date) return;
-      (attAllDayMap[r.work_date] = attAllDayMap[r.work_date]||[]).push(r);
-    });
-    // 월 합계
-    const sumEl = document.getElementById('attMonSummary');
-    if(sumEl){
-      if(data && data.length){
-        const totalDays = Object.keys(attAllDayMap).length;
-        const totalMin  = data.reduce((a,r)=>a+(r.total_work_min||0),0);
-        const totalWage = data.reduce((a,r)=>a+(r.calculated_wage||0),0);
-        sumEl.style.display='flex';
-        sumEl.innerHTML = `<span>💰 이번달</span><span>${totalDays}일 · ${fmtHourDecimal(totalMin)} · ${fmt(totalWage)}원</span>`;
-      } else {
-        sumEl.style.display='none';
-      }
+  // KPI 3분할
+  const kpiEl = document.getElementById('attKpi');
+  if(kpiEl){
+    if(data && data.length){
+      const totalDays = Object.keys(attAllDayMap).length;
+      const totalMin  = data.reduce((a,r)=>a+(r.total_work_min||0),0);
+      const totalWage = data.reduce((a,r)=>a+(r.calculated_wage||0),0);
+      kpiEl.style.display='grid';
+      kpiEl.innerHTML = `
+        <div class="att-kpi-cell"><div class="att-kpi-lbl">출근일</div><div class="att-kpi-val">${totalDays}</div></div>
+        <div class="att-kpi-cell"><div class="att-kpi-lbl">근무시간</div><div class="att-kpi-val">${fmtHourDecimal(totalMin)}</div></div>
+        <div class="att-kpi-cell wage"><div class="att-kpi-lbl">인건비</div><div class="att-kpi-val">${fmtMan(totalWage)}</div></div>`;
+    } else {
+      kpiEl.style.display='none';
     }
-    // 선택일: 다른 달이면 리셋. 비었으면 오늘(이번달이고 데이터 있을 때) > 가장 최근 근무일
-    if(attAllSelectedDate && !attAllSelectedDate.startsWith(monthStr)) attAllSelectedDate = null;
-    if(!attAllSelectedDate){
-      const todayStr = new Date().toISOString().slice(0,10);
-      if(todayStr.startsWith(monthStr) && attAllDayMap[todayStr]) attAllSelectedDate = todayStr;
-      else {
-        const dates = Object.keys(attAllDayMap).sort();
-        if(dates.length) attAllSelectedDate = dates[dates.length-1];
-      }
-    }
-    renderAttCalendar(monthStr, attAllDayMap, attAllSelectedDate);
-    renderAttDayDetail(attAllSelectedDate, attAllSelectedDate ? (attAllDayMap[attAllSelectedDate]||[]) : null);
-    return;
   }
 
-  // 내 기록 = 카드형
-  let html = '';
-  if(!data?.length){
-    html = '<div class="empty-state"><div class="empty-icon">📭</div><p>이 달의 기록이 없습니다</p></div>';
-  } else {
-    html = data.map(r=>`
-      <div style="background:var(--gray-100);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <span style="font-weight:700;">${r.work_date}</span>
-          <span style="font-size:11px;color:var(--gray-600);">${statusDot(r.caps_match_status)} ${r.caps_match_status}</span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:12px;text-align:center;">
-          <div style="background:#fff;border-radius:8px;padding:7px 4px;">
-            <div style="color:var(--gray-400);font-size:10px;margin-bottom:2px;">출근</div>
-            <div style="font-weight:700;">${tK(r,'app_in')}</div>
-          </div>
-          <div style="background:#fff;border-radius:8px;padding:7px 4px;">
-            <div style="color:var(--gray-400);font-size:10px;margin-bottom:2px;">퇴근</div>
-            <div style="font-weight:700;">${tK(r,'app_out')}</div>
-          </div>
-          <div style="background:#fff;border-radius:8px;padding:7px 4px;">
-            <div style="color:var(--gray-400);font-size:10px;margin-bottom:2px;">근무</div>
-            <div style="font-weight:700;">${r.total_work_min!=null?r.total_work_min+'분':'-'}</div>
-          </div>
-          <div style="background:var(--blue-light);border-radius:8px;padding:7px 4px;">
-            <div style="color:var(--blue);font-size:10px;margin-bottom:2px;">급여</div>
-            <div style="font-weight:800;color:var(--blue);font-size:11px;">${r.calculated_wage!=null?fmt(r.calculated_wage)+'원':'-'}</div>
-          </div>
-        </div>
-      </div>`).join('');
+  // 주간 간트 (본인 모드에서만)
+  const weeklyEl = document.getElementById('attWeeklySection');
+  if(weeklyEl){
+    if(isOwnView){
+      weeklyEl.style.display='block';
+      if(typeof loadMyAttGantt==='function') loadMyAttGantt();
+    } else {
+      weeklyEl.style.display='none';
+    }
   }
-  document.getElementById('attListData').innerHTML = html;
+
+  // 선택일: 다른 달이면 리셋, 비었으면 오늘(이번달+데이터) > 가장 최근 근무일
+  if(attAllSelectedDate && !attAllSelectedDate.startsWith(monthStr)) attAllSelectedDate = null;
+  if(!attAllSelectedDate){
+    const todayStr = new Date().toISOString().slice(0,10);
+    if(todayStr.startsWith(monthStr) && attAllDayMap[todayStr]) attAllSelectedDate = todayStr;
+    else {
+      const dates = Object.keys(attAllDayMap).sort();
+      if(dates.length) attAllSelectedDate = dates[dates.length-1];
+    }
+  }
+  renderAttCalendar(monthStr, attAllDayMap, attAllSelectedDate, isSingleView);
+  renderAttDayDetail(attAllSelectedDate, attAllSelectedDate ? (attAllDayMap[attAllSelectedDate]||[]) : null, isSingleView);
 }
-function loadAttAll(){ loadAttList(true); }
+function loadAttAll(){ loadAttList(); }
 
 // ─── 새 기능: 근태 전체조회 E안 — 월 캘린더 ───
-function renderAttCalendar(monthStr, dayMap, selectedDate){
+function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
   const target = document.getElementById('attCalendar');
   if(!target) return;
   const [y,m] = monthStr.split('-').map(Number);
@@ -3949,7 +3923,11 @@ function renderAttCalendar(monthStr, dayMap, selectedDate){
     if(dateStr===todayStr) cls.push('today');
     if(dateStr===selectedDate) cls.push('active');
     let dotsHtml = '<div class="att-cal-dots"></div>';
-    if(logs.length){
+    // 1인 모드: 색점 숨기고 시간을 크게 / 다인 모드: 색점 + 합계
+    if(isSingleView){
+      // 색점 슬롯은 빈 상태로 (높이 유지), 시간 더 큰 폰트
+      dotsHtml = '<div class="att-cal-dots"></div>';
+    } else if(logs.length){
       const sorted = [...logs].sort((a,b)=>(b.total_work_min||0)-(a.total_work_min||0));
       const visible = sorted.slice(0,3);
       const more = sorted.length-3;
@@ -3958,7 +3936,7 @@ function renderAttCalendar(monthStr, dayMap, selectedDate){
       dotsHtml = `<div class="att-cal-dots">${dots}</div>`;
     }
     const sumHtml = totalMin>0
-      ? `<div class="att-cal-sum">${fmtHourDecimal(totalMin)}</div>`
+      ? `<div class="att-cal-sum" style="${isSingleView?'font-size:13px;':''}">${fmtHourDecimal(totalMin)}</div>`
       : `<div class="att-cal-sum">&nbsp;</div>`;
     html += `<div class="att-cal-cell ${cls.join(' ')}" data-action="pickAttDay|${dateStr}">
       <div class="att-cal-day">${d}</div>
@@ -3971,7 +3949,7 @@ function renderAttCalendar(monthStr, dayMap, selectedDate){
 }
 
 // ─── 새 기능: 근태 전체조회 E안 — 일별 간트 상세 ───
-function renderAttDayDetail(date, logs){
+function renderAttDayDetail(date, logs, isSingleView){
   const target = document.getElementById('attDayDetail');
   if(!target) return;
   if(!date){
@@ -4018,6 +3996,11 @@ function renderAttDayDetail(date, logs){
     const wageLabel = r.calculated_wage!=null
       ? fmt(r.calculated_wage)+'원'
       : (r.app_in&&r.app_out ? '⚠️' : '-');
+    // 1인 모드에서만 매칭 상태(⚪🟠) 표시
+    const STATUS_DOT = {'정상매칭':'#05C072','앱전용':'#0050FF','캡스전용':'#FF9500','시간오차':'#FF9500','출근누락':'#F04452','퇴근누락':'#F04452'};
+    const statusHtml = (isSingleView && r.caps_match_status)
+      ? `<span style="font-size:9px;color:var(--gray-600);margin-left:6px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${STATUS_DOT[r.caps_match_status]||'#B0B8C1'};margin-right:2px;vertical-align:middle;"></span>${r.caps_match_status}</span>`
+      : '';
     const clickable = isManager && idx>=0;
     html += `<div class="gantt-row" ${clickable?`data-action="openEditAttByIdx|${idx}" style="cursor:pointer;"`:''}>
       <div class="att-row-label"><span class="dot" style="background:${color}"></span>${(r.employees?.name||'?').slice(0,4)}</div>
@@ -4027,7 +4010,7 @@ function renderAttDayDetail(date, logs){
       </div>
     </div>
     <div class="att-row-meta">
-      <span>${timeLabel} · ${fmtHourDecimal(r.total_work_min||0)}</span>
+      <span>${timeLabel} · ${fmtHourDecimal(r.total_work_min||0)}${statusHtml}</span>
       <span class="wage">${wageLabel}</span>
     </div>`;
   });
@@ -4037,8 +4020,11 @@ function renderAttDayDetail(date, logs){
 // ─── 새 기능: 캘린더 셀 탭 → 선택일 갱신 ───
 function pickAttDay(date){
   attAllSelectedDate = date;
-  renderAttCalendar(attAllMonth, attAllDayMap, attAllSelectedDate);
-  renderAttDayDetail(date, attAllDayMap[date]||[]);
+  const sel = document.getElementById('attEmpFilter');
+  const empF = (sel?.value) || (currentEmp && !isManager ? currentEmp.id : '');
+  const isSingleView = !!empF;
+  renderAttCalendar(attAllMonth, attAllDayMap, attAllSelectedDate, isSingleView);
+  renderAttDayDetail(date, attAllDayMap[date]||[], isSingleView);
 }
 
 // ─── 새 기능: 근태 기록 편집 ───
@@ -4074,7 +4060,7 @@ async function saveEditAttendance(){
   setLoad(false);
   if(error) return errToast('수정', error);
   toast('근태 기록 수정됐어요','success');
-  closeAllSheets();loadAttList(true);loadAttList(false);
+  closeAllSheets();loadAttList();
 }
 async function deleteAttendance(){
   const attId=document.getElementById('editAttId').value;
@@ -4084,7 +4070,7 @@ async function deleteAttendance(){
   setLoad(false);
   if(error) return errToast('삭제', error);
   toast('기록 삭제됐어요','success');
-  closeAllSheets();loadAttList(true);loadAttList(false);
+  closeAllSheets();loadAttList();
 }
 
 // ─── 내 기록: 주간 간트차트 뷰 ───
