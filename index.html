@@ -47,6 +47,12 @@ input,select,textarea,button{font-family:inherit;}
 .header-title{font-size:18px;font-weight:900;color:var(--blue);flex-shrink:0;}
 .header-store{font-size:12px;font-weight:600;color:var(--gray-600);background:var(--gray-100);padding:6px 12px;border-radius:20px;cursor:pointer;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .header-user{font-size:12px;font-weight:700;color:var(--gray-600);cursor:pointer;padding:6px 10px;background:var(--gray-100);border-radius:20px;white-space:nowrap;flex-shrink:0;}
+/* VIEWAS-START — 시점 토글 버튼 스타일 (제거 가이드: dev_lessons.md #46) */
+.viewas-toggle{font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;padding:6px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:4px;}
+.viewas-toggle:active{background:#FDE68A;}
+.viewas-opt:active{background:var(--gray-100);}
+body.viewas-on{padding-top:34px;}
+/* VIEWAS-END */
 
 /* ─ 네비 */
 .bottom-nav{position:fixed;bottom:0;width:100%;height:calc(72px + env(safe-area-inset-bottom,0));padding-bottom:env(safe-area-inset-bottom,0);background:var(--white);display:flex;border-top:1px solid var(--gray-200);z-index:1000;overflow-x:auto;scrollbar-width:none;box-sizing:border-box;}
@@ -838,6 +844,29 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 </div>
 
 <!-- 법률 문서 간이 시트 (템플릿) -->
+<!-- VIEWAS-START — 시점 전환 바텀시트 -->
+<div class="sheet-overlay" id="viewAsSheet">
+  <div class="sheet sheet-content" style="padding-bottom:40px;">
+    <div class="sheet-header">
+      <div class="sheet-title">👁 시점 전환</div>
+      <button class="sheet-close" data-action="closeSheet|viewAsSheet">✕</button>
+    </div>
+    <div style="padding:8px 4px 14px;font-size:11px;color:var(--gray-500);line-height:1.5;">
+      화면만 시뮬레이션해요. DB 권한은 안 바뀝니다.<br>새로고침하면 자동으로 사장 시점으로 돌아옵니다.
+    </div>
+    <div class="viewas-opt" data-action="setViewAs|" style="padding:16px 12px;border-top:1px solid var(--gray-100);cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px;">
+      👑 <span>사장 시점 (실제 권한)</span>
+    </div>
+    <div class="viewas-opt" data-action="setViewAs|store_manager" style="padding:16px 12px;border-top:1px solid var(--gray-100);cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px;">
+      📋 <span>점장 미리보기</span>
+    </div>
+    <div class="viewas-opt" data-action="setViewAs|staff" style="padding:16px 12px;border-top:1px solid var(--gray-100);cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px;">
+      🧑‍🍳 <span>직원 미리보기</span>
+    </div>
+  </div>
+</div>
+<!-- VIEWAS-END -->
+
 <div class="sheet-overlay" id="legalDocSheet">
   <div class="sheet sheet-content" style="max-height:85vh;padding-bottom:80px;">
     <div class="sheet-header">
@@ -858,9 +887,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
   <div style="display:flex;align-items:center;gap:6px;">
     <div class="header-store" id="headerStore" data-action="openStoreSheet">매장 선택</div>
+    <!-- VIEWAS-START — 시점 미리보기 토글 (제거 가이드: dev_lessons.md #46) -->
+    <div class="viewas-toggle" id="viewAsToggle" data-action="openSheet|viewAsSheet" style="display:none;">
+      👁 <span id="viewAsLabel">사장</span>
+    </div>
+    <!-- VIEWAS-END -->
     <div class="header-user" id="headerUser" data-action="openMyInfoSheet">개발모드</div>
   </div>
 </div>
+
+<!-- VIEWAS-START — 노란 띠 배너 (미리보기 ON일 때만 표시) -->
+<div id="viewAsBanner" data-action="setViewAs|" style="display:none;position:fixed;top:0;left:0;right:0;background:#FBBF24;color:#78350F;padding:8px;text-align:center;font-size:12px;font-weight:700;z-index:2000;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+  👁 <span id="viewAsBannerLabel"></span> · 탭해서 사장 복귀
+</div>
+<!-- VIEWAS-END -->
 
 <!-- 사이드 메뉴 오버레이 -->
 <div id="sideOverlay" data-action="closeSideMenu" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1500;"></div>
@@ -2879,7 +2919,18 @@ let b64 = '', rowCount = 0, stagingData = [];
 let cardDateStr = new Date().toISOString().split('T')[0];
 let currentEmp = null, isManager = false, isOwner = false;
 // auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
-let authLevel = 'staff';
+// ─── VIEWAS-START — 시점 미리보기 격리 (제거 가이드: dev_lessons.md #46) ───
+let realAuthLevel = 'staff';  // DB에서 받은 실제 권한 (변하지 않음)
+let viewAsLevel = null;       // 미리보기 권한 (null이면 실제 권한 사용)
+// ─── VIEWAS-END ────────────────────────────────────────────
+let authLevel = 'staff';       // 화면에 적용되는 권한 (viewAsLevel 반영)
+// 권한 단일 진입점: realAuthLevel + viewAsLevel → authLevel/isManager/isOwner 갱신
+function recalcPermissions(){
+  // VIEWAS 제거 시 → authLevel = realAuthLevel 한 줄로 단순화
+  authLevel = viewAsLevel || realAuthLevel;
+  isOwner = (authLevel === 'owner');
+  isManager = ['owner','franchise_admin','store_manager'].includes(authLevel);
+}
 let dashMonthStr = new Date().toISOString().slice(0,7);
 let schedEmpId = null;
 let chartInstances = {};
@@ -9532,13 +9583,50 @@ document.addEventListener('keydown',e=>{
 });
 // devLogin 제거됨 — UI 버튼 삭제, 함수는 안전장치로 잔류
 function devLogin(){ toast('개발모드가 비활성화됐어요.','warn'); }
+
+// ─── VIEWAS-START — 시점 미리보기 함수 (제거 가이드: dev_lessons.md #46) ───
+// 사장(owner) / 본사 관리자(franchise_admin)만 토글 가능. DB 권한은 안 바뀜.
+function setViewAs(level){
+  // 실제 권한이 owner/franchise_admin이 아니면 무시 (직원이 권한 상승 못 함)
+  if(realAuthLevel!=='owner'&&realAuthLevel!=='franchise_admin'){
+    toast('시점 전환 권한이 없어요.','warn');
+    return;
+  }
+  // 빈 문자열/null/'owner' = 사장 시점 복귀
+  viewAsLevel = (level&&level!=='owner') ? level : null;
+  recalcPermissions();
+  applyPermissionUI();
+  updateViewAsUI();
+  closeSheet('viewAsSheet');
+  // 첫 화면 이동 (직원 시점이면 근태로, 사장 복귀면 대시보드로)
+  if(viewAsLevel) nav(isManager?'dashboard':'attendance');
+  else nav('dashboard');
+}
+function updateViewAsUI(){
+  const toggle=document.getElementById('viewAsToggle');
+  const label=document.getElementById('viewAsLabel');
+  const banner=document.getElementById('viewAsBanner');
+  const bLabel=document.getElementById('viewAsBannerLabel');
+  const canToggle=(realAuthLevel==='owner'||realAuthLevel==='franchise_admin');
+  if(toggle) toggle.style.display=canToggle?'flex':'none';
+  const labelMap={owner:'사장',franchise_admin:'본사',store_manager:'점장',staff:'직원'};
+  if(label) label.textContent=labelMap[authLevel]||authLevel;
+  if(banner){
+    banner.style.display=viewAsLevel?'block':'none';
+    if(bLabel) bLabel.textContent='미리보기: '+(labelMap[viewAsLevel]||viewAsLevel)+'이 보는 화면';
+  }
+  document.body.classList.toggle('viewas-on',!!viewAsLevel);
+}
+// ─── VIEWAS-END ────────────────────────────────────────────────────
 function completeLogin(emp){
   currentEmp=emp;
   // auth_level 기반 권한 (is_manager와 동기화)
-  authLevel=emp.auth_level||'staff';
-  if(authLevel==='staff'&&emp.is_manager) authLevel='store_manager';
-  isOwner=authLevel==='owner';
-  isManager=['owner','franchise_admin','store_manager'].includes(authLevel);
+  realAuthLevel=emp.auth_level||'staff';
+  if(realAuthLevel==='staff'&&emp.is_manager) realAuthLevel='store_manager';
+  // ─── VIEWAS-START — 새 로그인 시 미리보기 초기화 ───
+  viewAsLevel=null;
+  // ─── VIEWAS-END ───
+  recalcPermissions();
   // 전역 상태 초기화 (이전 세션 잔여 방지)
   selectedEmpId=null;schedEmpId=null;
   document.getElementById('headerUser').innerText=emp.name;
@@ -9549,6 +9637,9 @@ function completeLogin(emp){
   localStorage.setItem('pd_emp',emp.id);
   localStorage.setItem('pd_auth_level',authLevel);
   applyPermissionUI();
+  // ─── VIEWAS-START ───
+  updateViewAsUI();
+  // ─── VIEWAS-END ───
   // 로그인 후 첫 화면: 본사→본사 홈, 관리자→대시보드, 직원→근태
   if(authLevel==='franchise_admin') nav('franchiseHome');
   else nav(isManager?'dashboard':'attendance');
@@ -9560,7 +9651,12 @@ function completeLogin(emp){
 function doLogout(){
   if(!confirm('로그아웃?')) return;
   closeAllSheets();
-  currentEmp=null;isManager=false;isOwner=false;authLevel='staff';
+  currentEmp=null;
+  realAuthLevel='staff';
+  // ─── VIEWAS-START ───
+  viewAsLevel=null;
+  // ─── VIEWAS-END ───
+  recalcPermissions();
   localStorage.removeItem('pd_emp');
   // 모든 컨테이너 내용 초기화 (이전 세션 데이터 잔류 방지)
   document.querySelectorAll('.container').forEach(c=>{c.classList.remove('active');});
@@ -9569,6 +9665,9 @@ function doLogout(){
   const firstNav=document.querySelector('.nav-item[data-tab="receipt"]');
   if(firstNav) firstNav.classList.add('active');
   applyPermissionUI();
+  // ─── VIEWAS-START ───
+  updateViewAsUI();
+  // ─── VIEWAS-END ───
   showLoginScreen();
 }
 

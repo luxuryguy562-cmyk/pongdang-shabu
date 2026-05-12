@@ -1219,3 +1219,58 @@ if(catName.includes('>')){
 - [ ] 기존 에이전트 역할과 겹치지 않게 경계가 명확한가?
 
 **교훈**: 외부 도구의 **실행 인프라**는 그 도구의 세계에서만 돌아간다. 우리 세계에선 **사고법**만 쓸모 있다.
+
+---
+
+## 45. 이모지 절제 정책 (2026-05-12 사장님 재확정)
+
+**배경**: 옛 작업(2026-04-24 work_log "사이드메뉴 이모지 통일")에서 이모지를 통일했으나, 사장님이 그 후 "이모지가 너무 많아서 빼자"고 별도 지시. 그러나 그 결정이 docs에 기록되지 않아 이후 작업에서 다시 이모지 잔뜩 추가하는 회귀 발생.
+
+**원칙**:
+- **사이드메뉴 항목 텍스트엔 이모지 안 붙임** (예: "지출 카테고리 설정" O, "📋 지출 카테고리 설정" X)
+- **결제수단/기타매출 등 DB에 사용자가 직접 등록하는 `icon` 필드**의 이모지는 OK (payment_methods, extra_revenue_items)
+- **앱 내 핵심 동작 한 줄 안내**(예: "📷 사진 찍으면 AI가 자동 분석")는 OK — 시각 단서 1개로 의미 강화
+- **나열 메뉴/리스트/표 헤더에 모든 항목마다 이모지** = 금지 (시각 노이즈)
+
+**판단 기준**: 이모지가 **의미를 추가하는가**, 아니면 **장식인가**. 후자면 빼라.
+
+**같은 실수 방지**: 사장님이 한 번 "빼자"고 한 결정은 즉시 `dev_lessons.md`에 박을 것.
+
+---
+
+## 46. 시점 미리보기 (viewAs) 격리 설계 + 미래 제거 절차 (2026-05-12)
+
+**기능**: 사장님(owner/franchise_admin)이 헤더 우측 토글로 "점장 시점", "직원 시점"을 임시로 켜서 다른 권한 사용자가 보는 화면을 미리볼 수 있는 기능. DB 권한은 안 바뀜.
+
+**왜 격리해야 하나**: 사장님이 "완성되면 토글 지워라" 할 가능성 있음. 그때 코드 곳곳에 분기 박혀있으면 제거가 대형 작업이 됨.
+
+### 격리 구조
+
+**1) 변수 분리** (`index.html` 글로벌 상태):
+```js
+let realAuthLevel = 'staff';  // DB에서 받은 실제 권한 (변하지 않음)
+let authLevel = 'staff';      // 화면에 적용되는 권한 (viewAsLevel 반영)
+let viewAsLevel = null;       // 미리보기 권한 (null이면 실제 권한 사용)
+```
+
+**2) 단일 진입점**: `recalcPermissions()` 함수만이 `authLevel` / `isManager` / `isOwner`를 갱신. 다른 코드는 이 함수만 호출.
+
+**3) 코드 마커**: 시점 관련 모든 추가 코드를 다음 마커로 감쌈:
+```
+<!-- VIEWAS-START -->  ...  <!-- VIEWAS-END -->
+// ─── VIEWAS-START ───  ...  // ─── VIEWAS-END ───
+```
+
+### 미래 제거 절차 (예상 10~15분, 소형 작업)
+
+1. `index.html`에서 `VIEWAS-START` ~ `VIEWAS-END` 마커 사이 모든 블록 삭제 (HTML/JS 양쪽)
+2. `let viewAsLevel = null;` 줄 삭제
+3. `let realAuthLevel = ...`을 `let authLevel = ...`로 합치기 (`authLevel` 변수 하나로 환원)
+4. `recalcPermissions()` 함수 삭제. `completeLogin` 안에서 직접 `isOwner`/`isManager` 계산식 복원 (이전 PR diff 참조)
+5. `recalcPermissions()` 호출 부분을 직접 계산식으로 교체 (grep로 찾음)
+6. `viewAsSheet` 바텀시트 HTML 블록 삭제
+
+**제거 후 검증**:
+- `grep -i "viewAs\|VIEWAS\|realAuthLevel\|recalcPermissions" index.html` → 0건
+- node --check 통과
+- 골든패스: 로그인 → isManager UI 정상 표시

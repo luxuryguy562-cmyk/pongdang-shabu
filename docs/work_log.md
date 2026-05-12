@@ -4,6 +4,38 @@
 
 ---
 
+## [2026-05-12] 시점 미리보기 토글 + 권한 격리 설계 (Phase 1)
+
+**브랜치**: `claude/check-receipt-category-fk-AtZHf` (계속 사용)
+**규모**: 중형. DB 변경 없음.
+**발단**: 사장님이 직원 화면 확인하려고 로그아웃→재로그인 반복하는 불편 해소 + 추후 제거 쉽게.
+
+### 작업 내용
+1. **권한 격리 설계**:
+   - 변수 분리: `realAuthLevel` (DB 실제 권한, 변하지 않음) + `authLevel` (화면 반영) + `viewAsLevel` (미리보기)
+   - `recalcPermissions()` 단일 진입점 함수 — `isManager` / `isOwner` 갱신은 이 함수만
+   - `completeLogin` / `doLogout` 안 직접 할당을 함수 호출로 교체
+2. **시점 토글 UI**:
+   - 헤더 우측 작은 노란 버튼 `[👁 사장]`
+   - 누르면 `viewAsSheet` 바텀시트: 👑 사장 / 📋 점장 / 🧑‍🍳 직원 3개 옵션
+   - owner / franchise_admin만 토글 가능 (직원이 권한 상승 못 함)
+3. **노란 띠 배너**: 미리보기 ON일 때 상단 고정 띠 "미리보기: X이 보는 화면 · 탭해서 사장 복귀". 클릭 시 즉시 복귀
+4. **새로고침 시 자동 복원**: `viewAsLevel`은 localStorage 저장 X — 새로고침하면 사장 시점으로
+
+### 격리 설계 (미래 제거 쉽게)
+- 모든 추가 코드를 `VIEWAS-START` / `VIEWAS-END` 마커로 감쌈 (HTML/JS/CSS 양쪽 20개 마커)
+- 제거 가이드: `dev_lessons.md #46`에 단계별 절차 명시 (예상 10~15분)
+
+### 추가 기록
+- `dev_lessons.md #45`: 이모지 절제 정책 (옛 결정이 docs 누락된 회귀 방지)
+- `dev_lessons.md #46`: 시점 미리보기 격리 설계 + 제거 절차
+
+### 검증
+- node --check 통과
+- VIEWAS 마커 20개 (10쌍) 정상
+
+---
+
 ## [2026-05-12] 영수증 분류 picker 통일 + 금액 콤마 + 400 진짜 수정
 
 **브랜치**: `claude/check-receipt-category-fk-AtZHf` (PR #31 머지 후 추가 작업)
