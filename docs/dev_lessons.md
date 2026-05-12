@@ -4,6 +4,83 @@
 
 ---
 
+## 65. `location.reload()` 후처리는 자동 로그인 흐름 발동 → 화면 점프 (2026-05-12)
+
+**사건**: `finishSettlement2` 마지막에 `location.reload()` 로 페이지 새로고침해서 마감 결과 갱신. 사장님 보고 "마감 저장 누르면 로그인 화면 잠깐 떴다가 대시보드로 점프".
+
+**원인 추적**:
+- `location.reload()` → 페이지 재로드 → 초기 자동 로그인 흐름 (localStorage `pd_emp` 확인) 발동
+- 그 짧은 사이 로그인 오버레이 깜빡 노출
+- `completeLogin` → `navHome(isManager?'dashboard':'attendance')` → 사장님은 관리자라 대시보드로
+
+**교훈**:
+- 저장 후 새로고침 대신 명시적 상태 갱신 (탭 전환/리렌더) 으로 해결.
+- `location.reload()` 는 PWA + 자동로그인 환경에서 시각 점프 야기. 최후수단.
+
+**적용**: `location.reload()` 제거 → `settleTab('list')` 자동 전환으로 방금 저장한 마감을 즉시 확인.
+
+---
+
+## 64. DB Generated Column 은 단순식만 가능 — 보정 계산은 JS 에서 (2026-05-12)
+
+**사건**: `daily_opening.diff_amount` 를 `GENERATED ALWAYS AS (actual_total - previous_close_total) STORED` 로 정의. 후속 작업에서 차감(deductions) 도입했지만 generated column 식은 차감 미반영. 차액 통합 표에서 "차감 입력해도 영업개시 차액 그대로 빨강".
+
+**원인**: Generated column 식은 같은 행의 다른 컬럼만 참조 가능. `deductions` JSONB 합산을 식에 못 박음.
+
+**교훈**:
+- Generated column 은 단순 산술 만. 복잡한 보정/JSONB 합산이 필요하면 JS 에서 계산.
+- DB 값은 "기본 차이" 의미로 두되, UI 표시 단계에서 JS 가 다시 보정.
+
+**적용**: `loadSettleList` 에서 `calcOpDiff = actual − (previous − Σdeductions.amount)` 로 JS 보정.
+
+---
+
+## 63. 매출 수식은 입력 칸 기준으로 단순화 — 분해/검증값을 매출에 합산하지 말 것 (2026-05-12)
+
+**사건**: `syncClosingToSalesDaily` 옛 코드가 `sales_daily.cash = cash_detail_cash, qr = cash_detail_qr, etc = pos_etc + cash_detail_transfer` 매핑. 직원이 매출 4칸(pos_*) 안 채우고 현금상세만 채우면 sales_daily 합계로 가짜 매출(예: 277,920원) 잡힘. 사장님이 "왜 매출이 이상한가" 추적 어려움.
+
+**원인**: 사장님 의도 = "매출 4칸 합 = 매출". 현금상세는 검증용이지 매출 합산 대상 X. 옛 매핑이 "분해 합 = 매출"로 일치시키려다 직원 입력 누락 시 가짜 매출.
+
+**교훈**:
+- 매출 합계 = 사장님이 명시한 입력 칸 기준 단순 합. 분해/검증값을 매출에 섞지 말 것.
+- 매출 4칸이 0인데 현금상세는 있다 = "직원 입력 누락" 시그널. 매출은 0으로 두고 UI 가 ⚠️ 안내.
+
+**적용**:
+1. `legacyVals.cash = pos_cash` (현금상세 분해 안 함)
+2. `loadSettleCard` 에 매출 현금+현금영수증 vs 현금분해 합 비교 ⚠️ 박스
+
+---
+
+## 62. iOS Safari sticky 작동 조건 까다로움 — 신뢰 못하면 fixed 로 (2026-05-12)
+
+**사건**: 마감정산 차액 박스를 `position: sticky` 로 헤더 아래 고정 시도. `.container { overflow-x: hidden }` 가 sticky 차단 → `clip` 폴백 + `#settleCont.container { overflow: visible }` 까지 해도 사장님 폰에서 "스크롤하면 안 따라옴".
+
+**원인 후보**:
+- iOS Safari `overflow-x: clip` 지원 16.4+ (사장님 폰 버전 불확실)
+- 부모 elements 의 다른 속성(transform/filter/contain) 이 sticky 컨테이너 break
+- body padding-top 으로 sticky top 계산 어긋남
+
+**교훈**:
+- iOS Safari sticky 는 환경 따라 깨질 수 있음. 사용자 핵심 기능에는 신뢰하기 어려움.
+- 행고정이 정말 중요하면 `position: fixed + left:0 right:0` + 자리 확보 padding 으로 확실히.
+- 또는 sticky 대상을 다른 카드 안에 흡수시켜 행고정 자체를 회피 (이번 케이스 = 차액 박스를 금고 계수 카드 안 좌측으로 이동 → 행고정 불필요).
+
+---
+
+## 61. 화면 같은 정보가 두 군데에 보이면 사장님이 "중복 거슬림" 호소 (2026-05-12)
+
+**사건**: 차액 박스(매출/금고/차액) 행고정 + 영업개시 카드의 전일 이월금이 같은 숫자(1,526,900원) 표시. 사장님 "중복 느낌, 차라리 영업개시에 붙이는 게 낫겠다".
+
+**원인**: 의미상 다른 값(영업개시 이월금 = 고정값 / 장부 합계 = 동적 계산)이지만 입력 시작 전엔 같은 숫자 → 사용자 인식상 중복.
+
+**교훈**:
+- 동일 숫자가 두 곳 표시되면 의미 차이 설명하기보다 한 곳으로 합치는 게 빠름.
+- 사장님 인사이트로 화면 재구성 = 헌법 1-6 정당한 갈아엎기 적용.
+
+**적용**: 차액 박스를 화면 위 행고정 → 금고 계수 카드 안 좌측 계산기로 통합. 영업개시는 자기 자리에 한 번만 표시.
+
+---
+
 ## 60. 디자인 변화는 무의식 효과 — 체감 임팩트는 패러다임 변경 (2026-05-06)
 
 **사건**: 전수 점검 1~5단계(폰트·아이콘·에러메시지·어미·자동로그인) 후 사장님 "큰 차이 못 느끼겠다". 6~9단계(햄버거→하단탭, 큰 숫자, 빈 상태, 시트 SVG) 한꺼번에 추가했더니 "조금은 보이지만 크게 달라진 느낌은 없다".
