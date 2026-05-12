@@ -1315,39 +1315,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
   </div>
   <!-- ── 근무계획 (근태 서브탭으로 통합, attTab('sched') 시 표시) ── -->
+  <!-- 2026-05-12: 근무 기록과 동일 레이아웃 (월 달력 + 일별 상세) — 사장님 통일 요청 -->
   <div class="card" id="schedCard" style="display:none;">
-    <div class="card-title">근무 계획</div>
-    <div class="sub-tabs">
-      <button class="sub-tab active" data-sub="input" data-action="schedTab|input|this">희망근무 등록</button>
-      <button class="sub-tab" data-sub="gantt" data-action="schedTab|gantt|this">📅 일정 보기</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-secondary btn-sm" data-action="moveSchedMonth|-1">‹</button>
+      <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vSchedMonth">-</div>
+      <button class="btn btn-secondary btn-sm" data-action="moveSchedMonth|1">›</button>
     </div>
-    <div id="schedInput">
-      <div class="input-row manager-only" data-action="openEmpSheet|sched">
-        <label>직원</label><span id="vSchedEmp" class="val empty">선택</span>
-      </div>
-      <div class="input-row" data-action="openDatePicker|sched">
-        <label>날짜</label><span id="vSchedDate" class="val empty">선택</span>
-      </div>
-      <div class="input-row" data-action="openTimePicker|schedStart">
-        <label>희망 출근</label><span id="vSchedStart" class="val empty">-</span>
-      </div>
-      <div class="input-row" data-action="openTimePicker|schedEnd">
-        <label>희망 퇴근</label><span id="vSchedEnd" class="val empty">-</span>
-      </div>
-      <input id="vSchedMemo" class="input-field" placeholder="메모 (선택)" type="text">
-      <button class="btn btn-primary btn-full" data-action="saveSchedule">희망근무 등록</button>
-    </div>
-    <div id="schedGantt" style="display:none;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <button class="btn btn-secondary btn-sm" data-action="moveGanttWeek|-1">‹ 이전주</button>
-        <span id="ganttWeekLabel" style="font-size:14px;font-weight:700;">-</span>
-        <button class="btn btn-secondary btn-sm" data-action="moveGanttWeek|1">다음주 ›</button>
-      </div>
-      <!-- 요일 탭 -->
-      <div style="display:flex;gap:3px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;" id="ganttDayTabs"></div>
-      <!-- 간트 차트 -->
-      <div id="ganttChart"></div>
-    </div>
+    <select id="schedEmpFilter" class="input-field" style="padding:10px 14px;font-size:13px;margin-bottom:10px;" data-change="loadScheduleMonth">
+      <option value="">전체 직원</option>
+    </select>
+    <div id="schedCalendar"></div>
+    <div id="schedDayDetail" class="att-day-detail"></div>
   </div>
 </div>
 
@@ -2815,6 +2794,29 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- 근무 계획 등록/편집 시트 -->
+<div class="sheet" id="addSchedSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="addSchedTitle">희망근무 등록</div>
+  <div class="input-row manager-only" data-action="openEmpSheet|sched">
+    <label>직원</label><span id="vSchedEmp" class="val empty">선택</span>
+  </div>
+  <div class="input-row" data-action="openDatePicker|sched">
+    <label>날짜</label><span id="vSchedDate" class="val empty">선택</span>
+  </div>
+  <div class="input-row" data-action="openTimePicker|schedStart">
+    <label>희망 출근</label><span id="vSchedStart" class="val empty">-</span>
+  </div>
+  <div class="input-row" data-action="openTimePicker|schedEnd">
+    <label>희망 퇴근</label><span id="vSchedEnd" class="val empty">-</span>
+  </div>
+  <input id="vSchedMemo" class="input-field" placeholder="메모 (선택)" type="text">
+  <div class="action-group" style="margin-top:14px;">
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveSchedule">💾 저장</button>
+  </div>
+</div>
+
 <!-- 거래처 추가/편집 -->
 <div class="sheet" id="addVendorSheet">
   <div class="sheet-handle"></div>
@@ -3838,6 +3840,7 @@ function attTab(tab,el){
     // 근태 카드 본문(서브탭 제외) 숨김 + 근무계획 카드 표시
     if(attCard) attCard.querySelectorAll(':scope > div:not(.sub-tabs)').forEach(d=>d.style.display='none');
     if(schedCard) schedCard.style.display='block';
+    if(typeof loadScheduleMonth==='function') loadScheduleMonth();
     return;
   }
   // 그 외 탭 — 근무계획 카드 숨김, 근태 카드 본문 복원
@@ -4639,17 +4642,172 @@ async function commitCaps(){
 // ══════════════════════════════════════════
 // 근무계획
 // ══════════════════════════════════════════
-function schedTab(tab,el){
-  document.querySelectorAll('#schedCard .sub-tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  ['Input','Gantt','Confirm'].forEach(t=>{const el2=document.getElementById('sched'+t);if(el2)el2.style.display='none';});
-  const target=document.getElementById('sched'+tab.charAt(0).toUpperCase()+tab.slice(1));
-  if(target) target.style.display='block';
-  if(tab==='gantt') renderGanttWeek();
-}
+// 옛 schedTab — sub-tab 제거됨. 데드코드 (호출처 없음). 안전망으로 잔류.
+function schedTab(tab,el){}
+
+// ─── 근무 계획 (월 달력 + 일별 상세, 2026-05-12 통일) ─────────
+let schedMonth = new Date().toISOString().slice(0,7);
+let schedDayMap = {};
+let schedSelectedDate = null;
 function initSchedDate(){
-  ganttWeekStart=getWeekStart(new Date().toISOString().split('T')[0]);
-  ganttSelectedDay=new Date().toISOString().split('T')[0];
+  schedMonth = new Date().toISOString().slice(0,7);
+  schedSelectedDate = null;
+}
+function moveSchedMonth(dir){
+  const d=new Date(schedMonth+'-01');d.setMonth(d.getMonth()+dir);
+  schedMonth=d.toISOString().slice(0,7);
+  schedSelectedDate=null;
+  loadScheduleMonth();
+}
+function fillSchedEmpFilter(){
+  const sel=document.getElementById('schedEmpFilter');
+  if(!sel) return;
+  const cur=sel.value;
+  if(!isManager){
+    // 직원 모드: 본인 고정 (필터 숨김)
+    sel.innerHTML=currentEmp?`<option value="${currentEmp.id}">${currentEmp.name}</option>`:'<option value="">-</option>';
+    sel.style.display='none';
+    return;
+  }
+  sel.style.display='';
+  const opts=['<option value="">전체 직원</option>'];
+  (employees||[]).filter(e=>e.is_active!==false).forEach(e=>{
+    opts.push(`<option value="${e.id}">${e.name}</option>`);
+  });
+  sel.innerHTML=opts.join('');
+  if(cur) sel.value=cur;
+}
+async function loadScheduleMonth(){
+  if(!currentStore){
+    const cal=document.getElementById('schedCalendar');
+    if(cal) cal.innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';
+    return;
+  }
+  const lbl=document.getElementById('vSchedMonth');
+  if(lbl) lbl.innerText=schedMonth;
+  fillSchedEmpFilter();
+  const [y,m]=schedMonth.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const start=schedMonth+'-01', end=schedMonth+'-'+String(lastDay).padStart(2,'0');
+  const sel=document.getElementById('schedEmpFilter');
+  const empF=isManager?(sel?.value||''):(currentEmp?.id||'');
+  let q=sb.from('work_schedules').select('*,employees(name)').eq('store_id',currentStore.id).gte('work_date',start).lte('work_date',end);
+  if(empF) q=q.eq('employee_id',empF);
+  const{data}=await q.order('wish_start');
+  schedDayMap={};
+  (data||[]).forEach(r=>{(schedDayMap[r.work_date]=schedDayMap[r.work_date]||[]).push(r);});
+  const today=new Date().toISOString().slice(0,10);
+  if(!schedSelectedDate || !schedSelectedDate.startsWith(schedMonth)){
+    if(today.startsWith(schedMonth)) schedSelectedDate=today;
+    else if(Object.keys(schedDayMap).length) schedSelectedDate=Object.keys(schedDayMap).sort().pop();
+    else schedSelectedDate=null;
+  }
+  renderSchedCalendar();
+  renderSchedDayDetail(schedSelectedDate);
+}
+function renderSchedCalendar(){
+  const target=document.getElementById('schedCalendar');
+  if(!target) return;
+  const [y,m]=schedMonth.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const startDow=new Date(y,m-1,1).getDay();
+  const todayStr=new Date().toISOString().slice(0,10);
+  const dows=['일','월','화','수','목','금','토'];
+  let html='<div class="att-cal">';
+  dows.forEach((d,i)=>{
+    const cls=i===0?'sun':(i===6?'sat':'');
+    html+=`<div class="att-cal-head ${cls}">${d}</div>`;
+  });
+  for(let i=0;i<startDow;i++) html+=`<div class="att-cal-cell empty"></div>`;
+  for(let d=1;d<=lastDay;d++){
+    const dateStr=`${schedMonth}-${String(d).padStart(2,'0')}`;
+    const dow=(startDow+d-1)%7;
+    const scheds=schedDayMap[dateStr]||[];
+    const cls=[];
+    if(dow===0) cls.push('sun');
+    if(dow===6) cls.push('sat');
+    if(dateStr===todayStr) cls.push('today');
+    if(dateStr===schedSelectedDate) cls.push('active');
+    let dotsHtml='<div class="att-cal-dots"></div>';
+    if(scheds.length){
+      const visible=scheds.slice(0,3);
+      const more=scheds.length-3;
+      let dots=visible.map(s=>`<span class="att-cal-dot" style="background:${typeof empColor==='function'?empColor(s.employee_id):'#94A3B8'}"></span>`).join('');
+      if(more>0) dots+=`<span class="att-cal-more">+${more}</span>`;
+      dotsHtml=`<div class="att-cal-dots">${dots}</div>`;
+    }
+    html+=`<div class="att-cal-cell ${cls.join(' ')}" data-action="pickSchedDay|${dateStr}">
+      <div class="att-cal-day">${d}</div>
+      ${dotsHtml}
+      <div class="att-cal-sum">&nbsp;</div>
+    </div>`;
+  }
+  html+='</div>';
+  target.innerHTML=html;
+}
+function pickSchedDay(date){
+  schedSelectedDate=date;
+  renderSchedCalendar();
+  renderSchedDayDetail(date);
+}
+function renderSchedDayDetail(date){
+  const target=document.getElementById('schedDayDetail');
+  if(!target) return;
+  if(!date){
+    target.innerHTML='<div class="att-day-empty">위 캘린더에서 날짜를 선택하세요</div>';
+    return;
+  }
+  const dow=['일','월','화','수','목','금','토'][new Date(date+'T00:00:00').getDay()];
+  const scheds=schedDayMap[date]||[];
+  const addBtnHtml=` <span class="att-day-add-btn" data-action="openSchedSheet|${date}">＋ 직원</span>`;
+  if(!scheds.length){
+    target.innerHTML=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span><span style="font-size:10px;color:var(--gray-400);">예정 없음</span></div>`;
+    return;
+  }
+  let html=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span><span style="font-size:11px;color:var(--blue);font-weight:700;">${scheds.length}명</span></div>`;
+  scheds.forEach(s=>{
+    const empName=s.employees?.name||'-';
+    const start=s.wish_start?s.wish_start.slice(0,5):'-';
+    const end=s.wish_end?s.wish_end.slice(0,5):'-';
+    const memo=s.memo?`<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">${s.memo}</div>`:'';
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--gray-200);border-radius:10px;margin-bottom:6px;background:#fff;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">${empName}</div>
+        <div style="font-size:12px;color:var(--gray-600);">${start} ~ ${end}</div>
+        ${memo}
+      </div>
+      <button class="btn btn-secondary btn-sm" style="padding:6px 10px;font-size:12px;" data-action="openSchedSheet|${date}|${s.id}">편집</button>
+    </div>`;
+  });
+  target.innerHTML=html;
+}
+function openSchedSheet(date, schedId){
+  if(!guardStore()) return;
+  document.getElementById('vSchedDate').innerText=date||'-';
+  if(schedId){
+    const s=(schedDayMap[date]||[]).find(x=>String(x.id)===String(schedId));
+    if(s){
+      document.getElementById('addSchedTitle').innerText='희망근무 편집';
+      document.getElementById('vSchedEmp').innerText=s.employees?.name||'-';
+      schedEmpId=s.employee_id;
+      document.getElementById('vSchedStart').innerText=s.wish_start?s.wish_start.slice(0,5):'-';
+      document.getElementById('vSchedEnd').innerText=s.wish_end?s.wish_end.slice(0,5):'-';
+      document.getElementById('vSchedMemo').value=s.memo||'';
+    }
+  } else {
+    document.getElementById('addSchedTitle').innerText='희망근무 등록';
+    if(!isManager && currentEmp){
+      document.getElementById('vSchedEmp').innerText=currentEmp.name;
+      schedEmpId=currentEmp.id;
+    } else {
+      document.getElementById('vSchedEmp').innerText='선택';
+      schedEmpId=null;
+    }
+    document.getElementById('vSchedStart').innerText='-';
+    document.getElementById('vSchedEnd').innerText='-';
+    document.getElementById('vSchedMemo').value='';
+  }
+  openSheet('addSchedSheet');
 }
 async function saveSchedule(){
   if(!guardStore()) return;
@@ -4670,12 +4828,12 @@ async function saveSchedule(){
   const{error}=await sb.from('work_schedules').upsert(payload,{onConflict:'store_id,employee_id,work_date'});
   setLoad(false);
   if(error) return errToast('저장', error);
-  ganttWeekStart=getWeekStart(date);ganttSelectedDay=date;
   document.getElementById('vSchedMemo').value='';
-  // 일정보기 탭으로 이동해서 바로 확인
-  const ganttTab=document.querySelector('#schedCard .sub-tab[data-sub="gantt"]');
-  if(ganttTab) schedTab('gantt',ganttTab);
-  else renderGanttWeek();
+  closeSheet('addSchedSheet');
+  // 달력 + 일별 상세 갱신 — 저장한 날짜로 선택일 이동
+  schedMonth=date.slice(0,7);
+  schedSelectedDate=date;
+  await loadScheduleMonth();
   toast('희망근무가 등록됐습니다!','success');
 }
 // 주간 간트 유틸
