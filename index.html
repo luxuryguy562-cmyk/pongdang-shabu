@@ -4918,10 +4918,11 @@ async function loadSettleCard(d){
   html += row('🏦 계좌이체', items.cash_detail_transfer||0);
   html += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--gray-200);"><span style="font-size:13px;font-weight:700;color:var(--gray-600);">분해 합계</span><span style="font-size:14px;font-weight:800;">${fmt(cashDetailSum)}원</span></div>`;
   // 불일치 시 ⚠️ 안내
-  const posCash = items.pos_cash||0;
-  if(cashDetailSum !== posCash){
-    const diffCD = cashDetailSum - posCash;
-    html += `<div style="background:var(--danger-light);border-radius:10px;padding:10px;margin-top:6px;font-size:12px;color:var(--danger);font-weight:600;">⚠️ 매출 현금 ${fmt(posCash)}원과 분해 합 ${fmt(cashDetailSum)}원이 ${diffCD>0?'+':''}${fmt(diffCD)}원 차이입니다. 직원 입력 누락 가능성 — 확인 필요.</div>`;
+  // 마감정산 입력 화면 검증식과 동일: POS(현금+현금영수증) vs 상세(현금+QR+이체)
+  const posCashReceiptSum = (items.pos_cash||0)+(items.pos_cash_receipt||0);
+  if(cashDetailSum !== posCashReceiptSum){
+    const diffCD = cashDetailSum - posCashReceiptSum;
+    html += `<div style="background:var(--danger-light);border-radius:10px;padding:10px;margin-top:6px;font-size:12px;color:var(--danger);font-weight:600;">⚠️ 매출 현금+현금영수증 ${fmt(posCashReceiptSum)}원과 분해 합 ${fmt(cashDetailSum)}원이 ${diffCD>0?'+':''}${fmt(diffCD)}원 차이입니다. 직원 입력 누락 가능성 — 확인 필요.</div>`;
   }
 
   // 4) 차감
