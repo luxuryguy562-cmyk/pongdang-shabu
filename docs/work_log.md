@@ -4,6 +4,55 @@
 
 ---
 
+## [2026-05-13 야간] 홈 N+1 정리 + 라벨 통일 + 영업개시 차감 통합 (헌법 1-6)
+
+**브랜치**: `claude/continue-session-cKTQ4`
+**규모**: 대형 (홈 성능 + UI 일괄 + 영업개시 갈아엎기)
+**PR**: #66 (N+1) · #67 (수동 뱃지) · #68 (nav 라벨) · 이번 (영업개시)
+
+### 1. 홈 N+1 쿼리 정리 (PR #66)
+- 캡쳐 측정: 홈 진입 시 supabase 호출 44건 / 3초 → 약 15건 / 1초
+- `calcExpenseByCategories(ym, mode, prefetched)` — 카테고리별 vendor_orders/receipts/fixed_costs/eca/attendance 반복 호출 → loadDashboard에서 prefetch 후 메모리 필터
+- 두 Promise.all 통합 + 일별 분배에 재사용
+- `renderExtraRevenueDashboard` extra_revenue_logs 2회 → 1회 (월별/누적 JS 분리)
+
+### 2. 라벨 통일 (PR #67, #68)
+- 거래처 주문 카드 `manual`→`수동`, `upload`→`업로드` (디버깅 잔재 한글화)
+- nav-bar: 홈 / **근태관리** / **개시·마감** / **지출관리** / 더보기 (사장님 의견 "영업이 뭔지 직관 X")
+- `.nav-item white-space:nowrap` 보강
+
+### 3. 영업개시 차감 통합 — 헌법 1-6 정당한 갈아엎기
+**발단**: 사장님 — "마감정산 수정 화면에서 차감 편집·삭제 안 된다" → "영업개시는 기록조회·수정 화면 자체가 없다" 짚어줌
+
+**결정**: 영업개시에서 **차감 입력 제거** + **기록조회/수정/삭제 화면 추가**. 차감은 마감 한 곳에서만.
+- 사장님 명시: "맨날 차감 입력하긴 한다. 근데 마감 한 번에 체크하는 게 맞아보임"
+- 도난 감지(차액 자동 계산)는 그대로 유지 — `actual - previous_close_total`로 단순화
+- 옛 차감 데이터는 read-only로 표시("저장 시 사라짐" 안내)
+
+**변경 내용**:
+- `openingCont`에 sub-tabs (`오늘 영업개시` / `기록 조회`) 추가
+- 차감 카드 UI 제거 + 차액 메모 1줄 추가
+- 마감 화면 파란 박스(`#settleOpDedReadonly`) 제거 + `loadOpeningAmount` 박스 채움 코드 삭제
+- 새 함수: `openingTab`, `loadOpeningList`, `editOpening`, `deleteOpening`, `initOpeningDate`, `moveOpeningDate`
+- `loadOpeningPage(dateStr)` — 날짜 인자 지원 (수정 모드)
+- `saveOpening` — `deductions=[]` 빈 배열 + memo 저장, 수정 모드 토스트 분기
+- 옛 함수 삭제: `addOpDeductRow`, `removeOpDeductRow`, `onOpDedAmountInput`, `getOpDeductTotal`
+- `daily_opening.deductions` 컬럼 DB는 그대로 유지 (옛 데이터 보존)
+
+**FK 안전**: `daily_opening`을 참조하는 다른 테이블 없음 → 삭제/수정 안전
+**호환성**: `loadSettleList` calcOpDiff / `loadSettleCard`의 영업개시 차감 표시는 옛 데이터용으로 유지
+
+### 검증
+- node --check 통과
+- grep 잔재 0건 (`addOpDeductRow`/`opDeductRows`/`settleOpDedReadonly` 등)
+- 골든패스: 오늘 영업개시 입력·저장 / 어제 [수정] → 메모 편집 → 저장 / 카드 [삭제] / 마감 화면 파란 박스 사라짐
+
+### 보류 / 다음 세션
+- 옛 영업개시 차감 데이터가 많은 매장: 수정 진입 시 read-only 안내. 사장님 결정에 따라 마이그레이션 SQL 가능
+- 영업개시 [기록 조회] 표 디자인은 마감 통합표(`settleList`)와 일관성 검토 가능
+
+---
+
 ## [2026-05-13 후반] 자정 넘는 근무 입력·표시 + 영업일 회전 + 거래처 짬뽕 해소
 
 **브랜치**: `claude/unify-schedule-registration-aa920`
