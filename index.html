@@ -348,6 +348,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--gray-100);min-height:22px;}
 .gantt-name{min-width:44px;width:44px;font-size:10px;font-weight:700;padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
 .gantt-bar-area{flex:1;position:relative;height:18px;display:flex;}
+/* 자정선 (영업일 회전축의 24시 위치, 축 75% 지점) */
+.gantt-bar-area::after{content:'';position:absolute;left:75%;top:-2px;bottom:-2px;border-left:2px dashed rgba(239,68,68,0.55);pointer-events:none;z-index:1;}
 .gantt-bg-col{flex:1;border-left:1px solid var(--gray-100);}
 .gantt-bar{position:absolute;height:14px;top:2px;border-radius:3px;background:var(--blue);opacity:.85;display:flex;align-items:center;overflow:hidden;}
 .gantt-bar.confirmed{background:var(--success);}
@@ -4357,7 +4359,8 @@ function renderAttDayDetail(date, logs, isSingleView){
     let bar = '';
     if(inT){
       const sH = inT.getHours()+inT.getMinutes()/60;
-      const eH = outT ? (outT.getHours()+outT.getMinutes()/60) : (sH+0.3);
+      let eH = outT ? (outT.getHours()+outT.getMinutes()/60) : (sH+0.3);
+      if(eH<sH) eH += 24; // 자정 넘는 근무
       if(eH>sH){
         const left  = Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
         const width = Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
@@ -4519,17 +4522,21 @@ async function loadMyAttGantt(){
     else if(!isPast&&!isToday) ganttHtml+=`<span style="font-size:10px;color:var(--gray-400);">${sched?'예정':''}</span>`;
 
     ganttHtml+=`</div>
-      <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
+      <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour"${h===24?' style="color:#dc2626;font-weight:700;"':''}>${h%3===0?(h>=24?h-24:h):''}</div>`).join('')}</div>`;
 
     // 바 그리기
     let bars='';
     // 계획 바 (연한색)
     if(sched&&!sched.is_off){
-      const sH=parseHour(sched.wish_start||sched.start_time),eH=parseHour(sched.wish_end||sched.end_time);
-      if(sH!=null&&eH!=null&&eH>sH){
-        const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
-        const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
-        bars+=`<div style="position:absolute;height:14px;top:2px;left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:var(--gray-300);opacity:0.5;border-radius:3px;"></div>`;
+      const sH=parseHour(sched.wish_start||sched.start_time);
+      let eH=parseHour(sched.wish_end||sched.end_time);
+      if(sH!=null&&eH!=null){
+        if(eH<sH) eH+=24; // 자정 넘는 일정
+        if(eH>sH){
+          const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
+          const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
+          bars+=`<div style="position:absolute;height:14px;top:2px;left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:var(--gray-300);opacity:0.5;border-radius:3px;"></div>`;
+        }
       }
     }
     // 실제 근무 바 (진한색) — 출근만 찍어도 표시
@@ -4540,6 +4547,7 @@ async function loadMyAttGantt(){
       if(log.app_out){const outTime=new Date(log.app_out);eH=outTime.getHours()+outTime.getMinutes()/60;}
       else if(isToday){const now=new Date();eH=now.getHours()+now.getMinutes()/60;}
       else{eH=sH+0.5;} // 과거 퇴근누락 — 최소 바 표시
+      if(eH<sH) eH += 24; // 자정 넘는 근무
       if(eH>sH){
         const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
         const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
@@ -4897,7 +4905,9 @@ function moveGanttWeek(dir){
   ganttWeekStart=d.toISOString().split('T')[0];
   renderGanttWeek();
 }
-const GANTT_START=9,GANTT_END=22,GANTT_SPAN=GANTT_END-GANTT_START;
+// 영업일 회전축: 매장 영업일 시작시각(06:00)부터 24시간 (06~30시 = 익일 06:00)
+// 마감조처럼 자정 넘는 근무도 한 줄에 연속 표시. 24시 위치(축 75%)는 자정선.
+const GANTT_START=6,GANTT_END=30,GANTT_SPAN=GANTT_END-GANTT_START;
 const ganttHours=Array.from({length:GANTT_SPAN},(_,i)=>i+GANTT_START);
 
 async function renderGanttWeek(){
@@ -4944,21 +4954,26 @@ function renderGanttFiltered(){
         <span>${day.label}${isToday?' (오늘)':''}</span>
         <span class="day-count">${dayData.length}명</span>
       </div>
-      <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
+      <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour"${h===24?' style="color:#dc2626;font-weight:700;"':''}>${h%3===0?(h>=24?h-24:h):''}</div>`).join('')}</div>`;
     if(!dayData.length){
       html+=`<div style="padding:8px;text-align:center;font-size:11px;color:var(--gray-400);">등록된 근무 없음</div>`;
     } else {
       dayData.forEach(row=>{
         const name=row.employees?.name||'-';
-        const sH=parseHour(row.wish_start),eH=parseHour(row.wish_end);
+        const sH=parseHour(row.wish_start);
+        let eH=parseHour(row.wish_end);
         let bar='';
-        if(sH!=null&&eH!=null&&eH>sH){
-          const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
-          const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
-          const sLabel=String(Math.floor(sH)).padStart(2,'0')+':'+(sH%1?'30':'00');
-          const eLabel=String(Math.floor(eH)).padStart(2,'0')+':'+(eH%1?'30':'00');
-          const confirmed=row.status==='확정';
-          bar=`<div class="gantt-bar${confirmed?' confirmed':''}" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;"><span style="font-size:8px;color:#fff;padding:0 2px;white-space:nowrap;">${sLabel}~${eLabel}</span></div>`;
+        if(sH!=null&&eH!=null){
+          if(eH<sH) eH+=24; // 자정 넘는 일정 (예: 18~02)
+          if(eH>sH){
+            const left=Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
+            const width=Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
+            const sLabel=String(Math.floor(sH)).padStart(2,'0')+':'+(sH%1?'30':'00');
+            const eH24=eH>=24?eH-24:eH;
+            const eLabel=String(Math.floor(eH24)).padStart(2,'0')+':'+(eH24%1?'30':'00')+(eH>=24?' (익)':'');
+            const confirmed=row.status==='확정';
+            bar=`<div class="gantt-bar${confirmed?' confirmed':''}" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;"><span style="font-size:8px;color:#fff;padding:0 2px;white-space:nowrap;">${sLabel}~${eLabel}</span></div>`;
+          }
         }
         html+=`<div class="gantt-row"><div class="gantt-name">${name}</div><div class="gantt-bar-area">${bgCols}${bar}</div></div>`;
       });
