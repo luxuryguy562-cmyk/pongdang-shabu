@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>간트 시각화 비교 (안 A / 안 B / 안 C)</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --border:#e5e7eb; --text:#1f2937; --muted:#6b7280;
+    --plan:#cbd5e1; --plan-edge:#94a3b8;
+    --actual:#6366f1; --actual-edge:#4f46e5;
+    --absent:#ef4444;
+    --midnight:#dc2626;
+    --row:#f1f5f9;
+    --ok:#16a34a; --warn:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif;color:var(--text);background:var(--bg);font-size:14px;line-height:1.5}
+  body{padding:14px;padding-bottom:60px;max-width:980px;margin:0 auto}
+  h1{font-size:18px;margin-bottom:6px}
+  .lead{color:var(--muted);font-size:13px;margin-bottom:14px}
+  .scenario{background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:10px 12px;margin-bottom:16px;font-size:13px}
+  .scenario b{color:#b45309}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:18px;font-size:12px;color:#374151}
+  .lg{display:flex;align-items:center;gap:5px}
+  .lg-box{display:inline-block;width:14px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.1)}
+  .lg-plan{background:var(--plan)}
+  .lg-actual{background:var(--actual)}
+  .lg-absent{background:repeating-linear-gradient(45deg,var(--absent),var(--absent) 4px,#fecaca 4px,#fecaca 8px)}
+  .lg-mid{display:inline-block;width:0;border-left:2px dashed var(--midnight);height:14px}
+
+  .section{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px}
+  .section.featured{border:2px solid #facc15;background:linear-gradient(180deg,#fffbeb 0%,#fff 60%)}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+  .b-now{background:#e5e7eb;color:#374151}
+  .b-boss{background:#dbeafe;color:#1d4ed8}
+  .b-best{background:#fef3c7;color:#b45309}
+  .sec-title{font-size:15px;font-weight:700;margin-bottom:2px}
+  .sec-sub{color:var(--muted);font-size:12px;margin-bottom:10px}
+
+  /* 시간 축 */
+  .axis{display:grid;grid-template-columns:70px 1fr;align-items:end;margin-bottom:4px}
+  .axis-spacer{}
+  .axis-ticks{position:relative;height:18px;font-size:10px;color:#9ca3af}
+  .axis-ticks span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+  .axis-ticks span.mid{color:var(--midnight);font-weight:700}
+
+  /* 간트 행 */
+  .gantt{background:var(--row);border:1px solid var(--border);border-radius:8px;padding:8px;overflow:hidden}
+  .row{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:8px;margin-bottom:6px}
+  .row:last-child{margin-bottom:0}
+  .rlabel{font-size:12px;color:#374151;text-align:right;padding-right:4px;font-weight:600}
+  .rlabel small{display:block;color:var(--muted);font-weight:400;font-size:10px}
+  .track{position:relative;height:28px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden}
+  /* 자정선 */
+  .midline{position:absolute;top:-2px;bottom:-2px;width:0;border-left:2px dashed var(--midnight);z-index:2;pointer-events:none}
+  .midline::after{content:'24:00';position:absolute;top:-14px;left:-16px;font-size:9px;color:var(--midnight);font-weight:700;background:#fff;padding:0 2px}
+  /* 바 */
+  .bar{position:absolute;top:4px;height:20px;border-radius:4px}
+  .bar.plan{background:var(--plan);border:1px solid var(--plan-edge);z-index:1}
+  .bar.actual{background:var(--actual);border:1px solid var(--actual-edge);z-index:2;opacity:.92}
+  .bar.absent{background:repeating-linear-gradient(45deg,var(--absent),var(--absent) 4px,#fecaca 4px,#fecaca 8px);border:1px solid var(--absent);z-index:1}
+  .bar-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:#fff;font-weight:600;text-shadow:0 1px 1px rgba(0,0,0,.3);white-space:nowrap}
+  .bar.plan .bar-label{color:#475569;text-shadow:none}
+  .bar.absent .bar-label{color:#fff}
+
+  /* 안 B 시각적 이음 (선택 사항) */
+  .link-arrow{position:absolute;right:-2px;top:14px;width:8px;height:8px;border-top:2px solid var(--actual);border-right:2px solid var(--actual);transform:rotate(45deg)}
+  .link-arrow-l{position:absolute;left:-2px;top:14px;width:8px;height:8px;border-top:2px solid var(--actual);border-left:2px solid var(--actual);transform:rotate(-45deg)}
+
+  /* 장단점 */
+  .pros,.cons{font-size:13px;padding:8px 10px;border-radius:8px;margin-top:8px}
+  .pros{background:#ecfdf5;border-left:3px solid var(--ok);color:#065f46}
+  .cons{background:#fef2f2;border-left:3px solid var(--absent);color:#991b1b}
+
+  .verdict{background:#fef9c3;border:1px solid #facc15;padding:10px 12px;border-radius:10px;margin-top:14px;font-size:13px}
+  .verdict b{color:#a16207}
+
+  /* 작은 화면 대응 */
+  @media (max-width:520px){
+    .row{grid-template-columns:56px 1fr;gap:6px}
+    .axis{grid-template-columns:56px 1fr}
+    .rlabel{font-size:11px}
+    .bar-label{font-size:9px}
+    h1{font-size:16px}
+  }
+
+  .foot{margin-top:24px;padding:12px;text-align:center;color:var(--muted);font-size:12px;border-top:1px dashed var(--border)}
+</style>
+</head>
+<body>
+
+<h1>📊 근무계획 간트차트 — 시각화 비교</h1>
+<p class="lead">자정 넘는 마감조를 어떻게 보여드릴지 3가지 안 비교 (사장님 매장 기준)</p>
+
+<div class="scenario">
+  <b>시나리오</b> · 5/13(수)~5/15(금) · <b>박마감</b> 직원이 5/13 18:00 출근 → 5/14 02:00 퇴근 (자정 넘는 마감조).<br>
+  김알바: 11:00~17:00 (홀) · 이주방: 11:00~22:00 (주방)
+</div>
+
+<div class="legend">
+  <span class="lg"><span class="lg-box lg-plan"></span>계획(회색)</span>
+  <span class="lg"><span class="lg-box lg-actual"></span>실제 근무(보라)</span>
+  <span class="lg"><span class="lg-box lg-absent"></span>결근</span>
+  <span class="lg"><span class="lg-mid"></span>자정선(점선)</span>
+</div>
+
+<!-- ────────── 안 A ────────── -->
+<div class="section">
+  <div class="sec-title">안 A — 지금 상태 <span class="badge b-now">현재</span></div>
+  <div class="sec-sub">자정 자르고 다음날 행에 따로. 시간 축 0~24시 고정.</div>
+
+  <!-- 축 0~24 -->
+  <div class="axis">
+    <div class="axis-spacer"></div>
+    <div class="axis-ticks">
+      <span style="left:0%">0</span>
+      <span style="left:25%">6</span>
+      <span style="left:50%">12</span>
+      <span style="left:75%">18</span>
+      <span style="left:100%">24</span>
+    </div>
+  </div>
+
+  <div class="gantt">
+    <!-- 5/13 -->
+    <div class="row">
+      <div class="rlabel">5/13<small>수</small></div>
+      <div class="track">
+        <!-- 김알바 11~17 -->
+        <div class="bar plan"  style="left:45.83%;width:25%"><span class="bar-label">김알바 11~17</span></div>
+        <!-- 박마감 18~24 (잘림) -->
+        <div class="bar actual" style="left:75%;width:25%;background:#a78bfa;border-color:#7c3aed"><span class="bar-label">박마감 18~24…</span></div>
+      </div>
+    </div>
+    <!-- 5/14 -->
+    <div class="row">
+      <div class="rlabel">5/14<small>목</small></div>
+      <div class="track">
+        <!-- 박마감 00~02 (이어짐) -->
+        <div class="bar actual" style="left:0%;width:8.33%;background:#a78bfa;border-color:#7c3aed"><span class="bar-label">…02</span></div>
+        <!-- 이주방 11~22 -->
+        <div class="bar plan" style="left:45.83%;width:45.83%"><span class="bar-label">이주방 11~22</span></div>
+      </div>
+    </div>
+    <!-- 5/15 -->
+    <div class="row">
+      <div class="rlabel">5/15<small>금</small></div>
+      <div class="track">
+        <div class="bar plan" style="left:45.83%;width:25%"><span class="bar-label">김알바 11~17</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cons">❌ 박마감의 마감조가 <b>두 일자 행에 흩어짐</b>. 5/14 새벽 2시까지 일했는지 확인하려면 달력을 한 번 더 눌러서 다음날 행을 봐야 함.</div>
+</div>
+
+
+<!-- ────────── 안 B (사장님 안) ────────── -->
+<div class="section">
+  <div class="sec-title">안 B — 사장님 안 <span class="badge b-boss">두 일자 분할</span></div>
+  <div class="sec-sub">자정에서 자르되 같은 색·연결 표시로 "위아래 이어진다" 강조.</div>
+
+  <div class="axis">
+    <div class="axis-spacer"></div>
+    <div class="axis-ticks">
+      <span style="left:0%">0</span>
+      <span style="left:25%">6</span>
+      <span style="left:50%">12</span>
+      <span style="left:75%">18</span>
+      <span style="left:100%">24</span>
+    </div>
+  </div>
+
+  <div class="gantt">
+    <div class="row">
+      <div class="rlabel">5/13<small>수</small></div>
+      <div class="track">
+        <div class="bar plan"  style="left:45.83%;width:25%"><span class="bar-label">김알바 11~17</span></div>
+        <div class="bar actual" style="left:75%;width:25%;border-top-right-radius:0;border-bottom-right-radius:0"><span class="bar-label">박마감 18~24</span>
+          <span class="link-arrow"></span>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="rlabel">5/14<small>목</small></div>
+      <div class="track">
+        <div class="bar actual" style="left:0%;width:8.33%;border-top-left-radius:0;border-bottom-left-radius:0">
+          <span class="bar-label">박~02</span>
+          <span class="link-arrow-l"></span>
+        </div>
+        <div class="bar plan" style="left:45.83%;width:45.83%"><span class="bar-label">이주방 11~22</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="rlabel">5/15<small>금</small></div>
+      <div class="track">
+        <div class="bar plan" style="left:45.83%;width:25%"><span class="bar-label">김알바 11~17</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros">✅ 위아래 시각적 연결로 "같은 근무"임을 표시. 안 A보다는 명확.</div>
+  <div class="cons">❌ 여전히 <b>시선이 위아래 두 번</b>. 한눈에는 부족. 결근/조퇴 판정도 두 행 매칭 복잡.</div>
+</div>
+
+
+<!-- ────────── 안 C (행 연장) ────────── -->
+<div class="section featured">
+  <div class="sec-title">안 C — 행 연장 (한 줄 연속) <span class="badge b-best">⭐ 추천</span></div>
+  <div class="sec-sub">시간 축 0~28시. 자정선을 점선으로 표시. 자정 넘는 근무는 <b>한 행에 끝까지 쭉</b> 표시.</div>
+
+  <!-- 축 0~28 -->
+  <div class="axis">
+    <div class="axis-spacer"></div>
+    <div class="axis-ticks" style="height:18px">
+      <span style="left:0%">0</span>
+      <span style="left:21.43%">6</span>
+      <span style="left:42.86%">12</span>
+      <span style="left:64.29%">18</span>
+      <span style="left:85.71%" class="mid">24</span>
+      <span style="left:100%">28</span>
+    </div>
+  </div>
+
+  <div class="gantt">
+    <!-- 5/13 -->
+    <div class="row">
+      <div class="rlabel">5/13<small>수</small></div>
+      <div class="track">
+        <div class="midline" style="left:85.71%"></div>
+        <!-- 김알바 11~17 -->
+        <div class="bar plan"  style="left:39.29%;width:21.43%"><span class="bar-label">김알바 11~17</span></div>
+        <!-- 박마감 18~26 (= 다음날 02시까지) 한 줄 -->
+        <div class="bar actual" style="left:64.29%;width:28.57%"><span class="bar-label">박마감 18 → 다음날 02</span></div>
+      </div>
+    </div>
+    <!-- 5/14 -->
+    <div class="row">
+      <div class="rlabel">5/14<small>목</small></div>
+      <div class="track">
+        <div class="midline" style="left:85.71%"></div>
+        <div class="bar plan" style="left:39.29%;width:39.29%"><span class="bar-label">이주방 11~22</span></div>
+      </div>
+    </div>
+    <!-- 5/15 -->
+    <div class="row">
+      <div class="rlabel">5/15<small>금</small></div>
+      <div class="track">
+        <div class="midline" style="left:85.71%"></div>
+        <div class="bar plan" style="left:39.29%;width:21.43%"><span class="bar-label">김알바 11~17</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros">
+    ✅ 박마감의 마감조가 <b>한 줄로 18시→다음날 02시까지 쭉</b> 보임. 달력 한 번만 누르면 끝.<br>
+    ✅ 자정선 점선으로 "여기가 자정" 명확. 새벽 시간대 즉시 인지.<br>
+    ✅ 24시간 매장, 새벽 마감 매장도 그대로 적용 가능 → <b>SaaS 호환</b>.
+  </div>
+
+  <div class="cons">⚠️ 일반 근무만 있는 일자도 0~28시 축이라 24~28 구간이 비어 보임 (시각적 빈 공간 살짝 증가).</div>
+</div>
+
+
+<!-- ────────── 추가 시나리오: A안+B안 (가시화 효과) ────────── -->
+<div class="section">
+  <div class="sec-title">🎯 보너스 — 안 C 위에 "계획 vs 실제" + 결근 표시 (A안·B안 효과)</div>
+  <div class="sec-sub">박마감이 5/13 마감조 정상, 5/14 김알바가 무단 결근, 이주방은 30분 일찍 퇴근한 케이스.</div>
+
+  <div class="axis">
+    <div class="axis-spacer"></div>
+    <div class="axis-ticks" style="height:18px">
+      <span style="left:0%">0</span>
+      <span style="left:21.43%">6</span>
+      <span style="left:42.86%">12</span>
+      <span style="left:64.29%">18</span>
+      <span style="left:85.71%" class="mid">24</span>
+      <span style="left:100%">28</span>
+    </div>
+  </div>
+
+  <div class="gantt">
+    <!-- 5/13 -->
+    <div class="row">
+      <div class="rlabel">5/13<small>수</small></div>
+      <div class="track">
+        <div class="midline" style="left:85.71%"></div>
+        <!-- 김알바 계획 11~17 + 실제 11~17 -->
+        <div class="bar plan"   style="left:39.29%;width:21.43%"></div>
+        <div class="bar actual" style="left:39.29%;width:21.43%"><span class="bar-label">김알바 정상</span></div>
+        <!-- 박마감 계획 18~26 + 실제 18~26 -->
+        <div class="bar plan"   style="left:64.29%;width:28.57%"></div>
+        <div class="bar actual" style="left:64.29%;width:28.57%"><span class="bar-label">박마감 마감조 정상</span></div>
+      </div>
+    </div>
+    <!-- 5/14 -->
+    <div class="row">
+      <div class="rlabel">5/14<small>목</small></div>
+      <div class="track">
+        <div class="midline" style="left:85.71%"></div>
+        <!-- 김알바 결근 -->
+        <div class="bar absent" style="left:39.29%;width:21.43%"><span class="bar-label">⚠️ 김알바 결근</span></div>
+        <!-- 이주방 계획 11~22, 실제 11~21.5 (조퇴) -->
+        <div class="bar plan"   style="left:39.29%;width:39.29%"></div>
+        <div class="bar actual" style="left:39.29%;width:37.5%"><span class="bar-label">이주방 30분 조퇴</span></div>
+      </div>
+    </div>
+    <!-- 5/15 -->
+    <div class="row">
+      <div class="rlabel">5/15<small>금</small></div>
+      <div class="track">
+        <div class="midline" style="left:85.71%"></div>
+        <div class="bar plan"   style="left:39.29%;width:21.43%"></div>
+        <div class="bar actual" style="left:39.29%;width:21.43%"><span class="bar-label">김알바 정상</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros">
+    ✅ <b>계획(회색) vs 실제(보라)</b> 한 행에 겹쳐서 → 조퇴/지각 즉시 보임.<br>
+    ✅ <b>결근(빨간 빗금)</b> = 계획만 있고 실제 없음 → 즉시 인지.<br>
+    ✅ <b>마감조 자정 넘김</b> = 한 줄 연속 표시.<br>
+    ✅ 이 한 화면이 "오늘 매장 인건비 어떻게 돌아가는지" 즉시 파악 가능.
+  </div>
+</div>
+
+
+<div class="verdict">
+  <b>💡 권고</b> · 안 C (행 연장) + 계획·실제 겹침 + 결근 빗금.<br>
+  · 회귀 위험 거의 없음 (간트 함수만 수정)<br>
+  · DB 변경 0<br>
+  · SaaS 다른 매장 (24h·새벽 마감)에도 그대로 동작<br>
+  · 작업량 ≈ 80줄 / 1~2시간
+</div>
+
+<div class="foot">
+  pongdang-shabu · 시각화 비교 mockup · 2026-05-13
+</div>
+
+</body>
+</html>
