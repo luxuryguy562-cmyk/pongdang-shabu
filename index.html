@@ -146,6 +146,7 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 /* 아이콘 배경 통일 — 모든 카드 같은 톤 (사장님 의견 2026-05-12) */
 .hub-mini-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:8px;flex-shrink:0;background:#EBF3FF;}
 .hub-mini-icon svg{width:17px;height:17px;color:var(--blue);stroke:var(--blue);fill:none;}
+.hub-mini-icon .hub-mini-text{color:#fff;font-size:10px;font-weight:800;letter-spacing:0.3px;font-family:system-ui,-apple-system,sans-serif;line-height:1;}
 .hub-full-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#EBF3FF;margin-right:12px;}
 .hub-full-icon svg{width:17px;height:17px;color:var(--blue);stroke:var(--blue);fill:none;}
 .hub-mini-title{font-size:15px;font-weight:700;color:var(--text);line-height:1.2;}
@@ -709,13 +710,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-7.5-1-10 1-3 2.5-3 7 0 9.5 1 1 2.5 2 4 2.5L11 21h2l1-1h2l1 1h2l1-2c2-1 3-3.5 3-5.5 0-1.5-.5-3-1.5-4 .5-1.5 0-3-.5-4-.5-1-1.5-1.5-2-1.5z"/>
       <path d="M16 11h.01"/>
     </symbol>
-    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="4"/>
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
-    </symbol>
-    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-    </symbol>
     <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect width="20" height="14" x="2" y="5" rx="2"/>
       <line x1="2" x2="22" y1="10" y2="10"/>
@@ -1166,13 +1160,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <div id="busHubCont" class="container">
   <div class="hub-grid" style="grid-template-columns:repeat(2,1fr);">
     <button type="button" class="hub-mini emphasized" data-action="nav|opening">
-      <span class="hub-mini-icon"><svg><use href="#i-sun"/></svg></span>
+      <span class="hub-mini-icon"><span class="hub-mini-text">OPEN</span></span>
       <span class="hub-mini-title">영업개시</span>
       <span class="hub-mini-amt" id="busMiniOpAmt">-</span>
       <span class="hub-mini-sub" id="busMiniOpSub">아침 금고</span>
     </button>
     <button type="button" class="hub-mini emphasized" data-action="nav|settle">
-      <span class="hub-mini-icon"><svg><use href="#i-moon"/></svg></span>
+      <span class="hub-mini-icon"><span class="hub-mini-text">CLOSE</span></span>
       <span class="hub-mini-title">마감정산</span>
       <span class="hub-mini-amt" id="busMiniStAmt">-</span>
       <span class="hub-mini-sub" id="busMiniStSub">저녁 정산</span>
