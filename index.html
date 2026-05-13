@@ -2759,10 +2759,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-handle"></div>
   <div class="sheet-title">근태 기록 수정</div>
   <div id="editAttInfo" style="font-size:13px;color:var(--gray-600);margin-bottom:12px;"></div>
-  <label class="emp-label">출근 시간</label>
-  <input id="editAttIn" class="input-field" type="time">
-  <label class="emp-label">퇴근 시간</label>
-  <input id="editAttOut" class="input-field" type="time">
+  <label class="emp-label">출근 일시</label>
+  <input id="editAttIn" class="input-field" type="datetime-local">
+  <label class="emp-label">퇴근 일시</label>
+  <input id="editAttOut" class="input-field" type="datetime-local">
   <label class="emp-label">휴게시간 (분)</label>
   <input id="editAttRest" class="input-field" type="number" inputmode="numeric" min="0" value="0">
   <input type="hidden" id="editAttId">
@@ -4408,10 +4408,10 @@ function openEditAttSheet(record){
   document.getElementById('editAttId').value=record.id;
   document.getElementById('editAttDate').value=record.work_date;
   document.getElementById('editAttEmpId').value=record.employee_id;
-  // 시간 파싱
-  const toTimeStr=ts=>{if(!ts)return'';const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
-  document.getElementById('editAttIn').value=toTimeStr(record.app_in);
-  document.getElementById('editAttOut').value=toTimeStr(record.app_out);
+  // 일시 파싱 (datetime-local 포맷: YYYY-MM-DDTHH:MM, 자정 넘는 근무 지원)
+  const toDTStr=ts=>{if(!ts)return'';const d=new Date(ts);const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;};
+  document.getElementById('editAttIn').value=toDTStr(record.app_in);
+  document.getElementById('editAttOut').value=toDTStr(record.app_out);
   document.getElementById('editAttRest').value=record.rest_min||0;
   openSheet('editAttSheet');
 }
@@ -4422,10 +4422,10 @@ async function saveEditAttendance(){
   const inStr=document.getElementById('editAttIn').value;
   const outStr=document.getElementById('editAttOut').value;
   const restMin=parseInt(document.getElementById('editAttRest').value)||0;
-  if(!inStr) return toast('출근 시간을 입력하세요.','warn');
-  const appIn=new Date(date+'T'+inStr+':00');
-  const appOut=outStr?new Date(date+'T'+outStr+':00'):null;
-  if(appOut&&appOut<=appIn) return toast('퇴근 시간이 출근보다 빠릅니다. 확인해주세요.','error');
+  if(!inStr) return toast('출근 일시를 입력하세요.','warn');
+  const appIn=new Date(inStr);
+  const appOut=outStr?new Date(outStr):null;
+  if(appOut&&appOut<=appIn) return toast('퇴근 일시가 출근보다 빠릅니다. 확인해주세요.','error');
   const w=await calcWageData(empId,appIn,appOut,date,restMin);
   setLoad(true,'수정 중...');
   const payload={app_in:appIn.toISOString(),app_out:appOut?.toISOString()||null,rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage};
