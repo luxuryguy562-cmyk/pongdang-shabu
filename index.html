@@ -3178,7 +3178,9 @@ function nav(tab, el) {
   window.scrollTo(0, 0);
   // 하단 탭 active 표시 (허브 카드에서 진입한 경우 부모 탭이 active 유지)
   const parentTabMap = {
-    opening:'busHub', settle:'busHub', sales:'busHub',
+    opening:'busHub', settle:'busHub',
+    // sales는 홈 매출 행에서만 진입 (영업 탭 카드는 제거됨) → 홈 탭 active 유지
+    sales:'dashboard',
     receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
     explist:'expHub', recon:'expHub', reserve:'expHub', expcat:'expHub',
   };
