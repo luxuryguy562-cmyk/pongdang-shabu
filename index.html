@@ -1166,13 +1166,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="hub-mini-icon bg-open"><span class="hub-mini-text">OPEN</span></span>
       <span class="hub-mini-title">영업개시</span>
       <span class="hub-mini-amt" id="busMiniOpAmt">-</span>
-      <span class="hub-mini-sub" id="busMiniOpSub">아침 금고</span>
     </button>
     <button type="button" class="hub-mini emphasized" data-action="nav|settle">
       <span class="hub-mini-icon bg-close"><span class="hub-mini-text">CLOSE</span></span>
       <span class="hub-mini-title">마감정산</span>
       <span class="hub-mini-amt" id="busMiniStAmt">-</span>
-      <span class="hub-mini-sub" id="busMiniStSub">저녁 정산</span>
     </button>
   </div>
 </div>
@@ -10250,12 +10248,10 @@ async function loadBusHubData(){
   try{
     const{data:op}=await sb.from('daily_opening').select('id').eq('store_id',sid).eq('opening_date',today).maybeSingle();
     setAmt('busMiniOpAmt', op?'✓ 완료':'미완료', !op);
-    setSub('busMiniOpSub', op?'오늘 기록됨':'오늘 입력 필요');
   }catch(e){setAmt('busMiniOpAmt','-');}
   try{
     const{data:st}=await sb.from('settlements').select('id').eq('store_id',sid).eq('settle_date',today).maybeSingle();
     setAmt('busMiniStAmt', st?'✓ 완료':'미완료', !st);
-    setSub('busMiniStSub', st?'오늘 기록됨':'오늘 입력 필요');
   }catch(e){setAmt('busMiniStAmt','-');}
   try{
     const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end);
