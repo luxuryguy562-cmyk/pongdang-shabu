@@ -261,7 +261,7 @@ franchises (프랜차이즈/브랜드)
 | actual_total (INT) | 오늘 출근 시 실제 금고 합계 |
 | previous_close_total (INT) | 어제 마감 금고 (스냅샷) |
 | diff_amount (INT, GENERATED) | `actual_total - previous_close_total` (단순 차이) |
-| memo (TEXT) | 보고 메모 |
+| memo (TEXT) | (사용 중단 2026-05-13 후반) 옛 차액 메모. UI·코드 참조 없음, 컬럼 보존만 |
 | created_at, created_by | |
 
 - UNIQUE: `(store_id, opening_date)` → upsert 가능
