@@ -6030,10 +6030,23 @@ async function loadDashboard(){
     document.getElementById('dashPassedLabel').innerText=`${lastDay}일 중 ${passedDays}일 경과`;
 
     // ══ 병렬 데이터 로드 ══
+    // N+1 정리: 두 Promise.all 통합. vendor_orders/receipts/attendance_logs/fixed_costs 1번씩만 받아
+    //          calcExpenseByCategories(prefetched)에 전달 + 일별 분배에 재사용
     await loadExpCategories();
     const sid=currentStore.id;
 
-    const [settleRes,fcRes,expResults,royaltyTxRes,prevSettleRes]=await Promise.all([
+    const [
+      settleRes,        // 매출 당월
+      fcRes,            // 고정비
+      royaltyTxRes,     // 로열티 (진마감용)
+      prevSettleRes,    // 매출 전월
+      voRes2,           // 거래처 주문 당월 (지출 집계 + 일별 분배 공유)
+      rcRes2,           // 영수증 당월 (공유)
+      attRes2,          // 근태 당월 (공유)
+      prevVoRes,        // 거래처 전월 (일별)
+      prevRcRes,        // 영수증 전월 (일별)
+      prevAttRes        // 근태 전월 (일별)
+    ]=await Promise.all([
       // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
       // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
       dashSaleSource==='ups'
@@ -6041,8 +6054,6 @@ async function loadDashboard(){
         :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
       // 고정비 — 항목별 예상 월 금액 1회 입력 (모든 달 동일 적용)
       sb.from('fixed_costs').select('estimated_monthly,is_active').eq('store_id',sid),
-      // 당월 지출 (병렬)
-      calcExpenseByCategories(ym, dashMode),
       // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
       dashMode==='final'
         ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
@@ -6051,8 +6062,24 @@ async function loadDashboard(){
       // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
       dashSaleSource==='ups'
         ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
-        :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd)
+        :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
+      // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
+      sb.from('vendor_orders').select('amount,order_date,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+      sb.from('receipts').select('total_price,category_id,receipt_date').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+      // ── 전월 일별 식자재/영수증/인건비 ──
+      sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
+      sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',pStart).lte('receipt_date',pEnd),
+      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd)
     ]);
+
+    // 지출 카테고리 집계는 prefetch한 데이터로 메모리 처리 (calcExpenseByCategories 내부 DB 호출 0번)
+    const expResults=await calcExpenseByCategories(ym, dashMode, {
+      vendor_orders: { data: voRes2.data },
+      receipts: { data: rcRes2.data },
+      attendance_logs: { data: attRes2.data },
+      fixed_costs: { data: fcRes.data }
+    });
 
     // ══ 1. 일별 매출 맵 + 매출 집계 ══
     let salesBreakdown={},totalRevenue=0,dailySalesMap={},receiptCount=0;
@@ -6196,17 +6223,7 @@ async function loadDashboard(){
     });
     catNames.push('로열티/수수료');catColors['로열티/수수료']='#EF4444';shortNames['로열티/수수료']='로열티';
 
-    // 일별 카테고리 데이터 (병렬 조회 — 전월 포함)
-    // employee_id 함께 조회 (월급제 직원의 attendance_logs는 별도 분배에서 무시)
-    const[voRes2,rcRes2,attRes2,prevVoRes,prevAttRes,prevRcRes]=await Promise.all([
-      sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-      sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
-      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
-      // ── 전월 일별 식자재/인건비/영수증 ──
-      sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
-      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
-      sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',pStart).lte('receipt_date',pEnd)
-    ]);
+    // 일별 카테고리 데이터는 위 통합 Promise.all에서 이미 받음 (voRes2/rcRes2/attRes2/prevVoRes/prevRcRes/prevAttRes 재사용)
     const voDaily=voRes2.data,rcDaily=rcRes2.data,attDaily=attRes2.data;
     // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
     const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
@@ -8670,7 +8687,8 @@ async function saveLaborConfirm(){
 
 // ── 카테고리별 지출 집계 (핵심 함수)
 // mode: 'provisional'(가마감/예측) | 'final'(진마감/확정=mydata 실제 출금)
-async function calcExpenseByCategories(ym, mode){
+// 가마감 prefetch 인자(prefetched): { vendor_orders, receipts, fixed_costs, attendance_logs } — loadDashboard가 일별 분배용으로 받은 데이터 재사용
+async function calcExpenseByCategories(ym, mode, prefetched){
   const [y,m]=ym.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
   const start=ym+'-01',end=ym+'-'+lastDay;
@@ -8701,70 +8719,92 @@ async function calcExpenseByCategories(ym, mode){
     if(c.data_source==='composite' && c.parent_id) return false; // composite 소분류 스킵
     return true;
   });
-  // 병렬: 대상 카테고리 동시 조회
-  const promises=catsForAggregation.map(async cat=>{
+
+  // ── 가마감 prefetch: 카테고리 루프 진입 전 공통 테이블 1회씩만 (N+1 제거) ──
+  // 진마감은 mydata만 쓰므로 prefetch 불필요
+  let voRows=[], rcRows=[], fcRows=[], ecaMap={}, attTotal=0;
+  if(!isFinal){
+    const needVo=catsForAggregation.some(c=>c.data_source==='vendor_orders'||c.data_source==='composite');
+    const needRc=catsForAggregation.some(c=>c.data_source==='receipts'||c.data_source==='composite');
+    const needFc=catsForAggregation.some(c=>c.data_source==='fixed_costs');
+    const ecaCatIds=catsForAggregation.filter(c=>c.data_source==='attendance'||c.data_source==='manual').map(c=>c.id);
+    const needEca=ecaCatIds.length>0;
+    const needAtt=catsForAggregation.some(c=>c.data_source==='attendance');
+    const pf=prefetched||{};
+
+    const [voRes,rcRes,fcRes,ecaRes,attRes]=await Promise.all([
+      needVo
+        ? (pf.vendor_orders||sb.from('vendor_orders').select('amount,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end))
+        : Promise.resolve({data:[]}),
+      needRc
+        ? (pf.receipts||sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end))
+        : Promise.resolve({data:[]}),
+      needFc
+        ? (pf.fixed_costs||sb.from('fixed_costs').select('estimated_monthly,is_active').eq('store_id',sid))
+        : Promise.resolve({data:[]}),
+      needEca
+        ? sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym).in('category_id',ecaCatIds)
+        : Promise.resolve({data:[]}),
+      needAtt
+        ? (pf.attendance_logs||sb.from('attendance_logs').select('calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end))
+        : Promise.resolve({data:[]})
+    ]);
+    voRows=voRes.data||[];
+    rcRows=rcRes.data||[];
+    fcRows=(fcRes.data||[]).filter(r=>r.is_active!==false);
+    (ecaRes.data||[]).forEach(r=>{ecaMap[r.category_id]=r.amount||0;});
+    attTotal=(attRes.data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);
+  }
+
+  // 카테고리별 집계 — 메모리 처리만 (DB 호출 없음)
+  const results=catsForAggregation.map(cat=>{
     let amount=0,isConfirmed=false;
     try{
       if(isFinal){
         // ── 진마감: mydata_transactions 실제 출금만 ──
-        amount=await getMydataAmount(cat.id);
+        amount=getMydataAmount(cat.id);
         isConfirmed=amount>0;
       } else {
-        // ── 가마감: 기존 기록 소스 (예측) ──
+        // ── 가마감: prefetch 데이터에서 필터 집계 ──
         if(cat.data_source==='vendor_orders'){
-          const{data}=await sb.from('vendor_orders').select('amount,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end);
-          amount=(data||[]).filter(o=>!cat.vendor_category||o.vendors?.category===cat.vendor_category).reduce((a,o)=>a+(o.amount||0),0);
+          amount=voRows.filter(o=>!cat.vendor_category||o.vendors?.category===cat.vendor_category).reduce((a,o)=>a+(o.amount||0),0);
         } else if(cat.data_source==='receipts'){
           // receipts.category_id는 소분류 id. 대분류 receipts면 자식 id도 포함
           const childIds=expCategories.filter(c=>c.parent_id===cat.id).map(c=>c.id);
           const targetIds=[cat.id,...childIds];
-          const{data}=await sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end);
-          amount=(data||[]).filter(r=>targetIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
+          amount=rcRows.filter(r=>targetIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
         } else if(cat.data_source==='composite'){
-          // ─── composite: 거래처(vendor_orders) + 영수증(receipts) 합산 ───
-          // 소분류: vendors.category=cat.vendor_category + receipts.category_id=cat.id
-          // 대분류: 자식 소분류들의 vendor_category 전부 + 자식 id로 된 receipts 전부 + 본인 id receipts
+          // composite: 거래처(vendor_orders) + 영수증(receipts) 합산
           let vCats=[],rIds=[cat.id];
           if(!cat.parent_id){
-            // 대분류: 자식들 수집
             const children=expCategories.filter(c=>c.parent_id===cat.id);
             children.forEach(ch=>{if(ch.vendor_category)vCats.push(ch.vendor_category); rIds.push(ch.id);});
             if(cat.vendor_category) vCats.push(cat.vendor_category);
           } else {
-            // 소분류: 본인 vendor_category만
             if(cat.vendor_category) vCats.push(cat.vendor_category);
           }
-          const[voRes,rcpRes]=await Promise.all([
-            vCats.length
-              ? sb.from('vendor_orders').select('amount,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end)
-              : Promise.resolve({data:[]}),
-            sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end)
-          ]);
-          const voSum=(voRes.data||[]).filter(o=>vCats.includes(o.vendors?.category)).reduce((a,o)=>a+(o.amount||0),0);
-          const rcpSum=(rcpRes.data||[]).filter(r=>rIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
+          const voSum=vCats.length?voRows.filter(o=>vCats.includes(o.vendors?.category)).reduce((a,o)=>a+(o.amount||0),0):0;
+          const rcpSum=rcRows.filter(r=>rIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
           amount=voSum+rcpSum;
         } else if(cat.data_source==='attendance'){
-          const{data:confirmed}=await sb.from('expense_category_amounts').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
-          if(confirmed?.amount){amount=confirmed.amount;isConfirmed=true;}
-          else{const{data}=await sb.from('attendance_logs').select('calculated_wage').eq('store_id',sid).gte('work_date',start).lte('work_date',end);amount=(data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);laborAutoAmount=amount;}
+          if(ecaMap[cat.id]){amount=ecaMap[cat.id];isConfirmed=true;}
+          else {amount=attTotal;laborAutoAmount=amount;}
         } else if(cat.data_source==='fixed_costs'){
           // 항목별 예상 월 금액 합산 (활성 항목만, 모든 달 동일 적용)
-          const{data}=await sb.from('fixed_costs').select('estimated_monthly').eq('store_id',sid).neq('is_active',false);
-          amount=(data||[]).reduce((a,r)=>a+(r.estimated_monthly||0),0);
+          amount=fcRows.reduce((a,r)=>a+(r.estimated_monthly||0),0);
         } else if(cat.data_source==='manual'){
-          const{data}=await sb.from('expense_category_amounts').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
-          amount=data?.amount||0;
+          amount=ecaMap[cat.id]||0;
         }
         // 가마감에서도 기록 없으면 mydata로 보충
         if(amount===0&&!isConfirmed){
-          const mdTotal=await getMydataAmount(cat.id);
+          const mdTotal=getMydataAmount(cat.id);
           if(mdTotal>0) amount=mdTotal;
         }
       }
     }catch(e){console.error('지출 계산 오류('+cat.name+'):',e);}
     return{id:cat.id,name:cat.name,color:cat.color||'#0050FF',source:cat.data_source,amount,isConfirmed};
   });
-  return Promise.all(promises);
+  return results;
 }
 
 // ══════════════════════════════════════════
@@ -12189,17 +12229,19 @@ async function renderExtraRevenueDashboard(){
   const[y,mo]=ym.split('-').map(Number);
   const lastDay=new Date(y,mo,0).getDate();
   const monthStart=ym+'-01', monthEnd=ym+'-'+String(lastDay).padStart(2,'0');
-  let monthLogs=[], allLogs=[];
+  // N+1 정리: 전체 로그 1회 호출 후 월별/누적 JS 분리 집계 (기존 2회 → 1회)
+  let allRows=[];
   try{
-    const[m,a]=await Promise.all([
-      sb.from('extra_revenue_logs').select('item_id,amount').eq('store_id',currentStore.id).gte('log_date',monthStart).lte('log_date',monthEnd),
-      sb.from('extra_revenue_logs').select('item_id,amount').eq('store_id',currentStore.id)
-    ]);
-    monthLogs=m.data||[]; allLogs=a.data||[];
+    const{data}=await sb.from('extra_revenue_logs').select('item_id,amount,log_date').eq('store_id',currentStore.id);
+    allRows=data||[];
   }catch(e){card.style.display='none';return;}
   const monthSum={}, totalSum={};
-  monthLogs.forEach(l=>{monthSum[l.item_id]=(monthSum[l.item_id]||0)+(l.amount||0);});
-  allLogs.forEach(l=>{totalSum[l.item_id]=(totalSum[l.item_id]||0)+(l.amount||0);});
+  allRows.forEach(l=>{
+    totalSum[l.item_id]=(totalSum[l.item_id]||0)+(l.amount||0);
+    if(l.log_date>=monthStart && l.log_date<=monthEnd){
+      monthSum[l.item_id]=(monthSum[l.item_id]||0)+(l.amount||0);
+    }
+  });
   // 캐시 갱신 (마감 입력 패널에서 즉시 반영되게)
   extraItemSums=totalSum;
   let monthTot=0, allTot=0;
