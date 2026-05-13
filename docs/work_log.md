@@ -4,6 +4,34 @@
 
 ---
 
+## [2026-05-13 야간 후반] 영업개시 옛 차감 잔재 정리 + 4월 테스트 데이터 삭제
+
+**브랜치**: `claude/cleanup-opening-deductions`
+**PR**: #71 (머지 완료, #70은 옛 브랜치 충돌로 닫음)
+**규모**: 중형 (코드 정리 + 데이터 삭제, DB 스키마 변경 없음)
+
+### 1. 영업개시 옛 차감 코드 잔재 제거 (PR #71)
+- 사전 점검 결과: `daily_opening.deductions` 컬럼이 이미 DB에서 사라진 상태 (docs와 불일치)
+- 5개 함수에서 `deductions` SELECT 참조 제거: `loadOpeningPage`, `saveOpening`, `loadOpeningList`, `loadSettleList`(calcOpDiff), `loadSettleCard`
+- UI 삭제: "⚠️ 이 날짜의 옛 차감 기록 (참고용)" 카드, "⚠️ 옛 차감" 행, 마감 카드 영업개시 차감 표시, `opLegacyDeductions` 빈 DOM
+- 영업개시 차액 계산 단순화: `actual_total - previous_close_total`
+- docs/db_schema.md daily_opening 표기 동기화
+- 변경: 17 ins / 62 del, node --check 통과, grep 잔재 0건
+
+### 2. 4월 테스트 데이터 삭제 (사장님 Supabase 직접 실행)
+- 매장: 퐁당샤브 논산점 (`4ae03341-e5dc-4933-b746-29728cbc685f`) — 사장님 유일 운영 매장
+- 점검 결과 → DELETE 한정: 7개 테이블 242건 (mydata_transactions 214, fixed_cost_amounts 16, attendance_logs 8, reserve_fund_logs 2, settlements 2, sales_daily 1, work_schedules 1)
+- mydata 214건: 자동 수집 거래지만 사장님 결정 "테스트 단계 → 삭제 OK"
+- fixed_cost_amounts는 fixed_costs.store_id 간접 한정 (서브쿼리)
+- 결과 확인 SELECT: 모두 0
+- 효과: 사장님 확인 "어색한거 없고 이상한 증감률 알림 사라짐" — 코드의 `prev===0 → return null` 분기가 5월 단독 화면 자연스럽게 처리
+
+### 보류 (사장님 명시)
+- 베타 매장 5개 오픈 전 인프라 점검 1주 계획 — "기능적으로 내가 납득된 후에"
+- 수익화 전략(소>대 + 외식업 1년 특화 + 월 1.5만원) 의논 결과 — 공식 기록 미정
+
+---
+
 ## [2026-05-13 야간] 홈 N+1 정리 + 라벨 통일 + 영업개시 차감 통합 (헌법 1-6)
 
 **브랜치**: `claude/continue-session-cKTQ4`
