@@ -1390,15 +1390,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
-    <!-- 차액 메모 (선택) — 차감은 마감정산 한 곳에서 입력 -->
-    <div class="card">
-      <div class="card-title">📝 차액 메모 <span style="font-size:11px;color:var(--gray-500);font-weight:400;">(선택)</span></div>
-      <p class="card-sub">차액 발생 시 원인 적기 (예: 사장님 새벽 인출, 통장입금, 잔돈 부족 등). 출금은 마감정산에서 일괄 입력</p>
-      <input type="text" id="opMemoInput" class="input-field" placeholder="예: 새벽 통장 입금 10만원" style="margin-top:6px;">
-    </div>
-
-    <!-- 옛 차감 데이터 read-only (legacy, 저장 시 사라짐 안내) -->
-
     <button class="btn btn-primary btn-full" style="margin-top:8px;border-radius:16px;padding:18px;font-size:16px;" data-action="saveOpening">📝 영업개시 보고하기</button>
 
     <!-- 삭제 버튼 (수정 모드에서만 표시) -->
@@ -5316,7 +5307,7 @@ async function loadOpeningPage(dateStr){
   // 어제 마감 + 그 날 영업개시 병렬 조회
   const [{data: prev}, {data: rec}] = await Promise.all([
     sb.from('settlements').select('actual_total,settle_date,sales_total,diff_amount').eq('store_id',currentStore.id).eq('settle_date',yestStr).maybeSingle(),
-    sb.from('daily_opening').select('vault_json,actual_total,previous_close_total,memo,created_at').eq('store_id',currentStore.id).eq('opening_date',targetDate).maybeSingle()
+    sb.from('daily_opening').select('vault_json,actual_total,previous_close_total,created_at').eq('store_id',currentStore.id).eq('opening_date',targetDate).maybeSingle()
   ]);
   // 수정 모드면 저장 당시 previous_close_total 스냅샷 사용 (수정 후 어제 마감 변경 영향 차단)
   opPrevCloseTotal = (rec?.previous_close_total!=null) ? rec.previous_close_total : (prev?.actual_total || 0);
@@ -5336,9 +5327,6 @@ async function loadOpeningPage(dateStr){
   // 금고 화폐 입력 복원
   const vMap = rec?.vault_json || {};
   document.querySelectorAll('.op-v-input').forEach(i=>{ i.value = vMap[i.dataset.unit] || ''; });
-  // 메모 복원
-  const memoEl = document.getElementById('opMemoInput');
-  if(memoEl) memoEl.value = rec?.memo || '';
   // 삭제 버튼: 기록이 있고 수정 모드일 때만
   const delBtn = document.getElementById('opDeleteBtn');
   if(delBtn) delBtn.style.display = (rec && openingEditDate) ? '' : 'none';
@@ -5436,12 +5424,11 @@ async function saveOpening(){
     if(cnt>0) vMap[unit] = cnt;
     actual += unit * cnt;
   });
-  const memo = (document.getElementById('opMemoInput')?.value || '').trim();
   const diff = actual - opPrevCloseTotal;
   const diffStatus = diff===0 ? '일치' : `차액 ${diff>0?'+':''}${fmt(diff)}원`;
   const isEdit = (targetDate !== today);
   const headLabel = isEdit ? `[${targetDate} 영업개시 수정]` : '영업개시 보고';
-  if(!confirm(`${headLabel}\n어제 마감: ${fmt(opPrevCloseTotal)}원\n오늘 실제: ${fmt(actual)}원\n결과: ${diffStatus}\n${memo?'메모: '+memo+'\n':''}\n저장하시겠습니까?`)) return;
+  if(!confirm(`${headLabel}\n어제 마감: ${fmt(opPrevCloseTotal)}원\n오늘 실제: ${fmt(actual)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'영업개시 저장 중...');
   const {error} = await sb.from('daily_opening').upsert({
     store_id: currentStore.id,
@@ -5449,7 +5436,6 @@ async function saveOpening(){
     vault_json: vMap,
     actual_total: actual,
     previous_close_total: opPrevCloseTotal,
-    memo: memo || null,
     created_by: currentEmp?.id || null
   }, { onConflict: 'store_id,opening_date' });
   setLoad(false);
@@ -5484,7 +5470,7 @@ async function loadOpeningList(){
   const c = document.getElementById('openingListData');
   c.innerHTML = '<div class="empty-state"><p>조회 중...</p></div>';
   const{data, error} = await sb.from('daily_opening')
-    .select('opening_date,actual_total,previous_close_total,memo')
+    .select('opening_date,actual_total,previous_close_total')
     .eq('store_id', currentStore.id)
     .order('opening_date',{ascending:false}).limit(60);
   if(error){ c.innerHTML='<div class="empty-state"><p>조회 실패</p></div>'; return; }
@@ -5508,7 +5494,6 @@ async function loadOpeningList(){
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-600);padding:3px 0;">
         <span>오늘 실제</span><span>${fmt(r.actual_total||0)}원</span>
       </div>
-      ${r.memo?`<div style="font-size:12px;color:var(--gray-600);padding:4px 0;">📝 ${r.memo}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:8px;">
         <button class="btn btn-secondary" style="flex:1;padding:8px;font-size:12px;" data-action="editOpening|${r.opening_date}">✏️ 수정</button>
         <button class="btn" style="flex:1;padding:8px;font-size:12px;background:var(--danger-light);color:var(--danger);" data-action="deleteOpening|${r.opening_date}">🗑 삭제</button>
