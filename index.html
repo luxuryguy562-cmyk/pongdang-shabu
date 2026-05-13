@@ -406,8 +406,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-day-empty{text-align:center;color:var(--gray-400);font-size:12px;padding:24px 0;}
 .att-row-label{display:flex;align-items:center;gap:4px;min-width:55px;font-size:10px;font-weight:700;color:var(--text);padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .att-row-label .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.att-row-meta{display:flex;justify-content:space-between;margin:-2px 0 6px 59px;font-size:10px;color:var(--gray-600);}
-.att-row-meta .wage{color:var(--blue);font-weight:700;}
+.att-row-meta{display:flex;justify-content:space-between;align-items:center;margin:-2px 0 6px 59px;font-size:10px;color:var(--gray-600);}
+.att-row-meta .time{color:var(--gray-400);}
+.att-row-meta .hours{color:var(--text);font-weight:700;font-size:11px;margin-left:8px;}
+.att-row-meta .wage{color:var(--blue);font-weight:700;font-size:11px;}
 
 /* ─ 대시보드 */
 .kpi-section{padding:14px 0;border-bottom:1px solid var(--gray-100);}
@@ -4338,7 +4340,7 @@ function renderAttDayDetail(date, logs, isSingleView){
 
   let html = `<div class="gantt-day-label">
     <span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span>
-    <span style="font-size:11px;color:var(--blue);font-weight:700;">${fmtHourDecimal(totalMin)} · ${fmt(totalWage)}원</span>
+    <span><span style="font-size:11px;color:var(--gray-500);font-weight:600;margin-right:10px;">${fmtHourDecimal(totalMin)}</span><span style="font-size:12px;color:var(--blue);font-weight:800;">${fmt(totalWage)}원</span></span>
   </div>`;
   html += `<div class="gantt-header"><div class="att-row-label" style="visibility:hidden;">x</div>${ganttHours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
 
@@ -4380,7 +4382,7 @@ function renderAttDayDetail(date, logs, isSingleView){
       </div>
     </div>
     <div class="att-row-meta">
-      <span>${timeLabel} · ${fmtHourDecimal(r.total_work_min||0)}${statusHtml}</span>
+      <span><span class="time">${timeLabel}</span><span class="hours">${fmtHourDecimal(r.total_work_min||0)}</span>${statusHtml}</span>
       <span class="wage">${wageLabel}</span>
     </div>`;
   });
