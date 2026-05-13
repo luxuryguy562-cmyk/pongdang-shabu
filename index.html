@@ -457,6 +457,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .summ-tbl .ds-amt{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;padding-left:10px;letter-spacing:-0.5px;}
 .summ-tbl .ds-pc{font-size:11px;font-weight:700;color:var(--gray-400);text-align:right;width:54px;white-space:nowrap;padding-left:4px;}
 .summ-tbl tr.summ-total td{border-top:2px solid var(--text);border-bottom:none;padding-top:14px;}
+.summ-tbl tr.summ-link{cursor:pointer;}
+.summ-tbl tr.summ-link:active td{background:var(--gray-100);}
 .summ-tbl tr.summ-total .ds-lb{font-size:15px;font-weight:800;color:var(--text);}
 .summ-tbl tr.summ-total .ds-amt{font-size:28px;font-weight:900;letter-spacing:-1px;}
 .summ-tbl.summ-est td{padding:3px 0;border-bottom:none;}
@@ -1149,7 +1151,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [Hub] 영업 허브 ══ -->
 <div id="busHubCont" class="container">
-  <div class="hub-grid">
+  <div class="hub-grid" style="grid-template-columns:repeat(2,1fr);">
     <button type="button" class="hub-mini emphasized" data-action="nav|opening">
       <span class="hub-mini-icon"><svg><use href="#i-piggy"/></svg></span>
       <span class="hub-mini-title">영업개시</span>
@@ -1161,12 +1163,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="hub-mini-title">마감정산</span>
       <span class="hub-mini-amt" id="busMiniStAmt">-</span>
       <span class="hub-mini-sub" id="busMiniStSub">저녁 정산</span>
-    </button>
-    <button type="button" class="hub-mini emphasized manager-only" data-action="nav|sales">
-      <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
-      <span class="hub-mini-title">매출 일별</span>
-      <span class="hub-mini-amt" id="busMiniSaAmt">-</span>
-      <span class="hub-mini-sub" id="busMiniSaSub">이번달 합계</span>
     </button>
   </div>
 </div>
@@ -6109,7 +6105,7 @@ async function loadDashboard(){
     const sR=(lb,val,cls,pct)=>`<tr><td class="ds-lb">${lb}</td><td class="ds-amt ${cls}">${val}</td><td class="ds-pc">${pct||''}</td></tr>`;
 
     let summHtml='<table class="summ-tbl">';
-    summHtml+=`<tr><td class="ds-lb">매출</td><td class="ds-amt amt-blue">${fmt(totalRevenue)}</td><td class="ds-pc"></td></tr>`;
+    summHtml+=`<tr class="summ-link" data-action="nav|sales"><td class="ds-lb">📊 매출 ›</td><td class="ds-amt amt-blue">${fmt(totalRevenue)}</td><td class="ds-pc"></td></tr>`;
     summHtml+='</table>';
     summHtml+=`<div id="revAccordionBody" style="padding:6px 0 14px;"></div>`;
     summHtml+='<table class="summ-tbl">';
