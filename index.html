@@ -4314,7 +4314,7 @@ function renderAttDayDetail(date, logs, isSingleView){
   const empF = document.getElementById('attEmpFilter')?.value || (currentEmp && !isManager ? currentEmp.id : '');
   if(!logs || !logs.length){
     const addBtnEmpty = isManager
-      ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 직원</span>`
+      ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 일정등록</span>`
       : '';
     const note = isManager
       ? ''
@@ -4327,7 +4327,7 @@ function renderAttDayDetail(date, logs, isSingleView){
   const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const allData = window._attListData || [];
   const addBtnHtml = isManager
-    ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 직원</span>`
+    ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 일정등록</span>`
     : '';
 
   let html = `<div class="gantt-day-label">
@@ -4733,7 +4733,7 @@ function renderSchedCalendar(){
     if(dow===6) cls.push('sat');
     if(dateStr===todayStr) cls.push('today');
     if(dateStr===schedSelectedDate) cls.push('active');
-    // 모든 셀 탭 = 시트 진입 (사장님 의견 2026-05-12) — [+] 마크 없이 셀 자체가 액션
+    // 셀 탭 = 일별 상세 표시, 등록은 헤더 [＋ 일정등록] 버튼 (근무 기록과 동일 패턴, 2026-05-13 통일)
     let dotsHtml='<div class="att-cal-dots"></div>';
     if(scheds.length){
       const visible=scheds.slice(0,3);
@@ -4742,7 +4742,7 @@ function renderSchedCalendar(){
       if(more>0) dots+=`<span class="att-cal-more">+${more}</span>`;
       dotsHtml=`<div class="att-cal-dots">${dots}</div>`;
     }
-    html+=`<div class="att-cal-cell ${cls.join(' ')}" data-action="openSchedSheet|${dateStr}">
+    html+=`<div class="att-cal-cell ${cls.join(' ')}" data-action="pickSchedDay|${dateStr}">
       <div class="att-cal-day">${d}</div>
       ${dotsHtml}
       <div class="att-cal-sum">&nbsp;</div>
@@ -4765,12 +4765,13 @@ function renderSchedDayDetail(date){
   }
   const dow=['일','월','화','수','목','금','토'][new Date(date+'T00:00:00').getDay()];
   const scheds=schedDayMap[date]||[];
-  // [+ 직원] 제거 — 셀 탭으로 직접 시트 진입 (사장님 의견 2026-05-12)
+  // 헤더 [＋ 일정등록] — 근태와 동일 패턴 (2026-05-13 통일). staff 본인 일정 등록 가능 → 권한 가드 없음
+  const addBtnHtml=` <span class="att-day-add-btn" data-action="openSchedSheet|${date}">＋ 일정등록</span>`;
   if(!scheds.length){
-    target.innerHTML=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})</span><span style="font-size:10px;color:var(--gray-400);">예정 없음</span></div>`;
+    target.innerHTML=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span><span style="font-size:10px;color:var(--gray-400);">예정 없음</span></div>`;
     return;
   }
-  let html=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})</span><span style="font-size:11px;color:var(--blue);font-weight:700;">${scheds.length}명</span></div>`;
+  let html=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span><span style="font-size:11px;color:var(--blue);font-weight:700;">${scheds.length}명</span></div>`;
   scheds.forEach(s=>{
     const empName=s.employees?.name||'-';
     const start=s.wish_start?s.wish_start.slice(0,5):'-';
