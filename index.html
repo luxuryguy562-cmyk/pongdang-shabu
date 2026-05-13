@@ -10279,9 +10279,9 @@ async function loadExpHubData(){
   try{
     const totals=Object.values(vendorMonthTotals||{});
     const sum=totals.reduce((a,t)=>a+(t.total||0),0);
-    const cnt=totals.reduce((a,t)=>a+(t.count||0),0);
+    const vendorCnt=totals.length;
     setText('expMiniVendor', sum?fmt(sum):'0');
-    setText('expMiniVendorSub', cnt?`${cnt}건`:'주문 없음');
+    setText('expMiniVendorSub', vendorCnt?`${vendorCnt}곳`:'주문 없음');
   }catch(e){setText('expMiniVendor','-');}
   // 고정비: fixed_costs.estimated_monthly 합 (활성)
   try{
