@@ -57,7 +57,7 @@ body.viewas-on{padding-top:34px;}
 /* ─ 네비 */
 .bottom-nav{position:fixed;bottom:0;width:100%;height:calc(72px + env(safe-area-inset-bottom,0));padding-bottom:env(safe-area-inset-bottom,0);background:var(--white);display:flex;border-top:1px solid var(--gray-200);z-index:1000;overflow-x:auto;scrollbar-width:none;box-sizing:border-box;}
 .bottom-nav::-webkit-scrollbar{display:none;}
-.nav-item{flex:1 1 0;min-width:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--gray-400);cursor:pointer;transition:color .2s;padding:0 2px;}
+.nav-item{flex:1 1 0;min-width:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--gray-400);cursor:pointer;transition:color .2s;padding:0 2px;white-space:nowrap;}
 .nav-item .ni{font-size:19px;margin-bottom:2px;line-height:1;display:inline-flex;align-items:center;justify-content:center;}
 .nav-item .ni svg{width:22px;height:22px;}
 /* 라벨 안 인라인 아이콘 (사이드메뉴/카드 제목/시트 제목 등) */
@@ -1033,15 +1033,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- 하단 네비: 직원용 4개 고정 -->
 <div class="bottom-nav" id="bottomNav">
-  <!-- 사장(관리자) nav: 홈/근태/영업/지출/더보기 -->
+  <!-- 사장(관리자) nav: 홈/근태관리/개시·마감/지출관리/더보기 -->
   <div class="nav-item manager-only" data-tab="dashboard" data-action="nav|dashboard|this" style="display:none;"><span class="ni"><svg><use href="#i-home"/></svg></span>홈</div>
-  <div class="nav-item manager-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태</div>
-  <div class="nav-item manager-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>영업</div>
-  <div class="nav-item manager-only" data-tab="expHub" data-action="nav|expHub|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>지출</div>
+  <div class="nav-item manager-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태관리</div>
+  <div class="nav-item manager-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>개시·마감</div>
+  <div class="nav-item manager-only" data-tab="expHub" data-action="nav|expHub|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>지출관리</div>
   <div class="nav-item manager-only" data-action="toggleSideMenu" style="display:none;"><span class="ni"><svg><use href="#i-grid"/></svg></span>더보기</div>
-  <!-- 직원 nav: 근태/영업/영수증/내정보 -->
-  <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태</div>
-  <div class="nav-item staff-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>영업</div>
+  <!-- 직원 nav: 근태관리/개시·마감/영수증/내 정보 -->
+  <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태관리</div>
+  <div class="nav-item staff-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>개시·마감</div>
   <div class="nav-item staff-only" data-tab="receipt" data-action="nav|receipt|this" style="display:none;"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
   <div class="nav-item staff-only" data-tab="myinfo" data-action="nav|myinfo|this" style="display:none;"><span class="ni"><svg><use href="#i-card"/></svg></span>내 정보</div>
 </div>
