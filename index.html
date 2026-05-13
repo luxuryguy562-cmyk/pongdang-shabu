@@ -7017,7 +7017,7 @@ async function loadVendorOrders(){
   document.getElementById('orderListData').innerHTML=data?.length?data.map(r=>`
     <div style="background:var(--gray-100);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;font-weight:700;">${r.vendors?.name||'-'}</span><span style="font-size:13px;font-weight:700;">${fmt(r.amount)}원</span></div>
-      <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">${r.order_date} ${r.item?'· '+r.item:''} ${r.memo?'· '+r.memo:''} <span class="badge badge-gray" style="font-size:10px;">${r.source}</span></div>
+      <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">${r.order_date} ${r.item?'· '+r.item:''} ${r.memo?'· '+r.memo:''} <span class="badge badge-gray" style="font-size:10px;">${({manual:'수동',upload:'업로드'})[r.source]||r.source}</span></div>
       <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px;"><button class="btn btn-secondary" style="padding:5px 12px;font-size:11px;" data-action="openEditOrderSheet|${r.id}">편집</button><button class="btn btn-danger" style="padding:5px 12px;font-size:11px;" data-action="deleteOrder|${r.id}">🗑 삭제</button></div>
     </div>`).join(''):'<div class="empty-state"><div class="empty-icon">📭</div><p>주문내역이 없습니다</p></div>';
 }
