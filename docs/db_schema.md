@@ -249,8 +249,8 @@ franchises (프랜차이즈/브랜드)
   - `deduct_etc / deduct_bank` — 위 deductions 의 type별 합산값 (옛 코드 호환)
   - `extra_draw_large / extra_draw_small` — 기타매출 호환 (현재는 extra_revenue_logs 로 분리)
 
-### daily_opening (2026-05-12 신규)
-영업개시 보고 (아침 출근 시 금고 계수 + 차감 처리)
+### daily_opening (2026-05-12 신규, 2026-05-13 차감 컬럼 제거)
+영업개시 보고 (아침 출근 시 금고 계수). **차감은 마감(settlements)에서만 입력.**
 
 | 컬럼 | 용도 |
 |---|---|
@@ -260,20 +260,20 @@ franchises (프랜차이즈/브랜드)
 | vault_json (JSONB) | 화폐별 장수 {50000:N, 10000:N, ...} |
 | actual_total (INT) | 오늘 출근 시 실제 금고 합계 |
 | previous_close_total (INT) | 어제 마감 금고 (스냅샷) |
-| **deductions (JSONB)** | 차감 동적 행 `[{type:'bank'|'etc', amount, memo}]` |
-| diff_amount (INT, GENERATED) | `actual_total - previous_close_total` (단순 차이, **차감 미반영**) |
-| memo (TEXT) | 보고 메모 (deprecated — 차감별 메모 사용) |
+| diff_amount (INT, GENERATED) | `actual_total - previous_close_total` (단순 차이) |
+| memo (TEXT) | 보고 메모 |
 | created_at, created_by | |
 
 - UNIQUE: `(store_id, opening_date)` → upsert 가능
 - RLS: `USING(true) WITH CHECK (store_id IS NOT NULL)`
 
-**핵심 수식 (JS에서 보정 계산)**:
+**핵심 수식**:
 ```
-영업개시 차액 = actual_total − (previous_close_total − Σdeductions.amount)
+영업개시 차액 = actual_total − previous_close_total
 0 = 정상 / ≠0 = 진짜 사라진 돈 (도난·실수 의심)
 ```
-- DB `diff_amount` 는 generated 라 차감 미반영. JS 에서 deductions 합 같이 가져와 보정.
+
+> ⚠️ 옛 `deductions (JSONB)` 컬럼은 DB·코드에서 모두 제거됨 (2026-05-13). 차감은 `settlements.items_json.deduct_etc/deduct_bank`에서만 관리.
 
 ### vendors / vendor_orders
 | vendors | vendor_orders |
