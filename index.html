@@ -6881,7 +6881,9 @@ function renderVendorList(){
   }).join(''):'<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div>');
 }
 // 거래처 카드 ↘ 진입 → 주문 내역 패널로 이동 (그 거래처만 필터 + 헤더 갱신)
-function openVendorDetail(vendorId){
+async function openVendorDetail(vendorId){
+  // 캐시 stale 방지: vendors 배열을 항상 fresh하게 (DB의 거래처 이름·카테고리 변경이 즉시 반영)
+  if(typeof loadVendors==='function') await loadVendors();
   vendorTab('orders', null);
   const sel=document.getElementById('orderVendorFilter');
   if(sel) sel.value=vendorId;
@@ -6995,15 +6997,50 @@ async function loadVendorOrders(){
   const{data}=await query;
   document.getElementById('orderListData').innerHTML=data?.length?data.map(r=>`
     <div style="background:var(--gray-100);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
-      <div style="display:flex;justify-content:space-between;"><span style="font-size:13px;font-weight:700;">${r.vendors?.name||'-'}</span><span style="font-size:13px;font-weight:700;">${fmt(r.amount)}원</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;font-weight:700;">${r.vendors?.name||'-'}</span><span style="font-size:13px;font-weight:700;">${fmt(r.amount)}원</span></div>
       <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">${r.order_date} ${r.item?'· '+r.item:''} ${r.memo?'· '+r.memo:''} <span class="badge badge-gray" style="font-size:10px;">${r.source}</span></div>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px;"><button class="btn btn-secondary" style="padding:5px 12px;font-size:11px;" data-action="openEditOrderSheet|${r.id}">편집</button><button class="btn btn-danger" style="padding:5px 12px;font-size:11px;" data-action="deleteOrder|${r.id}">🗑 삭제</button></div>
     </div>`).join(''):'<div class="empty-state"><div class="empty-icon">📭</div><p>주문내역이 없습니다</p></div>';
 }
+// 주문 입력/편집 공통 시트 — editOrderId가 있으면 편집, 없으면 신규
+let editOrderId=null;
 function openAddOrderSheet(){
   if(!guardStore())return;
+  editOrderId=null;
+  const titleEl=document.querySelector('#addOrderSheet .sheet-title');
+  if(titleEl) titleEl.textContent='주문 입력';
   document.getElementById('orderVendorInput').innerHTML=vendors.filter(v=>v.is_active).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
   document.getElementById('orderDateInput').value=new Date().toISOString().split('T')[0];
+  document.getElementById('orderItemInput').value='';
+  document.getElementById('orderAmtInput').value='';
+  document.getElementById('orderMemoInput').value='';
   openSheet('addOrderSheet');
+}
+async function openEditOrderSheet(id){
+  if(!guardStore())return;
+  setLoad(true,'주문 정보 로드 중...');
+  const{data:o,error}=await sb.from('vendor_orders').select('*').eq('id',id).eq('store_id',currentStore.id).maybeSingle();
+  setLoad(false);
+  if(error||!o) return toast('주문을 찾을 수 없습니다.','error');
+  editOrderId=id;
+  const titleEl=document.querySelector('#addOrderSheet .sheet-title');
+  if(titleEl) titleEl.textContent='주문 편집';
+  // 거래종료 거래처도 옵션에 포함 (기존 매핑 유지하기 위해)
+  document.getElementById('orderVendorInput').innerHTML=vendors.map(v=>`<option value="${v.id}"${v.id===o.vendor_id?' selected':''}>${v.name}${!v.is_active?' (종료)':''}</option>`).join('');
+  document.getElementById('orderDateInput').value=o.order_date;
+  document.getElementById('orderItemInput').value=o.item||'';
+  document.getElementById('orderAmtInput').value=o.amount;
+  document.getElementById('orderMemoInput').value=o.memo||'';
+  openSheet('addOrderSheet');
+}
+async function deleteOrder(id){
+  if(!confirm('이 주문 기록을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.')) return;
+  setLoad(true,'삭제 중...');
+  const{error}=await sb.from('vendor_orders').delete().eq('id',id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('삭제', error);
+  toast('삭제됐어요','success');
+  loadVendorOrders();
 }
 async function saveOrder(){
   if(!guardStore())return;
@@ -7011,9 +7048,17 @@ async function saveOrder(){
   const item=document.getElementById('orderItemInput').value;const amt=parseInt(document.getElementById('orderAmtInput').value)||0;
   const memo=document.getElementById('orderMemoInput').value;
   if(!vendorId||!date||!amt)return toast('거래처, 날짜, 금액은 필수입니다.','warn');
-  setLoad(true,'저장 중...');
-  const{error}=await sb.from('vendor_orders').insert({store_id:currentStore.id,vendor_id:vendorId,order_date:date,item:item||null,amount:amt,memo:memo||null,source:'manual'});
-  setLoad(false);if(error)return errToast('저장', error);closeAllSheets();loadVendorOrders();
+  setLoad(true,editOrderId?'수정 중...':'저장 중...');
+  const payload={vendor_id:vendorId,order_date:date,item:item||null,amount:amt,memo:memo||null};
+  const{error}=editOrderId
+    ? await sb.from('vendor_orders').update(payload).eq('id',editOrderId).eq('store_id',currentStore.id)
+    : await sb.from('vendor_orders').insert({...payload,store_id:currentStore.id,source:'manual'});
+  setLoad(false);
+  if(error)return errToast(editOrderId?'수정':'저장', error);
+  toast(editOrderId?'수정됐어요':'저장됐어요','success');
+  editOrderId=null;
+  closeAllSheets();
+  loadVendorOrders();
 }
 
 // 거래처 파일 업로드 (컬럼 매칭)
