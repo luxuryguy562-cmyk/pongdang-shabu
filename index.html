@@ -4389,6 +4389,7 @@ function pickAttDay(date){
   const isSingleView = !!empF;
   renderAttCalendar(attAllMonth, attAllDayMap, attAllSelectedDate, isSingleView);
   renderAttDayDetail(date, attAllDayMap[date]||[], isSingleView);
+  document.getElementById('attDayDetail')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // ─── 새 기능: 근태 기록 편집 ───
@@ -4755,6 +4756,7 @@ function pickSchedDay(date){
   schedSelectedDate=date;
   renderSchedCalendar();
   renderSchedDayDetail(date);
+  document.getElementById('schedDayDetail')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function renderSchedDayDetail(date){
   const target=document.getElementById('schedDayDetail');
