@@ -344,12 +344,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* ─ 근무계획 간트 */
 .gantt-header{display:flex;border-bottom:2px solid var(--gray-200);}
 .gantt-emp-col{min-width:44px;width:44px;font-size:9px;font-weight:700;color:var(--gray-600);padding:3px 2px;flex-shrink:0;text-align:center;}
-.gantt-hour{flex:1;font-size:8px;text-align:center;color:var(--gray-400);padding:3px 0;}
+/* .gantt-hour 정의는 영업일 회전축 블록(아래)에서 통일 */
 .gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--gray-100);min-height:22px;}
 .gantt-name{min-width:44px;width:44px;font-size:10px;font-weight:700;padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
-.gantt-bar-area{flex:1;position:relative;height:18px;display:flex;}
-/* 자정선 (영업일 회전축의 24시 위치, 축 75% 지점) */
-.gantt-bar-area::after{content:'';position:absolute;left:75%;top:-2px;bottom:-2px;border-left:2px dashed rgba(239,68,68,0.55);pointer-events:none;z-index:1;}
+/* 영업일 회전축: 24시 이후(75%~100%)는 옅은 파랑 배경으로 '익일 새벽' 시각 분리 */
+.gantt-bar-area{flex:1;position:relative;height:18px;display:flex;background:linear-gradient(to right,transparent 0,transparent 75%,rgba(99,102,241,0.07) 75%,rgba(99,102,241,0.07) 100%);}
+/* 자정선 (24시 위치, 축 75% 지점) */
+.gantt-bar-area::after{content:'';position:absolute;left:75%;top:-2px;bottom:-2px;border-left:2px dashed rgba(220,38,38,0.85);pointer-events:none;z-index:2;}
+.gantt-hour{flex:1;font-size:9px;text-align:center;color:var(--gray-500);padding:3px 0;}
 .gantt-bg-col{flex:1;border-left:1px solid var(--gray-100);}
 .gantt-bar{position:absolute;height:14px;top:2px;border-radius:3px;background:var(--blue);opacity:.85;display:flex;align-items:center;overflow:hidden;}
 .gantt-bar.confirmed{background:var(--success);}
@@ -1762,11 +1764,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <button id="vdEditBtn" class="btn btn-secondary btn-sm" style="padding:6px 10px;font-size:12px;display:none;" data-action="editVendorFromDetail">편집</button>
       <button id="vdToggleBtn" class="btn btn-danger btn-sm" style="padding:6px 10px;font-size:12px;display:none;" data-action="toggleVendorFromDetail">거래종료</button>
     </div>
+    <!-- 거래처 선택 드롭다운은 헤더(vdName)에 고정된 거래처와 짬뽕되는 UX라서 숨김.
+         거래처 전환은 ‹ 목록 버튼으로 돌아가서 다시 선택. value는 헤더 vendorId와 동기화되어 loadVendorOrders가 그대로 사용. -->
     <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <select id="orderVendorFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="loadVendorOrders">
+      <select id="orderVendorFilter" style="display:none;" data-change="loadVendorOrders">
         <option value="">전체 거래처</option>
       </select>
-      <div class="input-row" style="flex:0 0 auto;margin-bottom:0;padding:10px 12px;" data-action="openDatePicker|orderMonth">
+      <div class="input-row" style="flex:1;margin-bottom:0;padding:10px 12px;" data-action="openDatePicker|orderMonth">
         <span id="vOrderMonth" class="val" style="font-size:13px;white-space:nowrap;">-</span>
       </div>
     </div>
@@ -4347,7 +4351,7 @@ function renderAttDayDetail(date, logs, isSingleView){
     <span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span>
     <span><span style="font-size:11px;color:var(--gray-500);font-weight:600;margin-right:10px;">${fmtHourDecimal(totalMin)}</span><span style="font-size:12px;color:var(--blue);font-weight:800;">${fmt(totalWage)}원</span></span>
   </div>`;
-  html += `<div class="gantt-header"><div class="att-row-label" style="visibility:hidden;">x</div>${ganttHours.map(h=>`<div class="gantt-hour">${h}</div>`).join('')}</div>`;
+  html += `<div class="gantt-header"><div class="att-row-label" style="visibility:hidden;">x</div>${ganttHours.map(h=>`<div class="gantt-hour"${h===24?' style="color:#dc2626;font-weight:700;"':''}>${h%3===0?(h>=24?h-24:h):''}</div>`).join('')}</div>`;
 
   const sorted = [...logs].sort((a,b)=>{
     const ta = a.app_in?new Date(a.app_in).getTime():9e15;
