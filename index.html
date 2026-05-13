@@ -4093,8 +4093,11 @@ async function saveAttendance(){
   const eStr=document.getElementById('vEnd').innerText;
   if(sStr==='-') return toast('출근 시간을 입력하세요.','warn');
   const appIn=new Date(date+'T'+sStr+':00');
-  const appOut=eStr!=='-'?new Date(date+'T'+eStr+':00'):null;
-  if(appOut&&appOut<=appIn) return toast('퇴근 시간이 출근보다 빠릅니다. 확인해주세요.','error');
+  let appOut=eStr!=='-'?new Date(date+'T'+eStr+':00'):null;
+  // 자정 넘는 근무 자동 처리: 퇴근 시각이 출근보다 같거나 빠르면 = 다음날 퇴근
+  let crossedMidnight=false;
+  if(appOut&&appOut<=appIn){appOut=new Date(appOut.getTime()+24*60*60*1000);crossedMidnight=true;}
+  if(appOut&&(appOut-appIn)>24*60*60*1000) return toast('근무 시간이 24시간을 초과합니다. 시각 확인해주세요.','error');
   const restMin=parseInt(document.getElementById('vRest').value)||0;
   const w=await calcWageData(selectedEmpId, appIn, appOut, date, restMin);
   setLoad(true,'근태 기록 중...');
@@ -4106,7 +4109,7 @@ async function saveAttendance(){
   });
   setLoad(false);
   if(error) return errToast('저장', error);
-  toast('기록됐어요','success');
+  toast(crossedMidnight?`기록됐어요 (익일 ${eStr} 퇴근으로 처리)`:'기록됐어요','success');
   selectedEmpId=null;
   ['vEmpName','vStart','vEnd'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerText=id==='vEmpName'?'선택':'-';el.classList.add('empty');}});
   closeAllSheets();
