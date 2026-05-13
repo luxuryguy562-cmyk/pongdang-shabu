@@ -1290,9 +1290,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vAllMonth">-</div>
         <button class="btn btn-secondary btn-sm" data-action="moveAttMonth|1|all">›</button>
       </div>
-      <select id="attEmpFilter" class="input-field" style="padding:10px 14px;font-size:13px;margin-bottom:10px;" data-change="loadAttAll">
-        <option value="">전체 직원</option>
-      </select>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-600);flex-shrink:0;">👥 직원별 보기</div>
+        <select id="attEmpFilter" class="input-field" style="flex:1;padding:10px 14px;font-size:13px;" data-change="loadAttAll">
+          <option value="">전체</option>
+        </select>
+      </div>
       <!-- KPI 3분할 (출근일 / 근무시간 / 인건비) -->
       <div id="attKpi" class="att-kpi-row" style="display:none;"></div>
       <!-- 본인 모드 전용: 이번주 간트 -->
@@ -1318,9 +1321,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vSchedMonth">-</div>
       <button class="btn btn-secondary btn-sm" data-action="moveSchedMonth|1">›</button>
     </div>
-    <select id="schedEmpFilter" class="input-field" style="padding:10px 14px;font-size:13px;margin-bottom:10px;" data-change="loadScheduleMonth">
-      <option value="">전체 직원</option>
-    </select>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gray-600);flex-shrink:0;">👥 직원별 보기</div>
+      <select id="schedEmpFilter" class="input-field" style="flex:1;padding:10px 14px;font-size:13px;" data-change="loadScheduleMonth">
+        <option value="">전체</option>
+      </select>
+    </div>
     <div id="schedCalendar"></div>
     <div id="schedDayDetail" class="att-day-detail"></div>
   </div>
@@ -4676,7 +4682,7 @@ function fillSchedEmpFilter(){
     return;
   }
   sel.style.display='';
-  const opts=['<option value="">전체 직원</option>'];
+  const opts=['<option value="">전체</option>'];
   (employees||[]).filter(e=>e.is_active!==false).forEach(e=>{
     opts.push(`<option value="${e.id}">${e.name}</option>`);
   });
