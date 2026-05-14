@@ -5655,6 +5655,10 @@ function initOpeningDate(){
   const today = new Date().toISOString().split('T')[0];
   picker.value = today;
   picker.max = today; // 미래 차단
+  // 2026-05-14: status 텍스트와 수정 모드 전역 변수도 같이 reset (옛 잔재로 picker/status 불일치 발생하던 버그)
+  const status = document.getElementById('openingDateStatus');
+  if(status) status.innerText = '오늘 영업개시';
+  openingEditDate = null;
   if(isManager){
     group.style.display = 'block';
     picker.addEventListener('change', function(){
