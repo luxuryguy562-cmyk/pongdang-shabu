@@ -10572,7 +10572,7 @@ async function loadExpHubData(){
     const rate=parseFloat(ss?.royalty_rate||0)/100;
     const royaltyAmt=Math.round(totalRev*rate);
     setText('expMiniRoyalty', rate>0?fmt(royaltyAmt):'-');
-    setText('expMiniRoyaltySub', rate>0?`매출 ${fmt(totalRev)} × ${(rate*100).toFixed(1)}%`:'요율 미설정');
+    setText('expMiniRoyaltySub', rate>0?`${(rate*100).toFixed(1)}%`:'요율 미설정');
   }catch(e){setText('expMiniRoyalty','-');}
   // 마케팅/세금: fixed_costs(category=해당) + expense_category_amounts 합산
   const renderCatCard=async(catName,amtId,subId)=>{
@@ -10586,7 +10586,7 @@ async function loadExpHubData(){
       const fcSum=fcByCat[catName]||0;
       const sum=fcSum+ecaSum;
       setText(amtId, sum?fmt(sum):'0');
-      setText(subId, sum?`${m}월`:'미입력');
+      setText(subId, '이번달');
     }catch(e){setText(amtId,'-');}
   };
   await renderCatCard('마케팅','expMiniMarketing','expMiniMarketingSub');
