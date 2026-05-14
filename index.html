@@ -1198,20 +1198,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <!-- 차액 확인 (최근 30일 · 도난·실수 감지) -->
   <div class="card" style="margin-top:14px;">
     <div class="card-title">🛡 차액 확인 (최근 30일)</div>
-    <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">±1,000원 이상 차이는 빨강. 행을 누르면 상세 펼침.</div>
-    <table style="width:100%;font-size:13px;border-collapse:collapse;">
-      <thead>
-        <tr style="border-bottom:2px solid var(--gray-200);text-align:right;">
-          <th style="padding:8px 4px;text-align:left;">날짜</th>
-          <th style="padding:8px 4px;">개시 금고</th>
-          <th style="padding:8px 4px;">마감 금고</th>
-          <th style="padding:8px 4px;">차액</th>
-        </tr>
-      </thead>
-      <tbody id="diffTableBody">
-        <tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
-      </tbody>
-    </table>
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">±1,000원 이상 차이는 빨강. 빨강 행을 누르면 지출 상세 펼침 (메모 없는 지출은 빨강 ⚠️).</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:560px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--gray-200);text-align:right;white-space:nowrap;">
+            <th style="padding:8px 6px;text-align:left;">날짜</th>
+            <th style="padding:8px 6px;">개시 금고</th>
+            <th style="padding:8px 6px;">마감 금고</th>
+            <th style="padding:8px 6px;">매출</th>
+            <th style="padding:8px 6px;">지출</th>
+            <th style="padding:8px 6px;">개시차액</th>
+            <th style="padding:8px 6px;">마감차액</th>
+            <th style="padding:8px 6px;">차액</th>
+          </tr>
+        </thead>
+        <tbody id="diffTableBody">
+          <tr><td colspan="8" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
+        </tbody>
+      </table>
+    </div>
     <div id="diffTableSummary" style="font-size:11px;color:var(--gray-500);margin-top:10px;"></div>
   </div>
 </div>
@@ -10490,23 +10496,57 @@ async function loadDiffTable(){
     const items=st.items_json||{};
     const cashRev=(items.pos_cash||0)+(items.pos_cash_receipt||0);
     const expense=(items.deduct_etc||0)+(items.deduct_bank||0);
+    const opDiffText=opDiff!=null?((opDiff>0?'+':'')+fmt(opDiff)):'<span style="color:var(--gray-400);">—</span>';
+    const stDiffText=(stDiff>0?'+':'')+fmt(stDiff);
+    const stDiffColor=Math.abs(stDiff)>=THRESHOLD?'#DC2626':'var(--gray-700)';
+    const opDiffColor=opDiff!=null&&Math.abs(opDiff)>=THRESHOLD?'#DC2626':'var(--gray-700)';
+    const rowBg=isAlert?'background:#FEF2F2;':'';
 
-    html+=`<tr class="diff-row" data-date="${d}" style="border-bottom:1px solid var(--gray-100);cursor:pointer;text-align:right;font-variant-numeric:tabular-nums;">
-      <td style="padding:8px 4px;text-align:left;font-weight:600;">${d.slice(5)}</td>
-      <td style="padding:8px 4px;">${opCell}</td>
-      <td style="padding:8px 4px;">${stCell}</td>
-      <td style="padding:8px 4px;color:${totalColor};font-weight:700;">${totalIcon} ${totalText}</td>
-    </tr>
-    <tr class="diff-detail" data-detail="${d}" style="display:none;background:var(--gray-50);">
-      <td colspan="4" style="padding:10px 14px;font-size:11px;color:var(--gray-700);line-height:1.7;">
-        ↳ 개시차액: ${opDiff!=null?((opDiff>0?'+':'')+fmt(opDiff)):'— (개시 생략)'}<br>
-        ↳ 마감차액: ${stDiff>0?'+':''}${fmt(stDiff)}<br>
-        ↳ 현금매출: ${fmt(cashRev)} <span style="color:var(--gray-400);">(현금 ${fmt(items.pos_cash||0)} + 영수증 ${fmt(items.pos_cash_receipt||0)})</span><br>
-        ↳ 지출: ${fmt(expense)}
-      </td>
+    html+=`<tr class="diff-row" data-date="${d}" style="border-bottom:1px solid var(--gray-100);cursor:${isAlert?'pointer':'default'};text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;${rowBg}">
+      <td style="padding:8px 6px;text-align:left;font-weight:600;">${d.slice(5)}</td>
+      <td style="padding:8px 6px;">${opCell}</td>
+      <td style="padding:8px 6px;">${stCell}</td>
+      <td style="padding:8px 6px;">${fmt(cashRev)}</td>
+      <td style="padding:8px 6px;">${fmt(expense)}</td>
+      <td style="padding:8px 6px;color:${opDiffColor};">${opDiffText}</td>
+      <td style="padding:8px 6px;color:${stDiffColor};">${stDiffText}</td>
+      <td style="padding:8px 6px;color:${totalColor};font-weight:700;">${totalIcon} ${totalText}</td>
     </tr>`;
+    // 빨강 행이면 펼침 행 추가 (지출 상세 + 매출 분해)
+    if(isAlert){
+      const deductions=Array.isArray(items.deductions)?items.deductions:[];
+      let dedRows='';
+      if(deductions.length){
+        dedRows=deductions.map(de=>{
+          const memo=(de.memo||'').trim();
+          const type=de.type==='bank'?'통장':'현금';
+          const suspect=!memo; // 메모 없는 지출 → 빨강 의심
+          const tagColor=suspect?'#DC2626':'var(--gray-500)';
+          const memoText=memo?memo:'<span style="color:#DC2626;font-weight:700;">⚠️ 메모 없음</span>';
+          return `<div style="display:flex;gap:8px;padding:3px 0;color:${tagColor};">
+            <span style="min-width:36px;">[${type}]</span>
+            <span style="min-width:80px;text-align:right;">${fmt(de.amount||0)}</span>
+            <span style="flex:1;">${memoText}</span>
+          </div>`;
+        }).join('');
+      } else if(expense>0){
+        dedRows=`<div style="color:#DC2626;">⚠️ 지출 ${fmt(expense)}원 — 항목 정보 없음 (옛 데이터)</div>`;
+      } else {
+        dedRows='<div style="color:var(--gray-400);">지출 없음</div>';
+      }
+      html+=`<tr class="diff-detail" data-detail="${d}" style="display:none;background:#FEF2F2;">
+        <td colspan="8" style="padding:12px 16px;font-size:11px;color:var(--gray-700);line-height:1.7;">
+          <div style="font-weight:700;color:#991B1B;margin-bottom:6px;">⚠️ Review 필요 — 지출 상세</div>
+          ${dedRows}
+          <div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--gray-300);font-size:10px;color:var(--gray-500);">
+            현금매출 ${fmt(cashRev)} = 현금 ${fmt(items.pos_cash||0)} + 영수증 ${fmt(items.pos_cash_receipt||0)}
+          </div>
+        </td>
+      </tr>`;
+    }
   });
   tbody.innerHTML=html;
+  // 빨강 행만 클릭 펼침 (그 외 행은 정보 다 보임 → 펼침 불필요)
   tbody.querySelectorAll('.diff-row').forEach(row=>{
     row.addEventListener('click',()=>{
       const detail=tbody.querySelector(`.diff-detail[data-detail="${row.dataset.date}"]`);
