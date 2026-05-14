@@ -10523,7 +10523,7 @@ async function loadDiffTable(){
 
     const isAlert=Math.abs(totalDiff)>=THRESHOLD;
     const diffColor=isAlert?'#DC2626':(totalDiff===0?'var(--gray-400)':'var(--text)');
-    const zeroSpan='<span style="color:var(--gray-300);font-weight:400;">0</span>';
+    const zeroSpan='<span style="color:var(--gray-300);font-weight:400;">-</span>';
     const diffText=totalDiff===0
       ? zeroSpan
       : `${totalDiff>0?'+':''}${fmt(totalDiff)}${isAlert?' ⚠':''}`;
