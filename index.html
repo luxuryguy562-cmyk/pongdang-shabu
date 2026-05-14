@@ -1250,7 +1250,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <button type="button" class="hub-full" data-action="nav|explist">
     <span class="hub-full-icon"><svg><use href="#i-card"/></svg></span>
     <div style="flex:1;min-width:0;">
-      <div class="hub-full-title">계좌·카드</div>
+      <div class="hub-full-title">계좌내역·카드내역</div>
       <div class="hub-full-sub" id="expMiniMydataSub">자동 수집</div>
     </div>
     <span style="color:var(--gray-400);font-size:20px;">›</span>
@@ -1259,14 +1259,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <span class="hub-full-icon"><svg><use href="#i-arrows-lr"/></svg></span>
     <div style="flex:1;min-width:0;">
       <div class="hub-full-title">정산 대조</div>
-      <div class="hub-full-sub" id="expMiniReconSub">매출 vs 카드 출금</div>
+      <div class="hub-full-sub" id="expMiniReconSub">예상 vs 실제 매출·지출 대조</div>
     </div>
     <span style="color:var(--gray-400);font-size:20px;">›</span>
   </button>
   <button type="button" class="hub-full" data-action="nav|expcat">
     <span class="hub-full-icon"><svg><use href="#i-settings"/></svg></span>
     <div style="flex:1;min-width:0;">
-      <div class="hub-full-title">카테고리 관리</div>
+      <div class="hub-full-title">지출 카테고리 관리</div>
       <div class="hub-full-sub" id="expFullCat">분류 추가·수정·삭제</div>
     </div>
     <span style="color:var(--gray-400);font-size:20px;">›</span>
@@ -10607,8 +10607,8 @@ async function loadExpHubData(){
   // 정산 대조: hub-full sub에 통합 표시
   try{
     const{count}=await sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending');
-    setText('expMiniReconSub', count?`${count}건 검토 필요`:'매출 vs 카드 출금');
-  }catch(e){setText('expMiniReconSub','매출 vs 카드 출금');}
+    setText('expMiniReconSub', count?`${count}건 검토 필요`:'예상 vs 실제 매출·지출 대조');
+  }catch(e){setText('expMiniReconSub','예상 vs 실제 매출·지출 대조');}
   // 예비비는 홈 대시보드 미니 행과 사이드 메뉴에서 진입 (지출 hub에서 제거됨)
   // hub 그리드 카드 순서 적용 + 드래그 정렬 초기화
   applyExpHubCardOrder();
