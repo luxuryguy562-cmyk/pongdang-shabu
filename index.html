@@ -326,6 +326,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .fixedcost-item .fc-name{flex:1;font-size:13px;font-weight:600;}
 .fixedcost-item .fc-amt{font-size:13px;font-weight:700;color:var(--blue);}
 .fixedcost-item.inactive{opacity:.4;}
+.fc-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;margin-top:2px;}
+.fc-badge-fixed{background:#E5E7EB;color:#374151;}
+.fc-badge-utility{background:#FED7AA;color:#9A3412;}
+.fc-badge-marketing{background:#FCE7F3;color:#9D174D;}
+.fc-badge-tax{background:#FEE2E2;color:#991B1B;}
+.fc-badge-hidden{background:#FECACA;color:#7F1D1D;margin-left:6px;}
 
 /* ─ 정산/검수 */
 .recon-row{display:flex;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:7px;gap:6px;cursor:pointer;}
@@ -1203,6 +1209,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="hub-mini-title">인건비</span>
       <span class="hub-mini-amt" id="expMiniWage">-</span>
       <span class="hub-mini-sub" id="expMiniWageSub">이번달</span>
+    </button>
+  </div>
+  <div class="hub-grid">
+    <button type="button" class="hub-mini" data-action="nav|royalty">
+      <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
+      <span class="hub-mini-title">로열티</span>
+      <span class="hub-mini-amt" id="expMiniRoyalty">-</span>
+      <span class="hub-mini-sub" id="expMiniRoyaltySub">매출 × 요율</span>
+    </button>
+    <button type="button" class="hub-mini" data-action="goCategoryDetail|마케팅">
+      <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
+      <span class="hub-mini-title">마케팅</span>
+      <span class="hub-mini-amt" id="expMiniMarketing">-</span>
+      <span class="hub-mini-sub" id="expMiniMarketingSub">이번달</span>
+    </button>
+    <button type="button" class="hub-mini" data-action="goCategoryDetail|세금">
+      <span class="hub-mini-icon"><svg><use href="#i-receipt"/></svg></span>
+      <span class="hub-mini-title">세금</span>
+      <span class="hub-mini-amt" id="expMiniTax">-</span>
+      <span class="hub-mini-sub" id="expMiniTaxSub">이번달</span>
     </button>
   </div>
   <div class="hub-grid">
@@ -2379,6 +2405,58 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- ══ [10c] 로열티 (신규 — 매출 비례 자동 계산) ══ -->
+<div id="royaltyCont" class="container">
+  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
+  <div class="card">
+    <div class="card-title">💼 로열티</div>
+    <div style="font-size:12px;color:var(--gray-600);margin-bottom:12px;">설정의 로열티율 기준으로 매출의 일정 비율을 자동 계산합니다.</div>
+    <div id="royaltyEmpty" style="display:none;padding:20px;text-align:center;color:var(--gray-500);">
+      <p>로열티율이 설정되지 않았습니다.</p>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px;" data-action="nav|settings">설정으로 가기</button>
+    </div>
+    <div id="royaltyMain" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="padding:12px;background:var(--gray-100);border-radius:10px;">
+        <div style="font-size:11px;color:var(--gray-500);">이번달 매출 (<span id="royaltyMonthLabel">-</span>)</div>
+        <div style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);" id="royaltyRevenue">-</div>
+      </div>
+      <div style="padding:12px;background:#FEE2E2;border-radius:10px;">
+        <div style="font-size:11px;color:#991B1B;">로열티율</div>
+        <div style="font-size:18px;font-weight:800;color:#991B1B;" id="royaltyRateLabel">-</div>
+      </div>
+      <div style="padding:12px;background:#FEF3C7;border-radius:10px;">
+        <div style="font-size:11px;color:#92400E;">예상 로열티 (가마감)</div>
+        <div style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:#92400E;" id="royaltyExpected">-</div>
+      </div>
+      <div style="padding:12px;background:#E0F2FE;border-radius:10px;">
+        <div style="font-size:11px;color:#075985;">실제 출금 (진마감)</div>
+        <div style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:#075985;" id="royaltyActual">-</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📅 월별 로열티 (최근 12개월)</div>
+    <div style="overflow-x:auto;">
+      <table id="royaltyMonthTable" style="width:100%;font-size:12px;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--gray-200);text-align:right;">
+            <th style="padding:8px 6px;text-align:left;">월</th>
+            <th style="padding:8px 6px;">매출</th>
+            <th style="padding:8px 6px;">요율</th>
+            <th style="padding:8px 6px;">예상</th>
+            <th style="padding:8px 6px;">실제</th>
+            <th style="padding:8px 6px;">차액</th>
+          </tr>
+        </thead>
+        <tbody id="royaltyMonthBody">
+          <tr><td colspan="6" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--gray-400);margin-top:10px;">💡 차액 = 실제 − 예상. 음수면 실제 출금이 예상보다 적었어요.</div>
+  </div>
+</div>
+
 <!-- ══ [10a] 지출 카테고리 ══ -->
 <div id="expcatCont" class="container">
   <div class="card">
@@ -2968,9 +3046,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addFcTitle">고정비 추가</div>
   <input id="fcNameInput" class="input-field" placeholder="항목명 (예: 로열티, 임대료)" type="text">
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">유형 (어느 카테고리로 집계할지)</div>
   <select id="fcCatInput" class="input-field">
-    <option value="고정비">고정비</option>
-    <option value="로열티">로열티</option>
+    <option value="고정비">고정비 (월세·인터넷 등 변동 없음)</option>
+    <option value="공과금">공과금 (전기·가스 등 변동)</option>
     <option value="마케팅">마케팅</option>
     <option value="세금">세금</option>
   </select>
@@ -3212,6 +3291,7 @@ function nav(tab, el) {
     sales:'dashboard',
     receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
     explist:'expHub', recon:'expHub', reserve:'expHub', expcat:'expHub',
+    royalty:'expHub',
   };
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
@@ -3240,6 +3320,7 @@ function nav(tab, el) {
     wage: loadWageSummary,
     explist: initExplist,
     expcat: loadExpCategories,
+    royalty: loadRoyaltyPage,
     recon: initRecon,
     sales: loadSalesDaily,
     opening: loadOpeningPage,
@@ -6104,7 +6185,7 @@ async function loadDashboard(){
         ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
         :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
       // 고정비 — 항목별 예상 월 금액 1회 입력 (모든 달 동일 적용)
-      sb.from('fixed_costs').select('estimated_monthly,is_active').eq('store_id',sid),
+      sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
       // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
       dashMode==='final'
         ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
@@ -6166,6 +6247,16 @@ async function loadDashboard(){
     // 고정비 일할계산 — 항목별 예상 월 금액 합산 (활성 항목만)
     const fixedMonthly=fcRows.filter(r=>r.is_active!==false).reduce((a,r)=>a+(r.estimated_monthly||0),0);
     const fixedProrated=Math.round(fixedMonthly/lastDay*passedDays);
+    // 카테고리별 일할 (차트 그룹 분리용: 고정비/공과금/마케팅/세금 등)
+    const fcByCatMonthly={};
+    fcRows.filter(r=>r.is_active!==false).forEach(r=>{
+      const c=r.category||'고정비';
+      fcByCatMonthly[c]=(fcByCatMonthly[c]||0)+(r.estimated_monthly||0);
+    });
+    const fixedProratedByCat={};
+    Object.keys(fcByCatMonthly).forEach(c=>{
+      fixedProratedByCat[c]=Math.round(fcByCatMonthly[c]/lastDay*passedDays);
+    });
 
     // 지출에서 고정비를 일할계산으로 교체
     const totalCostRaw=expData.reduce((a,e)=>a+e.amount,0);
@@ -6262,7 +6353,8 @@ async function loadDashboard(){
     const dailyExpTotal={}; // { '15': 1200000 }
 
     // ── 일별정산 카테고리 (DB 동적 생성) ──
-    const _dailySrcs=['vendor_orders','receipts','attendance','fixed_costs'];
+    // 2026-05-14: fixed_costs는 카테고리별(고정비/공과금) 분리 처리로 _dailySrcs에서 제외
+    const _dailySrcs=['vendor_orders','receipts','attendance'];
     const catNames=[],catColors={},shortNames={},srcToCat={};
     _dailySrcs.forEach(src=>{
       const cat=expCategories.find(c=>c.data_source===src&&!c.parent_id)||expCategories.find(c=>c.data_source===src);
@@ -6272,6 +6364,14 @@ async function loadDashboard(){
       else if(nm.includes('('))shortNames[nm]=nm.split('(')[0];
       else shortNames[nm]=nm.length>4?nm.slice(0,3):nm;
     });
+    // fixed_costs 카테고리 (고정비/공과금 분리)
+    const fixedCats=expCategories.filter(c=>c.data_source==='fixed_costs'&&!c.parent_id).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+    fixedCats.forEach(cat=>{
+      catNames.push(cat.name);
+      catColors[cat.name]=cat.color||'#FF9500';
+      shortNames[cat.name]=cat.name.length>4?cat.name.slice(0,3):cat.name;
+    });
+    srcToCat['fixed_costs']=fixedCats[0]?.name||'고정비'; // 호환용 (단일 키 참조 코드 대비)
     catNames.push('로열티/수수료');catColors['로열티/수수료']='#EF4444';shortNames['로열티/수수료']='로열티';
 
     // 일별 카테고리 데이터는 위 통합 Promise.all에서 이미 받음 (voRes2/rcRes2/attRes2/prevVoRes/prevRcRes/prevAttRes 재사용)
@@ -6315,8 +6415,11 @@ async function loadDashboard(){
         });
       });
     }
-    // 고정비 (일할 균등배분)
-    const dailyFixedShare=Math.round(fixedMonthly/lastDay);
+    // 고정비 카테고리별 일할 (고정비/공과금 분리)
+    const dailyFixedShareByCat={};
+    fixedCats.forEach(cat=>{
+      dailyFixedShareByCat[cat.name]=Math.round((fcByCatMonthly[cat.name]||0)/lastDay);
+    });
 
     // 일별 합계 계산
     allDays.forEach(d=>{
@@ -6325,7 +6428,9 @@ async function loadDashboard(){
       const hasSale=dailySalesMap.hasOwnProperty(d);
       if(!hasSale) return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
-      dailyCatMap[d][srcToCat['fixed_costs']]=dailyFixedShare;
+      fixedCats.forEach(cat=>{
+        if(dailyFixedShareByCat[cat.name]>0) dailyCatMap[d][cat.name]=dailyFixedShareByCat[cat.name];
+      });
       // 로열티/수수료: 해당일 매출 기준
       const daySale=dailySalesMap[d]||0;
       const dayRoyalty=Math.round(daySale*royaltyRate);
@@ -6538,23 +6643,27 @@ async function loadDashboard(){
     // ══ A-4. 지출 상세 (세그먼트 바 + 카테고리 리스트, 항상 펼침) ══
     // 2026-04-22: 식자재 통합(composite) 반영 — 직구/영수증 별도 그룹 제거
     // 2026-05-06: 도넛 → 세그먼트 바 (토스 스타일, 항상 펼침)
-    const groupMap={composite:'식자재',vendor_orders:'식자재',receipts:'기타',attendance:'인건비',fixed_costs:'공과금/고정비',manual:'기타/수동'};
+    // 2026-05-14: 고정비/공과금 분리 + 마케팅/세금 그룹 추가 — e.name 우선 매핑
+    const groupMap={composite:'식자재',vendor_orders:'식자재',receipts:'기타',attendance:'인건비',fixed_costs:'고정비',manual:'기타/수동'};
+    const nameGroupMap={'주류':'주류','공과금':'공과금','마케팅':'마케팅','세금':'세금'};
     const expByGroup={};
     expData.forEach(e=>{
-      // 주류는 vendor_orders지만 별도 그룹으로 분리 (식자재와 나란히)
-      let group;
-      if(e.name==='주류') group='주류';
-      else group=groupMap[e.source]||'기타';
+      // e.name이 nameGroupMap에 있으면 우선 (주류/공과금/마케팅/세금)
+      const group=nameGroupMap[e.name]||groupMap[e.source]||'기타';
       if(!expByGroup[group])expByGroup[group]=0;
-      if(e.source==='fixed_costs') expByGroup[group]=fixedProrated;
-      else expByGroup[group]+=e.amount;
+      if(e.source==='fixed_costs'){
+        // 카테고리별 일할 분리 (e.name 기준)
+        expByGroup[group]=fixedProratedByCat[e.name]||0;
+      } else {
+        expByGroup[group]+=e.amount;
+      }
     });
     if(royalty>0) expByGroup['로열티']=(expByGroup['로열티']||0)+royalty;
     if(cardFee>0) expByGroup['카드수수료']=(expByGroup['카드수수료']||0)+cardFee;
 
     const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1):'0';
-    const mGroupColors={'식자재':'#05C072','주류':'#8B5CF6','인건비':'#0050FF','공과금/고정비':'#FF9500','로열티':'#EF4444','카드수수료':'#EF4444','기타/수동':'#7C3AED','마케팅':'#F59E0B','기타':'#94A3B8'};
-    const groupOrder=['식자재','주류','인건비','공과금/고정비','로열티','카드수수료','기타/수동','마케팅','기타'];
+    const mGroupColors={'식자재':'#05C072','주류':'#8B5CF6','인건비':'#0050FF','고정비':'#FF9500','공과금':'#FB923C','로열티':'#EF4444','카드수수료':'#DC2626','마케팅':'#EC4899','세금':'#92400E','기타/수동':'#7C3AED','기타':'#94A3B8'};
+    const groupOrder=['식자재','주류','인건비','고정비','공과금','로열티','카드수수료','마케팅','세금','기타/수동','기타'];
 
     // 카테고리 행 (지출 합계 기준 비율) + 세그먼트 바 데이터
     const expRows=[];
@@ -7205,14 +7314,18 @@ async function loadFixedCosts(){
   const{data}=await sb.from('fixed_costs').select('*').eq('store_id',currentStore.id).order('sort_order');
   fixedCosts=data||[];renderFcList();
 }
+// fixed_costs.category → 뱃지 CSS 클래스 매핑
+const FC_BADGE_CLASS={'고정비':'fixed','공과금':'utility','마케팅':'marketing','세금':'tax'};
 function renderFcList(){
   document.getElementById('fcListData').innerHTML=fixedCosts.length?fixedCosts.map(fc=>{
     const est=fc.estimated_monthly||0;
+    const cat=fc.category||'고정비';
+    const badgeCls=FC_BADGE_CLASS[cat]||'fixed';
     return `
     <div class="fixedcost-item ${fc.is_active?'':'inactive'}" style="display:flex;align-items:center;gap:8px;padding:14px 12px;border-bottom:1px solid var(--gray-100);">
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:700;">${fc.name}</div>
-        <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">${fc.category||'고정비'}${!fc.is_active?' · <span style="color:#F04452;">숨김</span>':''}</div>
+        <div style="margin-top:4px;"><span class="fc-badge fc-badge-${badgeCls}">${cat}</span>${!fc.is_active?'<span class="fc-badge fc-badge-hidden">숨김</span>':''}</div>
       </div>
       <div style="text-align:right;font-variant-numeric:tabular-nums;min-width:100px;">
         <div style="font-size:14px;font-weight:700;color:${est>0?'var(--gray-900)':'var(--gray-400)'};">${est>0?fmt(est)+'원':'미입력'}</div>
@@ -8045,6 +8158,29 @@ async function loadExpCategories(){
   const{data}=await sb.from('expense_categories').select('*').eq('store_id',currentStore.id).order('sort_order');
   expCategories=data||[];
   renderExpCatList();
+  // hub 카드에서 진입한 경우 해당 카테고리로 스크롤 + 하이라이트
+  if(window._expcatPreselect){
+    const targetName=window._expcatPreselect;
+    window._expcatPreselect=null;
+    setTimeout(()=>{
+      const target=expCategories.find(c=>c.name===targetName && !c.parent_id);
+      if(target){
+        const el=document.querySelector(`#expCatParentBox [data-cat-id="${target.id}"]`);
+        if(el){
+          el.scrollIntoView({behavior:'smooth',block:'center'});
+          el.style.transition='background 0.4s';
+          el.style.background='#FEF3C7';
+          setTimeout(()=>{el.style.background='';},2000);
+        }
+      }
+    },300);
+  }
+}
+
+// hub 카테고리 카드 → expcat 진입 + 자동 하이라이트
+function goCategoryDetail(catName){
+  window._expcatPreselect=catName;
+  nav('expcat');
 }
 
 // 현재 선택된 카테고리 타입 탭 (expense/income/exclude)
@@ -8777,7 +8913,8 @@ async function calcExpenseByCategories(ym, mode, prefetched){
   if(!isFinal){
     const needVo=catsForAggregation.some(c=>c.data_source==='vendor_orders'||c.data_source==='composite');
     const needRc=catsForAggregation.some(c=>c.data_source==='receipts'||c.data_source==='composite');
-    const needFc=catsForAggregation.some(c=>c.data_source==='fixed_costs');
+    // fixed_costs는 manual 카테고리(마케팅/세금)에도 합산되므로 무조건 SELECT
+    const needFc=true;
     const ecaCatIds=catsForAggregation.filter(c=>c.data_source==='attendance'||c.data_source==='manual').map(c=>c.id);
     const needEca=ecaCatIds.length>0;
     const needAtt=catsForAggregation.some(c=>c.data_source==='attendance');
@@ -8791,7 +8928,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
         ? (pf.receipts||sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end))
         : Promise.resolve({data:[]}),
       needFc
-        ? (pf.fixed_costs||sb.from('fixed_costs').select('estimated_monthly,is_active').eq('store_id',sid))
+        ? (pf.fixed_costs||sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid))
         : Promise.resolve({data:[]}),
       needEca
         ? sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym).in('category_id',ecaCatIds)
@@ -8841,10 +8978,13 @@ async function calcExpenseByCategories(ym, mode, prefetched){
           if(ecaMap[cat.id]){amount=ecaMap[cat.id];isConfirmed=true;}
           else {amount=attTotal;laborAutoAmount=amount;}
         } else if(cat.data_source==='fixed_costs'){
-          // 항목별 예상 월 금액 합산 (활성 항목만, 모든 달 동일 적용)
-          amount=fcRows.reduce((a,r)=>a+(r.estimated_monthly||0),0);
+          // 카테고리별 분기 (고정비/공과금) — cat.name과 fixed_costs.category 매칭
+          amount=fcRows.filter(r=>(r.category||'고정비')===cat.name).reduce((a,r)=>a+(r.estimated_monthly||0),0);
         } else if(cat.data_source==='manual'){
-          amount=ecaMap[cat.id]||0;
+          // 수동 입력 + fixed_costs에 같은 이름 카테고리(마케팅/세금)로 등록된 항목 합산
+          const ecaSum=ecaMap[cat.id]||0;
+          const fcMatchSum=fcRows.filter(r=>(r.category||'')===cat.name).reduce((a,r)=>a+(r.estimated_monthly||0),0);
+          amount=ecaSum+fcMatchSum;
         }
         // 가마감에서도 기록 없으면 mydata로 보충
         if(amount===0&&!isConfirmed){
@@ -10260,6 +10400,92 @@ async function loadBusHubData(){
     setSub('busMiniSaSub', `${(sd||[]).length}일 기록`);
   }catch(e){setAmt('busMiniSaAmt','-');}
 }
+// ─── 로열티 전용 화면 (매출 × 요율 + mydata 실제 출금) ───
+async function loadRoyaltyPage(){
+  if(!currentStore) return;
+  const sid=currentStore.id;
+  // 1) 요율 (store_settings)
+  const{data:ss}=await sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle();
+  const rate=parseFloat(ss?.royalty_rate||0)/100;
+  const empty=document.getElementById('royaltyEmpty'),main=document.getElementById('royaltyMain');
+  if(rate<=0){
+    if(empty)empty.style.display='block';
+    if(main)main.style.display='none';
+    const body=document.getElementById('royaltyMonthBody');
+    if(body)body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--gray-400);">요율 미설정</td></tr>';
+    return;
+  }
+  if(empty)empty.style.display='none';
+  if(main)main.style.display='grid';
+
+  // 2) 12개월 범위
+  const now=new Date();
+  const months=[];
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push(d.toISOString().slice(0,7));
+  }
+  const oldestStart=months[11]+'-01';
+  const newest=new Date(now.getFullYear(),now.getMonth()+1,0);
+  const newestEnd=newest.toISOString().slice(0,10);
+
+  // 3) sales_daily 12개월 매출
+  const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',oldestStart).lte('date',newestEnd);
+  const salesByMonth={};
+  (sd||[]).forEach(s=>{
+    const ym=(s.date||'').slice(0,7);
+    if(!ym) return;
+    const t=typeof salesRowTotal==='function'?salesRowTotal(s):((s.card||0)+(s.cash||0)+(s.cash_receipt||0)+(s.qr||0)+(s.etc||0)+(s.extra_large||0)+(s.extra_small||0));
+    salesByMonth[ym]=(salesByMonth[ym]||0)+t;
+  });
+
+  // 4) mydata_transactions 실제 로열티 출금 (유림에퐁당 키워드 + sub_category)
+  const{data:mt}=await sb.from('mydata_transactions').select('amount,tx_date,attribution_month,sub_category,description')
+    .eq('store_id',sid).eq('exclude_from_settlement',false)
+    .gte('tx_date',oldestStart).lte('tx_date',newestEnd);
+  const actualByMonth={};
+  (mt||[]).forEach(t=>{
+    const desc=t.description||'';
+    const sub=t.sub_category||'';
+    if(!(sub==='로열티'||desc.includes('유림에퐁당'))) return;
+    const ym=t.attribution_month||(t.tx_date||'').slice(0,7);
+    if(!ym) return;
+    actualByMonth[ym]=(actualByMonth[ym]||0)+Math.abs(t.amount||0);
+  });
+
+  // 5) 표 렌더링 (최신순)
+  let html='';
+  months.forEach(ym=>{
+    const rev=salesByMonth[ym]||0;
+    const expected=Math.round(rev*rate);
+    const actual=actualByMonth[ym]||0;
+    const diff=actual-expected;
+    const diffColor=diff===0||actual===0?'var(--gray-400)':(diff<0?'#059669':'#DC2626');
+    html+=`<tr style="border-bottom:1px solid var(--gray-100);text-align:right;font-variant-numeric:tabular-nums;">
+      <td style="padding:8px 6px;text-align:left;font-weight:600;">${ym}</td>
+      <td style="padding:8px 6px;">${rev?fmt(rev):'-'}</td>
+      <td style="padding:8px 6px;color:var(--gray-500);">${(rate*100).toFixed(1)}%</td>
+      <td style="padding:8px 6px;color:#92400E;">${expected?fmt(expected):'-'}</td>
+      <td style="padding:8px 6px;color:#075985;">${actual?fmt(actual):'-'}</td>
+      <td style="padding:8px 6px;color:${diffColor};">${actual?(diff>0?'+':'')+fmt(diff):'-'}</td>
+    </tr>`;
+  });
+  const body=document.getElementById('royaltyMonthBody');
+  if(body)body.innerHTML=html||'<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--gray-400);">데이터 없음</td></tr>';
+
+  // 6) 상단 요약 (이번달)
+  const curYm=now.toISOString().slice(0,7);
+  const curRev=salesByMonth[curYm]||0;
+  const curExp=Math.round(curRev*rate);
+  const curAct=actualByMonth[curYm]||0;
+  const setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setT('royaltyMonthLabel',curYm);
+  setT('royaltyRevenue',curRev?fmt(curRev)+'원':'-');
+  setT('royaltyRateLabel',(rate*100).toFixed(1)+'%');
+  setT('royaltyExpected',curExp?fmt(curExp)+'원':'-');
+  setT('royaltyActual',curAct?fmt(curAct)+'원':'-');
+}
+
 // ─── 지출 허브: 카드별 동적 정보 ───
 async function loadExpHubData(){
   if(!currentStore) return;
@@ -10283,14 +10509,48 @@ async function loadExpHubData(){
     setText('expMiniVendor', sum?fmt(sum):'0');
     setText('expMiniVendorSub', vendorCnt?`${vendorCnt}곳`:'주문 없음');
   }catch(e){setText('expMiniVendor','-');}
-  // 고정비: fixed_costs.estimated_monthly 합 (활성)
+  // 고정비: fixed_costs.estimated_monthly 합 — 고정비+공과금 통합 (hub는 합산 유지)
+  // 마케팅/세금: fixed_costs + expense_category_amounts 합산
+  let fcByCat={};
   try{
-    const{data:fc}=await sb.from('fixed_costs').select('estimated_monthly,is_active').eq('store_id',sid);
+    const{data:fc}=await sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid);
     const rows=(fc||[]).filter(r=>r.is_active!==false);
-    const sum=rows.reduce((a,r)=>a+(r.estimated_monthly||0),0);
-    setText('expMiniFixed', fmt(sum));
-    setText('expMiniFixedSub', `${rows.length}개 항목`);
+    rows.forEach(r=>{
+      const c=r.category||'고정비';
+      fcByCat[c]=(fcByCat[c]||0)+(r.estimated_monthly||0);
+    });
+    const fixedSum=(fcByCat['고정비']||0)+(fcByCat['공과금']||0);
+    const fixedCnt=rows.filter(r=>['고정비','공과금'].includes(r.category||'고정비')).length;
+    setText('expMiniFixed', fmt(fixedSum));
+    setText('expMiniFixedSub', `${fixedCnt}개 항목`);
   }catch(e){setText('expMiniFixed','-');}
+  // 로열티: sales_daily × store_settings.royalty_rate
+  try{
+    const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end);
+    const totalRev=(sd||[]).reduce((a,r)=>a+(typeof salesRowTotal==='function'?salesRowTotal(r):(r.card||0)+(r.cash||0)+(r.cash_receipt||0)+(r.qr||0)+(r.etc||0)+(r.extra_large||0)+(r.extra_small||0)),0);
+    const{data:ss}=await sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle();
+    const rate=parseFloat(ss?.royalty_rate||0)/100;
+    const royaltyAmt=Math.round(totalRev*rate);
+    setText('expMiniRoyalty', rate>0?fmt(royaltyAmt):'-');
+    setText('expMiniRoyaltySub', rate>0?`매출 ${fmt(totalRev)} × ${(rate*100).toFixed(1)}%`:'요율 미설정');
+  }catch(e){setText('expMiniRoyalty','-');}
+  // 마케팅/세금: fixed_costs(category=해당) + expense_category_amounts 합산
+  const renderCatCard=async(catName,amtId,subId)=>{
+    try{
+      const cat=(expCategories||[]).find(c=>c.name===catName && !c.parent_id);
+      let ecaSum=0;
+      if(cat){
+        const{data:eca}=await sb.from('expense_category_amounts').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
+        ecaSum=eca?.amount||0;
+      }
+      const fcSum=fcByCat[catName]||0;
+      const sum=fcSum+ecaSum;
+      setText(amtId, sum?fmt(sum):'0');
+      setText(subId, sum?`${m}월`:'미입력');
+    }catch(e){setText(amtId,'-');}
+  };
+  await renderCatCard('마케팅','expMiniMarketing','expMiniMarketingSub');
+  await renderCatCard('세금','expMiniTax','expMiniTaxSub');
   // 인건비: attendance_logs.calculated_wage 합
   try{
     const{data:al}=await sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end);
