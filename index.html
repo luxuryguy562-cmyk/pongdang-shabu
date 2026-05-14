@@ -1195,15 +1195,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="hub-mini-amt" id="busMiniStAmt">-</span>
     </button>
   </div>
-  <!-- 차액 확인 (당월 · 토스 스타일) -->
+  <!-- 차액 확인 (월별 · 토스 스타일) -->
   <div class="card" style="margin-top:14px;padding:0;overflow:hidden;">
-    <div style="padding:16px 16px 12px;display:flex;align-items:center;gap:12px;">
-      <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#E0F2FE 0%,#DBEAFE 100%);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🛡</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:15px;font-weight:800;color:var(--text);letter-spacing:-0.3px;">차액 확인</div>
-        <div style="font-size:11px;color:var(--gray-500);margin-top:2px;">도난·실수 감지 · 매일 0원이 정상</div>
+    <div style="padding:14px 14px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="font-size:15px;font-weight:800;color:var(--text);letter-spacing:-0.3px;">차액 확인</div>
+      <div style="display:flex;align-items:center;gap:2px;background:#F5F7FA;border-radius:999px;padding:2px;">
+        <button type="button" data-action="shiftDiffTableMonth|-1" id="diffTablePrev" style="width:28px;height:28px;border:none;background:transparent;color:var(--gray-700);font-size:16px;font-weight:700;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1;">‹</button>
+        <span id="diffTableMonthChip" style="font-size:12px;font-weight:800;color:var(--text);min-width:48px;text-align:center;">5월</span>
+        <button type="button" data-action="shiftDiffTableMonth|1" id="diffTableNext" style="width:28px;height:28px;border:none;background:transparent;color:var(--gray-700);font-size:16px;font-weight:700;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1;">›</button>
       </div>
-      <div style="font-size:11px;font-weight:700;color:#0050FF;background:#EFF6FF;padding:5px 10px;border-radius:999px;flex-shrink:0;" id="diffTableMonthChip">당월</div>
     </div>
     <div id="diffTableSummary" style="padding:0 14px 12px;"></div>
     <table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--bg);table-layout:fixed;">
@@ -10478,10 +10478,17 @@ async function loadBusHubData(){
   loadDiffTable();
 }
 
-// ─── 개시·마감 차액 확인 표 (당월, 도난·실수 감지) ───
+// ─── 개시·마감 차액 확인 표 (월별 네비, 도난·실수 감지) ───
 // 개시차액 = daily_opening.actual_total − previous_close_total (밤사이 변동)
 // 마감차액 = settlements.diff_amount (영업 중 변동, 이미 저장됨)
 // 총차액   = 개시차액 + 마감차액
+let _diffTableMonthOffset=0; // 0=이번달, -1=지난달, ...
+function shiftDiffTableMonth(delta){
+  const next=_diffTableMonthOffset+(parseInt(delta,10)||0);
+  if(next>0) return; // 미래 차단
+  _diffTableMonthOffset=next;
+  loadDiffTable();
+}
 async function loadDiffTable(){
   if(!currentStore) return;
   const tbody=document.getElementById('diffTableBody');
@@ -10489,12 +10496,25 @@ async function loadDiffTable(){
   if(!tbody) return;
   const sid=currentStore.id;
   const today=new Date();
-  const endDate=today.toISOString().slice(0,10);
-  // 2026-05-14: 사장님 요청 — 최근 30일 → 당월(이번달 1일~오늘)
-  const startD=new Date(today.getFullYear(),today.getMonth(),1);
+  // 2026-05-14: 월별 네비게이션 (offset 0=이번달)
+  const target=new Date(today.getFullYear(),today.getMonth()+_diffTableMonthOffset,1);
+  const startD=target;
+  const lastOfMonth=new Date(target.getFullYear(),target.getMonth()+1,0);
+  const endD=(_diffTableMonthOffset===0)?today:lastOfMonth;
   const startDate=startD.toISOString().slice(0,10);
+  const endDate=endD.toISOString().slice(0,10);
   const monthChip=document.getElementById('diffTableMonthChip');
-  if(monthChip) monthChip.textContent=`${today.getMonth()+1}월`;
+  if(monthChip){
+    const isThis=_diffTableMonthOffset===0;
+    monthChip.textContent=isThis?`${target.getMonth()+1}월`:`${target.getFullYear()}.${String(target.getMonth()+1).padStart(2,'0')}`;
+  }
+  const nextBtn=document.getElementById('diffTableNext');
+  if(nextBtn){
+    const disabled=_diffTableMonthOffset>=0;
+    nextBtn.style.opacity=disabled?'0.3':'1';
+    nextBtn.style.cursor=disabled?'not-allowed':'pointer';
+    nextBtn.disabled=disabled;
+  }
   const THRESHOLD=1000;
 
   const[opRes,stRes]=await Promise.all([
@@ -10507,7 +10527,8 @@ async function loadDiffTable(){
   // 2026-05-14: 사장님 요청 — 날짜 오름차순 (옛날 → 최신, 아래로 갈수록 오늘)
   const dates=Object.keys(stByDate).sort((a,b)=>a.localeCompare(b));
   if(!dates.length){
-    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">이번달 마감 데이터 없음</td></tr>';
+    const lbl=_diffTableMonthOffset===0?'이번달':`${target.getFullYear()}년 ${target.getMonth()+1}월`;
+    tbody.innerHTML=`<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">${lbl} 마감 데이터 없음</td></tr>`;
     if(summaryEl) summaryEl.textContent='';
     return;
   }
