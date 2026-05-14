@@ -1263,14 +1263,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <span style="color:var(--gray-400);font-size:20px;">›</span>
   </button>
-  <button type="button" class="hub-full" data-action="nav|reserve">
-    <span class="hub-full-icon"><svg><use href="#i-piggy"/></svg></span>
-    <div style="flex:1;min-width:0;">
-      <div class="hub-full-title">예비비</div>
-      <div class="hub-full-sub" id="expMiniReserveSub">잔고</div>
-    </div>
-    <span style="color:var(--gray-400);font-size:20px;">›</span>
-  </button>
   <button type="button" class="hub-full" data-action="nav|expcat">
     <span class="hub-full-icon"><svg><use href="#i-settings"/></svg></span>
     <div style="flex:1;min-width:0;">
@@ -10617,13 +10609,7 @@ async function loadExpHubData(){
     const{count}=await sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending');
     setText('expMiniReconSub', count?`${count}건 검토 필요`:'매출 vs 카드 출금');
   }catch(e){setText('expMiniReconSub','매출 vs 카드 출금');}
-  // 예비비 잔고: hub-full sub에 통합 표시
-  try{
-    if(typeof calcReserveBalance==='function'){
-      const bal=await calcReserveBalance();
-      setText('expMiniReserveSub', bal!=null?`잔고 ${fmt(bal||0)}원`:'잔고');
-    }
-  }catch(e){setText('expMiniReserveSub','잔고');}
+  // 예비비는 홈 대시보드 미니 행과 사이드 메뉴에서 진입 (지출 hub에서 제거됨)
   // hub 그리드 카드 순서 적용 + 드래그 정렬 초기화
   applyExpHubCardOrder();
   initExpHubSortable();
