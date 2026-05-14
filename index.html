@@ -3859,7 +3859,10 @@ async function loadReceiptList(){
     .gte('receipt_date',start).lte('receipt_date',end)
     .order('receipt_date',{ascending:false});
   if(error){
-    body.innerHTML='<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;">불러오기 실패</div>';
+    console.error('[receipts] load failed:',error);
+    const code=error.code||error.status||'';
+    const msg=(error.message||error.error_description||'').slice(0,120);
+    body.innerHTML=`<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;line-height:1.5;">불러오기 실패${code?' ['+code+']':''}<br><span style="font-size:11px;color:var(--gray-500);">${msg||'(에러 메시지 없음)'}</span></div>`;
     return;
   }
   rcpRecords=data||[];
@@ -6288,6 +6291,21 @@ async function loadDashboard(){
       fixed_costs: { data: fcRes.data }
     });
 
+    // ── 2026-05-14 진단 로그 (식자재 출처 추적) — 콘솔에서 [DASH-DEBUG] 검색 ──
+    try {
+      const voErr=voRes2?.error, rcErr=rcRes2?.error;
+      const voList=voRes2?.data||[], rcList=rcRes2?.data||[];
+      const voSum=voList.reduce((a,o)=>a+(o.amount||0),0);
+      const rcSum=rcList.reduce((a,r)=>a+(r.total_price||0),0);
+      console.log('[DASH-DEBUG]', {
+        ym, dashMode, store_id: sid,
+        vendor_orders: { rows: voList.length, sum: voSum, error: voErr },
+        receipts_normal: { rows: rcList.length, sum: rcSum, error: rcErr },
+        expCategories: (expCategories||[]).map(c=>({id:c.id, name:c.name, source:c.data_source, parent_id:c.parent_id, vendor_category:c.vendor_category, is_active:c.is_active, type:c.category_type})),
+        expResults: expResults.map(r=>({name:r.name, source:r.source, amount:r.amount}))
+      });
+    } catch(e) { console.warn('[DASH-DEBUG] log failed', e); }
+
     // ══ 1. 일별 매출 맵 + 매출 집계 ══
     let salesBreakdown={},totalRevenue=0,dailySalesMap={},receiptCount=0;
     const settle=settleRes.data||[];
@@ -6718,20 +6736,23 @@ async function loadDashboard(){
     // ══ A-4. 지출 상세 (세그먼트 바 + 카테고리 리스트, 항상 펼침) ══
     // 2026-04-22: 식자재 통합(composite) 반영 — 직구/영수증 별도 그룹 제거
     // 2026-05-06: 도넛 → 세그먼트 바 (토스 스타일, 항상 펼침)
-    // 2026-05-14: 고정비/공과금 분리 + 마케팅/세금 그룹 추가 — e.name 우선 매핑
-    const groupMap={composite:'식자재',vendor_orders:'식자재',receipts:'기타',attendance:'인건비',fixed_costs:'고정비',manual:'기타/수동'};
+    // 2026-05-14a: 고정비/공과금 분리 + 마케팅/세금 그룹 추가 — e.name 우선 매핑
+    // 2026-05-14b: 고정비 그룹화는 fcRows.category 직접 기준으로 갈아엎음 (헌법 1-6)
+    //   - 옛 매핑: fixedProratedByCat[e.name] → expense_categories.name이 "공과금/고정비"면 키 없음 → 0 → 차트 누락
+    //   - 새 매핑: fcRows의 fixed_costs.category(고정비/공과금/마케팅/세금) 기준 일할 합산 → expense_categories.name 무관
+    const groupMap={composite:'식자재',vendor_orders:'식자재',receipts:'기타',attendance:'인건비',manual:'기타/수동'};
     const nameGroupMap={'주류':'주류','공과금':'공과금','마케팅':'마케팅','세금':'세금'};
     const expByGroup={};
     expData.forEach(e=>{
-      // e.name이 nameGroupMap에 있으면 우선 (주류/공과금/마케팅/세금)
+      if(e.source==='fixed_costs') return; // fcRows에서 별도 합산
       const group=nameGroupMap[e.name]||groupMap[e.source]||'기타';
       if(!expByGroup[group])expByGroup[group]=0;
-      if(e.source==='fixed_costs'){
-        // 카테고리별 일할 분리 (e.name 기준)
-        expByGroup[group]=fixedProratedByCat[e.name]||0;
-      } else {
-        expByGroup[group]+=e.amount;
-      }
+      expByGroup[group]+=e.amount;
+    });
+    // 고정비 일할 분배 — fixed_costs.category 기준 직접 합산 (expense_categories.name과 무관)
+    Object.entries(fixedProratedByCat).forEach(([cat,amt])=>{
+      if(!amt) return;
+      expByGroup[cat]=(expByGroup[cat]||0)+amt;
     });
     if(royalty>0) expByGroup['로열티']=(expByGroup['로열티']||0)+royalty;
     if(cardFee>0) expByGroup['카드수수료']=(expByGroup['카드수수료']||0)+cardFee;
