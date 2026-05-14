@@ -1198,23 +1198,22 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <!-- 차액 확인 (최근 30일 · 도난·실수 감지) -->
   <div class="card" style="margin-top:14px;">
     <div class="card-title">🛡 차액 확인 (최근 30일)</div>
-    <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">±1,000원 이상 차이는 빨강. 빨강 행을 누르면 지출 상세 펼침 (메모 없는 지출은 빨강 ⚠️).</div>
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">±1,000원 이상 차이는 빨강. 행을 누르면 지출 상세 펼침 (메모 없는 지출은 ⚠️ 빨강).</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-      <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:560px;">
+      <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:540px;">
         <thead>
           <tr style="border-bottom:2px solid var(--gray-200);text-align:right;white-space:nowrap;">
             <th style="padding:8px 6px;text-align:left;">날짜</th>
+            <th style="padding:8px 6px;">차액</th>
             <th style="padding:8px 6px;">개시 금고</th>
             <th style="padding:8px 6px;">마감 금고</th>
             <th style="padding:8px 6px;">매출</th>
-            <th style="padding:8px 6px;">지출</th>
-            <th style="padding:8px 6px;">개시차액</th>
-            <th style="padding:8px 6px;">마감차액</th>
-            <th style="padding:8px 6px;">차액</th>
+            <th style="padding:8px 6px;">통장입금</th>
+            <th style="padding:8px 6px;">현금지출</th>
           </tr>
         </thead>
         <tbody id="diffTableBody">
-          <tr><td colspan="8" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
+          <tr><td colspan="7" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
         </tbody>
       </table>
     </div>
@@ -1567,16 +1566,29 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="extraRevenueInputs"></div>
     </div>
 
-    <!-- 지출 (이전 라벨: 차감) -->
+    <!-- 통장입금 (현금→통장 이동, 금고에서 빠짐) -->
     <div class="settle-card-group">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="card-title">지출</div>
-        <span id="settleDeductTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
+        <div class="card-title">🏧 통장 입금</div>
+        <span id="settleBankTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
       </div>
-      <p class="card-sub">금고에서 빠진 금액을 입력하세요 (어제 새벽 인출 등도 여기서 일괄 입력)</p>
-      <div id="settleDeductRows"></div>
-      <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 지출 추가</button>
+      <p class="card-sub">금고 현금을 통장으로 옮긴 금액 (지출 아님, 이동)</p>
+      <div id="settleDeductBankRows"></div>
+      <button class="add-item-btn" data-action="addSettleDeductRow|bank|0|" style="margin-top:8px;">+ 통장 입금 추가</button>
     </div>
+
+    <!-- 현금 지출 (가게 운영비 현금 지급) -->
+    <div class="settle-card-group">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title">💵 현금 지출</div>
+        <span id="settleEtcTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
+      </div>
+      <p class="card-sub">거래처 외상·일급·영수증 결제 등 금고에서 현금으로 나간 금액</p>
+      <div id="settleDeductEtcRows"></div>
+      <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 현금 지출 추가</button>
+    </div>
+    <!-- 호환: 통합 총합 표시용 hidden -->
+    <span id="settleDeductTotal" style="display:none;">0원</span>
 
     <!-- 금고 계수 (좌: 계산기 / 우: 화폐 입력) -->
     <div class="settle-card-group">
@@ -5305,7 +5317,11 @@ function recalcSettle2(){
   // 차감: 동적 행에서 합산
   const _ded=getSettleDeductTotals();
   const deductEtc=_ded.etcSum, deductBank=_ded.bankSum;
+  const _bankEl=document.getElementById('settleBankTotal');
+  const _etcEl=document.getElementById('settleEtcTotal');
   const _dedTotalEl=document.getElementById('settleDeductTotal');
+  if(_bankEl) _bankEl.innerText=fmt(_ded.bankSum)+'원';
+  if(_etcEl) _etcEl.innerText=fmt(_ded.etcSum)+'원';
   if(_dedTotalEl) _dedTotalEl.innerText=fmt(_ded.total)+'원';
 
   // 매출합계 (본 매출만 — 기타매출은 장부와 별개)
@@ -5451,27 +5467,30 @@ async function loadOpeningPage(dateStr){
   recalcOpening();
 }
 
-// ─── 마감정산 차감 (영업개시와 동일 패턴) ───
+// ─── 마감정산 지출 — 통장입금(bank) / 현금지출(etc) 카드 분리 ───
+// 2026-05-14: 옛 단일 컨테이너(#settleDeductRows) → 두 컨테이너로 분리.
+//   #settleDeductBankRows · #settleDeductEtcRows
+//   type select 제거 — 컨테이너로 자동 결정 (row data-type 보존).
+function _settleDeductContainerFor(type){
+  return document.getElementById(type==='bank' ? 'settleDeductBankRows' : 'settleDeductEtcRows');
+}
 function addSettleDeductRow(type, amount, memo){
-  type = type || 'etc'; amount = parseInt(amount)||0; memo = memo || '';
-  const cont = document.getElementById('settleDeductRows');
+  type = (type==='bank') ? 'bank' : 'etc';
+  amount = parseInt(amount)||0; memo = memo || '';
+  const cont = _settleDeductContainerFor(type);
   if(!cont) return;
   const id = 'stDed_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
   cont.insertAdjacentHTML('beforeend', `
-    <div class="st-deduct-row" data-id="${id}" style="display:grid;grid-template-columns:96px 1fr 28px;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
-      <select class="st-ded-type" style="padding:8px 4px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;background:var(--white);min-width:0;" data-change="recalcSettle2">
-        <option value="etc" ${type==='etc'?'selected':''}>📤 기타사용</option>
-        <option value="bank" ${type==='bank'?'selected':''}>🏧 통장입금</option>
-      </select>
+    <div class="st-deduct-row" data-id="${id}" data-type="${type}" style="display:grid;grid-template-columns:1fr 28px;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
       <input type="text" class="st-ded-amount" placeholder="금액" value="${amount?fmt(amount):''}" inputmode="numeric" style="padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;text-align:right;min-width:0;" data-input="onStDedAmountInput|this">
       <button class="x-btn" data-action="removeSettleDeductRow|${id}" style="width:26px;height:26px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-size:14px;font-weight:800;cursor:pointer;padding:0;">×</button>
-      <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo}" style="grid-column:1 / 4;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
+      <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo}" style="grid-column:1 / 3;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
     </div>
   `);
   recalcSettle2();
 }
 function removeSettleDeductRow(id){
-  const row = document.querySelector(`#settleDeductRows .st-deduct-row[data-id="${id}"]`);
+  const row = document.querySelector(`.st-deduct-row[data-id="${id}"]`);
   if(row){row.remove();recalcSettle2();}
 }
 function onStDedAmountInput(el){
@@ -5479,10 +5498,13 @@ function onStDedAmountInput(el){
   if(/^\d*$/.test(raw)) el.value = raw ? parseInt(raw).toLocaleString() : '';
   recalcSettle2();
 }
+function _allSettleDeductRows(){
+  return document.querySelectorAll('#settleDeductBankRows .st-deduct-row, #settleDeductEtcRows .st-deduct-row');
+}
 function getSettleDeductTotals(){
   let etcSum=0, bankSum=0;
-  document.querySelectorAll('#settleDeductRows .st-deduct-row').forEach(row=>{
-    const t = row.querySelector('.st-ded-type').value;
+  _allSettleDeductRows().forEach(row=>{
+    const t = row.getAttribute('data-type')||'etc';
     const v = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
     if(t==='bank') bankSum += v; else etcSum += v;
   });
@@ -5490,8 +5512,8 @@ function getSettleDeductTotals(){
 }
 function getSettleDeductRows(){
   const out = [];
-  document.querySelectorAll('#settleDeductRows .st-deduct-row').forEach(row=>{
-    const type = row.querySelector('.st-ded-type').value;
+  _allSettleDeductRows().forEach(row=>{
+    const type = row.getAttribute('data-type')||'etc';
     const amount = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
     const memo = row.querySelector('.st-ded-memo').value || '';
     if(amount>0) out.push({type, amount, memo});
@@ -5499,12 +5521,10 @@ function getSettleDeductRows(){
   return out;
 }
 function ensureSettleDeductDefaultRows(){
-  const cont = document.getElementById('settleDeductRows');
-  if(!cont) return;
-  if(cont.children.length===0){
-    addSettleDeductRow('etc', 0, '');
-    addSettleDeductRow('bank', 0, '');
-  }
+  const bankCont = document.getElementById('settleDeductBankRows');
+  const etcCont = document.getElementById('settleDeductEtcRows');
+  if(bankCont && bankCont.children.length===0) addSettleDeductRow('bank', 0, '');
+  if(etcCont && etcCont.children.length===0) addSettleDeductRow('etc', 0, '');
 }
 
 function recalcOpening(){
@@ -5725,9 +5745,11 @@ function resetSettleView(){
   ['siPosCash','siPosCashReceipt','siPosCard','siPosEtc','siCashCash','siCashQr','siCashTransfer'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.querySelectorAll('.v-input').forEach(i=>i.value='');
   document.querySelectorAll('.s-extra-input').forEach(i=>i.value='');
-  // 차감 행 초기화 → 기본 2행
-  const dedCont=document.getElementById('settleDeductRows');
-  if(dedCont){dedCont.innerHTML='';addSettleDeductRow('etc',0,'');addSettleDeductRow('bank',0,'');}
+  // 지출 행 초기화 → 통장입금·현금지출 각각 기본 1행
+  const bankCont=document.getElementById('settleDeductBankRows');
+  const etcCont=document.getElementById('settleDeductEtcRows');
+  if(bankCont){bankCont.innerHTML='';addSettleDeductRow('bank',0,'');}
+  if(etcCont){etcCont.innerHTML='';addSettleDeductRow('etc',0,'');}
   const statusEl=document.getElementById('settleDateStatus');if(statusEl)statusEl.innerText='관리자 전용';
 }
 async function finishSettlement2(){
@@ -6107,14 +6129,17 @@ async function editSettlement(dateStr){
     const el=document.getElementById(elId);
     if(el) el.value=items[key]?parseInt(items[key]).toLocaleString():'';
   });
-  // 차감 행 복원 (deductions 신규 우선, 없으면 옛 deduct_etc/bank+memo 로 변환)
-  const dedCont=document.getElementById('settleDeductRows');
-  if(dedCont){
-    dedCont.innerHTML='';
+  // 지출 행 복원 (deductions 신규 우선, 없으면 옛 deduct_etc/bank+memo 로 변환)
+  // 두 컨테이너(통장입금·현금지출) 각각 비우고 type별로 분기 채움
+  const bankCont=document.getElementById('settleDeductBankRows');
+  const etcCont=document.getElementById('settleDeductEtcRows');
+  if(bankCont || etcCont){
+    if(bankCont) bankCont.innerHTML='';
+    if(etcCont) etcCont.innerHTML='';
     if(Array.isArray(items.deductions) && items.deductions.length){
       items.deductions.forEach(d=>addSettleDeductRow(d.type||'etc', d.amount||0, d.memo||''));
     } else {
-      // 옛 데이터: 단일 값 → 2행 변환
+      // 옛 데이터: 단일 값 → type별 1행씩
       addSettleDeductRow('etc', items.deduct_etc||0, items.deduct_etc_memo||'');
       addSettleDeductRow('bank', items.deduct_bank||0, items.deduct_bank_memo||'');
     }
@@ -10495,55 +10520,77 @@ async function loadDiffTable(){
 
     const items=st.items_json||{};
     const cashRev=(items.pos_cash||0)+(items.pos_cash_receipt||0);
-    const expense=(items.deduct_etc||0)+(items.deduct_bank||0);
-    const opDiffText=opDiff!=null?((opDiff>0?'+':'')+fmt(opDiff)):'<span style="color:var(--gray-400);">—</span>';
-    const stDiffText=(stDiff>0?'+':'')+fmt(stDiff);
-    const stDiffColor=Math.abs(stDiff)>=THRESHOLD?'#DC2626':'var(--gray-700)';
-    const opDiffColor=opDiff!=null&&Math.abs(opDiff)>=THRESHOLD?'#DC2626':'var(--gray-700)';
+    const bankSum=items.deduct_bank||0;  // 통장입금
+    const etcSum=items.deduct_etc||0;    // 현금지출
     const rowBg=isAlert?'background:#FEF2F2;':'';
 
-    html+=`<tr class="diff-row" data-date="${d}" style="border-bottom:1px solid var(--gray-100);cursor:${isAlert?'pointer':'default'};text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;${rowBg}">
+    html+=`<tr class="diff-row" data-date="${d}" style="border-bottom:1px solid var(--gray-100);cursor:pointer;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;${rowBg}">
       <td style="padding:8px 6px;text-align:left;font-weight:600;">${d.slice(5)}</td>
+      <td style="padding:8px 6px;color:${totalColor};font-weight:700;">${totalIcon} ${totalText}</td>
       <td style="padding:8px 6px;">${opCell}</td>
       <td style="padding:8px 6px;">${stCell}</td>
       <td style="padding:8px 6px;">${fmt(cashRev)}</td>
-      <td style="padding:8px 6px;">${fmt(expense)}</td>
-      <td style="padding:8px 6px;color:${opDiffColor};">${opDiffText}</td>
-      <td style="padding:8px 6px;color:${stDiffColor};">${stDiffText}</td>
-      <td style="padding:8px 6px;color:${totalColor};font-weight:700;">${totalIcon} ${totalText}</td>
+      <td style="padding:8px 6px;">${fmt(bankSum)}</td>
+      <td style="padding:8px 6px;">${fmt(etcSum)}</td>
     </tr>`;
-    // 빨강 행이면 펼침 행 추가 (지출 상세 + 매출 분해)
-    if(isAlert){
-      const deductions=Array.isArray(items.deductions)?items.deductions:[];
-      let dedRows='';
-      if(deductions.length){
-        dedRows=deductions.map(de=>{
-          const memo=(de.memo||'').trim();
-          const type=de.type==='bank'?'통장':'현금';
-          const suspect=!memo; // 메모 없는 지출 → 빨강 의심
-          const tagColor=suspect?'#DC2626':'var(--gray-500)';
-          const memoText=memo?memo:'<span style="color:#DC2626;font-weight:700;">⚠️ 메모 없음</span>';
-          return `<div style="display:flex;gap:8px;padding:3px 0;color:${tagColor};">
-            <span style="min-width:36px;">[${type}]</span>
-            <span style="min-width:80px;text-align:right;">${fmt(de.amount||0)}</span>
-            <span style="flex:1;">${memoText}</span>
-          </div>`;
-        }).join('');
-      } else if(expense>0){
-        dedRows=`<div style="color:#DC2626;">⚠️ 지출 ${fmt(expense)}원 — 항목 정보 없음 (옛 데이터)</div>`;
-      } else {
-        dedRows='<div style="color:var(--gray-400);">지출 없음</div>';
+    // 펼침 — 모든 행 (정상·빨강 모두)
+    const deductions=Array.isArray(items.deductions)?items.deductions:[];
+    const bankRows=deductions.filter(x=>x.type==='bank');
+    const etcRows=deductions.filter(x=>x.type!=='bank');
+    const renderItem=(de)=>{
+      const memo=(de.memo||'').trim();
+      const suspect=!memo;
+      const amt=fmt(de.amount||0);
+      if(suspect){
+        return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 10px;background:#FEE2E2;border-left:3px solid #DC2626;border-radius:6px;margin-bottom:4px;">
+          <span style="color:#991B1B;font-weight:600;">⚠️ 메모 없음</span>
+          <span style="font-variant-numeric:tabular-nums;font-weight:700;color:#991B1B;">${amt}</span>
+        </div>`;
       }
-      html+=`<tr class="diff-detail" data-detail="${d}" style="display:none;background:#FEF2F2;">
-        <td colspan="8" style="padding:12px 16px;font-size:11px;color:var(--gray-700);line-height:1.7;">
-          <div style="font-weight:700;color:#991B1B;margin-bottom:6px;">⚠️ Review 필요 — 지출 상세</div>
-          ${dedRows}
-          <div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--gray-300);font-size:10px;color:var(--gray-500);">
-            현금매출 ${fmt(cashRev)} = 현금 ${fmt(items.pos_cash||0)} + 영수증 ${fmt(items.pos_cash_receipt||0)}
+      return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 10px;background:#F9FAFB;border-left:3px solid var(--gray-300);border-radius:6px;margin-bottom:4px;">
+        <span style="color:var(--gray-700);">${memo}</span>
+        <span style="font-variant-numeric:tabular-nums;font-weight:600;color:var(--gray-900);">${amt}</span>
+      </div>`;
+    };
+    const renderSection=(title,emoji,rows,sum,emptyMsg)=>{
+      const body=rows.length?rows.map(renderItem).join(''):`<div style="padding:6px 10px;color:var(--gray-400);font-size:11px;">${emptyMsg}</div>`;
+      return `<div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+          <span style="font-size:11px;font-weight:700;color:var(--gray-600);">${emoji} ${title}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gray-500);font-variant-numeric:tabular-nums;">${fmt(sum)}원</span>
+        </div>
+        ${body}
+      </div>`;
+    };
+    const headerColor=isAlert?'#991B1B':'var(--gray-700)';
+    const headerBg=isAlert?'#FEF2F2':'var(--gray-50)';
+    const headerLine=isAlert
+      ? `<div style="font-weight:700;color:${headerColor};margin-bottom:8px;">⚠️ Review 필요 — 차액 ${totalText}원</div>`
+      : `<div style="font-weight:700;color:${headerColor};margin-bottom:8px;">✓ 정상 — 상세</div>`;
+
+    html+=`<tr class="diff-detail" data-detail="${d}" style="display:none;background:${headerBg};">
+      <td colspan="7" style="padding:14px 16px;font-size:12px;color:var(--gray-700);line-height:1.5;">
+        ${headerLine}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;">
+          <div style="padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--gray-200);">
+            <div style="font-size:10px;color:var(--gray-500);margin-bottom:2px;">개시차액 (밤사이)</div>
+            <div style="font-size:14px;font-weight:800;color:${opDiff!=null&&Math.abs(opDiff)>=THRESHOLD?'#DC2626':'var(--gray-900)'};">${opDiff!=null?((opDiff>0?'+':'')+fmt(opDiff)):'— (개시 생략)'}</div>
           </div>
-        </td>
-      </tr>`;
-    }
+          <div style="padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--gray-200);">
+            <div style="font-size:10px;color:var(--gray-500);margin-bottom:2px;">마감차액 (영업 중)</div>
+            <div style="font-size:14px;font-weight:800;color:${Math.abs(stDiff)>=THRESHOLD?'#DC2626':'var(--gray-900)'};">${(stDiff>0?'+':'')+fmt(stDiff)}</div>
+          </div>
+        </div>
+        <div style="padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--gray-200);margin-bottom:12px;">
+          <div style="font-size:10px;color:var(--gray-500);margin-bottom:4px;">현금 매출 분해</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--gray-600);">현금</span><span style="font-variant-numeric:tabular-nums;font-weight:600;">${fmt(items.pos_cash||0)}원</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--gray-600);">현금영수증</span><span style="font-variant-numeric:tabular-nums;font-weight:600;">${fmt(items.pos_cash_receipt||0)}원</span></div>
+          <div style="display:flex;justify-content:space-between;padding-top:4px;margin-top:4px;border-top:1px dashed var(--gray-200);font-size:12px;"><span style="color:var(--gray-700);font-weight:700;">합계</span><span style="font-variant-numeric:tabular-nums;font-weight:800;color:#059669;">${fmt(cashRev)}원</span></div>
+        </div>
+        ${renderSection('통장 입금', '🏧', bankRows, bankSum, '통장 입금 없음')}
+        ${renderSection('현금 지출', '💵', etcRows, etcSum, '현금 지출 없음')}
+      </td>
+    </tr>`;
   });
   tbody.innerHTML=html;
   // 빨강 행만 클릭 펼침 (그 외 행은 정보 다 보임 → 펼침 불필요)
