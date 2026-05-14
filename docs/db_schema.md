@@ -2,7 +2,7 @@
 
 > **Supabase URL**: `https://ruytgygjwnbtzmtofopg.supabase.co`
 > **store_id**: `4ae03341-e5dc-4933-b746-29728cbc685f` (퐁당샤브 논산점)
-> **최종 업데이트**: 2026-04-22 (#53 매출/제외 카테고리 분리 — category_type 컬럼 추가)
+> **최종 업데이트**: 2026-05-14 (고정비/공과금 분리 — expense_categories에 '공과금' INSERT, fixed_costs.category 옵션 정리)
 
 ## 테이블 관계도
 
@@ -314,11 +314,20 @@ franchises (프랜차이즈/브랜드)
 ### fixed_costs / fixed_cost_amounts
 | fixed_costs | fixed_cost_amounts |
 |------------|-------------------|
-| id, store_id, name, category | fixed_cost_id(FK) |
+| id, store_id, name, **category** | fixed_cost_id(FK) |
 | sort_order, is_active, is_variable | year_month, amount, estimated_amount, is_confirmed |
 | **estimated_monthly** (int, default 0) — 항목별 예상 월 금액. 모든 달 가마감 자동 집계 (2026-05-06 신설) | |
 | expected_day, tolerance_days | |
 - upsert onConflict: `fixed_cost_id, year_month`
+- **`category` 컬럼 값 (2026-05-14 정리)**:
+  - `'고정비'` (default) — 월세·인터넷·보험 등 변동 없는 자동이체
+  - `'공과금'` — 전기·가스·수도·관리비 등 매달 변동 자동이체 (2026-05-14 신규 옵션)
+  - `'마케팅'` — 광고비·행사비 (variable)
+  - `'세금'` — 자동이체로 빠지는 세금
+  - ⚠️ `'로열티'` 옵션 제거 (`매출 × store_settings.royalty_rate` 자동 계산과 중복) — 기존 데이터 있으면 사장님이 다른 카테고리로 이동 필요
+- 차트 그룹·hub 카드는 이 `category` 값으로 분기:
+  - 고정비 hub 카드 = `category in ('고정비','공과금')` 합산 (사장님 결정: hub는 통합)
+  - 차트(`dashboard`) = 카테고리별 분리 표시
 
 **⚠️ 2026-05-06 변경 (`estimated_monthly` 도입)**:
 - 가마감 고정비 집계는 이제 `fixed_costs.estimated_monthly` 합산 (활성 항목만)

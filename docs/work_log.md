@@ -4,6 +4,87 @@
 
 ---
 
+## [2026-05-14] 고정비/공과금 분리 + 지출 hub 카테고리 보강 (로열티 전용 화면)
+
+**브랜치**: `claude/update-business-icons-AYKCB`
+**규모**: 대형 (DB 변경 + 광범위 UI + 신규 화면)
+**계기**: 사장님 — "고정비와 공과금을 분리해야겠어. 고정비=월세 같은 고정 금액, 공과금=전기세 같은 변동 금액". 추가로 hub에 로열티/마케팅/세금 카드 누락 발견.
+
+### 1. DB 변경 (사장님 Supabase 직접 실행 완료)
+- `expense_categories` INSERT: '공과금' 카테고리 (data_source='fixed_costs', color #FB923C, sort_order=8)
+- `classification_rules` UPDATE: 한국전력/가스/관리비 키워드 → '공과금' 카테고리
+- `mydata_transactions` UPDATE: 과거 자동분류 데이터 동기화 (sub_category IN ('전기요금','가스요금','관리비') OR description ILIKE '%한국전력%' etc)
+- **컬럼 신규 추가 0건** — 기존 `fixed_costs.category` 활용 (옵션에 '공과금' 추가만)
+
+### 2. UI 변경 (코드)
+**고정비 등록 시트** (라인 2971~)
+- 옵션 4개: `고정비/공과금/마케팅/세금` (기존 '로열티' 제거)
+- 안내 라벨: "유형 (어느 카테고리로 집계할지)"
+
+**고정비 리스트 뱃지** (라인 7315~)
+- 컬러 뱃지 CSS 5종: `.fc-badge-fixed/utility/marketing/tax/hidden`
+- `FC_BADGE_CLASS` 매핑
+
+**지출 hub 카드 3개 신규** (라인 1214~)
+- 💼 로열티 → `nav|royalty` (신규 화면)
+- 📣 마케팅 → `goCategoryDetail|마케팅` (expcat + 하이라이트)
+- 🧾 세금 → `goCategoryDetail|세금`
+
+**로열티 전용 화면 (`royaltyCont`)** — 신규
+- 상단 요약: 이번달 매출 / 요율 / 예상 / 실제
+- 표: 최근 12개월 [월/매출/요율/예상/실제/차액]
+- 데이터: `sales_daily` × `store_settings.royalty_rate` + `mydata_transactions` (sub_category='로열티' OR description ILIKE '%유림에퐁당%')
+
+### 3. 로직 변경
+**`loadDashboard` 일별 카테고리 분배** (라인 6300~6440)
+- `_dailySrcs`에서 fixed_costs 제외 → `fixedCats` 별도 처리
+- `dailyFixedShareByCat` 카테고리별 일할 (고정비/공과금)
+- `fcByCatMonthly`, `fixedProratedByCat` 신규
+
+**차트 그룹** (라인 6620~6660)
+- `groupMap.fixed_costs`: '공과금/고정비' → '고정비'
+- `nameGroupMap`: 주류/공과금/마케팅/세금 → e.name 우선 매핑
+- `mGroupColors`/`groupOrder`: '공과금', '마케팅', '세금' 그룹 추가, 색상 분리
+
+**`calcExpenseByCategories`** (라인 8870~)
+- `needFc=true` 무조건 (manual 카테고리 마케팅/세금도 fc 합산)
+- SELECT에 `category` 컬럼 추가
+- fixed_costs 분기: `cat.name`과 `r.category` 매칭
+- manual 분기: ecaSum + fcMatchSum 합산
+
+**`loadExpHubData`** (라인 10510~)
+- 고정비 카드: fixed_costs 카테고리별 분기 (고정비+공과금 합산 표시)
+- 로열티 카드: sales × 요율 자동 계산
+- 마케팅/세금 카드: `renderCatCard` (ECA + fc 합산)
+
+**`loadExpCategories`** (라인 8146~)
+- `window._expcatPreselect` 외부 진입 시 자동 스크롤·하이라이트 (#FEF3C7, 2초)
+
+**`goCategoryDetail`** — 신규 글로벌 함수
+- 카테고리명 전역 변수 저장 후 nav('expcat')
+
+**라우팅** (라인 3220~3324)
+- `parentTabMap.royalty='expHub'`
+- `actions.royalty=loadRoyaltyPage`
+
+### 4. 검증
+- node --check 통과 (492K chars)
+- grep 잔재 0건 ('공과금/고정비' 옛 라벨 제거 확인)
+
+### 5. 골든패스 (사장님 확인 필요)
+- 지출 hub에 로열티·마케팅·세금 카드 3개 보임
+- 로열티 카드 amt = "매출 × 요율" 표시, 클릭 시 월별 12개월 표
+- 마케팅·세금 카드 클릭 → expcat 진입 + 카테고리 자동 하이라이트
+- 사이드 → 고정비 관리: 항목별 컬러 뱃지 (회색/주황/분홍/갈색)
+- 등록 시트에 '공과금' 옵션 있음 ('로열티' 옵션 없음)
+- 대시보드 차트: '고정비'·'공과금' 두 색으로 분리
+
+### 6. 다음 작업 (사장님 한 번 분류)
+- 사이드 → 고정비 관리에서 기존 항목 중 변동성 있는 것(전기·가스·수도·관리비 등) "공과금"으로 편집
+- fixed_costs.category='로열티' 항목이 있었다면 다른 카테고리로 이동 또는 비활성 (자동계산 중복 방지)
+
+---
+
 ## [2026-05-13 심야] 개시·마감 허브 아이콘 — 해/달 → OPEN/CLOSE 글자
 
 **브랜치**: `claude/update-business-icons-AYKCB`
