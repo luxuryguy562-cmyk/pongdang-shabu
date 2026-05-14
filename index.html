@@ -1198,7 +1198,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <!-- 차액 확인 (최근 30일 · 도난·실수 감지) -->
   <div class="card" style="margin-top:14px;">
     <div class="card-title">🛡 차액 확인 (최근 30일)</div>
-    <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">±1,000원 이상 차이는 빨강. 행을 누르면 지출 상세 펼침 (메모 없는 지출은 ⚠️ 빨강).</div>
+    <div id="diffTableSummary" style="font-size:11px;color:var(--gray-500);margin-bottom:8px;line-height:1.5;"></div>
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">±1,000원 이상 차이는 빨강. 행을 누르면 상세 펼침 (메모 없는 지출은 ⚠️ 빨강).</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
       <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:540px;">
         <thead>
@@ -1217,7 +1218,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </tbody>
       </table>
     </div>
-    <div id="diffTableSummary" style="font-size:11px;color:var(--gray-500);margin-top:10px;"></div>
   </div>
 </div>
 
@@ -10589,6 +10589,10 @@ async function loadDiffTable(){
         </div>
         ${renderSection('통장 입금', '🏧', bankRows, bankSum, '통장 입금 없음')}
         ${renderSection('현금 지출', '💵', etcRows, etcSum, '현금 지출 없음')}
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button class="btn btn-secondary btn-sm" style="flex:1;padding:8px;font-size:12px;" data-action="gotoOpeningFromDiff|${d}">✏️ 영업개시 수정</button>
+          <button class="btn btn-secondary btn-sm" style="flex:1;padding:8px;font-size:12px;" data-action="gotoSettleCardFromDiff|${d}">📋 마감 기록 보기</button>
+        </div>
       </td>
     </tr>`;
   });
@@ -10603,9 +10607,29 @@ async function loadDiffTable(){
 
   if(summaryEl){
     const maxDiff=totalDiffs.reduce((a,v)=>Math.abs(v)>Math.abs(a)?v:a,0);
-    const avg=Math.round(totalDiffs.reduce((a,v)=>a+v,0)/totalDiffs.length);
-    summaryEl.textContent=`30일 평균 차액 ${avg>0?'+':''}${fmt(avg)} / 최대 ${maxDiff>0?'+':''}${fmt(maxDiff)}`;
+    const sumDiff=totalDiffs.reduce((a,v)=>a+v,0);
+    const avg=Math.round(sumDiff/totalDiffs.length);
+    const alertCnt=totalDiffs.filter(v=>Math.abs(v)>=THRESHOLD).length;
+    const sumColor=Math.abs(sumDiff)>=THRESHOLD?'#DC2626':'#059669';
+    summaryEl.innerHTML=`
+      <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;">
+        <span style="font-size:13px;font-weight:800;color:${sumColor};font-variant-numeric:tabular-nums;">총 차액 ${sumDiff>0?'+':''}${fmt(sumDiff)}원</span>
+        <span style="color:var(--gray-500);">평균 ${avg>0?'+':''}${fmt(avg)}</span>
+        <span style="color:var(--gray-500);">최대 ${maxDiff>0?'+':''}${fmt(maxDiff)}</span>
+        <span style="color:${alertCnt>0?'#DC2626':'var(--gray-500)'};">${alertCnt>0?'⚠️ ':''}이상치 ${alertCnt}일</span>
+      </div>`;
   }
+}
+
+// 차액 표 → 영업개시 수정 화면 진입
+function gotoOpeningFromDiff(dateStr){
+  nav('opening');
+  setTimeout(()=>{ if(typeof editOpening==='function') editOpening(dateStr); }, 80);
+}
+// 차액 표 → 마감 카드 보기 진입
+function gotoSettleCardFromDiff(dateStr){
+  nav('settle');
+  setTimeout(()=>{ if(typeof gotoCard==='function') gotoCard(dateStr); }, 80);
 }
 
 // ─── 로열티 전용 화면 (매출 × 요율 자동 계산) ───
