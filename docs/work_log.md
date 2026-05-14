@@ -4,6 +4,89 @@
 
 ---
 
+## [2026-05-14 오후~심야] hub UI 정비 + 차액 표 + 마감정산 지출 분리 (대형 세션)
+
+**브랜치**: `claude/update-business-icons-AYKCB`
+**PR**: #74~#100 (28개 squash 머지) — 한 브랜치 누적
+**규모**: 대형 (UI 전반 + 차액 무결성 표 신규 + 마감 데이터 구조 변경 + 헌법 3-1 신설)
+
+### A. CLAUDE.md 제3조 3-1 신설 — 아부 금지·사장님 틀릴 수 있음
+사장님 명시 — "아부 떨지 말고, 내가 틀릴 수 있음을 항상 고려해야함".
+- 사장님 의견 무조건 동조 X, critic 정신
+- 동의 안 할 때 솔직 반박 + 근거 + 대안
+- 단, 단순 반대 금지 — 근거 기반 책임감 있는 의견
+
+### B. 개시·마감 hub 아이콘 시리즈 (PR #74~#79)
+- 저금통/지갑 → 해/달 SVG → OPEN/CLOSE 글자 (사장님 결정 흐름)
+- 색상 부활: 영업개시 주황(#F59E0B) / 마감정산 인디고(#6366F1)
+- 글자 12px/weight 900, 카드 가운데 정렬, sub 라인 제거 (amt와 중복)
+
+### C. 거래처 hub 카드 sub (PR #80)
+- '주문 N건' → 'N곳' (다른 카드 패턴과 통일, 거래처 수 정보가 더 직관)
+
+### D. 고정비/공과금 분리 + 지출 hub 보강 (PR #81~#82)
+- DB: `expense_categories` '공과금' INSERT (data_source='fixed_costs', sort_order=8)
+- DB: `classification_rules` UPDATE (한국전력/가스/관리비 → '공과금')
+- DB: `mydata_transactions` 과거 자동분류 동기화 (description+sub_category)
+- 신규 컬럼 0건 (기존 `fixed_costs.category` 활용)
+- hub 카드 3개 추가: 로열티 / 마케팅 / 세금
+- 로열티 전용 화면 (`royaltyCont`): 매출 × 요율 + 월별 12개월 표
+- 차트 그룹 분리: groupMap/groupOrder/mGroupColors → 고정비·공과금·로열티·마케팅·세금 별도
+- 가마감 일할계산 카테고리별 분기 (`fcByCatMonthly`)
+- 로열티 화면 단순화: 상단 3섹션(매출/예상/요율 input) + 월별 4열 표(월/매출/요율/금액), 실제 출금·차액 컬럼 제거 (정산 대조와 중복)
+
+### E. 지출 hub UI 정비 (PR #83~#88)
+- 신규 SVG: i-megaphone, i-document, i-arrows-lr
+- 아이콘 교체: 고정비 home→calendar / 마케팅 coins→megaphone / 세금 receipt→document / 정산대조 coins→arrows-lr
+- i-settings 진짜 톱니바퀴로 교체 (옛 정의가 사실 해 모양이었음, 사장님 짚음)
+- hub 구조: 카테고리 그리드(거래처/고정비/인건비/로열티/마케팅/세금) + 도구 hub-full(계좌·카드/정산 대조/카테고리 관리)
+- 예비비 카드 제거 (홈 미니 행과 중복 — 사장님 짚음)
+- 라벨 정정: '계좌·카드'→'계좌내역·카드내역', '정산 대조 sub'→'예상 vs 실제 매출·지출 대조', '카테고리 관리'→'수입·지출 카테고리 관리'
+- 카테고리 그리드 드래그 reorder (SortableJS long-press 300ms)
+- DB: `store_settings.exp_hub_order` text 컬럼 신규 (사장님 ALTER 실행)
+
+### F. 마감정산 지출 카드 분리 + 차액 표 (PR #89~#100)
+**마감정산 화면**:
+- 옛 '차감' 카드 → 🏧 통장 입금 / 💵 현금 지출 2개 카드로 분리 (사장님 직관: "통장입금은 지출이 아니라 이동")
+- 컨테이너: `#settleDeductBankRows` / `#settleDeductEtcRows`
+- type select 제거 (컨테이너로 자동 결정, data-type 보존)
+- 호환: `items_json.deductions[]`·`deduct_etc`·`deduct_bank` 그대로 (book 계산 동일)
+
+**차액 표 (busHubCont)**:
+- 사장님 운영 흐름 반영: 전날 마감(필수) → 당일 영업개시(생략 가능) → 당일 마감(필수)
+- 영업개시 생략 시 전날 마감 기준 자동 계산
+- 토스 스타일: 3카드 한 줄(총 차액·통장입금 합·현금지출 합), 표 4컬럼(날짜/통장입금/현금지출/차액)
+- 행 padding 7px, 폰트 12px, 한 화면 31일 가시
+- 날짜 오름차순 (옛날 위, 오늘 아래)
+- 날짜 셀 중앙, 화폐 셀 우측 정렬 (헌법 3-1 — 사장님 짚음, 표 표준)
+- 0 표시 → `-` (엑셀 회계 서식)
+- ±1,000원 이상만 차액 빨강 + ⚠
+- 가로 스크롤·펼침·진입 버튼 모두 제거 (사장님 의도)
+- DB 변경 0건 — `daily_opening.actual_total/previous_close_total` + `settlements.diff_amount/items_json` 그대로 활용
+
+**기타 버그 수정**:
+- `loadOpeningAmount` 시스템 today 고정 버그 → picker.value(settle_date) 기준 (PR #90)
+- `initOpeningDate` 시 status·`openingEditDate` 잔재 → reset 추가 (PR #91)
+
+### G. 사장님 직관 점검·반려한 안 (헌법 3-1 적용)
+- "지출 hub로 다 펴바르기 동적" → 사장님 본인이 "변동되는 게 불편" 짚어 반려
+- 마감정산 화면 매출/시재 분리 → 사장님 자각: "현금 상세가 시재 점검 인풋" → 분리 안 함
+- 영업개시 효용 모호 호소 → 옵션 B 유지 결정 (보험 가치)
+- 차액 표 정렬 — 처음 중앙으로 갔다가 사장님 짚음 → 숫자 우측 정렬로 정정
+
+### H. 사장님이 가르쳐준 비즈니스 흐름
+- 마감정산 = 매출 입력 + 시재 점검 (분리 불가, 현금 매출이 시재 인풋)
+- 영업개시는 생략 가능, 마감정산은 필수 누락 시 다음날에라도 입력
+- 인계 차액(밤사이) vs 마감차액(영업 중) — 별도 의미, 합쳐서 총 차액
+- 가짜 지출로 차액 메우는 위험성 — 시스템 무결성 한계
+
+### 검증
+- 28개 PR 각각 node --check 통과, grep 잔재 0건
+- 사장님 매장(논산점) 실데이터 검증 완료
+- 헌법 11조 대규모 변경 절차 준수 (백업 커밋·검증·문서화)
+
+---
+
 ## [2026-05-14] 고정비/공과금 분리 + 지출 hub 카테고리 보강 (로열티 전용 화면)
 
 **브랜치**: `claude/update-business-icons-AYKCB`
