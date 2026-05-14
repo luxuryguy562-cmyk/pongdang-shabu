@@ -1195,6 +1195,25 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="hub-mini-amt" id="busMiniStAmt">-</span>
     </button>
   </div>
+  <!-- 차액 확인 (최근 30일 · 도난·실수 감지) -->
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title">🛡 차액 확인 (최근 30일)</div>
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">±1,000원 이상 차이는 빨강. 행을 누르면 상세 펼침.</div>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--gray-200);text-align:right;">
+          <th style="padding:8px 4px;text-align:left;">날짜</th>
+          <th style="padding:8px 4px;">개시</th>
+          <th style="padding:8px 4px;">마감</th>
+          <th style="padding:8px 4px;">총차액</th>
+        </tr>
+      </thead>
+      <tbody id="diffTableBody">
+        <tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
+      </tbody>
+    </table>
+    <div id="diffTableSummary" style="font-size:11px;color:var(--gray-500);margin-top:10px;"></div>
+  </div>
 </div>
 
 <!-- ══ [Hub] 지출 허브 (관리자 전용) ══ -->
@@ -1542,15 +1561,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="extraRevenueInputs"></div>
     </div>
 
-    <!-- 차감 -->
+    <!-- 지출 (이전 라벨: 차감) -->
     <div class="settle-card-group">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="card-title">차감</div>
+        <div class="card-title">지출</div>
         <span id="settleDeductTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
       </div>
       <p class="card-sub">금고에서 빠진 금액을 입력하세요 (어제 새벽 인출 등도 여기서 일괄 입력)</p>
       <div id="settleDeductRows"></div>
-      <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 차감 추가</button>
+      <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 지출 추가</button>
     </div>
 
     <!-- 금고 계수 (좌: 계산기 / 우: 화폐 입력) -->
@@ -10409,7 +10428,91 @@ async function loadBusHubData(){
     setAmt('busMiniSaAmt', fmt(total));
     setSub('busMiniSaSub', `${(sd||[]).length}일 기록`);
   }catch(e){setAmt('busMiniSaAmt','-');}
+  // 차액 확인 표
+  loadDiffTable();
 }
+
+// ─── 개시·마감 차액 확인 표 (최근 30일, 도난·실수 감지) ───
+// 개시차액 = daily_opening.actual_total − previous_close_total (밤사이 변동)
+// 마감차액 = settlements.diff_amount (영업 중 변동, 이미 저장됨)
+// 총차액   = 개시차액 + 마감차액
+async function loadDiffTable(){
+  if(!currentStore) return;
+  const tbody=document.getElementById('diffTableBody');
+  const summaryEl=document.getElementById('diffTableSummary');
+  if(!tbody) return;
+  const sid=currentStore.id;
+  const today=new Date();
+  const endDate=today.toISOString().slice(0,10);
+  const startD=new Date(today); startD.setDate(today.getDate()-30);
+  const startDate=startD.toISOString().slice(0,10);
+  const THRESHOLD=1000;
+
+  const[opRes,stRes]=await Promise.all([
+    sb.from('daily_opening').select('opening_date,actual_total,previous_close_total').eq('store_id',sid).gte('opening_date',startDate).lte('opening_date',endDate),
+    sb.from('settlements').select('settle_date,actual_total,diff_amount,items_json').eq('store_id',sid).gte('settle_date',startDate).lte('settle_date',endDate)
+  ]);
+  const opByDate={};(opRes.data||[]).forEach(o=>opByDate[o.opening_date]=o);
+  const stByDate={};(stRes.data||[]).forEach(s=>stByDate[s.settle_date]=s);
+
+  const dates=Object.keys(stByDate).sort((a,b)=>b.localeCompare(a));
+  if(!dates.length){
+    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">최근 마감 데이터 없음</td></tr>';
+    if(summaryEl) summaryEl.textContent='';
+    return;
+  }
+
+  const totalDiffs=[];
+  let html='';
+  dates.forEach(d=>{
+    const st=stByDate[d];
+    const op=opByDate[d];
+    const opDiff=(op&&op.actual_total!=null&&op.previous_close_total!=null)?(op.actual_total-op.previous_close_total):null;
+    const stDiff=st.diff_amount||0;
+    const totalDiff=(opDiff!=null?opDiff:0)+stDiff;
+    totalDiffs.push(totalDiff);
+
+    const opCell=op?fmt(op.actual_total||0):'<span style="color:var(--gray-400);">생략</span>';
+    const stCell=fmt(st.actual_total||0);
+    const isAlert=Math.abs(totalDiff)>=THRESHOLD;
+    const totalColor=isAlert?'#DC2626':'#059669';
+    const totalIcon=isAlert?'⚠️':'✓';
+    const totalText=totalDiff===0?'0':(totalDiff>0?'+':'')+fmt(totalDiff);
+
+    const items=st.items_json||{};
+    const cashRev=(items.pos_cash||0)+(items.pos_cash_receipt||0);
+    const expense=(items.deduct_etc||0)+(items.deduct_bank||0);
+
+    html+=`<tr class="diff-row" data-date="${d}" style="border-bottom:1px solid var(--gray-100);cursor:pointer;text-align:right;font-variant-numeric:tabular-nums;">
+      <td style="padding:8px 4px;text-align:left;font-weight:600;">${d.slice(5)}</td>
+      <td style="padding:8px 4px;">${opCell}</td>
+      <td style="padding:8px 4px;">${stCell}</td>
+      <td style="padding:8px 4px;color:${totalColor};font-weight:700;">${totalIcon} ${totalText}</td>
+    </tr>
+    <tr class="diff-detail" data-detail="${d}" style="display:none;background:var(--gray-50);">
+      <td colspan="4" style="padding:10px 14px;font-size:11px;color:var(--gray-700);line-height:1.7;">
+        ↳ 개시차액: ${opDiff!=null?((opDiff>0?'+':'')+fmt(opDiff)):'— (개시 생략)'}<br>
+        ↳ 마감차액: ${stDiff>0?'+':''}${fmt(stDiff)}<br>
+        ↳ 현금매출: ${fmt(cashRev)} <span style="color:var(--gray-400);">(현금 ${fmt(items.pos_cash||0)} + 영수증 ${fmt(items.pos_cash_receipt||0)})</span><br>
+        ↳ 지출: ${fmt(expense)}
+      </td>
+    </tr>`;
+  });
+  tbody.innerHTML=html;
+  tbody.querySelectorAll('.diff-row').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const detail=tbody.querySelector(`.diff-detail[data-detail="${row.dataset.date}"]`);
+      if(detail) detail.style.display=detail.style.display==='none'?'table-row':'none';
+    });
+  });
+
+  if(summaryEl){
+    const maxDiff=totalDiffs.reduce((a,v)=>Math.abs(v)>Math.abs(a)?v:a,0);
+    const avg=Math.round(totalDiffs.reduce((a,v)=>a+v,0)/totalDiffs.length);
+    summaryEl.textContent=`30일 평균 차액 ${avg>0?'+':''}${fmt(avg)} / 최대 ${maxDiff>0?'+':''}${fmt(maxDiff)}`;
+  }
+}
+
 // ─── 로열티 전용 화면 (매출 × 요율 자동 계산) ───
 async function loadRoyaltyPage(){
   if(!currentStore) return;
