@@ -1208,17 +1208,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div id="diffTableSummary" style="padding:0 14px 12px;"></div>
     <table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--bg);table-layout:fixed;">
       <colgroup>
-        <col style="width:22%;">
-        <col style="width:30%;">
-        <col style="width:24%;">
-        <col style="width:24%;">
+        <col style="width:16%;">
+        <col style="width:28%;">
+        <col style="width:28%;">
+        <col style="width:28%;">
       </colgroup>
       <thead>
         <tr style="font-size:10px;color:var(--gray-400);font-weight:700;">
-          <th style="padding:8px 10px;text-align:center;">날짜</th>
-          <th style="padding:8px 10px;text-align:right;">통장 입금</th>
-          <th style="padding:8px 10px;text-align:right;">현금 지출</th>
-          <th style="padding:8px 10px;text-align:right;">차액</th>
+          <th style="padding:8px 6px;text-align:center;">날짜</th>
+          <th style="padding:8px 6px;text-align:center;">통장 입금</th>
+          <th style="padding:8px 6px;text-align:center;">현금 지출</th>
+          <th style="padding:8px 6px;text-align:center;">차액</th>
         </tr>
       </thead>
       <tbody id="diffTableBody" style="background:#fff;">
@@ -10561,10 +10561,10 @@ async function loadDiffTable(){
     const dateText=`${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}`;
 
     html+=`<tr style="border-top:1px solid var(--gray-100);">
-      <td style="padding:7px 10px;text-align:center;font-weight:600;color:var(--text);">${dateText}</td>
-      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text);">${bankCell}</td>
-      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text);">${etcCell}</td>
-      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:${diffColor};">${diffText}</td>
+      <td style="padding:7px 6px;text-align:center;font-weight:600;color:var(--text);">${dateText}</td>
+      <td style="padding:7px 6px;text-align:center;font-variant-numeric:tabular-nums;color:var(--text);">${bankCell}</td>
+      <td style="padding:7px 6px;text-align:center;font-variant-numeric:tabular-nums;color:var(--text);">${etcCell}</td>
+      <td style="padding:7px 6px;text-align:center;font-variant-numeric:tabular-nums;font-weight:700;color:${diffColor};">${diffText}</td>
     </tr>`;
   });
   tbody.innerHTML=html;
