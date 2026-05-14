@@ -1201,7 +1201,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div style="font-size:15px;font-weight:800;color:var(--text);letter-spacing:-0.3px;">차액 확인</div>
       <div style="display:flex;align-items:center;gap:2px;background:#F5F7FA;border-radius:999px;padding:2px;">
         <button type="button" data-action="shiftDiffTableMonth|-1" id="diffTablePrev" style="width:28px;height:28px;border:none;background:transparent;color:var(--gray-700);font-size:16px;font-weight:700;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1;">‹</button>
-        <span id="diffTableMonthChip" style="font-size:12px;font-weight:800;color:var(--text);min-width:48px;text-align:center;">5월</span>
+        <span id="diffTableMonthChip" style="font-size:12px;font-weight:800;color:var(--text);min-width:56px;text-align:center;font-variant-numeric:tabular-nums;">2026.05</span>
         <button type="button" data-action="shiftDiffTableMonth|1" id="diffTableNext" style="width:28px;height:28px;border:none;background:transparent;color:var(--gray-700);font-size:16px;font-weight:700;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1;">›</button>
       </div>
     </div>
@@ -10505,8 +10505,7 @@ async function loadDiffTable(){
   const endDate=endD.toISOString().slice(0,10);
   const monthChip=document.getElementById('diffTableMonthChip');
   if(monthChip){
-    const isThis=_diffTableMonthOffset===0;
-    monthChip.textContent=isThis?`${target.getMonth()+1}월`:`${target.getFullYear()}.${String(target.getMonth()+1).padStart(2,'0')}`;
+    monthChip.textContent=`${target.getFullYear()}.${String(target.getMonth()+1).padStart(2,'0')}`;
   }
   const nextBtn=document.getElementById('diffTableNext');
   if(nextBtn){
