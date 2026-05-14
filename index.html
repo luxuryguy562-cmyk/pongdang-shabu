@@ -2420,17 +2420,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <div style="font-size:11px;color:var(--gray-500);">이번달 매출 (<span id="royaltyMonthLabel">-</span>)</div>
         <div style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);" id="royaltyRevenue">-</div>
       </div>
-      <div style="padding:12px;background:#FEE2E2;border-radius:10px;">
-        <div style="font-size:11px;color:#991B1B;">로열티율</div>
-        <div style="font-size:18px;font-weight:800;color:#991B1B;" id="royaltyRateLabel">-</div>
-      </div>
       <div style="padding:12px;background:#FEF3C7;border-radius:10px;">
-        <div style="font-size:11px;color:#92400E;">예상 로열티 (가마감)</div>
+        <div style="font-size:11px;color:#92400E;">예상 로열티</div>
         <div style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:#92400E;" id="royaltyExpected">-</div>
       </div>
-      <div style="padding:12px;background:#E0F2FE;border-radius:10px;">
-        <div style="font-size:11px;color:#075985;">실제 출금 (진마감)</div>
-        <div style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:#075985;" id="royaltyActual">-</div>
+      <div style="grid-column:1/-1;padding:12px;background:#FEE2E2;border-radius:10px;">
+        <div style="font-size:11px;color:#991B1B;margin-bottom:6px;">로열티율 (매출 대비 %)</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input id="royaltyRateInput" type="number" min="0" max="100" step="0.1" placeholder="0" style="flex:1;padding:8px 10px;font-size:16px;font-weight:800;color:#991B1B;border:1px solid #FCA5A5;border-radius:8px;background:#fff;text-align:right;">
+          <span style="font-size:16px;font-weight:700;color:#991B1B;">%</span>
+          <button class="btn btn-primary btn-sm" style="padding:8px 14px;font-size:13px;background:#991B1B;border-color:#991B1B;" data-action="saveRoyaltyRate">저장</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2443,17 +2443,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
             <th style="padding:8px 6px;text-align:left;">월</th>
             <th style="padding:8px 6px;">매출</th>
             <th style="padding:8px 6px;">요율</th>
-            <th style="padding:8px 6px;">예상</th>
-            <th style="padding:8px 6px;">실제</th>
-            <th style="padding:8px 6px;">차액</th>
+            <th style="padding:8px 6px;">금액</th>
           </tr>
         </thead>
         <tbody id="royaltyMonthBody">
-          <tr><td colspan="6" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
+          <tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
         </tbody>
       </table>
     </div>
-    <div style="font-size:11px;color:var(--gray-400);margin-top:10px;">💡 차액 = 실제 − 예상. 음수면 실제 출금이 예상보다 적었어요.</div>
+    <div style="font-size:11px;color:var(--gray-400);margin-top:10px;">💡 매출 × 요율 = 예상 로열티. 실제 출금은 정산 대조에서 확인하세요.</div>
   </div>
 </div>
 
@@ -10400,23 +10398,16 @@ async function loadBusHubData(){
     setSub('busMiniSaSub', `${(sd||[]).length}일 기록`);
   }catch(e){setAmt('busMiniSaAmt','-');}
 }
-// ─── 로열티 전용 화면 (매출 × 요율 + mydata 실제 출금) ───
+// ─── 로열티 전용 화면 (매출 × 요율 자동 계산) ───
 async function loadRoyaltyPage(){
   if(!currentStore) return;
   const sid=currentStore.id;
-  // 1) 요율 (store_settings)
+  // 1) 요율 (store_settings) — 화면 내 input에도 채움
   const{data:ss}=await sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle();
-  const rate=parseFloat(ss?.royalty_rate||0)/100;
-  const empty=document.getElementById('royaltyEmpty'),main=document.getElementById('royaltyMain');
-  if(rate<=0){
-    if(empty)empty.style.display='block';
-    if(main)main.style.display='none';
-    const body=document.getElementById('royaltyMonthBody');
-    if(body)body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--gray-400);">요율 미설정</td></tr>';
-    return;
-  }
-  if(empty)empty.style.display='none';
-  if(main)main.style.display='grid';
+  const ratePct=parseFloat(ss?.royalty_rate||0);
+  const rate=ratePct/100;
+  const rateInput=document.getElementById('royaltyRateInput');
+  if(rateInput) rateInput.value=ratePct>0?ratePct:'';
 
   // 2) 12개월 범위
   const now=new Date();
@@ -10439,51 +10430,43 @@ async function loadRoyaltyPage(){
     salesByMonth[ym]=(salesByMonth[ym]||0)+t;
   });
 
-  // 4) mydata_transactions 실제 로열티 출금 (유림에퐁당 키워드 + sub_category)
-  const{data:mt}=await sb.from('mydata_transactions').select('amount,tx_date,attribution_month,sub_category,description')
-    .eq('store_id',sid).eq('exclude_from_settlement',false)
-    .gte('tx_date',oldestStart).lte('tx_date',newestEnd);
-  const actualByMonth={};
-  (mt||[]).forEach(t=>{
-    const desc=t.description||'';
-    const sub=t.sub_category||'';
-    if(!(sub==='로열티'||desc.includes('유림에퐁당'))) return;
-    const ym=t.attribution_month||(t.tx_date||'').slice(0,7);
-    if(!ym) return;
-    actualByMonth[ym]=(actualByMonth[ym]||0)+Math.abs(t.amount||0);
-  });
-
-  // 5) 표 렌더링 (최신순)
+  // 4) 월별 표 렌더 (최신순) — 매출 / 요율 / 금액
   let html='';
   months.forEach(ym=>{
     const rev=salesByMonth[ym]||0;
-    const expected=Math.round(rev*rate);
-    const actual=actualByMonth[ym]||0;
-    const diff=actual-expected;
-    const diffColor=diff===0||actual===0?'var(--gray-400)':(diff<0?'#059669':'#DC2626');
+    const amt=Math.round(rev*rate);
     html+=`<tr style="border-bottom:1px solid var(--gray-100);text-align:right;font-variant-numeric:tabular-nums;">
       <td style="padding:8px 6px;text-align:left;font-weight:600;">${ym}</td>
       <td style="padding:8px 6px;">${rev?fmt(rev):'-'}</td>
       <td style="padding:8px 6px;color:var(--gray-500);">${(rate*100).toFixed(1)}%</td>
-      <td style="padding:8px 6px;color:#92400E;">${expected?fmt(expected):'-'}</td>
-      <td style="padding:8px 6px;color:#075985;">${actual?fmt(actual):'-'}</td>
-      <td style="padding:8px 6px;color:${diffColor};">${actual?(diff>0?'+':'')+fmt(diff):'-'}</td>
+      <td style="padding:8px 6px;color:#92400E;font-weight:700;">${amt?fmt(amt):'-'}</td>
     </tr>`;
   });
   const body=document.getElementById('royaltyMonthBody');
-  if(body)body.innerHTML=html||'<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--gray-400);">데이터 없음</td></tr>';
+  if(body)body.innerHTML=html||'<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">데이터 없음</td></tr>';
 
-  // 6) 상단 요약 (이번달)
+  // 5) 상단 요약 (이번달)
   const curYm=now.toISOString().slice(0,7);
   const curRev=salesByMonth[curYm]||0;
   const curExp=Math.round(curRev*rate);
-  const curAct=actualByMonth[curYm]||0;
   const setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   setT('royaltyMonthLabel',curYm);
   setT('royaltyRevenue',curRev?fmt(curRev)+'원':'-');
-  setT('royaltyRateLabel',(rate*100).toFixed(1)+'%');
-  setT('royaltyExpected',curExp?fmt(curExp)+'원':'-');
-  setT('royaltyActual',curAct?fmt(curAct)+'원':'-');
+  setT('royaltyExpected',rate>0?(curExp?fmt(curExp)+'원':'0원'):'요율 설정 필요');
+}
+
+// 로열티율 즉시 저장 (로열티 화면 내)
+async function saveRoyaltyRate(){
+  if(!guardStore())return;
+  const el=document.getElementById('royaltyRateInput');
+  const v=parseFloat(el?.value||'0')||0;
+  if(v<0||v>100){toast('요율은 0~100 사이로 입력하세요','warn');return;}
+  setLoad(true,'요율 저장 중...');
+  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,royalty_rate:v},{onConflict:'store_id'});
+  setLoad(false);if(error)return errToast('요율 저장',error);
+  toast(`로열티율 ${v}% 저장됐어요`,'success');
+  if(typeof settings==='object'&&settings) settings.royalty_rate=v;
+  loadRoyaltyPage();
 }
 
 // ─── 지출 허브: 카드별 동적 정보 ───
