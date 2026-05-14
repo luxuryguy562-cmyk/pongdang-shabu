@@ -1210,10 +1210,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </colgroup>
       <thead>
         <tr style="font-size:10px;color:var(--gray-400);font-weight:700;">
-          <th style="padding:6px 10px;text-align:left;">날짜</th>
-          <th style="padding:6px 10px;text-align:right;">통장</th>
-          <th style="padding:6px 10px;text-align:right;">지출</th>
-          <th style="padding:6px 10px;text-align:right;">차액</th>
+          <th style="padding:6px 8px;text-align:center;">날짜</th>
+          <th style="padding:6px 8px;text-align:center;">통장</th>
+          <th style="padding:6px 8px;text-align:center;">지출</th>
+          <th style="padding:6px 8px;text-align:center;">차액</th>
         </tr>
       </thead>
       <tbody id="diffTableBody" style="background:#fff;">
@@ -10496,7 +10496,8 @@ async function loadDiffTable(){
   const opByDate={};(opRes.data||[]).forEach(o=>opByDate[o.opening_date]=o);
   const stByDate={};(stRes.data||[]).forEach(s=>stByDate[s.settle_date]=s);
 
-  const dates=Object.keys(stByDate).sort((a,b)=>b.localeCompare(a));
+  // 2026-05-14: 사장님 요청 — 날짜 오름차순 (옛날 → 최신, 아래로 갈수록 오늘)
+  const dates=Object.keys(stByDate).sort((a,b)=>a.localeCompare(b));
   if(!dates.length){
     tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">최근 마감 데이터 없음</td></tr>';
     if(summaryEl) summaryEl.textContent='';
@@ -10522,20 +10523,20 @@ async function loadDiffTable(){
 
     const isAlert=Math.abs(totalDiff)>=THRESHOLD;
     const diffColor=isAlert?'#DC2626':(totalDiff===0?'var(--gray-400)':'var(--text)');
+    const zeroSpan='<span style="color:var(--gray-300);font-weight:400;">0</span>';
     const diffText=totalDiff===0
-      ? '<span style="color:var(--gray-300);">0</span>'
+      ? zeroSpan
       : `${totalDiff>0?'+':''}${fmt(totalDiff)}${isAlert?' ⚠':''}`;
-    const dash='<span style="color:var(--gray-300);">─</span>';
-    const bankCell=bankSum>0?fmt(bankSum):dash;
-    const etcCell=etcSum>0?fmt(etcSum):dash;
+    const bankCell=bankSum>0?fmt(bankSum):zeroSpan;
+    const etcCell=etcSum>0?fmt(etcSum):zeroSpan;
     const m=parseInt(d.slice(5,7),10), day=parseInt(d.slice(8,10),10);
     const dateText=`${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}`;
 
     html+=`<tr style="border-top:1px solid var(--gray-100);">
-      <td style="padding:7px 10px;text-align:left;font-weight:600;color:var(--text);">${dateText}</td>
-      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:${bankSum>0?'var(--text)':'var(--gray-300)'};">${bankCell}</td>
-      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:${etcSum>0?'var(--text)':'var(--gray-300)'};">${etcCell}</td>
-      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:${diffColor};">${diffText}</td>
+      <td style="padding:7px 8px;text-align:center;font-weight:600;color:var(--text);">${dateText}</td>
+      <td style="padding:7px 8px;text-align:center;font-variant-numeric:tabular-nums;color:var(--text);">${bankCell}</td>
+      <td style="padding:7px 8px;text-align:center;font-variant-numeric:tabular-nums;color:var(--text);">${etcCell}</td>
+      <td style="padding:7px 8px;text-align:center;font-variant-numeric:tabular-nums;font-weight:700;color:${diffColor};">${diffText}</td>
     </tr>`;
   });
   tbody.innerHTML=html;
@@ -10543,18 +10544,18 @@ async function loadDiffTable(){
   if(summaryEl){
     const sumColor=sumDiff===0?'var(--text)':(sumDiff<0?'#DC2626':'#059669');
     summaryEl.innerHTML=`
-      <div style="text-align:center;margin:2px 0 8px;">
-        <div style="font-size:20px;font-weight:900;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;color:${sumColor};line-height:1.1;">${sumDiff>0?'+':''}${fmt(sumDiff)}원</div>
-        <div style="font-size:10px;color:var(--gray-500);margin-top:1px;">총 차액</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-        <div style="padding:7px 10px;background:var(--gray-100);border-radius:8px;">
-          <div style="font-size:10px;color:var(--gray-500);">🏧 통장 입금</div>
-          <div style="font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumBank)}원</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+        <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--gray-500);">총 차액</div>
+          <div style="font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;color:${sumColor};">${sumDiff>0?'+':''}${fmt(sumDiff)}원</div>
         </div>
-        <div style="padding:7px 10px;background:var(--gray-100);border-radius:8px;">
+        <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--gray-500);">🏧 통장 입금</div>
+          <div style="font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumBank)}원</div>
+        </div>
+        <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
           <div style="font-size:10px;color:var(--gray-500);">💵 현금 지출</div>
-          <div style="font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumEtc)}원</div>
+          <div style="font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumEtc)}원</div>
         </div>
       </div>`;
   }
