@@ -1195,29 +1195,25 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="hub-mini-amt" id="busMiniStAmt">-</span>
     </button>
   </div>
-  <!-- 차액 확인 (최근 30일 · 도난·실수 감지) -->
-  <div class="card" style="margin-top:14px;">
-    <div class="card-title">🛡 차액 확인 (최근 30일)</div>
-    <div id="diffTableSummary" style="font-size:11px;color:var(--gray-500);margin-bottom:8px;line-height:1.5;"></div>
-    <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">±1,000원 이상 차이는 빨강. 행을 누르면 상세 펼침 (메모 없는 지출은 ⚠️ 빨강).</div>
-    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-      <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:540px;">
-        <thead>
-          <tr style="border-bottom:2px solid var(--gray-200);text-align:right;white-space:nowrap;">
-            <th style="padding:8px 6px;text-align:left;">날짜</th>
-            <th style="padding:8px 6px;">차액</th>
-            <th style="padding:8px 6px;">개시 금고</th>
-            <th style="padding:8px 6px;">마감 금고</th>
-            <th style="padding:8px 6px;">매출</th>
-            <th style="padding:8px 6px;">통장입금</th>
-            <th style="padding:8px 6px;">현금지출</th>
-          </tr>
-        </thead>
-        <tbody id="diffTableBody">
-          <tr><td colspan="7" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
-        </tbody>
-      </table>
+  <!-- 차액 확인 (최근 30일 · 토스 스타일) -->
+  <div class="card" style="margin-top:14px;padding:0;overflow:hidden;">
+    <div style="padding:18px 18px 4px;">
+      <div style="font-size:12px;font-weight:700;color:var(--gray-500);">🛡 차액 확인 · 최근 30일</div>
     </div>
+    <div id="diffTableSummary" style="padding:0 18px 18px;"></div>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;background:var(--bg);">
+      <thead>
+        <tr style="font-size:11px;color:var(--gray-400);font-weight:700;">
+          <th style="padding:10px 14px;text-align:left;">날짜</th>
+          <th style="padding:10px 6px;text-align:right;">통장</th>
+          <th style="padding:10px 6px;text-align:right;">지출</th>
+          <th style="padding:10px 14px;text-align:right;">차액</th>
+        </tr>
+      </thead>
+      <tbody id="diffTableBody" style="background:#fff;">
+        <tr><td colspan="4" style="text-align:center;padding:18px;color:var(--gray-400);">로딩 중…</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
@@ -10501,136 +10497,63 @@ async function loadDiffTable(){
     return;
   }
 
-  const totalDiffs=[];
+  // 4컬럼 표 (날짜·통장·지출·차액) + 토스 스타일 요약
   let html='';
+  let sumBank=0, sumEtc=0, sumDiff=0;
   dates.forEach(d=>{
     const st=stByDate[d];
     const op=opByDate[d];
     const opDiff=(op&&op.actual_total!=null&&op.previous_close_total!=null)?(op.actual_total-op.previous_close_total):null;
     const stDiff=st.diff_amount||0;
     const totalDiff=(opDiff!=null?opDiff:0)+stDiff;
-    totalDiffs.push(totalDiff);
-
-    const opCell=op?fmt(op.actual_total||0):'<span style="color:var(--gray-400);">생략</span>';
-    const stCell=fmt(st.actual_total||0);
-    const isAlert=Math.abs(totalDiff)>=THRESHOLD;
-    const totalColor=isAlert?'#DC2626':'#059669';
-    const totalIcon=isAlert?'⚠️':'✓';
-    const totalText=totalDiff===0?'0':(totalDiff>0?'+':'')+fmt(totalDiff);
+    sumDiff+=totalDiff;
 
     const items=st.items_json||{};
-    const cashRev=(items.pos_cash||0)+(items.pos_cash_receipt||0);
-    const bankSum=items.deduct_bank||0;  // 통장입금
-    const etcSum=items.deduct_etc||0;    // 현금지출
-    const rowBg=isAlert?'background:#FEF2F2;':'';
+    const bankSum=items.deduct_bank||0;
+    const etcSum=items.deduct_etc||0;
+    sumBank+=bankSum;
+    sumEtc+=etcSum;
 
-    html+=`<tr class="diff-row" data-date="${d}" style="border-bottom:1px solid var(--gray-100);cursor:pointer;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;${rowBg}">
-      <td style="padding:8px 6px;text-align:left;font-weight:600;">${d.slice(5)}</td>
-      <td style="padding:8px 6px;color:${totalColor};font-weight:700;">${totalIcon} ${totalText}</td>
-      <td style="padding:8px 6px;">${opCell}</td>
-      <td style="padding:8px 6px;">${stCell}</td>
-      <td style="padding:8px 6px;">${fmt(cashRev)}</td>
-      <td style="padding:8px 6px;">${fmt(bankSum)}</td>
-      <td style="padding:8px 6px;">${fmt(etcSum)}</td>
-    </tr>`;
-    // 펼침 — 모든 행 (정상·빨강 모두)
-    const deductions=Array.isArray(items.deductions)?items.deductions:[];
-    const bankRows=deductions.filter(x=>x.type==='bank');
-    const etcRows=deductions.filter(x=>x.type!=='bank');
-    const renderItem=(de)=>{
-      const memo=(de.memo||'').trim();
-      const suspect=!memo;
-      const amt=fmt(de.amount||0);
-      if(suspect){
-        return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 10px;background:#FEE2E2;border-left:3px solid #DC2626;border-radius:6px;margin-bottom:4px;">
-          <span style="color:#991B1B;font-weight:600;">⚠️ 메모 없음</span>
-          <span style="font-variant-numeric:tabular-nums;font-weight:700;color:#991B1B;">${amt}</span>
-        </div>`;
-      }
-      return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 10px;background:#F9FAFB;border-left:3px solid var(--gray-300);border-radius:6px;margin-bottom:4px;">
-        <span style="color:var(--gray-700);">${memo}</span>
-        <span style="font-variant-numeric:tabular-nums;font-weight:600;color:var(--gray-900);">${amt}</span>
-      </div>`;
-    };
-    const renderSection=(title,emoji,rows,sum,emptyMsg)=>{
-      const body=rows.length?rows.map(renderItem).join(''):`<div style="padding:6px 10px;color:var(--gray-400);font-size:11px;">${emptyMsg}</div>`;
-      return `<div style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
-          <span style="font-size:11px;font-weight:700;color:var(--gray-600);">${emoji} ${title}</span>
-          <span style="font-size:11px;font-weight:700;color:var(--gray-500);font-variant-numeric:tabular-nums;">${fmt(sum)}원</span>
-        </div>
-        ${body}
-      </div>`;
-    };
-    const headerColor=isAlert?'#991B1B':'var(--gray-700)';
-    const headerBg=isAlert?'#FEF2F2':'var(--gray-50)';
-    const headerLine=isAlert
-      ? `<div style="font-weight:700;color:${headerColor};margin-bottom:8px;">⚠️ Review 필요 — 차액 ${totalText}원</div>`
-      : `<div style="font-weight:700;color:${headerColor};margin-bottom:8px;">✓ 정상 — 상세</div>`;
+    const isAlert=Math.abs(totalDiff)>=THRESHOLD;
+    const diffColor=isAlert?'#DC2626':(totalDiff===0?'var(--gray-400)':'var(--text)');
+    const diffText=totalDiff===0
+      ? '<span style="color:var(--gray-300);">0</span>'
+      : `${totalDiff>0?'+':''}${fmt(totalDiff)}${isAlert?' ⚠':''}`;
+    const dash='<span style="color:var(--gray-300);">─</span>';
+    const bankCell=bankSum>0?fmt(bankSum):dash;
+    const etcCell=etcSum>0?fmt(etcSum):dash;
+    const m=parseInt(d.slice(5,7),10), day=parseInt(d.slice(8,10),10);
+    const dateText=`${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}`;
 
-    html+=`<tr class="diff-detail" data-detail="${d}" style="display:none;background:${headerBg};">
-      <td colspan="7" style="padding:14px 16px;font-size:12px;color:var(--gray-700);line-height:1.5;">
-        ${headerLine}
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;">
-          <div style="padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--gray-200);">
-            <div style="font-size:10px;color:var(--gray-500);margin-bottom:2px;">개시차액 (밤사이)</div>
-            <div style="font-size:14px;font-weight:800;color:${opDiff!=null&&Math.abs(opDiff)>=THRESHOLD?'#DC2626':'var(--gray-900)'};">${opDiff!=null?((opDiff>0?'+':'')+fmt(opDiff)):'— (개시 생략)'}</div>
-          </div>
-          <div style="padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--gray-200);">
-            <div style="font-size:10px;color:var(--gray-500);margin-bottom:2px;">마감차액 (영업 중)</div>
-            <div style="font-size:14px;font-weight:800;color:${Math.abs(stDiff)>=THRESHOLD?'#DC2626':'var(--gray-900)'};">${(stDiff>0?'+':'')+fmt(stDiff)}</div>
-          </div>
-        </div>
-        <div style="padding:8px 10px;background:#fff;border-radius:8px;border:1px solid var(--gray-200);margin-bottom:12px;">
-          <div style="font-size:10px;color:var(--gray-500);margin-bottom:4px;">현금 매출 분해</div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--gray-600);">현금</span><span style="font-variant-numeric:tabular-nums;font-weight:600;">${fmt(items.pos_cash||0)}원</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--gray-600);">현금영수증</span><span style="font-variant-numeric:tabular-nums;font-weight:600;">${fmt(items.pos_cash_receipt||0)}원</span></div>
-          <div style="display:flex;justify-content:space-between;padding-top:4px;margin-top:4px;border-top:1px dashed var(--gray-200);font-size:12px;"><span style="color:var(--gray-700);font-weight:700;">합계</span><span style="font-variant-numeric:tabular-nums;font-weight:800;color:#059669;">${fmt(cashRev)}원</span></div>
-        </div>
-        ${renderSection('통장 입금', '🏧', bankRows, bankSum, '통장 입금 없음')}
-        ${renderSection('현금 지출', '💵', etcRows, etcSum, '현금 지출 없음')}
-        <div style="display:flex;gap:6px;margin-top:10px;">
-          <button class="btn btn-secondary btn-sm" style="flex:1;padding:8px;font-size:12px;" data-action="gotoOpeningFromDiff|${d}">✏️ 영업개시 수정</button>
-          <button class="btn btn-secondary btn-sm" style="flex:1;padding:8px;font-size:12px;" data-action="gotoSettleCardFromDiff|${d}">📋 마감 기록 보기</button>
-        </div>
-      </td>
+    html+=`<tr style="border-top:1px solid var(--gray-100);">
+      <td style="padding:14px;text-align:left;font-weight:600;color:var(--text);">${dateText}</td>
+      <td style="padding:14px 6px;text-align:right;font-variant-numeric:tabular-nums;color:${bankSum>0?'var(--text)':'var(--gray-300)'};">${bankCell}</td>
+      <td style="padding:14px 6px;text-align:right;font-variant-numeric:tabular-nums;color:${etcSum>0?'var(--text)':'var(--gray-300)'};">${etcCell}</td>
+      <td style="padding:14px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:${diffColor};">${diffText}</td>
     </tr>`;
   });
   tbody.innerHTML=html;
-  // 빨강 행만 클릭 펼침 (그 외 행은 정보 다 보임 → 펼침 불필요)
-  tbody.querySelectorAll('.diff-row').forEach(row=>{
-    row.addEventListener('click',()=>{
-      const detail=tbody.querySelector(`.diff-detail[data-detail="${row.dataset.date}"]`);
-      if(detail) detail.style.display=detail.style.display==='none'?'table-row':'none';
-    });
-  });
 
   if(summaryEl){
-    const maxDiff=totalDiffs.reduce((a,v)=>Math.abs(v)>Math.abs(a)?v:a,0);
-    const sumDiff=totalDiffs.reduce((a,v)=>a+v,0);
-    const avg=Math.round(sumDiff/totalDiffs.length);
-    const alertCnt=totalDiffs.filter(v=>Math.abs(v)>=THRESHOLD).length;
-    const sumColor=Math.abs(sumDiff)>=THRESHOLD?'#DC2626':'#059669';
+    const sumColor=sumDiff===0?'var(--text)':(sumDiff<0?'#DC2626':'#059669');
     summaryEl.innerHTML=`
-      <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;">
-        <span style="font-size:13px;font-weight:800;color:${sumColor};font-variant-numeric:tabular-nums;">총 차액 ${sumDiff>0?'+':''}${fmt(sumDiff)}원</span>
-        <span style="color:var(--gray-500);">평균 ${avg>0?'+':''}${fmt(avg)}</span>
-        <span style="color:var(--gray-500);">최대 ${maxDiff>0?'+':''}${fmt(maxDiff)}</span>
-        <span style="color:${alertCnt>0?'#DC2626':'var(--gray-500)'};">${alertCnt>0?'⚠️ ':''}이상치 ${alertCnt}일</span>
+      <div style="text-align:center;margin:6px 0 16px;">
+        <div style="font-size:28px;font-weight:900;letter-spacing:-1px;font-variant-numeric:tabular-nums;color:${sumColor};">${sumDiff>0?'+':''}${fmt(sumDiff)}원</div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">총 차액</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="padding:12px;background:var(--gray-100);border-radius:12px;">
+          <div style="font-size:11px;color:var(--gray-500);margin-bottom:3px;">🏧 통장 입금</div>
+          <div style="font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumBank)}원</div>
+        </div>
+        <div style="padding:12px;background:var(--gray-100);border-radius:12px;">
+          <div style="font-size:11px;color:var(--gray-500);margin-bottom:3px;">💵 현금 지출</div>
+          <div style="font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumEtc)}원</div>
+        </div>
       </div>`;
   }
 }
 
-// 차액 표 → 영업개시 수정 화면 진입
-function gotoOpeningFromDiff(dateStr){
-  nav('opening');
-  setTimeout(()=>{ if(typeof editOpening==='function') editOpening(dateStr); }, 80);
-}
-// 차액 표 → 마감 카드 보기 진입
-function gotoSettleCardFromDiff(dateStr){
-  nav('settle');
-  setTimeout(()=>{ if(typeof gotoCard==='function') gotoCard(dateStr); }, 80);
-}
 
 // ─── 로열티 전용 화면 (매출 × 요율 자동 계산) ───
 async function loadRoyaltyPage(){
