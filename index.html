@@ -739,6 +739,22 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
       <path d="M12 18V6"/>
     </symbol>
+    <symbol id="i-megaphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 11l18-5v12L3 14v-3z"/>
+      <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+    </symbol>
+    <symbol id="i-document" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="9" y1="13" x2="15" y2="13"/>
+      <line x1="9" y1="17" x2="13" y2="17"/>
+    </symbol>
+    <symbol id="i-arrows-lr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="17 1 21 5 17 9"/>
+      <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+      <polyline points="7 23 3 19 7 15"/>
+      <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -1191,66 +1207,70 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <span style="color:var(--gray-400);font-size:20px;">›</span>
   </button>
-  <div class="hub-grid">
-    <button type="button" class="hub-mini" data-action="nav|vendors">
+  <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">📦 카테고리 (드래그로 순서 변경)</div>
+  <div class="hub-grid" id="expHubCatGrid">
+    <button type="button" class="hub-mini" data-card-id="vendors" data-action="nav|vendors">
       <span class="hub-mini-icon"><svg><use href="#i-building"/></svg></span>
       <span class="hub-mini-title">거래처</span>
       <span class="hub-mini-amt" id="expMiniVendor">-</span>
       <span class="hub-mini-sub" id="expMiniVendorSub">이번달</span>
     </button>
-    <button type="button" class="hub-mini" data-action="nav|fixedcost">
-      <span class="hub-mini-icon"><svg><use href="#i-home"/></svg></span>
+    <button type="button" class="hub-mini" data-card-id="fixedcost" data-action="nav|fixedcost">
+      <span class="hub-mini-icon"><svg><use href="#i-calendar"/></svg></span>
       <span class="hub-mini-title">고정비</span>
       <span class="hub-mini-amt" id="expMiniFixed">-</span>
       <span class="hub-mini-sub" id="expMiniFixedSub">월 예상</span>
     </button>
-    <button type="button" class="hub-mini" data-action="nav|wage">
+    <button type="button" class="hub-mini" data-card-id="wage" data-action="nav|wage">
       <span class="hub-mini-icon"><svg><use href="#i-clock"/></svg></span>
       <span class="hub-mini-title">인건비</span>
       <span class="hub-mini-amt" id="expMiniWage">-</span>
       <span class="hub-mini-sub" id="expMiniWageSub">이번달</span>
     </button>
-  </div>
-  <div class="hub-grid">
-    <button type="button" class="hub-mini" data-action="nav|royalty">
+    <button type="button" class="hub-mini" data-card-id="royalty" data-action="nav|royalty">
       <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
       <span class="hub-mini-title">로열티</span>
       <span class="hub-mini-amt" id="expMiniRoyalty">-</span>
       <span class="hub-mini-sub" id="expMiniRoyaltySub">매출 × 요율</span>
     </button>
-    <button type="button" class="hub-mini" data-action="goCategoryDetail|마케팅">
-      <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
+    <button type="button" class="hub-mini" data-card-id="marketing" data-action="goCategoryDetail|마케팅">
+      <span class="hub-mini-icon"><svg><use href="#i-megaphone"/></svg></span>
       <span class="hub-mini-title">마케팅</span>
       <span class="hub-mini-amt" id="expMiniMarketing">-</span>
       <span class="hub-mini-sub" id="expMiniMarketingSub">이번달</span>
     </button>
-    <button type="button" class="hub-mini" data-action="goCategoryDetail|세금">
-      <span class="hub-mini-icon"><svg><use href="#i-receipt"/></svg></span>
+    <button type="button" class="hub-mini" data-card-id="tax" data-action="goCategoryDetail|세금">
+      <span class="hub-mini-icon"><svg><use href="#i-document"/></svg></span>
       <span class="hub-mini-title">세금</span>
       <span class="hub-mini-amt" id="expMiniTax">-</span>
       <span class="hub-mini-sub" id="expMiniTaxSub">이번달</span>
     </button>
   </div>
-  <div class="hub-grid">
-    <button type="button" class="hub-mini" data-action="nav|explist">
-      <span class="hub-mini-icon"><svg><use href="#i-card"/></svg></span>
-      <span class="hub-mini-title">계좌·카드</span>
-      <span class="hub-mini-amt" id="expMiniMydata">-</span>
-      <span class="hub-mini-sub" id="expMiniMydataSub">이번달 출입</span>
-    </button>
-    <button type="button" class="hub-mini" data-action="nav|recon">
-      <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
-      <span class="hub-mini-title">정산 대조</span>
-      <span class="hub-mini-amt" id="expMiniRecon">-</span>
-      <span class="hub-mini-sub" id="expMiniReconSub">검토 필요</span>
-    </button>
-    <button type="button" class="hub-mini" data-action="nav|reserve">
-      <span class="hub-mini-icon"><svg><use href="#i-piggy"/></svg></span>
-      <span class="hub-mini-title">예비비</span>
-      <span class="hub-mini-amt" id="expMiniReserve">-</span>
-      <span class="hub-mini-sub" id="expMiniReserveSub">잔고</span>
-    </button>
-  </div>
+  <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:18px 0 6px 4px;">🔧 도구</div>
+  <button type="button" class="hub-full" data-action="nav|explist">
+    <span class="hub-full-icon"><svg><use href="#i-card"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div class="hub-full-title">계좌·카드</div>
+      <div class="hub-full-sub" id="expMiniMydataSub">자동 수집</div>
+    </div>
+    <span style="color:var(--gray-400);font-size:20px;">›</span>
+  </button>
+  <button type="button" class="hub-full" data-action="nav|recon">
+    <span class="hub-full-icon"><svg><use href="#i-arrows-lr"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div class="hub-full-title">정산 대조</div>
+      <div class="hub-full-sub" id="expMiniReconSub">매출 vs 카드 출금</div>
+    </div>
+    <span style="color:var(--gray-400);font-size:20px;">›</span>
+  </button>
+  <button type="button" class="hub-full" data-action="nav|reserve">
+    <span class="hub-full-icon"><svg><use href="#i-piggy"/></svg></span>
+    <div style="flex:1;min-width:0;">
+      <div class="hub-full-title">예비비</div>
+      <div class="hub-full-sub" id="expMiniReserveSub">잔고</div>
+    </div>
+    <span style="color:var(--gray-400);font-size:20px;">›</span>
+  </button>
   <button type="button" class="hub-full" data-action="nav|expcat">
     <span class="hub-full-icon"><svg><use href="#i-settings"/></svg></span>
     <div style="flex:1;min-width:0;">
@@ -10469,6 +10489,51 @@ async function saveRoyaltyRate(){
   loadRoyaltyPage();
 }
 
+// ─── 지출 hub 카드 드래그 순서 (store_settings.exp_hub_order에 JSON 배열 저장) ───
+function getExpHubCardOrder(){
+  try{
+    const raw=settings?.exp_hub_order;
+    if(!raw) return null;
+    const arr=typeof raw==='string'?JSON.parse(raw):raw;
+    return Array.isArray(arr)?arr:null;
+  }catch(e){return null;}
+}
+function applyExpHubCardOrder(){
+  const order=getExpHubCardOrder();
+  if(!order||!order.length) return;
+  const grid=document.getElementById('expHubCatGrid');
+  if(!grid) return;
+  order.forEach(cardId=>{
+    const el=grid.querySelector(`[data-card-id="${cardId}"]`);
+    if(el) grid.appendChild(el);
+  });
+}
+function initExpHubSortable(){
+  if(!window.Sortable) return;
+  const grid=document.getElementById('expHubCatGrid');
+  if(!grid||grid._sortableInited) return;
+  grid._sortableInited=true;
+  new Sortable(grid,{
+    animation:150,
+    delay:300,            // long-press 300ms — 일반 탭(카드 진입)과 구분
+    delayOnTouchOnly:true,
+    touchStartThreshold:5,
+    ghostClass:'drag-ghost',
+    onEnd:saveExpHubCardOrder
+  });
+}
+async function saveExpHubCardOrder(){
+  if(!currentStore) return;
+  const grid=document.getElementById('expHubCatGrid');
+  if(!grid) return;
+  const ids=Array.from(grid.querySelectorAll('[data-card-id]')).map(el=>el.getAttribute('data-card-id'));
+  const json=JSON.stringify(ids);
+  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,exp_hub_order:json},{onConflict:'store_id'});
+  if(error){console.error('[exp_hub_order]',error);toast('순서 저장 실패','warn');return;}
+  if(typeof settings==='object'&&settings) settings.exp_hub_order=json;
+  toast('순서 저장됨','success');
+}
+
 // ─── 지출 허브: 카드별 동적 정보 ───
 async function loadExpHubData(){
   if(!currentStore) return;
@@ -10542,26 +10607,26 @@ async function loadExpHubData(){
     setText('expMiniWage', fmt(sum));
     setText('expMiniWageSub', `${emps.size}명`);
   }catch(e){setText('expMiniWage','-');}
-  // 계좌·카드: mydata_transactions 이번달
+  // 계좌·카드: hub-full sub에 통합 표시
   try{
     const{count}=await sb.from('mydata_transactions').select('id',{count:'exact',head:true}).eq('store_id',sid).gte('tx_date',start).lte('tx_date',end);
-    setText('expMiniMydata', String(count||0));
-    setText('expMiniMydataSub', '건');
-  }catch(e){setText('expMiniMydata','-');}
-  // 정산 대조: reconciliation status='pending' count
+    setText('expMiniMydataSub', count?`이번달 ${count}건 자동 수집`:'자동 수집');
+  }catch(e){setText('expMiniMydataSub','자동 수집');}
+  // 정산 대조: hub-full sub에 통합 표시
   try{
     const{count}=await sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending');
-    setText('expMiniRecon', String(count||0));
-    setText('expMiniReconSub', '건 검토 필요');
-  }catch(e){setText('expMiniRecon','-');}
-  // 예비비 잔고
+    setText('expMiniReconSub', count?`${count}건 검토 필요`:'매출 vs 카드 출금');
+  }catch(e){setText('expMiniReconSub','매출 vs 카드 출금');}
+  // 예비비 잔고: hub-full sub에 통합 표시
   try{
     if(typeof calcReserveBalance==='function'){
       const bal=await calcReserveBalance();
-      setText('expMiniReserve', fmt(bal||0));
-      setText('expMiniReserveSub','잔고');
+      setText('expMiniReserveSub', bal!=null?`잔고 ${fmt(bal||0)}원`:'잔고');
     }
-  }catch(e){setText('expMiniReserve','-');}
+  }catch(e){setText('expMiniReserveSub','잔고');}
+  // hub 그리드 카드 순서 적용 + 드래그 정렬 초기화
+  applyExpHubCardOrder();
+  initExpHubSortable();
   // 카테고리: 활성 개수
   try{
     const list=(expCategories||[]).filter(c=>c.is_active!==false);
