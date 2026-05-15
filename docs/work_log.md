@@ -4,6 +4,61 @@
 
 ---
 
+## [2026-05-15 (대형 세션)] 식자재 미궁 → 시간대 → 거래처 FK 갈아엎기 → 카테고리 표시 (PR #109~#121)
+
+### 머지된 PR 13개
+| # | 작업 |
+|---|---|
+| 109 | 고정비 차트 그룹 누락 + 영수증 에러 진단 로그 |
+| 110 | receipts.price 42703 → price/count 제거 + mydata 디버그 강화 |
+| 111 | docs 정리 (식자재 마이그레이션 + price 제거 기록) |
+| 112 | 차트 그룹화 하드코딩 갈아엎기 (헌법 10조 2번) |
+| 113 | 시간대 버그 8곳 + 차액 카드 2x2 그리드 + 헌법 1-7 신설 |
+| 114 | 거래처 상세 진입 시 다른 거래처 주문 깜빡임 fix |
+| 115 | 주문 입력 단가/수량 + 자동 곱셈 (DB ALTER) |
+| 116 | 시간대 버그 남은 30곳 일괄 (헌법 11조) |
+| 117 | 금액 input 9개 천단위 콤마 일관 적용 |
+| 118 | 거래처 카테고리 select 하드코딩 1차 제거 (1단 동적) |
+| 119 | 거래처 2단 select + category_id FK 도입 (DB ALTER) |
+| 120 | calcExpense·reconciliation·필터 FK 매칭 갈아엎기 |
+| 121 | 0원 카테고리도 0%로 차트 표시 |
+
+### 사장님 직접 실행 SQL
+1. `expense_categories` 식자재 트리 마이그레이션 (식자재/육류/야채/공산품 → composite, vendor_category 설정)
+2. `daily_opening` 5/15 row previous_close_total 정정 (897,100 → 1,109,200)
+3. `expense_categories` 주류 카테고리 정상화 (receipts → vendor_orders, vendor_category='주류')
+4. `vendor_orders` ALTER — unit_price INT, quantity NUMERIC
+5. `vendors` ALTER — category_id UUID FK to expense_categories (ON DELETE SET NULL)
+6. `daily_opening` 5/13 row 등 옛 잔재 row UPDATE (있다면 정정)
+
+### 헌법 변경
+- **1-7 신설**: 추측 절대 금지 (사장님 도메인 용어 모르면 즉시 grep, 추측 답 금지)
+
+### business_rules.md 추가
+- **#10**: 영업개시 생략 가능 + 이월금 fallback (마감→영업개시→마감 vs 마감→마감)
+
+### dev_lessons.md 추가
+- **#53**: 추측 답변 신뢰 손상 사례 (물품대금/카드대금/배당금 추정 사건)
+- **#54**: `toISOString().split('T')[0]` 시간대 트랩 + `ymdLocal()` 헬퍼
+
+### 핵심 변경 결정사항
+1. **카테고리 표준화** — `expense_categories`가 _모든 그룹의 단일 진실의 원천_. 색·이름·순서 사장님 자유 관리. SaaS 매장 가입 시 라벨 자유.
+2. **vendors.category_id FK** — 텍스트 매칭 폐기, FK 매칭 일관. 카테고리 이름 변경에도 매칭 안 깨짐.
+3. **시간대 헬퍼** — `ymdLocal()` 도입. 모든 `toISOString().split('T')[0]` 제거 (주석 1줄만 보존).
+4. **0원 카테고리 표시** — 사장님이 신규 카테고리 추가 후 데이터 없어도 차트 리스트에 등장 (0%).
+
+### 사장님 다음 작업 (영업 중 본인 페이스로)
+- 옛 거래처 9개 (식자재 4 + 직구 5) 편집창에서 1개씩 재분류 → category_id 채워짐 → 가마감 식자재 합산 정상화
+- 음료 카테고리 활용: 거래처 _음료_로 분류 + 거래처 주문 입력 시 단가·수량·금액
+
+### 미해결 (다음 세션 후보)
+- 카테고리 화면의 _데이터 소스_ 라벨 사용자 친화 표현 (옵션 — 사장님이 필요 시)
+- `vendorReclassSheet` 옵션 동적화 (지금은 옛 하드코딩 일부 남음)
+- 영수증 row 단가/수량 입력 → DB 저장 패턴 정리 (현재 c-u/c-q UI는 있지만 DB 컬럼 없음)
+- classification_rules 시드의 '배당' 키워드 (모든 매장 강제) — SaaS 확장 시 정리 필요
+
+---
+
 ## [2026-05-15] 식자재 12,594,000원 미궁 추적 + DB 마이그레이션 (대형)
 
 **브랜치**: `claude/dash-fix-fixedgroup-receipt-debug` (PR #109), `claude/receipts-price-fix-debug2` (PR #110)
