@@ -507,6 +507,21 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 매출대비 비교 문구 행 (카테고리와 순수익 사이) */
 .summ-tbl tr.mom-cat-row td{padding:4px 0 8px;border-bottom:none;}
 
+/* ─ 거래처 주문 리스트 표 (2026-05-15 카드 → 표, 데이터 많아도 한눈에) */
+.order-tbl{width:100%;border-collapse:collapse;table-layout:fixed;}
+.order-tbl th{font-size:10px;font-weight:700;color:var(--gray-400);text-align:left;padding:6px 4px;border-bottom:1px solid var(--gray-200);text-transform:uppercase;letter-spacing:0.3px;}
+.order-tbl th:nth-child(3){text-align:right;}
+.order-tbl tr.ord-row{cursor:pointer;}
+.order-tbl tr.ord-row:active td{background:var(--gray-100);}
+.order-tbl tr.ord-row td{padding:9px 4px;border-bottom:1px solid var(--gray-100);font-size:12px;vertical-align:middle;}
+.order-tbl .ord-date{font-size:11px;font-weight:700;color:var(--gray-600);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.order-tbl .ord-item{font-weight:500;color:var(--gray-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.order-tbl .ord-item .ord-memo{font-size:11px;color:var(--gray-500);}
+.order-tbl .ord-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.order-tbl .ord-act{text-align:center;padding:0;}
+.order-tbl .ord-del-btn{background:transparent;border:none;cursor:pointer;font-size:14px;padding:6px;color:var(--gray-400);line-height:1;}
+.order-tbl .ord-del-btn:active{color:var(--danger);}
+
 /* ─ 대시보드 월요약 레거시 (토스 스타일) */
 .dash-summ-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--gray-100);}
 .dash-summ-row:last-child{border-bottom:none;}
@@ -1939,7 +1954,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <div id="vdCategory" style="font-size:11px;color:var(--gray-500);"></div>
       </div>
       <button id="vdEditBtn" class="btn btn-secondary btn-sm" style="padding:6px 10px;font-size:12px;display:none;" data-action="editVendorFromDetail">편집</button>
-      <button id="vdToggleBtn" class="btn btn-danger btn-sm" style="padding:6px 10px;font-size:12px;display:none;" data-action="toggleVendorFromDetail">거래종료</button>
+      <!-- 거래종료 버튼은 편집 시트 안으로 이동 (사장님 요청 2026-05-15) -->
     </div>
     <!-- 거래처 선택 드롭다운은 헤더(vdName)에 고정된 거래처와 짬뽕되는 UX라서 숨김.
          거래처 전환은 ‹ 목록 버튼으로 돌아가서 다시 선택. value는 헤더 vendorId와 동기화되어 loadVendorOrders가 그대로 사용. -->
@@ -1951,8 +1966,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <span id="vOrderMonth" class="val" style="font-size:13px;white-space:nowrap;">-</span>
       </div>
     </div>
+    <!-- 주문 수동 입력 버튼은 데이터 위 (사장님 요청 2026-05-15 — 데이터 많으면 스크롤 부담) -->
+    <button class="btn btn-primary btn-full" style="margin-bottom:10px;" data-action="openAddOrderSheet">+ 주문 수동 입력</button>
     <div id="orderListData"></div>
-    <button class="btn btn-primary btn-full" style="margin-top:4px;" data-action="openAddOrderSheet">+ 주문 수동 입력</button>
   </div>
   <!-- 📊 대조 & 단가 (거래처 장표 ↔ 내 송금 일별 대조 + 품목별 월 비교) -->
   <div id="vendorCompare" style="display:none;">
@@ -3132,7 +3148,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveVendor">저장</button>
   </div>
-  <!-- 편집 모드에서만 표시 — 잘못 추가한 거래처 완전 삭제 (주문 0건일 때만) -->
+  <!-- 편집 모드에서만 표시 — 거래종료/재개 토글 + 완전 삭제 (사장님 요청 2026-05-15) -->
+  <button id="vendorToggleBtn" class="btn btn-secondary" style="display:none;width:100%;padding:12px;margin-top:10px;font-size:13px;" data-action="toggleVendorFromSheet">거래종료</button>
   <button id="vendorDeleteBtn" class="btn btn-danger" style="display:none;width:100%;padding:12px;margin-top:8px;font-size:13px;" data-action="hardDeleteVendor">🗑 완전 삭제 (잘못 추가한 거래처)</button>
 </div>
 
@@ -7643,38 +7660,36 @@ async function openVendorDetail(vendorId){
   const nm=document.getElementById('vdName');
   const cat=document.getElementById('vdCategory');
   const editBtn=document.getElementById('vdEditBtn');
-  const toggleBtn=document.getElementById('vdToggleBtn');
   if(nm) nm.textContent=v?.name||'-';
-  if(cat) cat.textContent=v?.category||'-';
+  if(cat) cat.textContent=(v?.category||'-')+(v?.is_active===false?' · 거래종료':'');
   if(editBtn){
     editBtn.style.display='';
     editBtn.dataset.vid=vendorId;
   }
-  if(toggleBtn){
-    toggleBtn.style.display='';
-    toggleBtn.dataset.vid=vendorId;
-    if(v?.is_active){
-      toggleBtn.textContent='거래종료';
-      toggleBtn.classList.remove('btn-success');
-      toggleBtn.classList.add('btn-danger');
-    } else {
-      toggleBtn.textContent='재개';
-      toggleBtn.classList.remove('btn-danger');
-      toggleBtn.classList.add('btn-success');
-    }
-  }
+  // vdToggleBtn은 편집 시트 안으로 이동됨 (사장님 요청 2026-05-15)
   // vendorTab('orders')에서 이미 loadVendorOrders 호출됨 — 중복 호출 제거 (2026-05-15)
 }
 function editVendorFromDetail(){
   const btn=document.getElementById('vdEditBtn');
   if(btn?.dataset.vid) openEditVendorSheet(btn.dataset.vid);
 }
-function toggleVendorFromDetail(){
-  const btn=document.getElementById('vdToggleBtn');
-  if(!btn?.dataset.vid) return;
-  const v=vendors.find(x=>x.id===btn.dataset.vid);
+// 편집 시트 안 거래종료/재개 토글 (사장님 요청 2026-05-15)
+async function toggleVendorFromSheet(){
+  if(!guardStore()) return;
+  const eid=document.getElementById('editVendorId').value;
+  if(!eid) return;
+  const v=vendors.find(x=>x.id===eid);
   if(!v) return;
-  toggleVendor(v.id, !v.is_active);
+  const msg=v.is_active
+    ? '거래종료 처리하시겠습니까?\n(기존 거래내역은 유지됩니다)'
+    : '거래처를 재개하시겠습니까?';
+  if(!confirm(msg)) return;
+  setLoad(true, v.is_active?'거래종료 중...':'재개 중...');
+  const{error}=await sb.from('vendors').update({is_active:!v.is_active}).eq('id',eid).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('변경', error);
+  closeAllSheets();
+  await loadVendors();
 }
 // 거래처 카테고리 — 2단 select (대분류·소분류) + FK 연결 (헌법 10조 2번, 영수증 패턴)
 // 2026-05-15: 기존 1단 텍스트 select 갈아엎기 (refreshVendorCategoryOptions 제거)
@@ -7738,6 +7753,8 @@ function openAddVendorSheet(){
   document.getElementById('editVendorId').value='';
   const delBtn=document.getElementById('vendorDeleteBtn');
   if(delBtn) delBtn.style.display='none'; // 신규 추가 시 삭제 버튼 숨김
+  const togBtn=document.getElementById('vendorToggleBtn');
+  if(togBtn) togBtn.style.display='none'; // 신규 추가 시 거래종료 버튼 숨김
   openSheet('addVendorSheet');
 }
 function openEditVendorSheet(id){
@@ -7749,6 +7766,20 @@ function openEditVendorSheet(id){
   document.getElementById('editVendorId').value=v.id;
   const delBtn=document.getElementById('vendorDeleteBtn');
   if(delBtn) delBtn.style.display=''; // 편집 시 삭제 버튼 노출
+  // 거래종료 버튼 라벨/색 (is_active 따라)
+  const togBtn=document.getElementById('vendorToggleBtn');
+  if(togBtn){
+    togBtn.style.display='';
+    if(v.is_active){
+      togBtn.textContent='거래종료';
+      togBtn.classList.remove('btn-success');
+      togBtn.classList.add('btn-danger');
+    } else {
+      togBtn.textContent='재개';
+      togBtn.classList.remove('btn-danger');
+      togBtn.classList.add('btn-success');
+    }
+  }
   // category_id 기준 복원 (자식이면 부모 + 자식 선택, 부모면 부모만)
   const cat=v.category_id?(expCategories||[]).find(c=>c.id===v.category_id):null;
   if(cat){
@@ -7886,12 +7917,36 @@ async function loadVendorOrders(){
   let query=sb.from('vendor_orders').select('*,vendors(name)').eq('store_id',currentStore.id).gte('order_date',monthStr+'-01').lte('order_date',monthStr+'-31').order('order_date',{ascending:false});
   if(vendorId)query=query.eq('vendor_id',vendorId);
   const{data}=await query;
-  document.getElementById('orderListData').innerHTML=data?.length?data.map(r=>`
-    <div style="background:var(--gray-100);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;font-weight:700;">${r.vendors?.name||'-'}</span><span style="font-size:13px;font-weight:700;">${fmt(r.amount)}원</span></div>
-      <div style="font-size:12px;color:var(--gray-600);margin-top:4px;">${r.order_date} ${r.item?'· '+r.item:''} ${r.memo?'· '+r.memo:''} <span class="badge badge-gray" style="font-size:10px;">${({manual:'수동',upload:'업로드'})[r.source]||r.source}</span></div>
-      <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px;"><button class="btn btn-secondary" style="padding:5px 12px;font-size:11px;" data-action="openEditOrderSheet|${r.id}">편집</button><button class="btn btn-danger" style="padding:5px 12px;font-size:11px;" data-action="deleteOrder|${r.id}">🗑 삭제</button></div>
-    </div>`).join(''):'<div class="empty-state"><div class="empty-icon">📭</div><p>주문내역이 없습니다</p></div>';
+  if(!data?.length){
+    document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>주문내역이 없습니다</p></div>';
+    return;
+  }
+  // 표 형식 (사장님 요청 2026-05-15 — 데이터 많아도 한눈에)
+  // 거래처 상세에서 진입(vendorId 있음)이면 거래처명 컬럼 생략, 전체 조회면 표시
+  const showVendor = !vendorId;
+  let html='<table class="order-tbl"><colgroup>'
+    +'<col style="width:56px"/>'
+    +(showVendor?'<col style="width:24%"/>':'')
+    +'<col/>'
+    +'<col style="width:84px"/>'
+    +'<col style="width:32px"/>'
+    +'</colgroup><thead><tr>'
+    +'<th>날짜</th>'
+    +(showVendor?'<th>거래처</th>':'')
+    +'<th>품목/메모</th><th>금액</th><th></th></tr></thead><tbody>';
+  data.forEach(r=>{
+    const dateShort=(r.order_date||'').slice(5).replace('-','/');
+    const itemTxt=(r.item||'')+(r.memo?` <span class="ord-memo">· ${r.memo}</span>`:'')||'-';
+    html+=`<tr class="ord-row" data-action="openEditOrderSheet|${r.id}">`
+      +`<td class="ord-date">${dateShort||'-'}</td>`
+      +(showVendor?`<td class="ord-item">${r.vendors?.name||'-'}</td>`:'')
+      +`<td class="ord-item">${itemTxt}</td>`
+      +`<td class="ord-amt">${fmt(r.amount)}</td>`
+      +`<td class="ord-act"><button class="ord-del-btn" data-action="deleteOrder|${r.id}" title="삭제">🗑</button></td>`
+      +`</tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('orderListData').innerHTML=html;
 }
 // 주문 입력/편집 공통 시트 — editOrderId가 있으면 편집, 없으면 신규
 // currentVendorDetailId가 있으면 그 거래처로 고정 입력 (다른 거래처로 입력 못 함)
@@ -7979,11 +8034,18 @@ async function saveOrder(){
   setLoad(false);
   if(error)return errToast(editOrderId?'수정':'저장', error);
   toast(editOrderId?'수정됐어요':'저장됐어요','success');
+  // 즉시 캐시 갱신 (사장님 체감 — 추가 케이스 정확, await 안 기다림)
+  if(!editOrderId){
+    const _vid=vendorId;
+    if(!vendorMonthTotals[_vid]) vendorMonthTotals[_vid]={total:0,count:0};
+    vendorMonthTotals[_vid].total += amt;
+    vendorMonthTotals[_vid].count += 1;
+  }
   editOrderId=null;
   closeAllSheets();
-  // vendorMonthTotals 재계산 — 거래처 카드/리스트 합계 즉시 반영 (사장님 호소: stale)
-  await loadVendors();
   loadVendorOrders();
+  // 백그라운드 정합 (수정 차이 반영 + 거래처 리스트 렌더, await 없이 화면은 즉시 닫힘)
+  loadVendors();
 }
 
 // 거래처 파일 업로드 (컬럼 매칭)
