@@ -7781,13 +7781,20 @@ async function saveVendor(){
   // category 텍스트 = vendor_category (calcExpense composite filter 호환). 없으면 카테고리 name.
   const categoryText=cat?.vendor_category||cat?.name||'';
   const eid=document.getElementById('editVendorId').value;
+  // 진단 토스트 (임시) — 사장님 "저장 안 됨" 증상 추적
+  toast(`[진단] ${eid?'수정':'추가'} 시도: ${name} / ${categoryText}`,'info',3000);
   setLoad(true,'저장 중...');
   const payload={name,category:categoryText,category_id};
   const{error}=eid
     ? await sb.from('vendors').update(payload).eq('id',eid)
     : await sb.from('vendors').insert({...payload,store_id:currentStore.id});
   setLoad(false);
-  if(error) return errToast('저장', error);
+  if(error){
+    // 자세한 진단 토스트
+    toast(`[진단] DB 에러: ${error.code||'?'} - ${(error.message||'').slice(0,80)}`,'error',8000);
+    return errToast('저장', error);
+  }
+  toast('[진단] 저장 성공 → 리스트 새로고침','info',2000);
   closeAllSheets();
   await loadVendors();
 }
