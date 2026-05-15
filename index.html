@@ -3235,7 +3235,7 @@ let selectedEmpId = null, selectedEmpCtx = 'att';
 let currentTargetRowIdx = -1, currentMatchStagingIdx = -1;
 let datePickerCtx = '', timePickerCtx = '';
 let b64 = '', rowCount = 0, stagingData = [];
-let cardDateStr = new Date().toISOString().split('T')[0];
+let cardDateStr = ymdLocal(new Date());
 let currentEmp = null, isManager = false, isOwner = false;
 // auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
 // ─── VIEWAS-START — 시점 미리보기 격리 (제거 가이드: dev_lessons.md #46) ───
@@ -3762,7 +3762,7 @@ function buildReceiptRow(i={}) {
     <td>${ruleBadge}<button type="button" class="c-cBtn${emptyCls}" data-action="openReceiptCatPicker|${idx}">${label}</button></td>
     <input type="hidden" class="c-u" value="${i.unitPrice||''}">
     <input type="hidden" class="c-q" value="${i.qty||1}">
-    <input type="hidden" class="c-d" value="${i.date||new Date().toISOString().split('T')[0]}">
+    <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
   </tr>`;
 }
 // ─── 금액 입력: 천단위 콤마 자동 ───
@@ -3777,7 +3777,7 @@ function onReceiptAmountInput(inputEl){
   const diff=formatted.length-before.length;
   try{ inputEl.setSelectionRange(pos+diff, pos+diff); }catch(e){}
 }
-function addReceiptRow(){document.getElementById('resultArea').style.display='block';document.getElementById('resTable').insertAdjacentHTML('beforeend',buildReceiptRow({date:new Date().toISOString().split('T')[0]}));}
+function addReceiptRow(){document.getElementById('resultArea').style.display='block';document.getElementById('resTable').insertAdjacentHTML('beforeend',buildReceiptRow({date:ymdLocal(new Date())}));}
 function resetReceipt(){location.reload();}
 function openReasonSheet(idx){currentTargetRowIdx=idx;openSheet('reasonSheet');}
 function selectReason(r){
@@ -3926,7 +3926,7 @@ function openReceiptEdit(id){
   if(!r){toast('영수증을 찾을 수 없어요','error');return;}
   rcpEditingId=r.id;
   rcpEditingCategory=r.category||'';
-  document.getElementById('reDate').value=r.receipt_date||new Date().toISOString().split('T')[0];
+  document.getElementById('reDate').value=r.receipt_date||ymdLocal(new Date());
   document.getElementById('reVendor').value=r.vendor||'';
   document.getElementById('reItem').value=r.item||'';
   document.getElementById('reAmount').value=r.total_price||0;
@@ -4035,7 +4035,7 @@ function attTab(tab,el){
 }
 function initAttDate(){
   const el=document.getElementById('vDate');
-  if(el){el.innerText=new Date().toISOString().split('T')[0];el.classList.remove('empty');}
+  if(el){el.innerText=ymdLocal(new Date());el.classList.remove('empty');}
   const rEl=document.getElementById('vRest');
   if(rEl) rEl.value=settings.auto_rest_min||0;
   // 현재 시간 시계 시작
@@ -4062,7 +4062,7 @@ async function loadTodayRecord(){
   if(!currentStore) return;
   const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
   if(!empId&&!isManager) return;
-  const today=new Date().toISOString().split('T')[0];
+  const today=ymdLocal(new Date());
   const query=isManager&&selectedEmpId
     ?sb.from('attendance_logs').select('*,employees(name)').eq('store_id',currentStore.id).eq('employee_id',selectedEmpId).eq('work_date',today).maybeSingle()
     :currentEmp
@@ -4165,7 +4165,7 @@ async function checkIn(){
     }
   }
   if(devCheck.firstReg) toast('이 기기가 출퇴근 기기로 등록됐습니다.','success');
-  const now=new Date();const today=now.toISOString().split('T')[0];
+  const now=new Date();const today=ymdLocal(now);
   const{data:exist}=await sb.from('attendance_logs').select('id,app_in').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
   if(exist?.app_in){toast('이미 출근 처리됐습니다. 출근: '+new Date(exist.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}),'warn');return;}
   setLoad(true,'출근 처리 중...');
@@ -4203,12 +4203,12 @@ async function checkOut(){
       toast(devCheck.msg,'error');return;
     }
   }
-  const now=new Date();const today=now.toISOString().split('T')[0];
+  const now=new Date();const today=ymdLocal(now);
   let{data:record}=await sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
   // 자정 넘긴 경우: 오늘 기록 없으면 어제 기록 확인
   if(!record?.app_in){
     const yd=new Date(now);yd.setDate(yd.getDate()-1);
-    const yesterday=yd.toISOString().split('T')[0];
+    const yesterday=ymdLocal(yd);
     const{data:yRecord}=await sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',yesterday).maybeSingle();
     if(yRecord?.app_in&&!yRecord?.app_out) record=yRecord;
   }
@@ -4622,14 +4622,14 @@ async function deleteAttendance(){
 let myAttWeekStart='';
 function moveMyAttWeek(dir){
   const d=new Date(myAttWeekStart);d.setDate(d.getDate()+dir*7);
-  myAttWeekStart=d.toISOString().split('T')[0];
+  myAttWeekStart=ymdLocal(d);
   loadMyAttGantt();
 }
 async function loadMyAttGantt(){
   if(!currentStore||!currentEmp) return;
-  if(!myAttWeekStart) myAttWeekStart=getWeekStart(new Date().toISOString().split('T')[0]);
+  if(!myAttWeekStart) myAttWeekStart=getWeekStart(ymdLocal(new Date()));
   const days=getWeekDays(myAttWeekStart);
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=ymdLocal(new Date());
   document.getElementById('myAttWeekLabel').innerText=`${days[0].label} ~ ${days[6].label}`;
 
   // 이번 주 내 근태 데이터 조회
@@ -4765,7 +4765,7 @@ async function handleCapsUpload(input){
       const rawName=String(r['이름']||'').trim();
       const rawCapsId=String(r['사용자ID']||'').trim();
       const rawDate=r['발생일자'],rawTime=r['발생시각'],rawMode=String(r['모드']||'').trim(),rawAuth=String(r['인증결과']||'').trim();
-      let parsedDate=null;if(rawDate){const d=new Date(rawDate);if(!isNaN(d))parsedDate=d.toISOString().split('T')[0];}
+      let parsedDate=null;if(rawDate){const d=new Date(rawDate);if(!isNaN(d))parsedDate=ymdLocal(d);}
       let parsedTime=null;if(rawTime){const t=String(rawTime).trim();if(/^\d{1,2}:\d{2}/.test(t))parsedTime=t.slice(0,5)+':00';}
       const isValidAuth=rawAuth.includes('O');
       const matchedEmp=employees.find(e=>e.caps_id===rawCapsId);
@@ -5055,14 +5055,14 @@ function getWeekStart(dateStr){
   const day=d.getDay();// 0=일
   const diff=day===0?-6:1-day;// 월요일 기준
   d.setDate(d.getDate()+diff);
-  return d.toISOString().split('T')[0];
+  return ymdLocal(d);
 }
 function getWeekDays(startStr){
   const days=[];const d=new Date(startStr);
   const dayNames=['일','월','화','수','목','금','토'];
   for(let i=0;i<7;i++){
     const s=new Date(d);s.setDate(d.getDate()+i);
-    days.push({date:s.toISOString().split('T')[0],label:`${s.getMonth()+1}/${s.getDate()}(${dayNames[s.getDay()]})`});
+    days.push({date:ymdLocal(s),label:`${s.getMonth()+1}/${s.getDate()}(${dayNames[s.getDay()]})`});
   }
   return days;
 }
@@ -5071,7 +5071,7 @@ const parseHour=t=>{if(!t)return null;const p=String(t).split(':');return p.leng
 
 function moveGanttWeek(dir){
   const d=new Date(ganttWeekStart);d.setDate(d.getDate()+dir*7);
-  ganttWeekStart=d.toISOString().split('T')[0];
+  ganttWeekStart=ymdLocal(d);
   renderGanttWeek();
 }
 // 영업일 회전축: 매장 영업일 시작시각(06:00)부터 24시간 (06~30시 = 익일 06:00)
@@ -5081,10 +5081,10 @@ const ganttHours=Array.from({length:GANTT_SPAN},(_,i)=>i+GANTT_START);
 
 async function renderGanttWeek(){
   if(!currentStore){document.getElementById('ganttChart').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
-  if(!ganttWeekStart) ganttWeekStart=getWeekStart(new Date().toISOString().split('T')[0]);
+  if(!ganttWeekStart) ganttWeekStart=getWeekStart(ymdLocal(new Date()));
   const days=getWeekDays(ganttWeekStart);
   const endDate=days[6].date;
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=ymdLocal(new Date());
   document.getElementById('ganttWeekLabel').innerText=`${days[0].label} ~ ${days[6].label}`;
   // 요일 탭 (전체 + 7일)
   if(!ganttSelectedDay) ganttSelectedDay='all';
@@ -5104,7 +5104,7 @@ async function renderGanttWeek(){
 function renderGanttFiltered(){
   const days=window._ganttWeekDays||[];
   const allData=window._ganttWeekData||[];
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=ymdLocal(new Date());
   // 탭 active
   document.querySelectorAll('#ganttDayTabs button').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('#ganttDayTabs button').forEach(b=>{
@@ -5284,7 +5284,7 @@ async function handleSalesUpload(input){
 
     // 날짜 컬럼 있으면 오늘 날짜와 일치하는 행 찾기, 없으면 첫 행 사용
     let targetRow=rows[0];
-    const today=new Date().toISOString().split('T')[0];
+    const today=ymdLocal(new Date());
     if(colMap.settle_date!=null){
       const todayRow=rows.find(row=>{
         const vals=Object.values(row);
@@ -5578,7 +5578,7 @@ async function saveOpening(){
   if(!guardStore()) return;
   // 저장 대상 날짜 = picker 값 (수정 모드) 또는 오늘
   const picker = document.getElementById('openingDatePicker');
-  const today = new Date().toISOString().split('T')[0];
+  const today = ymdLocal(new Date());
   const targetDate = (picker && picker.value) ? picker.value : today;
   let actual = 0;
   const vMap = {};
@@ -6211,7 +6211,7 @@ async function deleteSettlement(dateStr){
   toast('정산 기록 삭제됐어요','success');
   loadSettleCard(dateStr);
 }
-async function moveCardDate(dir){const d=new Date(cardDateStr);d.setDate(d.getDate()+dir);await loadSettleCard(d.toISOString().split('T')[0]);}
+async function moveCardDate(dir){const d=new Date(cardDateStr);d.setDate(d.getDate()+dir);await loadSettleCard(ymdLocal(d));}
 async function onCardDateChange(el){const v=el.value;if(v) await loadSettleCard(v);}
 
 // ══════════════════════════════════════════
@@ -7400,7 +7400,7 @@ async function handleVendorUpload(input){
       const amount=parseNum(getVal(colMap.amount));
       if(!amount) return null;
       return {
-        order_date:parseDate(getVal(colMap.order_date))||new Date().toISOString().split('T')[0],
+        order_date:parseDate(getVal(colMap.order_date))||ymdLocal(new Date()),
         item:getVal(colMap.item)||null,
         amount,
         quantity:colMap.quantity!=null?parseNum(getVal(colMap.quantity))||null:null,
@@ -7682,7 +7682,7 @@ async function saveEmployee(){
   const{error}=eid?await sb.from('employees').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('employees').insert(payload);
   setLoad(false);if(error)return errToast('저장', error);closeAllSheets();await loadEmployees();
 }
-async function toggleEmp(id,active){if(!confirm(active?'복직?':'퇴사?'))return;await sb.from('employees').update({is_active:active,resign_date:active?null:new Date().toISOString().split('T')[0]}).eq('id',id).eq('store_id',currentStore.id);await loadEmployees();}
+async function toggleEmp(id,active){if(!confirm(active?'복직?':'퇴사?'))return;await sb.from('employees').update({is_active:active,resign_date:active?null:ymdLocal(new Date())}).eq('id',id).eq('store_id',currentStore.id);await loadEmployees();}
 
 // ─── 서류 첨부 업로드/삭제 ───
 const DOC_COL_MAP={Contract:'doc_contract',Health:'doc_health_cert',Minor:'doc_minor_consent',Foreigner:'doc_foreigner_id'};
@@ -7917,7 +7917,7 @@ function renderSpecialWageList(){
       <button class="btn btn-danger btn-sm" data-action="removeSpecialWageRow|${i}">✕</button>
     </div>`).join('');
 }
-function addSpecialWageRow(){specialWageRows.push({date:new Date().toISOString().split('T')[0],amount:0,memo:''});renderSpecialWageList();}
+function addSpecialWageRow(){specialWageRows.push({date:ymdLocal(new Date()),amount:0,memo:''});renderSpecialWageList();}
 function removeSpecialWageRow(i){specialWageRows.splice(i,1);renderSpecialWageList();}
 async function saveSpecialWages(){
   if(!currentStore)return;
@@ -11497,11 +11497,11 @@ function parseDate(v){
   const numVal=typeof v==='number'?v:Number(s);
   if(!isNaN(numVal)&&numVal>40000&&numVal<60000){
     const d=new Date((numVal-25569)*86400000);
-    return d.toISOString().split('T')[0];
+    return ymdLocal(d);
   }
   // Date 객체 시도
   const d=new Date(s);
-  if(!isNaN(d)) return d.toISOString().split('T')[0];
+  if(!isNaN(d)) return ymdLocal(d);
   return null;
 }
 
@@ -12912,7 +12912,7 @@ function openManualPayment(categoryId,subKey,label,recorded,actual){
   document.getElementById('mpTargetLabel').innerText=label;
   document.getElementById('mpRecordedLabel').innerText='기록 금액: '+fmt(recorded)+'원';
   document.getElementById('mpAmount').value=actual||'';
-  document.getElementById('mpDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('mpDate').value=ymdLocal(new Date());
   document.getElementById('mpMemo').value='';
   openSheet('manualPaymentSheet');
 }
@@ -13368,7 +13368,7 @@ function renderSalesCards(){
 function openSalesAdd(){
   if(!guardStore()) return;
   const monthStr=getSalesMonthStr();
-  const today=new Date().toISOString().split('T')[0];
+  const today=ymdLocal(new Date());
   const defaultDate=today.startsWith(monthStr)?today:monthStr+'-01';
   // 이미 그 날 카드 있으면 편집 모드로
   const exists=salesDaily.find(r=>r.date===defaultDate);
