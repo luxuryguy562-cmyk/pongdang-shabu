@@ -7162,10 +7162,12 @@ function renderVendorList(){
 async function openVendorDetail(vendorId){
   // 캐시 stale 방지: vendors 배열을 항상 fresh하게 (DB의 거래처 이름·카테고리 변경이 즉시 반영)
   if(typeof loadVendors==='function') await loadVendors();
-  vendorTab('orders', null);
   currentVendorDetailId=vendorId; // 주문 입력 시 이 거래처 고정용
+  // 2026-05-15: 다른 거래처 주문이 잠깐 깜빡이던 버그 fix —
+  // sel.value 먼저 set 후 vendorTab(orders) 호출 (자동 loadVendorOrders가 올바른 vendorId 사용)
   const sel=document.getElementById('orderVendorFilter');
   if(sel) sel.value=vendorId;
+  vendorTab('orders', null);
   const v=vendors.find(x=>x.id===vendorId);
   const nm=document.getElementById('vdName');
   const cat=document.getElementById('vdCategory');
@@ -7190,7 +7192,7 @@ async function openVendorDetail(vendorId){
       toggleBtn.classList.add('btn-success');
     }
   }
-  if(typeof loadVendorOrders==='function') loadVendorOrders();
+  // vendorTab('orders')에서 이미 loadVendorOrders 호출됨 — 중복 호출 제거 (2026-05-15)
 }
 function editVendorFromDetail(){
   const btn=document.getElementById('vdEditBtn');
@@ -7271,6 +7273,9 @@ async function loadVendorOrders(){
   const monthStr=(ms==='-'||!ms)?new Date().toISOString().slice(0,7):ms;
   if(document.getElementById('vOrderMonth'))document.getElementById('vOrderMonth').innerText=monthStr;
   const vendorId=document.getElementById('orderVendorFilter')?.value||'';
+  // 옛 데이터 깜빡임 방지 (2026-05-15)
+  const listEl=document.getElementById('orderListData');
+  if(listEl) listEl.innerHTML='<div class="empty-state"><p style="color:var(--gray-400);">조회 중...</p></div>';
   let query=sb.from('vendor_orders').select('*,vendors(name)').eq('store_id',currentStore.id).gte('order_date',monthStr+'-01').lte('order_date',monthStr+'-31').order('order_date',{ascending:false});
   if(vendorId)query=query.eq('vendor_id',vendorId);
   const{data}=await query;
