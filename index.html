@@ -6290,51 +6290,6 @@ async function loadDashboard(){
       fixed_costs: { data: fcRes.data }
     });
 
-    // ── 2026-05-14/15 진단 로그 (식자재 출처 추적) — 콘솔에서 [DASH-DEBUG] 검색 ──
-    try {
-      const voErr=voRes2?.error, rcErr=rcRes2?.error;
-      const voList=voRes2?.data||[], rcList=rcRes2?.data||[];
-      const voSum=voList.reduce((a,o)=>a+(o.amount||0),0);
-      const rcSum=rcList.reduce((a,r)=>a+(r.total_price||0),0);
-      // 잔재 비활성 카테고리 + mydata 거래 추적 (2026-05-15 추가)
-      const cats=expCategories||[];
-      const inactive=cats.filter(c=>c.is_active===false);
-      const expResultsByName=Object.fromEntries(expResults.map(r=>[r.name,r.amount]));
-      // mydata 별도 1회 SELECT (디버그용)
-      let mdRows=[];
-      try {
-        const{data:md}=await sb.from('mydata_transactions').select('amount,category_id,sub_category,attribution_month,tx_date,exclude_from_settlement').eq('store_id',sid);
-        mdRows=(md||[]).filter(t=>!t.exclude_from_settlement).filter(t=>{
-          if(t.attribution_month===ym) return true;
-          if(!t.attribution_month && t.tx_date>=start && t.tx_date<=end) return true;
-          return false;
-        });
-      } catch(e){ /* ignore */ }
-      const mdByCat={};
-      mdRows.forEach(t=>{
-        const k=t.category_id||'(no_cat)';
-        if(!mdByCat[k]) mdByCat[k]={sum:0,count:0};
-        mdByCat[k].sum+=Math.abs(t.amount||0);
-        mdByCat[k].count++;
-      });
-      // 카테고리별 mydata 매핑
-      const mdAnnotated=Object.entries(mdByCat).map(([cid,v])=>{
-        const c=cats.find(c=>c.id===cid);
-        return {category_id:cid, name:c?.name||'(unknown)', source:c?.data_source, is_active:c?.is_active, mydata_sum:v.sum, mydata_count:v.count};
-      });
-      console.log('[DASH-DEBUG]', {
-        ym, dashMode, store_id: sid,
-        vendor_orders: { rows: voList.length, sum: voSum, error: voErr },
-        receipts_normal: { rows: rcList.length, sum: rcSum, error: rcErr },
-        mydata: { total_rows: mdRows.length, byCategory: mdAnnotated },
-        expCategories_total: cats.length,
-        expCategories_inactive: inactive.length,
-        inactiveCats: inactive.map(c=>({id:c.id, name:c.name, source:c.data_source})),
-        expResults: expResults.map(r=>({name:r.name, source:r.source, amount:r.amount})),
-        '식자재_그룹_의심': expResults.filter(r=>r.amount>0 && (r.source==='composite' || r.source==='vendor_orders')).map(r=>({name:r.name, amount:r.amount}))
-      });
-    } catch(e) { console.warn('[DASH-DEBUG] log failed', e); }
-
     // ══ 1. 일별 매출 맵 + 매출 집계 ══
     let salesBreakdown={},totalRevenue=0,dailySalesMap={},receiptCount=0;
     const settle=settleRes.data||[];
@@ -6765,42 +6720,53 @@ async function loadDashboard(){
     // ══ A-4. 지출 상세 (세그먼트 바 + 카테고리 리스트, 항상 펼침) ══
     // 2026-04-22: 식자재 통합(composite) 반영 — 직구/영수증 별도 그룹 제거
     // 2026-05-06: 도넛 → 세그먼트 바 (토스 스타일, 항상 펼침)
-    // 2026-05-14a: 고정비/공과금 분리 + 마케팅/세금 그룹 추가 — e.name 우선 매핑
-    // 2026-05-14b: 고정비 그룹화는 fcRows.category 직접 기준으로 갈아엎음 (헌법 1-6)
-    //   - 옛 매핑: fixedProratedByCat[e.name] → expense_categories.name이 "공과금/고정비"면 키 없음 → 0 → 차트 누락
-    //   - 새 매핑: fcRows의 fixed_costs.category(고정비/공과금/마케팅/세금) 기준 일할 합산 → expense_categories.name 무관
-    const groupMap={composite:'식자재',vendor_orders:'식자재',receipts:'기타',attendance:'인건비',manual:'기타/수동'};
-    const nameGroupMap={'주류':'주류','공과금':'공과금','마케팅':'마케팅','세금':'세금'};
+    // 2026-05-15: 그룹화 하드코딩 갈아엎기 (헌법 10조 2번, 1-6)
+    //   - 옛: groupMap/nameGroupMap/mGroupColors/groupOrder 4개 dict 박혀있어
+    //         사장님이 카테고리 추가해도 차트엔 '식자재' 또는 '기타'로 합쳐졌음
+    //   - 새: expense_categories (name/color/sort_order) 단일 진실의 원천.
+    //         카테고리 추가/색변경/순서변경 → 차트 자동 반영. 코드 수정 X.
     const expByGroup={};
     expData.forEach(e=>{
-      if(e.source==='fixed_costs') return; // fcRows에서 별도 합산
-      const group=nameGroupMap[e.name]||groupMap[e.source]||'기타';
-      if(!expByGroup[group])expByGroup[group]=0;
-      expByGroup[group]+=e.amount;
+      if(e.source==='fixed_costs') return; // 고정비는 fcRows에서 일할 합산 (아래)
+      if(!e.amount || e.amount<=0) return;
+      // 그룹 이름 = 카테고리 이름 그대로 (자식 카테고리는 catsForAggregation에서 이미 제외됨)
+      expByGroup[e.name]=(expByGroup[e.name]||0)+e.amount;
     });
     // 고정비 일할 분배 — fixed_costs.category 기준 직접 합산 (expense_categories.name과 무관)
     Object.entries(fixedProratedByCat).forEach(([cat,amt])=>{
       if(!amt) return;
       expByGroup[cat]=(expByGroup[cat]||0)+amt;
     });
+    // 시스템 가상 그룹 (DB 카테고리 없음 — 매출×요율 계산)
     if(royalty>0) expByGroup['로열티']=(expByGroup['로열티']||0)+royalty;
     if(cardFee>0) expByGroup['카드수수료']=(expByGroup['카드수수료']||0)+cardFee;
 
-    const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1):'0';
-    const mGroupColors={'식자재':'#05C072','주류':'#8B5CF6','인건비':'#0050FF','고정비':'#FF9500','공과금':'#FB923C','로열티':'#EF4444','카드수수료':'#DC2626','마케팅':'#EC4899','세금':'#92400E','기타/수동':'#7C3AED','기타':'#94A3B8'};
-    const groupOrder=['식자재','주류','인건비','고정비','공과금','로열티','카드수수료','마케팅','세금','기타/수동','기타'];
+    // 메타 (색·순서) — expense_categories 단일 진실의 원천 + 시스템 fallback
+    const groupMeta={};
+    (expCategories||[]).forEach(c=>{
+      if(c.parent_id) return; // 자식 카테고리는 부모에 합산되어 표시
+      groupMeta[c.name]={color:c.color||'#94A3B8', order:c.sort_order??999};
+    });
+    // 시스템 fallback (DB 카테고리 없는 가상 그룹 + 고정비.category 옵션)
+    const SYS_META={
+      '고정비':{color:'#FF9500',order:90},
+      '공과금':{color:'#FB923C',order:91},
+      '로열티':{color:'#EF4444',order:95},
+      '카드수수료':{color:'#DC2626',order:96}
+    };
+    Object.entries(SYS_META).forEach(([k,v])=>{ if(!groupMeta[k]) groupMeta[k]=v; });
 
-    // 카테고리 행 (지출 합계 기준 비율) + 세그먼트 바 데이터
-    const expRows=[];
-    const addExpRow=(g,amt,color)=>expRows.push({g,amt,color});
-    groupOrder.forEach(g=>{
-      const amt=expByGroup[g];
-      if(!amt||amt<=0) return;
-      addExpRow(g,amt,mGroupColors[g]||'#4E5968');
-    });
-    Object.entries(expByGroup).forEach(([g,amt])=>{
-      if(!groupOrder.includes(g)&&amt>0) addExpRow(g,amt,'#4E5968');
-    });
+    const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1):'0';
+
+    // 카테고리 행 (지출 합계 기준 비율) + 세그먼트 바 데이터 — sort_order 정렬
+    const expRows=Object.entries(expByGroup)
+      .filter(([g,amt])=>amt>0)
+      .map(([g,amt])=>({
+        g, amt,
+        color: groupMeta[g]?.color || '#94A3B8',
+        order: groupMeta[g]?.order ?? 999
+      }))
+      .sort((a,b)=>a.order-b.order || a.g.localeCompare(b.g));
     const expRowsTotal=expRows.reduce((a,r)=>a+r.amt,0);
     const pctExp=v=>expRowsTotal>0?(v/expRowsTotal*100).toFixed(1):'0';
     // 세그먼트 바 (지출 합계 기준 비율)
