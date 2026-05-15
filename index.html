@@ -6671,18 +6671,8 @@ async function loadDashboard(){
       return h;
     };
 
-    // 매출대비 비교 문구 (식자재/인건비 vs 전월 — 카테고리 끝, 순수익 직전)
-    const expCompareHtml=(()=>{
-      if(prevTotalRevenue<=0 || totalRevenue<=0)return '';
-      const currVendor=expByGroup['식자재']||0,currAtt=expByGroup['인건비']||0;
-      const mV=momTxt(currVendor,prevVendorTotal,false),mA=momTxt(currAtt,prevAttTotal,false);
-      let h='';
-      if(mV){const ic=mV.text==='비슷'?'✅':mV.up?'⚠️':'✅';
-        h+=`<div class="mom-text">${ic} 식자재 지난달보다 매출대비 ${mV.text==='비슷'?'비슷해요':`<span class="${mV.cls}">${mV.text}</span> ${mV.up?'늘었어요':'줄었어요'}`}</div>`;}
-      if(mA){const ic=mA.text==='비슷'?'✅':mA.up?'⚠️':'✅';
-        h+=`<div class="mom-text">${ic} 인건비 지난달보다 매출대비 ${mA.text==='비슷'?'비슷해요':`<span class="${mA.cls}">${mA.text}</span> ${mA.up?'늘었어요':'줄었어요'}`}</div>`;}
-      return h;
-    })();
+    // 매출대비 비교 자리 — 전월 데이터(prevTotalRevenue 등)는 아래에서 계산되므로
+    // placeholder만 두고 후속 코드에서 DOM 삽입 (momSummaryText 패턴)
 
     // 예상 컬럼 텍스트 (현재 월만)
     const estRevTxt = isCurrent ? fmt(estRevenue) : '';
@@ -6714,10 +6704,8 @@ async function loadDashboard(){
       // 접기 행 (펼침 시만 표시, 카테고리 맨 아래 우측 끝)
       summHtml+=`<tr id="expCollapseRow" class="exp-toggle-row" data-more="1" style="display:none;"><td colspan="3"></td><td style="text-align:right;"><button class="exp-more-btn" data-action="toggleExpMoreCategories">− 접기 ▴</button></td></tr>`;
     }
-    // 매출대비 비교 (카테고리 끝, 순수익 직전)
-    if(expCompareHtml){
-      summHtml+=`<tr class="mom-cat-row"><td colspan="4">${expCompareHtml}</td></tr>`;
-    }
+    // 매출대비 비교 placeholder (카테고리 끝, 순수익 직전 — 전월 데이터 후 채움)
+    summHtml+=`<tr id="momCatRow" class="mom-cat-row" style="display:none;"><td colspan="4" id="momCatBody"></td></tr>`;
     // 순수익 / 예비비 / 실수익(총합)
     summHtml+=`<tr><td class="ds-lb">순수익</td><td class="ds-amt ${netProfit>=0?'amt-blue':'amt-red'}">${netProfit>=0?'':'-'}${fmt(Math.abs(netProfit))}</td><td class="ds-pc">${pctR(netProfit)}</td><td class="ds-est">${estNetTxt}</td></tr>`;
     summHtml+=`<tr><td class="ds-lb">예비비</td><td class="ds-amt amt-muted">${reserveAmt>0?'-'+fmt(reserveAmt):'0'}</td><td class="ds-pc">${pctR(reserveAmt)}</td><td class="ds-est">${estResTxt}</td></tr>`;
@@ -6892,6 +6880,22 @@ async function loadDashboard(){
       const cls=isRevType?(up?'mom-good':'mom-bad'):(up?'mom-bad':'mom-good');
       return{text:`${fmt(Math.abs(diff))}(${up?'▲':'▼'}${pct}%)`,cls,arrow:up?'▲':'▼',pct,up};
     };
+
+    // ── 매출대비 비교 (식자재/인건비 vs 전월) — DOM 삽입 ──
+    // 카테고리 데이터 빌더가 위로 옮겨졌으나 prev*은 여기서 정의되므로 분리 처리 (TDZ 회피)
+    if(prevTotalRevenue>0 && totalRevenue>0){
+      const currVendor=expByGroup['식자재']||0,currAtt=expByGroup['인건비']||0;
+      const mV=momTxt(currVendor,prevVendorTotal,false),mA=momTxt(currAtt,prevAttTotal,false);
+      let h='';
+      if(mV){const ic=mV.text==='비슷'?'✅':mV.up?'⚠️':'✅';
+        h+=`<div class="mom-text">${ic} 식자재 지난달보다 매출대비 ${mV.text==='비슷'?'비슷해요':`<span class="${mV.cls}">${mV.text}</span> ${mV.up?'늘었어요':'줄었어요'}`}</div>`;}
+      if(mA){const ic=mA.text==='비슷'?'✅':mA.up?'⚠️':'✅';
+        h+=`<div class="mom-text">${ic} 인건비 지난달보다 매출대비 ${mA.text==='비슷'?'비슷해요':`<span class="${mA.cls}">${mA.text}</span> ${mA.up?'늘었어요':'줄었어요'}`}</div>`;}
+      if(h){
+        const row=document.getElementById('momCatRow'),body=document.getElementById('momCatBody');
+        if(row && body){body.innerHTML=h; row.style.display='';}
+      }
+    }
 
     // ── 전월대비 문구 (월 요약) — DOM 삽입 ──
     // 당월 매출 0이면 비교 의미 없음 → 숨김 (사장님 요청 2026-05-06)
