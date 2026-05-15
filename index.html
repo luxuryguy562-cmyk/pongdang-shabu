@@ -3783,14 +3783,12 @@ async function saveReceipt(){
     const cat=(tr.dataset.cat||'').trim();
     // dataset.catId가 비어있으면 picker가 안 거쳐진 케이스 → 재계산
     const category_id=tr.dataset.catId?tr.dataset.catId:(resolveReceiptCatId(cat)||null);
-    const unit=parseInt(tr.querySelector('.c-u')?.value)||null;
-    const qty=parseInt(tr.querySelector('.c-q')?.value)||1;
     const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,'');
+    // 2026-05-15: price/count 키 제거. DB 스키마에 해당 컬럼 없음 (42703 에러 원인). 합계만 저장.
     return {
       _idx:idx+1, _cat:cat,
       store_id:currentStore.id,receipt_date:tr.querySelector('.c-d').value,
       vendor:tr.querySelector('.c-v').value,item:tr.querySelector('.c-i').value,
-      price:unit,count:qty,
       total_price:parseInt(amtRaw,10)||0,
       category:cat||null,category_id:category_id||null,
       note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
@@ -3853,8 +3851,9 @@ async function loadReceiptList(){
   const [y,m]=rcpListMonth.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
   const start=rcpListMonth+'-01', end=rcpListMonth+'-'+String(lastDay).padStart(2,'0');
+  // 2026-05-15: price 컬럼 DB에 없음 (스키마 문서와 불일치, dev_lessons 추가). total_price만 SELECT.
   const {data,error}=await sb.from('receipts')
-    .select('id,receipt_date,vendor,item,total_price,category,category_id,note,price')
+    .select('id,receipt_date,vendor,item,total_price,category,category_id,note')
     .eq('store_id',currentStore.id)
     .gte('receipt_date',start).lte('receipt_date',end)
     .order('receipt_date',{ascending:false});
@@ -6291,18 +6290,48 @@ async function loadDashboard(){
       fixed_costs: { data: fcRes.data }
     });
 
-    // ── 2026-05-14 진단 로그 (식자재 출처 추적) — 콘솔에서 [DASH-DEBUG] 검색 ──
+    // ── 2026-05-14/15 진단 로그 (식자재 출처 추적) — 콘솔에서 [DASH-DEBUG] 검색 ──
     try {
       const voErr=voRes2?.error, rcErr=rcRes2?.error;
       const voList=voRes2?.data||[], rcList=rcRes2?.data||[];
       const voSum=voList.reduce((a,o)=>a+(o.amount||0),0);
       const rcSum=rcList.reduce((a,r)=>a+(r.total_price||0),0);
+      // 잔재 비활성 카테고리 + mydata 거래 추적 (2026-05-15 추가)
+      const cats=expCategories||[];
+      const inactive=cats.filter(c=>c.is_active===false);
+      const expResultsByName=Object.fromEntries(expResults.map(r=>[r.name,r.amount]));
+      // mydata 별도 1회 SELECT (디버그용)
+      let mdRows=[];
+      try {
+        const{data:md}=await sb.from('mydata_transactions').select('amount,category_id,sub_category,attribution_month,tx_date,exclude_from_settlement').eq('store_id',sid);
+        mdRows=(md||[]).filter(t=>!t.exclude_from_settlement).filter(t=>{
+          if(t.attribution_month===ym) return true;
+          if(!t.attribution_month && t.tx_date>=start && t.tx_date<=end) return true;
+          return false;
+        });
+      } catch(e){ /* ignore */ }
+      const mdByCat={};
+      mdRows.forEach(t=>{
+        const k=t.category_id||'(no_cat)';
+        if(!mdByCat[k]) mdByCat[k]={sum:0,count:0};
+        mdByCat[k].sum+=Math.abs(t.amount||0);
+        mdByCat[k].count++;
+      });
+      // 카테고리별 mydata 매핑
+      const mdAnnotated=Object.entries(mdByCat).map(([cid,v])=>{
+        const c=cats.find(c=>c.id===cid);
+        return {category_id:cid, name:c?.name||'(unknown)', source:c?.data_source, is_active:c?.is_active, mydata_sum:v.sum, mydata_count:v.count};
+      });
       console.log('[DASH-DEBUG]', {
         ym, dashMode, store_id: sid,
         vendor_orders: { rows: voList.length, sum: voSum, error: voErr },
         receipts_normal: { rows: rcList.length, sum: rcSum, error: rcErr },
-        expCategories: (expCategories||[]).map(c=>({id:c.id, name:c.name, source:c.data_source, parent_id:c.parent_id, vendor_category:c.vendor_category, is_active:c.is_active, type:c.category_type})),
-        expResults: expResults.map(r=>({name:r.name, source:r.source, amount:r.amount}))
+        mydata: { total_rows: mdRows.length, byCategory: mdAnnotated },
+        expCategories_total: cats.length,
+        expCategories_inactive: inactive.length,
+        inactiveCats: inactive.map(c=>({id:c.id, name:c.name, source:c.data_source})),
+        expResults: expResults.map(r=>({name:r.name, source:r.source, amount:r.amount})),
+        '식자재_그룹_의심': expResults.filter(r=>r.amount>0 && (r.source==='composite' || r.source==='vendor_orders')).map(r=>({name:r.name, amount:r.amount}))
       });
     } catch(e) { console.warn('[DASH-DEBUG] log failed', e); }
 
