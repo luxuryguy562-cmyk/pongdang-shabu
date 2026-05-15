@@ -1837,12 +1837,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div id="vendorList">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:6px;">
       <select id="vendorCatFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderVendorList">
+        <!-- 옵션은 refreshVendorCategoryOptions에서 동적 채움 -->
         <option value="">전체 카테고리</option>
-        <option value="육류">육류</option>
-        <option value="야채">야채</option>
-        <option value="공산품">공산품</option>
-        <option value="주류">주류</option>
-        <option value="기타">기타</option>
       </select>
       <button class="btn btn-secondary btn-sm" style="flex:0 0 auto;padding:10px 10px;font-size:12px;" data-action="openVendorReclassSheet" title="기존 식자재/직구 거래처를 육류/야채/공산품으로 재지정">🔄 재분류</button>
       <button class="btn btn-primary btn-sm" data-action="openAddVendorSheet">+ 추가</button>
@@ -2983,11 +2979,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-title" id="addVendorTitle">거래처 추가</div>
   <input id="vendorNameInput" class="input-field" placeholder="거래처명 *" type="text">
   <select id="vendorCatInput" class="input-field">
-    <option value="육류">육류</option>
-    <option value="야채">야채</option>
-    <option value="공산품">공산품</option>
-    <option value="주류">주류</option>
-    <option value="기타">기타</option>
+    <!-- 옵션은 refreshVendorCategoryOptions에서 동적 채움 (expense_categories.vendor_category 기준) -->
   </select>
   <input type="hidden" id="editVendorId">
   <div class="action-group">
@@ -6913,6 +6905,8 @@ async function loadVendors(){
       vendorMonthTotals[o.vendor_id].count+=1;
     });
   }catch(e){/* 조회 실패는 무시 — 카드에서 합계 안 보일 뿐 */}
+  // 카테고리 필터 옵션 동적 채움 (헌법 10조 2번 — 데이터 단일 진실의 원천)
+  if(typeof refreshVendorCategoryOptions==='function') refreshVendorCategoryOptions();
   renderVendorList();
   // 드롭다운 채우기
   const sels=['orderVendorFilter','uploadVendorSel','orderVendorInput'];
@@ -7210,8 +7204,28 @@ function toggleVendorFromDetail(){
   if(!v) return;
   toggleVendor(v.id, !v.is_active);
 }
-function openAddVendorSheet(){if(!guardStore())return;document.getElementById('addVendorTitle').innerText='거래처 추가';document.getElementById('vendorNameInput').value='';document.getElementById('editVendorId').value='';openSheet('addVendorSheet');}
-function openEditVendorSheet(id){const v=vendors.find(x=>x.id===id);if(!v)return;document.getElementById('addVendorTitle').innerText='거래처 편집';document.getElementById('vendorNameInput').value=v.name;document.getElementById('vendorCatInput').value=v.category||'식자재';document.getElementById('editVendorId').value=v.id;openSheet('addVendorSheet');}
+// 거래처 카테고리 옵션 동적 채움 — expense_categories.vendor_category 단일 진실의 원천
+// (2026-05-15 헌법 10조 2번: 하드코딩 ['육류','야채','공산품','주류','기타'] 제거)
+function refreshVendorCategoryOptions(){
+  const cats=(expCategories||[])
+    .filter(c=>c.is_active!==false && c.vendor_category && (c.category_type||'expense')==='expense')
+    .map(c=>c.vendor_category);
+  const unique=[...new Set(cats)].sort();
+  const sel=document.getElementById('vendorCatInput');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML=unique.map(v=>`<option value="${v}">${v}</option>`).join('');
+    if(cur && unique.includes(cur)) sel.value=cur;
+  }
+  const filter=document.getElementById('vendorCatFilter');
+  if(filter){
+    const cur=filter.value;
+    filter.innerHTML='<option value="">전체 카테고리</option>'+unique.map(v=>`<option value="${v}">${v}</option>`).join('');
+    if(cur==='' || unique.includes(cur)) filter.value=cur;
+  }
+}
+function openAddVendorSheet(){if(!guardStore())return;refreshVendorCategoryOptions();document.getElementById('addVendorTitle').innerText='거래처 추가';document.getElementById('vendorNameInput').value='';document.getElementById('editVendorId').value='';openSheet('addVendorSheet');}
+function openEditVendorSheet(id){const v=vendors.find(x=>x.id===id);if(!v)return;refreshVendorCategoryOptions();document.getElementById('addVendorTitle').innerText='거래처 편집';document.getElementById('vendorNameInput').value=v.name;document.getElementById('vendorCatInput').value=v.category||'';document.getElementById('editVendorId').value=v.id;openSheet('addVendorSheet');}
 async function saveVendor(){
   if(!guardStore())return;const name=document.getElementById('vendorNameInput').value.trim();if(!name)return toast('거래처명을 입력하세요.','warn');
   const cat=document.getElementById('vendorCatInput').value;const eid=document.getElementById('editVendorId').value;
@@ -8284,6 +8298,8 @@ async function loadExpCategories(){
   // 비활성 포함 전체 로드 (대시보드에서 과거 거래 집계에 필요)
   const{data}=await sb.from('expense_categories').select('*').eq('store_id',currentStore.id).order('sort_order');
   expCategories=data||[];
+  // 카테고리 변경 즉시 거래처 셀렉트도 갱신 (헌법 10조 2번)
+  if(typeof refreshVendorCategoryOptions==='function') refreshVendorCategoryOptions();
   renderExpCatList();
   // hub 카드에서 진입한 경우 해당 카테고리로 스크롤 + 하이라이트
   if(window._expcatPreselect){
