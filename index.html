@@ -660,6 +660,25 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .side-item{padding:11px 20px 11px 36px;font-size:13px;font-weight:600;color:var(--gray-600);cursor:pointer;}
 .side-item:active{background:var(--gray-100);}
 .side-item.current{color:var(--blue);font-weight:700;}
+/* ─── 새 기능: 1순위 카드 안 순수익/지출 행 (2026-05-15) ─── */
+.dash-top-pe-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;}
+.dash-top-pe-row .pe-label{color:var(--gray-600);font-weight:700;display:flex;align-items:center;gap:4px;}
+.dash-top-pe-row .pe-val{font-weight:900;font-size:14px;color:var(--blue);}
+.dash-top-pe-row .pe-delta{font-size:11px;font-weight:700;margin-left:6px;color:var(--gray-400);}
+/* ─── 새 기능: 매출 빠른 입력 시트 (2026-05-15) ─── */
+.qsi-date-row{display:flex;align-items:center;gap:10px;padding:10px 0 14px;border-bottom:1px solid var(--gray-100);}
+.qsi-date-label{font-size:13px;font-weight:700;color:var(--gray-600);width:50px;}
+.qsi-date-input{flex:1;padding:9px 11px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;}
+.qsi-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--gray-100);}
+.qsi-row .qsi-ic{font-size:20px;width:28px;text-align:center;}
+.qsi-row .qsi-lb{font-size:13px;font-weight:700;color:var(--gray-700);flex:1;}
+.qsi-row .qsi-input{width:140px;padding:9px 11px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;font-weight:700;text-align:right;}
+.qsi-row .qsi-input:focus{border-color:var(--blue);outline:none;}
+.qsi-total-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-top:2px solid var(--gray-200);font-size:15px;font-weight:900;}
+.qsi-total-row .qsi-total-val{color:var(--blue);font-size:18px;}
+.qsi-memo-row{display:flex;align-items:center;gap:10px;padding:10px 0;}
+.qsi-memo-label{font-size:13px;font-weight:700;color:var(--gray-600);width:50px;}
+.qsi-memo-input{flex:1;padding:9px 11px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;}
 /* ─── 새 기능: 일별 매출 캘린더 그리드 (2026-05-15) ─── */
 .sales-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
 .sales-cal-wkh{font-size:11px;font-weight:800;text-align:center;padding:6px 0;color:var(--gray-500);}
@@ -1666,7 +1685,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [5] 대시보드 ══ -->
 <div id="dashboardCont" class="container">
   <!-- ─── 새 기능: 오늘 매출 1순위 카드 (2026-05-15) ─── -->
-  <div class="card" id="dashTopSalesCard" style="padding:18px 16px;margin-bottom:10px;cursor:pointer;display:none;">
+  <div class="card" id="dashTopSalesCard" style="padding:18px 16px;margin-bottom:14px;cursor:pointer;display:none;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span style="font-size:14px;">💰</span>
@@ -1677,22 +1696,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div id="dashTopSalesAmt" style="font-size:30px;font-weight:900;color:var(--gray-900);line-height:1.15;">0원</div>
     <div id="dashTopSalesUpdated" style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right;display:none;">업데이트 -</div>
-    <div id="dashTopSalesActionRow" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--gray-100);">
+    <div id="dashTopSalesProfitExpense" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100);">
+      <div class="dash-top-pe-row">
+        <span class="pe-label">💵 순수익</span>
+        <span><span id="dashTopProfitAmt" class="pe-val">0원</span><span id="dashTopProfitDelta" class="pe-delta">-</span></span>
+      </div>
+      <div class="dash-top-pe-row">
+        <span class="pe-label">💸 지출</span>
+        <span><span id="dashTopExpenseAmt" class="pe-val" style="color:#EF4444;">0원</span><span id="dashTopExpenseDelta" class="pe-delta">-</span></span>
+      </div>
+    </div>
+    <div id="dashTopSalesActionRow" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100);">
       <button id="dashTopSalesInputBtn" class="btn btn-primary btn-sm" style="width:100%;font-size:12px;padding:10px;">📝 오늘 매출 입력 (30초)</button>
       <p style="font-size:11px;color:var(--gray-500);margin:8px 0 0;text-align:center;">⏳ 자동 동기화 준비중...</p>
-    </div>
-  </div>
-  <!-- ─── 새 기능: 순수익/지출 2순위 카드 (2026-05-15) ─── -->
-  <div id="dashTodayProfitExpenseRow" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-    <div class="card" style="padding:12px 10px;">
-      <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:4px;">💵 순수익</div>
-      <div id="dashTodayProfitAmt" style="font-size:16px;font-weight:900;color:var(--blue);line-height:1.2;">0원</div>
-      <div id="dashTodayProfitDelta" style="font-size:10px;font-weight:700;margin-top:3px;color:var(--gray-400);">-</div>
-    </div>
-    <div class="card" style="padding:12px 10px;">
-      <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:4px;">💸 지출</div>
-      <div id="dashTodayExpenseAmt" style="font-size:16px;font-weight:900;color:#EF4444;line-height:1.2;">0원</div>
-      <div id="dashTodayExpenseDelta" style="font-size:10px;font-weight:700;margin-top:3px;color:var(--gray-400);">-</div>
     </div>
   </div>
   <!-- 월 네비게이션 -->
@@ -2234,6 +2250,29 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <!-- 수동 출금 입력 바텀시트 -->
 </div>
 
+<!-- ─── 새 기능: 매출 빠른 입력 시트 (마감정산 형식, 2026-05-15) ─── -->
+<div class="sheet-overlay" id="quickSalesInputSheet">
+  <div class="sheet sheet-content" style="max-height:88vh;padding-bottom:80px;">
+    <div class="sheet-header">
+      <div class="sheet-title">💰 매출 빠른 입력</div>
+      <button class="sheet-close" data-action="closeSheet|quickSalesInputSheet">✕</button>
+    </div>
+    <div class="qsi-date-row">
+      <span class="qsi-date-label">날짜</span>
+      <input type="date" id="qsiDate" class="qsi-date-input">
+    </div>
+    <div id="qsiRowsContainer"></div>
+    <div class="qsi-total-row">
+      <span>합계</span>
+      <span id="qsiTotal" class="qsi-total-val">0원</span>
+    </div>
+    <div class="qsi-memo-row">
+      <span class="qsi-memo-label">메모</span>
+      <input type="text" id="qsiMemo" placeholder="(선택)" class="qsi-memo-input">
+    </div>
+    <button class="btn btn-primary" data-action="saveQuickSalesInput" style="width:100%;padding:14px;font-size:14px;font-weight:800;margin-top:12px;">💾 저장</button>
+  </div>
+</div>
 <!-- ─── 새 기능: 일별 매출 캘린더 시트 (2026-05-15) ─── -->
 <div class="sheet-overlay" id="salesCalendarSheet">
   <div class="sheet sheet-content" style="max-height:90vh;padding-bottom:40px;">
@@ -6950,11 +6989,10 @@ async function loadDashboard(){
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}}},scales:{y:{ticks:{callback:v=>v>=10000?Math.round(v/10000)+'만':(v<=-10000?Math.round(v/10000)+'만':v)},beginAtZero:false}}}
     });
 
-    // ─── 새 기능: 1순위 매출 카드 + 2순위 순수익/지출 카드 (2026-05-15) ─── //
+    // ─── 새 기능: 1순위 매출 통합 카드 (매출+순수익+지출, 2026-05-15) ─── //
     // 현재 월일 때만 카드 표시 (다른 월에서 "오늘 매출" 의미 X)
     const isCurMonth=today.toISOString().slice(0,7)===dashMonthStr;
     const topCard=document.getElementById('dashTopSalesCard');
-    const topRow=document.getElementById('dashTodayProfitExpenseRow');
     if(isCurMonth){
       // 전월 일별 지출 맵 (% 비교용, 변동성 큰 vendor/receipt/attendance만 — 고정비/로열티는 일별 차이 작아 생략)
       const prevDailyExpTotal={};
@@ -6992,36 +7030,105 @@ async function loadDashboard(){
       }else{updEl.style.display='none';}
       topCard.style.display='block';
 
-      // 2순위 순수익/지출
+      // 1순위 카드 내부 순수익/지출 통합 (사장님 피드백: "어제" 컨텍스트 한 번에 묶기)
+      const peEl=document.getElementById('dashTopSalesProfitExpense');
       if(lastSaleDay){
         const dayExp=dailyExpTotal[lastSaleDay]||0;
         const dayProfit=saleAmt-dayExp;
         const prevExp=prevDailyExpTotal[lastSaleDay]||0;
         const prevSale=prevDailySalesMap[lastSaleDay]||0;
         const prevProfit=prevSale-prevExp;
-        const profitEl=document.getElementById('dashTodayProfitAmt');
+        const profitEl=document.getElementById('dashTopProfitAmt');
         profitEl.innerText=(dayProfit>=0?'':'-')+fmt(Math.abs(dayProfit))+'원';
         profitEl.style.color=dayProfit>=0?'var(--blue)':'#EF4444';
-        document.getElementById('dashTodayExpenseAmt').innerText=fmt(dayExp)+'원';
-        // % 비교 (momTxt 재사용)
+        document.getElementById('dashTopExpenseAmt').innerText=fmt(dayExp)+'원';
         const renderDelta=(el,m)=>{
-          if(!m){el.innerText='전월동일 -';el.style.color='var(--gray-400)';return;}
-          if(m.text==='비슷'){el.innerText='전월동일 비슷';el.style.color='var(--gray-500)';return;}
-          el.innerText=`전월동일 ${m.arrow}${m.pct}%`;
+          if(!m){el.innerText='';return;}
+          if(m.text==='비슷'){el.innerText='비슷';el.style.color='var(--gray-500)';return;}
+          el.innerText=`${m.arrow}${m.pct}%`;
           el.style.color=m.cls==='mom-good'?'#10B981':(m.cls==='mom-bad'?'#EF4444':'var(--gray-400)');
         };
-        renderDelta(document.getElementById('dashTodayProfitDelta'),momTxt(dayProfit,prevProfit,true));
-        renderDelta(document.getElementById('dashTodayExpenseDelta'),momTxt(dayExp,prevExp,false));
-        topRow.style.display='grid';
+        renderDelta(document.getElementById('dashTopProfitDelta'),momTxt(dayProfit,prevProfit,true));
+        renderDelta(document.getElementById('dashTopExpenseDelta'),momTxt(dayExp,prevExp,false));
+        peEl.style.display='block';
       } else {
-        topRow.style.display='none';
+        peEl.style.display='none';
       }
     } else {
       topCard.style.display='none';
-      topRow.style.display='none';
     }
 
   }catch(e){console.error('대시보드 오류:',e);}finally{setLoad(false);}
+}
+
+// ─── 새 기능: 매출 빠른 입력 시트 (마감정산 형식, 2026-05-15) ─── //
+// paymentMethods 버그 우회: sales_daily 레거시 컬럼 직매핑
+const QUICK_SALES_METHODS=[
+  {key:'card',         name:'신용카드',   icon:'💳'},
+  {key:'cash',         name:'현금',       icon:'💵'},
+  {key:'cash_receipt', name:'현금영수증', icon:'🧾'},
+  {key:'qr',           name:'QR',         icon:'📱'},
+  {key:'etc',          name:'기타결제',   icon:'📲'}
+];
+function openQuickSalesInput(){
+  if(!currentStore){toast('매장을 먼저 선택하세요','error');return;}
+  document.getElementById('qsiDate').value=ymdLocal(new Date());
+  const cont=document.getElementById('qsiRowsContainer');
+  cont.innerHTML=QUICK_SALES_METHODS.map(m=>`
+    <div class="qsi-row">
+      <span class="qsi-ic">${m.icon}</span>
+      <span class="qsi-lb">${m.name}</span>
+      <input type="text" inputmode="numeric" class="qsi-input" placeholder="0" data-key="${m.key}" data-input="onQuickSalesInputChange|this">
+    </div>
+  `).join('');
+  document.getElementById('qsiMemo').value='';
+  document.getElementById('qsiTotal').innerText='0원';
+  openSheet('quickSalesInputSheet');
+}
+function onQuickSalesInputChange(el){
+  const raw=unFmt(el.value);
+  el.value=raw?fmt(raw):'';
+  _recalcQsiTotal();
+}
+function _recalcQsiTotal(){
+  let t=0;
+  document.querySelectorAll('#qsiRowsContainer .qsi-input').forEach(el=>{t+=Number(unFmt(el.value))||0;});
+  document.getElementById('qsiTotal').innerText=fmt(t)+'원';
+}
+async function saveQuickSalesInput(){
+  if(!currentStore){toast('매장 없음','error');return;}
+  const date=document.getElementById('qsiDate').value;
+  if(!date){toast('날짜를 선택해주세요','error');return;}
+  const memo=document.getElementById('qsiMemo').value.trim()||null;
+  const row={store_id:currentStore.id,date,source:'manual',memo};
+  let total=0;
+  document.querySelectorAll('#qsiRowsContainer .qsi-input').forEach(el=>{
+    const k=el.dataset.key;
+    const v=Number(unFmt(el.value))||0;
+    row[k]=v;
+    total+=v;
+  });
+  if(total<=0){toast('금액을 1원 이상 입력해주세요','error');return;}
+  setLoad(true,'저장 중...');
+  try{
+    const{data:existing}=await sb.from('sales_daily').select('id').eq('store_id',currentStore.id).eq('date',date).maybeSingle();
+    if(existing){
+      if(!confirm(`${date} 매출이 이미 있어요. 덮어쓸까요?`)){setLoad(false);return;}
+      const{error}=await sb.from('sales_daily').update(row).eq('id',existing.id);
+      if(error)throw error;
+    }else{
+      const{error}=await sb.from('sales_daily').insert(row);
+      if(error)throw error;
+    }
+    closeSheet('quickSalesInputSheet');
+    toast('매출 저장됐어요','success');
+    await loadDashboard();
+  }catch(e){
+    console.error('매출 저장:',e);
+    toast('저장 실패: '+e.message,'error');
+  }finally{
+    setLoad(false);
+  }
 }
 
 // ─── 새 기능: 일별 매출 캘린더 시트 (2026-05-15) ─── //
@@ -13406,7 +13513,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   });
   document.getElementById('dashTopSalesInputBtn').addEventListener('click',(e)=>{
     e.stopPropagation();
-    nav('sales',document.querySelector('[data-tab="sales"]'));
+    openQuickSalesInput();
   });
   document.getElementById('salesCalendarPrev').addEventListener('click',()=>moveSalesCalendarMonth(-1));
   document.getElementById('salesCalendarNext').addEventListener('click',()=>moveSalesCalendarMonth(1));

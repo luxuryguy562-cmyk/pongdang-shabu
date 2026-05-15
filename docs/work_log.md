@@ -39,9 +39,18 @@
 - DB: SELECT만 (sales_daily, vendor_orders, receipts, attendance_logs) — 캘린더용 4쿼리 추가
 - DB 스키마 변경: **없음**
 
+### 사장님 미리보기 피드백 → 추가 작업 (같은 PR #123)
+1. **1순위 카드 통합** — 사장님 피드백 "카드 따로 있으니 어제 거 같지 않고 총 같은 느낌". 1순위 매출 + 순수익 + 지출 한 카드 안에 묶음. 2순위 카드(dashTodayProfitExpenseRow) 삭제. DOM ID 변경: dashTodayProfitAmt → dashTopProfitAmt 등
+2. **매출 빠른 입력 시트 신설** (`quickSalesInputSheet`) — 사장님 짚으심: 매출 관리 탭의 매출 추가 시트가 paymentMethods 빈 배열로 input 행 0개 (버그). 마감정산 형식 새 시트 신설로 우회. `QUICK_SALES_METHODS` 5개 (카드/현금/현금영수증/QR/기타) LEGACY 직매핑. sales_daily에 source='manual'로 upsert
+3. **입력 버튼 동작 변경** — `dashTopSalesInputBtn` 클릭 시 매출 관리 탭 점프 → `openQuickSalesInput()` 직접 호출
+
+### 헌법 1-7 위반 정정 (사장님 짚으심)
+- coder 단계에서 매출 관리 탭 매출 추가 폼이 "코드는 살아있다"고 추측 답변. 실제 스크린샷 보니 paymentMethods 빈 상태에서 input 행 0개. 사장님 미리보기 직접 확인 없이 코드만 보고 답한 게 부적절. → 새 시트로 우회 + 별도 진단(payment_methods 폴백 미작동) 후속
+
 ### 후속 작업 (이번 세션과 분리)
 - I안 (Capacitor) 본격 시작 (맥북 도착 후, 1~2주)
 - I안 완성 후 마감정산 매출 칸 정리 (헌법 1-6, 사장님 짚으심)
+- 매출 관리 탭 매출 추가 폼 paymentMethods 폴백 버그 진단 (별도)
 - OKPOS 참고: "오늘 들어올 돈" 카드, 빠른 액션 버튼 — 별도 검토
 - 캘린더 일별 지출에 고정비 일할 / 로열티 / 카드수수료 추가 정밀화 (현재 변동비만)
 - 캘린더 vs 주단위 테이블 중복 정리 (한 달 운영 후 판단)
