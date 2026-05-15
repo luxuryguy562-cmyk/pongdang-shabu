@@ -283,7 +283,9 @@ franchises (프랜차이즈/브랜드)
 | vendors | vendor_orders |
 |---------|---------------|
 | id, store_id, name, category, is_active | store_id, vendor_id(FK), order_date |
-| | item, amount, memo, source |
+| | item, **unit_price** (int, nullable), **quantity** (numeric, nullable), amount, memo, source |
+
+> ⚠️ **2026-05-15 추가**: `unit_price`, `quantity` 컬럼 추가. UI에서 단가×수량 자동 곱셈해서 amount 채우되, 사장님이 amount 직접 수정 가능 (할인/운송비 포함 등). DB엔 셋 다 저장 (단가 변동 추적용).
 
 ### expense_categories / expense_category_amounts
 | expense_categories | expense_category_amounts |

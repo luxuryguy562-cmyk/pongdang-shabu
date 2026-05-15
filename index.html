@@ -3018,6 +3018,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <select id="orderVendorInput" class="input-field"></select>
   <input id="orderDateInput" class="input-field" placeholder="날짜 (YYYY-MM-DD)" type="date">
   <input id="orderItemInput" class="input-field" placeholder="품목명" type="text">
+  <!-- 단가 × 수량 = 금액 자동 계산 (사장님이 금액 직접 수정도 가능) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <input id="orderUnitInput" class="input-field" placeholder="단가 (원, 선택)" type="number" inputmode="numeric" data-input="onOrderUnitQtyInput">
+    <input id="orderQtyInput" class="input-field" placeholder="수량 (선택)" type="number" inputmode="numeric" step="0.01" data-input="onOrderUnitQtyInput">
+  </div>
   <input id="orderAmtInput" class="input-field" placeholder="금액 (원)" type="number" inputmode="numeric">
   <input id="orderMemoInput" class="input-field" placeholder="메모" type="text">
   <div class="action-group">
@@ -7306,11 +7311,21 @@ function openAddOrderSheet(){
     sel.innerHTML=vendors.filter(v=>v.is_active).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
     sel.style.display='';
   }
-  document.getElementById('orderDateInput').value=new Date().toISOString().split('T')[0];
+  document.getElementById('orderDateInput').value=ymdLocal(new Date());
   document.getElementById('orderItemInput').value='';
+  document.getElementById('orderUnitInput').value='';
+  document.getElementById('orderQtyInput').value='';
   document.getElementById('orderAmtInput').value='';
   document.getElementById('orderMemoInput').value='';
   openSheet('addOrderSheet');
+}
+// 단가/수량 입력 시 금액 자동 계산 (사장님이 amt 직접 수정 가능 — 마지막 입력 우선)
+function onOrderUnitQtyInput(){
+  const unit=parseFloat(document.getElementById('orderUnitInput').value)||0;
+  const qty=parseFloat(document.getElementById('orderQtyInput').value)||0;
+  if(unit>0 && qty>0){
+    document.getElementById('orderAmtInput').value=Math.round(unit*qty);
+  }
 }
 async function openEditOrderSheet(id){
   if(!guardStore())return;
@@ -7328,6 +7343,8 @@ async function openEditOrderSheet(id){
   sel.style.display='none';
   document.getElementById('orderDateInput').value=o.order_date;
   document.getElementById('orderItemInput').value=o.item||'';
+  document.getElementById('orderUnitInput').value=o.unit_price||'';
+  document.getElementById('orderQtyInput').value=o.quantity||'';
   document.getElementById('orderAmtInput').value=o.amount;
   document.getElementById('orderMemoInput').value=o.memo||'';
   openSheet('addOrderSheet');
@@ -7344,11 +7361,14 @@ async function deleteOrder(id){
 async function saveOrder(){
   if(!guardStore())return;
   const vendorId=document.getElementById('orderVendorInput').value;const date=document.getElementById('orderDateInput').value;
-  const item=document.getElementById('orderItemInput').value;const amt=parseInt(document.getElementById('orderAmtInput').value)||0;
+  const item=document.getElementById('orderItemInput').value;
+  const unit=parseInt(document.getElementById('orderUnitInput').value)||null;
+  const qty=parseFloat(document.getElementById('orderQtyInput').value)||null;
+  const amt=parseInt(document.getElementById('orderAmtInput').value)||0;
   const memo=document.getElementById('orderMemoInput').value;
   if(!vendorId||!date||!amt)return toast('거래처, 날짜, 금액은 필수입니다.','warn');
   setLoad(true,editOrderId?'수정 중...':'저장 중...');
-  const payload={vendor_id:vendorId,order_date:date,item:item||null,amount:amt,memo:memo||null};
+  const payload={vendor_id:vendorId,order_date:date,item:item||null,unit_price:unit,quantity:qty,amount:amt,memo:memo||null};
   const{error}=editOrderId
     ? await sb.from('vendor_orders').update(payload).eq('id',editOrderId).eq('store_id',currentStore.id)
     : await sb.from('vendor_orders').insert({...payload,store_id:currentStore.id,source:'manual'});
