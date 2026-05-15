@@ -509,22 +509,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 매출대비 비교 문구 행 (카테고리와 순수익 사이) */
 .summ-tbl tr.mom-cat-row td{padding:4px 0 8px;border-bottom:none;}
 
-/* ─ 거래처 주문 리스트 표 (2026-05-15 정정: 8컬럼 — dev_lessons #85 표 정렬 규칙 적용) */
-/*    헤더: 항상 가운데 정렬. 본문 숫자: 우측, 텍스트: 좌측. 짤림은 ellipsis */
+/* ─ 거래처 주문 리스트 표 (2026-05-15 옵션 A: 7컬럼 — dev_lessons #85 표 정렬 규칙 적용) */
+/*    헤더: 항상 가운데. 본문 숫자: 우측, 텍스트: 좌측. 행 클릭 = 편집 시트(삭제는 시트 안) */
 .order-tbl{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;}
 .order-tbl th{font-size:10px;font-weight:700;color:var(--gray-400);text-align:center;padding:6px 2px;border-bottom:1px solid var(--gray-200);letter-spacing:0.2px;}
 .order-tbl tr.ord-row{cursor:pointer;}
 .order-tbl tr.ord-row:active td{background:var(--gray-100);}
-.order-tbl tr.ord-row td{padding:8px 2px;border-bottom:1px solid var(--gray-100);font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.order-tbl tr.ord-row td{padding:9px 2px;border-bottom:1px solid var(--gray-100);font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .order-tbl .ord-date{font-size:10px;font-weight:700;color:var(--gray-600);font-variant-numeric:tabular-nums;text-align:center;}
 .order-tbl .ord-item{font-weight:600;color:var(--gray-700);text-align:left;padding-left:4px;}
 .order-tbl .ord-unit, .order-tbl .ord-qty{text-align:right;font-variant-numeric:tabular-nums;color:var(--gray-600);font-size:11px;padding-right:4px;}
 .order-tbl .ord-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:11px;padding-right:4px;}
 .order-tbl .ord-memo{color:var(--gray-500);font-size:10px;text-align:left;padding-left:4px;}
-.order-tbl .ord-edit, .order-tbl .ord-act{text-align:center;padding:0 2px;}
-.order-tbl .ord-edit-btn, .order-tbl .ord-del-btn{background:transparent;border:none;cursor:pointer;font-size:13px;padding:6px 2px;color:var(--gray-400);line-height:1;}
-.order-tbl .ord-del-btn:active{color:var(--danger);}
-.order-tbl .ord-edit-btn:active{color:var(--blue);}
+/* › 화살표 = "행 탭하면 편집" iOS 표준 시각 큐 (설명 없이 직관) */
+.order-tbl .ord-arrow{text-align:center;color:var(--gray-400);font-size:14px;padding:0;}
 
 /* ─ 대시보드 월요약 레거시 (토스 스타일) */
 .dash-summ-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--gray-100);}
@@ -3190,6 +3188,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveOrder">저장</button>
   </div>
+  <!-- 편집 모드에서만 표시 — 행 클릭으로 진입 시 (사장님 옵션 A 2026-05-15) -->
+  <button id="orderDeleteBtn" class="btn btn-danger" style="display:none;width:100%;padding:12px;margin-top:8px;font-size:13px;" data-action="deleteOrderFromSheet">🗑 이 주문 삭제</button>
 </div>
 
 <!-- 지출 카테고리 추가/편집 -->
@@ -7626,24 +7626,44 @@ function renderVendorCompare(vendor, ym, pYm, orders, prevOrders, mydata){
 
   body.innerHTML=html;
 }
-// 거래처 카드 사용자 지정 순서 (localStorage, 매장별 키, 2026-05-15)
-// — store_settings 새 컬럼 SQL 부담 없이 즉시 적용. 다점포 본격화 시 DB 마이그레이션 검토.
+// 거래처 카드 사용자 지정 순서 (store_settings.vendor_order, 2026-05-15 DB 마이그레이션)
+// — 옛 localStorage는 다기기 동기화 안 됨 (모바일/PC 따로) → DB 컬럼으로 이전
+// — exp_hub_order 패턴 그대로 (settings 캐시 + DB upsert)
 function getVendorOrder(){
   if(!currentStore) return null;
   try{
-    const raw=localStorage.getItem(`pd_vendor_order_${currentStore.id}`);
-    return raw?JSON.parse(raw):null;
+    const raw=settings?.vendor_order;
+    if(raw){
+      const arr=typeof raw==='string'?JSON.parse(raw):raw;
+      return Array.isArray(arr)?arr:null;
+    }
+    // 옛 localStorage 마이그레이션 — 있으면 한 번 읽어 settings에 옮기고 정리
+    const legacy=localStorage.getItem(`pd_vendor_order_${currentStore.id}`);
+    if(legacy){
+      try{
+        const arr=JSON.parse(legacy);
+        if(Array.isArray(arr)&&arr.length){
+          // 백그라운드 DB 저장 (사용자 즉시 반영 위해 settings 캐시 우선)
+          if(typeof settings==='object'&&settings) settings.vendor_order=legacy;
+          sb.from('store_settings').upsert({store_id:currentStore.id,vendor_order:legacy},{onConflict:'store_id'})
+            .then(()=>{localStorage.removeItem(`pd_vendor_order_${currentStore.id}`);});
+          return arr;
+        }
+      }catch(e){}
+    }
+    return null;
   }catch(e){return null;}
 }
-function saveVendorOrderFromDom(){
+async function saveVendorOrderFromDom(){
   if(!currentStore) return;
   const wrap=document.getElementById('vendorCardWrap');
   if(!wrap) return;
   const ids=Array.from(wrap.querySelectorAll('[data-vendor-id]')).map(el=>el.dataset.vendorId);
-  try{
-    localStorage.setItem(`pd_vendor_order_${currentStore.id}`, JSON.stringify(ids));
-    toast('순서 저장됨','success');
-  }catch(e){toast('순서 저장 실패','warn');}
+  const json=JSON.stringify(ids);
+  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,vendor_order:json},{onConflict:'store_id'});
+  if(error){console.error('[vendor_order]',error);toast('순서 저장 실패','warn');return;}
+  if(typeof settings==='object'&&settings) settings.vendor_order=json;
+  toast('순서 저장됨','success');
 }
 function initVendorSortable(){
   if(!window.Sortable) return;
@@ -7975,21 +7995,23 @@ async function loadVendorOrders(){
     document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>주문내역이 없습니다</p></div>';
     return;
   }
-  // 한 행 8컬럼 (사장님 정정 2026-05-15): 날짜/품목/단가/수량/금액/메모/편집/삭제
-  // dev_lessons #85 표 정렬 규칙: 헤더=가운데, 본문 숫자=우측, 텍스트=좌측, 짤림은 ellipsis
-  // 거래처 상세에서 진입(vendorId 있음)이면 그대로, 전체 조회면 메모 자리에 거래처명 추가 표시
+  // 한 행 7컬럼 (사장님 옵션 A 2026-05-15): 날짜/품목/단가/수량/금액/메모/›
+  // 행 탭 = 편집 시트 (시트 안에 🗑 삭제 버튼) — ✎/🗑 컬럼 제거로 폭 여유
+  // dev_lessons #85: 헤더=가운데, 본문 숫자=우측, 텍스트=좌측, 짤림은 ellipsis+title
   const showVendor = !vendorId;
-  // 모바일 360px(본문 ~328) 기준 width 데이터 최대 폭 고려:
-  // 단가/금액 999,999(7글자), 수량 999, 날짜 5/15, ✎🗑 22px 고정
+  // 모바일 360px 본문 ~328px 기준 데이터 최대 폭:
+  //   단가/금액 "10,400" / "983,944" (7글자 최대) + tabular-nums 11px ≈ 50~60px
+  //   수량 "94.5" / "999" → 36px
+  //   날짜 "5/15" → 32px
+  //   › 22px 고정
   let html='<table class="order-tbl"><colgroup>'
-    +'<col style="width:32px"/>'   // 날짜 (5/15 4글자)
-    +'<col/>'                       // 품목 (가변, 메인 정보)
-    +'<col style="width:54px"/>'   // 단가 (999,999 7글자)
-    +'<col style="width:28px"/>'   // 수량 (999 3글자)
-    +'<col style="width:60px"/>'   // 금액 (999,999 + 여유)
-    +'<col style="width:54px"/>'   // 메모 (가변 ellipsis)
-    +'<col style="width:22px"/>'   // ✎
-    +'<col style="width:22px"/>'   // 🗑
+    +'<col style="width:32px"/>'   // 날짜
+    +'<col/>'                       // 품목 (가변, 메인)
+    +'<col style="width:56px"/>'   // 단가
+    +'<col style="width:38px"/>'   // 수량 (소수점 대비)
+    +'<col style="width:62px"/>'   // 금액
+    +'<col style="width:48px"/>'   // 메모 (ellipsis)
+    +'<col style="width:22px"/>'   // ›
     +'</colgroup><thead><tr>'
     +'<th>날짜</th>'
     +'<th>품목</th>'
@@ -7997,13 +8019,12 @@ async function loadVendorOrders(){
     +'<th>수량</th>'
     +'<th>금액</th>'
     +'<th>메모</th>'
-    +'<th>✎</th><th>🗑</th></tr></thead><tbody>';
+    +'<th></th></tr></thead><tbody>';
   data.forEach(r=>{
     const dateShort=(r.order_date||'').slice(5).replace('-','/');
     const itemTxt=r.item||'-';
     const unitTxt=r.unit_price?fmt(r.unit_price):'-';
     const qtyTxt=r.quantity!=null&&r.quantity!==''?String(r.quantity):'-';
-    // 메모 셀: 전체 조회면 거래처명 + 메모, 거래처 상세면 메모만
     const memoParts=[];
     if(showVendor && r.vendors?.name) memoParts.push(r.vendors.name);
     if(r.memo) memoParts.push(r.memo);
@@ -8015,8 +8036,7 @@ async function loadVendorOrders(){
       +`<td class="ord-qty">${qtyTxt}</td>`
       +`<td class="ord-amt">${fmt(r.amount)}</td>`
       +`<td class="ord-memo" title="${memoTxt}">${memoTxt}</td>`
-      +`<td class="ord-edit"><button class="ord-edit-btn" data-action="openEditOrderSheet|${r.id}" title="편집">✎</button></td>`
-      +`<td class="ord-act"><button class="ord-del-btn" data-action="deleteOrder|${r.id}" title="삭제">🗑</button></td>`
+      +`<td class="ord-arrow">›</td>`
       +`</tr>`;
   });
   html+='</tbody></table>';
@@ -8048,6 +8068,8 @@ function openAddOrderSheet(){
   document.getElementById('orderQtyInput').value='';
   document.getElementById('orderAmtInput').value='';
   document.getElementById('orderMemoInput').value='';
+  const delBtn=document.getElementById('orderDeleteBtn');
+  if(delBtn) delBtn.style.display='none'; // 신규는 삭제 버튼 숨김
   openSheet('addOrderSheet');
 }
 // 단가/수량 입력 시 금액 자동 계산 (사장님이 amt 직접 수정 가능 — 마지막 입력 우선)
@@ -8080,6 +8102,8 @@ async function openEditOrderSheet(id){
   document.getElementById('orderQtyInput').value=o.quantity||'';
   document.getElementById('orderAmtInput').value=o.amount?fmt(o.amount):'';
   document.getElementById('orderMemoInput').value=o.memo||'';
+  const delBtn=document.getElementById('orderDeleteBtn');
+  if(delBtn) delBtn.style.display=''; // 편집 모드 → 삭제 버튼 노출
   openSheet('addOrderSheet');
 }
 async function deleteOrder(id){
@@ -8090,6 +8114,21 @@ async function deleteOrder(id){
   if(error) return errToast('삭제', error);
   toast('삭제됐어요','success');
   loadVendorOrders();
+}
+// 편집 시트 안 삭제 버튼 (옵션 A — 사장님 2026-05-15)
+async function deleteOrderFromSheet(){
+  if(!editOrderId) return;
+  const id=editOrderId;
+  if(!confirm('이 주문 기록을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.')) return;
+  setLoad(true,'삭제 중...');
+  const{error}=await sb.from('vendor_orders').delete().eq('id',id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('삭제', error);
+  toast('삭제됐어요','success');
+  editOrderId=null;
+  closeAllSheets();
+  loadVendorOrders();
+  loadVendors(); // vendorMonthTotals 재계산
 }
 async function saveOrder(){
   if(!guardStore())return;
