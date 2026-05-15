@@ -516,6 +516,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .order-tbl tr.ord-row td{padding:9px 4px;border-bottom:1px solid var(--gray-100);font-size:12px;vertical-align:middle;}
 .order-tbl .ord-date{font-size:11px;font-weight:700;color:var(--gray-600);font-variant-numeric:tabular-nums;white-space:nowrap;}
 .order-tbl .ord-item{font-weight:500;color:var(--gray-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.order-tbl .ord-item-name{font-size:12px;font-weight:600;color:var(--gray-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.order-tbl .ord-item-sub{font-size:10px;color:var(--gray-500);font-weight:500;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;}
 .order-tbl .ord-item .ord-memo{font-size:11px;color:var(--gray-500);}
 .order-tbl .ord-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .order-tbl .ord-act{text-align:center;padding:0;}
@@ -6661,10 +6663,10 @@ async function loadDashboard(){
     });
     expSegHtml+='</div>';
 
-    // 카테고리: 금액 큰 순 상위 3 + 더보기
-    const expRowsSorted=[...expRows].sort((a,b)=>b.amt-a.amt);
-    const expTop=expRowsSorted.slice(0,3);
-    const expRest=expRowsSorted.slice(3);
+    // 카테고리: 사장님이 지출카테고리 화면에서 드래그 정렬한 순서 따라옴 (sort_order)
+    // expRows는 이미 위에서 sort_order로 정렬됨 → 처음 3개가 상위
+    const expTop=expRows.slice(0,3);
+    const expRest=expRows.slice(3);
     const buildCatRow=(r,isMore)=>{
       const children=r.id?(childExpByCat[r.id]||[]).sort((a,b)=>b.amt-a.amt):[];
       const hasChild=children.length>0;
@@ -7620,11 +7622,55 @@ function renderVendorCompare(vendor, ym, pYm, orders, prevOrders, mydata){
 
   body.innerHTML=html;
 }
+// 거래처 카드 사용자 지정 순서 (localStorage, 매장별 키, 2026-05-15)
+// — store_settings 새 컬럼 SQL 부담 없이 즉시 적용. 다점포 본격화 시 DB 마이그레이션 검토.
+function getVendorOrder(){
+  if(!currentStore) return null;
+  try{
+    const raw=localStorage.getItem(`pd_vendor_order_${currentStore.id}`);
+    return raw?JSON.parse(raw):null;
+  }catch(e){return null;}
+}
+function saveVendorOrderFromDom(){
+  if(!currentStore) return;
+  const wrap=document.getElementById('vendorCardWrap');
+  if(!wrap) return;
+  const ids=Array.from(wrap.querySelectorAll('[data-vendor-id]')).map(el=>el.dataset.vendorId);
+  try{
+    localStorage.setItem(`pd_vendor_order_${currentStore.id}`, JSON.stringify(ids));
+    toast('순서 저장됨','success');
+  }catch(e){toast('순서 저장 실패','warn');}
+}
+function initVendorSortable(){
+  if(!window.Sortable) return;
+  const wrap=document.getElementById('vendorCardWrap');
+  if(!wrap||wrap._sortableInited) return;
+  wrap._sortableInited=true;
+  new Sortable(wrap,{
+    animation:150,
+    delay:300,            // long-press 300ms — 일반 탭(카드 진입)과 구분
+    delayOnTouchOnly:true,
+    touchStartThreshold:5,
+    ghostClass:'drag-ghost',
+    onEnd:saveVendorOrderFromDom
+  });
+}
+
 function renderVendorList(){
   // 2026-05-15: 필터 옵션 value = category_id (FK). 텍스트 매칭에서 FK 매칭으로.
   const catId=document.getElementById('vendorCatFilter')?.value||'';
   let list=vendors;
   if(catId) list=list.filter(v=>v.category_id===catId);
+  // 사용자 지정 순서 적용 (없으면 기본 name 정렬 유지)
+  const userOrder=getVendorOrder();
+  if(userOrder&&userOrder.length){
+    const orderMap={};
+    userOrder.forEach((id,i)=>{orderMap[id]=i;});
+    list=[...list].sort((a,b)=>{
+      const oa=orderMap[a.id]??9999, ob=orderMap[b.id]??9999;
+      return oa-ob;
+    });
+  }
   // 이번달 전체 합계 헤더
   const monthTotal=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.total||0),0);
   const monthCount=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.count||0),0);
@@ -7633,10 +7679,10 @@ function renderVendorList(){
     <span style="font-size:12px;color:var(--gray-600);">${ymStr} 주문 합계</span>
     <span style="font-size:14px;font-weight:800;color:var(--text);">${fmt(monthTotal)}원 · ${monthCount}건</span>
   </div>`:'';
-  document.getElementById('vendorListData').innerHTML=headerHtml+(list.length?list.map(v=>{
+  const cardsHtml=list.length?list.map(v=>{
     const t=vendorMonthTotals[v.id];
     const monthLine=t&&t.count?`<div style="font-size:13px;color:var(--blue);font-weight:700;margin-top:4px;">이번달 ${fmt(t.total)}원 · ${t.count}건</div>`:`<div style="font-size:12px;color:var(--gray-400);margin-top:4px;">이번달 주문 없음</div>`;
-    return `<div class="vendor-card ${v.is_active?'':'inactive'}" data-action="openVendorDetail|${v.id}">
+    return `<div class="vendor-card ${v.is_active?'':'inactive'}" data-vendor-id="${v.id}" data-action="openVendorDetail|${v.id}">
       <div style="flex:1;min-width:0;">
         <div style="font-size:11px;color:var(--gray-500);font-weight:600;margin-bottom:2px;">${v.category||'기타'}</div>
         <div style="font-size:15px;font-weight:700;color:var(--text);">${v.name} ${!v.is_active?'<span class="badge badge-gray">거래종료</span>':''}</div>
@@ -7644,7 +7690,12 @@ function renderVendorList(){
       </div>
       <div style="font-size:20px;color:var(--gray-400);">›</div>
     </div>`;
-  }).join(''):'<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div>');
+  }).join(''):'<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div>';
+  // 카드들은 별도 wrap에 넣어 SortableJS 대상으로 (헤더/empty는 정렬 제외)
+  const wrapHtml=list.length?`<div id="vendorCardWrap">${cardsHtml}</div>`:cardsHtml;
+  document.getElementById('vendorListData').innerHTML=headerHtml+wrapHtml;
+  // 드래그 정렬 초기화 (innerHTML 갱신 후 새 element라 매번 새로 init)
+  initVendorSortable();
 }
 // 거래처 카드 ↘ 진입 → 주문 내역 패널로 이동 (그 거래처만 필터 + 헤더 갱신)
 async function openVendorDetail(vendorId){
@@ -7936,11 +7987,17 @@ async function loadVendorOrders(){
     +'<th>품목/메모</th><th>금액</th><th></th></tr></thead><tbody>';
   data.forEach(r=>{
     const dateShort=(r.order_date||'').slice(5).replace('-','/');
-    const itemTxt=(r.item||'')+(r.memo?` <span class="ord-memo">· ${r.memo}</span>`:'')||'-';
+    // 품목 셀 = 메인(품목명) + 서브(단가×수량 · 메모) — 사장님 요청 2026-05-15
+    const itemMain=r.item||'-';
+    const subParts=[];
+    if(r.unit_price) subParts.push(`${fmt(r.unit_price)}${r.quantity?` × ${r.quantity}`:''}`);
+    else if(r.quantity) subParts.push(`수량 ${r.quantity}`);
+    if(r.memo) subParts.push(r.memo);
+    const subTxt=subParts.length?`<div class="ord-item-sub">${subParts.join(' · ')}</div>`:'';
     html+=`<tr class="ord-row" data-action="openEditOrderSheet|${r.id}">`
       +`<td class="ord-date">${dateShort||'-'}</td>`
       +(showVendor?`<td class="ord-item">${r.vendors?.name||'-'}</td>`:'')
-      +`<td class="ord-item">${itemTxt}</td>`
+      +`<td class="ord-item"><div class="ord-item-name">${itemMain}</div>${subTxt}</td>`
       +`<td class="ord-amt">${fmt(r.amount)}</td>`
       +`<td class="ord-act"><button class="ord-del-btn" data-action="deleteOrder|${r.id}" title="삭제">🗑</button></td>`
       +`</tr>`;
