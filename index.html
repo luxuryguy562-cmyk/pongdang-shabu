@@ -467,23 +467,39 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 /* ─ 대시보드 월요약 테이블 */
 .summ-tbl{width:100%;border-collapse:collapse;}
-.summ-tbl td{padding:12px 0;border-bottom:1px solid var(--gray-100);vertical-align:baseline;}
+.summ-tbl td{padding:10px 0;border-bottom:1px solid var(--gray-100);vertical-align:baseline;}
 .summ-tbl tr:last-child td{border-bottom:none;}
-.summ-tbl .ds-lb{font-size:14px;font-weight:600;color:var(--gray-600);text-align:left;white-space:nowrap;}
-.summ-tbl .ds-amt{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;padding-left:10px;letter-spacing:-0.5px;}
-.summ-tbl .ds-pc{font-size:11px;font-weight:700;color:var(--gray-400);text-align:right;width:54px;white-space:nowrap;padding-left:4px;}
-.summ-tbl tr.summ-total td{border-top:2px solid var(--text);border-bottom:none;padding-top:14px;}
+.summ-tbl .ds-lb{font-size:13px;font-weight:600;color:var(--gray-600);text-align:left;white-space:nowrap;}
+.summ-tbl .ds-amt{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;padding-left:8px;letter-spacing:-0.5px;}
+.summ-tbl .ds-pc{font-size:10px;font-weight:700;color:var(--gray-400);text-align:right;width:42px;white-space:nowrap;padding-left:3px;font-variant-numeric:tabular-nums;}
+.summ-tbl .ds-est{font-size:11px;font-weight:600;color:var(--gray-400);text-align:right;width:64px;white-space:nowrap;padding-left:6px;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+.summ-tbl tr.summ-total td{border-top:2px solid var(--text);border-bottom:none;padding-top:12px;}
 .summ-tbl tr.summ-link{cursor:pointer;}
 .summ-tbl tr.summ-link:active td{background:var(--gray-100);}
-.summ-tbl tr.summ-total .ds-lb{font-size:15px;font-weight:800;color:var(--text);}
-.summ-tbl tr.summ-total .ds-amt{font-size:28px;font-weight:900;letter-spacing:-1px;}
-.summ-tbl.summ-est td{padding:3px 0;border-bottom:none;}
-.summ-tbl.summ-est .ds-lb{font-size:12px;color:var(--gray-600);}
-.summ-tbl.summ-est .ds-amt{font-size:12px;font-weight:700;}
-.summ-tbl.summ-est .ds-pc{font-size:10px;}
-.summ-tbl.summ-est tr.summ-total td{border-top:1px solid var(--gray-200);padding-top:6px;margin-top:4px;}
-.summ-tbl.summ-est tr.summ-total .ds-lb{font-weight:800;}
-.summ-tbl.summ-est tr.summ-total .ds-amt{font-weight:800;}
+.summ-tbl tr.summ-total .ds-lb{font-size:14px;font-weight:800;color:var(--text);}
+.summ-tbl tr.summ-total .ds-amt{font-size:24px;font-weight:900;letter-spacing:-1px;}
+.summ-tbl tr.summ-total .ds-est{font-size:12px;font-weight:700;color:var(--gray-500);}
+/* 예상 컬럼 헤더 (상단 1줄) */
+.summ-tbl thead th{font-size:10px;font-weight:700;color:var(--gray-400);text-align:right;padding:2px 0 4px;border-bottom:1px solid var(--gray-100);text-transform:uppercase;letter-spacing:0.5px;}
+.summ-tbl thead th.h-lb{text-align:left;}
+
+/* ─ 지출 카테고리 아코디언 (상위3+더보기+드릴다운) */
+.exp-cat-tbl{width:100%;border-collapse:collapse;}
+.exp-cat-tbl td{padding:6px 0;}
+.exp-cat-tbl tr.cat-row td{border-bottom:1px solid var(--gray-100);}
+.exp-cat-tbl tr.cat-row[data-has-child="1"]{cursor:pointer;}
+.exp-cat-tbl tr.cat-row[data-has-child="1"]:active td{background:var(--gray-100);}
+.exp-cat-tbl .c-name{text-align:left;font-size:12px;font-weight:600;color:var(--gray-700);}
+.exp-cat-tbl .c-amt{text-align:right;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;}
+.exp-cat-tbl .c-pct{text-align:right;font-size:10px;font-weight:700;color:var(--gray-500);width:46px;font-variant-numeric:tabular-nums;}
+.exp-cat-tbl tr.cat-child td{padding:3px 0;border-bottom:none;}
+.exp-cat-tbl tr.cat-child .c-name{padding-left:30px;font-size:11px;font-weight:500;color:var(--gray-500);}
+.exp-cat-tbl tr.cat-child .c-amt{font-size:11px;font-weight:600;color:var(--gray-500);}
+.exp-cat-tbl tr.cat-child .c-pct{font-size:9px;color:var(--gray-400);}
+.exp-cat-tbl .cat-toggle{display:inline-block;width:11px;font-size:9px;color:var(--gray-400);text-align:center;}
+.exp-cat-tbl .cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+.exp-cat-tbl tr.cat-child .cat-dot{width:6px;height:6px;}
+.exp-more-btn{font-size:11px;font-weight:700;color:var(--blue);background:transparent;border:none;cursor:pointer;padding:6px 12px;}
 
 /* ─ 대시보드 월요약 레거시 (토스 스타일) */
 .dash-summ-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--gray-100);}
@@ -1762,11 +1778,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="dashDailyTable"></div>
     </div>
 
-    <!-- A-5. 일별 차트 (매출 + 순이익) -->
-    <div class="card">
-      <div class="card-title">일별 추이</div>
-      <div class="chart-container"><canvas id="dailyChart"></canvas></div>
-    </div>
+    <!-- A-5. 일별 차트 — 2026-05-15 제거 (사장님 요청, 주단위 요약 카드와 정보 중복) -->
 
     <!-- A-6. 기타매출 (매장별 동적 항목) -->
     <div class="card" id="dashExtraRevenueCard" style="display:none;">
@@ -3417,6 +3429,43 @@ function setSpecialWageAmount(i, el){ specialWageRows[i].amount=parseInt(el.valu
 function toggleRolePermEvt(roleId, roleName, el){ toggleRolePerm(roleId, roleName, el.checked); }
 function toggleEmpPermEvt(empId, el){ toggleEmpPerm(empId, el.checked); }
 function resetCurrentEmpDevice(){ resetDeviceFingerprint(document.getElementById('editEmpId').value); }
+
+// 월 요약 카드 — 지출 카테고리 소분류 드릴다운 (2026-05-15)
+function toggleExpCatChildren(catId){
+  if(!catId) return;
+  const root=document.getElementById('expAccordionBody'); if(!root) return;
+  // CSS attribute selector에 한글/특수문자 안전하게 — id는 UUID라 문제 없지만 방어
+  const safe=String(catId).replace(/"/g,'\\"');
+  const children=root.querySelectorAll(`tr.cat-child[data-cat="${safe}"]`);
+  if(!children.length) return;
+  // 더보기에 속한 자식은 부모 보일 때만 토글 가능
+  const parent=root.querySelector(`tr.cat-row[data-cat="${safe}"]`);
+  if(parent && parent.style.display==='none') return;
+  const willShow=children[0].style.display==='none';
+  children.forEach(c=>{c.style.display=willShow?'':'none';});
+  const toggle=parent?.querySelector('.cat-toggle');
+  if(toggle) toggle.innerText=willShow?'▼':'▶';
+}
+function toggleExpMoreCategories(){
+  const root=document.getElementById('expAccordionBody'); if(!root) return;
+  const moreParents=root.querySelectorAll('tr.cat-row[data-more="1"]');
+  if(!moreParents.length) return;
+  const willShow=moreParents[0].style.display==='none';
+  moreParents.forEach(r=>{
+    r.style.display=willShow?'':'none';
+    if(!willShow){
+      // 접힐 때 자식도 강제 접힘 + 토글 ▶ 리셋
+      const cat=r.dataset.cat;
+      root.querySelectorAll(`tr.cat-child[data-cat="${String(cat).replace(/"/g,'\\"')}"]`).forEach(ch=>{ch.style.display='none';});
+      const toggle=r.querySelector('.cat-toggle');
+      if(toggle && toggle.innerText==='▼') toggle.innerText='▶';
+    }
+  });
+  const label=document.getElementById('expMoreLabel');
+  if(label){
+    label.innerText=willShow?'− 접기 ▴':`+ 더보기 ${moreParents.length}개 ▾`;
+  }
+}
 
 // ══════════════════════════════════════════
 // 공통 유틸
@@ -6524,40 +6573,40 @@ async function loadDashboard(){
     const estRealProfit=estNetProfit-estReserve;
 
     // ══ A-1. 월 요약 렌더 (토스 스타일) ══
+    // 2026-05-15: 단일 표 + "예상" 컬럼 통합. 별도 마감예상 블록 제거. (사장님 요청 — 월요약 수술)
     const pctR=v=>totalRevenue>0?((v/totalRevenue)*100).toFixed(1)+'%':'–';
-    // 월 요약 테이블 (행열 정렬)
-    const sR=(lb,val,cls,pct)=>`<tr><td class="ds-lb">${lb}</td><td class="ds-amt ${cls}">${val}</td><td class="ds-pc">${pct||''}</td></tr>`;
+    const fmtEst=v=>(v||v===0)?fmt(v):'';
+    // 행 헬퍼: (라벨, 금액, 색클래스, 매출대비%, 예상금액)
+    const sR=(lb,val,cls,pct,est)=>`<tr><td class="ds-lb">${lb}</td><td class="ds-amt ${cls}">${val}</td><td class="ds-pc">${pct||''}</td><td class="ds-est">${est||''}</td></tr>`;
+
+    // 예상 컬럼은 현재 월일 때만 채움
+    const estRevTxt = isCurrent ? fmt(estRevenue) : '';
+    const estExpTxt = isCurrent ? fmt(estTotalCostFull) : '';
+    const estNetTxt = isCurrent ? ((estNetProfit>=0?'':'-')+fmt(Math.abs(estNetProfit))) : '';
+    const estResTxt = isCurrent ? (estReserve>0?'-'+fmt(estReserve):'0') : '';
+    const estRealTxt = isCurrent ? ((estRealProfit>=0?'':'-')+fmt(Math.abs(estRealProfit))) : '';
 
     let summHtml='<table class="summ-tbl">';
-    summHtml+=`<tr class="summ-link" data-action="nav|sales"><td class="ds-lb">📊 매출 ›</td><td class="ds-amt amt-blue">${fmt(totalRevenue)}</td><td class="ds-pc"></td></tr>`;
-    summHtml+='</table>';
+    if(isCurrent){
+      summHtml+='<thead><tr><th class="h-lb"></th><th>지금</th><th></th><th>월말 예상</th></tr></thead>';
+    }
+    summHtml+='<tbody>';
+    // 매출/지출
+    summHtml+=`<tr class="summ-link" data-action="nav|sales"><td class="ds-lb">📊 매출 ›</td><td class="ds-amt amt-blue">${fmt(totalRevenue)}</td><td class="ds-pc"></td><td class="ds-est">${estRevTxt}</td></tr>`;
+    summHtml+=`<tr><td class="ds-lb">지출</td><td class="ds-amt amt-red">${fmt(totalCostFull)}</td><td class="ds-pc">${pctR(totalCostFull)}</td><td class="ds-est">${estExpTxt}</td></tr>`;
+    summHtml+='</tbody></table>';
+    // 지출 카테고리 아코디언 자리
+    summHtml+=`<div id="expAccordionBody" style="padding:6px 0 10px;"></div>`;
+    // 순수익/예비비/실수익
     summHtml+='<table class="summ-tbl">';
-    summHtml+=`<tr><td class="ds-lb">지출</td><td class="ds-amt amt-red">${fmt(totalCostFull)}</td><td class="ds-pc">${pctR(totalCostFull)}</td></tr>`;
-    summHtml+='</table>';
-    summHtml+=`<div id="expAccordionBody" style="padding:6px 0 14px;"></div>`;
-    summHtml+='<table class="summ-tbl">';
-    summHtml+=sR('순수익',fmt(netProfit),netProfit>=0?'amt-blue':'amt-red',pctR(netProfit));
-    summHtml+=sR('예비비',reserveAmt>0?'-'+fmt(reserveAmt):'0','amt-muted',pctR(reserveAmt));
-    summHtml+=`<tr class="summ-total"><td class="ds-lb">실수익</td><td class="ds-amt ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</td><td class="ds-pc">${pctR(realProfit)}</td></tr>`;
+    summHtml+=sR('순수익',(netProfit>=0?'':'-')+fmt(Math.abs(netProfit)),netProfit>=0?'amt-blue':'amt-red',pctR(netProfit),estNetTxt);
+    summHtml+=sR('예비비',reserveAmt>0?'-'+fmt(reserveAmt):'0','amt-muted',pctR(reserveAmt),estResTxt);
+    summHtml+=`<tr class="summ-total"><td class="ds-lb">실수익</td><td class="ds-amt ${realProfit>=0?'amt-blue':'amt-red'}">${realProfit>=0?'':'-'}${fmt(Math.abs(realProfit))}</td><td class="ds-pc">${pctR(realProfit)}</td><td class="ds-est">${estRealTxt}</td></tr>`;
     summHtml+='</table>';
 
     // 전월대비 문구 자리 (데이터 로드 후 DOM으로 채움)
     summHtml+=`<p id="momSummaryText" class="mom-text" style="display:none;"></p>`;
 
-    // 마감예상 블록 (현재 월만)
-    if(isCurrent){
-      const pctE=v=>estRevenue>0?((v/estRevenue)*100).toFixed(1)+'%':'–';
-      summHtml+=`<div class="dash-summ-est-block">
-        <div class="est-title">월말 마감예상 (${lastDay}일 기준)</div>
-        <table class="summ-tbl summ-est">
-          ${sR('매출',fmt(estRevenue),'amt-blue','')}
-          ${sR('지출',fmt(estTotalCostFull),'amt-red',pctE(estTotalCostFull))}
-          ${sR('순수익',fmt(estNetProfit),estNetProfit>=0?'amt-blue':'amt-red',pctE(estNetProfit))}
-          ${sR('예비비',estReserve>0?'-'+fmt(estReserve):'0','amt-muted','')}
-          <tr class="summ-total"><td class="ds-lb">실수익</td><td class="ds-amt ${estRealProfit>=0?'amt-blue':'amt-red'}">${estRealProfit>=0?'':'-'}${fmt(Math.abs(estRealProfit))}</td><td class="ds-pc">${pctE(Math.abs(estRealProfit))}</td></tr>
-        </table>
-      </div>`;
-    }
     document.getElementById('dashSummaryGrid').innerHTML=summHtml;
 
     // 예비비 잔고 미니
@@ -6898,34 +6947,81 @@ async function loadDashboard(){
 
     const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1):'0';
 
-    // 카테고리 행 (지출 합계 기준 비율) + 세그먼트 바 데이터 — sort_order 정렬
+    // 카테고리 행 (지출 합계 기준 비율) + 세그먼트 바 데이터
     // 2026-05-15: 음수만 제외 (0은 0%로 표시, 사장님 요청)
+    // 2026-05-15 수술: 상위 3 + "더보기" + 소분류 드릴다운 (사장님 요청)
     const expRows=Object.entries(expByGroup)
       .filter(([g,amt])=>amt>=0)
-      .map(([g,amt])=>({
-        g, amt,
-        color: groupMeta[g]?.color || '#94A3B8',
-        order: groupMeta[g]?.order ?? 999
-      }))
+      .map(([g,amt])=>{
+        const catObj=(expCategories||[]).find(c=>c.name===g && !c.parent_id);
+        return {
+          g, amt,
+          id: catObj?.id || null,
+          color: groupMeta[g]?.color || '#94A3B8',
+          order: groupMeta[g]?.order ?? 999
+        };
+      })
+      // 세그먼트 바용: sort_order 정렬 보존 (시각 일관성)
       .sort((a,b)=>a.order-b.order || a.g.localeCompare(b.g));
     const expRowsTotal=expRows.reduce((a,r)=>a+r.amt,0);
     const pctExp=v=>expRowsTotal>0?(v/expRowsTotal*100).toFixed(1):'0';
-    // 세그먼트 바 (지출 합계 기준 비율)
+
+    // 자식 카테고리 합산 (parent_id 동적 — 식자재 외에도 사장님이 소분류 추가하면 자동)
+    // composite/vendor_orders/receipts 자식에 한해 — 이미 fetch한 voRes2/rcRes2 재사용 (DB 호출 0)
+    const childExpByCat={}; // {부모id: [{name, amt, color, order}]}
+    (expCategories||[]).filter(c=>c.parent_id && c.is_active!==false).forEach(child=>{
+      let amt=0;
+      amt+=(voRes2.data||[]).filter(o=>o.vendors?.category_id===child.id).reduce((a,o)=>a+(o.amount||0),0);
+      amt+=(rcRes2.data||[]).filter(r=>r.category_id===child.id).reduce((a,r)=>a+(r.total_price||0),0);
+      if(amt<=0) return;
+      if(!childExpByCat[child.parent_id]) childExpByCat[child.parent_id]=[];
+      childExpByCat[child.parent_id].push({
+        name:child.name, amt,
+        color:child.color||'#94A3B8',
+        order:child.sort_order??999
+      });
+    });
+
+    // 세그먼트 바 (지출 합계 기준 비율) — 전체 카테고리 그대로 (시각 한눈에)
     let expSegHtml='<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--gray-100);margin-bottom:10px;">';
     expRows.forEach(r=>{
       const w=expRowsTotal>0?(r.amt/expRowsTotal*100):0;
       expSegHtml+=`<div style="width:${w.toFixed(2)}%;background:${r.color};" title="${r.g} ${pctExp(r.amt)}%"></div>`;
     });
     expSegHtml+='</div>';
-    // 카테고리 테이블 (행열 정렬, dev_lessons #22)
-    let catListHtml='<table style="width:100%;border-collapse:collapse;">';
-    expRows.forEach(r=>{
-      catListHtml+=`<tr>
-        <td style="padding:4px 0;white-space:nowrap;text-align:left;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.color};margin-right:6px;vertical-align:middle;"></span><span style="font-size:12px;font-weight:600;color:var(--gray-700);">${r.g}</span></td>
-        <td style="padding:4px 0;text-align:right;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${fmt(r.amt)}</td>
-        <td style="padding:4px 0;text-align:right;font-size:11px;font-weight:600;color:var(--gray-500);width:48px;font-variant-numeric:tabular-nums;">${pctExp(r.amt)}%</td>
+
+    // 카테고리 리스트: 금액 큰 순으로 상위 3 + 더보기
+    const expRowsSorted=[...expRows].sort((a,b)=>b.amt-a.amt);
+    const expTop=expRowsSorted.slice(0,3);
+    const expRest=expRowsSorted.slice(3);
+    const buildCatRow=(r,isMore)=>{
+      const children=r.id?(childExpByCat[r.id]||[]).sort((a,b)=>b.amt-a.amt):[];
+      const hasChild=children.length>0;
+      const hideAttr=isMore?'style="display:none;"':'';
+      const moreAttr=isMore?'data-more="1"':'';
+      const clickAttr=hasChild?`data-action="toggleExpCatChildren|${r.id}"`:'';
+      let h=`<tr class="cat-row" data-row-type="parent" data-cat="${r.id||''}" ${moreAttr} ${hasChild?'data-has-child="1"':''} ${clickAttr} ${hideAttr}>
+        <td class="c-name"><span class="cat-toggle">${hasChild?'▶':''}</span><span class="cat-dot" style="background:${r.color};"></span>${r.g}</td>
+        <td class="c-amt">${fmt(r.amt)}</td>
+        <td class="c-pct">${pctExp(r.amt)}%</td>
       </tr>`;
-    });
+      if(hasChild){
+        children.forEach(c=>{
+          h+=`<tr class="cat-child" data-row-type="child" data-cat="${r.id}" ${moreAttr} style="display:none;">
+            <td class="c-name"><span class="cat-dot" style="background:${c.color};"></span>${c.name}</td>
+            <td class="c-amt">${fmt(c.amt)}</td>
+            <td class="c-pct">${pctExp(c.amt)}%</td>
+          </tr>`;
+        });
+      }
+      return h;
+    };
+    let catListHtml='<table class="exp-cat-tbl">';
+    expTop.forEach(r=>{catListHtml+=buildCatRow(r,false);});
+    if(expRest.length){
+      catListHtml+=`<tr id="expMoreToggleRow"><td colspan="3" style="text-align:center;padding:4px 0;border-bottom:none;"><button class="exp-more-btn" data-action="toggleExpMoreCategories"><span id="expMoreLabel">+ 더보기 ${expRest.length}개 ▾</span></button></td></tr>`;
+      expRest.forEach(r=>{catListHtml+=buildCatRow(r,true);});
+    }
     catListHtml+='</table>';
 
     const accBody=document.getElementById('expAccordionBody');
@@ -6948,26 +7044,9 @@ async function loadDashboard(){
     // 사장님 피드백: 현금/카드 비율은 의사결정 가치 낮고, paymentMethods 빈 배열 시 회색 빈 바만 표시.
     // 매출원별 분해 시스템(배달 매출 정산금/입금주기)은 정확한 데이터 확보 후 별도 PR.
 
-    // ══ A-5. 일별 차트 (매출 + 순이익) ══
+    // ══ A-5. 일별 차트 제거 (2026-05-15) ══
+    // 사장님 요청: 주단위 요약 카드(일별 카드)가 이미 일별 매출/지출/순익 다 보여줘서 그래프 정보 중복.
     destroyChart('dailyChart');
-    const chartDays=allDays.filter(d=>parseInt(d)<=passedDays);
-    const dailyProfitMap={};
-    chartDays.forEach(d=>{
-      const sale=dailySalesMap[d]||0;
-      const exp=dailyExpTotal[d]||0;
-      dailyProfitMap[d]=sale-exp;
-    });
-    chartInstances.dailyChart=new Chart(document.getElementById('dailyChart'),{
-      type:'line',
-      data:{
-        labels:chartDays.map(d=>parseInt(d)+''),
-        datasets:[
-          {label:'매출',data:chartDays.map(d=>dailySalesMap[d]||0),borderColor:'#0050FF',backgroundColor:'rgba(0,80,255,0.08)',tension:0.3,fill:true,pointRadius:2,pointHoverRadius:5},
-          {label:'순이익',data:chartDays.map(d=>dailyProfitMap[d]||0),borderColor:'#05C072',backgroundColor:'rgba(5,192,114,0.08)',tension:0.3,fill:true,pointRadius:2,pointHoverRadius:5,borderDash:[4,3]}
-        ]
-      },
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}}},scales:{y:{ticks:{callback:v=>v>=10000?Math.round(v/10000)+'만':(v<=-10000?Math.round(v/10000)+'만':v)},beginAtZero:false}}}
-    });
 
     // ─── 새 기능: 1순위 매출 통합 카드 (매출+지출+순수익, 2026-05-15) ─── //
     // 현재 월일 때만 카드 표시 (다른 월에서 "오늘 매출" 의미 X)
