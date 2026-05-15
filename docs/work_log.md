@@ -39,6 +39,15 @@
 - DB: SELECT만 (sales_daily, vendor_orders, receipts, attendance_logs) — 캘린더용 4쿼리 추가
 - DB 스키마 변경: **없음**
 
+### 사장님 미리보기 2차 피드백 (같은 PR #123, 2026-05-15 저녁)
+1. **매출관리/업솔루션/↓ 토글 제거** — 사장님 안 쓰던 잔재. 자동 모드 판별로 대체 (loadDashboard 시작 시 daily_sales 최근 3일 데이터 체크 → 있으면 ups, 없으면 settle). 이벤트 리스너 3개 제거 (switchSaleSource·manualCrawl·crawlBtn 함수 자체는 ↻ 재사용 위해 보존)
+2. **↻ 클릭 가능** — 1순위 카드 안 "업데이트 hh:mm ↻" 텍스트가 영구 모드일 때 클릭 → manualCrawl() 강제 갱신
+3. **월 네비 위치 이동** — 1순위 카드(일 단위) 직하단 → dashSettleCont 안 (월 단위 카드 컨테이너 헤더)로 이동. 어디의 네비인지 명확
+4. **1순위 카드 순서 변경** — "순수익 → 지출" → **"지출 → 순수익"** (계산 순서대로, 사장님 피드백)
+5. **신규 매장/빈 데이터 CTA** — 1순위 카드에 매출 데이터 0건이면 "오늘 첫 매출인가요?" + [📝 매출 입력] [🏖 휴무] 2버튼 표시
+6. **캘린더 빈 셀 클릭 → 미니 시트** — 매출 0인 셀 클릭 시 calCellActionSheet 열림 → "매출 입력 / 휴무 / 그대로" 3옵션
+7. **휴무 표시** — sales_daily에 source='closed' + memo='휴무' + 결제수단 0원으로 저장 (스키마 변경 X). 캘린더에 🏖 노란 셀로 표시. dashTopSalesCard 빈 데이터 분기에서 lastSaleDay 계산 시 매출 0인 행(휴무) 자동 제외
+
 ### 사장님 미리보기 피드백 → 추가 작업 (같은 PR #123)
 1. **1순위 카드 통합** — 사장님 피드백 "카드 따로 있으니 어제 거 같지 않고 총 같은 느낌". 1순위 매출 + 순수익 + 지출 한 카드 안에 묶음. 2순위 카드(dashTodayProfitExpenseRow) 삭제. DOM ID 변경: dashTodayProfitAmt → dashTopProfitAmt 등
 2. **매출 빠른 입력 시트 신설** (`quickSalesInputSheet`) — 사장님 짚으심: 매출 관리 탭의 매출 추가 시트가 paymentMethods 빈 배열로 input 행 0개 (버그). 마감정산 형식 새 시트 신설로 우회. `QUICK_SALES_METHODS` 5개 (카드/현금/현금영수증/QR/기타) LEGACY 직매핑. sales_daily에 source='manual'로 upsert
