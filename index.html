@@ -1154,7 +1154,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
       <span style="font-size:12px;color:var(--gray-600);width:56px;">💰 금액</span>
-      <input type="number" id="reAmount" placeholder="0" inputmode="numeric" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
+      <input type="text" id="reAmount" placeholder="0" inputmode="numeric" data-input="formatNumberInput|this" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
       <span style="font-size:12px;color:var(--gray-600);">원</span>
     </div>
     <div style="padding:10px 0;border-bottom:1px solid var(--gray-100);">
@@ -1803,14 +1803,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="setting-row" style="cursor:default;">
       <div><div class="setting-label">고정 적립액</div><div class="setting-sub">매월 고정</div></div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <input type="number" id="rv-fixed" min="0" class="input-inline" style="width:100px;text-align:right;">
+        <input type="text" id="rv-fixed" inputmode="numeric" data-input="formatNumberInput|this" class="input-inline" style="width:100px;text-align:right;">
         <span style="font-size:13px;color:var(--gray-600);">원</span>
       </div>
     </div>
     <div class="setting-row" style="cursor:default;">
       <div><div class="setting-label">초기 잔고 (이월)</div><div class="setting-sub">이전 기간 적립금</div></div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <input type="number" id="rv-initial" min="0" class="input-inline" style="width:100px;text-align:right;">
+        <input type="text" id="rv-initial" inputmode="numeric" data-input="formatNumberInput|this" class="input-inline" style="width:100px;text-align:right;">
         <span style="font-size:13px;color:var(--gray-600);">원</span>
       </div>
     </div>
@@ -2198,7 +2198,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <input type="hidden" id="mpSubKey">
     <div style="font-size:13px;font-weight:700;color:var(--gray-600);margin-bottom:6px;" id="mpTargetLabel">-</div>
     <div style="font-size:12px;color:var(--gray-600);margin-bottom:12px;" id="mpRecordedLabel">기록 금액: -</div>
-    <input id="mpAmount" class="input-field" placeholder="실제 출금 금액" type="number" inputmode="numeric">
+    <input id="mpAmount" class="input-field" placeholder="실제 출금 금액" type="text" inputmode="numeric" data-input="formatNumberInput|this">
     <input id="mpDate" class="input-field" type="date">
     <select id="mpMethod" class="input-field">
       <option value="bank">통장 이체</option>
@@ -2646,7 +2646,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="setting-row" style="cursor:default;">
       <div><div class="setting-label">야간 추가시급</div><div class="setting-sub">시간당 추가</div></div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <input type="number" id="si-night-amount" min="0" class="input-inline" style="width:80px;text-align:right;" placeholder="0">
+        <input type="text" id="si-night-amount" inputmode="numeric" data-input="formatNumberInput|this" class="input-inline" style="width:80px;text-align:right;" placeholder="0">
         <span style="font-size:13px;color:var(--gray-600);">원/시</span>
       </div>
     </div>
@@ -2840,7 +2840,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </select>
   <div id="empWageHourlyWrap">
     <label class="emp-label">시급 (원)</label>
-    <input id="empWageInput" class="input-field" placeholder="10030" type="number" inputmode="numeric">
+    <input id="empWageInput" class="input-field" placeholder="10,030" type="text" inputmode="numeric" data-input="formatNumberInput|this">
   </div>
   <div id="empWageMonthlyWrap" style="display:none;">
     <label class="emp-label">월급 (만원)</label>
@@ -3020,10 +3020,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <input id="orderItemInput" class="input-field" placeholder="품목명" type="text">
   <!-- 단가 × 수량 = 금액 자동 계산 (사장님이 금액 직접 수정도 가능) -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-    <input id="orderUnitInput" class="input-field" placeholder="단가 (원, 선택)" type="number" inputmode="numeric" data-input="onOrderUnitQtyInput">
-    <input id="orderQtyInput" class="input-field" placeholder="수량 (선택)" type="number" inputmode="numeric" step="0.01" data-input="onOrderUnitQtyInput">
+    <input id="orderUnitInput" class="input-field" placeholder="단가 (원, 선택)" type="text" inputmode="numeric" data-input="onOrderUnitQtyInput|this">
+    <input id="orderQtyInput" class="input-field" placeholder="수량 (선택)" type="number" inputmode="decimal" step="0.01" data-input="onOrderUnitQtyInput|this">
   </div>
-  <input id="orderAmtInput" class="input-field" placeholder="금액 (원)" type="number" inputmode="numeric">
+  <input id="orderAmtInput" class="input-field" placeholder="금액 (원)" type="text" inputmode="numeric" data-input="formatNumberInput|this">
   <input id="orderMemoInput" class="input-field" placeholder="메모" type="text">
   <div class="action-group">
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
@@ -3091,7 +3091,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">사용 날짜</div>
   <input id="rvUsageDate" class="input-field" type="date">
   <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">금액</div>
-  <input id="rvUsageAmount" class="input-field" type="number" placeholder="금액 (원)">
+  <input id="rvUsageAmount" class="input-field" type="text" inputmode="numeric" data-input="formatNumberInput|this" placeholder="금액 (원)">
   <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">사유</div>
   <input id="rvUsageMemo" class="input-field" type="text" placeholder="예: 에어컨 수리, 설비 교체">
   <div class="action-group">
@@ -3929,7 +3929,7 @@ function openReceiptEdit(id){
   document.getElementById('reDate').value=r.receipt_date||ymdLocal(new Date());
   document.getElementById('reVendor').value=r.vendor||'';
   document.getElementById('reItem').value=r.item||'';
-  document.getElementById('reAmount').value=r.total_price||0;
+  document.getElementById('reAmount').value=r.total_price?fmt(r.total_price):'';
   document.getElementById('reCatBtn').innerHTML=(r.category?'🏷️ '+getCatLabel(r.category,''):'미분류 ▸');
   const noteVal=(r.note==='정상')?'정상':'오답';
   document.querySelectorAll('input[name="reNote"]').forEach(i=>{i.checked=(i.value===noteVal);});
@@ -3951,7 +3951,7 @@ async function saveReceiptEdit(){
   const date=document.getElementById('reDate').value;
   const vendor=document.getElementById('reVendor').value.trim();
   const item=document.getElementById('reItem').value.trim();
-  const amount=parseInt(document.getElementById('reAmount').value)||0;
+  const amount=unFmt(document.getElementById('reAmount').value)||0;
   const note=document.querySelector('input[name="reNote"]:checked')?.value||'정상';
   const cat=rcpEditingCategory||'';
   if(!date) return toast('날짜를 입력하세요','warn');
@@ -7320,11 +7320,13 @@ function openAddOrderSheet(){
   openSheet('addOrderSheet');
 }
 // 단가/수량 입력 시 금액 자동 계산 (사장님이 amt 직접 수정 가능 — 마지막 입력 우선)
-function onOrderUnitQtyInput(){
-  const unit=parseFloat(document.getElementById('orderUnitInput').value)||0;
+// 단가 입력은 콤마 자동 포맷, 수량은 소수 가능이라 그대로
+function onOrderUnitQtyInput(el){
+  if(el && el.id==='orderUnitInput') formatNumberInput(el);
+  const unit=unFmt(document.getElementById('orderUnitInput').value);
   const qty=parseFloat(document.getElementById('orderQtyInput').value)||0;
   if(unit>0 && qty>0){
-    document.getElementById('orderAmtInput').value=Math.round(unit*qty);
+    document.getElementById('orderAmtInput').value=Math.round(unit*qty).toLocaleString();
   }
 }
 async function openEditOrderSheet(id){
@@ -7343,9 +7345,9 @@ async function openEditOrderSheet(id){
   sel.style.display='none';
   document.getElementById('orderDateInput').value=o.order_date;
   document.getElementById('orderItemInput').value=o.item||'';
-  document.getElementById('orderUnitInput').value=o.unit_price||'';
+  document.getElementById('orderUnitInput').value=o.unit_price?fmt(o.unit_price):'';
   document.getElementById('orderQtyInput').value=o.quantity||'';
-  document.getElementById('orderAmtInput').value=o.amount;
+  document.getElementById('orderAmtInput').value=o.amount?fmt(o.amount):'';
   document.getElementById('orderMemoInput').value=o.memo||'';
   openSheet('addOrderSheet');
 }
@@ -7362,9 +7364,9 @@ async function saveOrder(){
   if(!guardStore())return;
   const vendorId=document.getElementById('orderVendorInput').value;const date=document.getElementById('orderDateInput').value;
   const item=document.getElementById('orderItemInput').value;
-  const unit=parseInt(document.getElementById('orderUnitInput').value)||null;
+  const unit=unFmt(document.getElementById('orderUnitInput').value)||null;
   const qty=parseFloat(document.getElementById('orderQtyInput').value)||null;
-  const amt=parseInt(document.getElementById('orderAmtInput').value)||0;
+  const amt=unFmt(document.getElementById('orderAmtInput').value)||0;
   const memo=document.getElementById('orderMemoInput').value;
   if(!vendorId||!date||!amt)return toast('거래처, 날짜, 금액은 필수입니다.','warn');
   setLoad(true,editOrderId?'수정 중...':'저장 중...');
@@ -7567,7 +7569,7 @@ async function openAddEmpSheet(){
   if(!isManager)return toast('관리자만 직원을 추가할 수 있습니다.','warn');
   document.getElementById('addEmpTitle').innerText='직원 추가';
   ['empNameInput','empIdNumInput','empPhoneInput','empAddressInput','empBankInput','empAccountInput','empPinInput','empCapsIdInput','empHireDateInput','empMonthlyWageInput'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('empWageInput').value='10030';
+  document.getElementById('empWageInput').value=fmt(10030);
   document.getElementById('empWageType').value='hourly';
   onEmpWageTypeChange();
   document.getElementById('empRoleSelect').value='';
@@ -7605,7 +7607,7 @@ async function openEditEmpSheet(id){
   document.getElementById('empAddressInput').value=e.address||'';
   document.getElementById('empBankInput').value=e.bank_name||'';
   document.getElementById('empAccountInput').value=e.account_number||'';
-  document.getElementById('empWageInput').value=e.base_wage||10030;
+  document.getElementById('empWageInput').value=fmt(e.base_wage||10030);
   document.getElementById('empMonthlyWageInput').value=e.monthly_wage||'';
   document.getElementById('empWageType').value=e.wage_type||'hourly';
   onEmpWageTypeChange();
@@ -7647,7 +7649,7 @@ async function saveEmployee(){
   if(!pinVal||!/^\d{4}$/.test(pinVal)) return toast('PIN 4자리 숫자를 입력하세요.','warn');
   // 급여 종류 + 금액 검증
   const wageType=document.getElementById('empWageType').value||'hourly';
-  const baseWage=parseInt(document.getElementById('empWageInput').value)||10030;
+  const baseWage=unFmt(document.getElementById('empWageInput').value)||10030;
   const monthlyWageManwon=parseInt(document.getElementById('empMonthlyWageInput').value)||null;
   if(wageType==='monthly' && (!monthlyWageManwon || monthlyWageManwon<=0))
     return toast('월급(만원)을 입력하세요.','warn');
@@ -7783,7 +7785,7 @@ async function loadAllSettings(){
   const weEl=document.getElementById('si-weekend-extra');if(weEl)weEl.value=settings.weekend_extra||0;
   const nsEl=document.getElementById('si-night-start');if(nsEl)nsEl.value=settings.night_extra_start||'';
   const neEl=document.getElementById('si-night-end');if(neEl)neEl.value=settings.night_extra_end||'';
-  const naEl=document.getElementById('si-night-amount');if(naEl)naEl.value=settings.night_extra_amount||0;
+  const naEl=document.getElementById('si-night-amount');if(naEl)naEl.value=settings.night_extra_amount?fmt(settings.night_extra_amount):'';
   // 로열티 & 수수료 & 예비비
   const rrEl=document.getElementById('si-royalty-rate');if(rrEl)rrEl.value=settings.royalty_rate||0;
   const cfEl=document.getElementById('si-card-fee-rate');if(cfEl)cfEl.value=settings.card_fee_rate||0;
@@ -7886,7 +7888,7 @@ async function saveWageSettings(){
   const weekendExtra=parseInt(document.getElementById('si-weekend-extra').value)||0;
   const nightStart=document.getElementById('si-night-start').value||null;
   const nightEnd=document.getElementById('si-night-end').value||null;
-  const nightAmt=parseInt(document.getElementById('si-night-amount').value)||0;
+  const nightAmt=unFmt(document.getElementById('si-night-amount').value)||0;
   const royaltyRate=parseFloat(document.getElementById('si-royalty-rate').value)||0;
   const cardFeeRate=parseFloat(document.getElementById('si-card-fee-rate').value)||0;
   const reserveRate=parseFloat(document.getElementById('si-reserve-rate').value)||5;
@@ -8860,8 +8862,8 @@ async function loadReserveFund(){
 
     // 설정 폼 채우기
     document.getElementById('rv-rate').value=settings.reserve_rate||5;
-    document.getElementById('rv-fixed').value=settings.reserve_fixed||400000;
-    document.getElementById('rv-initial').value=settings.reserve_initial_balance||0;
+    document.getElementById('rv-fixed').value=fmt(settings.reserve_fixed||400000);
+    document.getElementById('rv-initial').value=fmt(settings.reserve_initial_balance||0);
 
     // 잔고 계산
     const balance=await calcReserveBalance();
@@ -8900,8 +8902,8 @@ async function loadReserveFund(){
 async function saveReserveSettings(){
   if(!guardStore()) return;
   const rate=parseFloat(document.getElementById('rv-rate').value)||5;
-  const fixed=parseInt(document.getElementById('rv-fixed').value)||400000;
-  const initial=parseInt(document.getElementById('rv-initial').value)||0;
+  const fixed=unFmt(document.getElementById('rv-fixed').value)||400000;
+  const initial=unFmt(document.getElementById('rv-initial').value)||0;
   setLoad(true,'저장 중...');
   const{error}=await sb.from('store_settings').upsert({
     store_id:currentStore.id,reserve_rate:rate,reserve_fixed:fixed,reserve_initial_balance:initial
@@ -8917,7 +8919,7 @@ async function saveReserveSettings(){
 async function saveReserveUsage(){
   if(!guardStore()) return;
   const dt=document.getElementById('rvUsageDate').value;
-  const amt=parseInt(document.getElementById('rvUsageAmount').value)||0;
+  const amt=unFmt(document.getElementById('rvUsageAmount').value)||0;
   const memo=document.getElementById('rvUsageMemo').value.trim();
   if(!dt) return toast('날짜를 선택하세요','warn');
   if(!amt) return toast('금액을 입력하세요','warn');
@@ -12911,7 +12913,7 @@ function openManualPayment(categoryId,subKey,label,recorded,actual){
   document.getElementById('mpSubKey').value=subKey;
   document.getElementById('mpTargetLabel').innerText=label;
   document.getElementById('mpRecordedLabel').innerText='기록 금액: '+fmt(recorded)+'원';
-  document.getElementById('mpAmount').value=actual||'';
+  document.getElementById('mpAmount').value=actual?fmt(actual):'';
   document.getElementById('mpDate').value=ymdLocal(new Date());
   document.getElementById('mpMemo').value='';
   openSheet('manualPaymentSheet');
@@ -12921,7 +12923,7 @@ async function saveManualPayment(){
   if(!guardStore())return;
   const categoryId=document.getElementById('mpCategoryId').value;
   const subKey=document.getElementById('mpSubKey').value;
-  const amount=parseInt(document.getElementById('mpAmount').value)||0;
+  const amount=unFmt(document.getElementById('mpAmount').value)||0;
   const memo=document.getElementById('mpMemo').value.trim();
 
   if(!amount)return toast('출금 금액을 입력하세요.','warn');
