@@ -494,10 +494,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .summ-tbl tr.cat-child .c-name{padding-left:30px;font-size:11px;font-weight:500;color:var(--gray-500);}
 .summ-tbl tr.cat-child .c-amt{font-size:11px;font-weight:600;color:var(--gray-500);}
 .summ-tbl tr.cat-child .c-pct{font-size:9px;color:var(--gray-400);}
-/* ▾/▸ 이름 우측 (도트와 분리, 짜침 해소) */
-.summ-tbl .cat-toggle{display:inline-block;margin-left:5px;font-size:9px;color:var(--gray-400);font-weight:600;}
 .summ-tbl .cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;}
 .summ-tbl tr.cat-child .cat-dot{width:6px;height:6px;}
+/* "+ 상세보기" 텍스트 (자식 있는 카테고리 우측 끝, 월말예상 컬럼 자리) */
+.summ-tbl .c-detail{text-align:right;font-size:10px;font-weight:700;color:var(--blue);white-space:nowrap;}
+.summ-tbl .cat-detail-btn{color:var(--blue);}
 /* 세그먼트 바 행 */
 .summ-tbl tr.exp-seg-row td{padding:8px 0 6px;border-bottom:none;}
 /* 더보기/접기 행 (우측 끝 = 월말예상 컬럼 자리) */
@@ -3435,24 +3436,23 @@ function toggleRolePermEvt(roleId, roleName, el){ toggleRolePerm(roleId, roleNam
 function toggleEmpPermEvt(empId, el){ toggleEmpPerm(empId, el.checked); }
 function resetCurrentEmpDevice(){ resetDeviceFingerprint(document.getElementById('editEmpId').value); }
 
-// 월 요약 카드 — 지출 카테고리 소분류 드릴다운 (2026-05-15, 단일 표 통합)
+// 월 요약 카드 — 지출 카테고리 소분류 드릴다운 (2026-05-15)
+// 우측 끝 "+ 상세보기" ↔ "− 접기" 텍스트 토글 (사장님 안: ▾ 표시 모호함)
 function toggleExpCatChildren(catId){
   if(!catId) return;
   const root=document.getElementById('dashSummaryGrid'); if(!root) return;
   const safe=String(catId).replace(/"/g,'\\"');
   const children=root.querySelectorAll(`tr.cat-child[data-cat="${safe}"]`);
   if(!children.length) return;
-  // 더보기에 속한 자식은 부모 보일 때만 토글 가능
   const parent=root.querySelector(`tr.cat-row[data-cat="${safe}"]`);
   if(parent && parent.style.display==='none') return;
   const willShow=children[0].style.display==='none';
   children.forEach(c=>{c.style.display=willShow?'':'none';});
-  const toggle=parent?.querySelector('.cat-toggle');
-  if(toggle) toggle.innerText=willShow?'▴':'▾';
+  const btn=parent?.querySelector('.cat-detail-btn');
+  if(btn) btn.innerText=willShow?'− 접기':'+ 상세보기';
 }
 function toggleExpMoreCategories(){
   const root=document.getElementById('dashSummaryGrid'); if(!root) return;
-  // 더보기 대상: 카테고리 행(cat-row) + 자식(cat-child) + 접기 행(expCollapseRow)
   const moreParents=root.querySelectorAll('tr.cat-row[data-more="1"]');
   const collapseRow=document.getElementById('expCollapseRow');
   const moreToggleRow=document.getElementById('expMoreToggleRow');
@@ -3461,14 +3461,14 @@ function toggleExpMoreCategories(){
   moreParents.forEach(r=>{
     r.style.display=willShow?'':'none';
     if(!willShow){
-      // 접힐 때 자식도 강제 접힘 + 토글 ▾ 리셋
+      // 접힐 때 자식도 강제 접힘 + 상세보기 라벨 리셋
       const cat=r.dataset.cat;
       root.querySelectorAll(`tr.cat-child[data-cat="${String(cat).replace(/"/g,'\\"')}"]`).forEach(ch=>{ch.style.display='none';});
-      const toggle=r.querySelector('.cat-toggle');
-      if(toggle && toggle.innerText==='▴') toggle.innerText='▾';
+      const btn=r.querySelector('.cat-detail-btn');
+      if(btn) btn.innerText='+ 상세보기';
     }
   });
-  // 더보기 행/접기 행 교대 표시 (사장님 안: 펼치면 더보기 자리 사라지고 맨 아래 접기)
+  // 더보기 행/접기 행 교대 (펼치면 더보기 자리 사라지고 맨 아래 접기 등장)
   if(moreToggleRow) moreToggleRow.style.display=willShow?'none':'';
   if(collapseRow) collapseRow.style.display=willShow?'':'none';
 }
@@ -6652,11 +6652,13 @@ async function loadDashboard(){
       const hideAttr=isMore?'style="display:none;"':'';
       const moreAttr=isMore?'data-more="1"':'';
       const clickAttr=hasChild?`data-action="toggleExpCatChildren|${r.id}"`:'';
+      // 우측 끝(월말예상 컬럼 자리) = "+ 상세보기" 텍스트 (자식 있는 경우)
+      const detailCell=hasChild?`<span class="cat-detail-btn">+ 상세보기</span>`:'';
       let h=`<tr class="cat-row" data-row-type="parent" data-cat="${r.id||''}" ${moreAttr} ${hasChild?'data-has-child="1"':''} ${clickAttr} ${hideAttr}>
-        <td class="c-name"><span class="cat-dot" style="background:${r.color};"></span>${r.g}${hasChild?'<span class="cat-toggle">▾</span>':''}</td>
+        <td class="c-name"><span class="cat-dot" style="background:${r.color};"></span>${r.g}</td>
         <td class="c-amt">${fmt(r.amt)}</td>
         <td class="c-pct">${pctOf(r.amt)}%</td>
-        <td></td>
+        <td class="c-detail">${detailCell}</td>
       </tr>`;
       if(hasChild){
         children.forEach(c=>{
@@ -6697,12 +6699,12 @@ async function loadDashboard(){
     // 카테고리 상위 3
     expTop.forEach(r=>{summHtml+=buildCatRow(r,false);});
     if(expRest.length){
-      // 더보기 행 (우측 끝 = 월말예상 컬럼 자리, 사장님 안)
-      summHtml+=`<tr id="expMoreToggleRow" class="exp-toggle-row"><td colspan="3"></td><td style="text-align:right;"><button class="exp-more-btn" data-action="toggleExpMoreCategories"><span id="expMoreLabel">+ 더보기 ${expRest.length}개 ▾</span></button></td></tr>`;
+      // 더보기 행 (가운데 정렬, 사장님 안)
+      summHtml+=`<tr id="expMoreToggleRow" class="exp-toggle-row"><td colspan="4" style="text-align:center;"><button class="exp-more-btn" data-action="toggleExpMoreCategories"><span id="expMoreLabel">+ 더보기 ${expRest.length}개 ▾</span></button></td></tr>`;
       // 숨김 카테고리들 + 자식 (default 숨김)
       expRest.forEach(r=>{summHtml+=buildCatRow(r,true);});
-      // 접기 행 (펼침 시만 표시, 카테고리 맨 아래 우측 끝)
-      summHtml+=`<tr id="expCollapseRow" class="exp-toggle-row" data-more="1" style="display:none;"><td colspan="3"></td><td style="text-align:right;"><button class="exp-more-btn" data-action="toggleExpMoreCategories">− 접기 ▴</button></td></tr>`;
+      // 접기 행 (펼침 시만 표시, 카테고리 맨 아래 가운데 정렬)
+      summHtml+=`<tr id="expCollapseRow" class="exp-toggle-row" data-more="1" style="display:none;"><td colspan="4" style="text-align:center;"><button class="exp-more-btn" data-action="toggleExpMoreCategories">− 접기 ▴</button></td></tr>`;
     }
     // 매출대비 비교 placeholder (카테고리 끝, 순수익 직전 — 전월 데이터 후 채움)
     summHtml+=`<tr id="momCatRow" class="mom-cat-row" style="display:none;"><td colspan="4" id="momCatBody"></td></tr>`;
