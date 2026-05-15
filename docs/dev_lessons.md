@@ -1567,7 +1567,13 @@ function ymdLocal(date){
 - `initSettleDate`, `moveSettleDate`, `loadOpeningForDate`, `getSettleDate`
 - `loadOpeningPage`, `initOpeningDate`, `moveOpeningDate`, `loadOpeningAmount`
 
-**미해결 (다음 PR)**: `toISOString().split('T')[0]` 패턴이 코드에 **37곳** 더 있음 (대시보드/매출/영수증 등). 같은 트랩일 가능성 높음. 전수 점검 + ymdLocal 일관 적용 필요.
+**✅ 2026-05-15 해결**: 남은 30곳 (실제 카운트) 일괄 치환 완료 (Python 정규식 스크립트):
+- 패턴 1 `new Date().toISOString().split('T')[0]` → `ymdLocal(new Date())` (18개)
+- 패턴 2 `<var>.toISOString().split('T')[0]` → `ymdLocal(<var>)` (11개)
+- 헬퍼 정의 위 주석 1줄만 보존 (코드 아님)
+- node --check 통과, 모든 패턴2 변수 Date 객체 확인됨
+
+**영향 범위**: 영수증/카드내역/근태/스케줄/매출/직원관리/거래처 업로드 등 전반.
 
 **원칙**:
 - 사용자가 보는 날짜 문자열 = 로컬 기준이어야 한다 (한국 매장이면 한국 시간)
