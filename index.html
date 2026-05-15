@@ -6740,14 +6740,13 @@ async function loadDashboard(){
     const expByGroup={};
     expData.forEach(e=>{
       if(e.source==='fixed_costs') return; // 고정비는 fcRows에서 일할 합산 (아래)
-      if(!e.amount || e.amount<=0) return;
-      // 그룹 이름 = 카테고리 이름 그대로 (자식 카테고리는 catsForAggregation에서 이미 제외됨)
-      expByGroup[e.name]=(expByGroup[e.name]||0)+e.amount;
+      // 2026-05-15: 사장님 요청 — 0원 카테고리도 0%로 표시 (활성 카테고리 모두 차트에 등장)
+      expByGroup[e.name]=(expByGroup[e.name]||0)+(e.amount||0);
     });
     // 고정비 일할 분배 — fixed_costs.category 기준 직접 합산 (expense_categories.name과 무관)
     Object.entries(fixedProratedByCat).forEach(([cat,amt])=>{
-      if(!amt) return;
-      expByGroup[cat]=(expByGroup[cat]||0)+amt;
+      // 0도 표시 (사장님 요청)
+      expByGroup[cat]=(expByGroup[cat]||0)+(amt||0);
     });
     // 시스템 가상 그룹 (DB 카테고리 없음 — 매출×요율 계산)
     if(royalty>0) expByGroup['로열티']=(expByGroup['로열티']||0)+royalty;
@@ -6771,8 +6770,9 @@ async function loadDashboard(){
     const pctOf=v=>totalRevenue>0?(v/totalRevenue*100).toFixed(1):'0';
 
     // 카테고리 행 (지출 합계 기준 비율) + 세그먼트 바 데이터 — sort_order 정렬
+    // 2026-05-15: 음수만 제외 (0은 0%로 표시, 사장님 요청)
     const expRows=Object.entries(expByGroup)
-      .filter(([g,amt])=>amt>0)
+      .filter(([g,amt])=>amt>=0)
       .map(([g,amt])=>({
         g, amt,
         color: groupMeta[g]?.color || '#94A3B8',
