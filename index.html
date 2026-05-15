@@ -509,7 +509,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 매출대비 비교 문구 행 (카테고리와 순수익 사이) */
 .summ-tbl tr.mom-cat-row td{padding:4px 0 8px;border-bottom:none;}
 
-/* ─ 거래처 주문 리스트 표 (2026-05-15: 한 행 7컬럼 — 날짜/단가/수량/금액/메모/편집/삭제) */
+/* ─ 거래처 주문 리스트 표 (2026-05-15 정정: 한 행 8컬럼 — 날짜/품목/단가/수량/금액/메모/편집/삭제) */
 .order-tbl{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;}
 .order-tbl th{font-size:10px;font-weight:700;color:var(--gray-400);text-align:left;padding:6px 2px;border-bottom:1px solid var(--gray-200);letter-spacing:0.2px;}
 .order-tbl th.h-num{text-align:right;}
@@ -517,6 +517,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .order-tbl tr.ord-row:active td{background:var(--gray-100);}
 .order-tbl tr.ord-row td{padding:8px 2px;border-bottom:1px solid var(--gray-100);font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .order-tbl .ord-date{font-size:10px;font-weight:700;color:var(--gray-600);font-variant-numeric:tabular-nums;}
+.order-tbl .ord-item{font-weight:600;color:var(--gray-700);}
 .order-tbl .ord-unit, .order-tbl .ord-qty{text-align:right;font-variant-numeric:tabular-nums;color:var(--gray-600);font-size:11px;}
 .order-tbl .ord-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:11px;}
 .order-tbl .ord-memo{color:var(--gray-500);font-size:10px;}
@@ -7974,40 +7975,43 @@ async function loadVendorOrders(){
     document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>주문내역이 없습니다</p></div>';
     return;
   }
-  // 한 행 7컬럼 (사장님 요청 2026-05-15): 날짜/단가/수량/금액/메모/편집/삭제
-  // 거래처 상세에서 진입(vendorId 있음)이면 그대로, 전체 조회면 메모 자리에 거래처명 표시
+  // 한 행 8컬럼 (사장님 정정 2026-05-15): 날짜/품목/단가/수량/금액/메모/편집/삭제
+  // 거래처 상세에서 진입(vendorId 있음)이면 그대로, 전체 조회면 메모 자리에 거래처명 추가 표시
   const showVendor = !vendorId;
   let html='<table class="order-tbl"><colgroup>'
-    +'<col style="width:38px"/>'
-    +'<col style="width:54px"/>'
-    +'<col style="width:30px"/>'
-    +'<col style="width:60px"/>'
-    +'<col/>'
-    +'<col style="width:24px"/>'
-    +'<col style="width:24px"/>'
+    +'<col style="width:38px"/>'   // 날짜
+    +'<col/>'                       // 품목 (가변)
+    +'<col style="width:52px"/>'   // 단가
+    +'<col style="width:28px"/>'   // 수량
+    +'<col style="width:58px"/>'   // 금액
+    +'<col style="width:60px"/>'   // 메모
+    +'<col style="width:22px"/>'   // ✎
+    +'<col style="width:22px"/>'   // 🗑
     +'</colgroup><thead><tr>'
     +'<th>날짜</th>'
+    +'<th>품목</th>'
     +'<th class="h-num">단가</th>'
     +'<th class="h-num">수량</th>'
     +'<th class="h-num">금액</th>'
-    +'<th>'+(showVendor?'거래처/메모':'메모')+'</th>'
+    +'<th>메모</th>'
     +'<th></th><th></th></tr></thead><tbody>';
   data.forEach(r=>{
     const dateShort=(r.order_date||'').slice(5).replace('-','/');
+    const itemTxt=r.item||'-';
     const unitTxt=r.unit_price?fmt(r.unit_price):'-';
     const qtyTxt=r.quantity!=null&&r.quantity!==''?String(r.quantity):'-';
-    // 메모 셀: 전체 조회면 거래처명 + 메모, 거래처 상세면 메모만 (+ 품목 보조)
+    // 메모 셀: 전체 조회면 거래처명 + 메모, 거래처 상세면 메모만
     const memoParts=[];
-    if(showVendor && r.vendors?.name) memoParts.push(`<b style="color:var(--gray-700);">${r.vendors.name}</b>`);
-    if(r.item) memoParts.push(r.item);
+    if(showVendor && r.vendors?.name) memoParts.push(r.vendors.name);
     if(r.memo) memoParts.push(r.memo);
     const memoTxt=memoParts.length?memoParts.join(' · '):'-';
     html+=`<tr class="ord-row" data-action="openEditOrderSheet|${r.id}">`
       +`<td class="ord-date">${dateShort||'-'}</td>`
+      +`<td class="ord-item" title="${itemTxt}">${itemTxt}</td>`
       +`<td class="ord-unit">${unitTxt}</td>`
       +`<td class="ord-qty">${qtyTxt}</td>`
       +`<td class="ord-amt">${fmt(r.amount)}</td>`
-      +`<td class="ord-memo" title="${memoTxt.replace(/<[^>]+>/g,'')}">${memoTxt}</td>`
+      +`<td class="ord-memo" title="${memoTxt}">${memoTxt}</td>`
       +`<td class="ord-edit"><button class="ord-edit-btn" data-action="openEditOrderSheet|${r.id}" title="편집">✎</button></td>`
       +`<td class="ord-act"><button class="ord-del-btn" data-action="deleteOrder|${r.id}" title="삭제">🗑</button></td>`
       +`</tr>`;
