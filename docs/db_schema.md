@@ -56,6 +56,7 @@ franchises (프랜차이즈/브랜드)
 | expense_thresholds (jsonb, default '{}') | 상세비교 기준% (카테고리명→%) |
 | **sales_recon_mapping** (jsonb, default '{}') | 매출 대조 매핑 (2026-04-23 Part D). `{"card":[category_id,...], "cash_receipt":[], "qr":[], "etc":[]}`. category_type='income' 카테고리 id 배열 |
 | **business_day_start_hour** (smallint, NOT NULL, default 6, CHECK 0~23) | 영업일 시작 시각 (2026-05-13 추가). 자정 자체가 의미 없는 야간 영업 매장 위해 영업일 경계 도입. 익일 06:00이 매장 영업일 종료/시작 = 자정 넘는 마감조도 같은 영업일에 묶임. SaaS 확장 대비. 매장별 변경 가능 (24h 매장은 04 등). |
+| **vendor_order** (text, nullable) | 거래처 카드 사용자 지정 순서 JSON 배열 (2026-05-15 추가). 옛 localStorage `pd_vendor_order_*`에서 마이그레이션. 다기기 동기화용. exp_hub_order와 같은 패턴. |
 - upsert onConflict: `store_id`
 
 > ⚠️ **2026-05-13**: 위 `business_day_start_hour` 컬럼 추가 시 `attendance_logs_backup_20260513` 백업 테이블 함께 생성됨. 다음 단계 (work_date 영업일 기준 재계산 마이그레이션) 시 롤백용.
