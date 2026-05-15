@@ -11380,23 +11380,20 @@ async function saveExpHubCardOrder(){
 }
 
 // ─── 지출 허브: 카드별 동적 정보 ───
+// 2026-05-15 최적화: 직렬 await 8개 → Promise.all 1번 묶음 (사장님 "엄청 느림" 호소)
 async function loadExpHubData(){
   if(!currentStore) return;
   // 카드 순서 즉시 적용 — settings 캐시 활용, DB fetch 기다리지 말고 (사장님 호소: stale)
   applyExpHubCardOrder();
+  initExpHubSortable();
   const sid=currentStore.id;
   const ym=new Date().toISOString().slice(0,7);
   const [y,m]=ym.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
   const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
   const setText=(id,v)=>{const el=document.getElementById(id);if(el) el.textContent=v;};
-  // 영수증
-  try{
-    const{data:rc}=await sb.from('receipts').select('total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end);
-    const cnt=(rc||[]).length, sum=(rc||[]).reduce((a,r)=>a+(r.total_price||0),0);
-    setText('expHeroInfo', cnt>0?`이번달 ${cnt}건 · ${fmt(sum)}원`:'사진 찍으면 AI가 자동 분석');
-  }catch(e){setText('expHeroInfo','사진 찍으면 AI가 자동 분석');}
-  // 거래처: vendorMonthTotals 활용
+
+  // 거래처(vendorMonthTotals 캐시) + 카테고리 활성 개수 — DB 호출 X, 즉시 처리
   try{
     const totals=Object.values(vendorMonthTotals||{});
     const sum=totals.reduce((a,t)=>a+(t.total||0),0);
@@ -11404,12 +11401,41 @@ async function loadExpHubData(){
     setText('expMiniVendor', sum?fmt(sum):'0');
     setText('expMiniVendorSub', vendorCnt?`${vendorCnt}곳`:'주문 없음');
   }catch(e){setText('expMiniVendor','-');}
-  // 고정비: fixed_costs.estimated_monthly 합 — 고정비+공과금 통합 (hub는 합산 유지)
-  // 마케팅/세금: fixed_costs + expense_category_amounts 합산
-  let fcByCat={};
   try{
-    const{data:fc}=await sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid);
-    const rows=(fc||[]).filter(r=>r.is_active!==false);
+    const list=(expCategories||[]).filter(c=>c.is_active!==false);
+    setText('expFullCat', `활성 ${list.length}개`);
+  }catch(e){}
+
+  // 마케팅/세금 카테고리 id 미리 추출 (expense_category_amounts in 필터용)
+  const marketingCat=(expCategories||[]).find(c=>c.name==='마케팅' && !c.parent_id);
+  const taxCat=(expCategories||[]).find(c=>c.name==='세금' && !c.parent_id);
+  const ecaCatIds=[marketingCat?.id, taxCat?.id].filter(Boolean);
+
+  // ━━ 모든 DB 호출 병렬 발사 (직렬 8회 → 1회 Promise.all) ━━
+  const [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdCntRes, recCntRes] = await Promise.all([
+    sb.from('receipts').select('total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+    sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
+    sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
+    sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle(),
+    ecaCatIds.length
+      ? sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym).in('category_id',ecaCatIds)
+      : Promise.resolve({data:[]}),
+    sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+    sb.from('mydata_transactions').select('id',{count:'exact',head:true}).eq('store_id',sid).gte('tx_date',start).lte('tx_date',end),
+    sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending')
+  ]);
+
+  // 영수증
+  try{
+    const rc=rcRes.data||[];
+    const cnt=rc.length, sum=rc.reduce((a,r)=>a+(r.total_price||0),0);
+    setText('expHeroInfo', cnt>0?`이번달 ${cnt}건 · ${fmt(sum)}원`:'사진 찍으면 AI가 자동 분석');
+  }catch(e){setText('expHeroInfo','사진 찍으면 AI가 자동 분석');}
+
+  // 고정비 (마케팅/세금 합산용 fcByCat도 여기서 구성)
+  const fcByCat={};
+  try{
+    const rows=(fcRes.data||[]).filter(r=>r.is_active!==false);
     rows.forEach(r=>{
       const c=r.category||'고정비';
       fcByCat[c]=(fcByCat[c]||0)+(r.estimated_monthly||0);
@@ -11419,60 +11445,48 @@ async function loadExpHubData(){
     setText('expMiniFixed', fmt(fixedSum));
     setText('expMiniFixedSub', `${fixedCnt}개 항목`);
   }catch(e){setText('expMiniFixed','-');}
+
   // 로열티: sales_daily × store_settings.royalty_rate
   try{
-    const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end);
-    const totalRev=(sd||[]).reduce((a,r)=>a+(typeof salesRowTotal==='function'?salesRowTotal(r):(r.card||0)+(r.cash||0)+(r.cash_receipt||0)+(r.qr||0)+(r.etc||0)+(r.extra_large||0)+(r.extra_small||0)),0);
-    const{data:ss}=await sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle();
-    const rate=parseFloat(ss?.royalty_rate||0)/100;
+    const sd=sdRes.data||[];
+    const totalRev=sd.reduce((a,r)=>a+(typeof salesRowTotal==='function'?salesRowTotal(r):(r.card||0)+(r.cash||0)+(r.cash_receipt||0)+(r.qr||0)+(r.etc||0)+(r.extra_large||0)+(r.extra_small||0)),0);
+    const rate=parseFloat(ssRes.data?.royalty_rate||0)/100;
     const royaltyAmt=Math.round(totalRev*rate);
     setText('expMiniRoyalty', rate>0?fmt(royaltyAmt):'-');
     setText('expMiniRoyaltySub', rate>0?`${(rate*100).toFixed(1)}%`:'요율 미설정');
   }catch(e){setText('expMiniRoyalty','-');}
-  // 마케팅/세금: fixed_costs(category=해당) + expense_category_amounts 합산
-  const renderCatCard=async(catName,amtId,subId)=>{
+
+  // 마케팅/세금: fcByCat + ecaByCat 합산
+  const ecaByCat={};
+  (ecaRes.data||[]).forEach(r=>{ecaByCat[r.category_id]=(ecaByCat[r.category_id]||0)+(r.amount||0);});
+  const renderCatCard=(catName, catObj, amtId, subId)=>{
     try{
-      const cat=(expCategories||[]).find(c=>c.name===catName && !c.parent_id);
-      let ecaSum=0;
-      if(cat){
-        const{data:eca}=await sb.from('expense_category_amounts').select('amount').eq('store_id',sid).eq('category_id',cat.id).eq('year_month',ym).maybeSingle();
-        ecaSum=eca?.amount||0;
-      }
+      const ecaSum=catObj?(ecaByCat[catObj.id]||0):0;
       const fcSum=fcByCat[catName]||0;
       const sum=fcSum+ecaSum;
       setText(amtId, sum?fmt(sum):'0');
       setText(subId, '이번달');
     }catch(e){setText(amtId,'-');}
   };
-  await renderCatCard('마케팅','expMiniMarketing','expMiniMarketingSub');
-  await renderCatCard('세금','expMiniTax','expMiniTaxSub');
-  // 인건비: attendance_logs.calculated_wage 합
+  renderCatCard('마케팅', marketingCat, 'expMiniMarketing', 'expMiniMarketingSub');
+  renderCatCard('세금', taxCat, 'expMiniTax', 'expMiniTaxSub');
+
+  // 인건비
   try{
-    const{data:al}=await sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end);
-    const sum=(al||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);
-    const emps=new Set((al||[]).map(r=>r.employee_id).filter(Boolean));
+    const al=alRes.data||[];
+    const sum=al.reduce((a,r)=>a+(r.calculated_wage||0),0);
+    const emps=new Set(al.map(r=>r.employee_id).filter(Boolean));
     setText('expMiniWage', fmt(sum));
     setText('expMiniWageSub', `${emps.size}명`);
   }catch(e){setText('expMiniWage','-');}
-  // 계좌·카드: hub-full sub에 통합 표시
+
+  // 계좌·카드 / 정산 대조 (count head 결과)
   try{
-    const{count}=await sb.from('mydata_transactions').select('id',{count:'exact',head:true}).eq('store_id',sid).gte('tx_date',start).lte('tx_date',end);
-    setText('expMiniMydataSub', count?`이번달 ${count}건 자동 수집`:'자동 수집');
+    setText('expMiniMydataSub', mdCntRes.count?`이번달 ${mdCntRes.count}건 자동 수집`:'자동 수집');
   }catch(e){setText('expMiniMydataSub','자동 수집');}
-  // 정산 대조: hub-full sub에 통합 표시
   try{
-    const{count}=await sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending');
-    setText('expMiniReconSub', count?`${count}건 검토 필요`:'예상 vs 실제 매출·지출 대조');
+    setText('expMiniReconSub', recCntRes.count?`${recCntRes.count}건 검토 필요`:'예상 vs 실제 매출·지출 대조');
   }catch(e){setText('expMiniReconSub','예상 vs 실제 매출·지출 대조');}
-  // 예비비는 홈 대시보드 미니 행과 사이드 메뉴에서 진입 (지출 hub에서 제거됨)
-  // hub 그리드 카드 순서 적용 + 드래그 정렬 초기화
-  applyExpHubCardOrder();
-  initExpHubSortable();
-  // 카테고리: 활성 개수
-  try{
-    const list=(expCategories||[]).filter(c=>c.is_active!==false);
-    setText('expFullCat', `활성 ${list.length}개`);
-  }catch(e){}
 }
 
 // ─── 내 정보 탭 로드 (직원용) ───
