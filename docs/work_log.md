@@ -4,6 +4,46 @@
 
 ---
 
+## [2026-05-15] 식자재 12,594,000원 미궁 추적 + DB 마이그레이션 (대형)
+
+**브랜치**: `claude/dash-fix-fixedgroup-receipt-debug` (PR #109), `claude/receipts-price-fix-debug2` (PR #110)
+**규모**: 대형 (DB 마이그레이션 + 코드 fix + 진단)
+
+### 발견 흐름
+1. 사장님 신고 — 거래처 등록 7,653,858원(실은 고정비) → 홈 식자재 12,594,000원 (실은 거래처 3,148,500)
+2. 코드 흐름 추적 — 식자재 = vendor_orders + receipts. 영수증 0원이면 식자재 ≤ 거래처 합이어야 하나 안 맞음 (미궁)
+3. 진단 콘솔 로그 + 영수증 SELECT 에러 화면 노출 (PR #109)
+4. 사장님 캡처 — 영수증 42703 (`column receipts.price does not exist`) 확정
+5. price 컬럼 제거 + mydata/잔재 디버그 강화 (PR #110)
+6. 2차 캡처 — expCategories 29개 (잔재 7개) + expResults에서 식자재 트리 4개 모두 `vendor_orders` source + vendor_category null
+7. 원인 확정: 식자재(vendor_orders, vc=null) + 육류/야채/공산품(vendor_orders, vc=null) × 4 → 모든 voRows가 4번 합산 → 3,148,500 × 4 = 12,594,000 ✅
+
+### DB 마이그레이션 (사장님 SQL 실행 완료)
+- `expense_categories_backup_20260515` 백업 테이블 생성
+- 식자재 (a521efc8): vendor_orders → composite
+- 육류 (2750fd26): vendor_orders → composite, vendor_category='육류'
+- 야채 (015d4126): vendor_orders → composite, vendor_category='야채'
+- 공산품 (7dde5264): vendor_orders → composite, vendor_category='공산품'
+- 검증 SELECT 결과 4행 모두 정상
+
+### 부가 fix (PR #109)
+- 고정비 차트 그룹화 갈아엎기: `fixedProratedByCat[e.name]` 룩업 → fcRows.category 기준 직접 합산
+  - 사장님 "공과금/고정비" 통합 이름이 `fixed_costs.category` 키 ("고정비"/"공과금")와 불일치로 차트 누락되던 버그 fix
+- 영수증 에러 화면 노출 (코드+메시지)
+- Dashboard 가마감 디버그 로그 추가
+
+### 부가 fix (PR #110)
+- 영수증 SELECT/INSERT에서 `price/count` 키 제거 (DB 컬럼 없음, 42703 원인)
+- docs/db_schema.md receipts 컬럼 정정
+
+### 남은 일 (다음 세션)
+- 사장님 거래처 2곳 카테고리 확인 (옛 '식자재'면 재분류 필요)
+- 디버그 콘솔 로그 제거 (`[DASH-DEBUG]`) — 진단 끝났으니 정리
+- 잔재 카테고리 7개 정리 검토 (식자재(주류)/쿠팡/옛 income 5개/물품대금)
+- dev_lessons 추가: "DB 컬럼-문서 불일치 의심 시 진단 SELECT 먼저"
+
+---
+
 ## [2026-05-14 후속] 차액 확인 카드 헤더 토스화 + 월별 네비 (소형)
 
 **브랜치**: `claude/improve-deadline-ui-2m897`
