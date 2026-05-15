@@ -282,10 +282,17 @@ franchises (프랜차이즈/브랜드)
 ### vendors / vendor_orders
 | vendors | vendor_orders |
 |---------|---------------|
-| id, store_id, name, category, is_active | store_id, vendor_id(FK), order_date |
+| id, store_id, name, **category** (text), **category_id** (FK→expense_categories ON DELETE SET NULL), is_active | store_id, vendor_id(FK), order_date |
 | | item, **unit_price** (int, nullable), **quantity** (numeric, nullable), amount, memo, source |
 
-> ⚠️ **2026-05-15 추가**: `unit_price`, `quantity` 컬럼 추가. UI에서 단가×수량 자동 곱셈해서 amount 채우되, 사장님이 amount 직접 수정 가능 (할인/운송비 포함 등). DB엔 셋 다 저장 (단가 변동 추적용).
+> ⚠️ **2026-05-15 추가** (vendor_orders): `unit_price`, `quantity` 컬럼. UI에서 단가×수량 자동 곱셈해서 amount 채우되, 사장님이 amount 직접 수정 가능 (할인/운송비 포함 등).
+>
+> ⚠️ **2026-05-15 추가** (vendors): `category_id` FK 도입 (PR #119). 거래처 편집창 대분류+소분류 2단 select. category_id = 자식 우선, 없으면 부모. `category` 텍스트는 UI 표시·calcExpense 호환용으로 유지 (saveVendor에서 동기화).
+>
+> **calcExpense 매칭 (2026-05-15 PR #120 갈아엎기)**:
+> - `vendor_orders` source 카테고리: `o.vendors?.category_id === cat.id` (FK 직접)
+> - `composite` 카테고리(식자재): `[cat.id, ...children.ids]` 매칭 (대분류면 자식 ids 포함)
+> - 옛 거래처 (`category_id=NULL`) 는 매칭 X → 사장님 재분류 필요
 
 ### expense_categories / expense_category_amounts
 | expense_categories | expense_category_amounts |
