@@ -509,18 +509,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 매출대비 비교 문구 행 (카테고리와 순수익 사이) */
 .summ-tbl tr.mom-cat-row td{padding:4px 0 8px;border-bottom:none;}
 
-/* ─ 거래처 주문 리스트 표 (2026-05-15 정정: 한 행 8컬럼 — 날짜/품목/단가/수량/금액/메모/편집/삭제) */
+/* ─ 거래처 주문 리스트 표 (2026-05-15 정정: 8컬럼 — dev_lessons #85 표 정렬 규칙 적용) */
+/*    헤더: 항상 가운데 정렬. 본문 숫자: 우측, 텍스트: 좌측. 짤림은 ellipsis */
 .order-tbl{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;}
-.order-tbl th{font-size:10px;font-weight:700;color:var(--gray-400);text-align:left;padding:6px 2px;border-bottom:1px solid var(--gray-200);letter-spacing:0.2px;}
-.order-tbl th.h-num{text-align:right;}
+.order-tbl th{font-size:10px;font-weight:700;color:var(--gray-400);text-align:center;padding:6px 2px;border-bottom:1px solid var(--gray-200);letter-spacing:0.2px;}
 .order-tbl tr.ord-row{cursor:pointer;}
 .order-tbl tr.ord-row:active td{background:var(--gray-100);}
 .order-tbl tr.ord-row td{padding:8px 2px;border-bottom:1px solid var(--gray-100);font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.order-tbl .ord-date{font-size:10px;font-weight:700;color:var(--gray-600);font-variant-numeric:tabular-nums;}
-.order-tbl .ord-item{font-weight:600;color:var(--gray-700);}
-.order-tbl .ord-unit, .order-tbl .ord-qty{text-align:right;font-variant-numeric:tabular-nums;color:var(--gray-600);font-size:11px;}
-.order-tbl .ord-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:11px;}
-.order-tbl .ord-memo{color:var(--gray-500);font-size:10px;}
+.order-tbl .ord-date{font-size:10px;font-weight:700;color:var(--gray-600);font-variant-numeric:tabular-nums;text-align:center;}
+.order-tbl .ord-item{font-weight:600;color:var(--gray-700);text-align:left;padding-left:4px;}
+.order-tbl .ord-unit, .order-tbl .ord-qty{text-align:right;font-variant-numeric:tabular-nums;color:var(--gray-600);font-size:11px;padding-right:4px;}
+.order-tbl .ord-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:11px;padding-right:4px;}
+.order-tbl .ord-memo{color:var(--gray-500);font-size:10px;text-align:left;padding-left:4px;}
 .order-tbl .ord-edit, .order-tbl .ord-act{text-align:center;padding:0 2px;}
 .order-tbl .ord-edit-btn, .order-tbl .ord-del-btn{background:transparent;border:none;cursor:pointer;font-size:13px;padding:6px 2px;color:var(--gray-400);line-height:1;}
 .order-tbl .ord-del-btn:active{color:var(--danger);}
@@ -7976,25 +7976,28 @@ async function loadVendorOrders(){
     return;
   }
   // 한 행 8컬럼 (사장님 정정 2026-05-15): 날짜/품목/단가/수량/금액/메모/편집/삭제
+  // dev_lessons #85 표 정렬 규칙: 헤더=가운데, 본문 숫자=우측, 텍스트=좌측, 짤림은 ellipsis
   // 거래처 상세에서 진입(vendorId 있음)이면 그대로, 전체 조회면 메모 자리에 거래처명 추가 표시
   const showVendor = !vendorId;
+  // 모바일 360px(본문 ~328) 기준 width 데이터 최대 폭 고려:
+  // 단가/금액 999,999(7글자), 수량 999, 날짜 5/15, ✎🗑 22px 고정
   let html='<table class="order-tbl"><colgroup>'
-    +'<col style="width:38px"/>'   // 날짜
-    +'<col/>'                       // 품목 (가변)
-    +'<col style="width:52px"/>'   // 단가
-    +'<col style="width:28px"/>'   // 수량
-    +'<col style="width:58px"/>'   // 금액
-    +'<col style="width:60px"/>'   // 메모
+    +'<col style="width:32px"/>'   // 날짜 (5/15 4글자)
+    +'<col/>'                       // 품목 (가변, 메인 정보)
+    +'<col style="width:54px"/>'   // 단가 (999,999 7글자)
+    +'<col style="width:28px"/>'   // 수량 (999 3글자)
+    +'<col style="width:60px"/>'   // 금액 (999,999 + 여유)
+    +'<col style="width:54px"/>'   // 메모 (가변 ellipsis)
     +'<col style="width:22px"/>'   // ✎
     +'<col style="width:22px"/>'   // 🗑
     +'</colgroup><thead><tr>'
     +'<th>날짜</th>'
     +'<th>품목</th>'
-    +'<th class="h-num">단가</th>'
-    +'<th class="h-num">수량</th>'
-    +'<th class="h-num">금액</th>'
+    +'<th>단가</th>'
+    +'<th>수량</th>'
+    +'<th>금액</th>'
     +'<th>메모</th>'
-    +'<th></th><th></th></tr></thead><tbody>';
+    +'<th>✎</th><th>🗑</th></tr></thead><tbody>';
   data.forEach(r=>{
     const dateShort=(r.order_date||'').slice(5).replace('-','/');
     const itemTxt=r.item||'-';
