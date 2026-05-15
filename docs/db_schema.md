@@ -2,7 +2,9 @@
 
 > **Supabase URL**: `https://ruytgygjwnbtzmtofopg.supabase.co`
 > **store_id**: `4ae03341-e5dc-4933-b746-29728cbc685f` (퐁당샤브 논산점)
-> **최종 업데이트**: 2026-05-14 (고정비/공과금 분리 — expense_categories에 '공과금' INSERT, fixed_costs.category 옵션 정리)
+> **최종 업데이트**: 2026-05-15 (식자재 트리 정상화 — 논산점 expense_categories 마이그레이션, receipts.price/count 컬럼 코드 제거)
+>
+> ⚠️ **2026-05-15 백업 테이블**: `expense_categories_backup_20260515` — 식자재 트리 마이그레이션 롤백용. 마이그레이션 안정 확인 후 삭제 가능.
 
 ## 테이블 관계도
 
