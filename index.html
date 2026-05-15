@@ -6531,7 +6531,6 @@ async function loadDashboard(){
     let summHtml='<table class="summ-tbl">';
     summHtml+=`<tr class="summ-link" data-action="nav|sales"><td class="ds-lb">📊 매출 ›</td><td class="ds-amt amt-blue">${fmt(totalRevenue)}</td><td class="ds-pc"></td></tr>`;
     summHtml+='</table>';
-    summHtml+=`<div id="revAccordionBody" style="padding:6px 0 14px;"></div>`;
     summHtml+='<table class="summ-tbl">';
     summHtml+=`<tr><td class="ds-lb">지출</td><td class="ds-amt amt-red">${fmt(totalCostFull)}</td><td class="ds-pc">${pctR(totalCostFull)}</td></tr>`;
     summHtml+='</table>';
@@ -6945,53 +6944,9 @@ async function loadDashboard(){
       })()}`;
     }
 
-    // ══ A-1b. 매출 상세 (세그먼트 바 + 결제수단 테이블, 항상 펼침) ══
-    // 2026-05-06: 도넛 → 세그먼트 바
-    const revBody=document.getElementById('revAccordionBody');
-    if(revBody){
-      // Part F Phase 2: paymentMethods 동적 색상/순서. 'ups' 경로 폴백(카드/현금/기타) 유지.
-      const revColors={'카드':'#0050FF','현금':'#05C072','기타':'#FF9500'};
-      const revOrder=[];
-      (paymentMethods||[]).forEach(m=>{
-        revColors[m.name]=m.color||'#4E5968';
-        revOrder.push(m.name);
-      });
-      // 'ups' 경로용 폴백 순서 보강
-      ['카드','현금','기타'].forEach(k=>{if(!revOrder.includes(k)) revOrder.push(k);});
-      // salesBreakdown에서 0 초과 항목만
-      const revEntries=[];
-      revOrder.forEach(k=>{if(salesBreakdown[k]&&salesBreakdown[k]>0) revEntries.push([k,salesBreakdown[k]]);});
-      Object.entries(salesBreakdown).forEach(([k,v])=>{if(!revOrder.includes(k)&&v>0) revEntries.push([k,v]);});
-      const revRowsTotal=revEntries.reduce((a,[,v])=>a+v,0);
-      const pctRev=v=>revRowsTotal>0?(v/revRowsTotal*100).toFixed(1):'0';
-
-      // 세그먼트 바 (매출 합계 기준 비율)
-      let revSegHtml='<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--gray-100);margin-bottom:10px;">';
-      revEntries.forEach(([k,v])=>{
-        const w=revRowsTotal>0?(v/revRowsTotal*100):0;
-        const color=revColors[k]||'#4E5968';
-        revSegHtml+=`<div style="width:${w.toFixed(2)}%;background:${color};" title="${k} ${pctRev(v)}%"></div>`;
-      });
-      revSegHtml+='</div>';
-
-      // 결제수단 테이블 (행열 정렬)
-      let revListHtml='<table style="width:100%;border-collapse:collapse;">';
-      revEntries.forEach(([k,v])=>{
-        const color=revColors[k]||'#4E5968';
-        revListHtml+=`<tr>
-          <td style="padding:4px 0;white-space:nowrap;text-align:left;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;vertical-align:middle;"></span><span style="font-size:12px;font-weight:600;color:var(--gray-700);">${k}</span></td>
-          <td style="padding:4px 0;text-align:right;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${fmt(v)}</td>
-          <td style="padding:4px 0;text-align:right;font-size:11px;font-weight:600;color:var(--gray-500);width:48px;font-variant-numeric:tabular-nums;">${pctRev(v)}%</td>
-        </tr>`;
-      });
-      // 일평균 + 영업일수
-      const avgDaily=passedDays>0?Math.round(totalRevenue/passedDays):0;
-      revListHtml+=`<tr><td colspan="3" style="border-top:1px solid var(--gray-100);padding-top:4px;"></td></tr>`;
-      revListHtml+=`<tr><td style="padding:2px 0;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;">일평균</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;">${fmt(avgDaily)}</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:600;color:var(--gray-400);font-variant-numeric:tabular-nums;">${passedDays}일</td></tr>`;
-      revListHtml+='</table>';
-
-      revBody.innerHTML=`${revSegHtml}${revListHtml}`;
-    }
+    // ══ A-1b. 매출 결제수단별 분해 제거 (2026-05-15) ══
+    // 사장님 피드백: 현금/카드 비율은 의사결정 가치 낮고, paymentMethods 빈 배열 시 회색 빈 바만 표시.
+    // 매출원별 분해 시스템(배달 매출 정산금/입금주기)은 정확한 데이터 확보 후 별도 PR.
 
     // ══ A-5. 일별 차트 (매출 + 순이익) ══
     destroyChart('dailyChart');
