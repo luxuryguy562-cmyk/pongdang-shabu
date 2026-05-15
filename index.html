@@ -6285,7 +6285,7 @@ async function loadDashboard(){
         ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
         :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
       // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
-      sb.from('vendor_orders').select('amount,order_date,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+      sb.from('vendor_orders').select('amount,order_date,vendors(category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
       sb.from('receipts').select('total_price,category_id,receipt_date').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
       sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
       // ── 전월 일별 식자재/영수증/인건비 ──
@@ -7140,8 +7140,10 @@ function renderVendorCompare(vendor, ym, pYm, orders, prevOrders, mydata){
   body.innerHTML=html;
 }
 function renderVendorList(){
-  const cat=document.getElementById('vendorCatFilter')?.value||'';
-  let list=vendors;if(cat)list=list.filter(v=>v.category===cat);
+  // 2026-05-15: 필터 옵션 value = category_id (FK). 텍스트 매칭에서 FK 매칭으로.
+  const catId=document.getElementById('vendorCatFilter')?.value||'';
+  let list=vendors;
+  if(catId) list=list.filter(v=>v.category_id===catId);
   // 이번달 전체 합계 헤더
   const monthTotal=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.total||0),0);
   const monthCount=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.count||0),0);
@@ -7250,17 +7252,17 @@ function refreshVendorCategoryChildren(parentId, preferChildId){
 function onVendorCatParentChange(el){
   refreshVendorCategoryChildren(el.value);
 }
-// 목록 필터 (1단 vendor_category 텍스트, 단순 유지)
+// 목록 필터 — FK 매칭. 옵션 value=category_id, label=vendor_category (사용자 표시)
 function refreshVendorListFilter(){
   const cats=(expCategories||[])
     .filter(c=>c.is_active!==false && c.vendor_category && (c.category_type||'expense')==='expense')
-    .map(c=>c.vendor_category);
-  const unique=[...new Set(cats)].sort();
+    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   const filter=document.getElementById('vendorCatFilter');
   if(!filter) return;
   const cur=filter.value;
-  filter.innerHTML='<option value="">전체 카테고리</option>'+unique.map(v=>`<option value="${v}">${v}</option>`).join('');
-  if(cur==='' || unique.includes(cur)) filter.value=cur;
+  filter.innerHTML='<option value="">전체 카테고리</option>'+
+    cats.map(c=>`<option value="${c.id}">${c.vendor_category}</option>`).join('');
+  if(cur==='' || cats.find(c=>c.id===cur)) filter.value=cur;
 }
 function openAddVendorSheet(){
   if(!guardStore()) return;
@@ -9156,7 +9158,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
 
     const [voRes,rcRes,fcRes,ecaRes,attRes]=await Promise.all([
       needVo
-        ? (pf.vendor_orders||sb.from('vendor_orders').select('amount,vendors(category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end))
+        ? (pf.vendor_orders||sb.from('vendor_orders').select('amount,vendors(category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end))
         : Promise.resolve({data:[]}),
       needRc
         ? (pf.receipts||sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end))
@@ -9188,25 +9190,25 @@ async function calcExpenseByCategories(ym, mode, prefetched){
         isConfirmed=amount>0;
       } else {
         // ── 가마감: prefetch 데이터에서 필터 집계 ──
+        // 2026-05-15: vendors.category 텍스트 매칭 → category_id FK 매칭 갈아엎기 (헌법 1-6)
+        //   - 옛: o.vendors?.category === cat.vendor_category (텍스트, 이름 변경에 취약)
+        //   - 새: o.vendors?.category_id IN [cat.id, ...child.ids] (FK, 안전)
         if(cat.data_source==='vendor_orders'){
-          amount=voRows.filter(o=>!cat.vendor_category||o.vendors?.category===cat.vendor_category).reduce((a,o)=>a+(o.amount||0),0);
+          amount=voRows.filter(o=>o.vendors?.category_id===cat.id).reduce((a,o)=>a+(o.amount||0),0);
         } else if(cat.data_source==='receipts'){
           // receipts.category_id는 소분류 id. 대분류 receipts면 자식 id도 포함
           const childIds=expCategories.filter(c=>c.parent_id===cat.id).map(c=>c.id);
           const targetIds=[cat.id,...childIds];
           amount=rcRows.filter(r=>targetIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
         } else if(cat.data_source==='composite'){
-          // composite: 거래처(vendor_orders) + 영수증(receipts) 합산
-          let vCats=[],rIds=[cat.id];
+          // composite: 거래처(vendor_orders.vendor.category_id) + 영수증(receipts.category_id) FK 합산
+          // 대분류: 자식들 id + 본인 id 모두 매칭 (사장님이 자식 안 정하고 부모만 선택한 케이스 포함)
+          const targetIds=[cat.id];
           if(!cat.parent_id){
-            const children=expCategories.filter(c=>c.parent_id===cat.id);
-            children.forEach(ch=>{if(ch.vendor_category)vCats.push(ch.vendor_category); rIds.push(ch.id);});
-            if(cat.vendor_category) vCats.push(cat.vendor_category);
-          } else {
-            if(cat.vendor_category) vCats.push(cat.vendor_category);
+            expCategories.filter(c=>c.parent_id===cat.id).forEach(ch=>targetIds.push(ch.id));
           }
-          const voSum=vCats.length?voRows.filter(o=>vCats.includes(o.vendors?.category)).reduce((a,o)=>a+(o.amount||0),0):0;
-          const rcpSum=rcRows.filter(r=>rIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
+          const voSum=voRows.filter(o=>targetIds.includes(o.vendors?.category_id)).reduce((a,o)=>a+(o.amount||0),0);
+          const rcpSum=rcRows.filter(r=>targetIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
           amount=voSum+rcpSum;
         } else if(cat.data_source==='attendance'){
           if(ecaMap[cat.id]){amount=ecaMap[cat.id];isConfirmed=true;}
@@ -12211,7 +12213,7 @@ async function loadReconciliation(){
   try{
     const [catRes,voRes,rcpRes,attRes,swRes,fcRes,txRes,salesRes,settingsRes,matchRes,salesDailyRes]=await Promise.all([
       sb.from('expense_categories').select('*').eq('store_id',sid).order('sort_order'),
-      sb.from('vendor_orders').select('amount,vendor_id,vendors(name,category)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+      sb.from('vendor_orders').select('amount,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
       sb.from('receipts').select('id,vendor,total_price,category').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
       sb.from('attendance_logs').select('employee_id,calculated_wage,employees(name)').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
       sb.from('special_wages').select('extra_amount').eq('store_id',sid).gte('target_date',start).lte('target_date',end),
@@ -12289,8 +12291,9 @@ async function loadReconciliation(){
       const saved=savedRecon.filter(r=>r.category_id===cat.id);
 
       if(cat.data_source==='vendor_orders'){
+        // 2026-05-15: 텍스트 매칭 → category_id FK 매칭
         const vendorMap={};
-        vendorOrders.filter(o=>!cat.vendor_category||o.vendors?.category===cat.vendor_category).forEach(o=>{
+        vendorOrders.filter(o=>o.vendors?.category_id===cat.id).forEach(o=>{
           const vid=o.vendor_id||'unknown';
           const vname=o.vendors?.name||'미지정';
           if(!vendorMap[vid])vendorMap[vid]={name:vname,amount:0};
@@ -12310,12 +12313,12 @@ async function loadReconciliation(){
 
       } else if(cat.data_source==='composite'){
         // ─── composite: 거래처(vendor_orders) + 영수증(receipts) 합산, 소분류별 details ───
+        // 2026-05-15: 텍스트 매칭 → category_id FK 매칭
         const isParent=!cat.parent_id;
         const children=isParent?allCategories.filter(c=>c.parent_id===cat.id):[];
         const subs=isParent?children:[cat]; // 대분류면 자식들 각각, 소분류면 자신만
         subs.forEach(sub=>{
-          const vCat=sub.vendor_category;
-          const voAmt=vendorOrders.filter(o=>vCat && o.vendors?.category===vCat).reduce((a,o)=>a+(o.amount||0),0);
+          const voAmt=vendorOrders.filter(o=>o.vendors?.category_id===sub.id).reduce((a,o)=>a+(o.amount||0),0);
           const rcpAmt=receipts.filter(r=>r.category_id===sub.id).reduce((a,r)=>a+(r.total_price||0),0);
           const subTotal=voAmt+rcpAmt;
           const s=saved.find(r=>r.sub_key==='comp_'+sub.id);
