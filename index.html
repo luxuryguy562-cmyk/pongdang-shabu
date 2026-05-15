@@ -3132,6 +3132,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveVendor">저장</button>
   </div>
+  <!-- 편집 모드에서만 표시 — 잘못 추가한 거래처 완전 삭제 (주문 0건일 때만) -->
+  <button id="vendorDeleteBtn" class="btn btn-danger" style="display:none;width:100%;padding:12px;margin-top:8px;font-size:13px;" data-action="hardDeleteVendor">🗑 완전 삭제 (잘못 추가한 거래처)</button>
 </div>
 
 <!-- 거래처 재분류 도우미 (2026-04-22 식자재 개편) -->
@@ -7734,6 +7736,8 @@ function openAddVendorSheet(){
   document.getElementById('vendorNameInput').value='';
   document.getElementById('vendorCatParent').value='';
   document.getElementById('editVendorId').value='';
+  const delBtn=document.getElementById('vendorDeleteBtn');
+  if(delBtn) delBtn.style.display='none'; // 신규 추가 시 삭제 버튼 숨김
   openSheet('addVendorSheet');
 }
 function openEditVendorSheet(id){
@@ -7743,6 +7747,8 @@ function openEditVendorSheet(id){
   document.getElementById('addVendorTitle').innerText='거래처 편집';
   document.getElementById('vendorNameInput').value=v.name;
   document.getElementById('editVendorId').value=v.id;
+  const delBtn=document.getElementById('vendorDeleteBtn');
+  if(delBtn) delBtn.style.display=''; // 편집 시 삭제 버튼 노출
   // category_id 기준 복원 (자식이면 부모 + 자식 선택, 부모면 부모만)
   const cat=v.category_id?(expCategories||[]).find(c=>c.id===v.category_id):null;
   if(cat){
@@ -7775,20 +7781,41 @@ async function saveVendor(){
   // category 텍스트 = vendor_category (calcExpense composite filter 호환). 없으면 카테고리 name.
   const categoryText=cat?.vendor_category||cat?.name||'';
   const eid=document.getElementById('editVendorId').value;
-  // 진단 토스트 (임시) — 사장님 "저장 안 됨" 증상 추적
-  toast(`[진단] ${eid?'수정':'추가'} 시도: ${name} / ${categoryText}`,'info',3000);
   setLoad(true,'저장 중...');
   const payload={name,category:categoryText,category_id};
   const{error}=eid
     ? await sb.from('vendors').update(payload).eq('id',eid)
     : await sb.from('vendors').insert({...payload,store_id:currentStore.id});
   setLoad(false);
-  if(error){
-    // 자세한 진단 토스트
-    toast(`[진단] DB 에러: ${error.code||'?'} - ${(error.message||'').slice(0,80)}`,'error',8000);
-    return errToast('저장', error);
+  if(error) return errToast('저장', error);
+  closeAllSheets();
+  await loadVendors();
+}
+
+// 거래처 완전 삭제 (잘못 추가한 거래처용, 2026-05-15)
+// - vendor_orders 0건 → hard delete 가능
+// - 1건 이상 → 거래종료(is_active=false)로 안내
+async function hardDeleteVendor(){
+  if(!guardStore()) return;
+  const eid=document.getElementById('editVendorId').value;
+  if(!eid) return;
+  const v=vendors.find(x=>x.id===eid);
+  if(!v) return;
+  setLoad(true,'주문 기록 확인 중...');
+  const{count,error:cntErr}=await sb.from('vendor_orders').select('id',{count:'exact',head:true}).eq('vendor_id',eid).eq('store_id',currentStore.id);
+  if(cntErr){setLoad(false);return errToast('조회',cntErr);}
+  if((count||0)>0){
+    setLoad(false);
+    alert(`${v.name}에 주문 기록 ${count}건이 있어요.\n완전 삭제 대신 "거래종료"로 처리하세요.\n(편집 닫고 거래처 카드 → 거래종료 버튼)`);
+    return;
   }
-  toast('[진단] 저장 성공 → 리스트 새로고침','info',2000);
+  setLoad(false);
+  if(!confirm(`${v.name} 거래처를 완전히 삭제할까요?\n(주문 기록 0건 확인 — 되돌릴 수 없음)`)) return;
+  setLoad(true,'삭제 중...');
+  const{error}=await sb.from('vendors').delete().eq('id',eid).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('삭제',error);
+  toast('삭제 완료','success');
   closeAllSheets();
   await loadVendors();
 }
@@ -7954,6 +7981,8 @@ async function saveOrder(){
   toast(editOrderId?'수정됐어요':'저장됐어요','success');
   editOrderId=null;
   closeAllSheets();
+  // vendorMonthTotals 재계산 — 거래처 카드/리스트 합계 즉시 반영 (사장님 호소: stale)
+  await loadVendors();
   loadVendorOrders();
 }
 
@@ -11353,6 +11382,8 @@ async function saveExpHubCardOrder(){
 // ─── 지출 허브: 카드별 동적 정보 ───
 async function loadExpHubData(){
   if(!currentStore) return;
+  // 카드 순서 즉시 적용 — settings 캐시 활용, DB fetch 기다리지 말고 (사장님 호소: stale)
+  applyExpHubCardOrder();
   const sid=currentStore.id;
   const ym=new Date().toISOString().slice(0,7);
   const [y,m]=ym.split('-').map(Number);
