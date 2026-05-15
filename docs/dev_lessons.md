@@ -1515,3 +1515,62 @@ function selectFromModal(){
 **원칙**:
 - 진입 경로 바뀌면 (예: 영업 탭에서 매출 카드 제거) parentTabMap도 즉시 갱신
 - visible nav-item 우선 매칭 → 사용 안 되는 nav-item이 active 표시되는 부작용 방지
+
+---
+
+## 53. 추측 답변 → 사장님 신뢰 손상 (2026-05-15)
+
+**상황**: 식자재 12,594,000 원인 추적 + 잔재 카테고리 정리 작업 중, 사장님 매장의 '물품대금', '카드대금', '배당금' 카테고리 의미를 docs 안 읽고 "잔재 같다", "사장님 비즈니스 규칙일 듯" 등 추측해서 답함.
+
+사장님 지적:
+> "너 docs 안 읽고 추측하잖아. 내가 항상 세션에서 docs 읽으라고 하는데 왜 요즘 추측을 많이 하는거지? 추측 절대 금지하자."
+
+**확인된 docs 위치**:
+- `business_rules.md #4` (2026-04-09): 카드대금/배당금 = 정산 제외 항목 명시
+- `work_log.md:2663` (2026-04-22): 물품대금 → 식자재 일괄 치환 이력
+- `index.html:9655` 하드코딩 `fixedCats=['매출','카드대금','배당금','미분류']`
+- `index.html:11201` classification_rules 시드 '배당' 키워드
+
+**교훈**:
+- 비즈니스 용어 모르면 즉시 `grep "용어" docs/*.md` 먼저
+- 매 답변 전 자문: "이게 추측인가 사실인가?"
+- docs 읽기 비용(0.5초) << 추측 답변 신뢰 손상 비용(영구)
+- 빠른 답보다 정확한 답
+
+**헌법 1-7 신설**로 못박음 (CLAUDE.md 제1조 1-7).
+
+---
+
+## 54. toISOString().split('T')[0] = 한국 시간 자정 직후 하루 빠짐 트랩 (2026-05-15)
+
+**증상**: 사장님 5/15 영업개시 진입 시 "어제 마감"으로 5/14 (1,109,200) 대신 **5/13** 마감 (897,100)이 표시됨. 화살표 ← 누르면 5/15 → 5/14 가야 하는데 **5/13으로 점프** (하루 빠짐).
+
+**원인 코드 패턴**:
+```js
+const t = new Date(targetDate+'T00:00:00');  // '2026-05-15T00:00:00' → 로컬(한국) 자정
+t.setDate(t.getDate()-1);                     // 5/14 한국 자정 = UTC 5/13T15:00
+const yest = t.toISOString().split('T')[0];   // UTC 변환 → '2026-05-13' ⚠️
+```
+
+`new Date(YYYY-MM-DD'T00:00:00')` 는 시간대 명시 없으면 **로컬 자정**으로 파싱. `toISOString()` 은 **UTC 변환**. 한국(UTC+9)에선 자정의 -9시간 = 전날 15시. `.split('T')[0]` 하면 _전날 날짜 문자열_ 반환.
+
+**해결**: 헬퍼 `ymdLocal(date)` 함수 도입. 로컬 기준 YYYY-MM-DD 반환.
+
+```js
+function ymdLocal(date){
+  const d=date instanceof Date?date:new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+```
+
+**fix 8곳** (영업개시 + 마감정산):
+- `initSettleDate`, `moveSettleDate`, `loadOpeningForDate`, `getSettleDate`
+- `loadOpeningPage`, `initOpeningDate`, `moveOpeningDate`, `loadOpeningAmount`
+
+**미해결 (다음 PR)**: `toISOString().split('T')[0]` 패턴이 코드에 **37곳** 더 있음 (대시보드/매출/영수증 등). 같은 트랩일 가능성 높음. 전수 점검 + ymdLocal 일관 적용 필요.
+
+**원칙**:
+- 사용자가 보는 날짜 문자열 = 로컬 기준이어야 한다 (한국 매장이면 한국 시간)
+- DB 저장 날짜도 마찬가지 (settle_date, opening_date 등)
+- UTC 변환은 _명시적으로_ 필요할 때만 (서버 timestamp 비교 등)
+- 새 코드 작성 시 `toISOString().split('T')[0]` 패턴 절대 금지 → `ymdLocal()` 사용

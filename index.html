@@ -3429,6 +3429,11 @@ function closeAllSheets() {
 }
 const fmt = n => (n||0).toLocaleString();
 const unFmt = s => parseInt((s||'0').replace(/,/g,''))||0;
+// 로컬(한국) 시간 기준 YYYY-MM-DD 문자열 — toISOString().split('T')[0] 시간대 버그 회피용 (2026-05-15 #69)
+function ymdLocal(date){
+  const d=date instanceof Date?date:new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 // 금액 입력란 공용: 입력 중 세자리 콤마 자동 (dev_lessons #58)
 function formatNumberInput(el){const raw=(el.value||'').replace(/[^\d]/g,'');el.value=raw?parseInt(raw).toLocaleString():'';}
 const guardStore = () => { if(!currentStore){toast('매장을 먼저 선택하세요.','warn');openStoreSheet();return false;}return true; };
@@ -5150,7 +5155,7 @@ function renderGanttFiltered(){
 function initSettleDate(){
   const picker=document.getElementById('settleDatePicker');
   const group=document.getElementById('settleDateGroup');
-  const today=new Date().toISOString().split('T')[0];
+  const today=ymdLocal(new Date());
   picker.value=today;
   picker.max=today; // 미래 날짜 차단
   if(isManager){
@@ -5163,17 +5168,17 @@ function initSettleDate(){
 }
 function moveSettleDate(dir){
   const picker=document.getElementById('settleDatePicker');
-  const d=new Date(picker.value);d.setDate(d.getDate()+dir);
-  const today=new Date().toISOString().split('T')[0];
-  const newDate=d.toISOString().split('T')[0];
+  const d=new Date(picker.value+'T00:00:00');d.setDate(d.getDate()+dir);
+  const today=ymdLocal(new Date());
+  const newDate=ymdLocal(d);
   if(newDate>today) return; // 미래 차단
   picker.value=newDate;
   loadOpeningForDate(newDate);
 }
 async function loadOpeningForDate(dateStr){
   if(!currentStore) return;
-  const d=new Date(dateStr);d.setDate(d.getDate()-1);
-  const yd=d.toISOString().split('T')[0];
+  const d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()-1);
+  const yd=ymdLocal(d);
   const{data}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
   const el=document.getElementById('siOpening');
   const statusEl=document.getElementById('openingStatus');
@@ -5193,7 +5198,7 @@ async function loadOpeningForDate(dateStr){
 }
 function getSettleDate(){
   const picker=document.getElementById('settleDatePicker');
-  return picker?.value||new Date().toISOString().split('T')[0];
+  return picker?.value||ymdLocal(new Date());
 }
 function onSInput(el){const raw=el.value.replace(/,/g,'');if(/^\d*$/.test(raw))el.value=raw?parseInt(raw).toLocaleString():'';recalcSettle2();}
 
@@ -5440,13 +5445,13 @@ let openingEditDate = null; // 수정 모드: 'YYYY-MM-DD' / 오늘 입력: null
 // 입력 폼 초기화 + 해당 날짜 데이터 로드 (dateStr 없으면 오늘)
 async function loadOpeningPage(dateStr){
   if(!guardStore()) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = ymdLocal(new Date());
   const targetDate = dateStr || today;
   openingEditDate = (dateStr && dateStr!==today) ? dateStr : null;
-  // 어제 날짜 = targetDate -1
+  // 어제 날짜 = targetDate -1 (로컬 한국 시간 기준, 시간대 버그 회피)
   const t = new Date(targetDate+'T00:00:00');
   const yest = new Date(t); yest.setDate(yest.getDate()-1);
-  const yestStr = yest.toISOString().split('T')[0];
+  const yestStr = ymdLocal(yest);
   // 어제 마감 + 그 날 영업개시 병렬 조회
   const [{data: prev}, {data: rec}] = await Promise.all([
     sb.from('settlements').select('actual_total,settle_date,sales_total,diff_amount').eq('store_id',currentStore.id).eq('settle_date',yestStr).maybeSingle(),
@@ -5473,6 +5478,13 @@ async function loadOpeningPage(dateStr){
   // 삭제 버튼: 기록이 있고 수정 모드일 때만
   const delBtn = document.getElementById('opDeleteBtn');
   if(delBtn) delBtn.style.display = (rec && openingEditDate) ? '' : 'none';
+  // 라벨 통합: rec 있으면 "수정 중", 없으면 "신규 보고" (사장님 요청 — 영업개시 생략 많음)
+  const statusEl = document.getElementById('openingDateStatus');
+  if(statusEl){
+    if(targetDate === today) statusEl.innerText = '오늘 영업개시';
+    else if(rec) statusEl.innerText = `${targetDate} 영업개시 수정 중`;
+    else statusEl.innerText = `${targetDate} (영업개시 기록 없음 · 신규 보고)`;
+  }
   recalcOpening();
 }
 
@@ -5659,8 +5671,7 @@ async function editOpening(dateStr){
   document.getElementById('openingList').style.display='none';
   const picker = document.getElementById('openingDatePicker');
   if(picker) picker.value = dateStr;
-  const status = document.getElementById('openingDateStatus');
-  if(status) status.innerText = `${dateStr} 영업개시 수정 중`;
+  // status 라벨은 loadOpeningPage가 rec 받은 후 통합 설정
   await loadOpeningPage(dateStr);
   toast(`${dateStr} 데이터 불러왔어요`,'success');
 }
@@ -5687,10 +5698,10 @@ function initOpeningDate(){
   const picker = document.getElementById('openingDatePicker');
   const group = document.getElementById('openingDateGroup');
   if(!picker || !group) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = ymdLocal(new Date());
   picker.value = today;
   picker.max = today; // 미래 차단
-  // 2026-05-14: status 텍스트와 수정 모드 전역 변수도 같이 reset (옛 잔재로 picker/status 불일치 발생하던 버그)
+  // status 라벨은 loadOpeningPage가 통합 처리
   const status = document.getElementById('openingDateStatus');
   if(status) status.innerText = '오늘 영업개시';
   openingEditDate = null;
@@ -5698,26 +5709,24 @@ function initOpeningDate(){
     group.style.display = 'block';
     picker.addEventListener('change', function(){
       loadOpeningPage(this.value);
-      const status = document.getElementById('openingDateStatus');
-      if(status) status.innerText = this.value===today ? '오늘 영업개시' : `${this.value} 영업개시 수정 중`;
+      // 라벨은 loadOpeningPage 안에서 rec 기반으로 통합 설정
     });
   } else {
     group.style.display = 'none';
   }
 }
 
-// 영업개시 날짜 이동 (‹ / ›)
+// 영업개시 날짜 이동 (‹ / ›) — 로컬(한국) 시간 기준, 시간대 버그 회피
 function moveOpeningDate(dir){
   const picker = document.getElementById('openingDatePicker');
   if(!picker) return;
   const d = new Date(picker.value+'T00:00:00'); d.setDate(d.getDate()+dir);
-  const today = new Date().toISOString().split('T')[0];
-  const newDate = d.toISOString().split('T')[0];
+  const today = ymdLocal(new Date());
+  const newDate = ymdLocal(d);
   if(newDate > today) return;
   picker.value = newDate;
   loadOpeningPage(newDate);
-  const status = document.getElementById('openingDateStatus');
-  if(status) status.innerText = newDate===today ? '오늘 영업개시' : `${newDate} 영업개시 수정 중`;
+  // 라벨은 loadOpeningPage 안에서 rec 기반으로 통합 설정
 }
 
 // 영업개시보고서 자동 로드 (전일 마감금액)
@@ -5726,9 +5735,9 @@ async function loadOpeningAmount(){
   // 2026-05-14: picker.value(settle_date) 기준 전날 마감 로드.
   // 옛 버그: 시스템 today-1 고정이라 사장님이 settle_date 변경해도 전일이월금이 항상 가장 최근 마감으로 갔음.
   const picker=document.getElementById('settleDatePicker');
-  const settleDate=picker?.value||new Date().toISOString().split('T')[0];
-  const d=new Date(settleDate);d.setDate(d.getDate()-1);
-  const yd=d.toISOString().split('T')[0];
+  const settleDate=picker?.value||ymdLocal(new Date());
+  const d=new Date(settleDate+'T00:00:00');d.setDate(d.getDate()-1);
+  const yd=ymdLocal(d);
   const{data} = await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
   const el=document.getElementById('siOpening');
   const statusEl=document.getElementById('openingStatus');
@@ -10587,11 +10596,25 @@ async function loadDiffTable(){
 
   if(summaryEl){
     const sumColor=sumDiff===0?'var(--text)':(sumDiff<0?'#DC2626':'#059669');
+    // 가장 최근 측정 금고 (settlements/daily_opening 중 더 최신, 사장님 요청 2026-05-15)
+    let latestDate='', latestVault=0;
+    Object.entries(stByDate).forEach(([d,s])=>{
+      if(s?.actual_total!=null && d>latestDate){ latestDate=d; latestVault=s.actual_total||0; }
+    });
+    Object.entries(opByDate).forEach(([d,o])=>{
+      if(o?.actual_total!=null && d>latestDate){ latestDate=d; latestVault=o.actual_total||0; }
+    });
+    const vaultSub = latestDate ? `${latestDate.slice(5,7)}/${latestDate.slice(8,10)} 기준` : '기록 없음';
     summaryEl.innerHTML=`
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
         <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
           <div style="font-size:10px;color:var(--gray-500);">총 차액</div>
           <div style="font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;color:${sumColor};">${sumDiff>0?'+':''}${fmt(sumDiff)}원</div>
+        </div>
+        <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--gray-500);">💰 금고 현황</div>
+          <div style="font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--blue);">${fmt(latestVault)}원</div>
+          <div style="font-size:9px;color:var(--gray-400);margin-top:1px;">${vaultSub}</div>
         </div>
         <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
           <div style="font-size:10px;color:var(--gray-500);">🏧 통장 입금</div>
