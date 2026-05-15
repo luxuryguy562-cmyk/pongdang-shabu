@@ -660,6 +660,24 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .side-item{padding:11px 20px 11px 36px;font-size:13px;font-weight:600;color:var(--gray-600);cursor:pointer;}
 .side-item:active{background:var(--gray-100);}
 .side-item.current{color:var(--blue);font-weight:700;}
+/* ─── 새 기능: 일별 매출 캘린더 그리드 (2026-05-15) ─── */
+.sales-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.sales-cal-wkh{font-size:11px;font-weight:800;text-align:center;padding:6px 0;color:var(--gray-500);}
+.sales-cal-wkh.sun{color:#EF4444;}
+.sales-cal-wkh.sat{color:#3B82F6;}
+.sales-cal-cell{min-height:62px;border-radius:8px;padding:5px 4px;display:flex;flex-direction:column;gap:1px;background:var(--gray-50);border:1px solid var(--gray-100);overflow:hidden;}
+.sales-cal-cell.empty{background:transparent;border:none;}
+.sales-cal-cell.today{background:var(--blue-light);border:1.5px solid var(--blue);}
+.sales-cal-cell.future{background:transparent;border:1px dashed var(--gray-200);}
+.sales-cal-cell.noSale{background:var(--gray-50);}
+.sales-cal-cell .sc-day{font-size:11px;font-weight:800;color:var(--gray-700);}
+.sales-cal-cell.sun .sc-day{color:#EF4444;}
+.sales-cal-cell.sat .sc-day{color:#3B82F6;}
+.sales-cal-cell .sc-sale{font-size:10.5px;font-weight:800;color:var(--blue);line-height:1.25;letter-spacing:-0.3px;}
+.sales-cal-cell .sc-profit{font-size:10px;font-weight:700;line-height:1.2;letter-spacing:-0.3px;}
+.sc-profit.pos{color:#10B981;}
+.sc-profit.neg{color:#EF4444;}
+.sales-cal-cell.today .sc-day{color:var(--blue);}
 </style>
 </head>
 <body>
@@ -1647,6 +1665,36 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [5] 대시보드 ══ -->
 <div id="dashboardCont" class="container">
+  <!-- ─── 새 기능: 오늘 매출 1순위 카드 (2026-05-15) ─── -->
+  <div class="card" id="dashTopSalesCard" style="padding:18px 16px;margin-bottom:10px;cursor:pointer;display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:14px;">💰</span>
+        <span id="dashTopSalesLabel" style="font-size:13px;font-weight:800;color:var(--gray-700);">오늘 매출</span>
+        <span id="dashTopSalesMode" style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--blue-light);color:var(--blue);font-weight:700;">실시간</span>
+      </div>
+      <span style="font-size:18px;color:var(--gray-300);">›</span>
+    </div>
+    <div id="dashTopSalesAmt" style="font-size:30px;font-weight:900;color:var(--gray-900);line-height:1.15;">0원</div>
+    <div id="dashTopSalesUpdated" style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right;display:none;">업데이트 -</div>
+    <div id="dashTopSalesActionRow" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--gray-100);">
+      <button id="dashTopSalesInputBtn" class="btn btn-primary btn-sm" style="width:100%;font-size:12px;padding:10px;">📝 오늘 매출 입력 (30초)</button>
+      <p style="font-size:11px;color:var(--gray-500);margin:8px 0 0;text-align:center;">⏳ 자동 동기화 준비중...</p>
+    </div>
+  </div>
+  <!-- ─── 새 기능: 순수익/지출 2순위 카드 (2026-05-15) ─── -->
+  <div id="dashTodayProfitExpenseRow" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+    <div class="card" style="padding:12px 10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:4px;">💵 순수익</div>
+      <div id="dashTodayProfitAmt" style="font-size:16px;font-weight:900;color:var(--blue);line-height:1.2;">0원</div>
+      <div id="dashTodayProfitDelta" style="font-size:10px;font-weight:700;margin-top:3px;color:var(--gray-400);">-</div>
+    </div>
+    <div class="card" style="padding:12px 10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:4px;">💸 지출</div>
+      <div id="dashTodayExpenseAmt" style="font-size:16px;font-weight:900;color:#EF4444;line-height:1.2;">0원</div>
+      <div id="dashTodayExpenseDelta" style="font-size:10px;font-weight:700;margin-top:3px;color:var(--gray-400);">-</div>
+    </div>
+  </div>
   <!-- 월 네비게이션 -->
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
     <button class="btn btn-secondary btn-sm" id="dashPrevBtn">‹</button>
@@ -2184,6 +2232,24 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 
   <!-- 수동 출금 입력 바텀시트 -->
+</div>
+
+<!-- ─── 새 기능: 일별 매출 캘린더 시트 (2026-05-15) ─── -->
+<div class="sheet-overlay" id="salesCalendarSheet">
+  <div class="sheet sheet-content" style="max-height:90vh;padding-bottom:40px;">
+    <div class="sheet-header">
+      <div class="sheet-title">📅 일별 매출 캘린더</div>
+      <button class="sheet-close" data-action="closeSheet|salesCalendarSheet">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin:10px 0;align-items:center;">
+      <button class="btn btn-secondary btn-sm" id="salesCalendarPrev">‹</button>
+      <span id="salesCalendarMonthLabel" style="flex:1;text-align:center;font-size:15px;font-weight:800;">-</span>
+      <button class="btn btn-secondary btn-sm" id="salesCalendarNext">›</button>
+    </div>
+    <div id="salesCalendarSummary" style="padding:10px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:10px;font-size:12px;color:var(--gray-700);line-height:1.6;">-</div>
+    <div id="salesCalendarGrid" class="sales-cal-grid"></div>
+    <p style="font-size:10px;color:var(--gray-400);margin-top:10px;text-align:center;">매출 (파랑) · 순수익 (+초록 / -빨강)</p>
+  </div>
 </div>
 
 <!-- 수동 출금 입력 시트 -->
@@ -6884,7 +6950,173 @@ async function loadDashboard(){
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}}},scales:{y:{ticks:{callback:v=>v>=10000?Math.round(v/10000)+'만':(v<=-10000?Math.round(v/10000)+'만':v)},beginAtZero:false}}}
     });
 
+    // ─── 새 기능: 1순위 매출 카드 + 2순위 순수익/지출 카드 (2026-05-15) ─── //
+    // 현재 월일 때만 카드 표시 (다른 월에서 "오늘 매출" 의미 X)
+    const isCurMonth=today.toISOString().slice(0,7)===dashMonthStr;
+    const topCard=document.getElementById('dashTopSalesCard');
+    const topRow=document.getElementById('dashTodayProfitExpenseRow');
+    if(isCurMonth){
+      // 전월 일별 지출 맵 (% 비교용, 변동성 큰 vendor/receipt/attendance만 — 고정비/로열티는 일별 차이 작아 생략)
+      const prevDailyExpTotal={};
+      (prevVoRes.data||[]).forEach(v=>{const d=v.order_date?.slice(8);if(!d)return;prevDailyExpTotal[d]=(prevDailyExpTotal[d]||0)+(v.amount||0);});
+      (prevRcRes.data||[]).forEach(r=>{const d=r.receipt_date?.slice(8);if(!d)return;prevDailyExpTotal[d]=(prevDailyExpTotal[d]||0)+(r.total_price||0);});
+      (prevAttRes.data||[]).forEach(a=>{if(monthlyEmpIds.has(a.employee_id))return;const d=a.work_date?.slice(8);if(!d)return;prevDailyExpTotal[d]=(prevDailyExpTotal[d]||0)+(a.calculated_wage||0);});
+
+      // 최근 매출일 찾기 (passedDays까지)
+      const sortedDays=Object.keys(dailySalesMap).filter(d=>parseInt(d)<=passedDays).sort();
+      const lastSaleDay=sortedDays[sortedDays.length-1]||null;
+      const todayDayStr=String(today.getDate()).padStart(2,'0');
+      const isTodayShown=lastSaleDay===todayDayStr;
+      const isUpsMode=(dashSaleSource==='ups');
+
+      // 라벨 (오늘/어제 + 날짜 + 요일)
+      const dayOfWeek=lastSaleDay?['일','월','화','수','목','금','토'][new Date(ym+'-'+lastSaleDay+'T00:00:00').getDay()]:'';
+      const moStr=String(mo).padStart(2,'0');
+      const dateLabel=lastSaleDay?`${moStr}.${lastSaleDay}(${dayOfWeek})`:'';
+      const titleLabel=isTodayShown?'오늘 매출':(lastSaleDay?'어제 매출':'최근 매출 없음');
+      const modeLabel=isUpsMode?'실시간':'마감';
+      const showInputBtn=!isUpsMode && !dailySalesMap[todayDayStr];
+
+      document.getElementById('dashTopSalesLabel').innerText=lastSaleDay?`${titleLabel} · ${dateLabel}`:titleLabel;
+      const modeEl=document.getElementById('dashTopSalesMode');
+      modeEl.innerText=modeLabel;
+      modeEl.style.background=isUpsMode?'var(--blue-light)':'var(--gray-100)';
+      modeEl.style.color=isUpsMode?'var(--blue)':'var(--gray-600)';
+      const saleAmt=lastSaleDay?(dailySalesMap[lastSaleDay]||0):0;
+      document.getElementById('dashTopSalesAmt').innerText=fmt(saleAmt)+'원';
+      document.getElementById('dashTopSalesActionRow').style.display=showInputBtn?'block':'none';
+      const updEl=document.getElementById('dashTopSalesUpdated');
+      if(isUpsMode && lastSaleDay){
+        const hh=String(today.getHours()).padStart(2,'0'),mi=String(today.getMinutes()).padStart(2,'0');
+        updEl.innerText=`업데이트 ${hh}:${mi} ↻`;updEl.style.display='block';
+      }else{updEl.style.display='none';}
+      topCard.style.display='block';
+
+      // 2순위 순수익/지출
+      if(lastSaleDay){
+        const dayExp=dailyExpTotal[lastSaleDay]||0;
+        const dayProfit=saleAmt-dayExp;
+        const prevExp=prevDailyExpTotal[lastSaleDay]||0;
+        const prevSale=prevDailySalesMap[lastSaleDay]||0;
+        const prevProfit=prevSale-prevExp;
+        const profitEl=document.getElementById('dashTodayProfitAmt');
+        profitEl.innerText=(dayProfit>=0?'':'-')+fmt(Math.abs(dayProfit))+'원';
+        profitEl.style.color=dayProfit>=0?'var(--blue)':'#EF4444';
+        document.getElementById('dashTodayExpenseAmt').innerText=fmt(dayExp)+'원';
+        // % 비교 (momTxt 재사용)
+        const renderDelta=(el,m)=>{
+          if(!m){el.innerText='전월동일 -';el.style.color='var(--gray-400)';return;}
+          if(m.text==='비슷'){el.innerText='전월동일 비슷';el.style.color='var(--gray-500)';return;}
+          el.innerText=`전월동일 ${m.arrow}${m.pct}%`;
+          el.style.color=m.cls==='mom-good'?'#10B981':(m.cls==='mom-bad'?'#EF4444':'var(--gray-400)');
+        };
+        renderDelta(document.getElementById('dashTodayProfitDelta'),momTxt(dayProfit,prevProfit,true));
+        renderDelta(document.getElementById('dashTodayExpenseDelta'),momTxt(dayExp,prevExp,false));
+        topRow.style.display='grid';
+      } else {
+        topRow.style.display='none';
+      }
+    } else {
+      topCard.style.display='none';
+      topRow.style.display='none';
+    }
+
   }catch(e){console.error('대시보드 오류:',e);}finally{setLoad(false);}
+}
+
+// ─── 새 기능: 일별 매출 캘린더 시트 (2026-05-15) ─── //
+let _salesCalendarMonth=null;
+async function openSalesCalendarSheet(){
+  if(!currentStore){toast('매장을 먼저 선택하세요');return;}
+  _salesCalendarMonth=dashMonthStr||new Date().toISOString().slice(0,7);
+  openSheet('salesCalendarSheet');
+  await renderSalesCalendar();
+}
+function moveSalesCalendarMonth(dir){
+  if(!_salesCalendarMonth)return;
+  const d=new Date(_salesCalendarMonth+'-01');d.setMonth(d.getMonth()+dir);
+  _salesCalendarMonth=d.toISOString().slice(0,7);
+  renderSalesCalendar();
+}
+async function renderSalesCalendar(){
+  const ym=_salesCalendarMonth;
+  document.getElementById('salesCalendarMonthLabel').innerText=ym;
+  document.getElementById('salesCalendarGrid').innerHTML='<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--gray-500);">불러오는 중...</div>';
+  document.getElementById('salesCalendarSummary').innerText='-';
+  const[y,mo]=ym.split('-').map(Number);
+  const lastDay=new Date(y,mo,0).getDate();
+  const start=ym+'-01',end=ym+'-'+String(lastDay).padStart(2,'0');
+  const sid=currentStore.id;
+  try{
+    const[salesRes,voRes,rcRes,attRes]=await Promise.all([
+      sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
+      sb.from('vendor_orders').select('amount,order_date').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+      sb.from('receipts').select('total_price,receipt_date').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end)
+    ]);
+    // 일별 매출
+    const dailySales={};
+    (salesRes.data||[]).forEach(s=>{const d=s.date?.slice(8);if(d)dailySales[d]=salesRowTotal(s);});
+    // 일별 지출 (변동 비용만 — 고정비/로열티 일할 생략. 캘린더는 시각적 추세 비교 본질)
+    const dailyExp={};
+    (voRes.data||[]).forEach(v=>{const d=v.order_date?.slice(8);if(!d)return;dailyExp[d]=(dailyExp[d]||0)+(v.amount||0);});
+    (rcRes.data||[]).forEach(r=>{const d=r.receipt_date?.slice(8);if(!d)return;dailyExp[d]=(dailyExp[d]||0)+(r.total_price||0);});
+    const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+    (attRes.data||[]).forEach(a=>{if(monthlyEmpIds.has(a.employee_id))return;const d=a.work_date?.slice(8);if(!d)return;dailyExp[d]=(dailyExp[d]||0)+(a.calculated_wage||0);});
+
+    // 그리드 그리기
+    const firstDayOfWeek=new Date(y,mo-1,1).getDay();
+    const todayDate=new Date();
+    const todayYm=todayDate.toISOString().slice(0,7);
+    const todayDay=todayYm===ym?todayDate.getDate():-1;
+
+    let html='';
+    ['일','월','화','수','목','금','토'].forEach((wk,i)=>{
+      const cls=i===0?'sun':(i===6?'sat':'');
+      html+=`<div class="sales-cal-wkh ${cls}">${wk}</div>`;
+    });
+    for(let i=0;i<firstDayOfWeek;i++)html+=`<div class="sales-cal-cell empty"></div>`;
+    let totalSale=0,totalProfit=0,saleDays=0;
+    const compactWon=v=>{const a=Math.abs(v);if(a>=10000)return(v<0?'-':'')+Math.round(a/10000)+'만';return fmt(v);};
+    for(let d=1;d<=lastDay;d++){
+      const dd=String(d).padStart(2,'0');
+      const sale=dailySales[dd]||0;
+      const exp=dailyExp[dd]||0;
+      const profit=sale-exp;
+      const isToday=d===todayDay;
+      const isFuture=todayDay>0&&d>todayDay;
+      const dayOfWeek=(firstDayOfWeek+d-1)%7;
+      const wkCls=dayOfWeek===0?'sun':(dayOfWeek===6?'sat':'');
+      if(isFuture){
+        html+=`<div class="sales-cal-cell future ${wkCls}"><span class="sc-day">${d}</span></div>`;
+      }else if(sale){
+        html+=`<div class="sales-cal-cell ${isToday?'today':''} ${wkCls}">
+          <span class="sc-day">${d}</span>
+          <span class="sc-sale">${compactWon(sale)}</span>
+          <span class="sc-profit ${profit>=0?'pos':'neg'}">${profit>=0?'+':''}${compactWon(profit)}</span>
+        </div>`;
+        totalSale+=sale;totalProfit+=profit;saleDays++;
+      }else{
+        html+=`<div class="sales-cal-cell noSale ${isToday?'today':''} ${wkCls}">
+          <span class="sc-day">${d}</span>
+          <span style="font-size:9px;color:var(--gray-400);margin-top:auto;text-align:center;">-</span>
+        </div>`;
+      }
+    }
+    document.getElementById('salesCalendarGrid').innerHTML=html;
+    document.getElementById('salesCalendarSummary').innerHTML=
+      `<div style="display:flex;justify-content:space-between;align-items:center;">
+        <span>📊 매출 합계 <span style="color:var(--gray-400);font-size:11px;">(${saleDays}일)</span></span>
+        <b style="color:var(--blue);">${fmt(totalSale)}원</b>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+        <span>💵 순수익 합계</span>
+        <b style="color:${totalProfit>=0?'#10B981':'#EF4444'};">${totalProfit>=0?'+':''}${fmt(totalProfit)}원</b>
+      </div>`;
+  }catch(e){
+    console.error('캘린더 오류:',e);
+    document.getElementById('salesCalendarGrid').innerHTML='<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--danger);">불러오기 실패</div>';
+  }
 }
 
 // ══════════════════════════════════════════
@@ -13166,6 +13398,18 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('dashModeProvisional').addEventListener('click',()=>switchDashMode('provisional'));
   document.getElementById('dashModeFinal').addEventListener('click',()=>switchDashMode('final'));
   document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>openReserveHistorySheet());
+  // ─── 새 기능: 1순위 매출 카드 + 캘린더 시트 이벤트 (2026-05-15) ─── //
+  document.getElementById('dashTopSalesCard').addEventListener('click',(e)=>{
+    // 입력 버튼 영역 클릭은 카드 클릭으로 전파시키지 않음
+    if(e.target.closest('#dashTopSalesActionRow'))return;
+    openSalesCalendarSheet();
+  });
+  document.getElementById('dashTopSalesInputBtn').addEventListener('click',(e)=>{
+    e.stopPropagation();
+    nav('sales',document.querySelector('[data-tab="sales"]'));
+  });
+  document.getElementById('salesCalendarPrev').addEventListener('click',()=>moveSalesCalendarMonth(-1));
+  document.getElementById('salesCalendarNext').addEventListener('click',()=>moveSalesCalendarMonth(1));
   // Part F: 결제수단 색상 피커 ↔ hex 입력 양방향 동기화
   const pmePicker=document.getElementById('pmeColor');
   const pmeHex=document.getElementById('pmeColorHex');
