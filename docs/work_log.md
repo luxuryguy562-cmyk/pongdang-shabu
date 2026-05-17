@@ -4,6 +4,101 @@
 
 ---
 
+## [2026-05-17] 인건비 시급/월급 갈라치기 + 마감정산 차감 카테고리 FK (대형, Phase 1+2+3)
+
+### 상태: 배포완료
+### 브랜치: `claude/test-supabase-mcp-agent-DGbKV`
+
+### 배경
+사장님 호소 2개:
+1. "인건비가 시급만 계산되는 듯, 월급(고정급)도 있는데 어떻게 되는지?"
+   → 코드 확인 결과 월급제도 처리 중. 단, 인건비 대분류 1개로 합쳐 보임 (시급 vs 월급 분리 X)
+2. **"현금지출은 내가 지금까지 계속 놓쳐서 반영이 하나도 안 되고 있었어"** (긴급)
+   → 마감정산 차감(deductions) 입력값이 카테고리 집계에 안 들어옴 = **데이터 누수 진행 중**
+
+### 사장님 통찰 (대형 그림)
+- 상여금 = 금고에서 만원씩 현금 지급 → 마감정산 차감으로 입력
+- 차감 항목에 카테고리 FK 연결되면 → 마감정산이 곧 분류 입력 화면
+- 모든 현금지출이 카테고리별 자동 집계됨
+
+### critic 검토 결과
+- v1 1회차 (인건비 카테고리는 처음 갈라치기, 부담 적음)
+- 사장님 4개 안(시급/월급/상여/기타) → 3개로 축소 → 최종 시급/월급 2개로 축소
+  - "기타(택시비)" = 인건비 X (세무상 복리후생비). 노무사 데이터에도 없음 → 제외
+  - "상여금" = special_wages 코드 오해 발견 (그건 일별 추가시급) → 별도 구상 필요
+- 사장님 결정: 1+2 묶음 → "3 급함" 명시 → 결국 1+2+3 통합 결정 (데이터 누수 차단 우선)
+
+### 작업 내용
+
+**Phase 1: 인건비 시급/월급 갈라치기**
+- DB: `expense_categories` INSERT 2건 (시급/월급 소분류, parent_id=인건비 id)
+  - data_source 신값: `attendance_hourly`, `attendance_monthly`
+- 코드:
+  - `calcExpenseByCategories`: 자식 스킵 추가 (composite 패턴), attendance_logs select에 employee_id 추가, attTotal 계산 = 시급제 calculated_wage + 월급제 분배
+  - `loadDashboard childExpByCat`: 시급/월급 자식 amt 계산 분기 추가
+
+**Phase 2: 마감정산 차감 자동 집계 (긴급)**
+- `calcExpenseByCategories`: settlements.items_json.deductions SELECT 1회 → category_id 있는 차감 합산 → 가마감 카테고리 합계에 추가 (진마감은 mydata 기반이라 중복 방지)
+- 옛 deductions (category_id 없음)은 자동 집계 무시 (옛 동작 보존)
+
+**Phase 3: 마감정산 차감 입력 UI 카테고리 선택**
+- `addSettleDeductRow(type, amount, memo, catName, catId)`: 인자 2개 추가, row HTML에 분류 버튼 추가
+- 새 함수 `pickStDedCategory(rowId)`: openCatPicker 재사용 → 카테고리 선택 → row dataset 업데이트
+- `getSettleDeductRows()`: category_id, category_name 함께 리턴
+- 차감 행 복원 (`restoreSettlement2`): d.category_name, d.category_id 함께 전달
+- 옛 차감 입력 UI 호환 (4,5번 인자 기본값 '')
+
+### DB 변경
+**실행 SQL** (`execute_sql` 🟡 노란불, 사장님 "실행 승인" 통과):
+```sql
+INSERT INTO expense_categories (store_id, name, parent_id, data_source, category_type, is_active, color, sort_order)
+VALUES
+  ('4ae03341-...', '시급', '6f1a1cb5-...', 'attendance_hourly',  'expense', true, '#FF9F0A', 1),
+  ('4ae03341-...', '월급', '6f1a1cb5-...', 'attendance_monthly', 'expense', true, '#FF453A', 2);
+```
+**롤백**: `DELETE FROM expense_categories WHERE parent_id='6f1a1cb5-...';`
+
+**스키마 변경 X** (JSONB 자유 필드라 `deductions[].category_id` 추가는 마이그레이션 불필요)
+
+### 검증
+- ✅ node --check 통과 (HTML <script> 추출 검증)
+- ✅ 옛 deductions 데이터 보호 (category_id 없으면 자동 집계 무시)
+- ⏳ 사장님 골든패스 (다음 단계 필수):
+  1. 하드 새로고침 (Ctrl+Shift+R)
+  2. 홈 지출 카드 → 인건비 "+ 상세보기" → 시급/월급 자식 행 표시 확인
+  3. 마감정산 진입 → "+ 현금 지출 추가" → 금액 입력 → "🏷️ 분류 선택" 버튼 → 인건비/식자재 등 선택 → 저장
+  4. 다시 마감정산 진입 → 복원된 차감 행에 카테고리 표시 확인
+  5. 홈 지출 카드에서 해당 카테고리에 금액 반영 확인
+
+### 헌법 위반 / 교훈
+- **헌법 1-7 위반 2회 (추측)**:
+  1. "special_wages 활발히 사용 중" — 코드에 함수만 있을 뿐 사장님 0건 사용 (정정)
+  2. "special_wages = 상여금" — 코드 보니 "일별 추가시급" (정정)
+- 사장님 즉각 짚으심 ("내가 쓴 적 없는데", "이름만 보고 추측?") — 헌법 1-7 제대로 작동
+- 대응: 코드 (placeholder/필드명) 직접 확인 후 정정 → 새 설계로 전환
+
+### 헌법 변경 없음
+- 다만 dev_lessons.md에 본 헌법 1-7 위반 사례 추가 권장 (다음 세션 todo)
+
+### docs 동기화
+- `db_schema.md`: expense_categories.data_source 신값(attendance_hourly/monthly) + settlements.items_json.deductions[].category_id 추가 명시
+- `work_log.md`: 본 항목
+
+### 사장님 다음 작업
+1. **하드 새로고침** (Ctrl+Shift+R)
+2. 마감정산 진입 → 현금지출 행 입력 시 "🏷️ 분류 선택" 클릭 → 카테고리 선택
+3. 저장 후 홈 지출 카드에 합산 확인
+4. 매일 마감 시 차감 항목 카테고리 분류 시작 → **누수 차단**
+
+### 미해결 / 다음 세션 후보
+- 상여금 입력 방식 (별 테이블 vs special_wages 확장 vs 수동 카테고리) — 사장님 결정 필요
+- 노무사 데이터 받은 후 진마감 인건비 매핑 형식 확정
+- 인건비 외 다른 자동 집계 카테고리에도 deductions 합산 작동 (이미 됨, 검증만)
+- `_sales_daily_touch_updated_at` 함수 search_path mutable (이전 세션 WARN 잔여)
+- `employee-docs` 버킷 SELECT 정책 광범위 (이전 세션 WARN 잔여)
+
+---
+
 ## [2026-05-17] MCP 실전 검증 + RLS 누락 16개 보강 + "실행 승인" 명령어 도입 (대형)
 
 ### 상태: 배포완료 (DB 마이그레이션 1회 + 헌법 1줄 수정)
