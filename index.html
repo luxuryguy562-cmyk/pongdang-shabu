@@ -1662,15 +1662,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <button class="add-item-btn" data-action="addSettleDeductRow|bank|0|" style="margin-top:8px;">+ 통장 입금 추가</button>
     </div>
 
-    <!-- 현금 지출 (가게 운영비 현금 지급) -->
+    <!-- 금고 변동 사유 (양방향 ±: 사장님 출금 -, 거래처 환불 등 +) -->
     <div class="settle-card-group">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="card-title">💵 현금 지출</div>
+        <div class="card-title">💵 금고 변동 사유</div>
         <span id="settleEtcTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
       </div>
-      <p class="card-sub">거래처 외상·일급·영수증 결제 등 금고에서 현금으로 나간 금액</p>
+      <p class="card-sub">금고 돈이 안 맞는 사유 (- 빠짐 / + 들어옴 양방향). 행마다 부호 토글 가능.</p>
       <div id="settleDeductEtcRows"></div>
-      <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 현금 지출 추가</button>
+      <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 사유 추가</button>
     </div>
     <!-- 호환: 통합 총합 표시용 hidden -->
     <span id="settleDeductTotal" style="display:none;">0원</span>
@@ -5700,25 +5700,53 @@ function _settleDeductContainerFor(type){
 }
 function addSettleDeductRow(type, amount, memo, catName, catId){
   type = (type==='bank') ? 'bank' : 'etc';
-  amount = parseInt(amount)||0; memo = memo || '';
+  // ── 부호 정책 (2026-05-17 갈아엎기) ──
+  // 옛 의미 보존: amount 양수 = 금고에서 빠짐 (book 차감), 음수 = 들어옴 (book 증가, -(-)=+)
+  // UI 토글: '−' = 빠짐 (sign=1, default), '+' = 들어옴 (sign=-1)
+  amount = parseInt(amount)||0;
+  const sign = (amount<0) ? -1 : 1; // 음수 amount면 들어옴 (sign=-1, UI '+')
+  const absAmt = Math.abs(amount);
+  memo = memo || '';
   catName = catName || ''; catId = catId || '';
   const cont = _settleDeductContainerFor(type);
   if(!cont) return;
   const id = 'stDed_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-  // ─── 새 기능: 차감 행에 분류 버튼 추가 (Phase 3) — 차감(현금지출)을 카테고리에 자동 집계 ───
   const catLabel = catName ? `🏷️ ${catName}` : '🏷️ 분류 선택';
   const catColor = catName ? 'var(--text)' : 'var(--gray-500)';
+  // etc 행만 ± 토글. bank은 항상 빠짐(통장 입금)
+  // sign=1(빠짐) → '−' 빨강 / sign=-1(들어옴) → '+' 초록
+  const signBtnHtml = type==='etc'
+    ? `<button class="st-ded-sign" data-action="toggleStDedSign|${id}" title="빠짐/들어옴 토글" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--gray-200);background:${sign>0?'var(--danger-light)':'#DCFCE7'};color:${sign>0?'var(--danger)':'#15803D'};font-size:16px;font-weight:900;cursor:pointer;padding:0;">${sign>0?'−':'+'}</button>`
+    : '';
+  const gridCols = type==='etc' ? '32px 1fr 28px' : '1fr 28px';
   cont.insertAdjacentHTML('beforeend', `
-    <div class="st-deduct-row" data-id="${id}" data-type="${type}" data-cat-id="${catId}" data-cat-name="${catName.replace(/"/g,'&quot;')}" style="display:grid;grid-template-columns:1fr 28px;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
-      <input type="text" class="st-ded-amount" placeholder="금액" value="${amount?fmt(amount):''}" inputmode="numeric" style="padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;text-align:right;min-width:0;" data-input="onStDedAmountInput|this">
+    <div class="st-deduct-row" data-id="${id}" data-type="${type}" data-sign="${sign}" data-cat-id="${catId}" data-cat-name="${catName.replace(/"/g,'&quot;')}" style="display:grid;grid-template-columns:${gridCols};gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+      ${signBtnHtml}
+      <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;text-align:right;min-width:0;" data-input="onStDedAmountInput|this">
       <button class="x-btn" data-action="removeSettleDeductRow|${id}" style="width:26px;height:26px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-size:14px;font-weight:800;cursor:pointer;padding:0;">×</button>
-      <button class="st-ded-cat" data-action="pickStDedCategory|${id}" style="grid-column:1 / 3;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;background:#fff;text-align:left;cursor:pointer;color:${catColor};">${catLabel}</button>
-      <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="grid-column:1 / 3;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
+      <button class="st-ded-cat" data-action="pickStDedCategory|${id}" style="grid-column:1 / -1;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;background:#fff;text-align:left;cursor:pointer;color:${catColor};">${catLabel}</button>
+      <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="grid-column:1 / -1;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
     </div>
   `);
   recalcSettle2();
 }
-// ─── 새 기능: 차감 행 분류 선택 (openCatPicker 재사용) ───
+// ─── 부호 토글 (etc 행만, 양방향) ───
+// sign=1: 빠짐 (UI '−'), sign=-1: 들어옴 (UI '+')
+function toggleStDedSign(rowId){
+  const row=document.querySelector('.st-deduct-row[data-id="'+rowId+'"]');
+  if(!row) return;
+  const cur=parseInt(row.dataset.sign)||1;
+  const next=cur*-1;
+  row.dataset.sign=String(next);
+  const btn=row.querySelector('.st-ded-sign');
+  if(btn){
+    btn.textContent=next>0?'−':'+';
+    btn.style.background=next>0?'var(--danger-light)':'#DCFCE7';
+    btn.style.color=next>0?'var(--danger)':'#15803D';
+  }
+  recalcSettle2();
+}
+// ─── 차감 행 분류 선택 (모든 타입 노출 — 사장님 짚음: FK 다 가능) ───
 function pickStDedCategory(rowId){
   const row=document.querySelector('.st-deduct-row[data-id="'+rowId+'"]');
   if(!row) return;
@@ -5729,7 +5757,6 @@ function pickStDedCategory(rowId){
     onSelect:(val,memo)=>{
       let catId='', catName=val||'';
       if(val && val!=='미분류'){
-        // val 형식: '대분류명' 또는 '대분류명>소분류명'
         const parts=String(val).split('>');
         const parentName=parts[0], childName=parts[1]||null;
         const childCat=childName?(expCategories||[]).find(c=>c.name===childName&&c.parent_id):null;
@@ -5760,23 +5787,30 @@ function _allSettleDeductRows(){
   return document.querySelectorAll('#settleDeductBankRows .st-deduct-row, #settleDeductEtcRows .st-deduct-row');
 }
 function getSettleDeductTotals(){
+  // 2026-05-17 양방향 — etc 행은 sign 반영 (부호 포함 amount), bank은 항상 양수 (=빠짐)
+  // 옛 book 계산은 sum을 -로 빼므로, etc의 양수입력(빠짐)이 -로 작용하도록 sum>0 유지
   let etcSum=0, bankSum=0;
   _allSettleDeductRows().forEach(row=>{
     const t = row.getAttribute('data-type')||'etc';
-    const v = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
-    if(t==='bank') bankSum += v; else etcSum += v;
+    const sign = parseInt(row.dataset.sign)||1;
+    const abs = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
+    const signed = (t==='etc') ? sign*abs : abs; // bank은 항상 양수(= 빠짐)
+    if(t==='bank') bankSum += abs; else etcSum += signed;
   });
   return {etcSum, bankSum, total: etcSum+bankSum};
 }
 function getSettleDeductRows(){
+  // 2026-05-17 양방향 — etc 행 amount에 부호 포함 (-/+). bank은 양수만.
   const out = [];
   _allSettleDeductRows().forEach(row=>{
     const type = row.getAttribute('data-type')||'etc';
-    const amount = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
+    const sign = parseInt(row.dataset.sign)||1;
+    const abs = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
+    const amount = (type==='etc') ? sign*abs : abs;
     const memo = row.querySelector('.st-ded-memo').value || '';
     const category_id = row.dataset.catId || null;
     const category_name = row.dataset.catName || '';
-    if(amount>0) out.push({type, amount, memo, category_id, category_name});
+    if(abs>0) out.push({type, amount, memo, category_id, category_name});
   });
   return out;
 }
@@ -9853,14 +9887,18 @@ async function calcExpenseByCategories(ym, mode, prefetched){
     .filter(t=>t.sub_category!=='영수증 참조'); // 영수증에서 집계되므로 제외
   const getMydataAmount=(catId)=>allMdTx.filter(t=>t.category_id===catId).reduce((a,r)=>a+Math.abs(r.amount||0),0);
 
-  // ─── 새 기능: 마감정산 차감(현금지출) 카테고리 합산 (Phase 2) ───
-  // 사장님이 차감 행에 카테고리 분류한 건만 자동 집계 (가마감 전용 — 진마감은 mydata 기반이라 중복 방지)
+  // ─── 마감정산 금고 변동 사유 → 카테고리 자동 집계 (2026-05-17 갈아엎기: 양방향) ───
+  // d.amount 정책 (옛 의미 보존 — book 계산식 호환):
+  //   amount > 0 = 금고에서 빠짐 = 지출 발생 → 카테고리 +amount
+  //   amount < 0 = 금고에 들어옴 = 지출 차감 → 카테고리 -|amount| = +amount (음수가 +되는 셈)
+  // 즉, cat += d.amount 그대로 — 부호가 자연스레 반영됨
+  // 매출/정산제외 카테고리는 catsForAggregation 필터(category_type='expense')에서 자동 제외
   const _settlementsRes=await sb.from('settlements').select('items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end);
   const deductSumByCatId={};
   (_settlementsRes.data||[]).forEach(s=>{
     const deductions=s.items_json?.deductions||[];
     deductions.forEach(d=>{
-      if(d.category_id && d.amount>0){
+      if(d.category_id && d.amount){
         deductSumByCatId[d.category_id]=(deductSumByCatId[d.category_id]||0)+Number(d.amount);
       }
     });
