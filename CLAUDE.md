@@ -274,6 +274,55 @@ to: [다음 에이전트]
 
 ---
 
+## 제8조-A. Supabase MCP 도구 안전 규칙 (2026-05-17 신설)
+
+> 사장님이 claude.ai에서 Supabase OAuth 커넥터를 승인하여 Judypapa 조직에 광범위 권한(프로젝트 삭제 포함)을 부여한 상태.
+> 그러나 `.mcp.json`이 `--read-only`로 잠겨 있어 MCP 서버 레벨에서 변경 도구를 거부함. 본 조항은 이 2중 안전망을 명문화한다.
+
+### 8-A-1. 1차 방어선 — `.mcp.json --read-only` 절대 유지
+- `.mcp.json`의 `--read-only` 플래그는 **절대 임의로 제거하지 않는다.**
+- 제거 필요 시: 사장님께 사유 보고 → 명시적 승인 → 변경 → 작업 끝나면 **즉시 원복**.
+- 매 세션 시작 시(또는 의심 상황) `cat .mcp.json | grep read-only`로 안전망 유지 확인.
+
+### 8-A-2. 도구 3색 신호등 분류
+
+**🟢 초록불 — 자동 실행 OK (보기만 함)**
+- `list_*` 계열: `list_projects`, `list_tables`, `list_extensions`, `list_migrations`, `list_branches`, `list_edge_functions`
+- `get_*` 계열: `get_project_url`, `get_anon_key`/`get_publishable_api_key`, `get_logs`, `get_advisors`
+- `execute_sql` (단, **SELECT 구문만**)
+
+**🟡 노란불 — 사장님 승인 필수 (변경 작업)**
+- `execute_sql` (INSERT / UPDATE / DELETE / WITH ... 변경 SQL) — 1차 방어선이 거부할 가능성 큼
+- 변경 SQL 실행 전: SQL 본문 + 한글 설명 + 영향 행 수 추정 → 사장님 "OK" → 실행 → 결과 보고
+
+**🔴 빨간불 — 절대 자동 호출 금지 (사장님이 도구 이름 콕 찍어 시킨 1회만)**
+- `apply_migration` (DDL: 테이블/컬럼 생성·변경·삭제)
+- `deploy_edge_function` (서버 코드 배포)
+- `create_branch` / `delete_branch` / `merge_branch` / `reset_branch` / `rebase_branch`
+- `create_project` / `delete_project` / `pause_project` / `restore_project`
+- `update_postgres_config`
+- 분류 미정 신규 도구는 빨간불로 간주
+
+### 8-A-3. 호출 전 의무 절차
+1. 호출할 도구 이름을 사장님께 한 줄 보고 ("`list_tables` 호출합니다")
+2. 🟢이면 그대로 실행 후 결과 요약
+3. 🟡이면 SQL/인자 한글 설명 → "OK" 대기 → 실행 → 결과 + 영향 행 수 보고
+4. 🔴이면 호출 거부. 사장님이 도구명 직접 지정한 경우에만 백업·롤백 계획 동반 1회 실행
+
+### 8-A-4. 애매하면 빨간불 취급
+- 사장님이 "DB 정리해줘", "쓸데없는 거 지워" 같은 **애매한 지시**를 했을 때 클로드가 빨간불 도구 호출 금지.
+- 사장님이 "지금 `apply_migration`으로 OOO 해" 처럼 도구명을 명시한 경우에만 실행.
+
+### 8-A-5. 사고 대응
+- 🟡 도구 실행 후 결과가 예상과 다르면 → 즉시 추가 호출 중단 + 사장님 보고
+- 데이터 손실 의심 시 → Supabase Dashboard PITR(Point-in-time Recovery) 안내
+- 잘못된 SQL은 가능한 한 역방향 SQL 작성하여 함께 보고
+
+### 8-A-6. 신규 도구 발견 시 (헌법 1-7 연계)
+- 위 분류에 없는 도구가 MCP에 추가되면 → 호출 금지 + 사장님에게 도구명·설명 보고 → 분류 합의 후 본 조항 갱신.
+
+---
+
 ## 제9조. 계획서 양식
 
 ```

@@ -4,6 +4,39 @@
 
 ---
 
+## [2026-05-17] Supabase MCP 보안 정리 — 헌법 8조-A 신설 (중형)
+
+### 상태: 배포완료 (문서만, 앱 영향 없음)
+### 브랜치: `claude/security-token-risks-JVSFs`
+
+### 배경
+- 이전 세션에서 사장님이 데스크탑 Claude Code에서 Supabase MCP 시도 → 도구 미연결
+- 원인 진단: 네트워크 정책 + OAuth 권한 범위 + MCP 서버 read-only 설정 등 다층 요인
+
+### 작업 내용
+1. **CashFlow 클라우드 환경 구성 안내** (사장님 작업)
+   - 네트워크 정책: 사용자 정의
+   - 허용 도메인: `*.supabase.co`, `*.supabase.com`, `api.github.com`
+   - 환경 변수: `SUPABASE_ACCESS_TOKEN`
+2. **OAuth 커넥터 승인** (사장님 작업, claude.ai 측)
+   - Judypapa 조직 광범위 권한 부여 (프로젝트 삭제 포함)
+   - 보안 검토 결과 보고 후 사장님 A안 선택 (권한 유지 + 헌법 강화)
+3. **헌법 8조-A 신설** (`CLAUDE.md` +49줄)
+   - 1차 방어선: `.mcp.json --read-only` 절대 유지
+   - 도구 3색 신호등 (🟢 자동 / 🟡 승인 / 🔴 절대금지)
+   - 호출 전 의무 절차 4단계
+   - 빨간불 도구 6종: `delete_project`, `apply_migration`, `deploy_edge_function`, branch 조작 5종, `pause/restore_project`, `update_postgres_config`
+
+### 핵심 교훈 (→ dev_lessons.md 추가)
+- **도메인 추측 금지**: `api.supabase.com` vs `*.supabase.co` 혼동으로 정정 한 번 더 발생. MCP 도구는 관리 API(`api.supabase.com`) 사용.
+- **OAuth 권한 ≠ MCP 도구 노출**: OAuth가 광범위 권한을 주더라도 MCP 서버가 read-only면 위험 도구 자체가 노출 안 됨. 이게 1차 방어선.
+- **사장님이 무서워하면 진짜 무서워해야 할 가능성 큼**: 사장님이 "괜찮을 거 같다고는 했는데 무섭다" → 헌법 1-7·3-1에 따라 솔직히 보안 위험 4+1가지 분석 보고. 사장님 직관 신뢰.
+
+### 머지 정보
+- 본 PR: 헌법 문서만 수정 → 앱 영향 0 → 머지 후에도 사장님 테스트 불필요
+
+---
+
 ## [2026-05-15 (밤~새벽 통합 세션)] 월 요약 갈아엎기 + 거래처/주문 UX 대공사 ✅ PR #126~#139 머지
 
 **브랜치**: `claude/redesign-monthly-summary-aBZ2Y` (14 PR)
