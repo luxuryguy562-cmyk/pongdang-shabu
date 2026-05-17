@@ -5725,6 +5725,7 @@ function pickStDedCategory(rowId){
   const currentName=row.dataset.catName||'';
   openCatPicker({
     current:currentName,
+    onlyTypes:['expense'], // 차감(현금지출)은 지출 카테고리만 (사장님 짚음: FK 일관성)
     onSelect:(val,memo)=>{
       let catId='', catName=val||'';
       if(val && val!=='미분류'){
@@ -6692,8 +6693,9 @@ async function loadDashboard(){
         amt=(attRes2.data||[]).filter(r=>!_attMonthlyIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
       } else if(child.data_source==='attendance_monthly'){
         // 월급 자식: 월급제 직원 monthly_wage 분배 합 (만원→원, 월 일수 분배)
+        // passedDays까지만 합산 (미래 일자 제외 — 사장님 짚음 2026-05-17)
         (employees||[]).filter(e=>e.is_active&&e.wage_type==='monthly'&&e.monthly_wage>0).forEach(emp=>{
-          amt+=Math.round((emp.monthly_wage*10000)/lastDay)*lastDay;
+          amt+=Math.round((emp.monthly_wage*10000)/lastDay)*passedDays;
         });
       } else {
         // 기존: vendor_orders.vendor.category_id + receipts.category_id (식자재 패턴)
@@ -9912,11 +9914,15 @@ async function calcExpenseByCategories(ym, mode, prefetched){
     fcRows=(fcRes.data||[]).filter(r=>r.is_active!==false);
     (ecaRes.data||[]).forEach(r=>{ecaMap[r.category_id]=r.amount||0;});
     // 인건비 = 시급제 attendance_logs.calculated_wage + 월급제 monthly_wage 분배 (사장님 매장: 탁성현 750만원 등)
+    // 진행일까지만 합산 (미래 일자 제외 — 사장님 짚음 2026-05-17)
     const _monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
     const _hourlySum=(attRes.data||[]).filter(r=>!_monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+    const _today=new Date();
+    const _isCurrentMonth=(y===_today.getFullYear() && m===_today.getMonth()+1);
+    const _effectiveDays=_isCurrentMonth ? _today.getDate() : lastDay;
     let _monthlyDistSum=0;
     (employees||[]).filter(e=>e.is_active&&e.wage_type==='monthly'&&e.monthly_wage>0).forEach(emp=>{
-      _monthlyDistSum+=Math.round((emp.monthly_wage*10000)/lastDay)*lastDay;
+      _monthlyDistSum+=Math.round((emp.monthly_wage*10000)/lastDay)*_effectiveDays;
     });
     attTotal=_hourlySum+_monthlyDistSum;
   }
@@ -12604,7 +12610,9 @@ function getCatLabel(cat,sub){
 // context: {current:string, onSelect:(val,memo)=>void, currentMemo?:string}
 function openCatPicker(context){
   const typeLabel={expense:'💸 지출',income:'💰 매출',exclude:'🚫 정산제외',receipt_ref:'📸 영수증 참조',reserve:'🏦 예비비 사용'};
-  const typeOrder=['expense','income','exclude','receipt_ref','reserve'];
+  // context.onlyTypes 있으면 그 타입만 노출 (예: 차감 입력 → 지출만, 2026-05-17 사장님 짚음)
+  const _allTypes=['expense','income','exclude','receipt_ref','reserve'];
+  const typeOrder=context.onlyTypes && context.onlyTypes.length ? _allTypes.filter(t=>context.onlyTypes.includes(t)) : _allTypes;
   const drillTypes=['expense','income','exclude']; // 2단계 진입 대상
   const sheet=document.getElementById('catPickerSheet');
   const box=document.getElementById('catPickerBox');
