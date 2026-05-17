@@ -475,7 +475,12 @@ franchises (프랜차이즈/브랜드)
   - 의미: 읽기 전부 허용 + 쓰기 시 store_id 필수. **느슨함 — 코드 레이어 필터와 2중 방어**
   - 향후 Phase 2c에서 Cloudflare Worker + JWT auth 도입 후 엄격화 예정
   - SQL 파일: `docs/sql/phase2b_rls_enable.sql` / `phase2b_rls_rollback.sql`
-- **RLS 비활성 테이블**: stores, franchises (부모 테이블, store_id 없음)
+- **RLS 누락 보강 (2026-05-17, MCP `apply_migration`)**: Phase 2b 이후 추가된 운영 4개 + 잔재 3개 + 백업 9개 = 16개에 RLS ENABLE.
+  - 운영 4개(`sales_daily`, `payment_methods`, `extra_revenue_items`, `extra_revenue_logs`)는 `pd_phase2b_all` 동일 정책 적용 → 앱 영향 0
+  - 잔재 3개(`exp_groups`, `exp_items`, `exp_item_amounts`) + 백업 9개는 RLS ON, 정책 없음 = 완전 봉인 (service_role만 접근)
+  - 마이그레이션 이름: `enable_rls_on_missing_tables_20260517`
+  - ⚠️ **새 운영 테이블 만들 때마다 RLS + pd_phase2b_all 정책 함께 적용 의무** (안 하면 anon key 노출)
+- **RLS 비활성 테이블**: stores, franchises (부모 테이블, store_id 없음 — 의도적 OFF 유지)
 - **store_id 필수**: 모든 쿼리에 빠뜨리면 타 매장 데이터 노출
 - **role 문자열 연결**: employees.role = roles.name (FK 아님), 직급명 변경 시 employees도 업데이트 필요
 - **category_id FK 규칙 (2가지)**:
