@@ -4,6 +4,56 @@
 
 ---
 
+## [2026-05-17] MCP 실전 검증 + RLS 누락 16개 보강 + "실행 승인" 명령어 도입 (대형)
+
+### 상태: 배포완료 (DB 마이그레이션 1회 + 헌법 1줄 수정)
+### 브랜치: `claude/test-supabase-mcp-agent-DGbKV`
+
+### 배경 — 이전 세션 권장 순서대로 실전 테스트
+1. CashFlow 환경 새 세션에서 "supabase mcp로 stores 데이터 보여줘" 시도
+2. 헌법 8조-A 작동 검증 (🟢/🟡/🔴 흐름)
+3. 자물쇠 빠진 테이블 발견 시 보강
+
+### 작업 내용
+1. **🟢 도구 자동 실행 검증** — `list_tables`, `execute_sql(SELECT stores)` 모두 자동 호출 정상.
+   - 결과: stores 1개 (퐁당샤브 논산점) — 헌법 8조-A-3 절차 통과
+2. **보안 advisory에서 RLS 비활성 19개 발견** (Supabase MCP가 의무 surface)
+   - 운영 4개 위험: `sales_daily`(17행), `payment_methods`(7), `extra_revenue_items`(2), `extra_revenue_logs`(1)
+   - 잔재 3개: `exp_groups`, `exp_items`, `exp_item_amounts` (코드 grep 0건 = 안 씀)
+   - 백업 9개: `*_bak_20260422*` / `*_backup_2026051*`
+   - 의도적 OFF 2개: `stores`, `franchises` (유지)
+3. **🔴 빨간불 명령어 변경 (헌법 8-A 1줄 수정)**
+   - 기존: 사장님이 도구 이름(`apply_migration`) 콕 찍어야 → 사용성 ❌
+   - 신규: **"실행 승인" 4글자**만 말하면 OK → 사장님 친화적
+   - 헌법 8-A-3, 8-A-4 표현 갱신
+4. **🔴 `apply_migration` 1회 실행 — 16개 RLS ON + 4개 정책 CREATE**
+   - 마이그레이션 이름: `enable_rls_on_missing_tables_20260517`
+   - 결과: critical 보안 경고 19개 → 0개 ✅
+   - 운영 4개 SELECT 검증: 정책 적용 후에도 정상 동작 (앱 영향 0)
+
+### 핵심 결정사항
+- "실행 승인 + 뒤에 무엇" 형태도 허용 (예: "실행 승인 잠가")
+- 새 운영 테이블 만들 때마다 RLS + `pd_phase2b_all` 정책 함께 적용 의무화 (db_schema.md 명시)
+- 백업/잔재 테이블도 자물쇠는 채우되 정책은 없음 → service_role(사장님 콘솔)만 접근 가능
+
+### docs 동기화
+- `CLAUDE.md` 8-A-2/8-A-3/8-A-4: "실행 승인" 명령어로 갱신
+- `db_schema.md` 주의사항: RLS 보강 항목 + 신규 테이블 의무 패턴 추가
+- `work_log.md`: 본 항목
+
+### 미해결 (다음 세션 후보)
+- WARN 레벨 잔여:
+  - `employee-docs` 버킷 SELECT 정책이 광범위 (직원 파일 목록 노출 가능성)
+  - `_sales_daily_touch_updated_at` 함수 search_path mutable
+  - `pd_phase2b_all USING(true)` 정책 자체 — Phase 2c JWT 도입 후 엄격화 예정 (헌법 명시)
+- exp_* 3개 통째 DROP 여부 (지금은 봉인만, 사장님 결정 시 삭제)
+
+### 사장님 다음 작업
+- **없음**. 앱 동작 그대로. UI 변경 0줄.
+- 다음 새 세션 시작 시 본 헌법(`CLAUDE.md` 8-A)에 "실행 승인" 명령어 자동 적용됨.
+
+---
+
 ## [2026-05-17] Supabase MCP 보안 정리 — 헌법 8조-A 신설 (중형)
 
 ### 상태: 배포완료 (문서만, 앱 영향 없음)
