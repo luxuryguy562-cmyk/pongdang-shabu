@@ -246,11 +246,14 @@ franchises (프랜차이즈/브랜드)
 | diff_status | 과부족 상태 |
 | sales_total (int) | 매출 합계 |
 - upsert onConflict: `store_id, settle_date`
-- `items_json` 구조 (2026-05-12 업데이트):
+- `items_json` 구조 (2026-05-12 업데이트 / 2026-05-17 차감 카테고리 FK 추가):
   - `opening` — 전일 이월금
   - `pos_cash / pos_cash_receipt / pos_card / pos_etc` — 매출 4칸
   - `cash_detail_cash / cash_detail_qr / cash_detail_transfer` — 현금 분해(검증용)
-  - **`deductions: [{type, amount, memo}, ...]`** — 차감 동적 행 (신규)
+  - **`deductions: [{type, amount, memo, category_id, category_name}, ...]`** — 차감 동적 행
+    - 2026-05-17: `category_id` (FK→expense_categories) + `category_name` (표시용) 추가
+    - 옛 데이터(category_id 없음)는 자동 집계 무시 (옛 동작 보존)
+    - 사장님이 차감 행에 카테고리 분류하면 가마감 카테고리 합계에 자동 합산 (현금지출 추적)
   - `deduct_etc / deduct_bank` — 위 deductions 의 type별 합산값 (옛 코드 호환)
   - `extra_draw_large / extra_draw_small` — 기타매출 호환 (현재는 extra_revenue_logs 로 분리)
 
@@ -314,16 +317,24 @@ franchises (프랜차이즈/브랜드)
 - 리뷰 드롭다운은 5 타입 optgroup으로 구분 표시
 - expense/income/exclude만 사장님이 UI에서 편집 가능, receipt_ref/reserve는 DB에 고정 1건씩 INSERT된 상태
 
-**data_source 값 정의 (2026-04-22 확장)**:
+**data_source 값 정의 (2026-04-22 확장 / 2026-05-17 인건비 자식 추가)**:
 - `vendor_orders` — 거래처 주문(vendor_orders)만 집계. `vendor_category` 필터 적용
 - `receipts` — 영수증만 집계. 소분류 id 또는 대분류 id인 receipts 포함
 - `composite` — 거래처+영수증 **합산** (식자재 대분류 및 육류/야채/공산품 소분류용).
   - 대분류 composite: 자식 소분류들의 vendor_category 총합 + 자식 id로 된 receipts + 본인 id receipts
   - 소분류 composite: 본인 vendor_category + 본인 id receipts
   - ⚠️ 대분류만 집계 루프 참여, 소분류는 `details`로 하위 표시됨 (중복 방지)
-- `attendance` — attendance_logs.calculated_wage 합 (인건비)
+- `attendance` — attendance_logs.calculated_wage 합 + 월급제 monthly_wage 분배 (부모 인건비)
+- `attendance_hourly` — **시급제 직원만** attendance_logs.calculated_wage 합 (인건비 자식, 2026-05-17 추가)
+- `attendance_monthly` — **월급제 직원만** monthly_wage × 10000 ÷ 월일수 분배 (인건비 자식, 2026-05-17 추가)
 - `fixed_costs` — fixed_cost_amounts (고정비)
 - `manual` — expense_category_amounts 수동 입력
+
+**인건비 자식 패턴 (2026-05-17)**:
+- 부모 `attendance` = 시급제 + 월급제 합 (= 자식 합과 동일)
+- 자식 `attendance_hourly` / `attendance_monthly`는 `parent_id`로 부모 연결
+- ⚠️ 자식은 집계 루프에서 스킵 (composite 자식과 동일 패턴, 중복 방지)
+- 자식은 월 요약 카드 "+ 상세보기" 펼침에서만 표시 (식자재 패턴 일치)
 
 ### fixed_costs / fixed_cost_amounts
 | fixed_costs | fixed_cost_amounts |
