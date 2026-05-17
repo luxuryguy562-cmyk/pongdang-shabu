@@ -44,6 +44,21 @@
 | `<meta theme-color>` | `index.html` head | iOS 상태바·앱스토어 splash 색 |
 | `safe-area-inset` CSS | `.header`, `.bottom-nav` | iOS 노치/홈 인디케이터 자동 회피 |
 
+## Supabase MCP (Claude 자동화, 2026-05-17)
+
+| 항목 | 값 |
+|------|---|
+| **설정 파일** | `.mcp.json` (레포 루트) |
+| **MCP 서버 패키지** | `@supabase/mcp-server-supabase@latest` (npx 자동 실행) |
+| **모드** | `--read-only` (조회 전용, 쓰기 차단) |
+| **프로젝트 한정** | `--project-ref=ruytgygjwnbtzmtofopg` (퐁당샤브 전용) |
+| **인증 방식** | Personal Access Token, 환경변수 `SUPABASE_ACCESS_TOKEN` 참조 |
+| **토큰 등록 위치** | 데스크탑 클로드 → "기본값" 클라우드 환경 → 환경 변수 (사장님 본인만) |
+| **토큰 폐기** | https://supabase.com/dashboard/account/tokens → Revoke |
+| **쓰기 모드 전환** | `.mcp.json`에서 `--read-only` 제거 + 계획서/승인 (헌법 8조) |
+
+> ⚠️ 토큰은 GitHub 레포에 절대 커밋 X — `.mcp.json`은 `${SUPABASE_ACCESS_TOKEN}` 참조만 함.
+
 ## Cloudflare Workers
 
 | 워커 | URL | 용도 | 파일 |
