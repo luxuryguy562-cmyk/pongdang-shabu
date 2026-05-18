@@ -6544,7 +6544,8 @@ async function loadDashboard(){
       attRes2,          // 근태 당월 (공유)
       prevVoRes,        // 거래처 전월 (일별)
       prevRcRes,        // 영수증 전월 (일별)
-      prevAttRes        // 근태 전월 (일별)
+      prevAttRes,       // 근태 전월 (일별)
+      setRes2           // 마감정산 당월 (차감 일자별 분배 + 인건비 통일, 2026-05-18)
     ]=await Promise.all([
       // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
       // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
@@ -6569,7 +6570,8 @@ async function loadDashboard(){
       // ── 전월 일별 식자재/영수증/인건비 ──
       sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
       sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',pStart).lte('receipt_date',pEnd),
-      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd)
+      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
+      sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end)
     ]);
 
     // 지출 카테고리 집계는 prefetch한 데이터로 메모리 처리 (calcExpenseByCategories 내부 DB 호출 0번)
@@ -6866,6 +6868,30 @@ async function loadDashboard(){
       const d=a.work_date?.slice(8);if(!d)return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
       const k=srcToCat['attendance'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(a.calculated_wage||0);
+    });
+    // ─── 마감 차감 일자별 분배 — 카테고리 매칭 → 해당 카테고리 키 (2026-05-18 통일) ───
+    // 인건비 부모/자식 → 인건비 키, 식자재 부모/자식 → 식자재 키 등
+    const _dailyCatIdToKey={};
+    Object.keys(srcToCat).forEach(src=>{
+      const parent=(expCategories||[]).find(c=>c.data_source===src&&!c.parent_id);
+      if(parent){
+        _dailyCatIdToKey[parent.id]=srcToCat[src];
+        (expCategories||[]).filter(c=>c.parent_id===parent.id).forEach(ch=>{
+          _dailyCatIdToKey[ch.id]=srcToCat[src];
+        });
+      }
+    });
+    (setRes2.data||[]).forEach(s=>{
+      const d=s.settle_date?.slice(8);if(!d)return;
+      (s.items_json?.deductions||[]).forEach(deduct=>{
+        if(deduct.category_id && deduct.amount){
+          const key=_dailyCatIdToKey[deduct.category_id];
+          if(key){
+            if(!dailyCatMap[d])dailyCatMap[d]={};
+            dailyCatMap[d][key]=(dailyCatMap[d][key]||0)+Number(deduct.amount);
+          }
+        }
+      });
     });
     // ─── 새 기능: 월급제 직원 일별 인건비 분배 (헌법 1-6, 2026-05-05) ───
     // 시급제는 attendance_logs.calculated_wage 그대로(위), 월급제는 매일 monthly_wage(만원)*10000/해당월일수
@@ -9643,13 +9669,20 @@ async function calcReserveBalance(){
   // dev_lessons #47: sales_daily 단일 진실의 원천 — 매출관리 수정본 반영
   // 순이익 = 매출 − (vendor_orders + receipts + attendance + fixed + 로열티 + 카드수수료)
   // 적립금 = max(0, round(순이익 × rate) + fixed)
-  const [sdRes, fcRes, voRes, rcpRes, attRes] = await Promise.all([
+  const [sdRes, fcRes, voRes, rcpRes, attRes, setRes] = await Promise.all([
     sb.from('sales_daily').select('*').eq('store_id',sid),
     sb.from('fixed_costs').select('estimated_monthly,is_active').eq('store_id',sid),
     sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid),
     sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상'),
-    sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid)
+    sb.from('attendance_logs').select('work_date,calculated_wage').eq('store_id',sid),
+    sb.from('settlements').select('settle_date,items_json').eq('store_id',sid)
   ]);
+
+  // 인건비 카테고리 id (부모 + 자식들) — 차감 매칭용 (2026-05-18 통일)
+  const _laborCat=(expCategories||[]).find(c=>c.data_source==='attendance'&&!c.parent_id);
+  const _laborCatIds=_laborCat
+    ? new Set([_laborCat.id, ...((expCategories||[]).filter(c=>c.parent_id===_laborCat.id).map(c=>c.id))])
+    : new Set();
 
   // 월별 매출 + 카드매출 (sales_daily 기준, Part F paymentMethods 동적)
   const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
@@ -9674,6 +9707,16 @@ async function calcReserveBalance(){
   (attRes.data||[]).forEach(a=>{
     const ym=a.work_date?.slice(0,7); if(!ym) return;
     bucket(ym).att+=(a.calculated_wage||0);
+  });
+  // 마감정산 차감 중 인건비 카테고리(부모+자식) 매칭 → 월별 att에 합산 (2026-05-18 통일)
+  (setRes.data||[]).forEach(s=>{
+    const ym=s.settle_date?.slice(0,7); if(!ym) return;
+    const ds=s.items_json?.deductions||[];
+    ds.forEach(d=>{
+      if(d.category_id && _laborCatIds.has(d.category_id) && d.amount){
+        bucket(ym).att+=Number(d.amount);
+      }
+    });
   });
 
   // 총 적립 계산 (각 월의 실제 순이익 × 비율 + 고정액)
@@ -11743,7 +11786,8 @@ async function loadExpHubData(){
   const ecaCatIds=[marketingCat?.id, taxCat?.id].filter(Boolean);
 
   // ━━ 모든 DB 호출 병렬 발사 (직렬 8회 → 1회 Promise.all) ━━
-  const [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdCntRes, recCntRes] = await Promise.all([
+  // 2026-05-18: settlements 추가 (인건비 차감 합산 통일)
+  const [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdCntRes, recCntRes, setRes] = await Promise.all([
     sb.from('receipts').select('total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
     sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
     sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
@@ -11753,7 +11797,8 @@ async function loadExpHubData(){
       : Promise.resolve({data:[]}),
     sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
     sb.from('mydata_transactions').select('id',{count:'exact',head:true}).eq('store_id',sid).gte('tx_date',start).lte('tx_date',end),
-    sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending')
+    sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending'),
+    sb.from('settlements').select('items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end)
   ]);
 
   // 영수증
@@ -11802,11 +11847,21 @@ async function loadExpHubData(){
   renderCatCard('마케팅', marketingCat, 'expMiniMarketing', 'expMiniMarketingSub');
   renderCatCard('세금', taxCat, 'expMiniTax', 'expMiniTaxSub');
 
-  // 인건비
+  // 인건비 (2026-05-18 통일: attendance_logs + 차감 인건비 매칭)
   try{
     const al=alRes.data||[];
-    const sum=al.reduce((a,r)=>a+(r.calculated_wage||0),0);
+    let sum=al.reduce((a,r)=>a+(r.calculated_wage||0),0);
     const emps=new Set(al.map(r=>r.employee_id).filter(Boolean));
+    // 인건비 카테고리(부모+자식) 매칭 차감 합산
+    const _laborCat=(expCategories||[]).find(c=>c.data_source==='attendance'&&!c.parent_id);
+    if(_laborCat){
+      const _laborIds=new Set([_laborCat.id, ...((expCategories||[]).filter(c=>c.parent_id===_laborCat.id).map(c=>c.id))]);
+      (setRes.data||[]).forEach(s=>{
+        (s.items_json?.deductions||[]).forEach(d=>{
+          if(d.category_id && _laborIds.has(d.category_id) && d.amount){ sum+=Number(d.amount); }
+        });
+      });
+    }
     setText('expMiniWage', fmt(sum));
     setText('expMiniWageSub', `${emps.size}명`);
   }catch(e){setText('expMiniWage','-');}
@@ -13200,6 +13255,20 @@ async function loadReconciliation(){
           const s=saved.find(r=>r.sub_key==='special_wages');
           entry.details.push({subKey:'special_wages',label:'특별수당',recorded:swTotal,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''});
           entry.recorded+=swTotal;entry.actual+=(s?.actual_total||0);
+        }
+        // 2026-05-18 통일: 마감 차감 인건비 매칭 (부모+자식 ids)
+        const _laborChildIds=(allCategories||[]).filter(c=>c.parent_id===cat.id).map(c=>c.id);
+        const _laborIds=new Set([cat.id, ..._laborChildIds]);
+        let _dedLaborSum=0;
+        (salesRes.data||[]).forEach(st=>{
+          (st.items_json?.deductions||[]).forEach(d=>{
+            if(d.category_id && _laborIds.has(d.category_id) && d.amount){ _dedLaborSum+=Number(d.amount); }
+          });
+        });
+        if(_dedLaborSum>0){
+          const s=saved.find(r=>r.sub_key==='deduct_labor');
+          entry.details.push({subKey:'deduct_labor',label:'마감 차감 인건비',recorded:_dedLaborSum,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''});
+          entry.recorded+=_dedLaborSum;entry.actual+=(s?.actual_total||0);
         }
 
       } else if(cat.data_source==='fixed_costs'){
