@@ -2066,6 +2066,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <button id="vdEditBtn" class="btn btn-secondary btn-sm" style="padding:6px 10px;font-size:12px;display:none;" data-action="editVendorFromDetail">편집</button>
       <!-- 거래종료 버튼은 편집 시트 안으로 이동 (사장님 요청 2026-05-15) -->
     </div>
+    <!-- 거래처 영수증 등록 진입 (Phase 3) -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-primary" style="flex:1;padding:12px;font-size:13px;font-weight:700;" data-action="openRcpReceiptFromVendor|currentVendorId|photo">📸 영수증 사진</button>
+      <button class="btn btn-secondary" style="flex:1;padding:12px;font-size:13px;font-weight:700;" data-action="openRcpReceiptFromVendor|currentVendorId|manual">✏️ 수동 입력</button>
+    </div>
     <!-- 거래처 선택 드롭다운은 헤더(vdName)에 고정된 거래처와 짬뽕되는 UX라서 숨김.
          거래처 전환은 ‹ 목록 버튼으로 돌아가서 다시 선택. value는 헤더 vendorId와 동기화되어 loadVendorOrders가 그대로 사용. -->
     <div style="display:flex;gap:8px;margin-bottom:12px;">
@@ -4125,6 +4130,36 @@ function renderCatReceiptList(rows){
     </div>
   `;
   body.innerHTML = html;
+}
+
+// 거래처 영수증 등록 진입 (거래처 카드 미니 📸 / 거래처 상세 헤더 버튼 둘 다 처리)
+async function openRcpReceiptFromVendor(vendorId, method){
+  if(!guardStore()) return;
+  // vendor-card 미니 진입 = vendorId 직접 전달 / 거래처 상세 헤더 = '' → currentVendorDetailId fallback
+  const vid = (vendorId && vendorId !== '') ? vendorId : (typeof currentVendorDetailId !== 'undefined' ? currentVendorDetailId : null);
+  if(!vid){ toast('거래처 정보를 찾을 수 없어요','error'); return; }
+  const {data, error} = await sb.from('vendors').select('id,name,category,category_id').eq('id', vid).eq('store_id', currentStore.id).maybeSingle();
+  if(error || !data){ toast('거래처 정보를 못 가져왔어요','error'); return; }
+  // setRcpMode('vendor')는 picker를 자동으로 열어 우회 — 모드·카테고리 직접 박기
+  rcpMode = 'vendor';
+  rcpVendorId = data.id;
+  rcpVendorName = data.name || '';
+  rcpCatId = data.category_id || null;
+  rcpCatName = data.category || '';
+  rcpInputMethod = (method === 'manual') ? 'manual' : 'photo';
+  nav('receipt');
+  setTimeout(()=>{
+    renderRcpModeBadge();
+    if(rcpInputMethod === 'manual'){
+      const ms = document.getElementById('rcpModeSelect'); if(ms) ms.style.display='none';
+      const mb = document.getElementById('rcpModeBadge'); if(mb) mb.style.display='flex';
+      const gb = document.getElementById('rcpGuideBox'); if(gb) gb.style.display='block';
+      const ug = document.getElementById('uploadGroup'); if(ug) ug.style.display='none';
+      manualReceipt();
+    } else {
+      showRcpUploadUI();
+    }
+  }, 60);
 }
 
 // 카테고리 화면에서 [📸 영수증 사진] 또는 [✏️ 수동 입력] 버튼 → 영수증 탭으로 이동
@@ -7976,6 +8011,18 @@ async function loadVendors(){
       vendorMonthTotals[o.vendor_id].count+=1;
     });
   }catch(e){/* 조회 실패는 무시 — 카드에서 합계 안 보일 뿐 */}
+  // 2026-05-18: 거래처 영수증(receipts.vendor_id NOT NULL)도 거래처 합산에 통합 (Phase 3)
+  try{
+    const{data:rc}=await sb.from('receipts').select('vendor_id,total_price')
+      .eq('store_id',currentStore.id).eq('note','정상').not('vendor_id','is',null)
+      .gte('receipt_date',start).lte('receipt_date',end);
+    (rc||[]).forEach(r=>{
+      if(!r.vendor_id) return;
+      if(!vendorMonthTotals[r.vendor_id]) vendorMonthTotals[r.vendor_id]={total:0,count:0};
+      vendorMonthTotals[r.vendor_id].total+=(r.total_price||0);
+      vendorMonthTotals[r.vendor_id].count+=1;
+    });
+  }catch(e){/* 영수증 조회 실패는 무시 */}
   // 카테고리 필터 옵션 동적 채움 (헌법 10조 2번 — 데이터 단일 진실의 원천)
   if(typeof refreshVendorListFilter==='function') refreshVendorListFilter();
   renderVendorList();
@@ -8289,6 +8336,7 @@ function renderVendorList(){
         <div style="font-size:15px;font-weight:700;color:var(--text);">${v.name} ${!v.is_active?'<span class="badge badge-gray">거래종료</span>':''}</div>
         ${monthLine}
       </div>
+      <button class="btn btn-secondary btn-sm" style="padding:8px 10px;font-size:14px;flex-shrink:0;" title="이 거래처 영수증 등록" data-stop="1" data-action="openRcpReceiptFromVendor|${v.id}">📸</button>
       <div style="font-size:20px;color:var(--gray-400);">›</div>
     </div>`;
   }).join(''):'<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div>';
@@ -14526,7 +14574,11 @@ document.addEventListener('DOMContentLoaded', async()=>{
   // ─── 중앙 이벤트 위임 (CSP 인라인 핸들러 대체) ───
   document.addEventListener('click',e=>{
     const el=e.target.closest('[data-action]');
-    if(el) _dispatchAction('data-action', el);
+    if(el){
+      // data-stop="1" 속성 있으면 부모 전파 차단 (카드 안 미니 버튼 등)
+      if(el.hasAttribute('data-stop')) e.stopPropagation();
+      _dispatchAction('data-action', el);
+    }
   });
   document.addEventListener('change',e=>{
     const el=e.target.closest('[data-change]');

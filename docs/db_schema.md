@@ -239,6 +239,8 @@ franchises (프랜차이즈/브랜드)
 > ⚠️ **2026-05-15 정정**: 옛 문서엔 `price, count` 컬럼이 있다고 적혀있었으나 **실제 DB에는 존재하지 않음** (42703 에러로 발견). 코드에서 `price/count` SELECT/INSERT 모두 제거. 단가/수량 분리 저장이 필요해지면 추후 ALTER TABLE로 추가하고 본 문서 동기화.
 >
 > ⚠️ **2026-05-18 추가**: `vendor_id` FK 도입 (영수증 진입 분기 거래처/직구). 거래처 모드 = vendor_id + 거래처.category_id 자동 박힘 + 학습 스킵. 직구 모드 = vendor_id NULL + AI 품목별 분류 + 학습 작동. 마이그레이션: `add_receipts_vendor_id_20260518`. 롤백: `DROP INDEX idx_receipts_vendor_id; ALTER TABLE receipts DROP COLUMN vendor_id;`.
+>
+> ⚠️ **2026-05-18 추가**: `input_method` TEXT 신설 (`'photo'` | `'manual'` | NULL). 영수증 단위 입력 방식 — `handleImg` 진입 = photo, `manualReceipt` 진입 = manual. 카테고리별 목록(catReceiptCont)에서 📸/✏️ 이모지 표시용. 옛 영수증 = NULL (이모지 빈 칸 호환). 마이그레이션: `add_receipts_input_method_20260518`. 롤백: `DROP INDEX idx_receipts_input_method; ALTER TABLE receipts DROP COLUMN input_method;`.
 
 ### settlements
 | 컬럼 | 용도 |

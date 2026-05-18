@@ -4,6 +4,69 @@
 
 ---
 
+## [2026-05-18 (5)] 지출 허브 그리드 완성 + 카테고리별 영수증 목록 + 거래처 영수증 진입 (Phase 1+2+3)
+
+### 상태: 코드 push 완료 / main 머지 진행
+### 브랜치: `claude/add-gemini-retry-logic-RjG9z`
+### 트리거: 사장님 — "지출이 분류돼있는 게 보여야 정상" + "각 그리드 안에 수동/영수증 이모지 구분"
+
+### 사장님 critic 반박 4번 (헌법 3-1 자기 적용)
+사장님이 내 critic 직접 반박:
+1. "대시보드는 합산만 보임 → 상세 항목 못 봄" → 맞음
+2. "기록 내역은 다 섞여서 카테고리별 찾기 힘듦" → 맞음
+3. "지출 허브 그리드가 이미 분류 진입점 → 여기 채우자" → 맞음
+→ 내가 "분석 욕구"라고 매도한 거 = 반박 위한 반박. 인정.
+
+### 핵심 결정 (3 Phase 일괄)
+**Phase 1**: 그리드에 [🛒 직구][📂 기타] 카드 2개 추가
+- 직구 합산 = receipts WHERE vendor_id IS NULL
+- 기타 합산 = receipts WHERE category_id IN (기타+자식 소분류)
+- receipts SELECT에 vendor_id, category_id 추가 (한 번에 분류)
+
+**Phase 2**: 카테고리별 영수증 목록 + 입력 방식 이모지
+- DB: `receipts.input_method` TEXT 추가 (마이그레이션 `add_receipts_input_method_20260518`, "실행 승인" 통과)
+- handleImg = 'photo', manualReceipt = 'manual', saveReceipt cleaned 박기
+- 신규 컨테이너 catReceiptCont (직구·기타 공통, mode 파라미터)
+- 헤더: 아이콘+제목+이번달 합계+월 선택
+- 상단 [📸 영수증 사진][✏️ 수동 입력] 두 버튼 (openCatReceiptInput)
+- 표: 날짜/가게/품목/금액/분류/📸|✏️
+- openReceiptEdit 공유 (rcpRecords set)
+- 편집/삭제 후 활성 컨테이너 기준 갱신
+- nav() parentTabMap·actions에 catReceipt:'expHub' 추가
+
+**Phase 3**: 거래처 영수증 진입 + 합산 통합
+- 거래처 카드(목록)에 [📸] 미니 버튼 (data-stop="1"로 부모 전파 차단)
+- 거래처 상세 헤더에 [📸 영수증 사진][✏️ 수동 입력]
+- openRcpReceiptFromVendor(vendorId, method) — picker 우회, 모드·카테고리·input_method 직접 박기
+- **loadVendors의 vendorMonthTotals = vendor_orders + receipts (vendor_id NOT NULL) 통합**
+  → 거래처 영수증 등록되면 거래처 카드 합산에 자동 반영
+
+### data-action 디스패처 작은 확장
+- `data-stop="1"` 속성 지원 → 부모 요소 전파 차단 (거래처 카드 안 미니 [📸] 버튼)
+
+### 검증
+- ✅ node --check 통과 (3 Phase 모두)
+- ✅ SQL apply_migration 성공 (input_method, 영향 행 0)
+- ✅ 옛 영수증 호환 (input_method NULL → 이모지 빈 칸)
+- ✅ 카드 드래그 순서 (applyExpHubCardOrder는 data-card-id 기반 → direct/etcExp 자동 처리)
+
+### 사장님 골든패스 테스트
+1. 지출 허브 → [🛒 직구] / [📂 기타] 카드 보이는지
+2. 각 카드 클릭 → 영수증 목록 화면 (헤더+버튼+표)
+3. 상단 [📸 영수증 사진] → 영수증 탭 직구 모드 진입
+4. 상단 [✏️ 수동 입력] → 영수증 탭 직구 + 빈 행 자동
+5. 영수증 등록 후 catReceiptCont 합계·이모지 확인
+6. 거래처 관리 카드의 [📸] 미니 버튼 → 거래처 영수증 등록 (vendor 자동 박힘)
+7. 거래처 상세 헤더의 두 버튼 → 동일하게 vendor·카테고리 자동
+8. 거래처 영수증 등록 후 거래처 카드 합산 자동 증가 (orders + receipts 통합)
+
+### 다음 세션 후보
+- 카테고리별 목록 화면 UX 피드백 반영
+- 식자재/비품 등 다른 expense_categories 카드도 그리드에 추가 검토
+- input_method NULL 옛 영수증 일괄 분류 보조 도구 (필요 시)
+
+---
+
 ## [2026-05-18 (4)] 영수증 진입 분기 (거래처/직구) + 수동 입력 + 토스 문어체 + 프롬프트 강화
 
 ### 상태: SQL 실행 완료 / 코드 push 진행
