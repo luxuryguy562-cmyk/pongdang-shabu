@@ -74,3 +74,39 @@ git add -A && git commit -m "backup: 기능명 작업 전 백업"
 - 기존 함수명/변수명 무단 변경 금지
 - 새 외부 라이브러리 추가 시 계획서에 명시되어 있어야 함
 - `console.log` 디버깅 코드를 남기지 않음
+- **tester 검증 안 거치고 머지 금지** (사장님 호소 누적)
+
+---
+
+## ⛔ UI 절대 규칙 자가 체크 (2026-05-18 사장님 반복 호소 누적)
+
+UI 코드 작성 시 매번 확인:
+
+### 회계 숫자
+- 금액 → `fmt(n)` 사용 (세자리 콤마 자동)
+- 숫자 셀 → `text-align:right` + `font-variant-numeric:tabular-nums`
+- 표 헤더(`<th>`) → `text-align:center`
+- 0원 → `'-'`로 표시 (회계 서식)
+- 차액 ±1,000원 이상만 빨강 + ⚠
+
+### 모바일
+- `min-width` 강제 X (좌우 스크롤 유발)
+- 한 행에 5컬럼 넘으면 2행 카드 또는 가로 스크롤 검토
+- 터치 영역 44×44px 이상
+
+### 하드코딩 X
+- 카테고리/소분류 분기 → `expCategories.filter(c=>c.parent_id===부모.id)` 동적
+- `if(name==='식자재')` 같은 이름 매칭 금지
+
+### 중복·통일감
+- 같은 숫자 두 카드에 표시 X
+- 비슷한 화면(근태/근무계획 등) 패턴 동일
+
+### 캐시 fresh
+- 진입 시 `await loadVendors()` / `await loadCategories()` 강제 fresh
+- 업데이트 후 메모리 변수 즉시 갱신
+- 진입점마다 prefetch 데이터로 전달 (sumAllSourcesByCatId 패턴)
+
+### 헌법 1-7 (추측 금지)
+- 도메인 단어 모르면 docs grep + DB 조회 → 사실로 답변
+- "이런 것 같다" 표현 코드에 주석으로도 쓰지 말 것

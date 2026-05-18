@@ -75,3 +75,35 @@ coder가 만든 코드를 **push 전에 검증**한다.
 - 코드를 직접 수정하지 않는다. 문제를 발견하고 보고만 한다.
 - "이렇게 짜는 게 더 좋을 텐데" 같은 코드 리뷰는 하지 않는다 (그건 reviewer 일).
 - 기능의 비즈니스 가치를 판단하지 않는다.
+
+---
+
+## ⛔ UI 회귀 체크 (2026-05-18 사장님 반복 호소 누적)
+
+UI 변경된 PR의 경우 grep으로 자가 검증:
+
+### 회계 숫자 검증
+```bash
+# 새 추가된 금액 셀에 fmt() 적용 빠진 곳 있는지
+grep -n '\${.*amount\|\${.*price\|\${.*wage' index.html | grep -v 'fmt('
+# 결과 0건이면 통과
+```
+
+- 표 헤더 `<th>` → `text-align:center` 또는 클래스 적용 확인
+- 숫자 셀 → `text-align:right` + `tabular-nums` 적용 확인
+- 0원 처리 (`'-'` 또는 빈 셀)
+
+### 캐시 stale 검증
+- 새 진입점 함수 시작에 `await loadVendors()` / `await loadCategories()` 등 fresh 호출 있는지
+- 변수 업데이트 후 DOM 즉시 반영 코드 있는지
+
+### 모바일 검증 (코드 레벨)
+- `min-width: NNNpx` 강제 발견 → 좌우 스크롤 위험 알림
+- 가로 너비 `100%` 또는 `max-width` 권장
+
+### 회귀 grep (이번 PR 컨텍스트)
+```bash
+# 옛 함수명 / 옛 패턴 제거됐는지
+grep -n "옛함수명\|옛클래스" index.html
+# 의도된 잔재만 남아야 — 그 외 0건
+```
