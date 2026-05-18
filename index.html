@@ -9911,8 +9911,9 @@ async function calcExpenseByCategories(ym, mode, prefetched){
     const t=c.category_type||'expense';
     if(t!=='expense') return false; // 매출(income)/정산제외(exclude)는 제외
     if(c.is_active===false && !activeCatIdsInMonth.has(c.id)) return false;
-    if(c.data_source==='composite' && c.parent_id) return false; // composite 소분류 스킵
-    if(['attendance_hourly','attendance_monthly'].includes(c.data_source) && c.parent_id) return false; // 인건비 자식 스킵 (부모 attendance에서 통합 합산)
+    // 자식 일괄 스킵 — 부모에서 통합 합산 + childExpByCat에서 별도 표시
+    // (옛 composite/attendance_hourly/attendance_monthly만 스킵하던 게 사장님 추가 카테고리 못 막음 2026-05-18)
+    if(c.parent_id) return false;
     return true;
   });
 
