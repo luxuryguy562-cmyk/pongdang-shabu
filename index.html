@@ -1461,6 +1461,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </button>
 </div>
 
+<!-- ══ 카테고리별 영수증 목록 (직구·기타 카드 진입) ══ -->
+<div id="catReceiptCont" class="container">
+  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+    <span id="catReceiptIcon" style="font-size:28px;">🛒</span>
+    <div style="flex:1;min-width:0;">
+      <div id="catReceiptTitle" style="font-size:18px;font-weight:900;color:var(--gray-900);">직구</div>
+      <div id="catReceiptTotal" style="font-size:13px;color:var(--gray-600);font-weight:600;">이번달 0원 · 0건</div>
+    </div>
+    <input type="month" id="catReceiptMonth" class="input-inline" style="width:140px;" data-change="onCatReceiptMonthChange|this">
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:14px;">
+    <button class="btn btn-primary" style="flex:1;padding:14px;font-size:14px;font-weight:700;" data-action="openCatReceiptInput|photo">📸 영수증 사진</button>
+    <button class="btn btn-secondary" style="flex:1;padding:14px;font-size:14px;font-weight:700;" data-action="openCatReceiptInput|manual">✏️ 수동 입력</button>
+  </div>
+  <div id="catReceiptBody">
+    <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>
+  </div>
+</div>
+
 <!-- ══ [Hub] 내 정보 (직원 전용) ══ -->
 <div id="myinfoCont" class="container">
   <div class="card">
@@ -3664,7 +3684,7 @@ function nav(tab, el) {
     sales:'dashboard',
     receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
     explist:'expHub', recon:'expHub', reserve:'expHub', expcat:'expHub',
-    royalty:'expHub',
+    royalty:'expHub', catReceipt:'expHub',
   };
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
@@ -3700,6 +3720,7 @@ function nav(tab, el) {
     myinfo: loadMyInfo,
     busHub: loadBusHubData,
     expHub: loadExpHubData,
+    catReceipt: loadCatReceiptData,
   };
   if (actions[tab]) actions[tab]();
   if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); renderExtraRevenueInputs(); recalcSettle2(); initSettleDate(); loadOpeningAmount(); }
@@ -3899,11 +3920,12 @@ async function selectStore(id, name) {
 // ─── 새 기능: 영수증 진입 분기 (거래처/직구) ───
 // 거래처 모드: 사용자가 거래처 선택 → vendors.category_id 자동 박힘 → AI는 양식·카테고리 알고 시작 (글자 추출만)
 // 직구 모드: 사용자 분기만, 카테고리는 AI가 품목별 분류 (현재 흐름)
-let rcpMode = '';        // 'vendor' | 'direct' | ''
+let rcpMode = '';        // 'vendor' | 'direct' | 'manual' | ''
 let rcpVendorId = null;  // 거래처 모드일 때 vendor id
 let rcpVendorName = '';  // 거래처 표시명
 let rcpCatId = null;     // 거래처 자동 박힌 category_id
 let rcpCatName = '';     // 거래처 자동 박힌 category 텍스트
+let rcpInputMethod = null; // 'photo' | 'manual' — 영수증 단위 입력 방식 (📸/✏️ 이모지 표시용)
 
 function setRcpMode(mode){
   if(!guardStore()) return;
@@ -3976,6 +3998,7 @@ function renderRcpModeBadge(){
 // ─── 새 기능: 수동 입력 (사진 없이 빈 행 1개로 시작) ───
 function manualReceipt(){
   if(!rcpMode) return toast('먼저 거래처 또는 직구를 골라주세요','warn');
+  rcpInputMethod = 'manual';
   document.getElementById('uploadGroup').style.display='none';
   document.getElementById('actionGroup').style.display='none';
   const ip = document.getElementById('imgPreview'); ip.style.display='none'; ip.src='';
@@ -3996,10 +4019,130 @@ function manualReceipt(){
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ─── 새 기능: 카테고리별 영수증 목록 (직구·기타 카드 클릭 진입) ───
-// Phase 1 임시: 토스트로 안내. Phase 2에서 실제 화면(catReceiptCont)으로 대체.
+let catReceiptMode = null;   // 'direct' | 'etc'
+let catReceiptMonth = (new Date()).toISOString().slice(0,7);
+
 function openCatReceipt(mode){
-  const name = mode==='direct' ? '직구' : (mode==='etc' ? '기타' : mode);
-  toast(`${name} 영수증 목록 화면은 다음 업데이트에서 추가됩니다`,'warn');
+  if(!guardStore()) return;
+  catReceiptMode = mode;
+  nav('catReceipt');
+  // 헤더는 nav 호출 후 catReceipt actions에서 loadCatReceiptData가 채움
+  const mEl = document.getElementById('catReceiptMonth');
+  if(mEl && !mEl.value) mEl.value = catReceiptMonth;
+}
+
+function onCatReceiptMonthChange(el){
+  catReceiptMonth = el.value || catReceiptMonth;
+  loadCatReceiptData();
+}
+
+async function loadCatReceiptData(){
+  if(!currentStore || !catReceiptMode) return;
+  const body = document.getElementById('catReceiptBody');
+  const totalEl = document.getElementById('catReceiptTotal');
+  const titleEl = document.getElementById('catReceiptTitle');
+  const iconEl = document.getElementById('catReceiptIcon');
+  // 헤더 셋
+  if(catReceiptMode === 'direct'){
+    titleEl.textContent = '직구';
+    iconEl.textContent = '🛒';
+  } else {
+    titleEl.textContent = '기타';
+    iconEl.textContent = '📂';
+  }
+  body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
+  const [y,m] = catReceiptMonth.split('-').map(Number);
+  const lastDay = new Date(y,m,0).getDate();
+  const start = catReceiptMonth+'-01', end = catReceiptMonth+'-'+String(lastDay).padStart(2,'0');
+  // 카테고리 id 풀: 기타 모드면 기타+자식 소분류 id들
+  const etcCat = (expCategories||[]).find(c=>c.name==='기타' && !c.parent_id);
+  const etcAllIds = etcCat ? [etcCat.id, ...(expCategories||[]).filter(c=>c.parent_id===etcCat.id).map(c=>c.id)] : [];
+  let q = sb.from('receipts')
+    .select('id,receipt_date,vendor,item,total_price,category,category_id,input_method,note')
+    .eq('store_id', currentStore.id)
+    .gte('receipt_date', start).lte('receipt_date', end)
+    .order('receipt_date', {ascending:false});
+  if(catReceiptMode === 'direct'){
+    q = q.is('vendor_id', null);
+  } else if(catReceiptMode === 'etc'){
+    if(!etcAllIds.length){
+      body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">기타 카테고리가 없어요</div>';
+      totalEl.textContent = '이번달 0원 · 0건';
+      return;
+    }
+    q = q.in('category_id', etcAllIds);
+  }
+  const {data, error} = await q;
+  if(error){
+    body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;">불러오기 실패: ${esc(error.message||'')}</div>`;
+    return;
+  }
+  renderCatReceiptList(data||[]);
+}
+
+function renderCatReceiptList(rows){
+  // openReceiptEdit(id)는 rcpRecords 글로벌에서 영수증을 찾음 → catReceipt 행 클릭 편집 가능하게 공유
+  rcpRecords = rows;
+  const body = document.getElementById('catReceiptBody');
+  const totalEl = document.getElementById('catReceiptTotal');
+  if(!rows.length){
+    body.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">이번달 영수증이 없어요.<br>위 버튼으로 새로 등록해보세요.</div>';
+    totalEl.textContent = '이번달 0원 · 0건';
+    return;
+  }
+  let total = 0;
+  rows.forEach(r=>{ if(r.note==='정상') total += (r.total_price||0); });
+  totalEl.textContent = `이번달 ${fmt(total)}원 · ${rows.length}건`;
+  const html = `
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:var(--gray-50);color:var(--gray-700);font-weight:700;">
+          <th style="text-align:left;padding:8px 6px;white-space:nowrap;">날짜</th>
+          <th style="text-align:left;padding:8px 6px;">가게</th>
+          <th style="text-align:left;padding:8px 6px;">품목</th>
+          <th style="text-align:right;padding:8px 6px;white-space:nowrap;">금액</th>
+          <th style="text-align:left;padding:8px 6px;white-space:nowrap;">분류</th>
+          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">📸/✏️</th>
+        </tr>
+      </thead>
+      <tbody>
+      ${rows.map(r=>{
+        const im = r.input_method==='photo'?'📸':(r.input_method==='manual'?'✏️':'');
+        const off = r.note && r.note!=='정상';
+        const catLabel = formatRcpCatLabel(r.category||'');
+        return `<tr style="border-top:1px solid var(--gray-100);${off?'opacity:0.5;text-decoration:line-through;':''};cursor:pointer;" data-action="openReceiptEdit|${r.id}">
+          <td style="padding:8px 6px;white-space:nowrap;">${(r.receipt_date||'').slice(5)}</td>
+          <td style="padding:8px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.vendor||'-')}</td>
+          <td style="padding:8px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.item||'-')}</td>
+          <td style="padding:8px 6px;text-align:right;white-space:nowrap;font-weight:700;">${fmt(r.total_price||0)}</td>
+          <td style="padding:8px 6px;color:var(--gray-600);font-size:11px;white-space:nowrap;">${esc(catLabel)}</td>
+          <td style="padding:8px 6px;text-align:center;font-size:14px;">${im}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+  body.innerHTML = html;
+}
+
+// 카테고리 화면에서 [📸 영수증 사진] 또는 [✏️ 수동 입력] 버튼 → 영수증 탭으로 이동
+function openCatReceiptInput(method){
+  // 모드 = 직구·기타 카드에서 진입 → 모두 직구 모드 (vendor_id NULL). 기타는 카테고리 선택 별도.
+  // 기타 카드에서 진입한 경우 = 사장님이 카테고리 picker에서 "기타" 선택해야 [기타] 카드에 합산됨.
+  // 진입 즉시 모드를 'direct'로 박고, 기타 카드면 안내.
+  nav('receipt');
+  setTimeout(()=>{
+    setRcpMode('direct');
+    if(method === 'manual'){
+      // setRcpMode('direct')는 모드 선택 화면 → uploadGroup 노출. manualReceipt 호출하여 빈 행 진입.
+      manualReceipt();
+    }
+    if(catReceiptMode === 'etc'){
+      setTimeout(()=>toast('기타로 등록하려면 분류 선택에서 "기타"를 골라주세요','warn'), 300);
+    }
+  }, 60);
 }
 
 async function openRcpVendorPicker(){
@@ -4044,6 +4187,7 @@ async function pickRcpVendor(vendorId){
 
 function handleImg(input) {
   if(!input.files[0]) return;
+  rcpInputMethod = 'photo';
   const fr = new FileReader();
   fr.onload = e => {
     const img = new Image();
@@ -4287,6 +4431,7 @@ async function saveReceipt(){
       vendor_id: isVendorMode ? rcpVendorId : null,
       total_price:parseInt(amtRaw,10)||0,
       category:cat||null,category_id:category_id||null,
+      input_method: rcpInputMethod || null, // 📸 photo / ✏️ manual — 옛 영수증은 NULL 호환
       note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
     };
   });
@@ -4477,7 +4622,12 @@ async function saveReceiptEdit(){
   toast('저장됐어요','success');
   closeSheet('receiptEditSheet');
   rcpEditingId=null;rcpEditingCategory='';
-  await loadReceiptList();
+  // 활성 컨테이너 기준 새로고침 (catReceiptCont 또는 기본 영수증 기록 내역)
+  if(document.getElementById('catReceiptCont')?.classList.contains('active')){
+    await loadCatReceiptData();
+  } else {
+    await loadReceiptList();
+  }
 }
 
 async function deleteReceiptRow(){
@@ -4490,7 +4640,11 @@ async function deleteReceiptRow(){
   toast('삭제됐어요','success');
   closeSheet('receiptEditSheet');
   rcpEditingId=null;rcpEditingCategory='';
-  await loadReceiptList();
+  if(document.getElementById('catReceiptCont')?.classList.contains('active')){
+    await loadCatReceiptData();
+  } else {
+    await loadReceiptList();
+  }
 }
 
 // ══════════════════════════════════════════
