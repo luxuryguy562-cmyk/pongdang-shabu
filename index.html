@@ -5753,6 +5753,7 @@ function pickStDedCategory(rowId){
   const currentName=row.dataset.catName||'';
   openCatPicker({
     current:currentName,
+    onlyTypes:['expense'], // 차감(현금지출)은 지출 카테고리만 (사장님 짚음: FK 일관성)
     onSelect:(val,memo)=>{
       let catId='', catName=val||'';
       if(val && val!=='미분류'){
