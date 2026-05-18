@@ -4,6 +4,43 @@
 
 ---
 
+## [2026-05-18] 마감정산 기록 영업개시 패턴 통일 (옵션 C: 미니 카드 + 풀정보 시트)
+
+### 상태: 배포완료 (push)
+### 브랜치: `claude/standardize-settlement-records-6QOZ4`
+### 계획서 요약: 마감정산 "기록 조회" 표 + 별도 "마감 기록" 서브탭(3개) → 영업개시처럼 미니 카드 리스트 + 카드 클릭→풀정보 바텀시트(2개)로 갈아엎기. 헌법 1-6 정당한 갈아엎기 (옆 분기 추가 X, 통째로).
+
+### 사장님 결정사항
+- 옵션 C 선택: 리스트는 미니 카드, 풀 상세는 시트
+- 카드 최소 정보: 마감 차액 + 차감 항목+메모
+- 시트 안 날짜 네비(‹›) 유지
+- 통합 추적(이번달 이상 발생 합)은 시트 상단에 표시
+
+### 변경 내역
+- HTML: `#settleCont .sub-tabs` 3→2 ("마감 기록" 서브탭 제거), `#settleCard` div 통째 새 `#settleDetailSheet` 시트로 이동 (날짜 네비·picker 그대로 살림)
+- JS:
+  - `loadSettleList()`: 4열 grid 표 → 미니 카드 리스트로 갈아엎기 (날짜+요일 / 마감 차액 / 차감 행+메모). items_json까지 SELECT (60일 차감 표시용). `_settleListMonthCache`로 이번달 합 캐시
+  - `gotoCard(d)`: 서브탭 전환 → `openSheet('settleDetailSheet')` + `renderSettleSheetMonthSummary()` + `loadSettleCard(d)` 3단계 호출
+  - 신규 `renderSettleSheetMonthSummary()`: 시트 상단 "📊 이번달 이상 발생 추적" 미니 카드 (영업개시 차액 합 + 마감 차액 합 + 이상 합)
+  - `settleTab`: 'card' 분기 제거
+  - `editSettlement`: `closeSheet('settleDetailSheet')` 추가, `#settleCard` 참조 제거
+  - `deleteSettlement`: 삭제 후 시트 닫고 `loadSettleList()` (영업개시 deleteOpening 패턴)
+- DB: 변경 없음
+- 잔재 검증: `settleTab|card`, `closeSettleDetailSheet`, `getElementById('settleCard')` 모두 0건
+- node --check 통과
+- 사용자 사고/UX 통일 패턴: 영업개시(`openingCont`)와 마감정산(`settleCont`) 둘 다 "오늘 입력 / 기록 조회" 2탭 + 카드형 리스트 + 카드 클릭→수정/삭제 동선
+
+### 골든패스 안내 (사장님 검증용)
+1. 햄버거 → 영업 hub → 마감정산 → "기록 조회" 진입 → 카드형으로 보이는지 (영업개시 화면과 같은 느낌)
+2. 차감 있는 날 카드: 통장입금/기타사용 + 메모가 카드 안에 보이는지
+3. 카드 클릭 → 시트 열림 → 상단에 "이번달 이상 발생" 요약 + 본문에 매출/현금분해/차감/금고 다 보이는지
+4. 시트 안 ‹ › 또는 날짜 picker로 다른 날 마감 후루림 가능한지
+5. 시트 안 [수정] → 시트 닫히고 입력 탭으로 이동 → 기존 값 채워져있는지
+6. 시트 안 [삭제] → 시트 닫히고 리스트 새로고침되며 그 카드 사라지는지
+7. 마감 새로 저장 → 자동으로 기록 조회 탭으로 이동하는지 (기존 동작 보존)
+
+---
+
 ## [2026-05-17~18 통합 세션] 인건비 카테고리 갈아엎기 + 마감정산 양방향 + agents 강화 + RLS 보강 (대형 멀티 PR)
 
 ### 상태: 배포완료
