@@ -3931,6 +3931,7 @@ let rcpVendorName = '';  // 거래처 표시명
 let rcpCatId = null;     // 거래처 자동 박힌 category_id
 let rcpCatName = '';     // 거래처 자동 박힌 category 텍스트
 let rcpInputMethod = null; // 'photo' | 'manual' — 영수증 단위 입력 방식 (📸/✏️ 이모지 표시용)
+let rcpEntryReturn = null; // 영수증 저장 후 자동 복귀할 화면 ('catReceipt:direct'|'catReceipt:etc'|'vendors:<id>')
 
 function setRcpMode(mode){
   if(!guardStore()) return;
@@ -4071,7 +4072,12 @@ async function loadCatReceiptData(){
     .gte('receipt_date', start).lte('receipt_date', end)
     .order('receipt_date', {ascending:false});
   if(catReceiptMode === 'direct'){
+    // 직구 = vendor_id NULL & 카테고리 ≠ 기타 (사장님 결정: 직구·기타 배타적)
     q = q.is('vendor_id', null);
+    if(etcAllIds.length){
+      // category_id NULL은 직구로 포함, 기타 카테고리만 제외
+      q = q.or(`category_id.is.null,category_id.not.in.(${etcAllIds.join(',')})`);
+    }
   } else if(catReceiptMode === 'etc'){
     if(!etcAllIds.length){
       body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">기타 카테고리가 없어요</div>';
@@ -4150,6 +4156,7 @@ async function openRcpReceiptFromVendor(vendorId, method){
   rcpCatId = data.category_id || null;
   rcpCatName = data.category || '';
   rcpInputMethod = (method === 'manual') ? 'manual' : 'photo';
+  rcpEntryReturn = 'vendors:' + vid; // 저장 후 거래처 상세로 복귀
   nav('receipt');
   setTimeout(()=>{
     renderRcpModeBadge();
@@ -4170,6 +4177,7 @@ function openCatReceiptInput(method){
   // 모드 = 직구·기타 카드에서 진입 → 모두 직구 모드 (vendor_id NULL). 기타는 카테고리 선택 별도.
   // 기타 카드에서 진입한 경우 = 사장님이 카테고리 picker에서 "기타" 선택해야 [기타] 카드에 합산됨.
   // 진입 즉시 모드를 'direct'로 박고, 기타 카드면 안내.
+  rcpEntryReturn = 'catReceipt:' + catReceiptMode; // 저장 후 복귀
   nav('receipt');
   setTimeout(()=>{
     setRcpMode('direct');
@@ -4497,6 +4505,10 @@ async function saveReceipt(){
       const kw=normalizeItemKeyword(r.item);
       if(mainCat&&kw) learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{});
     });
+  }
+  // 진입 컨텍스트 저장 → reload 후 자동 복귀 (사장님 결정: 홈으로 가면 안 됨)
+  if(rcpEntryReturn){
+    try{ localStorage.setItem('pd_rcp_return', rcpEntryReturn); }catch(e){}
   }
   toast('저장됐어요','success');resetReceipt();
 }
@@ -12338,6 +12350,9 @@ async function loadExpHubData(){
   ]);
 
   // 영수증 + 직구·기타 카드 합산 (한 번에 분류)
+  // ⚠️ 사장님 결정: 직구는 거래방법, 기타는 카테고리 → 직구·기타는 배타적 분류
+  // 직구 = vendor_id NULL AND 카테고리 ≠ 기타 (마트에서 산 식자재·일반)
+  // 기타 = 카테고리 = 기타 (거래방법 무관, vendor_id 유무 상관없음)
   try{
     const rc=rcRes.data||[];
     let cnt=0, sum=0, directSum=0, directCnt=0, etcSum=0, etcCnt=0;
@@ -12345,8 +12360,9 @@ async function loadExpHubData(){
     rc.forEach(r=>{
       const amt = r.total_price||0;
       cnt++; sum += amt;
-      if(!r.vendor_id){ directSum += amt; directCnt++; }
-      if(r.category_id && etcIdSet.has(r.category_id)){ etcSum += amt; etcCnt++; }
+      const isEtc = r.category_id && etcIdSet.has(r.category_id);
+      if(!r.vendor_id && !isEtc){ directSum += amt; directCnt++; }
+      if(isEtc){ etcSum += amt; etcCnt++; }
     });
     setText('expHeroInfo', cnt>0?`이번달 ${cnt}건 · ${fmt(sum)}원`:'사진 찍으면 AI가 자동 분석');
     setText('expMiniDirect', directSum?fmt(directSum):'0');
@@ -12478,11 +12494,35 @@ function completeLogin(emp){
   // ─── VIEWAS-START ───
   updateViewAsUI();
   // ─── VIEWAS-END ───
+  // 영수증 저장 후 진입 화면 자동 복귀 (사장님 결정: 홈으로 가지 않게)
+  const rcpRet = (()=>{try{return localStorage.getItem('pd_rcp_return');}catch(e){return null;}})();
+  if(rcpRet){
+    try{ localStorage.removeItem('pd_rcp_return'); }catch(e){}
+  }
   // 로그인 후 첫 화면: 본사→본사 홈, 관리자→대시보드, 직원→근태
   if(authLevel==='franchise_admin') nav('franchiseHome');
-  else nav(isManager?'dashboard':'attendance');
-  // 나머지 데이터 백그라운드 로드 (화면 차단 없이)
-  Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
+  else if(rcpRet && isManager){
+    // 데이터 로드 끝나야 catReceipt에서 etcAllIds 계산 가능 → 백그라운드 로드 완료 후 nav
+    Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>{
+      recalcSettle2();
+      if(rcpRet.startsWith('catReceipt:')){
+        catReceiptMode = rcpRet.split(':')[1];
+        nav('catReceipt');
+        toast('영수증 저장 완료','success');
+      } else if(rcpRet.startsWith('vendors:')){
+        const vid = rcpRet.split(':')[1];
+        nav('vendors');
+        if(vid && vid !== 'null') setTimeout(()=>openVendorDetail(vid), 300);
+        toast('영수증 저장 완료','success');
+      } else {
+        nav('dashboard');
+      }
+    });
+  } else {
+    nav(isManager?'dashboard':'attendance');
+    // 나머지 데이터 백그라운드 로드 (화면 차단 없이)
+    Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
+  }
   // 기기 등록 상태 팝업 (staff만 — 관리자는 여러 기기 사용 가능하므로 스킵)
   if(!isManager) setTimeout(()=>showDeviceStatusPopup(emp),400);
 }
