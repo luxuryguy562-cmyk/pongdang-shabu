@@ -3935,6 +3935,8 @@ let rcpInputMethod = null; // 'photo' | 'manual' — 영수증 단위 입력 방
 function setRcpMode(mode){
   if(!guardStore()) return;
   rcpMode = mode;
+  // 이전 영수증 입력 방식 잔재 방지 (사용자가 photo/manual 선택 시 그때 박힘)
+  rcpInputMethod = null;
   if(mode === 'vendor'){
     openRcpVendorPicker();
     return;
@@ -3957,6 +3959,7 @@ function setRcpMode(mode){
 function resetRcpMode(){
   rcpMode = '';
   rcpVendorId = null; rcpVendorName = ''; rcpCatId = null; rcpCatName = '';
+  rcpInputMethod = null;
   document.getElementById('rcpModeSelect').style.display = 'block';
   document.getElementById('rcpModeBadge').style.display = 'none';
   document.getElementById('rcpGuideBox').style.display = 'none';
