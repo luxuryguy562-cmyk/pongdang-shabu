@@ -4,6 +4,93 @@
 
 ---
 
+## [2026-05-17~18 통합 세션] 인건비 카테고리 갈아엎기 + 마감정산 양방향 + agents 강화 + RLS 보강 (대형 멀티 PR)
+
+### 상태: 배포완료
+### 브랜치: `claude/test-supabase-mcp-agent-DGbKV` (PR #142~#150 다 머지)
+
+### 머지된 PR 목록 (시간순)
+| PR | 작업 |
+|---|---|
+| #142 | Supabase MCP RLS 누락 16개 보강 + 헌법 8조-A "실행 승인" 명령어 도입 |
+| #143 | 인건비 시급/월급 갈라치기 + 마감정산 차감 카테고리 FK 기반 (Phase 1+2+3) |
+| #144 | 월급 진행일까지만 분배 + 차감 분류 지출만 노출 (PR #145로 후속 갈아엎기) |
+| #145 | 마감정산 "현금 지출" → "💵 금고 변동 사유" 양방향 + 전체 카테고리 노출 |
+| #146 | docs todo agents 강화 후보 추가 |
+| #148 | 인건비 카테고리 식자재 composite 패턴 통일 (모든 소스 매칭) |
+| #149 | 빈틈 4곳 통일 (예비비/지출허브/정산검수/일별차트) |
+| #150 | agents/*.md 6개 강화 (UI 절대 규칙 + 사장님 요구 거부 의무 + 추측 금지) |
+
+### 핵심 결정사항
+
+**1. Supabase MCP 운영 정착 (PR #142)**
+- `.mcp.json --read-only` 1차 방어선 유지
+- 헌법 8조-A 빨간불 명령어를 도구명 → **"실행 승인"** 4글자로 단순화
+- RLS 누락 16개 보강 (운영 4 + 잔재 3 + 백업 9) — critical 경고 19→0
+
+**2. 인건비 카테고리 식자재 패턴 통일 (PR #143, #148, #149)**
+- 부모 인건비 = 자기 매칭 + 자식 합 (composite 패턴)
+- 자식 시급/월급/상여금 = 자체 자동 + sumAllSourcesByCatId(자기 id)
+- 헬퍼 `sumAllSourcesByCatId(catId, opts)` 신설 — mydata + receipts + vendor + eca + deductSum 일괄
+- DB: 시급(attendance_hourly), 월급(attendance_monthly), 상여금(manual) 소분류 추가
+- 사장님 추가한 상여금 카테고리 `attendance` → `manual` 정정
+
+**3. 마감정산 차감 = "금고 변동 사유" 양방향 (PR #145)**
+- 옛 "현금 지출" 단방향 가정 → 사장님 짚음: 들어옴(거래처 환불·돈 투입)도 있음
+- 행마다 ± 토글 (빨강 −/초록 +)
+- 분류 선택 전체 카테고리 노출 (지출/매출/정산제외/예비비)
+- 카테고리 자동 집계: `cat += d.amount` (부호 그대로 반영)
+
+**4. 인건비 합산 빈틈 4곳 통일 (PR #149)**
+- `calcReserveBalance` (예비비 잔고)
+- `loadExpHubData` (지출 hub 인건비 카드)
+- `loadReconciliation` (정산검수 "마감 차감 인건비" details)
+- `loadDashboard` 일별 차트 (일자별 deductions 카테고리 키 분배)
+- 사장님 의도: 5개 화면 모두 같은 인건비 숫자
+
+**5. agents 강화 (PR #150)**
+- 6 agent (designer/reviewer/critic/context_reader/coder/tester) 다 강화
+- UI 절대 규칙 6개 못박음 (회계 숫자/모바일/하드코딩X/중복X/통일감/패러다임)
+- 사장님 요구도 거부 의무 (헌법 3-1 + 1-6)
+- 추측 금지 강화 (이번 세션 4번 위반 누적)
+- tester 통과 없이 머지 금지
+
+### DB 변경
+1. `.mcp.json` (변경 없음, 운영 정착)
+2. expense_categories: 시급/월급/상여금 소분류 3개 INSERT (`attendance_hourly`/`attendance_monthly`/`manual`)
+3. settlements.items_json.deductions[]에 category_id/category_name/(sign 의미) 옵션 필드 (스키마 변경 X, JSONB)
+4. 16개 테이블 RLS ENABLE + 4개 정책 CREATE
+
+### docs 동기화
+- `CLAUDE.md`: 8조-A "실행 승인" 명령어로 갱신
+- `db_schema.md`: attendance_hourly/monthly data_source + deductions.category_id/category_name 추가
+- `dev_lessons.md`: #87 (추측 4번 위반), #88 (금고 변동 양방향), #89 (식자재 composite 패턴 통일)
+- `agents/*.md` 6개: UI 절대 규칙 + 추측 금지 + 사장님 거부 의무
+- `todo_next_session.md`: agents 자동 호출 명령어 옵션 보류 (사장님 결정 대기)
+
+### 헌법 1-7 위반 4번 (이번 세션, dev_lessons #87 박음)
+1. `special_wages` "활발히 사용 중" — DB 0건
+2. `special_wages.extra_amount` = "상여금" — 실제 "추가시급(원/시간)"
+3. "현금지출" 단방향 가정 — 사장님 의도 양방향
+4. 빈틈 4곳 전수 점검 누락 — 사장님 짚음
+
+→ agents 강화로 다음 세션 방지
+
+### 미해결 / 다음 세션 후보
+- mydata 매칭 4곳 통일 (사장님 매장 0건, 노무사 데이터 들어올 때)
+- agents 자동 호출 명령어 ("풀코스" / "빨리") — 사장님 결정 대기
+- 상여금 사장님 매장 운영 검증 (사장님 차감 분류 시작 후)
+- `employee-docs` 버킷 SELECT 정책 광범위 (RLS 보강 잔여 WARN)
+- `_sales_daily_touch_updated_at` 함수 search_path mutable
+
+### 사장님 다음 작업
+1. 하드 새로고침
+2. 마감정산 → 금고 변동 사유 섹션에 차감 분류 시작 (인건비>상여금 등)
+3. 홈/예비비/허브/검수/일별차트 5곳 동기화 확인
+4. UI 절대 규칙 위반 발견 시 즉시 짚어주세요 → agents 더 강화
+
+---
+
 ## [2026-05-17] 인건비 시급/월급 갈라치기 + 마감정산 차감 카테고리 FK (대형, Phase 1+2+3)
 
 ### 상태: 배포완료
