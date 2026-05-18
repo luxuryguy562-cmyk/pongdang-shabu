@@ -1164,11 +1164,43 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <!-- 📸 새 영수증 (기본 탭) -->
     <div id="rcpNew">
       <div class="card-title" style="margin-top:4px;">영수증 등록</div>
-      <div style="background:#EBF3FF;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#1E40AF;line-height:1.5;">
+
+      <!-- ─── 새 기능: 진입 분기 (거래처/직구) ─── -->
+      <div id="rcpModeSelect" style="margin-bottom:14px;">
+        <div style="font-size:13px;color:var(--gray-700);margin-bottom:10px;font-weight:600;">어떤 영수증인가요?</div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-secondary" style="flex:1;padding:18px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;" data-action="setRcpMode|vendor">
+            <span style="font-size:24px;line-height:1;">📦</span>
+            <span style="font-size:13px;">거래처 영수증</span>
+            <span style="font-size:11px;color:var(--gray-500);font-weight:500;">외상·정기 거래</span>
+          </button>
+          <button class="btn btn-secondary" style="flex:1;padding:18px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;" data-action="setRcpMode|direct">
+            <span style="font-size:24px;line-height:1;">🛒</span>
+            <span style="font-size:13px;">직구 영수증</span>
+            <span style="font-size:11px;color:var(--gray-500);font-weight:500;">마트·일반 영수증</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 모드 표시 + 변경 (모드 선택 후만 노출) -->
+      <div id="rcpModeBadge" style="display:none;background:#F0F9FF;border:1px solid #BFDBFE;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;display:none;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <span id="rcpModeBadgeIcon" style="font-size:18px;flex-shrink:0;">📦</span>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:11px;color:var(--gray-600);font-weight:600;" id="rcpModeBadgeLabel">거래처 영수증</div>
+            <div style="font-size:13px;font-weight:700;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="rcpModeBadgeValue">선택 안 됨</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;flex-shrink:0;" data-action="resetRcpMode">변경</button>
+      </div>
+
+      <!-- 안내 박스 (모드 선택 후만 노출) -->
+      <div id="rcpGuideBox" style="display:none;background:#EBF3FF;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#1E40AF;line-height:1.5;">
         📷 사진 찍으면 AI가 거래처·품목·금액·분류를 자동 분석해요.
       </div>
+
       <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:14px;">
-      <div id="uploadGroup" class="action-group" style="margin-top:0;">
+      <div id="uploadGroup" class="action-group" style="margin-top:0;display:none;">
         <label class="btn btn-primary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
           📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" data-change="handleImg|this">
         </label>
@@ -1255,6 +1287,23 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="action-group" style="margin-top:16px;">
       <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="deleteReceiptRow">🗑 삭제</button>
       <button class="btn btn-primary" style="flex:2;padding:14px;" data-action="saveReceiptEdit">💾 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── 새 기능: 영수증 진입 거래처 picker 시트 ─── -->
+<div class="sheet-overlay" id="rcpVendorPickSheet">
+  <div class="sheet sheet-content" style="max-height:80vh;padding-bottom:40px;">
+    <div class="sheet-header">
+      <div class="sheet-title">거래처 선택</div>
+      <button class="sheet-close" data-action="closeSheet|rcpVendorPickSheet">✕</button>
+    </div>
+    <div style="padding:8px 0 12px;font-size:12px;color:var(--gray-600);line-height:1.5;">
+      거래처 선택 시 카테고리는 거래처 설정대로 자동 박혀요.<br>
+      등록 안 된 거래처는 거래처 관리에서 먼저 추가하세요.
+    </div>
+    <div id="rcpVendorPickList" style="display:flex;flex-direction:column;gap:6px;">
+      <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>
     </div>
   </div>
 </div>
@@ -3816,6 +3865,106 @@ async function selectStore(id, name) {
 // ══════════════════════════════════════════
 // 영수증
 // ══════════════════════════════════════════
+
+// ─── 새 기능: 영수증 진입 분기 (거래처/직구) ───
+// 거래처 모드: 사용자가 거래처 선택 → vendors.category_id 자동 박힘 → AI는 양식·카테고리 알고 시작 (글자 추출만)
+// 직구 모드: 사용자 분기만, 카테고리는 AI가 품목별 분류 (현재 흐름)
+let rcpMode = '';        // 'vendor' | 'direct' | ''
+let rcpVendorId = null;  // 거래처 모드일 때 vendor id
+let rcpVendorName = '';  // 거래처 표시명
+let rcpCatId = null;     // 거래처 자동 박힌 category_id
+let rcpCatName = '';     // 거래처 자동 박힌 category 텍스트
+
+function setRcpMode(mode){
+  if(!guardStore()) return;
+  rcpMode = mode;
+  if(mode === 'vendor'){
+    openRcpVendorPicker();
+    return;
+  }
+  // 직구: 바로 업로드 UI 노출
+  rcpVendorId = null; rcpVendorName = ''; rcpCatId = null; rcpCatName = '';
+  renderRcpModeBadge();
+  showRcpUploadUI();
+}
+
+function resetRcpMode(){
+  rcpMode = '';
+  rcpVendorId = null; rcpVendorName = ''; rcpCatId = null; rcpCatName = '';
+  document.getElementById('rcpModeSelect').style.display = 'block';
+  document.getElementById('rcpModeBadge').style.display = 'none';
+  document.getElementById('rcpGuideBox').style.display = 'none';
+  document.getElementById('uploadGroup').style.display = 'none';
+  document.getElementById('actionGroup').style.display = 'none';
+  document.getElementById('resultArea').style.display = 'none';
+  const ip = document.getElementById('imgPreview');
+  ip.style.display = 'none'; ip.src = '';
+  b64 = null;
+}
+
+function showRcpUploadUI(){
+  document.getElementById('rcpModeSelect').style.display = 'none';
+  document.getElementById('rcpModeBadge').style.display = 'flex';
+  document.getElementById('rcpGuideBox').style.display = 'block';
+  document.getElementById('uploadGroup').style.display = 'flex';
+}
+
+function renderRcpModeBadge(){
+  const icon = document.getElementById('rcpModeBadgeIcon');
+  const label = document.getElementById('rcpModeBadgeLabel');
+  const value = document.getElementById('rcpModeBadgeValue');
+  if(!icon || !label || !value) return;
+  if(rcpMode === 'vendor'){
+    icon.textContent = '📦';
+    label.textContent = '거래처 영수증';
+    value.textContent = rcpVendorName + (rcpCatName ? ` · ${rcpCatName}` : '');
+  } else if(rcpMode === 'direct'){
+    icon.textContent = '🛒';
+    label.textContent = '직구 영수증';
+    value.textContent = '마트·일반 (AI 자동 분류)';
+  }
+}
+
+async function openRcpVendorPicker(){
+  if(!currentStore) return;
+  openSheet('rcpVendorPickSheet');
+  const list = document.getElementById('rcpVendorPickList');
+  list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
+  const {data, error} = await sb.from('vendors')
+    .select('id,name,category,category_id')
+    .eq('store_id', currentStore.id)
+    .eq('is_active', true)
+    .order('name');
+  if(error){
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:#EF4444;font-size:13px;">불러오기 실패</div>';
+    return;
+  }
+  if(!data || !data.length){
+    list.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--gray-500);font-size:13px;line-height:1.6;">등록된 거래처가 없어요.<br>사이드 메뉴 → 거래처 관리에서 먼저 등록해주세요.</div>';
+    return;
+  }
+  const esc = s => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  list.innerHTML = data.map(v => `
+    <button type="button" class="btn btn-secondary" style="text-align:left;padding:14px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;" data-action="pickRcpVendor|${v.id}">
+      <span style="font-size:14px;font-weight:700;">${esc(v.name)}</span>
+      <span style="font-size:11px;color:var(--gray-500);">${esc(v.category || '카테고리 미지정')}</span>
+    </button>
+  `).join('');
+}
+
+async function pickRcpVendor(vendorId){
+  if(!currentStore) return;
+  const {data, error} = await sb.from('vendors').select('id,name,category,category_id').eq('id', vendorId).eq('store_id', currentStore.id).maybeSingle();
+  if(error || !data) return toast('거래처 정보를 못 가져왔어요', 'error');
+  rcpVendorId = data.id;
+  rcpVendorName = data.name || '';
+  rcpCatId = data.category_id || null;
+  rcpCatName = data.category || '';
+  closeSheet('rcpVendorPickSheet');
+  renderRcpModeBadge();
+  showRcpUploadUI();
+}
+
 function handleImg(input) {
   if(!input.files[0]) return;
   const fr = new FileReader();
@@ -3899,7 +4048,12 @@ async function runAI() {
   setLoad(true,'AI 분석 중...');
   try {
     const catList = getCatListForPrompt();
+    // ─── 새 기능: 모드별 프롬프트 분기 (거래처면 양식·카테고리 알고 시작 / 직구면 품목별 분류) ───
+    const modeHint = rcpMode === 'vendor'
+      ? `\n[모드: 거래처 영수증 — 매우 중요]\n- 이 영수증은 사용자가 "거래처: ${rcpVendorName}" 으로 선택한 거래명세서/세금계산서 양식이에요.\n- vendor 추출 시 반드시 "공급자" 또는 상단 매장명만 (절대 "공급받는자"·"수신자" X). 못 찾으면 vendor="${rcpVendorName}" 사용.\n- 모든 품목의 category는 무조건 "${rcpCatName || '식자재'}" 사용 (사용자가 사전 선택했으므로 다른 카테고리 추정 금지).\n- 거래명세서는 한 영수증에 같은 양식의 여러 품목이 들어가니 각 품목 행으로 분리.`
+      : `\n[모드: 직구 영수증]\n- 마트/일반 영수증/배민 양식 등. 한 영수증에 카테고리가 섞일 수 있음 (예: 양파=식자재>야채, 고무장갑=비품).\n- 품목별로 적절한 category를 [${catList}] 에서 정확히 골라줘.`;
     const prompt=`한국 영수증/거래명세서를 분석해 JSON 배열로만 응답하세요. 설명/주석 금지.
+${modeHint}
 
 [필드]
 - date: YYYY-MM-DD (거래일시. "2025.08.13" "25-08-13" "8/13" 모두 인식. 없으면 오늘)
@@ -3919,13 +4073,21 @@ async function runAI() {
 5. 숫자에서 쉼표/원 기호 제거, 음수 금지
 6. 흐릿해도 근접 추정 (빈 배열 금지)
 7. 품목별 category 각각 판단 (한 영수증이어도 다를 수 있음)
+8. vendor 우선순위: 거래명세서·세금계산서는 "공급자" 또는 상단 매장명 (절대 "공급받는자" X). 일반 영수증은 상단 매장명. 배민은 매장명 (배달지 주소 NOT)
+9. totalPrice 우선순위: "거래대금합계" > "받을금액" > "총결제금액" > "총주문금액" > "합계액" > "결제금액". 차감·할인 반영된 최종 1개 행만
+10. 누적 금액 절대 totalPrice 아님 — 무시: "전미수/당일입금/금일합계/총합계(누적)/잔액/현잔액/금일채권" (단, 거래명세서의 "총합계" 가 단일 거래분이면 OK)
+11. 주류·도매 계산서: "용기보증금"/"빈용기보증금"은 별도 행. 진짜 결제액은 "거래대금합계"
+12. 면세(*표시)/과세 구분은 무시 — totalPrice만 봐도 됨
 
 [예시]
 [
  {"date":"2025-08-13","vendor":"대봄야채","item":"양파 10kg","unitPrice":15000,"qty":2,"totalPrice":30000,"category":"식자재>야채"},
  {"date":"2025-08-13","vendor":"행복한정육점","item":"삼겹살 2kg","unitPrice":18000,"qty":2,"totalPrice":36000,"category":"식자재>육류"},
  {"date":"2025-08-13","vendor":"이마트","item":"라면 5개입","unitPrice":null,"qty":1,"totalPrice":4500,"category":"식자재>공산품"},
- {"date":"2025-08-13","vendor":"이마트","item":"휴지 30롤 (행사)","unitPrice":null,"qty":1,"totalPrice":12900,"category":"비품"}
+ {"date":"2025-08-13","vendor":"이마트","item":"휴지 30롤 (행사)","unitPrice":null,"qty":1,"totalPrice":12900,"category":"비품"},
+ {"date":"2026-04-09","vendor":"(주)순창국제","item":"위즈복대-날치알 500g","unitPrice":9400,"qty":30,"totalPrice":282000,"category":"식자재>공산품"},
+ {"date":"2026-04-08","vendor":"대명주류상사","item":"참이슬","unitPrice":81273,"qty":11,"totalPrice":100400,"category":"주류"},
+ {"date":"2026-03-29","vendor":"이래관","item":"더블클래식B","unitPrice":8000,"qty":2,"totalPrice":16000,"category":"식자재>공산품"}
 ]`;
     let list=await callGemini([
       {text:prompt},
@@ -4024,16 +4186,28 @@ function selectReason(r){
 }
 async function saveReceipt(){
   if(!guardStore()) return;
+  // ─── 새 기능: 거래처 모드면 vendor_id + 카테고리 자동 박힘, 직구 모드면 vendor_id NULL + AI 분류 그대로 ───
+  const isVendorMode = rcpMode === 'vendor' && rcpVendorId;
   const rows=Array.from(document.querySelectorAll('#resTable tr')).map((tr,idx)=>{
-    const cat=(tr.dataset.cat||'').trim();
-    // dataset.catId가 비어있으면 picker가 안 거쳐진 케이스 → 재계산
-    const category_id=tr.dataset.catId?tr.dataset.catId:(resolveReceiptCatId(cat)||null);
+    // 거래처 모드: 사용자가 사전 선택한 카테고리 강제 사용 (AI 분류 무시)
+    const cat = isVendorMode
+      ? (rcpCatName || (tr.dataset.cat||'').trim())
+      : (tr.dataset.cat||'').trim();
+    // dataset.catId가 비어있으면 picker가 안 거쳐진 케이스 → 재계산. 거래처 모드면 rcpCatId 우선
+    const category_id = isVendorMode
+      ? (rcpCatId || tr.dataset.catId || resolveReceiptCatId(cat) || null)
+      : (tr.dataset.catId ? tr.dataset.catId : (resolveReceiptCatId(cat) || null));
     const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,'');
+    // 거래처 모드면 vendor 텍스트도 거래처명으로 통일 (AI 추출 vendor가 누락이거나 다를 때 보호)
+    const vendorText = isVendorMode
+      ? (rcpVendorName || tr.querySelector('.c-v').value)
+      : tr.querySelector('.c-v').value;
     // 2026-05-15: price/count 키 제거. DB 스키마에 해당 컬럼 없음 (42703 에러 원인). 합계만 저장.
     return {
       _idx:idx+1, _cat:cat,
       store_id:currentStore.id,receipt_date:tr.querySelector('.c-d').value,
-      vendor:tr.querySelector('.c-v').value,item:tr.querySelector('.c-i').value,
+      vendor:vendorText,item:tr.querySelector('.c-i').value,
+      vendor_id: isVendorMode ? rcpVendorId : null,
       total_price:parseInt(amtRaw,10)||0,
       category:cat||null,category_id:category_id||null,
       note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
@@ -4054,13 +4228,16 @@ async function saveReceipt(){
   // 자동 학습: 품목→카테고리 규칙 저장 (정상 행만, 매장별)
   // 학습 키워드는 품목의 첫 단어만 추출 (예: "양파 10kg 2봉" → "양파")
   // 품목 전체 문자열을 keyword로 넣으면 contains 매칭이 실패해 학습이 무력화됨 (dev_lessons #49)
-  cleaned.filter(r=>r.note==='정상'&&r.item&&r.category).forEach(r=>{
-    const parts=String(r.category).split('>').map(s=>s.trim());
-    const mainCat=parts[0]||'';
-    const subCat=parts[1]||'';
-    const kw=normalizeItemKeyword(r.item);
-    if(mainCat&&kw) learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{});
-  });
+  // 거래처 모드는 학습 스킵 — 카테고리는 거래처 설정대로 자동이라 학습 불필요
+  if(!isVendorMode){
+    cleaned.filter(r=>r.note==='정상'&&r.item&&r.category).forEach(r=>{
+      const parts=String(r.category).split('>').map(s=>s.trim());
+      const mainCat=parts[0]||'';
+      const subCat=parts[1]||'';
+      const kw=normalizeItemKeyword(r.item);
+      if(mainCat&&kw) learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{});
+    });
+  }
   toast('저장됐어요','success');resetReceipt();
 }
 
