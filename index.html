@@ -6573,12 +6573,15 @@ async function loadDashboard(){
     ]);
 
     // 지출 카테고리 집계는 prefetch한 데이터로 메모리 처리 (calcExpenseByCategories 내부 DB 호출 0번)
-    const expResults=await calcExpenseByCategories(ym, dashMode, {
+    // 2026-05-18: 반환 객체화 {results, childAmounts} — 자식 amount도 함께
+    const _calcExpRet=await calcExpenseByCategories(ym, dashMode, {
       vendor_orders: { data: voRes2.data },
       receipts: { data: rcRes2.data },
       attendance_logs: { data: attRes2.data },
       fixed_costs: { data: fcRes.data }
     });
+    const expResults=_calcExpRet.results;
+    const calcChildAmounts=_calcExpRet.childAmounts||{};
 
     // ══ 1. 일별 매출 맵 + 매출 집계 ══
     let salesBreakdown={},totalRevenue=0,dailySalesMap={},receiptCount=0;
@@ -6716,28 +6719,13 @@ async function loadDashboard(){
       .sort((a,b)=>a.order-b.order || a.g.localeCompare(b.g));
     const expRowsTotal=expRows.reduce((a,r)=>a+r.amt,0);
 
-    // 자식 카테고리 합산 (parent_id 동적 — 식자재 외에도 사장님이 소분류 추가하면 자동 등장)
-    // 0원도 표시 (사장님 짚음: 카테고리 존재하면 0원이어도 행 등장, FK 잘못 박힘 자기치유)
+    // 자식 카테고리 합산 — calcExpenseByCategories에서 받은 childAmounts 그대로 사용 (2026-05-18 통일)
+    // 자식 amt = 자체 자동 (attendance_hourly 시급제, attendance_monthly 월급분배) + 모든 소스 매칭 (mydata/receipts/vendor/eca/deductSum)
+    // 0원도 표시 (사장님: 카테고리 존재하면 행 등장, FK 잘못 박힘 자기치유)
     const childExpByCat={}; // {부모id: [{name, amt, color, order}]}
-    const _attMonthlyIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-    (expCategories||[]).filter(c=>c.parent_id && c.is_active!==false).forEach(child=>{
-      let amt=0;
-      if(child.data_source==='attendance_hourly'){
-        // 시급 자식: 시급제 직원만 attendance_logs.calculated_wage 합
-        amt=(attRes2.data||[]).filter(r=>!_attMonthlyIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
-      } else if(child.data_source==='attendance_monthly'){
-        // 월급 자식: 월급제 직원 monthly_wage 분배 합 (만원→원, 월 일수 분배)
-        // passedDays까지만 합산 (미래 일자 제외 — 사장님 짚음 2026-05-17)
-        (employees||[]).filter(e=>e.is_active&&e.wage_type==='monthly'&&e.monthly_wage>0).forEach(emp=>{
-          amt+=Math.round((emp.monthly_wage*10000)/lastDay)*passedDays;
-        });
-      } else {
-        // 기존: vendor_orders.vendor.category_id + receipts.category_id (식자재 패턴)
-        amt+=(voRes2.data||[]).filter(o=>o.vendors?.category_id===child.id).reduce((a,o)=>a+(o.amount||0),0);
-        amt+=(rcRes2.data||[]).filter(r=>r.category_id===child.id).reduce((a,r)=>a+(r.total_price||0),0);
-      }
-      if(!childExpByCat[child.parent_id]) childExpByCat[child.parent_id]=[];
-      childExpByCat[child.parent_id].push({name:child.name, amt, color:child.color||'#94A3B8', order:child.sort_order??999});
+    Object.values(calcChildAmounts).forEach(c=>{
+      if(!childExpByCat[c.parent_id]) childExpByCat[c.parent_id]=[];
+      childExpByCat[c.parent_id].push({name:c.name, amt:c.amount, color:c.color, order:c.sort_order});
     });
 
     // 세그먼트 바 (전체 카테고리 비율, sort_order 정렬)
@@ -9921,6 +9909,8 @@ async function calcExpenseByCategories(ym, mode, prefetched){
   // ── 가마감 prefetch: 카테고리 루프 진입 전 공통 테이블 1회씩만 (N+1 제거) ──
   // 진마감은 mydata만 쓰므로 prefetch 불필요
   let voRows=[], rcRows=[], fcRows=[], ecaMap={}, attTotal=0;
+  // childAmounts 빌드에서 사용할 외부 노출 변수 (2026-05-18)
+  let _attLogsRows=[], _effectiveDaysShared=lastDay;
   if(!isFinal){
     const needVo=catsForAggregation.some(c=>c.data_source==='vendor_orders'||c.data_source==='composite');
     const needRc=catsForAggregation.some(c=>c.data_source==='receipts'||c.data_source==='composite');
@@ -9954,16 +9944,53 @@ async function calcExpenseByCategories(ym, mode, prefetched){
     (ecaRes.data||[]).forEach(r=>{ecaMap[r.category_id]=r.amount||0;});
     // 인건비 = 시급제 attendance_logs.calculated_wage + 월급제 monthly_wage 분배 (사장님 매장: 탁성현 750만원 등)
     // 진행일까지만 합산 (미래 일자 제외 — 사장님 짚음 2026-05-17)
+    _attLogsRows=(attRes.data||[]);
     const _monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-    const _hourlySum=(attRes.data||[]).filter(r=>!_monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+    const _hourlySum=_attLogsRows.filter(r=>!_monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
     const _today=new Date();
     const _isCurrentMonth=(y===_today.getFullYear() && m===_today.getMonth()+1);
-    const _effectiveDays=_isCurrentMonth ? _today.getDate() : lastDay;
+    _effectiveDaysShared=_isCurrentMonth ? _today.getDate() : lastDay;
     let _monthlyDistSum=0;
     (employees||[]).filter(e=>e.is_active&&e.wage_type==='monthly'&&e.monthly_wage>0).forEach(emp=>{
-      _monthlyDistSum+=Math.round((emp.monthly_wage*10000)/lastDay)*_effectiveDays;
+      _monthlyDistSum+=Math.round((emp.monthly_wage*10000)/lastDay)*_effectiveDaysShared;
     });
     attTotal=_hourlySum+_monthlyDistSum;
+  }
+
+  // ─── 새 헬퍼: 카테고리 id 기준 모든 소스 매칭 합산 (사장님 짚음 2026-05-18) ───
+  // 어떤 소스든(mydata/receipts/vendor_orders/expense_category_amounts/마감차감) 해당 catId로 분류된 거 다 합산
+  // composite 같이 옛 자동 합산 이미 처리한 카테고리는 호출 시 옵션으로 mydata만 제외 가능
+  const sumAllSourcesByCatId=(catId,opts)=>{
+    if(!catId) return 0;
+    const skipAutoSources=opts&&opts.skipAutoSources;
+    let s=0;
+    s+=allMdTx.filter(t=>t.category_id===catId).reduce((a,r)=>a+Math.abs(r.amount||0),0);
+    if(!skipAutoSources){
+      s+=rcRows.filter(r=>r.category_id===catId).reduce((a,r)=>a+(r.total_price||0),0);
+      s+=voRows.filter(o=>o.vendors?.category_id===catId).reduce((a,o)=>a+(o.amount||0),0);
+    }
+    s+=ecaMap[catId]||0;
+    s+=deductSumByCatId[catId]||0;
+    return s;
+  };
+
+  // ─── 자식 카테고리별 amount 계산 (childAmounts) — loadDashboard에서 자식 행 표시용 ───
+  const childAmounts={};
+  if(!isFinal){
+    expCategories.filter(c=>c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense').forEach(child=>{
+      let cAmt=0;
+      if(child.data_source==='attendance_hourly'){
+        const ids=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+        cAmt=_attLogsRows.filter(r=>!ids.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+      } else if(child.data_source==='attendance_monthly'){
+        (employees||[]).filter(e=>e.is_active&&e.wage_type==='monthly'&&e.monthly_wage>0).forEach(emp=>{
+          cAmt+=Math.round((emp.monthly_wage*10000)/lastDay)*_effectiveDaysShared;
+        });
+      }
+      // 자체 자동 합산 외에 모든 소스 매칭 추가 (사장님 의도)
+      cAmt+=sumAllSourcesByCatId(child.id);
+      childAmounts[child.id]={name:child.name,parent_id:child.parent_id,color:child.color||'#94A3B8',sort_order:child.sort_order??999,amount:cAmt};
+    });
   }
 
   // 카테고리별 집계 — 메모리 처리만 (DB 호출 없음)
@@ -9981,11 +10008,13 @@ async function calcExpenseByCategories(ym, mode, prefetched){
         //   - 새: o.vendors?.category_id IN [cat.id, ...child.ids] (FK, 안전)
         if(cat.data_source==='vendor_orders'){
           amount=voRows.filter(o=>o.vendors?.category_id===cat.id).reduce((a,o)=>a+(o.amount||0),0);
+          amount+=sumAllSourcesByCatId(cat.id,{skipAutoSources:true}); // mydata/eca/deductSum 추가
         } else if(cat.data_source==='receipts'){
           // receipts.category_id는 소분류 id. 대분류 receipts면 자식 id도 포함
           const childIds=expCategories.filter(c=>c.parent_id===cat.id).map(c=>c.id);
           const targetIds=[cat.id,...childIds];
           amount=rcRows.filter(r=>targetIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
+          amount+=sumAllSourcesByCatId(cat.id,{skipAutoSources:true}); // mydata/eca/deductSum 추가
         } else if(cat.data_source==='composite'){
           // composite: 거래처(vendor_orders.vendor.category_id) + 영수증(receipts.category_id) FK 합산
           // 대분류: 자식들 id + 본인 id 모두 매칭 (사장님이 자식 안 정하고 부모만 선택한 케이스 포함)
@@ -9996,35 +10025,42 @@ async function calcExpenseByCategories(ym, mode, prefetched){
           const voSum=voRows.filter(o=>targetIds.includes(o.vendors?.category_id)).reduce((a,o)=>a+(o.amount||0),0);
           const rcpSum=rcRows.filter(r=>targetIds.includes(r.category_id)).reduce((a,r)=>a+(r.total_price||0),0);
           amount=voSum+rcpSum;
+          // 본인 id 매칭 mydata/eca/deductSum 추가 (자식들 매칭은 voRows/rcRows에 이미 포함)
+          amount+=sumAllSourcesByCatId(cat.id,{skipAutoSources:true});
+          if(!cat.parent_id){
+            expCategories.filter(c=>c.parent_id===cat.id).forEach(ch=>{
+              amount+=sumAllSourcesByCatId(ch.id,{skipAutoSources:true});
+            });
+          }
         } else if(cat.data_source==='attendance'){
-          if(ecaMap[cat.id]){amount=ecaMap[cat.id];isConfirmed=true;}
-          else {amount=attTotal;laborAutoAmount=amount;}
+          // 부모 인건비 = 자기 매칭(mydata/receipts/vendor/eca/deductSum) + 자식 합 (식자재 composite 패턴 통일 2026-05-18)
+          // attTotal(시급제+월급제 분배)은 자식 시급/월급의 자체 자동 합산으로 들어옴 → 부모는 자식 합으로 자연 포함
+          amount=sumAllSourcesByCatId(cat.id);
+          expCategories.filter(c=>c.parent_id===cat.id&&c.is_active!==false).forEach(child=>{
+            amount+=(childAmounts[child.id]?.amount)||0;
+          });
+          laborAutoAmount=amount;
         } else if(cat.data_source==='fixed_costs'){
           // 카테고리별 분기 (고정비/공과금) — cat.name과 fixed_costs.category 매칭
           amount=fcRows.filter(r=>(r.category||'고정비')===cat.name).reduce((a,r)=>a+(r.estimated_monthly||0),0);
+          amount+=sumAllSourcesByCatId(cat.id);
         } else if(cat.data_source==='manual'){
-          // 수동 입력 + fixed_costs에 같은 이름 카테고리(마케팅/세금)로 등록된 항목 합산
-          const ecaSum=ecaMap[cat.id]||0;
+          // fixed_costs에 같은 이름 카테고리(마케팅/세금)로 등록된 항목 + 모든 소스 + 자식 합
           const fcMatchSum=fcRows.filter(r=>(r.category||'')===cat.name).reduce((a,r)=>a+(r.estimated_monthly||0),0);
-          amount=ecaSum+fcMatchSum;
+          amount=fcMatchSum+sumAllSourcesByCatId(cat.id);
+          expCategories.filter(c=>c.parent_id===cat.id&&c.is_active!==false).forEach(child=>{
+            amount+=(childAmounts[child.id]?.amount)||0;
+          });
+        } else if(cat.data_source==='vendor_orders' || cat.data_source==='receipts'){
+          // 옛 단일 소스 자동 + sumAllSources (mydata 보충 포함, 옛 가드 제거)
+          amount+=sumAllSourcesByCatId(cat.id);
         }
-        // 가마감에서도 기록 없으면 mydata로 보충
-        if(amount===0&&!isConfirmed){
-          const mdTotal=getMydataAmount(cat.id);
-          if(mdTotal>0) amount=mdTotal;
-        }
-      }
-      // ─── Phase 2: 마감정산 차감(현금지출) 합산 (가마감 전용) ───
-      // 사장님이 마감정산 차감 행에 카테고리 분류한 건 자동 집계
-      // 진마감은 mydata 기반이라 중복 방지 차원에서 가마감만 적용
-      if(!isFinal && deductSumByCatId[cat.id]){
-        amount+=deductSumByCatId[cat.id];
-        isConfirmed=true;
+        // composite 부모는 옛 [cat.id, ...childIds] 매칭 그대로 (식자재 영향 X — 일관성 보존)
       }
     }catch(e){console.error('지출 계산 오류('+cat.name+'):',e);}
     return{id:cat.id,name:cat.name,color:cat.color||'#0050FF',source:cat.data_source,amount,isConfirmed};
   });
-  return results;
+  return {results, childAmounts};
 }
 
 // ══════════════════════════════════════════
