@@ -231,11 +231,14 @@ franchises (프랜차이즈/브랜드)
 | store_id | 매장 |
 | receipt_date, vendor, category, item | 날짜/거래처/분류(문자열)/품목 |
 | **category_id** (FK→expense_categories) | **소분류 id 저장 규칙** (2026-04-22 확립). 품목이 명시돼 있어 소분류 추론 가능. mydata는 대분류 id. 집계 시 parent 조인으로 대분류 합산 |
+| **vendor_id** (FK→vendors ON DELETE SET NULL, 2026-05-18 추가) | **영수증 진입 분기** 시 거래처 모드면 박힘. 직구·옛 영수증은 NULL. 인덱스 `idx_receipts_vendor_id` |
 | total_price (int) | 합계 금액 |
 | note | 정상/오답/반품 등 |
 | created_at | 등록일시 |
 
 > ⚠️ **2026-05-15 정정**: 옛 문서엔 `price, count` 컬럼이 있다고 적혀있었으나 **실제 DB에는 존재하지 않음** (42703 에러로 발견). 코드에서 `price/count` SELECT/INSERT 모두 제거. 단가/수량 분리 저장이 필요해지면 추후 ALTER TABLE로 추가하고 본 문서 동기화.
+>
+> ⚠️ **2026-05-18 추가**: `vendor_id` FK 도입 (영수증 진입 분기 거래처/직구). 거래처 모드 = vendor_id + 거래처.category_id 자동 박힘 + 학습 스킵. 직구 모드 = vendor_id NULL + AI 품목별 분류 + 학습 작동. 마이그레이션: `add_receipts_vendor_id_20260518`. 롤백: `DROP INDEX idx_receipts_vendor_id; ALTER TABLE receipts DROP COLUMN vendor_id;`.
 
 ### settlements
 | 컬럼 | 용도 |
