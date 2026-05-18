@@ -1183,16 +1183,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </div>
       </div>
 
-      <!-- 모드 표시 + 변경 (모드 선택 후만 노출) -->
-      <div id="rcpModeBadge" style="display:none;background:#F0F9FF;border:1px solid #BFDBFE;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;align-items:center;justify-content:space-between;gap:10px;">
-        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-          <span id="rcpModeBadgeIcon" style="font-size:18px;flex-shrink:0;">📦</span>
+      <!-- 모드 표시 + 다시 고르기 (모드 선택 후만 노출) -->
+      <div id="rcpModeBadge" style="display:none;background:#F0F9FF;border:1px solid #BFDBFE;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <span id="rcpModeBadgeIcon" style="font-size:22px;flex-shrink:0;">📦</span>
           <div style="min-width:0;flex:1;">
-            <div style="font-size:11px;color:var(--gray-600);font-weight:600;" id="rcpModeBadgeLabel">거래처 영수증</div>
-            <div style="font-size:13px;font-weight:700;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="rcpModeBadgeValue">선택 안 됨</div>
+            <div style="font-size:14px;font-weight:800;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="rcpModeBadgeValue">선택 안 됨</div>
+            <div style="font-size:11px;color:var(--gray-600);margin-top:2px;" id="rcpModeBadgeLabel">거래처 영수증</div>
           </div>
         </div>
-        <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;flex-shrink:0;" data-action="resetRcpMode">변경</button>
+        <button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;flex-shrink:0;font-weight:600;" data-action="resetRcpMode">↩ 다시 고르기</button>
       </div>
 
       <!-- 안내 박스 (모드 선택 후만 노출) -->
@@ -1211,9 +1211,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
             🖼 업로드<input type="file" accept="image/*" style="display:none" data-change="handleImg|this">
           </label>
         </div>
-        <button type="button" class="btn btn-secondary" style="margin-top:8px;width:100%;padding:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;" data-action="manualReceipt">
-          ✏️ 수동 입력 (사진 없이 직접 등록)
+        <button type="button" class="btn btn-secondary" style="margin-top:8px;width:100%;padding:14px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;" data-action="manualReceipt">
+          ✏️ 수동 입력
         </button>
+        <div style="text-align:center;font-size:11px;color:var(--gray-500);margin-top:6px;">사진이 안 되거나 한두 줄짜리는 수동이 빨라요</div>
       </div>
       <div id="actionGroup" style="display:none;" class="action-group">
         <button class="btn btn-primary" style="flex:4;padding:15px;font-size:14px;" data-action="runAI">✨ AI 분석</button>
@@ -3913,7 +3914,8 @@ function showRcpUploadUI(){
   document.getElementById('rcpModeSelect').style.display = 'none';
   document.getElementById('rcpModeBadge').style.display = 'flex';
   document.getElementById('rcpGuideBox').style.display = 'block';
-  document.getElementById('uploadGroup').style.display = 'flex';
+  // ⚠️ uploadGroup 은 block (안에 .action-group flex + 수동 입력 button 2단 레이아웃). flex 박으면 깨짐
+  document.getElementById('uploadGroup').style.display = 'block';
 }
 
 function renderRcpModeBadge(){
@@ -3925,13 +3927,13 @@ function renderRcpModeBadge(){
   if(rcpMode === 'vendor'){
     icon.textContent = '📦';
     label.textContent = '거래처 영수증';
-    value.textContent = rcpVendorName + (rcpCatName ? ` · ${rcpCatName}` : '');
-    if(guide) guide.innerHTML = `🎯 <b>${esc(rcpVendorName)}</b> 영수증으로 등록할게요. 카테고리는 <b>${esc(rcpCatName || '미지정')}</b>로 자동으로 박아드려요.<br>📷 사진을 찍거나, ✏️ 수동으로 입력하셔도 돼요.`;
+    value.textContent = rcpVendorName;
+    if(guide) guide.innerHTML = `🎯 카테고리는 <b>${esc(rcpCatName || '미지정')}</b>로 자동 분류돼요.`;
   } else if(rcpMode === 'direct'){
     icon.textContent = '🛒';
     label.textContent = '직구 영수증';
-    value.textContent = '마트·일반 (AI 자동 분류)';
-    if(guide) guide.innerHTML = `🤖 AI가 품목별로 카테고리를 분류해드려요. 한 영수증에 식자재·비품이 섞여 있어도 따로따로 잡아드릴게요.<br>📷 사진을 찍거나, ✏️ 수동으로 입력하셔도 돼요.`;
+    value.textContent = '마트·일반';
+    if(guide) guide.innerHTML = `🤖 AI가 품목별로 분류해드려요. 한 영수증에 식자재·비품이 섞여도 따로 잡아드려요.`;
   }
 }
 
