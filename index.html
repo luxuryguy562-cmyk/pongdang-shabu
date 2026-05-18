@@ -1391,6 +1391,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="hub-mini-amt" id="expMiniVendor">-</span>
       <span class="hub-mini-sub" id="expMiniVendorSub">이번달</span>
     </button>
+    <button type="button" class="hub-mini" data-card-id="direct" data-action="openCatReceipt|direct">
+      <span class="hub-mini-icon" style="background:#FEF3C7;font-size:18px;">🛒</span>
+      <span class="hub-mini-title">직구</span>
+      <span class="hub-mini-amt" id="expMiniDirect">-</span>
+      <span class="hub-mini-sub" id="expMiniDirectSub">이번달</span>
+    </button>
+    <button type="button" class="hub-mini" data-card-id="etcExp" data-action="openCatReceipt|etc">
+      <span class="hub-mini-icon" style="background:#F3F4F6;font-size:18px;">📂</span>
+      <span class="hub-mini-title">기타</span>
+      <span class="hub-mini-amt" id="expMiniEtc">-</span>
+      <span class="hub-mini-sub" id="expMiniEtcSub">이번달</span>
+    </button>
     <button type="button" class="hub-mini" data-card-id="fixedcost" data-action="nav|fixedcost">
       <span class="hub-mini-icon"><svg><use href="#i-calendar"/></svg></span>
       <span class="hub-mini-title">고정비</span>
@@ -3982,6 +3994,13 @@ function manualReceipt(){
 
 // XSS 방지 헬퍼 (가이드 박스용)
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ─── 새 기능: 카테고리별 영수증 목록 (직구·기타 카드 클릭 진입) ───
+// Phase 1 임시: 토스트로 안내. Phase 2에서 실제 화면(catReceiptCont)으로 대체.
+function openCatReceipt(mode){
+  const name = mode==='direct' ? '직구' : (mode==='etc' ? '기타' : mode);
+  toast(`${name} 영수증 목록 화면은 다음 업데이트에서 추가됩니다`,'warn');
+}
 
 async function openRcpVendorPicker(){
   if(!currentStore) return;
@@ -12091,12 +12110,16 @@ async function loadExpHubData(){
   // 마케팅/세금 카테고리 id 미리 추출 (expense_category_amounts in 필터용)
   const marketingCat=(expCategories||[]).find(c=>c.name==='마케팅' && !c.parent_id);
   const taxCat=(expCategories||[]).find(c=>c.name==='세금' && !c.parent_id);
+  const etcCat=(expCategories||[]).find(c=>c.name==='기타' && !c.parent_id);
   const ecaCatIds=[marketingCat?.id, taxCat?.id].filter(Boolean);
+  // 기타 카테고리 + 자식 소분류 모두 포함 (사장님이 비품·간식 소분류를 기타 산하로 정리 가능)
+  const etcAllIds = etcCat ? [etcCat.id, ...(expCategories||[]).filter(c=>c.parent_id===etcCat.id).map(c=>c.id)] : [];
 
   // ━━ 모든 DB 호출 병렬 발사 (직렬 8회 → 1회 Promise.all) ━━
   // 2026-05-18: settlements 추가 (인건비 차감 합산 통일)
+  // 2026-05-18: receipts SELECT에 vendor_id, category_id 추가 (직구·기타 카드 합산용)
   const [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdCntRes, recCntRes, setRes] = await Promise.all([
-    sb.from('receipts').select('total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+    sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
     sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
     sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
     sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle(),
@@ -12109,12 +12132,26 @@ async function loadExpHubData(){
     sb.from('settlements').select('items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end)
   ]);
 
-  // 영수증
+  // 영수증 + 직구·기타 카드 합산 (한 번에 분류)
   try{
     const rc=rcRes.data||[];
-    const cnt=rc.length, sum=rc.reduce((a,r)=>a+(r.total_price||0),0);
+    let cnt=0, sum=0, directSum=0, directCnt=0, etcSum=0, etcCnt=0;
+    const etcIdSet = new Set(etcAllIds);
+    rc.forEach(r=>{
+      const amt = r.total_price||0;
+      cnt++; sum += amt;
+      if(!r.vendor_id){ directSum += amt; directCnt++; }
+      if(r.category_id && etcIdSet.has(r.category_id)){ etcSum += amt; etcCnt++; }
+    });
     setText('expHeroInfo', cnt>0?`이번달 ${cnt}건 · ${fmt(sum)}원`:'사진 찍으면 AI가 자동 분석');
-  }catch(e){setText('expHeroInfo','사진 찍으면 AI가 자동 분석');}
+    setText('expMiniDirect', directSum?fmt(directSum):'0');
+    setText('expMiniDirectSub', directCnt?`${directCnt}건`:'이번달');
+    setText('expMiniEtc', etcSum?fmt(etcSum):'0');
+    setText('expMiniEtcSub', etcCnt?`${etcCnt}건`:'이번달');
+  }catch(e){
+    setText('expHeroInfo','사진 찍으면 AI가 자동 분석');
+    setText('expMiniDirect','-'); setText('expMiniEtc','-');
+  }
 
   // 고정비 (마케팅/세금 합산용 fcByCat도 여기서 구성)
   const fcByCat={};
