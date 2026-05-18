@@ -1165,7 +1165,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div id="rcpNew">
       <div class="card-title" style="margin-top:4px;">영수증 등록</div>
 
-      <!-- ─── 새 기능: 진입 분기 (거래처/직구) ─── -->
+      <!-- ─── 새 기능: 진입 분기 (거래처/직구/수동) ─── -->
       <div id="rcpModeSelect" style="margin-bottom:14px;">
         <div style="font-size:15px;color:var(--gray-900);margin-bottom:4px;font-weight:700;">어떤 영수증인가요?</div>
         <div style="font-size:12px;color:var(--gray-600);margin-bottom:12px;line-height:1.5;">먼저 종류를 골라주세요. 거래처를 선택하면 카테고리는 자동으로 박아드려요.</div>
@@ -1181,6 +1181,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
             <span style="font-size:11px;color:var(--gray-500);font-weight:500;line-height:1.4;text-align:center;">마트·일반·배민 등</span>
           </button>
         </div>
+        <!-- 구분선: 또는 빠르게 -->
+        <div style="display:flex;align-items:center;gap:10px;margin:14px 0 10px;color:var(--gray-400);font-size:11px;font-weight:600;">
+          <div style="flex:1;height:1px;background:var(--gray-200);"></div>
+          <span>또는 빠르게</span>
+          <div style="flex:1;height:1px;background:var(--gray-200);"></div>
+        </div>
+        <button class="btn btn-secondary" style="width:100%;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:700;" data-action="setRcpMode|manual">
+          <span style="font-size:14px;">✏️ 수동 입력</span>
+          <span style="font-size:11px;color:var(--gray-500);font-weight:500;">사진 없이 직접 입력할게요</span>
+        </button>
       </div>
 
       <!-- 모드 표시 + 다시 고르기 (모드 선택 후만 노출) -->
@@ -3890,10 +3900,19 @@ function setRcpMode(mode){
     openRcpVendorPicker();
     return;
   }
-  // 직구: 바로 업로드 UI 노출
+  // 직구·수동: vendor 정보 초기화
   rcpVendorId = null; rcpVendorName = ''; rcpCatId = null; rcpCatName = '';
   renderRcpModeBadge();
-  showRcpUploadUI();
+  if(mode === 'manual'){
+    // 수동 입력: 사진 단계 건너뜀 → 모드 배지·가이드만 + 빈 행 1개
+    document.getElementById('rcpModeSelect').style.display = 'none';
+    document.getElementById('rcpModeBadge').style.display = 'flex';
+    document.getElementById('rcpGuideBox').style.display = 'block';
+    document.getElementById('uploadGroup').style.display = 'none';
+    manualReceipt();
+  } else {
+    showRcpUploadUI();
+  }
 }
 
 function resetRcpMode(){
@@ -3934,6 +3953,11 @@ function renderRcpModeBadge(){
     label.textContent = '직구 영수증';
     value.textContent = '마트·일반';
     if(guide) guide.innerHTML = `🤖 AI가 품목별로 분류해드려요. 한 영수증에 식자재·비품이 섞여도 따로 잡아드려요.`;
+  } else if(rcpMode === 'manual'){
+    icon.textContent = '✏️';
+    label.textContent = '사진 없이 직접 입력';
+    value.textContent = '수동 입력';
+    if(guide) guide.innerHTML = `💡 거래처·품목·금액·분류 모두 직접 입력해주세요. 다음에 같은 거 또 사면 학습돼서 빨라져요.`;
   }
 }
 
