@@ -127,6 +127,18 @@ table{width:100%;border-collapse:collapse;}
 #bankTxBody tr td,#cardTxBody tr td{border-bottom:1px solid var(--gray-200);}
 th{padding:9px 6px;font-size:11px;font-weight:700;color:var(--gray-600);background:var(--gray-100);text-align:center;}
 td{padding:10px 5px;font-size:12px;border-bottom:1px solid var(--gray-100);text-align:center;vertical-align:middle;}
+/* 영수증 결과지 전용 — 단가·수량 컬럼 추가 (2026-05-19 사장님 호소 + 가격 추세 분석 기반) */
+#resTable td,#rgeTable td{padding:8px 3px;font-size:11px;}
+#resTable th,#rgeTable th{padding:8px 3px;font-size:10px;}
+#resTable td input,#rgeTable td input{padding:5px 4px;font-size:11px;}
+#resTable .c-u{text-align:right;font-variant-numeric:tabular-nums;}
+#resTable .c-q{text-align:right;font-variant-numeric:tabular-nums;}
+#resTable .c-p{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
+#rgeTable .c-u,#rgeTable .c-q{text-align:right;font-variant-numeric:tabular-nums;}
+#rgeTable .c-p{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
+/* 거래처 모드 = vendor 컬럼 숨김 (이미 선택됨, 폭 절약) */
+#resultArea.vendor-mode #resTable th.col-vendor,
+#resultArea.vendor-mode #resTable td.col-vendor{display:none;}
 td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 tr.row-off{opacity:.35;filter:grayscale(1);}
 td input.c-v,td input.c-i,td input.c-p{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
@@ -1282,14 +1294,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">취소</button>
       </div>
       <div id="resultArea" style="display:none;">
+        <!-- 거래처 모드 배지 (rcpMode==='vendor' 시 표시) -->
+        <div id="rcpResultVendorBadge" style="display:none;background:#FEF3C7;border-radius:10px;padding:10px 12px;margin-top:14px;margin-bottom:10px;font-size:12px;color:#92400E;line-height:1.55;font-weight:700;">
+          🏪 거래처: <span id="rcpResultVendorName">-</span> (이미 선택됨, AI 거래처 추출 스킵)
+        </div>
         <!-- 학습 안내 박스 (2026-05-19 사장님 호소: ✨ 의미 불명 + 위 버튼과 간격) -->
-        <div style="background:#EBF3FF;border-radius:10px;padding:12px 14px;margin-top:16px;margin-bottom:14px;font-size:12px;color:#1E40AF;line-height:1.6;">
+        <div style="background:#EBF3FF;border-radius:10px;padding:12px 14px;margin-top:14px;margin-bottom:14px;font-size:12px;color:#1E40AF;line-height:1.6;">
           💡 <b>✨ 표시된 행은 다음 영수증 분류에 AI가 자동 활용해요.</b><br>
-          분류를 바꾸면 그것도 학습됩니다.
+          분류·품목명을 바꾸면 그것도 학습됩니다.
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th style="width:24px">X</th><th style="width:58px">거래처</th><th>품목</th><th style="width:60px">금액</th><th style="width:88px">분류</th></tr></thead>
+            <thead><tr>
+              <th style="width:24px">X</th>
+              <th class="col-vendor" style="width:60px">거래처</th>
+              <th>품목</th>
+              <th style="width:54px">단가</th>
+              <th style="width:42px">수량</th>
+              <th style="width:72px">금액</th>
+              <th style="width:74px">분류</th>
+            </tr></thead>
             <tbody id="resTable"></tbody>
           </table>
         </div>
@@ -1384,7 +1408,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px;">📦 품목 (행마다 ⓧ = 정상↔오답 토글, 🏷 = 분류 변경)</div>
       <div class="table-wrap" style="margin:0;">
         <table style="font-size:12px;">
-          <thead><tr><th style="width:24px">X</th><th>품목</th><th style="width:60px">금액</th><th style="width:88px">분류</th></tr></thead>
+          <thead><tr>
+            <th style="width:24px">X</th>
+            <th>품목</th>
+            <th style="width:54px">단가</th>
+            <th style="width:42px">수량</th>
+            <th style="width:72px">금액</th>
+            <th style="width:74px">분류</th>
+          </tr></thead>
           <tbody id="rgeTable"></tbody>
         </table>
       </div>
@@ -4552,6 +4583,8 @@ async function applyRulesToReceipt(list){
       else matched=itemText.includes(kw)||vendorText.includes(kw);
       if(matched){
         item.category=r.sub_category?`${r.category}>${r.sub_category}`:r.category;
+        // 학습된 표시명이 있으면 자동 교체 (2026-05-19 사장님 호소 "위즈복대 → 날치알" 학습)
+        if(r.display_item) item.item = r.display_item;
         item._ruleMatched=true;
         break;
       }
@@ -4567,8 +4600,8 @@ async function runAI() {
     const catList = getCatListForPrompt();
     // ─── 새 기능: 모드별 프롬프트 분기 (거래처면 양식·카테고리 알고 시작 / 직구면 품목별 분류) ───
     const modeHint = rcpMode === 'vendor'
-      ? `\n[모드: 거래처 영수증 — 매우 중요]\n- 이 영수증은 사용자가 "거래처: ${rcpVendorName}" 으로 선택한 거래명세서/세금계산서 양식이에요.\n- vendor 추출 시 반드시 "공급자" 또는 상단 매장명만 (절대 "공급받는자"·"수신자" X). 못 찾으면 vendor="${rcpVendorName}" 사용.\n- 모든 품목의 category는 무조건 "${rcpCatName || '식자재'}" 사용 (사용자가 사전 선택했으므로 다른 카테고리 추정 금지).\n- 거래명세서는 한 영수증에 같은 양식의 여러 품목이 들어가니 각 품목 행으로 분리.`
-      : `\n[모드: 직구 영수증]\n- 마트/일반 영수증/배민 양식 등. 한 영수증에 카테고리가 섞일 수 있음 (예: 양파=식자재>야채, 고무장갑=비품).\n- 품목별로 적절한 category를 [${catList}] 에서 정확히 골라줘.`;
+      ? `\n[모드: 거래처 영수증 — 매우 중요]\n- 사용자가 거래처를 "${rcpVendorName}"로 이미 선택했어요.\n- ⚠️ vendor 필드: 빈 문자열 "" 박기 (사용자 선택 우선, AI 추출 무시 = 토큰·오류 방지)\n- 모든 품목의 category는 무조건 "${rcpCatName || '식자재'}" 사용 (사용자 사전 선택, 다른 카테고리 추정 금지)\n- 거래명세서 양식이면 "단가/수량/합계" 컬럼 정확히 추출 → unitPrice/qty 반드시 채울 것 (없으면 null/1)\n- 한 영수증에 같은 양식 여러 품목 → 각 품목 행으로 분리`
+      : `\n[모드: 직구 영수증]\n- 마트/일반 영수증/배민 양식 등. 한 영수증에 카테고리가 섞일 수 있음 (예: 양파=식자재>야채, 고무장갑=비품).\n- 품목별로 적절한 category를 [${catList}] 에서 정확히 골라줘.\n- 단가/수량 보일 때만 unitPrice/qty 채울 것 (영수증에 없으면 null/1)`;
     const prompt=`한국 영수증/거래명세서를 분석해 JSON 배열로만 응답하세요. 설명/주석 금지.
 ${modeHint}
 
@@ -4610,12 +4643,20 @@ ${modeHint}
       {text:prompt},
       {inline_data:{mime_type:'image/jpeg',data:b64}}
     ], 30, 'receipt_ocr');
-    // DB 규칙으로 카테고리 덮어쓰기 (학습된 품목은 AI 판단 무시)
+    // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
     list=await applyRulesToReceipt(list);
     rowCount=0;
     document.getElementById('resTable').innerHTML=list.map(i=>buildReceiptRow(i)).join('');
     rowCount=list.length;
-    document.getElementById('resultArea').style.display='block';
+    // 거래처 모드 = vendor 컬럼 숨김 + 상단 배지 표시
+    const resultArea=document.getElementById('resultArea');
+    const isVendor = rcpMode==='vendor' && rcpVendorId;
+    resultArea.classList.toggle('vendor-mode', isVendor);
+    const vendorBadge=document.getElementById('rcpResultVendorBadge');
+    const vendorNameEl=document.getElementById('rcpResultVendorName');
+    if(vendorBadge){ vendorBadge.style.display = isVendor ? 'block' : 'none'; }
+    if(vendorNameEl && isVendor){ vendorNameEl.textContent = rcpVendorName || '-'; }
+    resultArea.style.display='block';
     // 토큰·비용 토스트 (2026-05-19 사장님 다이어트 검증용)
     // 비용 포맷: 한국어 표기 헷갈림 방지 — 1원 미만/소수점 적은 자리/정수 분기
     if(lastAIUsage){
@@ -4700,16 +4741,44 @@ function buildReceiptRow(i={}) {
   // ✨ = 학습 대상 (분류 박힌 모든 행, 저장 시 learnClassification 호출됨)
   // 2026-05-19 사장님 호소: ✨ 의미 명확화 + 분류 있는 모든 행 일관 표시
   const learnBadge=cat?`<span class="rcp-learn-badge" title="저장 시 AI 학습됨">✨</span>`:'';
-  return `<tr id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}">
+  // AI 원본 텍스트 보존 (사장님 정정 학습용 — 데이터 속성)
+  const origItem = String(i.item||'').replace(/"/g,'&quot;');
+  return `<tr id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" data-action="openReasonSheet|${idx}">X</button></td>
-    <td><input type="text" class="c-v" value="${i.vendor||''}"></td>
+    <td class="col-vendor"><input type="text" class="c-v" value="${i.vendor||''}"></td>
     <td><input type="text" class="c-i" value="${i.item||''}"></td>
+    <td><input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></td>
+    <td><input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></td>
     <td><input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this"></td>
     <td><span class="rcp-cat-cell">${learnBadge}<button type="button" class="c-cBtn${emptyCls}" data-action="openReceiptCatPicker|${idx}">${label}</button></span></td>
-    <input type="hidden" class="c-u" value="${i.unitPrice||''}">
-    <input type="hidden" class="c-q" value="${i.qty||1}">
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
   </tr>`;
+}
+// 단가/수량 입력 시 자동 금액 계산 (사용자 편의 — 2026-05-19)
+function onRcpUnitPriceInput(el, idx){
+  const tr=document.getElementById('row-'+idx); if(!tr) return;
+  // 천단위 콤마 자동
+  const pos=el.selectionStart;
+  const digits=String(el.value||'').replace(/[^0-9]/g,'');
+  const formatted=digits?fmt(parseInt(digits,10)):'';
+  el.value=formatted;
+  _rcpRecalcAmount(tr);
+}
+function onRcpQtyInput(el, idx){
+  const tr=document.getElementById('row-'+idx); if(!tr) return;
+  // 소수점 1자리까지 허용
+  const cleaned=String(el.value||'').replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1');
+  el.value=cleaned;
+  _rcpRecalcAmount(tr);
+}
+function _rcpRecalcAmount(tr){
+  const u=parseInt(String(tr.querySelector('.c-u')?.value||'').replace(/[^0-9]/g,''),10)||0;
+  const q=parseFloat(tr.querySelector('.c-q')?.value||'0')||0;
+  if(u>0 && q>0){
+    const amt=Math.round(u*q);
+    const pEl=tr.querySelector('.c-p');
+    if(pEl) pEl.value=fmt(amt);
+  }
 }
 // ─── 금액 입력: 천단위 콤마 자동 ───
 function onReceiptAmountInput(inputEl){
@@ -4761,17 +4830,24 @@ async function saveReceipt(){
     // 거래처 모드면 vendor 텍스트도 거래처명으로 통일 (AI 추출 vendor가 누락이거나 다를 때 보호)
     const vendorText = isVendorMode
       ? (rcpVendorName || tr.querySelector('.c-v').value)
-      : tr.querySelector('.c-v').value;
-    // 2026-05-15: price/count 키 제거. DB 스키마에 해당 컬럼 없음 (42703 에러 원인). 합계만 저장.
+      : (tr.querySelector('.c-v')?.value || '');
+    // 단가/수량 추출 (2026-05-19 부활) — 가격 추세 분석 기반
+    const unitRaw=(tr.querySelector('.c-u')?.value||'').replace(/[^0-9]/g,'');
+    const qtyRaw=parseFloat((tr.querySelector('.c-q')?.value||'').replace(/[^0-9.]/g,''))||null;
+    const itemText = tr.querySelector('.c-i')?.value || '';
+    // AI 원본 텍스트 보존 (사장님이 수정 시 학습용)
+    const origItem = tr.dataset.origItem || itemText;
     return {
-      _idx:idx+1, _cat:cat,
+      _idx:idx+1, _cat:cat, _origItem: origItem, // 학습용 메타 (DB 저장 X)
       store_id:currentStore.id,receipt_date:tr.querySelector('.c-d').value,
-      vendor:vendorText,item:tr.querySelector('.c-i').value,
+      vendor:vendorText,item:itemText,
       vendor_id: isVendorMode ? rcpVendorId : null,
+      unit_price: unitRaw ? parseInt(unitRaw,10) : null,
+      qty: qtyRaw,
       total_price:parseInt(amtRaw,10)||0,
       category:cat||null,category_id:category_id||null,
-      input_method: rcpInputMethod || null, // 📸 photo / ✏️ manual — 옛 영수증은 NULL 호환
-      receipt_group_id: groupId, // 같은 영수증 사진의 N행 동일 UUID (2026-05-19)
+      input_method: rcpInputMethod || null,
+      receipt_group_id: groupId,
       note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
     };
   });
@@ -4781,24 +4857,28 @@ async function saveReceipt(){
     const detail=missing.map(r=>`${r._idx}행 "${r._cat}"`).join('\n• ');
     if(!confirm(`아래 분류는 카테고리 목록에 없어요:\n• ${detail}\n\n그래도 저장할까요?\n(분류명은 텍스트로 들어가지만 집계가 안 잡힐 수 있어요)`)) return;
   }
-  // 임시 진단 필드 제거 후 insert
-  const cleaned=rows.map(({_idx,_cat,...rest})=>rest);
+  // 임시 진단 필드 제거 후 insert (_idx/_cat/_origItem은 DB 컬럼 X → 학습 전 분리)
+  const learnMeta = rows.map(r => ({ item: r.item, origItem: r._origItem, category: r.category, note: r.note }));
+  const cleaned=rows.map(({_idx,_cat,_origItem,...rest})=>rest);
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').insert(cleaned);
   setLoad(false);
   if(error) return errToast('저장', error);
-  // 자동 학습: 품목→카테고리 규칙 저장 (정상 행만, 매장별)
-  // 학습 키워드는 품목의 첫 단어만 추출 (예: "양파 10kg 2봉" → "양파")
-  // 품목 전체 문자열을 keyword로 넣으면 contains 매칭이 실패해 학습이 무력화됨 (dev_lessons #49)
-  // 거래처 모드는 학습 스킵 — 카테고리는 거래처 설정대로 자동이라 학습 불필요
+  // 자동 학습: 품목→(카테고리 + display_item) 규칙 저장 (정상 행만, 매장별)
+  // 키워드 = AI 원본 텍스트의 첫 단어 (origItem) — 사장님이 정정해도 다음 OCR 매칭 가능
+  // display_item = 사장님이 저장한 정정 텍스트 (item) — 매칭 시 자동 교체
+  // 거래처 모드는 학습 스킵 — 카테고리는 거래처 설정대로 자동
   let learnedCount=0;
   if(!isVendorMode){
-    cleaned.filter(r=>r.note==='정상'&&r.item&&r.category).forEach(r=>{
-      const parts=String(r.category).split('>').map(s=>s.trim());
+    learnMeta.filter(m=>m.note==='정상'&&m.item&&m.category).forEach(m=>{
+      const parts=String(m.category).split('>').map(s=>s.trim());
       const mainCat=parts[0]||'';
       const subCat=parts[1]||'';
-      const kw=normalizeItemKeyword(r.item);
-      if(mainCat&&kw){ learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{}); learnedCount++; }
+      // 키워드: AI 원본의 첫 단어 (사장님 정정 X 시 = item 첫 단어)
+      const kw=normalizeItemKeyword(m.origItem||m.item);
+      // display_item: 사장님이 수정한 경우만 박음 (원본과 다를 때)
+      const displayItem = (m.origItem && m.origItem !== m.item) ? m.item : null;
+      if(mainCat&&kw){ learnClassification(kw,mainCat,subCat,'receipt',false,displayItem).catch(()=>{}); learnedCount++; }
     });
   }
   const successMsg=learnedCount>0?`저장됐어요. ✨ ${learnedCount}건 AI 학습됐어요`:'저장됐어요';
@@ -4864,7 +4944,7 @@ async function loadReceiptList(){
   const lastDay=new Date(y,m,0).getDate();
   const start=rcpListMonth+'-01', end=rcpListMonth+'-'+String(lastDay).padStart(2,'0');
   const {data,error}=await sb.from('receipts')
-    .select('id,receipt_date,vendor,item,total_price,category,category_id,note,receipt_group_id,input_method,vendor_id,created_at')
+    .select('id,receipt_date,vendor,item,unit_price,qty,total_price,category,category_id,note,receipt_group_id,input_method,vendor_id,created_at')
     .eq('store_id',currentStore.id)
     .gte('receipt_date',start).lte('receipt_date',end)
     .order('receipt_date',{ascending:false})
@@ -4947,10 +5027,14 @@ function renderReceiptList(){
       g.rows.forEach(r=>{
         const isErr=r.note!=='정상';
         const catLabel=r.category||'미분류';
+        // 단가 × 수량 부가 정보 (있을 때만 표시)
+        const unitQtyHtml = (r.unit_price && r.qty)
+          ? `<span style="margin-left:6px;color:var(--gray-400);">· ${fmt(r.unit_price)} × ${r.qty}</span>`
+          : '';
         html+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;${isErr?'opacity:0.5;text-decoration:line-through;':''}">
           <div style="flex:1;min-width:0;overflow:hidden;">
             <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.item||'(품목 없음)')}</div>
-            <div style="font-size:10px;color:var(--gray-500);margin-top:2px;">🏷 ${esc(catLabel)}</div>
+            <div style="font-size:10px;color:var(--gray-500);margin-top:2px;">🏷 ${esc(catLabel)}${unitQtyHtml}</div>
           </div>
           <div style="font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0;">${fmt(r.total_price||0)}원</div>
         </div>`;
@@ -5065,9 +5149,11 @@ function _parseEditKey(editKey){
 }
 function _rgeRowsFromRecords(records){
   return records.map(r=>({
-    id:r.id, vendor:r.vendor||'', item:r.item||'', amount:r.total_price||0,
+    id:r.id, vendor:r.vendor||'', item:r.item||'',
+    unitPrice:r.unit_price||null, qty:r.qty||null,
+    amount:r.total_price||0,
     cat:r.category||'', catId:r.category_id||null, note:r.note||'정상',
-    _isNew:false, _deleted:false
+    _isNew:false, _deleted:false, _origItem:r.item||''
   }));
 }
 function openReceiptGroupEdit(editKey){
@@ -5099,8 +5185,10 @@ function renderRgeTable(){
     html+=`<tr${off?' class="row-off"':''}>
       <td>${offBtn}</td>
       <td><input type="text" class="c-i" value="${esc(row.item)}" data-input="setRgeRowField|${idx}|item|this" placeholder="품목"></td>
+      <td><input type="text" class="c-u" value="${row.unitPrice?fmt(row.unitPrice):''}" inputmode="numeric" placeholder="-" data-input="setRgeRowUnitPrice|${idx}|this"></td>
+      <td><input type="text" class="c-q" value="${row.qty||''}" inputmode="decimal" placeholder="-" data-input="setRgeRowQty|${idx}|this"></td>
       <td><input type="text" class="c-p" value="${fmt(row.amount)}" inputmode="numeric" data-input="setRgeRowAmount|${idx}|this"></td>
-      <td><button type="button" class="c-cBtn empty" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:84px;" data-action="openRgeCatPicker|${idx}">${catLabel} ▸</button></td>
+      <td><button type="button" class="c-cBtn empty" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;" data-action="openRgeCatPicker|${idx}">${catLabel} ▸</button></td>
     </tr>`;
   });
   tbody.innerHTML=html;
@@ -5116,6 +5204,39 @@ function setRgeRowAmount(idx,el){
   const raw=String(el.value||'').replace(/[^0-9]/g,'');
   rgeRows[i].amount=parseInt(raw,10)||0;
   el.value=fmt(rgeRows[i].amount);
+}
+function setRgeRowUnitPrice(idx,el){
+  const i=parseInt(idx,10);
+  if(!rgeRows[i]) return;
+  const raw=String(el.value||'').replace(/[^0-9]/g,'');
+  rgeRows[i].unitPrice=raw?parseInt(raw,10):null;
+  el.value=raw?fmt(rgeRows[i].unitPrice):'';
+  _rgeAutoCalcAmount(i);
+}
+function setRgeRowQty(idx,el){
+  const i=parseInt(idx,10);
+  if(!rgeRows[i]) return;
+  const cleaned=String(el.value||'').replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1');
+  el.value=cleaned;
+  rgeRows[i].qty=cleaned?parseFloat(cleaned):null;
+  _rgeAutoCalcAmount(i);
+}
+function _rgeAutoCalcAmount(i){
+  const r=rgeRows[i]; if(!r) return;
+  if(r.unitPrice>0 && r.qty>0){
+    r.amount=Math.round(r.unitPrice*r.qty);
+    // 해당 행의 금액 input 갱신
+    const tbody=document.getElementById('rgeTable');
+    if(!tbody) return;
+    const trs=Array.from(tbody.querySelectorAll('tr'));
+    // 렌더 시 _deleted 제외되므로 인덱스 맞추기 위해 visible 카운트
+    let visible=0;
+    for(let j=0;j<rgeRows.length;j++){
+      if(rgeRows[j]._deleted) continue;
+      if(j===i){ const tr=trs[visible]; if(tr){ const pEl=tr.querySelector('.c-p'); if(pEl) pEl.value=fmt(r.amount); } break; }
+      visible++;
+    }
+  }
 }
 function toggleRgeRowOff(idx){
   const i=parseInt(idx,10);
@@ -5146,7 +5267,7 @@ function openRgeCatPicker(idx){
   });
 }
 function addRgeRow(){
-  rgeRows.push({id:null,vendor:'',item:'',amount:0,cat:'',catId:null,note:'정상',_isNew:true,_deleted:false});
+  rgeRows.push({id:null,vendor:'',item:'',unitPrice:null,qty:null,amount:0,cat:'',catId:null,note:'정상',_isNew:true,_deleted:false,_origItem:''});
   renderRgeTable();
 }
 async function saveReceiptGroupEdit(){
@@ -5155,9 +5276,7 @@ async function saveReceiptGroupEdit(){
   const date=document.getElementById('rgeDate').value;
   const vendor=document.getElementById('rgeVendor').value.trim();
   if(!date) return toast('날짜를 입력하세요','warn');
-  // group_id 결정: 기존 그룹 그대로 / 옛 영수증은 NULL 유지 (1행짜리)
   const groupId=k.type==='grp'?k.id:null;
-  // 정상 행 중 금액 0 가드
   const invalid=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&(!r.amount||r.amount<=0));
   if(invalid.length) return toast('정상 행은 금액이 필요해요','warn');
   setLoad(true,'저장 중...');
@@ -5165,7 +5284,8 @@ async function saveReceiptGroupEdit(){
   const updates=rgeRows.filter(r=>r.id&&!r._isNew&&!r._deleted);
   for(const r of updates){
     const {error}=await sb.from('receipts').update({
-      receipt_date:date, vendor, item:r.item, total_price:r.amount,
+      receipt_date:date, vendor, item:r.item,
+      unit_price:r.unitPrice||null, qty:r.qty||null, total_price:r.amount,
       category:r.cat||null, category_id:r.catId||null, note:r.note
     }).eq('id',r.id).eq('store_id',currentStore.id);
     if(error){ setLoad(false); return errToast('저장(수정)', error); }
@@ -5175,6 +5295,7 @@ async function saveReceiptGroupEdit(){
   if(inserts.length){
     const payload=inserts.map(r=>({
       store_id:currentStore.id, receipt_date:date, vendor, item:r.item,
+      unit_price:r.unitPrice||null, qty:r.qty||null,
       total_price:r.amount, category:r.cat||null, category_id:r.catId||null,
       note:r.note, receipt_group_id:groupId
     }));
@@ -5188,14 +5309,15 @@ async function saveReceiptGroupEdit(){
     if(error){ setLoad(false); return errToast('저장(삭제)', error); }
   }
   setLoad(false);
-  // 학습: 정상 행만 (UPDATE+INSERT 모두)
+  // 학습: 정상 행만 + 원본↔정정 다르면 display_item 박음
   const learnTargets=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&r.item&&r.cat);
   learnTargets.forEach(r=>{
     const parts=String(r.cat).split('>').map(s=>s.trim());
     const mainCat=parts[0]||'';
     const subCat=parts[1]||'';
-    const kw=normalizeItemKeyword(r.item);
-    if(mainCat&&kw) learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{});
+    const kw=normalizeItemKeyword(r._origItem||r.item);
+    const displayItem = (r._origItem && r._origItem !== r.item) ? r.item : null;
+    if(mainCat&&kw) learnClassification(kw,mainCat,subCat,'receipt',false,displayItem).catch(()=>{});
   });
   toast('저장됐어요','success');
   closeSheet('receiptGroupEditSheet');
@@ -13638,7 +13760,7 @@ function classifyByKeyword(desc, type){
 }
 
 // ─── 자동 학습: 수동 분류 시 DB 규칙 자동 저장 ───
-async function learnClassification(keyword,category,sub_category,type,exclude){
+async function learnClassification(keyword,category,sub_category,type,exclude,displayItem){
   if(!currentStore||!keyword||keyword.length<2) return;
   if(!category||category==='미분류') return;
   // 공통 규칙(bank/card)에 이미 매칭되는 키워드는 학습 안 함
@@ -13649,15 +13771,21 @@ async function learnClassification(keyword,category,sub_category,type,exclude){
   const kwLower=keyword.toLowerCase();
   const existing=storeClassRules.find(r=>r.keyword.toLowerCase()===kwLower&&(r.tx_type===type||r.tx_type==='both'));
   if(existing){
-    // 값 동일 → 스킵, 다르면 UPDATE (사장님이 수정한 최신값 반영)
-    if(existing.category===category && (existing.sub_category||'')===(sub_category||'')) return;
-    await sb.from('classification_rules').update({category,sub_category:sub_category||'',exclude_from_settlement:!!exclude}).eq('id',existing.id).eq('store_id',currentStore.id);
+    const sameCat = existing.category===category && (existing.sub_category||'')===(sub_category||'');
+    const sameDisp = (existing.display_item||null) === (displayItem||null);
+    if(sameCat && sameDisp) return;
+    const update={category,sub_category:sub_category||'',exclude_from_settlement:!!exclude};
+    // display_item: 명시적으로 박힐 때만 UPDATE (null이면 옛 값 유지)
+    if(displayItem) update.display_item = displayItem;
+    await sb.from('classification_rules').update(update).eq('id',existing.id).eq('store_id',currentStore.id);
     existing.category=category;
     existing.sub_category=sub_category||'';
     existing.exclude_from_settlement=!!exclude;
+    if(displayItem) existing.display_item = displayItem;
     return;
   }
   const rule={store_id:currentStore.id,keyword,match_type:'contains',tx_type:type||'both',category,sub_category:sub_category||'',exclude_from_settlement:!!exclude,priority:100};
+  if(displayItem) rule.display_item = displayItem;
   const{data}=await sb.from('classification_rules').insert(rule).select().single();
   if(data) storeClassRules.push(data);
 }

@@ -244,6 +244,8 @@ franchises (프랜차이즈/브랜드)
 >
 > ⚠️ **2026-05-19 추가**: `receipt_group_id` UUID 신설. 영수증 사진 1장 그룹 식별자. saveReceipt 시 `crypto.randomUUID()` 1번 생성 후 모든 INSERT 행에 박음 → 기록내역 화면에서 같은 영수증 그룹 카드로 묶어 표시 + 그룹 단위 [✏ 편집]/[🗑 통째 삭제] 가능. 옛 영수증 = NULL → 1행짜리 그룹으로 호환. 인덱스 `idx_receipts_group_id`. 마이그레이션: `add_receipts_receipt_group_id_20260519`. 롤백: `DROP INDEX IF EXISTS idx_receipts_group_id; ALTER TABLE receipts DROP COLUMN IF EXISTS receipt_group_id;`.
 >
+> ⚠️ **2026-05-19 추가 (단가/수량 부활)**: `unit_price INT`, `qty NUMERIC(10,2)` 신설. 가격 추세 분석 기반 (사장님 호소: 거래처 주문 수동 입력과 통일 + 향후 AI 가격 상승/하락 분석). AI OCR이 거래명세서 단가·수량·합계 컬럼 정확히 추출, 사용자 수정 가능. 인덱스 `idx_receipts_item_date (item, receipt_date DESC) WHERE item NOT NULL`. 옛 영수증 = NULL 호환. 마이그레이션: `receipts_unit_price_qty_and_display_item_20260519`. 롤백: `DROP INDEX IF EXISTS idx_receipts_item_date; ALTER TABLE receipts DROP COLUMN IF EXISTS unit_price, DROP COLUMN IF EXISTS qty;`. 옛 컬럼명 `price/count`와 달리 명확하게 `unit_price/qty`로 명명.
+>
 > ⚠️ **2026-05-18 (6) 변경**: 사장님 매장(`4ae03341-...`) `expense_categories` 카테고리 분리 적용:
 > - `'공과금/고정비'` parent → `'고정비'` rename (id=c33020f4-...)
 > - `'공과금'` parent 신규 (sort_order=6, data_source='fixed_costs', id=7d0b97ff-...)
@@ -483,9 +485,11 @@ franchises (프랜차이즈/브랜드)
 | sub_category (text, default '') | 소분류 (행복한정육점, 직구상세...) |
 | exclude_from_settlement (bool, default false) | 정산 제외 여부 |
 | priority (int, default 100) | 우선순위 (낮을수록 먼저) |
+| **display_item** (text, NULL) | 사장님이 정정한 품목 표시명 (2026-05-19 추가). 영수증 OCR 원본 "위즈복대 -魚子福袋..." → 사장님 "날치알" 정정 시 학습 → 다음 OCR에서 자동 교체 |
 | created_at (timestamptz) | 생성일 |
 - UNIQUE(store_id, keyword, tx_type)
 - 용도: 매장별 엑셀 업로드 자동 분류 규칙. 수동 분류 시 자동 학습(INSERT)
+- `display_item`: applyRulesToReceipt에서 매칭 시 `item = display_item` 자동 교체. saveReceipt/saveReceiptGroupEdit에서 사장님이 item 정정 시 박힘 (`_origItem !== item`)
 
 ### store_settings 추가 컬럼
 | 컬럼 | 용도 |
