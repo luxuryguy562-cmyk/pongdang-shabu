@@ -1426,8 +1426,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </button>
   <!-- 거래 채널 (큰 카드 가로 2분할 — 카테고리와 차원 분리 시각화) -->
   <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">🚚 거래 채널</div>
-  <div style="display:flex;gap:10px;margin-bottom:14px;">
-    <button type="button" class="hub-full" style="flex:1;margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="nav|vendors">
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;">
+    <button type="button" class="hub-full" style="margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="nav|vendors">
       <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;">
         <span class="hub-full-icon" style="margin-right:8px;background:#FEF3C7;font-size:20px;line-height:1;">🏪</span>
         <span style="font-size:13px;font-weight:700;color:var(--text);">거래처 관리</span>
@@ -1435,7 +1435,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div style="font-size:17px;font-weight:900;color:var(--gray-900);text-align:left;font-variant-numeric:tabular-nums;" id="expMiniVendor">-</div>
       <div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:2px;text-align:left;" id="expMiniVendorSub">이번달</div>
     </button>
-    <button type="button" class="hub-full" style="flex:1;margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="openCatReceipt|direct">
+    <button type="button" class="hub-full" style="margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="openCatReceipt|direct">
       <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;">
         <span class="hub-full-icon" style="margin-right:8px;background:#FCE7F3;font-size:20px;line-height:1;">🛒</span>
         <span style="font-size:13px;font-weight:700;color:var(--text);">직구</span>
