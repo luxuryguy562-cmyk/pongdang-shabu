@@ -1820,3 +1820,43 @@ function ymdLocal(date){
 - DB 저장 날짜도 마찬가지 (settle_date, opening_date 등)
 - UTC 변환은 _명시적으로_ 필요할 때만 (서버 timestamp 비교 등)
 - 새 코드 작성 시 `toISOString().split('T')[0]` 패턴 절대 금지 → `ymdLocal()` 사용
+
+---
+
+## 91. grid `1fr`은 콘텐츠가 셀 폭을 늘릴 수 있다 — `minmax(0,1fr)` 강제 (2026-05-19 사장님 "위·아래 카드 가로넓이 안 맞아" 호소)
+
+### 사건
+지출 허브에서 위쪽 거래채널 그리드(2개 카드)와 아래쪽 지출 카테고리 그리드(8개 카드)의 카드 폭이 시각적으로 안 맞음. 두 그리드 다 `grid-template-columns:repeat(2,1fr)` + `gap:10px` 동일 설정인데도 거래채널 카드가 더 넓어 보임.
+
+### 진단
+- `1fr` 단위는 **남는 공간**을 비례 분배. **남는 공간 계산 전 grid item의 min-content를 고려**.
+- grid item 기본값: `min-width:auto` = 콘텐츠 자연 폭(= min-content).
+- 거래채널 카드 안 큰 숫자(예: "22,335,491") `font-size:17px;font-weight:900;tabular-nums` → 자연 폭 ~110px.
+- 모바일 360px 폰에서 셀 폭 (분자 280px ÷ 2) = 140px. 안쪽 padding 14px×2 = 28px 빼면 콘텐츠 영역 112px. 110px 숫자가 거의 꽉 참 — 폰트 렌더링 차이로 셀이 콘텐츠 폭 따라 늘어남.
+- 지출 카테고리 카드는 14px 폰트라 자연 폭 작음 → 안 늘어남.
+- 결과: 두 그리드 카드 폭 어긋남.
+
+### 교훈
+**모바일 그리드 표준:**
+```css
+grid-template-columns: repeat(N, minmax(0, 1fr));
+```
+- `minmax(0, 1fr)` = 최소 0, 최대 1fr → 콘텐츠 자연 폭 무시하고 정확히 (parent-gap)/N로 셀 폭 고정.
+- 추가로 **그리드 item(카드)에 `min-width:0; overflow:hidden;`** 박기 (자식이 카드를 못 늘리게).
+- **카드 안 큰 숫자 div**에:
+  - `white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;` (잘리면 …로 표시)
+  - 또는 `font-size:clamp(13px, 4.5vw, 17px)` (좁은 화면에서 자동 축소)
+- 둘 다 같이 박는 게 가장 안전 (사장님 매장 매출 1억 넘으면 자릿수 폭증해도 안전).
+
+### 사장님 호소 시그널
+- "위에 X 버튼이랑 가로넓이 안 맞아"
+- "글씨 잘려"
+- 화면 캡처에 위·아래 카드 좌·우 끝선이 픽셀 단위로 다름
+
+### 적용 위치
+- `agents/designer.md` UI 절대 규칙 7번 신설
+- `agents/reviewer.md` 자가 체크 항목 추가
+- 이번 수정: 거래채널 + 지출카테고리 그리드 양쪽 모두 `minmax(0,1fr)` + 카드 안 큰 숫자에 ellipsis + clamp 폰트
+
+### 부가 발견
+- 지출카테고리 카드 금액 색상: 본래 디자인 시스템 `.hub-mini-amt {color:var(--gray-400)}` (회색)인데, 이전 작업에서 `#expHubCatGrid .hub-mini-amt {color:var(--gray-900)}` override로 검정 됐음 → 회색 복원.

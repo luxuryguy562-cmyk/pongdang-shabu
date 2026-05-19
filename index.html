@@ -158,14 +158,14 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-mini.emphasized{text-align:center;align-items:center;}
 .hub-mini.emphasized .hub-mini-amt{font-size:15px;color:var(--success);}
 .hub-mini.emphasized .hub-mini-amt.miss{color:var(--danger);}
-/* 지출 카테고리 그리드 — 2컬럼 + 위 거래채널과 폭·여백 일치 (사장님 요청 2026-05-19) */
-#expHubCatGrid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
-#expHubCatGrid .hub-mini{flex-direction:row;justify-content:space-between;align-items:center;min-height:56px;gap:10px;padding:12px 14px;}
+/* 지출 카테고리 그리드 — 2컬럼 + minmax(0,1fr)로 콘텐츠 무관 폭 고정 (사장님 요청 2026-05-19) */
+#expHubCatGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px;}
+#expHubCatGrid .hub-mini{flex-direction:row;justify-content:space-between;align-items:center;min-height:56px;gap:10px;padding:12px 14px;min-width:0;overflow:hidden;}
 #expHubCatGrid .hub-mini-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 #expHubCatGrid .hub-mini-icon{margin-bottom:0;}
 #expHubCatGrid .hub-mini-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-#expHubCatGrid .hub-mini-right{text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:1px;}
-#expHubCatGrid .hub-mini-amt{margin-top:0;font-size:14px;color:var(--gray-900);}
+#expHubCatGrid .hub-mini-right{text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:1px;min-width:0;}
+#expHubCatGrid .hub-mini-amt{margin-top:0;font-size:14px;color:var(--gray-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .hub-full{width:100%;background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;outline:none;}
 .hub-full:active{background:var(--gray-100);}
 .hub-full-title{font-size:15px;font-weight:700;color:var(--text);}
@@ -1426,22 +1426,22 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </button>
   <!-- 거래 채널 (큰 카드 가로 2분할 — 카테고리와 차원 분리 시각화) -->
   <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">🚚 거래 채널</div>
-  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;">
-    <button type="button" class="hub-full" style="margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="nav|vendors">
-      <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;">
-        <span class="hub-full-icon" style="margin-right:8px;background:#FEF3C7;font-size:20px;line-height:1;">🏪</span>
-        <span style="font-size:13px;font-weight:700;color:var(--text);">거래처 관리</span>
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px;">
+    <button type="button" class="hub-full" style="margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;min-width:0;overflow:hidden;" data-action="nav|vendors">
+      <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;min-width:0;">
+        <span class="hub-full-icon" style="margin-right:8px;background:#FEF3C7;font-size:20px;line-height:1;flex-shrink:0;">🏪</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">거래처 관리</span>
       </div>
-      <div style="font-size:17px;font-weight:900;color:var(--gray-900);text-align:left;font-variant-numeric:tabular-nums;" id="expMiniVendor">-</div>
-      <div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:2px;text-align:left;" id="expMiniVendorSub">이번달</div>
+      <div style="font-size:clamp(13px,4.5vw,17px);font-weight:900;color:var(--gray-900);text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;" id="expMiniVendor">-</div>
+      <div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:2px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;" id="expMiniVendorSub">이번달</div>
     </button>
-    <button type="button" class="hub-full" style="margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="openCatReceipt|direct">
-      <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;">
-        <span class="hub-full-icon" style="margin-right:8px;background:#FCE7F3;font-size:20px;line-height:1;">🛒</span>
-        <span style="font-size:13px;font-weight:700;color:var(--text);">직구</span>
+    <button type="button" class="hub-full" style="margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;min-width:0;overflow:hidden;" data-action="openCatReceipt|direct">
+      <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;min-width:0;">
+        <span class="hub-full-icon" style="margin-right:8px;background:#FCE7F3;font-size:20px;line-height:1;flex-shrink:0;">🛒</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">직구</span>
       </div>
-      <div style="font-size:17px;font-weight:900;color:var(--gray-900);text-align:left;font-variant-numeric:tabular-nums;" id="expMiniDirect">-</div>
-      <div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:2px;text-align:left;" id="expMiniDirectSub">이번달</div>
+      <div style="font-size:clamp(13px,4.5vw,17px);font-weight:900;color:var(--gray-900);text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;" id="expMiniDirect">-</div>
+      <div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:2px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;" id="expMiniDirectSub">이번달</div>
     </button>
   </div>
   <!-- 지출 카테고리 (동적 렌더링) — JS renderExpHubCatCards가 채움 -->

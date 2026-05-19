@@ -113,6 +113,18 @@ depends_on: planner
 - 사장님이 "와닿다 마는 느낌"·"감이 안 잡힘" 호소 시 → **레이아웃 구조 자체 변경** 안 제시 (dev_lessons #60, #62)
 - 텍스트 수정·헤더 분리 수준으로 답하지 말 것
 
+### 7. 위·아래 카드 행렬 폭 일치 + 글자 자동조절 (2026-05-19 사장님 호소)
+- **같은 화면에서 위·아래로 배치된 카드 그리드는 카드 폭이 픽셀 단위까지 일치해야** 한다
+- 그리드 시스템 통일: 두 영역 모두 `display:grid; grid-template-columns:repeat(N,minmax(0,1fr));` 사용
+  - ⚠️ **`1fr` 단독 금지** — grid item의 `min-width:auto` 기본값 때문에 콘텐츠(특히 큰 숫자·tabular-nums)가 셀 폭을 늘림 → 위·아래 카드 폭 어긋남
+  - **`minmax(0, 1fr)` 강제** — 콘텐츠 자연 폭 무시하고 (parent-gap)/N로 셀 폭 고정
+- 카드 컨테이너에 `min-width:0; overflow:hidden;` 추가 (자식 콘텐츠가 카드를 못 늘리게)
+- 카드 안 큰 숫자(매출/지출 등) — 매장 규모 따라 자릿수 폭증 → **반드시 글자 잘림 방지**:
+  - `white-space:nowrap; overflow:hidden; text-overflow:ellipsis;`
+  - 또는 `font-size:clamp(최소,vw,최대)` 자동조절 (예: `clamp(13px, 4.5vw, 17px)`)
+- 사장님 호소 시그널: "위에 X 버튼이랑 가로넓이 안 맞아", "글씨 잘려"
+- 절대 규칙 1(회계 숫자) + 2(모바일 폭)의 결합 강화 — 같이 검증할 것 (dev_lessons #91)
+
 ---
 
 ## ⛔ 사장님 요구 거부 의무 (UI 영역)
@@ -137,3 +149,6 @@ depends_on: planner
 - [ ] 비슷한 화면과 패턴 일치?
 - [ ] 사장님 명시 vs 입력 폼 필드 1:1 대조? (예: 표 컬럼 = orderInput 필드 모두 포함)
 - [ ] 사장님 요구가 위 규칙 깨면 거부 + 대안 제시했나?
+- [ ] **위·아래 카드 그리드 동일 시스템(`grid + minmax(0,1fr)`)인가?**
+- [ ] **카드 안 큰 숫자에 ellipsis 또는 clamp 폰트 적용했나? (매장 규모 자릿수 폭증 대비)**
+- [ ] 카드 자체에 `min-width:0; overflow:hidden;` 있나?
