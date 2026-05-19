@@ -4,6 +4,23 @@
 
 ---
 
+## 90. 스키마 문서 ≠ 실제 DB 불일치 위험 (2026-05-18)
+
+**사고**: `docs/db_schema.md`에 `store_settings.vendor_order` 컬럼 문서화(2026-05-15)되어 있었지만 실제 DB에는 ALTER TABLE 적용 안 됐음. 사장님이 거래처 순서 변경 → "순서 저장 실패" 긴급 버그.
+
+**원인**: 문서에 컬럼 추가만 박고 실제 마이그레이션 SQL 실행 누락. CTO가 "문서 봤으니 적용된 것" 가정.
+
+**규칙**:
+1. **새 컬럼 추가 시 = `apply_migration` 실행 + `db_schema.md` 동기화 둘 다 의무.** 둘 중 하나만 하면 다음 세션에서 사고.
+2. 새 세션 시작 시 = `db_schema.md` 새 컬럼 = `information_schema.columns` 확인 후 작업.
+3. 컬럼 사용 코드 작성 전 = `SELECT column_name FROM information_schema.columns WHERE table_name='X'` 빠른 검증.
+
+**같은 패턴 위험**: 이번 사고 외에 다른 컬럼도 문서만 있고 DB 누락 가능. 다음 세션에서 전체 점검 가능.
+
+**해결 마이그레이션**: `add_store_settings_vendor_order_20260518`
+
+---
+
 ## 89. 카테고리 시스템 = 식자재 composite 패턴이 표준 (2026-05-18)
 
 **원칙**: 어떤 소스든 `category_id`로 분류된 데이터는 그 카테고리에 자동 합산.
