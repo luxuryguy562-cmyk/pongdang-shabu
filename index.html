@@ -3598,55 +3598,56 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 //             → 토스트로 토큰·비용 즉시 표시 + 관리자 대시보드 데이터 누적
 let lastAIUsage = null; // 최근 AI 호출 토큰·비용 (토스트용)
 // Gemini 모델별 가격 (환율 1400원/$ 기준, 2026-05 공식 가격)
-// 사장님이 Worker 모델 교체 시 _CURRENT_GEMINI_MODEL도 같이 변경
-const _CURRENT_GEMINI_MODEL = 'gemini-2.5-flash-lite'; // Worker와 일치 (2026-05-19 사장님 결정 ③ — 2.0-flash-lite 신규 차단됐고 2.5-flash-lite로 정착)
+// 2026-05-19 사장님 결정 B안: 동적 모델 — 거래처(복잡) = flash, 직구(단순) = flash-lite
+const _DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite'; // 기본 = 저렴 (직구 영수증·POS 등)
 const _GEMINI_PRICING = {
   'gemini-2.5-flash':       { in:  420, out: 3500 }, // $0.30 / $2.50 per 1M
   'gemini-2.5-flash-lite':  { in:  140, out:  560 }, // $0.10 / $0.40 per 1M
-  'gemini-2.0-flash':       { in:  140, out:  560 }, // $0.10 / $0.40 per 1M
-  'gemini-2.0-flash-lite':  { in:  105, out:  420 }, // $0.075/ $0.30 per 1M
+  'gemini-2.0-flash':       { in:  140, out:  560 },
+  'gemini-2.0-flash-lite':  { in:  105, out:  420 },
   'gemini-1.5-flash':       { in:  105, out:  420 },
   'gemini-1.5-flash-8b':    { in:  52.5,out:  210 },
 };
-function _calcGeminiCostWon(promptTokens, outputTokens, thinkingTokens){
-  const rates = _GEMINI_PRICING[_CURRENT_GEMINI_MODEL] || _GEMINI_PRICING['gemini-2.5-flash'];
+function _calcGeminiCostWon(promptTokens, outputTokens, thinkingTokens, model){
+  const rates = _GEMINI_PRICING[model] || _GEMINI_PRICING[_DEFAULT_GEMINI_MODEL] || _GEMINI_PRICING['gemini-2.5-flash-lite'];
   const input = (promptTokens||0) * rates.in / 1000000;
   const output = ((outputTokens||0) + (thinkingTokens||0)) * rates.out / 1000000;
   return Math.round((input + output) * 10000) / 10000;
 }
-function _logAIUsage(feature, usage, durationMs, success, errorMsg){
+function _logAIUsage(feature, usage, durationMs, success, errorMsg, modelUsed){
   try{
     if(!currentStore) return;
+    const model = modelUsed || _DEFAULT_GEMINI_MODEL;
     sb.from('ai_usage_logs').insert({
       store_id: currentStore.id,
       feature: feature || 'unknown',
-      model: _CURRENT_GEMINI_MODEL,
+      model,
       prompt_tokens: usage?.promptTokenCount || 0,
       output_tokens: usage?.candidatesTokenCount || 0,
       thinking_tokens: usage?.thoughtsTokenCount || 0,
       total_tokens: usage?.totalTokenCount || 0,
-      estimated_cost_won: _calcGeminiCostWon(usage?.promptTokenCount, usage?.candidatesTokenCount, usage?.thoughtsTokenCount),
+      estimated_cost_won: _calcGeminiCostWon(usage?.promptTokenCount, usage?.candidatesTokenCount, usage?.thoughtsTokenCount, model),
       duration_ms: durationMs,
       success: !!success,
       error_msg: errorMsg || null
     }).then(({error})=>{ if(error) console.warn('[ai_usage_logs] insert failed:', error.message); });
   }catch(e){ console.warn('[ai_usage_logs] exception:', e); }
 }
-async function callGemini(parts, timeoutSec=30, feature='unknown'){
+async function callGemini(parts, timeoutSec=30, feature='unknown', model){
   const MAX_RETRY = 3;
   const BACKOFF_MS = [1000, 2000, 4000];
   let lastErr = null;
   const startedAt = Date.now();
+  const requestModel = model || _DEFAULT_GEMINI_MODEL; // 동적 모델 선택 (B안)
   for(let attempt=0; attempt<MAX_RETRY; attempt++){
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(), timeoutSec*1000);
     try{
-      // 재시도 중이면 로딩 메시지 갱신
       if(attempt>0) setLoad(true, `AI 다시 시도 중... (${attempt+1}/${MAX_RETRY})`);
       const res=await fetch(GEMINI_URL,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({contents:[{parts}],generationConfig:{response_mime_type:'application/json'}}),
+        body:JSON.stringify({contents:[{parts}],generationConfig:{response_mime_type:'application/json'},_model:requestModel}),
         signal:ctrl.signal
       });
       if(!res.ok){
@@ -3671,11 +3672,14 @@ async function callGemini(parts, timeoutSec=30, feature='unknown'){
       const txt=data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if(!txt) throw new Error('AI 응답이 비어있습니다');
       // 토큰·비용 추출 + 글로벌 박음 + DB 저장 (성공 시)
+      // Worker가 응답에 _modelUsed 박아 보냄 (실제 사용한 모델) — 없으면 요청 모델 fallback
       const usage = data?.usageMetadata || {};
+      const modelUsed = data?._modelUsed || requestModel;
       const durationMs = Date.now() - startedAt;
-      const costWon = _calcGeminiCostWon(usage.promptTokenCount, usage.candidatesTokenCount, usage.thoughtsTokenCount);
+      const costWon = _calcGeminiCostWon(usage.promptTokenCount, usage.candidatesTokenCount, usage.thoughtsTokenCount, modelUsed);
       lastAIUsage = {
         feature,
+        model: modelUsed,
         promptTokens: usage.promptTokenCount || 0,
         outputTokens: usage.candidatesTokenCount || 0,
         thinkingTokens: usage.thoughtsTokenCount || 0,
@@ -3683,12 +3687,12 @@ async function callGemini(parts, timeoutSec=30, feature='unknown'){
         costWon,
         durationMs
       };
-      _logAIUsage(feature, usage, durationMs, true, null);
+      _logAIUsage(feature, usage, durationMs, true, null, modelUsed);
       return JSON.parse(txt.replace(/```json|```/g,'').trim());
     }catch(e){
       lastErr = e;
       if(e.name==='AbortError'){
-        _logAIUsage(feature, null, Date.now()-startedAt, false, 'timeout');
+        _logAIUsage(feature, null, Date.now()-startedAt, false, 'timeout', requestModel);
         throw new Error(`AI 응답 시간 초과 (${timeoutSec}초). 다시 시도해주세요.`);
       }
       // 네트워크 오류 등도 재시도 대상
@@ -3696,7 +3700,7 @@ async function callGemini(parts, timeoutSec=30, feature='unknown'){
         await new Promise(r=>setTimeout(r, BACKOFF_MS[attempt]));
         continue;
       }
-      _logAIUsage(feature, null, Date.now()-startedAt, false, (e&&e.message)||'unknown');
+      _logAIUsage(feature, null, Date.now()-startedAt, false, (e&&e.message)||'unknown', requestModel);
       throw e;
     }finally{clearTimeout(timer);}
   }
@@ -4660,10 +4664,12 @@ ${modeHint}
  · 위즈복대: 단위 20, BOX 1, EA 10 → q=30, p=9400×30=282,000
  · 연근모양분모자: 단위 20, BOX 0, EA 10 → q=10, p=2151×10≈21,500 (영수증 반올림)
  → "단위 × BOX + EA" 공식 정확히 적용. 합계가 단가와 비슷한 작은 수면 OCR 잘못 = 재추정)`;
+    // 동적 모델 (B안): 거래처 영수증 = flash (복잡한 거래명세서 정확도), 직구 = flash-lite (단순·저렴)
+    const aiModel = isVendorModeAI ? 'gemini-2.5-flash' : 'gemini-2.5-flash-lite';
     let raw=await callGemini([
       {text:prompt},
       {inline_data:{mime_type:'image/jpeg',data:b64}}
-    ], 30, 'receipt_ocr');
+    ], 30, 'receipt_ocr', aiModel);
     // 짧은 키 → 옛 키 매핑 (응답 호환). 거래처 모드면 c 자동 박음.
     const defaultCat = isVendorModeAI ? (rcpCatName || '식자재') : '';
     let list = (raw||[]).map(x => ({
@@ -4714,7 +4720,8 @@ ${modeHint}
       const c=u.costWon;
       const costStr = c<1 ? `약 ${Math.round(c*100)/100}원 (1원 미만)` : (c<10 ? `약 ${c.toFixed(1)}원` : `약 ${fmt(Math.round(c))}원`);
       const thinkLabel = u.thinkingTokens>0 ? ` · thinking ${fmt(u.thinkingTokens)}` : '';
-      toast(`✨ 분석 완료 (${(u.durationMs/1000).toFixed(1)}초)\n토큰: 입력 ${fmt(u.promptTokens)} · 출력 ${fmt(u.outputTokens)}${thinkLabel}\n💰 ${costStr}`, 'success', 6000);
+      const modelShort = (u.model||'').replace('gemini-','');
+      toast(`✨ 분석 완료 (${modelShort}, ${(u.durationMs/1000).toFixed(1)}초)\n토큰: 입력 ${fmt(u.promptTokens)} · 출력 ${fmt(u.outputTokens)}${thinkLabel}\n💰 ${costStr}`, 'success', 6000);
     }
   } catch(e){toast('분석 실패: '+e.message,'error');}
   finally{setLoad(false);}
@@ -6646,6 +6653,7 @@ async function runPosAI(){
   setLoad(true,'POS 장표 인식 중...');
   try{
     const parsed=await callGemini([
+      // POS 매출 장표 = 단순 숫자 추출 → lite로 충분
       {text:`이 POS 마감 장표 사진에서 매출 항목을 추출해주세요.
 다음 필드를 가진 JSON 객체로 응답해주세요 (숫자만, 없으면 0):
 {
@@ -6659,7 +6667,7 @@ async function runPosAI(){
 }
 반드시 순수 JSON만 출력하세요.`},
       {inline_data:{mime_type:'image/jpeg',data:posB64}}
-    ], 30, 'pos_ocr');
+    ], 30, 'pos_ocr', 'gemini-2.5-flash-lite');
 
     // 인식된 값을 마감정산 필드에 채움
     const fill=(id,val)=>{const el=document.getElementById(id);if(el&&val)el.value=parseInt(val).toLocaleString();};
