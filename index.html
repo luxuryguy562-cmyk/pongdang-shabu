@@ -158,7 +158,8 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-mini.emphasized{text-align:center;align-items:center;}
 .hub-mini.emphasized .hub-mini-amt{font-size:15px;color:var(--success);}
 .hub-mini.emphasized .hub-mini-amt.miss{color:var(--danger);}
-/* 지출 카테고리 그리드 — 가로 2단 (사장님 요청 2026-05-18: 세로 크기 축소) */
+/* 지출 카테고리 그리드 — 2컬럼 + 위 거래채널과 폭·여백 일치 (사장님 요청 2026-05-19) */
+#expHubCatGrid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
 #expHubCatGrid .hub-mini{flex-direction:row;justify-content:space-between;align-items:center;min-height:56px;gap:10px;padding:12px 14px;}
 #expHubCatGrid .hub-mini-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 #expHubCatGrid .hub-mini-icon{margin-bottom:0;}
