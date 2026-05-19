@@ -494,6 +494,28 @@ franchises (프랜차이즈/브랜드)
 | reserve_fixed (int, default 400000) | 예비비 고정액 |
 | reserve_initial_balance (int, default 0) | 예비비 초기 이월 잔고 |
 
+### ai_usage_logs (신규 2026-05-19)
+| 컬럼 | 용도 |
+|------|------|
+| id (UUID, default gen_random_uuid()) | PK |
+| store_id (FK→stores ON DELETE CASCADE) | 매장 |
+| feature (TEXT) | `receipt_ocr` / `pos_ocr` / 기타 |
+| model (TEXT) | 모델명 (예: `gemini-2.5-flash`) |
+| prompt_tokens (INT) | 입력 토큰 |
+| output_tokens (INT) | 출력 토큰 |
+| thinking_tokens (INT) | thinking 토큰 (2.5+ 모델, OFF면 0) |
+| total_tokens (INT) | 전체 |
+| estimated_cost_won (NUMERIC 10,4) | 추정 원 — gemini-2.5-flash 기준 input 420원/1M, output+thinking 3500원/1M |
+| duration_ms (INT) | 응답 시간 |
+| success (BOOLEAN) | 성공 여부 |
+| error_msg (TEXT) | 실패 메시지 |
+| called_at (TIMESTAMPTZ default now()) | 호출 시각 |
+
+- 인덱스: `idx_ai_usage_store_date (store_id, called_at DESC)`, `idx_ai_usage_feature_date (feature, called_at DESC)`
+- 용도: AI API 호출 토큰·비용 추적 + 향후 관리자 대시보드 데이터 소스
+- 마이그레이션: `create_ai_usage_logs_20260519`
+- 롤백: `DROP INDEX idx_ai_usage_*; DROP TABLE ai_usage_logs;`
+
 ## 주의사항
 - **RLS 1차 활성 (2026-04-17 Phase 2b)**: 매장별 22개 테이블 RLS ON + `pd_phase2b_all` 정책
   - 정책: `USING(true) WITH CHECK(store_id IS NOT NULL) FOR ALL TO public`
