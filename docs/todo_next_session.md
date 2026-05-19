@@ -2,31 +2,30 @@
 
 ---
 
-## 🔥🔥🔥 다음 세션 첫 결정 (2026-05-19 마무리 대기) — 거래명세서 OCR 정확도
+## ✅ 2026-05-19 (4) 완료 — 영수증 AI 분석 OCR 제거 + Gemini 단독 + GPT-4o fallback
 
-### 현재 상태
-- Multi-Provider 인프라 완성 (Naver Clova OCR + OpenAI GPT-4o + Gemini 폴백)
-- 거래명세서 정확도 62.5% (10/16) — GPT-mini 6%에서 10배 개선
-- 사장님 호소: "47% 차이는 사용 불가 수준. 어플 살길. 끝까지 정확도 추구"
+### 사장님 결정 (2026-05-19 (4))
+> "ai만 쓰는게 낫다고 보는중 하나만 틀린적도 있고, 요즘 ai 이미지분석 좋아져서 굳이 ocr 쓸 필요가 없다고 판단됨. clova ocr 썻음에도 정확도가 떨어졌었고"
+→ **D안 채택**: Gemini Flash/Lite 단독 (3차 best 회귀) + High demand 시 GPT-4o vision fallback
 
-### 사장님 결정 옵션 (대기 중)
-| # | 안 | 비용/회 | 정확도 기대 | 작업 |
-|---|---|---|---|---|
-| **★ D** | **3차 best 회귀 + Gemini high demand 시 Multi-Provider fallback** | 거래처 6원 / 직구 1원 | **~95%+** (이번 세션 3차 시점 best) | Worker 코드 폴백 로직 |
-| **A** | GPT 2단계 검증 (Worker 코드 추가) | ~15원 | 85~90% | Worker 1회 배포 |
-| **B** | Clova Document 모드 새 도메인 | ~10원 | 90~95% | Naver 새 도메인 + URL 갱신 |
-| **A+B** | 둘 다 | ~20원 | 95%+ | 양쪽 |
-| **C** | 현재 + 사장님 catch 도구 | 5~10원 | 62.5% + 사람 보완 | 0 |
+### 데이터 검증 (사장님 가설 정당)
+- AI 단독 (1·2·3차): 80~95% (3차 best)
+- OCR+AI Hybrid (4·6차): 6% (행 시프트) · 62.5% (GPT-4o full)
+- → **OCR이 정확도 끌어내리는 원흉**. AI 이미지 직접 분석이 안정적.
 
-### D안 상세 (CTO 추천 신설)
-- 이번 세션 **3차 시점 (Gemini 동적 모델)이 정확도 가장 좋았음** — 단가/수량/카테고리 거의 정확, 합계 116,000 vs 115,999 1건만 호소
-- 현재 Multi-Provider 인프라 그대로 두고 **기본 = Gemini, high demand 시 자동 Clova+GPT fallback**
-- 거래처 영수증: 1차 Gemini flash → 실패(high demand) 시 Clova+GPT-4o → 그래도 실패 시 GPT-4o vision
-- 직구·POS: Gemini lite → fallback GPT-mini
-- 116,000 vs 115,999 호소는 designer/coder 후속 조정 (프롬프트 단순 + 합계 박스 catch)
+### 적용 내역 (index.html)
+- `runAI()` provider 분기 단순화: 거래처/직구 모두 `'gemini'` 메인
+  - 거래처 = `gemini-2.5-flash` (3차 best)
+  - 직구·POS = `gemini-2.5-flash-lite` (저렴)
+- Fallback 1회: high demand·과부하·빈응답·JSON 실패 시 → `gpt-4o` vision 단독 (OCR 미사용)
+- 토스트: `🔄 GPT-4o 백업` 프리픽스로 fallback 발동 가시화
+- 프롬프트(BOX/EA, total_sum 박스) 한 글자도 안 건드림 → 3차 정확도 유지
 
-### 진입 트리거
-사장님 "A 진행" 또는 "B 진행" 또는 "A+B" 또는 "C로 받아들이자" 명시
+### 다음 세션 확인 사항
+- [ ] Worker `_provider='gemini'` 응답에 `_modelUsed`·`_costWon` 박는지 ai_usage_logs로 확인
+- [ ] GPT-4o vision 단독 fallback 발동률 추적 (낮으면 무시, 높으면 Gemini Pro 교체 검토)
+- [ ] 사장님 실측 정확도 보고 — 거래명세서 1장 + 직구 영수증 1장 표본
+- [ ] Worker 코드 정리 권고 (Clova OCR 회로 dead code) — 사장님 별도 작업
 
 ---
 
