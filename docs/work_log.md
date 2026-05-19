@@ -4,6 +4,66 @@
 
 ---
 
+## [2026-05-19 (4)+] 영수증 AI 통합 개선 — 다이어트 + p=인쇄값 + Multi-page + 임계값
+
+### 상태: 구현완료 (사장님 실측 검증 대기)
+### 브랜치: `claude/improve-receipt-ai-analysis-CNmn2`
+### 트리거: 사장님 영수증(순창국제 거래명세서) 분석 결과 호소 "정확도 부족" → critic 결과 = AI 행 분석 100% 정확. 진짜 원인 = ① 영수증 "Page (1/2)" 누락 ② AI가 "총합계(외상포함)" 박스 박음 ③ 임계값 5% 너무 느슨 (회계 기준)
+
+### 사장님 결정
+1. OCR 돌아가지 X (Gemini 단독 유지)
+2. Multi-page UI 신설 (사진 수 제한 X)
+3. 모델 자체 안 바꿈 (정확도 위험). 프롬프트 다이어트로 비용 ↓
+4. 해상도 1600 → 1280 다운사이즈 (Clova OCR 때문에 1600 올렸음. AI vision은 768 tile 단위라 영향 작음)
+5. u×q=p 검증 그대로 유지 (비용 0원 클라 JS, 안전망)
+6. 임계값 5% → max(100원, 0.5%) (회계 기준 5% 너무 느슨)
+7. "p = 영수증 인쇄값 그대로" 프롬프트 박음 (116,000 vs 115,999 사장님 호소 ② catch)
+
+### 작업 내역 (index.html)
+- 전역 `b64` (단일) → `b64Pages` (배열) 전환
+- HTML: 멀티페이지 썸네일 영역 (`#rcpPagesArea` 가로 스크롤 + ✕ 삭제) + 페이지 감지 박스 (`#rcpPageInfoBox`)
+- 신설 함수: `_renderRcpPages()`, `removeRcpPage(idx)`, `_updateRcpActionLabel()`
+- 수정 함수: `handleImg` (1280px + append + 마지막 사진 미리보기), `rcpRePickImage` (전체 초기화), `resetRcpMode` / `manualReceipt` (b64Pages 초기화), `_renderRcpSumCheck` (pageInfo + photoCount 처리, ⏳/✅ 표시), `runAI` (multi-image parts + 프롬프트 다이어트 + page_info 응답 + 임계값 갱신 + 토스트 페이지 표시)
+- 프롬프트 변경:
+  - 11개 규칙 → 핵심 4줄로 통합 (입력 토큰 ~30% ↓)
+  - `p = 영수증 [합계] 컬럼 인쇄값 그대로` 명시 (회계 증빙 우선)
+  - `total_sum` 우선순위 정정: 금일합계 > 합계액 > 결제금액 (전미수/총합계/잔액 무시)
+  - `page_info: {current, total}` 응답 추가
+  - `multiPageHint` 동적 추가 (사진 N장 = 같은 영수증 통합 분석)
+  - 예시 = 사장님 실제 영수증 케이스 (집게피쉬볼 115,999 vs 116,000)
+
+### DB 변경
+없음
+
+### 비용 예상 (다이어트 30% + 해상도 20% = ~40% 절감)
+| 시나리오 | 새 비용 | 옛 비용 |
+|---|---|---|
+| 거래처 1장 | ~3~4원 | ~6원 |
+| 거래처 2장 (2페이지) | ~5~6원 | — |
+| 거래처 3장 | ~8~9원 | — |
+| 직구 1장 | ~0.5원 | ~1원 |
+| Fallback 발동 | +5~8원 추가 | — |
+
+### High Demand 처리
+- callGemini 내부 3회 백오프 재시도 (1s/2s/4s)
+- 다 실패 → GPT-4o vision 자동 fallback 1회 (timeoutSec+15초)
+- 사용자 측 실패율 0%에 가까움 (Gemini OR GPT-4o 둘 중 응답)
+- 빈도 = ai_usage_logs로 다음 세션에 측정
+
+### 검증
+- node --check 통과 (604,308자 JS)
+- 단일 b64 변수 잔재 0건 (b64Pages·b64Part로 통일)
+- DB 변경 없음
+
+### 다음 세션 확인
+- 사장님 실측: 1페이지 영수증 / 2페이지 영수증 / 직구 영수증 각 1장씩
+- ai_usage_logs로 실제 토큰·비용·정확도 측정
+- 1280px 다운사이즈 정확도 영향 확인 (작은 글씨 식별)
+- Page (N/M) 감지 false negative 비율
+- GPT-4o vision 단독 fallback 정확도 (high demand 발동 시)
+
+---
+
 ## [2026-05-19 (4)] 영수증 AI 분석 — OCR 제거 + Gemini 단독 + GPT-4o vision fallback
 
 ### 상태: 구현완료 (사장님 실측 검증 대기)
