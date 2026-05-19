@@ -802,6 +802,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <path d="m3.3 7 8.7 5 8.7-5"/>
       <path d="M12 22V12"/>
     </symbol>
+    <symbol id="i-wine" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 22h8"/>
+      <path d="M7 10h10"/>
+      <path d="M12 15v7"/>
+      <path d="M12 15a5 5 0 0 0 5-5V3H7v7a5 5 0 0 0 5 5z"/>
+    </symbol>
+    <symbol id="i-cup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+      <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+      <line x1="6" x2="6" y1="2" y2="4"/>
+      <line x1="10" x2="10" y1="2" y2="4"/>
+      <line x1="14" x2="14" y1="2" y2="4"/>
+    </symbol>
     <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M3 12L12 3l9 9"/>
       <path d="M5 10v10h14V10"/>
@@ -1416,61 +1429,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="hub-mini-sub" id="expMiniDirectSub">이번달</span>
     </button>
   </div>
-  <!-- 카테고리 (영수증·수동입력 자동 합산) -->
-  <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">📦 카테고리 <span style="font-weight:500;color:var(--gray-400);">(영수증·수동입력 자동 합산)</span></div>
+  <!-- 지출 카테고리 (동적 렌더링) — JS renderExpHubCatCards가 채움 -->
+  <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">📦 지출 카테고리 <span style="font-weight:500;color:var(--gray-400);">(드래그로 순서 변경)</span></div>
   <div class="hub-grid" id="expHubCatGrid">
-    <button type="button" class="hub-mini" data-card-id="food" data-action="openCatReceipt|food">
-      <span class="hub-mini-icon"><svg><use href="#i-leaf"/></svg></span>
-      <span class="hub-mini-title">식자재</span>
-      <span class="hub-mini-amt" id="expMiniFood">-</span>
-      <span class="hub-mini-sub" id="expMiniFoodSub">이번달</span>
-    </button>
-    <button type="button" class="hub-mini" data-card-id="supplies" data-action="openCatReceipt|supplies">
-      <span class="hub-mini-icon"><svg><use href="#i-box"/></svg></span>
-      <span class="hub-mini-title">비품</span>
-      <span class="hub-mini-amt" id="expMiniSupplies">-</span>
-      <span class="hub-mini-sub" id="expMiniSuppliesSub">이번달</span>
-    </button>
-    <button type="button" class="hub-mini" data-card-id="etcExp" data-action="openCatReceipt|etc">
-      <span class="hub-mini-icon"><svg><use href="#i-folder"/></svg></span>
-      <span class="hub-mini-title">기타</span>
-      <span class="hub-mini-amt" id="expMiniEtc">-</span>
-      <span class="hub-mini-sub" id="expMiniEtcSub">이번달</span>
-    </button>
-  </div>
-  <!-- 정기·계산 지출 -->
-  <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">💰 정기·계산 지출</div>
-  <div class="hub-grid" id="expHubFixedGrid">
-    <button type="button" class="hub-mini" data-card-id="wage" data-action="nav|wage">
-      <span class="hub-mini-icon"><svg><use href="#i-clock"/></svg></span>
-      <span class="hub-mini-title">인건비</span>
-      <span class="hub-mini-amt" id="expMiniWage">-</span>
-      <span class="hub-mini-sub" id="expMiniWageSub">이번달</span>
-    </button>
-    <button type="button" class="hub-mini" data-card-id="fixedcost" data-action="nav|fixedcost">
-      <span class="hub-mini-icon"><svg><use href="#i-calendar"/></svg></span>
-      <span class="hub-mini-title">고정비</span>
-      <span class="hub-mini-amt" id="expMiniFixed">-</span>
-      <span class="hub-mini-sub" id="expMiniFixedSub">월 예상</span>
-    </button>
-    <button type="button" class="hub-mini" data-card-id="royalty" data-action="nav|royalty">
-      <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
-      <span class="hub-mini-title">로열티</span>
-      <span class="hub-mini-amt" id="expMiniRoyalty">-</span>
-      <span class="hub-mini-sub" id="expMiniRoyaltySub">매출 × 요율</span>
-    </button>
-    <button type="button" class="hub-mini" data-card-id="marketing" data-action="goCategoryDetail|마케팅">
-      <span class="hub-mini-icon"><svg><use href="#i-megaphone"/></svg></span>
-      <span class="hub-mini-title">마케팅</span>
-      <span class="hub-mini-amt" id="expMiniMarketing">-</span>
-      <span class="hub-mini-sub" id="expMiniMarketingSub">이번달</span>
-    </button>
-    <button type="button" class="hub-mini" data-card-id="tax" data-action="goCategoryDetail|세금">
-      <span class="hub-mini-icon"><svg><use href="#i-document"/></svg></span>
-      <span class="hub-mini-title">세금</span>
-      <span class="hub-mini-amt" id="expMiniTax">-</span>
-      <span class="hub-mini-sub" id="expMiniTaxSub">이번달</span>
-    </button>
+    <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>
   </div>
   <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:18px 0 6px 4px;">🔧 도구</div>
   <button type="button" class="hub-full" data-action="nav|explist">
@@ -4116,16 +4078,21 @@ async function loadCatReceiptData(){
   const totalEl = document.getElementById('catReceiptTotal');
   const titleEl = document.getElementById('catReceiptTitle');
   const iconEl = document.getElementById('catReceiptIcon');
-  // 모드별 헤더
-  const modeMeta = {
-    direct:   {title:'직구',   icon:'🛒'},
-    food:     {title:'식자재', icon:'🥬'},
-    supplies: {title:'비품',   icon:'📦'},
-    etc:      {title:'기타',   icon:'📂'},
-  };
-  const meta = modeMeta[catReceiptMode] || modeMeta.direct;
-  titleEl.textContent = meta.title;
-  iconEl.textContent = meta.icon;
+  // 헤더 (모드 = 'direct' 또는 'cat:<id>')
+  let title = '', iconEmoji = '🛒';
+  let catParent = null;
+  if(catReceiptMode === 'direct'){
+    title = '직구'; iconEmoji = '🛒';
+  } else if(catReceiptMode.startsWith('cat:')){
+    const cid = catReceiptMode.split(':')[1];
+    catParent = (expCategories||[]).find(c=>c.id===cid);
+    title = catParent?.name || '카테고리';
+    // 카테고리 이름별 이모지 매핑 (없으면 폴더)
+    const iconEmojiMap = {'식자재':'🥬','비품':'📦','기타':'📂','주류':'🍶','음료':'🥤','마케팅':'📢','세금':'💰','인건비':'⏰','고정비':'📅','공과금/고정비':'📅'};
+    iconEmoji = iconEmojiMap[title] || '📂';
+  }
+  titleEl.textContent = title;
+  iconEl.textContent = iconEmoji;
   body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
   const [y,m] = catReceiptMonth.split('-').map(Number);
   const lastDay = new Date(y,m,0).getDate();
@@ -4135,32 +4102,17 @@ async function loadCatReceiptData(){
     .eq('store_id', currentStore.id)
     .gte('receipt_date', start).lte('receipt_date', end)
     .order('receipt_date', {ascending:false});
-  // 모드별 쿼리
   if(catReceiptMode === 'direct'){
     q = q.is('vendor_id', null);
-  } else if(catReceiptMode === 'food'){
-    const ids = _collectCatIdsByName('식자재');
-    if(!ids.length){
-      body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">식자재 카테고리가 없어요</div>';
+  } else if(catReceiptMode.startsWith('cat:')){
+    // 카테고리 parent + 자식 모두 포함
+    if(!catParent){
+      body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">카테고리를 찾을 수 없어요</div>';
       totalEl.textContent = '이번달 0원 · 0건';
       return;
     }
-    q = q.in('category_id', ids);
-  } else if(catReceiptMode === 'supplies'){
-    const ids = _collectCatIdsByName('비품');
-    if(!ids.length){
-      body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">비품 카테고리가 없어요</div>';
-      totalEl.textContent = '이번달 0원 · 0건';
-      return;
-    }
-    q = q.in('category_id', ids);
-  } else if(catReceiptMode === 'etc'){
-    const ids = _collectCatIdsByName('기타');
-    if(!ids.length){
-      body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">기타 카테고리가 없어요</div>';
-      totalEl.textContent = '이번달 0원 · 0건';
-      return;
-    }
+    const childIds = (expCategories||[]).filter(c=>c.parent_id===catParent.id).map(c=>c.id);
+    const ids = [catParent.id, ...childIds];
     q = q.in('category_id', ids);
   }
   const {data, error} = await q;
@@ -12478,6 +12430,70 @@ function initExpHubSortable(){
     onEnd:saveExpHubCardOrder
   });
 }
+
+// ─── 지출 카테고리 그리드 동적 렌더링 (사장님 결정 2026-05-18 B안) ───
+// 활성 expense parent 카테고리 + 로열티 카드 = JS가 동적 생성
+// 카테고리 추가·삭제·순서 = DB 단일 진실, 그리드 자동 반영
+// 카드 아이콘 = 카테고리 이름별 svg 매핑, 없으면 fallback
+const _expCatIconMap = {
+  '식자재':'i-leaf', '비품':'i-box', '기타':'i-folder',
+  '인건비':'i-clock', '고정비':'i-calendar', '공과금/고정비':'i-calendar',
+  '마케팅':'i-megaphone', '세금':'i-document',
+  '주류':'i-wine', '음료':'i-cup',
+  '로열티':'i-coins',
+};
+function _expCatIcon(name){ return _expCatIconMap[name] || 'i-folder'; }
+
+// 카테고리 카드 클릭 시 어디로? (data_source 기반)
+//   - receipts/composite/vendor_orders → openCatReceipt|cat:<id> (표 + 필터)
+//   - attendance → nav|wage
+//   - fixed_costs → nav|fixedcost
+//   - manual → goCategoryDetail|<name> (잠시 기존 — 사장님 결정 9·10 뒤로)
+function _expCatAction(cat){
+  const ds = cat.data_source || 'manual';
+  if(ds==='attendance') return 'nav|wage';
+  if(ds==='fixed_costs') return 'nav|fixedcost';
+  if(ds==='manual') return 'goCategoryDetail|'+cat.name;
+  // receipts / composite / vendor_orders
+  return 'openCatReceipt|cat:'+cat.id;
+}
+
+function renderExpHubCatCards(catSums){
+  const grid = document.getElementById('expHubCatGrid');
+  if(!grid) return;
+  // 활성 expense parent 카테고리 (사장님 결정: 지출 대분류만)
+  const parents = (expCategories||[]).filter(c=>
+    !c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense'
+  ).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  let html = '';
+  parents.forEach(cat=>{
+    const amt = catSums?.[cat.id]?.amount || 0;
+    const cnt = catSums?.[cat.id]?.count || 0;
+    const sub = cnt ? `${cnt}건 · 이번달` : '이번달';
+    html += `<button type="button" class="hub-mini" data-card-id="cat-${cat.id}" data-action="${_expCatAction(cat)}">
+      <span class="hub-mini-icon"><svg><use href="#${_expCatIcon(cat.name)}"/></svg></span>
+      <span class="hub-mini-title">${esc(cat.name)}</span>
+      <span class="hub-mini-amt">${amt?fmt(amt):'0'}</span>
+      <span class="hub-mini-sub">${sub}</span>
+    </button>`;
+  });
+  // 로열티 카드 (카테고리 X — 매출 × 요율 계산 기반)
+  const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
+  const royaltyRate = (catSums && catSums._royalty) ? catSums._royalty.rate : 0;
+  const royaltySub = royaltyRate>0 ? `${(royaltyRate*100).toFixed(1)}% · 이번달` : '요율 미설정';
+  html += `<button type="button" class="hub-mini" data-card-id="royalty" data-action="nav|royalty">
+    <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
+    <span class="hub-mini-title">로열티</span>
+    <span class="hub-mini-amt">${royaltyAmt?fmt(royaltyAmt):'-'}</span>
+    <span class="hub-mini-sub">${royaltySub}</span>
+  </button>`;
+  grid.innerHTML = html;
+  // 카드 생성 후 순서·드래그 적용
+  applyExpHubCardOrder();
+  // Sortable 재초기화 (이전 인스턴스 무효 처리)
+  grid._sortableInited = false;
+  initExpHubSortable();
+}
 async function saveExpHubCardOrder(){
   if(!currentStore) return;
   const grid=document.getElementById('expHubCatGrid');
@@ -12494,9 +12510,8 @@ async function saveExpHubCardOrder(){
 // 2026-05-15 최적화: 직렬 await 8개 → Promise.all 1번 묶음 (사장님 "엄청 느림" 호소)
 async function loadExpHubData(){
   if(!currentStore) return;
-  // 카드 순서 즉시 적용 — settings 캐시 활용, DB fetch 기다리지 말고 (사장님 호소: stale)
-  applyExpHubCardOrder();
-  initExpHubSortable();
+  // 동적 그리드: expCategories 없으면 자리만 표시 (백그라운드 로드 후 재진입 시 카드 노출)
+  // 카드 생성·순서 적용은 합산 끝나고 renderExpHubCatCards 안에서.
   const sid=currentStore.id;
   const ym=new Date().toISOString().slice(0,7);
   const [y,m]=ym.split('-').map(Number);
@@ -12517,154 +12532,128 @@ async function loadExpHubData(){
     setText('expFullCat', `활성 ${list.length}개`);
   }catch(e){}
 
-  // 카테고리별 id 풀 — parent + 자식 통합 (사장님이 소분류 추가해도 자동 반영)
-  // ⚠️ "기타" 카테고리가 중복 생성된 매장 발견(2026-05-18) → 같은 이름 parent 모두 포함
-  const collectCatIds = (name)=>{
-    const parents = (expCategories||[]).filter(c=>c.name===name && !c.parent_id);
-    const ids = [];
-    parents.forEach(p=>{
-      ids.push(p.id);
-      (expCategories||[]).filter(c=>c.parent_id===p.id).forEach(ch=>ids.push(ch.id));
-    });
-    return ids;
-  };
-  const marketingCat=(expCategories||[]).find(c=>c.name==='마케팅' && !c.parent_id);
-  const taxCat=(expCategories||[]).find(c=>c.name==='세금' && !c.parent_id);
-  const ecaCatIds=[marketingCat?.id, taxCat?.id].filter(Boolean);
-  const foodAllIds = collectCatIds('식자재');
-  const suppliesAllIds = collectCatIds('비품');
-  const etcAllIds = collectCatIds('기타');
+  // 활성 expense parent 카테고리 (사장님 결정 B안: 동적 그리드)
+  const expCats = expCategories || [];
+  const activeParents = expCats.filter(c=>
+    !c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense'
+  ).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
 
-  // ━━ 모든 DB 호출 병렬 발사 (직렬 8회 → 1회 Promise.all) ━━
-  // 2026-05-18: settlements 추가 (인건비 차감 합산 통일)
-  // 2026-05-18: receipts SELECT에 vendor_id, category_id 추가 (직구·기타 카드 합산용)
-  const [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdCntRes, recCntRes, setRes, voRes] = await Promise.all([
+  // ━━ Promise.all (mydata는 select로 변경 — 카테고리별 매칭 위해) ━━
+  const [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes] = await Promise.all([
     sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
     sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
     sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
     sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle(),
-    ecaCatIds.length
-      ? sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym).in('category_id',ecaCatIds)
-      : Promise.resolve({data:[]}),
+    sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym),
     sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
-    sb.from('mydata_transactions').select('id',{count:'exact',head:true}).eq('store_id',sid).gte('tx_date',start).lte('tx_date',end),
+    sb.from('mydata_transactions').select('category_id,amount').eq('store_id',sid).gte('tx_date',start).lte('tx_date',end),
     sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending'),
     sb.from('settlements').select('items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end),
     sb.from('vendor_orders').select('vendor_id,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end)
   ]);
 
-  // 영수증 → 그리드 4섹션 합산 (한 번에 분류)
-  // ⚠️ designer 새 안: 거래방법(거래처/직구) ↔ 카테고리(식자재/비품/기타) = 다른 차원
-  //    한 영수증이 거래방법 카드 + 카테고리 카드 양쪽에 잡혀도 정상 (차원 분리)
+  // ── 영수증 hero info (전체 합) ──
   try{
     const rc=rcRes.data||[];
-    let cnt=0, sum=0;
-    let directSum=0, directCnt=0;
-    let foodSum=0, foodCnt=0;
-    let suppliesSum=0, suppliesCnt=0;
-    let etcSum=0, etcCnt=0;
-    const foodIdSet = new Set(foodAllIds);
-    const suppliesIdSet = new Set(suppliesAllIds);
-    const etcIdSet = new Set(etcAllIds);
-    rc.forEach(r=>{
-      const amt = r.total_price||0;
-      cnt++; sum += amt;
-      if(!r.vendor_id){ directSum += amt; directCnt++; }
-      if(r.category_id){
-        if(foodIdSet.has(r.category_id)){ foodSum += amt; foodCnt++; }
-        else if(suppliesIdSet.has(r.category_id)){ suppliesSum += amt; suppliesCnt++; }
-        else if(etcIdSet.has(r.category_id)){ etcSum += amt; etcCnt++; }
-      }
-    });
-    // ⚠️ 거래처 vendor_orders도 카테고리 카드에 합산 (사장님 통찰 2번)
-    //    vendor.category_id로 매핑 → 식자재/비품/기타 카드에 거래처 합산 포함
-    const vendorCatMap = {};
-    (vendors||[]).forEach(v=>{ vendorCatMap[v.id] = v.category_id; });
-    (voRes.data||[]).forEach(o=>{
-      if(!o.vendor_id) return;
-      const catId = vendorCatMap[o.vendor_id];
-      if(!catId) return;
-      const amt = o.amount||0;
-      if(foodIdSet.has(catId)){ foodSum += amt; foodCnt++; }
-      else if(suppliesIdSet.has(catId)){ suppliesSum += amt; suppliesCnt++; }
-      else if(etcIdSet.has(catId)){ etcSum += amt; etcCnt++; }
-    });
+    const cnt=rc.length, sum=rc.reduce((a,r)=>a+(r.total_price||0),0);
     setText('expHeroInfo', cnt>0?`이번달 ${cnt}건 · ${fmt(sum)}원`:'사진 자동 분류');
+  }catch(e){setText('expHeroInfo','사진 자동 분류');}
+
+  // ── 거래 채널 직구 카드 (vendor_id NULL 영수증) ──
+  try{
+    const rc=rcRes.data||[];
+    let directSum=0, directCnt=0;
+    rc.forEach(r=>{ if(!r.vendor_id){ directSum += r.total_price||0; directCnt++; } });
     setText('expMiniDirect', directSum?fmt(directSum):'0');
     setText('expMiniDirectSub', directCnt?`${directCnt}건 · 이번달`:'이번달');
-    setText('expMiniFood', foodSum?fmt(foodSum):'0');
-    setText('expMiniFoodSub', foodCnt?`${foodCnt}건 · 이번달`:'이번달');
-    setText('expMiniSupplies', suppliesSum?fmt(suppliesSum):'0');
-    setText('expMiniSuppliesSub', suppliesCnt?`${suppliesCnt}건 · 이번달`:'이번달');
-    setText('expMiniEtc', etcSum?fmt(etcSum):'0');
-    setText('expMiniEtcSub', etcCnt?`${etcCnt}건 · 이번달`:'이번달');
-  }catch(e){
-    setText('expHeroInfo','사진 자동 분류');
-    setText('expMiniDirect','-'); setText('expMiniFood','-');
-    setText('expMiniSupplies','-'); setText('expMiniEtc','-');
-  }
+  }catch(e){setText('expMiniDirect','-');}
 
-  // 고정비 (마케팅/세금 합산용 fcByCat도 여기서 구성)
-  const fcByCat={};
-  try{
-    const rows=(fcRes.data||[]).filter(r=>r.is_active!==false);
-    rows.forEach(r=>{
-      const c=r.category||'고정비';
-      fcByCat[c]=(fcByCat[c]||0)+(r.estimated_monthly||0);
-    });
-    const fixedSum=(fcByCat['고정비']||0)+(fcByCat['공과금']||0);
-    const fixedCnt=rows.filter(r=>['고정비','공과금'].includes(r.category||'고정비')).length;
-    setText('expMiniFixed', fmt(fixedSum));
-    setText('expMiniFixedSub', `${fixedCnt}개 항목`);
-  }catch(e){setText('expMiniFixed','-');}
+  // ── 동적 카테고리 카드 합산 ──
+  // 데이터 소스별 맵 미리 구성
+  const vendorCatMap = {};
+  (vendors||[]).forEach(v=>{ vendorCatMap[v.id]=v.category_id; });
+  const fcByCatText = {};
+  (fcRes.data||[]).filter(r=>r.is_active!==false).forEach(r=>{
+    const c=r.category||'고정비';
+    fcByCatText[c]=(fcByCatText[c]||0)+(r.estimated_monthly||0);
+  });
+  const ecaByCat = {};
+  (ecaRes.data||[]).forEach(r=>{ ecaByCat[r.category_id]=(ecaByCat[r.category_id]||0)+(r.amount||0); });
+  const mdByCat = {};
+  (mdRes.data||[]).forEach(t=>{
+    if(!t.category_id) return;
+    mdByCat[t.category_id]=(mdByCat[t.category_id]||0)+Math.abs(t.amount||0);
+  });
 
-  // 로열티: sales_daily × store_settings.royalty_rate
+  const catSums = {};
+  activeParents.forEach(p=>{
+    const childIds = expCats.filter(c=>c.parent_id===p.id).map(c=>c.id);
+    const ids = new Set([p.id, ...childIds]);
+    let amt = 0, cnt = 0;
+    const ds = p.data_source || 'manual';
+
+    // 영수증 + 거래처 주문 (receipts / composite / vendor_orders)
+    if(ds==='receipts' || ds==='composite' || ds==='vendor_orders'){
+      (rcRes.data||[]).forEach(r=>{
+        if(r.category_id && ids.has(r.category_id)){ amt += r.total_price||0; cnt++; }
+      });
+      (voRes.data||[]).forEach(o=>{
+        const cid = vendorCatMap[o.vendor_id];
+        if(cid && ids.has(cid)){ amt += o.amount||0; cnt++; }
+      });
+    }
+    // 인건비 (attendance + 마감 차감 인건비)
+    else if(ds==='attendance'){
+      amt = (alRes.data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);
+      (setRes.data||[]).forEach(s=>{
+        (s.items_json?.deductions||[]).forEach(d=>{
+          if(d.category_id && ids.has(d.category_id) && d.amount){ amt+=Number(d.amount); }
+        });
+      });
+      cnt = new Set((alRes.data||[]).map(r=>r.employee_id).filter(Boolean)).size;
+    }
+    // 고정비 (fixed_costs.category 텍스트 매칭)
+    else if(ds==='fixed_costs'){
+      (fcRes.data||[]).filter(r=>r.is_active!==false).forEach(r=>{
+        const c=r.category||'고정비';
+        // 공과금/고정비 같이 슬래시 포함 경우도 매칭
+        if(c===p.name || (p.name.includes('/') && p.name.split('/').includes(c))){
+          amt += r.estimated_monthly||0;
+          cnt++;
+        }
+      });
+    }
+    // manual (expense_category_amounts + mydata 자동 매칭)
+    else { // 'manual' 또는 기타
+      ids.forEach(id=>{
+        amt += ecaByCat[id]||0;
+        amt += mdByCat[id]||0;
+      });
+    }
+    catSums[p.id] = {amount: amt, count: cnt, cat: p};
+  });
+
+  // 로열티 (카테고리 X — 매출 × 요율)
   try{
     const sd=sdRes.data||[];
     const totalRev=sd.reduce((a,r)=>a+(typeof salesRowTotal==='function'?salesRowTotal(r):(r.card||0)+(r.cash||0)+(r.cash_receipt||0)+(r.qr||0)+(r.etc||0)+(r.extra_large||0)+(r.extra_small||0)),0);
     const rate=parseFloat(ssRes.data?.royalty_rate||0)/100;
-    const royaltyAmt=Math.round(totalRev*rate);
-    setText('expMiniRoyalty', rate>0?fmt(royaltyAmt):'-');
-    setText('expMiniRoyaltySub', rate>0?`${(rate*100).toFixed(1)}%`:'요율 미설정');
-  }catch(e){setText('expMiniRoyalty','-');}
+    catSums._royalty = {amount: Math.round(totalRev*rate), rate: rate};
+  }catch(e){ catSums._royalty = {amount:0, rate:0}; }
 
-  // 마케팅/세금: fcByCat + ecaByCat 합산
-  const ecaByCat={};
-  (ecaRes.data||[]).forEach(r=>{ecaByCat[r.category_id]=(ecaByCat[r.category_id]||0)+(r.amount||0);});
-  const renderCatCard=(catName, catObj, amtId, subId)=>{
-    try{
-      const ecaSum=catObj?(ecaByCat[catObj.id]||0):0;
-      const fcSum=fcByCat[catName]||0;
-      const sum=fcSum+ecaSum;
-      setText(amtId, sum?fmt(sum):'0');
-      setText(subId, '이번달');
-    }catch(e){setText(amtId,'-');}
-  };
-  renderCatCard('마케팅', marketingCat, 'expMiniMarketing', 'expMiniMarketingSub');
-  renderCatCard('세금', taxCat, 'expMiniTax', 'expMiniTaxSub');
+  // ── 카드 동적 생성 (활성 expense parent + 로열티) ──
+  renderExpHubCatCards(catSums);
 
-  // 인건비 (2026-05-18 통일: attendance_logs + 차감 인건비 매칭)
+  // ── 카테고리 활성 개수 (도구 영역 분류 관리 부제) ──
   try{
-    const al=alRes.data||[];
-    let sum=al.reduce((a,r)=>a+(r.calculated_wage||0),0);
-    const emps=new Set(al.map(r=>r.employee_id).filter(Boolean));
-    // 인건비 카테고리(부모+자식) 매칭 차감 합산
-    const _laborCat=(expCategories||[]).find(c=>c.data_source==='attendance'&&!c.parent_id);
-    if(_laborCat){
-      const _laborIds=new Set([_laborCat.id, ...((expCategories||[]).filter(c=>c.parent_id===_laborCat.id).map(c=>c.id))]);
-      (setRes.data||[]).forEach(s=>{
-        (s.items_json?.deductions||[]).forEach(d=>{
-          if(d.category_id && _laborIds.has(d.category_id) && d.amount){ sum+=Number(d.amount); }
-        });
-      });
-    }
-    setText('expMiniWage', fmt(sum));
-    setText('expMiniWageSub', `${emps.size}명`);
-  }catch(e){setText('expMiniWage','-');}
+    const list = expCats.filter(c=>c.is_active!==false);
+    setText('expFullCat', `활성 ${list.length}개`);
+  }catch(e){}
 
-  // 계좌·카드 / 정산 대조 (count head 결과)
+  // ── 계좌·카드 / 정산 대조 (도구 영역) ──
   try{
-    setText('expMiniMydataSub', mdCntRes.count?`이번달 ${mdCntRes.count}건 자동 수집`:'자동 수집');
+    const mdCnt = (mdRes.data||[]).length;
+    setText('expMiniMydataSub', mdCnt?`이번달 ${mdCnt}건 자동 수집`:'자동 수집');
   }catch(e){setText('expMiniMydataSub','자동 수집');}
   try{
     setText('expMiniReconSub', recCntRes.count?`${recCntRes.count}건 검토 필요`:'예상 vs 실제 매출·지출 대조');
@@ -12736,11 +12725,12 @@ function completeLogin(emp){
     Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>{
       recalcSettle2();
       if(rcpRet.startsWith('catReceipt:')){
-        catReceiptMode = rcpRet.split(':')[1];
+        // catReceiptMode가 'direct' 또는 'cat:<uuid>' 형태 → 콜론 2개 가능, slice로 받음
+        catReceiptMode = rcpRet.slice('catReceipt:'.length);
         nav('catReceipt');
         toast('영수증 저장 완료','success');
       } else if(rcpRet.startsWith('vendors:')){
-        const vid = rcpRet.split(':')[1];
+        const vid = rcpRet.slice('vendors:'.length);
         nav('vendors');
         if(vid && vid !== 'null') setTimeout(()=>openVendorDetail(vid), 300);
         toast('영수증 저장 완료','success');
