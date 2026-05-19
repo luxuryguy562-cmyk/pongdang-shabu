@@ -3599,7 +3599,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let lastAIUsage = null; // 최근 AI 호출 토큰·비용 (토스트용)
 // Gemini 모델별 가격 (환율 1400원/$ 기준, 2026-05 공식 가격)
 // 사장님이 Worker 모델 교체 시 _CURRENT_GEMINI_MODEL도 같이 변경
-const _CURRENT_GEMINI_MODEL = 'gemini-2.0-flash-lite'; // Worker와 일치 (2026-05-19 사장님 결정 ③ — 비용 다이어트 A안)
+const _CURRENT_GEMINI_MODEL = 'gemini-2.5-flash-lite'; // Worker와 일치 (2026-05-19 사장님 결정 ③ — 2.0-flash-lite 신규 차단됐고 2.5-flash-lite로 정착)
 const _GEMINI_PRICING = {
   'gemini-2.5-flash':       { in:  420, out: 3500 }, // $0.30 / $2.50 per 1M
   'gemini-2.5-flash-lite':  { in:  140, out:  560 }, // $0.10 / $0.40 per 1M
@@ -4622,8 +4622,8 @@ async function runAI() {
     // 옛 키: date,vendor,item,unitPrice,qty,totalPrice,category → 새 키: d,v,i,u,q,p,c
     // 거래처 모드: v="" + c 생략 (클라이언트가 박음) — 출력 토큰 30~50% 절감
     const modeHint = isVendorModeAI
-      ? `\n[모드: 거래처 — 매우 중요]\n- 거래처 = "${rcpVendorName}" 이미 선택됨. v="" 박을 것 (출력 안 함)\n- c 필드 생략 가능 (모든 행 카테고리 동일, 클라이언트가 박음)\n- 거래명세서 양식이면 단가(u)·수량(q)·합계(p) 정확히 추출`
-      : `\n[모드: 직구]\n- 마트·배민 등. 한 영수증에 카테고리 섞임. 품목별 c를 [${catList}]에서 정확히 골라`;
+      ? `\n[모드: 거래처 — 매우 중요]\n- 거래처 = "${rcpVendorName}" 이미 선택됨. v="" 박을 것 (출력 안 함)\n- c 필드 생략 가능 (모든 행 카테고리 동일, 클라이언트가 박음)\n- 거래명세서 양식 BOX/EA 시스템 ⚠️ 정확히 이해할 것:\n  · "단위" 컬럼 = 1박스 안 개수 (예: 20=1박스에 20개)\n  · "BOX" 컬럼 = 박스 수\n  · "EA" 컬럼 = 박스 제외 단품 추가 수\n  · 총 수량 q = (BOX × 단위) + EA\n  · 예) 단위 20, BOX 1, EA 10 → q = (1×20)+10 = 30\n  · 예) 단위 20, BOX 0, EA 10 → q = (0×20)+10 = 10\n- u(단가) × q(총수량) = p(합계) 반드시 검증\n  · 어긋나면 q 또는 p 잘못 — OCR 다시 추정 (BOX/EA 컬럼 위치 확인)\n  · 영수증 합계에 단가가 들어가는 경우 = 잘못 (예: 합계 컬럼 자리에 2,151 박힘 = 21,500이 정답일 가능성)`
+      : `\n[모드: 직구]\n- 마트·배민 등. 한 영수증에 카테고리 섞임. 품목별 c를 [${catList}]에서 정확히 골라\n- 단가/수량 보이면 u × q = p 검증`;
     const prompt=`한국 영수증을 JSON 배열로만 응답. 설명/주석 금지. 비용 절감 위해 키는 짧게 사용.
 ${modeHint}
 
@@ -4653,9 +4653,13 @@ ${modeHint}
 [
  {"d":"2025-08-13","v":"대봄야채","i":"양파 10kg","u":15000,"q":2,"p":30000,"c":"식자재>야채"},
  {"d":"2025-08-13","v":"이마트","i":"휴지 30롤","u":null,"q":1,"p":12900,"c":"비품"},
- {"d":"2026-04-09","v":"","i":"위즈복대-날치알 500g","u":9400,"q":30,"p":282000}
+ {"d":"2026-04-09","v":"","i":"위즈복대-날치알 500g","u":9400,"q":30,"p":282000},
+ {"d":"2026-04-09","v":"","i":"연근모양분모자 500g","u":2151,"q":10,"p":21500}
 ]
-(마지막 예시 = 거래처 모드: v="" + c 생략)`;
+(마지막 2개 = 거래처 모드 BOX/EA 시스템:
+ · 위즈복대: 단위 20, BOX 1, EA 10 → q=30, p=9400×30=282,000
+ · 연근모양분모자: 단위 20, BOX 0, EA 10 → q=10, p=2151×10≈21,500 (영수증 반올림)
+ → "단위 × BOX + EA" 공식 정확히 적용. 합계가 단가와 비슷한 작은 수면 OCR 잘못 = 재추정)`;
     let raw=await callGemini([
       {text:prompt},
       {inline_data:{mime_type:'image/jpeg',data:b64}}
@@ -4673,6 +4677,24 @@ ${modeHint}
     }));
     // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
     list=await applyRulesToReceipt(list);
+    // 합계 검증 — u × q ≠ p 차이 5% 이상이면 의심 행 표시 (2026-05-19 사장님 호소: 연근모양분모자 21,500을 2,151로 박은 사고)
+    // 사장님이 시각으로 인지하게 안내 (학습은 안 함, 그냥 경고)
+    const suspectRows = [];
+    list.forEach((it,idx)=>{
+      const u = parseFloat(it.unitPrice)||0;
+      const q = parseFloat(it.qty)||0;
+      const p = parseFloat(it.totalPrice)||0;
+      if(u>0 && q>0 && p>0){
+        const calc = u*q;
+        const diff = Math.abs(calc-p)/Math.max(calc,p);
+        if(diff>0.05){ suspectRows.push({idx:idx+1, item:it.item, u, q, p, calc:Math.round(calc)}); }
+      }
+    });
+    if(suspectRows.length){
+      const detail = suspectRows.slice(0,3).map(s=>`${s.idx}행 "${s.item.slice(0,12)}": ${fmt(s.u)}×${s.q}=${fmt(s.calc)} ≠ ${fmt(s.p)}`).join('\n');
+      const more = suspectRows.length>3?`\n외 ${suspectRows.length-3}건`:'';
+      toast(`⚠️ 단가×수량 ≠ 합계 의심 ${suspectRows.length}건\n${detail}${more}\n저장 전 확인하세요`, 'warn', 8000);
+    }
     rowCount=0;
     document.getElementById('resTable').innerHTML=list.map(i=>buildReceiptRow(i)).join('');
     rowCount=list.length;
