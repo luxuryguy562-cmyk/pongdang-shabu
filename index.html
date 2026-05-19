@@ -4775,13 +4775,9 @@ function _groupReceipts(records){
 function renderReceiptList(){
   const body=document.getElementById('rcpListBody');
   const totalEl=document.getElementById('rcpListTotal');
-  // 상단 추가 버튼 + 빈 상태 처리
-  const addBtn=`<button type="button" data-action="rcpTab|new" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;background:#fff;border:1px solid var(--gray-200);border-radius:12px;cursor:pointer;margin-bottom:12px;font-weight:700;color:var(--text);font-size:14px;">
-    <span>➕ 새 영수증 등록</span>
-    <span style="color:var(--gray-400);font-size:18px;">›</span>
-  </button>`;
+  // 상단 추가 버튼은 서브탭 [📸 새 영수증]과 중복이라 제거 (2026-05-19 사장님 지적)
   if(!rcpRecords.length){
-    body.innerHTML=addBtn+'<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">이번 달 영수증이 없어요.<br>위 버튼으로 등록해주세요.</div>';
+    body.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">이번 달 영수증이 없어요.<br>위 [📸 새 영수증] 탭에서 등록해주세요.</div>';
     totalEl.innerText='0원';
     return;
   }
@@ -4797,7 +4793,7 @@ function renderReceiptList(){
     byDate[d].push(g);
   });
   const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-  let html=addBtn;
+  let html='';
   dates.forEach(d=>{
     html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);padding:10px 2px 6px;position:sticky;top:0;background:#fff;z-index:2;">📅 ${d}</div>`;
     byDate[d].forEach(g=>{
