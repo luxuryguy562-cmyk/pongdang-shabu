@@ -4,6 +4,42 @@
 
 ---
 
+## 92. 동적 그리드 패턴 = expense_categories 단일 진실 (2026-05-18)
+
+**사고 방지**: 새 카테고리 추가/삭제할 때마다 그리드 HTML 수정 = 사장님이 늘 코드 요청. 헌법 10-2 위반 (데이터 단일 진실).
+
+**해결**: 그리드 카드 = `expense_categories WHERE category_type='expense' AND is_active AND parent_id IS NULL` 동적 렌더링.
+- 시스템 카테고리(`receipt_ref`/`reserve`) = `category_type` 다름 → 자동 제외
+- 매출(`income`) / 대조용(`exclude`) = 자동 제외
+- 사장님이 카테고리 관리에서 추가/삭제 → 다음 진입 시 그리드 자동 반영
+
+**카드 클릭 분기** (data_source 기반):
+- `receipts`/`composite`/`vendor_orders` → catReceipt (표 + 필터)
+- `attendance` → wage 페이지
+- `fixed_costs` → fixedcost 페이지
+- `manual` → goCategoryDetail (현재) 또는 mydata+eca 화면 (다음 세션)
+
+**적용 위치**: `loadExpHubData` + `renderExpHubCatCards` (2026-05-18 신규)
+
+**규칙**: 새 그리드 만들 때 카드 정의 하드코딩 금지. DB 단일 진실 + 동적 렌더링.
+
+---
+
+## 91. 디자이너 가로 row 카드 = 우측 영역 좁으면 좌측 이름 짤림 (2026-05-18)
+
+**사고**: 사장님 캡처에서 카테고리 카드 "주류" → "주...", "비품" → "비..." 짤림. min-width:0 + flex:1 좌측 영역이 우측 부제(긴 텍스트 "39건·이번달") 자리 차지로 좁아져서.
+
+**원인**: 가로 row 카드에서 우측 영역에 긴 부제(이번달·건수·% 등) 둘 다 표시 = 우측 폭 키움 = 좌측 이름 자동 ellipsis.
+
+**해결**: 부제 통째 제거 — 그리드는 합산만 (큰 숫자). 정보 욕구는 카드 진입 후 상세 화면에서 충족.
+
+**규칙**:
+- 카드 정보 표시 우선순위 = (1) 큰 금액 (2) 분류명 (3) 부제(이번달/건수)
+- 모바일 360px 가로 row = (3) 생략, (1)(2)만 표시
+- 사장님이 "부제 필요한가?" 묻기 전에 designer가 먼저 짤림 위험 점검
+
+---
+
 ## 90. 스키마 문서 ≠ 실제 DB 불일치 위험 (2026-05-18)
 
 **사고**: `docs/db_schema.md`에 `store_settings.vendor_order` 컬럼 문서화(2026-05-15)되어 있었지만 실제 DB에는 ALTER TABLE 적용 안 됐음. 사장님이 거래처 순서 변경 → "순서 저장 실패" 긴급 버그.

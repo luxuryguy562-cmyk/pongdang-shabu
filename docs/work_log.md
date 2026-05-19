@@ -4,6 +4,107 @@
 
 ---
 
+## [2026-05-18 (6)] 지출 허브 대정비 — 동적 그리드 + 카테고리 분리 + 4섹션 + 자동 복귀
+
+### 상태: 모든 변경 main 머지 완료
+### 브랜치: `claude/add-gemini-retry-logic-RjG9z`
+### 트리거: 사장님 — "지출 카테고리 그리드가 뭐가 들어가야 정상인가" + 통일감 + 동적
+
+### 큰 그림 변화 (designer 4섹션 + 동적)
+**이전**: 영수증·내역 + 거래처/직구/기타/고정비/인건비/로열티/마케팅/세금 = 8장 정적 카드 한 그리드
+
+**이후 4섹션 분리**:
+1. **입력**: [📸 영수증 등록] 큰 카드 1개 (수동 입력은 모드 선택 화면에)
+2. **🚚 거래 채널** (큰 카드 가로 2분할): 🏪 거래처 관리 / 🛒 직구
+   - 이모지 + 다른 배경색 (#FEF3C7 노랑 / #FCE7F3 분홍) = 다른 차원 시각 강조
+3. **📦 지출 카테고리** (동적 그리드, 가로 2단 row, 부제 X): expense_categories에서 자동
+4. **💰 도구** (그대로): 계좌·카드 / 정산 대조 / 카테고리 관리
+
+### 동적 그리드 (핵심 변경)
+- `expense_categories WHERE category_type='expense' AND is_active AND parent_id IS NULL` 동적 렌더링
+- 시스템·매출·exclude 카테고리 자동 제외 (영수증 참조 / 예비비 사용 / 카드대금 / 물품대금 / 매출)
+- 사장님이 카테고리 추가/삭제 = 그리드 자동 반영 (헌법 10-2)
+- 카드 합산 = data_source별 자동 분기
+  - `receipts`/`composite`/`vendor_orders` → receipts + vendor_orders (parent+자식 포함)
+  - `attendance` → attendance_logs + settlements 차감
+  - `fixed_costs` → fixed_costs.category 텍스트 매칭
+  - `manual` → expense_category_amounts + mydata_transactions 자동 매칭
+- 카드 클릭 = data_source별 분기 (catReceipt / wage / fixedcost / goCategoryDetail)
+- 로열티는 별도 (카테고리 X, 매출 × 요율)
+
+### catReceiptCont 화면 신설 + 진화
+- 모드: `direct` + `cat:<id>` 패턴 (카테고리 일반화)
+- 표 컬럼: 날짜·가게·품목·금액·분류·거래(🏪/🛒)·📸/✏️
+- 거래방법 필터 = 바텀시트
+  - 직구 모드: 가게별 (vendor 텍스트 그룹, `shop:<name>`)
+  - 카테고리 모드: 직접구입 + 거래처별 (vendor_id 그룹)
+- 카드 안 [📸][✏️] 입력 버튼 제거 (영수증 1장 카테고리 섞이는 모순 해소 — 사장님 통찰)
+
+### DB 변경 (3건)
+1. `receipts.vendor_id` UUID FK→vendors (영수증 진입 분기 거래처/직구)
+2. `receipts.input_method` TEXT ('photo'|'manual', 옛 영수증 NULL 호환)
+3. `store_settings.vendor_order` TEXT (긴급 버그 — 문서엔 있었는데 실제 DB 누락, dev_lessons #90)
+4. `expense_categories` 공과금/고정비 분리:
+   - '공과금/고정비' parent → '고정비' rename
+   - '공과금' parent 신규 (sort_order=6, data_source='fixed_costs')
+
+### 자동 복귀 (사장님 결정 C2)
+- `rcpEntryReturn` 글로벌 + localStorage `pd_rcp_return`
+- 영수증 저장 후 reload → 로그인 후 진입 화면 자동 복귀:
+  - catReceipt:<mode> → 카테고리 화면
+  - vendors:<id> → 거래처 상세
+- 로그인 12483 분기 처리 (콜론 2개 대응 slice)
+
+### Sortable 자동 스크롤 (사장님 호소)
+- 거래처/지출 허브/카테고리 관리 4곳 Sortable에 `forceAutoScrollFallback: true` 추가
+- 드래그 중 화면 가장자리 진입 시 자동 페이지 스크롤
+- 모바일 터치 환경 필수
+
+### 거래처 합산 통합 (Phase 3)
+- `vendorMonthTotals` = `vendor_orders.amount` + `receipts WHERE vendor_id NOT NULL`
+- 거래처 영수증 등록 → 거래처 카드 합산 자동 반영
+
+### 거래처 카드 [📸] 미니 + 거래처 상세 [📸/✏️] 버튼
+- `data-stop="1"` 속성 신규 (디스패처 부모 전파 차단)
+- `openRcpReceiptFromVendor(vendorId, method)` — picker 우회 + vendor·카테고리·input_method 직접 박기
+
+### 영수증 모드 진입 분기 (이전 세션 일부 + 이번 세션 정제)
+- 모드 선택 카드 3개: [📦 거래처][🛒 직구][✏️ 수동 입력]
+- 거래처 모드 = vendor_id + 카테고리 자동 박힘 + AI 학습 스킵
+- 직구 모드 = AI 품목별 분류
+- 수동 모드 = 사진 단계 건너뜀 + 빈 행
+- runAI 프롬프트 강화: 모드별 hint + 규칙 12개 + 예시 7개 (사장님 영수증 8장 사실 기반)
+
+### 사장님 critic 적용 (헌법 3-1)
+- "직구·기타 배타?" → 처음 배타 적용 (A2)
+- "한도 끝없겠는걸" 의심
+- "거래처도 카테고리?" → designer 4섹션 분리
+- "이번달·건수 부제 필요?" → 부제 통째 제거 (가로 2단 + 짤림 해결)
+- "공과금 ≠ 고정비?" → 카테고리 분리 (DB UPDATE + INSERT)
+- "남들도 분리?" → 일반 인식 + 사장님 매장만 적용
+
+### 사장님 매장 발견 사항
+- 옛 영수증 15개 모두 vendor_id NULL = 직구 카드로 정확히 잡힘
+- 거래처: 행복한정육점/순창국제/웰스토리 등 vendor.category_id 식자재 자식
+- **프레시원**: vendor.category_id 삭제된 카테고리 가리킴 (사장님 거래처 관리에서 재설정 필요)
+- "기타" 카테고리 3개 중복 (sort 8/18/20) — 다음 세션 정리 후보
+- 비활성 카테고리 5개 (식자재(주류), 카드결제, 현금결제, QR결제, 송금결제) — 정리 후보
+
+### 검증
+- ✅ node --check 통과 (JS 약 12,000줄)
+- ✅ apply_migration 2건 성공 (input_method, store_settings.vendor_order)
+- ✅ execute_sql (공과금/고정비 분리) "실행 승인" 통과
+- ✅ 옛 영수증·옛 데이터 호환 (NULL 처리)
+
+### 다음 세션 시작점
+**최우선 검토 사항** (todo_next_session.md):
+1. **manual 카테고리 카드 화면 신설** (마케팅/세금/기타 클릭 시 mydata + eca 합산 표) — 시나리오 9·10 잠시 뒤로 미룬 거
+2. **프레시원 거래처 category 재설정** (사장님 직접 또는 마이그레이션)
+3. **카테고리 정리** (중복 "기타" 3개, 비활성 5개)
+4. **신규 매장 기본 시드** = 공과금/고정비 분리 반영 검토
+
+---
+
 ## [2026-05-18 (5)] 지출 허브 그리드 완성 + 카테고리별 영수증 목록 + 거래처 영수증 진입 (Phase 1+2+3)
 
 ### 상태: 코드 push 완료 / main 머지 진행
