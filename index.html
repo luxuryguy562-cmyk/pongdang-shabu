@@ -4617,9 +4617,13 @@ ${modeHint}
     rowCount=list.length;
     document.getElementById('resultArea').style.display='block';
     // 토큰·비용 토스트 (2026-05-19 사장님 다이어트 검증용)
+    // 비용 포맷: 한국어 표기 헷갈림 방지 — 1원 미만/소수점 적은 자리/정수 분기
     if(lastAIUsage){
       const u=lastAIUsage;
-      toast(`✨ 분석 완료\n토큰: 입력 ${fmt(u.promptTokens)} · 출력 ${fmt(u.outputTokens)} · thinking ${fmt(u.thinkingTokens)}\n약 ${u.costWon}원 · ${(u.durationMs/1000).toFixed(1)}초`, 'success');
+      const c=u.costWon;
+      const costStr = c<1 ? `약 ${Math.round(c*100)/100}원 (1원 미만)` : (c<10 ? `약 ${c.toFixed(1)}원` : `약 ${fmt(Math.round(c))}원`);
+      const thinkLabel = u.thinkingTokens>0 ? ` · thinking ${fmt(u.thinkingTokens)}` : '';
+      toast(`✨ 분석 완료 (${(u.durationMs/1000).toFixed(1)}초)\n토큰: 입력 ${fmt(u.promptTokens)} · 출력 ${fmt(u.outputTokens)}${thinkLabel}\n💰 ${costStr}`, 'success', 6000);
     }
   } catch(e){toast('분석 실패: '+e.message,'error');}
   finally{setLoad(false);}
