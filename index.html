@@ -4685,11 +4685,23 @@ async function saveReceipt(){
       if(mainCat&&kw) learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{});
     });
   }
-  // 진입 컨텍스트 저장 → reload 후 자동 복귀 (사장님 결정: 홈으로 가면 안 됨)
+  // 진입 컨텍스트 따라 흐름 분기 (2026-05-19 사장님 결정 A안)
   if(rcpEntryReturn){
+    // 거래처(vendors:<id>) 또는 카테고리(catReceipt:<mode>) 진입 = 기존 reload + 자동 복귀
     try{ localStorage.setItem('pd_rcp_return', rcpEntryReturn); }catch(e){}
+    toast('저장됐어요','success');resetReceipt();
+  } else {
+    // 모드 선택 화면에서 시작한 케이스 = in-page로 기록 내역 자동 이동
+    // (reload·로그인 깜빡 X, 방금 저장한 그룹 카드 바로 확인)
+    toast('저장됐어요','success');
+    // form 초기화 (resTable 비우고 모드 선택 화면 복귀)
+    const resTable=document.getElementById('resTable');
+    if(resTable) resTable.innerHTML='';
+    resetRcpMode();
+    // 기록 내역 서브탭 전환 + 최신 데이터 로드
+    rcpTab('list');
+    await loadReceiptList();
   }
-  toast('저장됐어요','success');resetReceipt();
 }
 
 // ══════════════════════════════════════════
