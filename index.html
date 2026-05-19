@@ -3601,7 +3601,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let lastAIUsage = null; // 최근 AI 호출 토큰·비용 (토스트용)
 // Gemini 모델별 가격 (환율 1400원/$ 기준, 2026-05 공식 가격)
 // 2026-05-19 사장님 결정 B안: 동적 모델 — 거래처(복잡) = flash, 직구(단순) = flash-lite
-// 2026-05-19 (2): Multi-Provider 도입 — Clova+GPT / GPT / Gemini 3중 경로 (Worker가 분기)
+// 2026-05-19 (2): Multi-Provider 도입 — Clova+GPT-4o / GPT-mini / Gemini 3중 경로 (Worker가 분기)
+// 2026-05-19 (3): 거래명세서 정확도 = GPT-4o full + 이미지 Hybrid (사장님 핵심 무기)
 const _DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
 const _GEMINI_PRICING = {
   'gemini-2.5-flash':       { in:  420, out: 3500 },
@@ -3611,6 +3612,7 @@ const _GEMINI_PRICING = {
   'gemini-1.5-flash':       { in:  105, out:  420 },
   'gemini-1.5-flash-8b':    { in:  52.5,out:  210 },
   'gpt-4o-mini':            { in:  210, out:  840 },
+  'gpt-4o':                 { in: 3500, out:14000 },
 };
 function _calcGeminiCostWon(promptTokens, outputTokens, thinkingTokens, model){
   const rates = _GEMINI_PRICING[model] || _GEMINI_PRICING[_DEFAULT_GEMINI_MODEL] || _GEMINI_PRICING['gemini-2.5-flash-lite'];
@@ -3621,7 +3623,9 @@ function _calcGeminiCostWon(promptTokens, outputTokens, thinkingTokens, model){
 // 모델 이름 짧게 (토스트용)
 function _shortModelName(model){
   if(!model) return '?';
+  if(model.startsWith('clova+gpt-4o')) return 'Clova+GPT-4o';
   if(model.startsWith('clova+gpt')) return 'Clova+GPT';
+  if(model === 'gpt-4o') return 'GPT-4o';
   if(model.startsWith('gpt-')) return 'GPT-mini';
   if(model.startsWith('gemini-2.5-flash-lite')) return 'Gemini-Lite';
   if(model.startsWith('gemini-2.5-flash')) return 'Gemini-Flash';
