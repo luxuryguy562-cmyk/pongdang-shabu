@@ -158,6 +158,13 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-mini.emphasized{text-align:center;align-items:center;}
 .hub-mini.emphasized .hub-mini-amt{font-size:15px;color:var(--success);}
 .hub-mini.emphasized .hub-mini-amt.miss{color:var(--danger);}
+/* 지출 카테고리 그리드 — 가로 2단 (사장님 요청 2026-05-18: 세로 크기 축소) */
+#expHubCatGrid .hub-mini{flex-direction:row;justify-content:space-between;align-items:center;min-height:56px;gap:10px;padding:12px 14px;}
+#expHubCatGrid .hub-mini-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
+#expHubCatGrid .hub-mini-icon{margin-bottom:0;}
+#expHubCatGrid .hub-mini-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#expHubCatGrid .hub-mini-right{text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:1px;}
+#expHubCatGrid .hub-mini-amt{margin-top:0;font-size:14px;color:var(--gray-900);}
 .hub-full{width:100%;background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;outline:none;}
 .hub-full:active{background:var(--gray-100);}
 .hub-full-title{font-size:15px;font-weight:700;color:var(--text);}
@@ -1418,7 +1425,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div style="display:flex;gap:10px;margin-bottom:14px;">
     <button type="button" class="hub-full" style="flex:1;margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="nav|vendors">
       <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;">
-        <span class="hub-full-icon" style="margin-right:8px;"><svg><use href="#i-building"/></svg></span>
+        <span class="hub-full-icon" style="margin-right:8px;background:#FEF3C7;font-size:20px;line-height:1;">🏪</span>
         <span style="font-size:13px;font-weight:700;color:var(--text);">거래처 관리</span>
       </div>
       <div style="font-size:17px;font-weight:900;color:var(--gray-900);text-align:left;font-variant-numeric:tabular-nums;" id="expMiniVendor">-</div>
@@ -1426,7 +1433,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </button>
     <button type="button" class="hub-full" style="flex:1;margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="openCatReceipt|direct">
       <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;">
-        <span class="hub-full-icon" style="margin-right:8px;"><svg><use href="#i-cart"/></svg></span>
+        <span class="hub-full-icon" style="margin-right:8px;background:#FCE7F3;font-size:20px;line-height:1;">🛒</span>
         <span style="font-size:13px;font-weight:700;color:var(--text);">직구</span>
       </div>
       <div style="font-size:17px;font-weight:900;color:var(--gray-900);text-align:left;font-variant-numeric:tabular-nums;" id="expMiniDirect">-</div>
@@ -12470,27 +12477,29 @@ function renderExpHubCatCards(catSums){
     !c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense'
   ).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   let html = '';
+  const mkCard = (cardId, action, iconId, title, amt, sub)=>{
+    return `<button type="button" class="hub-mini" data-card-id="${cardId}" data-action="${action}">
+      <div class="hub-mini-left">
+        <span class="hub-mini-icon"><svg><use href="#${iconId}"/></svg></span>
+        <span class="hub-mini-title">${esc(title)}</span>
+      </div>
+      <div class="hub-mini-right">
+        <span class="hub-mini-amt">${amt?fmt(amt):'0'}</span>
+        <span class="hub-mini-sub">${esc(sub)}</span>
+      </div>
+    </button>`;
+  };
   parents.forEach(cat=>{
     const amt = catSums?.[cat.id]?.amount || 0;
     const cnt = catSums?.[cat.id]?.count || 0;
     const sub = cnt ? `${cnt}건 · 이번달` : '이번달';
-    html += `<button type="button" class="hub-mini" data-card-id="cat-${cat.id}" data-action="${_expCatAction(cat)}">
-      <span class="hub-mini-icon"><svg><use href="#${_expCatIcon(cat.name)}"/></svg></span>
-      <span class="hub-mini-title">${esc(cat.name)}</span>
-      <span class="hub-mini-amt">${amt?fmt(amt):'0'}</span>
-      <span class="hub-mini-sub">${sub}</span>
-    </button>`;
+    html += mkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, amt, sub);
   });
   // 로열티 카드 (카테고리 X — 매출 × 요율 계산 기반)
   const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
   const royaltyRate = (catSums && catSums._royalty) ? catSums._royalty.rate : 0;
   const royaltySub = royaltyRate>0 ? `${(royaltyRate*100).toFixed(1)}% · 이번달` : '요율 미설정';
-  html += `<button type="button" class="hub-mini" data-card-id="royalty" data-action="nav|royalty">
-    <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
-    <span class="hub-mini-title">로열티</span>
-    <span class="hub-mini-amt">${royaltyAmt?fmt(royaltyAmt):'-'}</span>
-    <span class="hub-mini-sub">${royaltySub}</span>
-  </button>`;
+  html += mkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt, royaltySub);
   grid.innerHTML = html;
   // 카드 생성 후 순서·드래그 적용
   applyExpHubCardOrder();
