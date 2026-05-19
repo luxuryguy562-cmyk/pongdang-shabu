@@ -3678,7 +3678,7 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
           await new Promise(r=>setTimeout(r, BACKOFF_MS[attempt]));
           continue;
         }
-        throw new Error(`서버 오류 (${res.status}): ${errText.slice(0,100)||res.statusText}`);
+        throw new Error(`서버 오류 (${res.status}): ${errText.slice(0,500)||res.statusText}`);
       }
       const data=await res.json();
       if(data.error){
