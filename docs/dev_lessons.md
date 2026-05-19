@@ -1860,3 +1860,59 @@ grid-template-columns: repeat(N, minmax(0, 1fr));
 
 ### 부가 발견
 - 지출카테고리 카드 금액 색상: 본래 디자인 시스템 `.hub-mini-amt {color:var(--gray-400)}` (회색)인데, 이전 작업에서 `#expHubCatGrid .hub-mini-amt {color:var(--gray-900)}` override로 검정 됐음 → 회색 복원.
+
+---
+
+## 92. ellipsis는 안전망일 뿐 정답이 아니다 + 스켈레톤 우선 패턴 (2026-05-19 사장님 "식자재가 식...이 맞아?" + "없어졌다 생기는 느낌" 호소)
+
+### 사건 1 — ellipsis 박기로 끝낸 designer 실격
+- 지출카테고리 카드를 row 형태(아이콘+제목 좌 / 금액 우)로 설계 + 제목에 `text-overflow:ellipsis` 적용
+- 결과: 모바일 360px 폰에서 셀 폭 ~140px - padding/아이콘/금액 = 제목 공간 ~0px → "식자재→식…", "공과금→공…", "고정비→고…", "인건비→인…", "로열티→로…"
+- **정보 의미 손실** = 사용자가 카드 식별 불가
+- 사장님 호소: "식자재가 식...이 맞아?" — 정확한 지적
+
+### 교훈 1 — 잘림 해결 우선순위
+designer는 ellipsis를 박기 전 모바일 360px 기준 콘텐츠 폭을 계산하고, 잘림 예상 시 다음 순서로 검토:
+1. **2줄 레이아웃 (column)** — 제목 위 / 금액 아래 (이번 케이스 채택)
+2. **폰트 자동축소 `clamp()`**
+3. **풀 width 카드 (1컬럼)**
+4. **만원 단위 축약** ("19,939,912" → "1,994만")
+5. (최후) **ellipsis**
+
+ellipsis 단독은 **데이터 의미 손실** 가능 → designer 실격.
+
+### 사건 2 — innerHTML 통째 교체 = "없어졌다 생기는" 느낌
+- `renderExpHubCatCards(catSums)`가 `loadExpHubData()` 끝에서 `grid.innerHTML = html` 한 번에 교체
+- 진입 후 ~500ms 빈 화면 → 카드 와르르 등장
+- 사장님 호소: "그리드들이 없어졌다가 생기는 느낌" — 정확한 지적
+
+### 교훈 2 — 스켈레톤 우선 패턴
+**`render{X}Skeleton()` (즉시) + `update{X}Amounts(data)` (비동기)** 두 함수 분리:
+- 외곽(아이콘·제목) = `expCategories` 등 캐시로 진입 즉시 렌더
+- 비동기 결과는 `[data-amt-cell="<key>"]` 셀의 **textContent만 in-place 갱신**
+- Sortable 등 라이브러리 init은 skeleton에서 1회만
+- 캐시 미스 시 fallback 경로 ("불러오는 중...")
+
+### 속도 비교 (이 케이스 추정치)
+| 단계 | 단일 교체 | 스켈레톤+비동기 |
+|---|---|---|
+| 진입 즉각감 | ~500ms 빈 화면 | ~30ms 외곽 보임 |
+| 총 완료 | ~550ms | ~535ms |
+| DOM 부하 | innerHTML 1회 | innerHTML 1회 + textContent N회 (reflow 없음) |
+
+→ **진입 즉각감 ~470ms 개선, 총 시간 동일**.
+
+### 사건 3 — CTO 책임 회피 (단순 동조)
+사장님이 "이렇게 하면 더 좋은지 안 좋은지 모르겠다. CTO가 판단해봐" 던졌을 때, 처음 답변은 **"사장님 의견 정확함" 단순 동조**였음. 사장님 재호소: "그냥 알겠습니다 X. 기술 근거로 분석해서 답해야지."
+
+### 교훈 3 — agent 책임 경계
+- **designer**: UX 원칙만 ("외곽 즉시 / 숫자 비동기 보여야 한다") — 사용자 입장
+- **coder**: 구현 방식 ("textContent in-place 갱신, innerHTML 통째 교체 금지, 함수 2개 분리") — 개발자 입장
+- **advisor**: 기술 의견 비교 분석 ("현재 vs 제안 표 + 결론 + 근거") — 단순 동조 금지 (헌법 3-1)
+- 이번 케이스에서 designer 규칙 9에 구현 디테일 섞여 있던 것을 사장님이 짚어 분리.
+
+### 적용 위치
+- `agents/designer.md` 절대 규칙 8 (잘림 해결 우선순위) + 9 (스켈레톤 UX 원칙)
+- `agents/coder.md` 데이터 로딩 패턴 신설
+- `agents/advisor.md` 사장님 기술 의견 처리 의무 신설
+- `agents/reviewer.md` 자가 체크 4개 항목 추가
