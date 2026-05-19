@@ -1413,20 +1413,24 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <span style="color:var(--gray-400);font-size:20px;">›</span>
   </button>
-  <!-- 거래 채널 -->
+  <!-- 거래 채널 (큰 카드 가로 2분할 — 카테고리와 차원 분리 시각화) -->
   <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">🚚 거래 채널</div>
-  <div class="hub-grid" id="expHubChannelGrid">
-    <button type="button" class="hub-mini" data-card-id="vendors" data-action="nav|vendors">
-      <span class="hub-mini-icon"><svg><use href="#i-building"/></svg></span>
-      <span class="hub-mini-title">거래처 관리</span>
-      <span class="hub-mini-amt" id="expMiniVendor">-</span>
-      <span class="hub-mini-sub" id="expMiniVendorSub">이번달</span>
+  <div style="display:flex;gap:10px;margin-bottom:14px;">
+    <button type="button" class="hub-full" style="flex:1;margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="nav|vendors">
+      <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;">
+        <span class="hub-full-icon" style="margin-right:8px;"><svg><use href="#i-building"/></svg></span>
+        <span style="font-size:13px;font-weight:700;color:var(--text);">거래처 관리</span>
+      </div>
+      <div style="font-size:17px;font-weight:900;color:var(--gray-900);text-align:left;font-variant-numeric:tabular-nums;" id="expMiniVendor">-</div>
+      <div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:2px;text-align:left;" id="expMiniVendorSub">이번달</div>
     </button>
-    <button type="button" class="hub-mini" data-card-id="direct" data-action="openCatReceipt|direct">
-      <span class="hub-mini-icon"><svg><use href="#i-cart"/></svg></span>
-      <span class="hub-mini-title">직구</span>
-      <span class="hub-mini-amt" id="expMiniDirect">-</span>
-      <span class="hub-mini-sub" id="expMiniDirectSub">이번달</span>
+    <button type="button" class="hub-full" style="flex:1;margin-bottom:0;padding:14px;flex-direction:column;align-items:flex-start;" data-action="openCatReceipt|direct">
+      <div style="display:flex;align-items:center;width:100%;margin-bottom:10px;">
+        <span class="hub-full-icon" style="margin-right:8px;"><svg><use href="#i-cart"/></svg></span>
+        <span style="font-size:13px;font-weight:700;color:var(--text);">직구</span>
+      </div>
+      <div style="font-size:17px;font-weight:900;color:var(--gray-900);text-align:left;font-variant-numeric:tabular-nums;" id="expMiniDirect">-</div>
+      <div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:2px;text-align:left;" id="expMiniDirectSub">이번달</div>
     </button>
   </div>
   <!-- 지출 카테고리 (동적 렌더링) — JS renderExpHubCatCards가 채움 -->
