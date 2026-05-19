@@ -242,6 +242,8 @@ franchises (프랜차이즈/브랜드)
 >
 > ⚠️ **2026-05-18 추가**: `input_method` TEXT 신설 (`'photo'` | `'manual'` | NULL). 영수증 단위 입력 방식 — `handleImg` 진입 = photo, `manualReceipt` 진입 = manual. 카테고리별 목록(catReceiptCont)에서 📸/✏️ 이모지 표시용. 옛 영수증 = NULL (이모지 빈 칸 호환). 마이그레이션: `add_receipts_input_method_20260518`. 롤백: `DROP INDEX idx_receipts_input_method; ALTER TABLE receipts DROP COLUMN input_method;`.
 >
+> ⚠️ **2026-05-19 추가**: `receipt_group_id` UUID 신설. 영수증 사진 1장 그룹 식별자. saveReceipt 시 `crypto.randomUUID()` 1번 생성 후 모든 INSERT 행에 박음 → 기록내역 화면에서 같은 영수증 그룹 카드로 묶어 표시 + 그룹 단위 [✏ 편집]/[🗑 통째 삭제] 가능. 옛 영수증 = NULL → 1행짜리 그룹으로 호환. 인덱스 `idx_receipts_group_id`. 마이그레이션: `add_receipts_receipt_group_id_20260519`. 롤백: `DROP INDEX IF EXISTS idx_receipts_group_id; ALTER TABLE receipts DROP COLUMN IF EXISTS receipt_group_id;`.
+>
 > ⚠️ **2026-05-18 (6) 변경**: 사장님 매장(`4ae03341-...`) `expense_categories` 카테고리 분리 적용:
 > - `'공과금/고정비'` parent → `'고정비'` rename (id=c33020f4-...)
 > - `'공과금'` parent 신규 (sort_order=6, data_source='fixed_costs', id=7d0b97ff-...)
