@@ -4,6 +4,111 @@
 
 ---
 
+## [2026-05-19] 대규모 세션 — 4단계 작업 (PR #152~#174, 23개 PR)
+
+### 상태: 진행 중 마무리 (사장님 결정 대기: 거래명세서 정확도 GPT 2단계 검증 OR Clova Document)
+### 브랜치: `claude/fix-category-grid-alignment-KTIth`
+### 트리거: 사장님 "지출카테고리 그리드 줄 틀어짐"으로 시작 → 영수증 OCR 정확도까지 확장
+
+### Phase 1: 지출 카테고리 그리드 + 거래채널 통일 (PR #152~#155, #158)
+- 거래채널 vs 지출카테고리 카드 폭 일치
+- `.hub-grid` 기본값 `repeat(3,1fr)` → `#expHubCatGrid`에 `repeat(2,minmax(0,1fr))` override
+- 거래채널도 grid로 통일 (flex→grid)
+- 폭 미세 차이 원인: `1fr` 단독 = min-content 영향 받음 → `minmax(0,1fr)` 표준
+- column 2줄 레이아웃 (사장님 "식자재가 식...이 맞아?" 호소 반영)
+- ✨ 학습 시그널 뱃지 강화 (12→14px) + 페이드인 애니메이션
+- 스켈레톤 우선 패턴 (진입 즉시 외곽 + 비동기 숫자)
+- 상단 [+ 새 영수증 등록] 중복 버튼 제거 (사장님 짚음)
+
+### Phase 2: 영수증 그룹핑 + 단가/수량 + 학습 (PR #157, #159, #160, #161, #164, #165)
+- **DB 변경 3건**:
+  - `receipts.receipt_group_id` UUID 신설 (영수증 사진 1장 그룹)
+  - `receipts.unit_price` INT, `qty` NUMERIC(10,2) 부활 (가격 추세 분석 기반)
+  - `classification_rules.display_item` TEXT (품목 표시명 학습)
+  - 인덱스 3개
+- 그룹 카드 + 그룹 편집 시트(receiptGroupEditSheet) 신설
+- 거래처 모드 vendor 컬럼 숨김 + 상단 노란 배지
+- 거래처 주문 수동 입력과 컬럼 통일 (단가/수량/금액)
+- BOX/EA 시스템 프롬프트 강화
+- 합계 검증 토스트 (u × q ≠ p 차이 5% 이상)
+- 학습 흐름: AI 원본(`data-orig-item`) → 사용자 정정 → `display_item` 학습 → 다음 OCR 자동 교체
+- 영수증 저장 후 in-page 기록내역 자동 이동 (location.reload 제거)
+- 취소·초기화 PWA 재실행 버그 (resetReceipt → in-page) + 업로드 2회 안 됨 + [📷 다시] 버튼
+- 셀렉터 버그: `#resTable th.col-vendor` 매칭 실패 (tbody id) → `.col-vendor` 클래스 단독으로
+- 컬럼 min-width 명시 (잘림 차단): c-v 64 / c-i 110 / c-u 62 / c-q 44 / c-p 78
+
+### Phase 3: AI 비용 다이어트 + 토큰 토스트 + 모델 교체 (PR #162, #163, #166, #167)
+- **DB 변경 1건**: `ai_usage_logs` 테이블 신설
+  - store_id, feature, model, prompt/output/thinking_tokens, total, estimated_cost_won, duration_ms, success, error_msg
+  - 인덱스 2개
+- callGemini 함수 4번째 인자 (feature) + 5번째 인자 (model) + 6번째 인자 (provider)
+- `_calcGeminiCostWon()`, `_GEMINI_PRICING` 6개 모델 가격표
+- 분석 후 토스트: "✨ 분석 완료 (Clova+GPT-4o, 8.3초) / 토큰: ... / 💰 약 N원"
+- thinking 다이어트: gemini-2.5-flash 기본 ON → Worker `thinkingBudget:0` (5~10배 절감)
+- 모델 교체 시도:
+  - gemini-2.5-flash → gemini-2.0-flash-lite (실패: 신규 사용자 차단됨)
+  - → gemini-2.5-flash-lite (정착, 1.1원/회)
+- 동적 모델: 거래처 = flash / 직구·POS = flash-lite
+- 비용 토스트 헷갈림 (1.3731원을 13,731원으로 오인) → 포맷 분기 + 6초 노출
+
+### Phase 4: Multi-Provider (Clova OCR + GPT) (PR #169, #173, #174)
+- **사장님 결정**: B안 동적 모델 + Multi-Provider (Naver Clova OCR + OpenAI GPT)
+- 트리거: Gemini high demand 누적 = "상용화 불가능 신뢰도"
+- 동종 앱 분석: 캐시노트·자비스 등도 OCR 보조 위치, 마이데이터 메인
+- **사장님 가입 완료**:
+  - Naver Cloud Platform + Clova OCR Domain (`cashflow-receipt`)
+  - OpenAI Platform + 결제 + API key
+- Worker 코드 진화:
+  - v1: Gemini 단독
+  - v2: 동적 모델 (gemini flash / lite)
+  - v3: Clova+GPT 도입
+  - v4: 디버그 강화 (error_msg에 응답 본문 포함)
+  - v5: GPT-4o full + 이미지 Hybrid + boundingPoly 정밀 그룹핑
+- Worker 환경변수: CLOVA_URL, CLOVA_SECRET, OPENAI_KEY (+ 기존 GEM_ES_KEY)
+- 분기: `body._provider` (`clova+gpt` / `gpt` / `gemini`)
+- Clova OCR 1002 인증 거부 troubleshoot (사장님과 1시간):
+  - 1차: URL 잘못 박힘 (수동 연동 URL 사용)
+  - 2차: `/general` 누락
+  - 3차: VPC 환경 의심
+  - 4차: Premium 플랜 의심
+  - **최종 원인**: 수동 연동 URL은 외부 호출 차단 → **API Gateway 자동 연동** 필요 (Naver 공식 가이드 확인)
+  - 사장님이 자동 연동 후 새 Invoke URL (`apigw.ntruss.com/...`) + Secret Key 받아 갱신 → 동작 시작
+- GPT 진행 정확도:
+  - GPT-mini Hybrid: 6% (1/16 정확, 행 매핑 통째 밀림)
+  - GPT-4o full Hybrid: **62.5%** (10/16 정확, 10배 개선)
+  - 남은 오류 패턴: BOX/EA 시스템 일부 행, 행 누락(13행 련화푸주) → 시프트
+
+### agent 강화 (사장님 호소 누적 반영, PR #154~#171)
+- `designer.md` 절대 규칙 신설: 7(위·아래 카드 폭 일치) / 8(잘림 해결 우선순위) / 9(스켈레톤 UX) / 10(텍스트 목업 의무) / 11(모바일 360px 실측 폭 표 + 셀렉터 검증)
+- `coder.md` 데이터 로딩 패턴 신설 (innerHTML 통째 교체 금지, textContent in-place)
+- `advisor.md` 사장님 기술 의견 처리 의무 (단순 동조 금지, 비교표+결론+근거)
+- `planner.md` UI 변경 시 designer 호출 + 목업 의무 (소형도 예외)
+- `reviewer.md` 자가 체크 11개 항목 추가
+- `dev_lessons.md` #91~#94 신설
+
+### 검증
+- node --check 통과 (모든 PR)
+- DB 마이그레이션 4건 성공 (ai_usage_logs, receipt_group_id, unit_price+qty+display_item)
+- ai_usage_logs로 실시간 토큰·비용 자동 추적
+- CTO 자동 진단: DB 조회로 실패 원인 즉시 파악 (사장님 손 최소)
+
+### 사장님 명시 결정 (이번 세션)
+1. 디자이너 박을 명령: "모바일 360px 의무 + 320px 권장 실측 폭 표 + 셀렉터 검증" (designer 규칙 11)
+2. AI 비용 다이어트 동의 (E + B + 모델 교체)
+3. Multi-Provider B안 (거래처=flash / 직구=lite)
+4. **거래명세서 OCR = "어플 살길". 포기 X**
+5. 학습 관리 + 영수증 삭제 학습 정리 = 관리자 대시보드 통합 (다음 세션)
+6. 가격 책정: 1.5만원/매장 권장 (마진 14,900원/매장 + 손익분기점 ~30~50매장)
+
+### 다음 세션 첫 결정 (마무리 대기)
+**거래명세서 정확도 62.5% → 사장님 호소 정당** (47% 차이는 SaaS 사용 불가)
+- 옵션 A: GPT 2단계 검증 (Worker 코드 추가, 사장님 1회 배포) — 85~90% 기대
+- 옵션 B: Clova Document 모드 새 도메인 (사장님 새 도메인 작업) — 90~95% 기대
+- 옵션 A+B 동시
+- 옵션 C: 현재 + catch 도구 + 사장님 부분 수정 (3분/장)
+
+---
+
 ## [2026-05-18 (6)] 지출 허브 대정비 — 동적 그리드 + 카테고리 분리 + 4섹션 + 자동 복귀
 
 ### 상태: 모든 변경 main 머지 완료

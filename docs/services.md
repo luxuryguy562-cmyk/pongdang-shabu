@@ -11,7 +11,11 @@
 |--------|----------|----------------------|------|
 | **Supabase** | `https://ruytgygjwnbtzmtofopg.supabase.co` | `SUPABASE_URL` | DB + REST API |
 | **Supabase Key** | `sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe` | `SUPABASE_ANON_KEY` | anon key (RLS 1차 활성 — Phase 2b 2026-04-17, USING true + WITH CHECK store_id) |
-| **Gemini 프록시** | `https://gemini-proxy.luxuryguy562.workers.dev` | `GEMINI_URL` | 영수증/POS AI용. 2026-04 기준 500 에러 |
+| **AI 프록시** (구 Gemini) | `https://gemini-proxy.luxuryguy562.workers.dev` | `GEMINI_URL` | **2026-05-19부터 Multi-Provider** (Clova+GPT / GPT / Gemini). 이름은 호환 유지. body._provider로 분기. |
+| **Naver Clova OCR** | `xxxxxxxxxx.apigw.ntruss.com/custom/v1/.../general` | Worker `env.CLOVA_URL` | 한국 영수증·세금계산서 OCR 1위. **API Gateway 자동 연동 필수** (수동 연동 URL은 외부 호출 차단, dev_lessons #96). 도메인명 `cashflow-receipt`. Premium 플랜. |
+| **Naver Clova OCR Secret** | (Secret Key) | Worker `env.CLOVA_SECRET` | 자동 연동 화면에서 생성된 키 (Domain Secret과 별개). 헤더 `X-OCR-SECRET`. |
+| **OpenAI GPT-4o** | `https://api.openai.com/v1/chat/completions` | Worker `env.OPENAI_KEY` | GPT-4o (정확도) / GPT-4o-mini (직구·POS 저렴). 영수증 1장 ~5~10원 (full) / ~1원 (mini). |
+| **Gemini API** | `https://generativelanguage.googleapis.com/v1beta/models/...` | Worker `env.GEM_ES_KEY` | 폴백용. gemini-2.5-flash / gemini-2.5-flash-lite. |
 | **XLSX 라이브러리** | `cdn.jsdelivr.net/npm/xlsx@0.18.5` | `<script>` 태그 | 엑셀 파싱용 |
 | **Chart.js** | `cdn.jsdelivr.net/npm/chart.js@4.4.0` | `<script>` 태그 | 대시보드 차트 |
 | **SortableJS** | `cdn.jsdelivr.net/npm/sortablejs@1.15.0` | `<script>` 태그 | 카테고리 드래그 정렬 (모바일 터치 지원) |
