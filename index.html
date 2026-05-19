@@ -130,6 +130,13 @@ td{padding:10px 5px;font-size:12px;border-bottom:1px solid var(--gray-100);text-
 td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 tr.row-off{opacity:.35;filter:grayscale(1);}
 td input.c-v,td input.c-i,td input.c-p{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
+/* 영수증 분류 학습 시그널 (2026-05-19) — 사용자 변경 시 ✨ 페이드인 */
+.rcp-learn-badge-pulse{animation:rcpLearnPulse 0.6s ease-out;}
+@keyframes rcpLearnPulse{
+  0%{opacity:0;transform:scale(0.5);}
+  50%{opacity:1;transform:scale(1.4);}
+  100%{opacity:1;transform:scale(1);}
+}
 td .c-cBtn{width:100%;min-height:38px;padding:6px 4px;border:1px solid var(--gray-300);border-radius:7px;background:#fff;font-size:11px;line-height:1.25;cursor:pointer;text-align:center;white-space:normal;word-break:keep-all;color:var(--gray-700);font-weight:600;}
 td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50);}
 .add-row-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;color:var(--blue);font-weight:700;font-size:13px;cursor:pointer;background:var(--blue-light);border-radius:10px;margin:8px 0;}
@@ -1267,10 +1274,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <div style="text-align:center;font-size:11px;color:var(--gray-500);margin-top:6px;">사진이 안 되거나 한두 줄짜리는 수동이 빨라요</div>
       </div>
       <div id="actionGroup" style="display:none;" class="action-group">
-        <button class="btn btn-primary" style="flex:4;padding:15px;font-size:14px;" data-action="runAI">✨ AI 분석</button>
+        <button class="btn btn-primary" style="flex:3;padding:15px;font-size:14px;" data-action="runAI">✨ AI 분석</button>
+        <button class="btn btn-secondary" style="flex:1;padding:15px;font-size:13px;" data-action="rcpRePickImage" title="다른 사진 선택">📷 다시</button>
         <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">취소</button>
       </div>
       <div id="resultArea" style="display:none;">
+        <!-- 학습 안내 박스 (2026-05-19 사장님 호소: ✨ 의미 불명) -->
+        <div style="background:#EBF3FF;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#1E40AF;line-height:1.55;">
+          💡 <b>✨ 표시된 행은 다음 영수증 분류에 AI가 자동 활용해요.</b><br>
+          분류를 바꾸면 그것도 학습됩니다.
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th style="width:24px">X</th><th style="width:58px">거래처</th><th>품목</th><th style="width:60px">금액</th><th style="width:88px">분류</th></tr></thead>
@@ -4421,10 +4434,21 @@ function handleImg(input) {
       document.getElementById('imgPreview').style.display='block';
       document.getElementById('uploadGroup').style.display='none';
       document.getElementById('actionGroup').style.display='flex';
+      // 같은 파일 다시 선택 가능하게 input value 초기화 (브라우저 change 이벤트 트리거 보장)
+      // 2026-05-19 사장님 호소 "업로드 2번 이상 안 됨" 해결
+      try{ input.value=''; }catch(e){}
     };
     img.src=e.target.result;
   };
   fr.readAsDataURL(input.files[0]);
+}
+// 사진 띄운 상태에서 즉시 다시 선택 (취소→reload 우회, 2026-05-19)
+function rcpRePickImage(){
+  document.getElementById('imgPreview').style.display='none';
+  document.getElementById('imgPreview').src='';
+  document.getElementById('actionGroup').style.display='none';
+  document.getElementById('uploadGroup').style.display='block';
+  b64=null;
 }
 async function getVendorHints() {
   if(!currentStore) return '';
@@ -4583,22 +4607,46 @@ function openReceiptCatPicker(idx){
         btn.innerHTML=formatRcpCatLabel(cat);
         btn.classList.toggle('empty',!cat);
       }
+      // ✨ 뱃지 동적 갱신 + 페이드인 (사장님 호소: 학습 시그널 명확화)
+      const cell=tr.querySelector('.rcp-cat-cell');
+      if(cell){
+        const oldBadge=cell.querySelector('.rcp-learn-badge');
+        if(cat && !oldBadge){
+          // 분류 신규 박힘 → ✨ 등장 (페이드인)
+          const b=document.createElement('span');
+          b.className='rcp-learn-badge rcp-learn-badge-pulse';
+          b.title='저장 시 AI 학습됨';
+          b.style.cssText='font-size:12px;color:var(--success);margin-right:3px;display:inline-block;';
+          b.textContent='✨';
+          cell.insertBefore(b, cell.firstChild);
+        } else if(!cat && oldBadge){
+          // 미분류로 바뀜 → ✨ 제거
+          oldBadge.remove();
+        } else if(cat && oldBadge){
+          // 분류 바뀜 → ✨ 깜빡 (학습 갱신 시그널)
+          oldBadge.classList.remove('rcp-learn-badge-pulse');
+          void oldBadge.offsetWidth; // reflow trigger
+          oldBadge.classList.add('rcp-learn-badge-pulse');
+        }
+      }
     }
   });
 }
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
-  const ruleBadge=i._ruleMatched?'<span title="학습된 분류" style="font-size:10px;color:var(--success);margin-right:2px;">✨</span>':'';
   const cat=String(i.category||'').trim();
   const catId=resolveReceiptCatId(cat)||'';
   const label=formatRcpCatLabel(cat);
   const emptyCls=cat?'':' empty';
+  // ✨ = 학습 대상 (분류 박힌 모든 행, 저장 시 learnClassification 호출됨)
+  // 2026-05-19 사장님 호소: ✨ 의미 명확화 + 분류 있는 모든 행 일관 표시
+  const learnBadge=cat?`<span class="rcp-learn-badge" title="저장 시 AI 학습됨" style="font-size:12px;color:var(--success);margin-right:3px;display:inline-block;">✨</span>`:'';
   return `<tr id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}">
     <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" data-action="openReasonSheet|${idx}">X</button></td>
     <td><input type="text" class="c-v" value="${i.vendor||''}"></td>
     <td><input type="text" class="c-i" value="${i.item||''}"></td>
     <td><input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this"></td>
-    <td>${ruleBadge}<button type="button" class="c-cBtn${emptyCls}" data-action="openReceiptCatPicker|${idx}">${label}</button></td>
+    <td><span class="rcp-cat-cell">${learnBadge}<button type="button" class="c-cBtn${emptyCls}" data-action="openReceiptCatPicker|${idx}">${label}</button></span></td>
     <input type="hidden" class="c-u" value="${i.unitPrice||''}">
     <input type="hidden" class="c-q" value="${i.qty||1}">
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
@@ -4617,7 +4665,15 @@ function onReceiptAmountInput(inputEl){
   try{ inputEl.setSelectionRange(pos+diff, pos+diff); }catch(e){}
 }
 function addReceiptRow(){document.getElementById('resultArea').style.display='block';document.getElementById('resTable').insertAdjacentHTML('beforeend',buildReceiptRow({date:ymdLocal(new Date())}));}
-function resetReceipt(){location.reload();}
+// in-page 초기화 (2026-05-19 사장님 호소 "취소하면 PWA 재실행" 해결)
+// 옛 동작: location.reload() — saveReceipt rcpEntryReturn 분기에서 별도 처리
+function resetReceipt(){
+  const resTable=document.getElementById('resTable');
+  if(resTable) resTable.innerHTML='';
+  rowCount=0;
+  rcpEntryReturn=null;
+  resetRcpMode();
+}
 function openReasonSheet(idx){currentTargetRowIdx=idx;openSheet('reasonSheet');}
 function selectReason(r){
   const tr=document.getElementById('row-'+currentTargetRowIdx);
@@ -4676,27 +4732,33 @@ async function saveReceipt(){
   // 학습 키워드는 품목의 첫 단어만 추출 (예: "양파 10kg 2봉" → "양파")
   // 품목 전체 문자열을 keyword로 넣으면 contains 매칭이 실패해 학습이 무력화됨 (dev_lessons #49)
   // 거래처 모드는 학습 스킵 — 카테고리는 거래처 설정대로 자동이라 학습 불필요
+  let learnedCount=0;
   if(!isVendorMode){
     cleaned.filter(r=>r.note==='정상'&&r.item&&r.category).forEach(r=>{
       const parts=String(r.category).split('>').map(s=>s.trim());
       const mainCat=parts[0]||'';
       const subCat=parts[1]||'';
       const kw=normalizeItemKeyword(r.item);
-      if(mainCat&&kw) learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{});
+      if(mainCat&&kw){ learnClassification(kw,mainCat,subCat,'receipt',false).catch(()=>{}); learnedCount++; }
     });
   }
+  const successMsg=learnedCount>0?`저장됐어요. ✨ ${learnedCount}건 AI 학습됐어요`:'저장됐어요';
   // 진입 컨텍스트 따라 흐름 분기 (2026-05-19 사장님 결정 A안)
   if(rcpEntryReturn){
     // 거래처(vendors:<id>) 또는 카테고리(catReceipt:<mode>) 진입 = 기존 reload + 자동 복귀
     try{ localStorage.setItem('pd_rcp_return', rcpEntryReturn); }catch(e){}
-    toast('저장됐어요','success');resetReceipt();
+    // reload 직전 토스트는 사라지므로 localStorage로 전달 → 로그인 후 자동복귀에서 학습 토스트 표시
+    try{ if(learnedCount>0) localStorage.setItem('pd_rcp_learned', String(learnedCount)); }catch(e){}
+    toast(successMsg,'success');
+    location.reload();
   } else {
     // 모드 선택 화면에서 시작한 케이스 = in-page로 기록 내역 자동 이동
     // (reload·로그인 깜빡 X, 방금 저장한 그룹 카드 바로 확인)
-    toast('저장됐어요','success');
+    toast(successMsg,'success');
     // form 초기화 (resTable 비우고 모드 선택 화면 복귀)
     const resTable=document.getElementById('resTable');
     if(resTable) resTable.innerHTML='';
+    rowCount=0;
     resetRcpMode();
     // 기록 내역 서브탭 전환 + 최신 데이터 로드
     rcpTab('list');
