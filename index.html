@@ -8488,6 +8488,12 @@ function initVendorSortable(){
     animation:150,
     handle:'.vendor-drag-handle',  // 카테고리 패턴(dev_lessons #55)과 동일 — ☰ 핸들만 드래그 활성
     ghostClass:'drag-ghost',
+    // 모바일 터치 환경 자동 스크롤 (사장님 호소 2026-05-18 — 드래그 중 스크롤 안 됨)
+    scroll:true,
+    forceAutoScrollFallback:true,
+    scrollSensitivity:80,   // 가장자리 80px 안에서 자동 스크롤 시작
+    scrollSpeed:18,
+    bubbleScroll:true,       // 페이지 전체 스크롤 (window) 까지 전파
     onEnd:saveVendorOrderFromDom
   });
 }
@@ -9995,12 +10001,18 @@ function renderExpCatList(){
 // 카테고리 드래그 정렬 초기화 (SortableJS)
 function initExpCatSortable(){
   if(!window.Sortable) return;
+  // 모바일 터치 자동 스크롤 옵션 (사장님 호소 2026-05-18)
+  const autoScrollOpts = {
+    scroll:true, forceAutoScrollFallback:true,
+    scrollSensitivity:80, scrollSpeed:18, bubbleScroll:true,
+  };
   const parentBox=document.getElementById('expCatParentBox');
   if(parentBox){
     new Sortable(parentBox,{
       handle:'.drag-handle',
       animation:150,
       ghostClass:'drag-ghost',
+      ...autoScrollOpts,
       onEnd:()=>reorderExpCats(parentBox)
     });
   }
@@ -10009,6 +10021,7 @@ function initExpCatSortable(){
       handle:'.drag-handle',
       animation:150,
       ghostClass:'drag-ghost',
+      ...autoScrollOpts,
       onEnd:()=>reorderExpCats(box)
     });
   });
@@ -12456,6 +12469,12 @@ function initExpHubSortable(){
     delayOnTouchOnly:true,
     touchStartThreshold:5,
     ghostClass:'drag-ghost',
+    // 모바일 터치 자동 스크롤
+    scroll:true,
+    forceAutoScrollFallback:true,
+    scrollSensitivity:80,
+    scrollSpeed:18,
+    bubbleScroll:true,
     onEnd:saveExpHubCardOrder
   });
 }
