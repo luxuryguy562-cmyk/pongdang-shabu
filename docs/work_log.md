@@ -119,9 +119,9 @@
 - 호소: 사장님 "비용 너무 비싸. 매장당 수익 없겠다"
 - 호소: high demand 자주 발생 → "상용화 불가능"
 
-### 2차: Gemini 다이어트 (Worker thinking OFF + 짧은 키 + 모델 lite)
+### 2차: Gemini 다이어트 (Worker thinking OFF + 짧은 키)
 - Worker 코드 갱신:
-  - `thinkingConfig.thinkingBudget: 0` (thinking 모드 OFF — Naver는 영수증 OCR에 추론 불필요)
+  - `thinkingConfig.thinkingBudget: 0` (thinking 모드 OFF — 영수증 OCR에 추론 불필요)
   - `maxOutputTokens: 2048` (출력 폭주 방지)
   - `temperature: 0.1` (일관성 ↑)
 - 클라이언트 프롬프트 다이어트:
@@ -129,11 +129,22 @@
   - 거래처 모드면 vendor/category 출력 생략 (클라이언트가 박음)
 - 모델 교체 시도 1: `gemini-2.0-flash-lite` → **신규 사용자 차단 (옛 모델, Google 정책)**
 - 모델 교체 시도 2: `gemini-2.5-flash-lite` → **정착** (1.1원/회, 5~10배 절감)
-- 동적 모델: 거래처 = flash (정확도) / 직구·POS = flash-lite (저렴)
 - **거래명세서 정확도 ↓↓** = lite 모델은 표 인식 약함 (행 매핑 다 밀림)
 - 호소: 사장님 "정확도가 너무 떨어진다"
 
-### 3차: Multi-Provider 인프라 구축 (Clova OCR + OpenAI GPT + Gemini Fallback)
+### 3차: 동적 모델 — 거래처=flash / 직구=lite (★ 정확도 가장 좋았던 시점)
+- Worker 코드 갱신: `body._model` 화이트리스트 분기
+- 거래처 영수증 = `gemini-2.5-flash` (정확도 우선) / 직구·POS = `gemini-2.5-flash-lite` (저렴)
+- **거래명세서 정확도: 거의 정확** (행별 단가/수량/카테고리 다 맞음)
+- **남은 호소 1건만**: 사장님 짚음 — "5,800×20=116,000으로 AI가 계산했지만 영수증 원본은 115,999. 원본 그대로 박는 게 맞지 않나"
+  - 회계·세무 측면: 영수증 원본 = 실제 지불 증빙, 자체 계산값으로 덮어쓰면 X
+  - CTO 동의 → 프롬프트에 "p = 영수증 인쇄된 값 그대로" 박음
+  - 부작용: 다른 행에서 BOX/EA 계산 약해짐 (산으로 가는 LLM 패턴, dev_lessons #94 같은 흐름)
+- 비용: 거래처 ~6원 / 직구 ~1원 / POS ~0.5원
+- **이 시점이 사장님 매장 운영상 best** — 동적 모델 + 합계 검증 토스트 + 합계 박스 도구
+- 사장님 의지: "그래도 거래처 high demand 차단 + 정확도 더 높게" → 다음 시도
+
+### 4차: Multi-Provider 인프라 구축 (Clova OCR + OpenAI GPT + Gemini Fallback)
 - 트리거: Gemini high demand + 정확도 부족 = "상용화 불가능"
 - 동종 앱 조사: 캐시노트·자비스 등 한국 SaaS도 OCR 보조 위치, 마이데이터(카드/은행) 메인
 - **사장님 가입 작업** (사장님 손 필수):
@@ -148,7 +159,7 @@
 - **거래명세서 정확도: 6%** (1/16, 행 통째 시프트 발생)
 - 호소: 사장님 "정확도 똥. 이건 어플 살길. 끝까지 성공시켜야"
 
-### 4차: 1002 인증 디버깅 (사장님과 1시간 troubleshoot)
+### 5차: 1002 인증 디버깅 (사장님과 1시간 troubleshoot)
 - 사장님 박은 URL = `clovaocr-api-kr.ncloud.com/external/v1/.../general` (**수동 연동 URL**)
 - 4번 시도:
   1. URL `/general` 누락 의심 — 추가해도 X
@@ -160,7 +171,7 @@
 - 해결: CLOVA OCR Domain → **"API Gateway 연동" 버튼 → 자동 연동** → 새 URL (`apigw.ntruss.com/...`) + 새 Secret Key
 - → Clova OCR 외부 호출 동작 시작
 
-### 5차: GPT-4o full + 이미지 Hybrid (정확도 핵심 무기)
+### 6차: GPT-4o full + 이미지 Hybrid (정확도 핵심 무기)
 - 사장님 결정: "거래명세서 OCR = 어플 살길. 비용 6~10원 받아들임"
 - Worker 코드 v5:
   - GPT-4o-mini → **GPT-4o (full)** (mini의 16배 똑똑한 표 인식)
@@ -174,14 +185,21 @@
 - 사장님 호소: "그대로 정확도 똥. 47% 차이는 사용 불가"
 - 다음 카드: **A안 GPT 2단계 검증** 또는 **B안 Clova Document 모드** (todo_next_session 박힘)
 
-### AI 비용 변화 (5단계)
-| 단계 | 모델 | 정확도 | 1회 비용 | 합계 비용 |
+### AI 비용·정확도 변화 (6단계)
+| 단계 | 모델 | 정확도 | 1회 비용 | 비고 |
 |---|---|---|---|---|
-| 1차 (Gemini 단독) | gemini-2.5-flash + thinking | ~80% | 5~10원 (thinking 포함) | — |
-| 2차 (다이어트) | gemini-2.5-flash-lite | ~30~50% | 1.1원 | 5~10배 절감 |
-| 3차 (Multi-Provider) | clova+gpt-4o-mini | 6% | 1.5~2원 | — |
-| 4차 (1002 디버깅) | — | 호출 실패 | 0원 | — |
-| **5차 (GPT-4o full + Hybrid)** | clova+gpt-4o | **62.5%** | **5~10원** | 비용 vs 정확도 trade-off |
+| 1차 (Gemini 단독) | gemini-2.5-flash + thinking ON | ~80% | 5~10원 (thinking 포함) | 비용 부담 |
+| 2차 (다이어트) | gemini-2.5-flash-lite | ~30~50% | 1.1원 | 5~10배 절감 but 정확도 ↓↓ |
+| **3차 (동적 모델 ★ best)** | **거래처=flash / 직구=lite** | **~95%+** (1행 호소만) | 거래처 6원 / 직구 1원 | **거의 정확. 단 116,000 vs 115,999 1건** |
+| 4차 (Multi-Provider 시도) | clova+gpt-4o-mini | 6% | 1.5~2원 | 행 매핑 통째 시프트 |
+| 5차 (1002 디버깅) | — | 호출 실패 | 0원 | 자동 연동 발견 |
+| 6차 (GPT-4o full + Hybrid) | clova+gpt-4o | 62.5% | 5~10원 | mini의 10배 개선, 다만 3차 best 미달 |
+
+### 핵심 통찰 — 3차 best 시점이 사장님 운영 옵션 후보
+- **3차 동적 모델** = 정확도 가장 좋았음 (단가/수량/카테고리 거의 정확)
+- 남은 호소 1건: 합계 116,000 vs 115,999 = **현실 운영에 영향 거의 없는 반올림 차이**
+- 다만 단점: **Gemini high demand 가끔 발생** (외부 매장 받기 시작 시 신뢰도 위협)
+- **다음 세션 후보 옵션**: 3차로 회귀 + Multi-Provider는 fallback으로만 활용 (high demand 시 자동 우회)
 
 ---
 

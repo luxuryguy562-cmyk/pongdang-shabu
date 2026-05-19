@@ -2061,12 +2061,19 @@ ellipsis 단독은 **데이터 의미 손실** 가능 → designer 실격.
 사장님 "거래명세서 OCR = 어플 살길. 정확도 높여야" 호소.
 
 순창국제 거래명세서 (16행 BOX/EA 시스템) 정확도 추이:
-- Gemini 2.5-flash + 짧은 키 + BOX/EA 강화 프롬프트: ~80% (행 일부 잘못)
-- gemini-2.5-flash-lite: ~30% (행 매핑 다 밀림)
-- Clova OCR + GPT-4o-mini Hybrid: 6% (1/16, 행 통째 시프트)
-- Clova OCR + GPT-4o full + 이미지 Hybrid + boundingPoly 정밀: **62.5%** (10/16, 10배 개선)
+- 1차 Gemini 2.5-flash + thinking ON: ~80% (행 일부 잘못, 비용 5~10원)
+- 2차 gemini-2.5-flash-lite (다이어트): ~30% (행 매핑 다 밀림, 비용 1.1원)
+- **3차 동적 모델 (거래처=flash / 직구=lite) ★ best**: **~95%+** (단가/수량/카테고리 거의 정확, 합계 116,000 vs 115,999 1건만 호소, 거래처 6원 / 직구 1원)
+- 4차 Clova OCR + GPT-4o-mini Hybrid: 6% (1/16, 행 통째 시프트)
+- 5차 (1002 디버깅, 호출 실패)
+- 6차 Clova OCR + GPT-4o full + 이미지 Hybrid + boundingPoly 정밀: 62.5% (10/16, 4차의 10배 개선이지만 3차 best 미달)
   - 정확: 행 1, 4, 6, 7, 8, 9, 10, 11, 12, 16
   - 오류: 행 2, 3, 5 (BOX/EA 적용 잘못) + 행 13 누락 → 14, 15 시프트
+
+### ★ 핵심 통찰 — 3차 시점이 정확도 best
+- 사장님 매장 운영상 가장 좋았던 시점
+- 남은 1건 호소 = 합계 반올림 (116,000 vs 115,999) = 회계상 영수증 원본 그대로 박는 게 맞음
+- 다만 high demand 발생 시 Multi-Provider fallback 필요 → **D안 (3차 회귀 + fallback) 다음 세션 후보**
 
 ### 교훈 — LLM Vision의 본질적 한계
 표 셀 정확 매핑 + BOX/EA 같은 복잡한 양식 = **LLM 100% 어려움**. 80~90%가 한계.

@@ -12,10 +12,18 @@
 ### 사장님 결정 옵션 (대기 중)
 | # | 안 | 비용/회 | 정확도 기대 | 작업 |
 |---|---|---|---|---|
+| **★ D** | **3차 best 회귀 + Gemini high demand 시 Multi-Provider fallback** | 거래처 6원 / 직구 1원 | **~95%+** (이번 세션 3차 시점 best) | Worker 코드 폴백 로직 |
 | **A** | GPT 2단계 검증 (Worker 코드 추가) | ~15원 | 85~90% | Worker 1회 배포 |
 | **B** | Clova Document 모드 새 도메인 | ~10원 | 90~95% | Naver 새 도메인 + URL 갱신 |
 | **A+B** | 둘 다 | ~20원 | 95%+ | 양쪽 |
 | **C** | 현재 + 사장님 catch 도구 | 5~10원 | 62.5% + 사람 보완 | 0 |
+
+### D안 상세 (CTO 추천 신설)
+- 이번 세션 **3차 시점 (Gemini 동적 모델)이 정확도 가장 좋았음** — 단가/수량/카테고리 거의 정확, 합계 116,000 vs 115,999 1건만 호소
+- 현재 Multi-Provider 인프라 그대로 두고 **기본 = Gemini, high demand 시 자동 Clova+GPT fallback**
+- 거래처 영수증: 1차 Gemini flash → 실패(high demand) 시 Clova+GPT-4o → 그래도 실패 시 GPT-4o vision
+- 직구·POS: Gemini lite → fallback GPT-mini
+- 116,000 vs 115,999 호소는 designer/coder 후속 조정 (프롬프트 단순 + 합계 박스 catch)
 
 ### 진입 트리거
 사장님 "A 진행" 또는 "B 진행" 또는 "A+B" 또는 "C로 받아들이자" 명시
