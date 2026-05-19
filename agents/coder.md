@@ -110,3 +110,47 @@ UI 코드 작성 시 매번 확인:
 ### 헌법 1-7 (추측 금지)
 - 도메인 단어 모르면 docs grep + DB 조회 → 사실로 답변
 - "이런 것 같다" 표현 코드에 주석으로도 쓰지 말 것
+
+---
+
+## 데이터 로딩 패턴 — 스켈레톤 + 비동기 업데이트 (2026-05-19 신설)
+
+designer가 "외곽 즉시 / 숫자 비동기" 명세하면 (designer.md 절대 규칙 9), coder는 다음 패턴으로 구현한다:
+
+### 원칙
+1. **`grid.innerHTML = html` 통째 교체 금지** — 사장님 호소 "없어졌다 생기는 느낌"의 정확한 원인
+2. **두 함수 분리**:
+   - `render{X}Skeleton()` — 캐시 기반 외곽 즉시 렌더 + Sortable 등 라이브러리 1회 초기화
+   - `update{X}Amounts(data)` — 비동기 결과 도착 후 **textContent in-place 갱신**
+3. **셀 식별자**: 갱신 대상 DOM에 `data-amt-cell="<key>"` 등 안정 속성 박기. `id`보다 `data-*` 권장 (중복 허용)
+4. **fallback 처리**: 캐시 미스(예: `expCategories`가 비어있음) 시 `update{X}Amounts` 첫 호출에서 통째 렌더 (구식 호환)
+
+### 호출 위치
+- 진입 트리거(`nav|<tab>` 처리부 또는 `load{X}Data()` 초입)에서 **동기로** `render{X}Skeleton()` 호출
+- 비동기 `Promise.all` 끝나면 `update{X}Amounts(result)` 호출
+
+### Sortable / 드래그 라이브러리
+- 초기화는 skeleton 1회만. `grid._sortableInited = true` 가드.
+- update 단계에서 재초기화 X (textContent만 바꾸면 Sortable 인스턴스 유지됨).
+
+### 절대 금지
+- ❌ skeleton에서 라이브러리 init → update에서 또 init (인스턴스 누적)
+- ❌ skeleton 만들고 update가 `innerHTML` 다시 통째 교체 (스켈레톤 의미 없어짐)
+- ❌ skeleton·update 통합한 단일 함수 (의도 흐려짐, 부분 갱신 못 함)
+
+### 이번 케이스 (지출 허브 카테고리 그리드)
+- `renderExpHubCatSkeleton()` — `expCategories` 캐시 기반 카드 외곽 + `data-amt-cell` 박힌 금액 셀 `-`
+- `updateExpHubCatAmounts(catSums)` — 카드별 `[data-amt-cell="cat-<id>"]` 찾아 `textContent` 갱신
+- 호출: `loadExpHubData()` 초입에 skeleton, 끝에 update
+
+### 속도 분석 의무
+**스켈레톤 패턴 채택 전 반드시 advisor와 함께 속도 분석 제출** (`agents/advisor.md` 사장님 기술 의견 처리 의무 참조). 단순 "사장님 의견 옳음" 동조 금지.
+
+| 단계 | 단일 교체 | 스켈레톤 + 비동기 |
+|---|---|---|
+| 진입 즉각감 | DB 끝날 때까지 빈 화면 | 외곽 즉시 보임 |
+| 총 완료 시간 | DB + DOM 통째 ≈ 거의 같음 | DB + textContent ≈ 거의 같음 |
+| DOM 부하 | innerHTML 1회 | innerHTML 1회 + textContent N회 (reflow 없음) |
+| 사장님 호소 | "없어졌다 생기는" | 해결 |
+
+→ 일반적으로 **진입 즉각감 ↑, 총 시간 동일** → 채택. 다만 캐시 미스 비율 높은 화면이면 효과 ↓ — 그땐 fallback 경로 명세할 것.

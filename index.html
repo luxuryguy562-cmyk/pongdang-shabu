@@ -158,14 +158,13 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-mini.emphasized{text-align:center;align-items:center;}
 .hub-mini.emphasized .hub-mini-amt{font-size:15px;color:var(--success);}
 .hub-mini.emphasized .hub-mini-amt.miss{color:var(--danger);}
-/* 지출 카테고리 그리드 — 2컬럼 + minmax(0,1fr)로 콘텐츠 무관 폭 고정 (사장님 요청 2026-05-19) */
+/* 지출 카테고리 그리드 — 2컬럼 column 2줄 카드 (2026-05-19 사장님 호소: 글자 잘림 방지 + 거래채널과 통일감) */
 #expHubCatGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px;}
-#expHubCatGrid .hub-mini{flex-direction:row;justify-content:space-between;align-items:center;min-height:56px;gap:10px;padding:12px 14px;min-width:0;overflow:hidden;}
-#expHubCatGrid .hub-mini-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
-#expHubCatGrid .hub-mini-icon{margin-bottom:0;}
-#expHubCatGrid .hub-mini-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-#expHubCatGrid .hub-mini-right{text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:1px;min-width:0;}
-#expHubCatGrid .hub-mini-amt{margin-top:0;font-size:14px;color:var(--gray-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#expHubCatGrid .hub-mini{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 14px;min-width:0;overflow:hidden;min-height:auto;}
+#expHubCatGrid .hub-mini-top{display:flex;align-items:center;gap:8px;width:100%;min-width:0;}
+#expHubCatGrid .hub-mini-icon{margin-bottom:0;flex-shrink:0;}
+#expHubCatGrid .hub-mini-title{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+#expHubCatGrid .hub-mini-amt{margin-top:0;font-size:15px;font-weight:800;color:var(--gray-400);font-variant-numeric:tabular-nums;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;}
 .hub-full{width:100%;background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;outline:none;}
 .hub-full:active{background:var(--gray-100);}
 .hub-full-title{font-size:15px;font-weight:700;color:var(--text);}
@@ -1444,7 +1443,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:2px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;" id="expMiniDirectSub">이번달</div>
     </button>
   </div>
-  <!-- 지출 카테고리 (동적 렌더링) — JS renderExpHubCatCards가 채움 -->
+  <!-- 지출 카테고리 (동적 렌더링) — JS renderExpHubCatSkeleton 즉시 + updateExpHubCatAmounts 비동기 -->
   <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">📦 지출 카테고리 <span style="font-weight:500;color:var(--gray-400);">(드래그로 순서 변경)</span></div>
   <div class="hub-grid" id="expHubCatGrid">
     <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>
@@ -12473,39 +12472,71 @@ function _expCatAction(cat){
   return 'openCatReceipt|cat:'+cat.id;
 }
 
-function renderExpHubCatCards(catSums){
-  const grid = document.getElementById('expHubCatGrid');
-  if(!grid) return;
-  // 활성 expense parent 카테고리 (사장님 결정: 지출 대분류만)
-  const parents = (expCategories||[]).filter(c=>
+// ─── 진입 즉시 스켈레톤 렌더 (2026-05-19 사장님 "없어졌다 생기는 느낌" 해결) ───
+// 외곽·아이콘·제목 = expCategories 캐시로 즉시 / 금액 = 비동기 "-" 표시 후 updateExpHubCatAmounts로 채움
+// 캐시 비어있으면 스킵 (기존 "불러오는 중..." fallback 유지)
+function _expHubCatParents(){
+  return (expCategories||[]).filter(c=>
     !c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense'
   ).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+}
+function _expHubMkCard(cardId, action, iconId, title, amtText){
+  return `<button type="button" class="hub-mini" data-card-id="${cardId}" data-action="${action}">
+    <div class="hub-mini-top">
+      <span class="hub-mini-icon"><svg><use href="#${iconId}"/></svg></span>
+      <span class="hub-mini-title">${esc(title)}</span>
+    </div>
+    <div class="hub-mini-amt" data-amt-cell="${cardId}">${amtText}</div>
+  </button>`;
+}
+function renderExpHubCatSkeleton(){
+  const grid = document.getElementById('expHubCatGrid');
+  if(!grid) return;
+  const parents = _expHubCatParents();
+  if(!parents.length) return; // 캐시 비면 기존 "불러오는 중..." 유지
   let html = '';
-  // 부제(이번달·건수·%) 제거 — 사장님 결정 2026-05-18: 큰 숫자만, 통일감 + 짤림 해결
-  const mkCard = (cardId, action, iconId, title, amt)=>{
-    return `<button type="button" class="hub-mini" data-card-id="${cardId}" data-action="${action}">
-      <div class="hub-mini-left">
-        <span class="hub-mini-icon"><svg><use href="#${iconId}"/></svg></span>
-        <span class="hub-mini-title">${esc(title)}</span>
-      </div>
-      <div class="hub-mini-right">
-        <span class="hub-mini-amt">${amt?fmt(amt):'0'}</span>
-      </div>
-    </button>`;
-  };
   parents.forEach(cat=>{
-    const amt = catSums?.[cat.id]?.amount || 0;
-    html += mkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, amt);
+    html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, '-');
   });
-  // 로열티 카드 (카테고리 X — 매출 × 요율 계산 기반)
-  const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
-  html += mkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt);
+  html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', '-');
   grid.innerHTML = html;
-  // 카드 생성 후 순서·드래그 적용
   applyExpHubCardOrder();
-  // Sortable 재초기화 (이전 인스턴스 무효 처리)
   grid._sortableInited = false;
   initExpHubSortable();
+}
+// 금액 셀만 in-place 갱신 (DOM 통째 교체 X = 깜빡임 없음)
+function updateExpHubCatAmounts(catSums){
+  const grid = document.getElementById('expHubCatGrid');
+  if(!grid) return;
+  // 스켈레톤이 안 그려졌으면(캐시 미스 fallback) 통째 렌더
+  if(!grid.querySelector('[data-amt-cell]')){
+    const parents = _expHubCatParents();
+    let html = '';
+    parents.forEach(cat=>{
+      const amt = catSums?.[cat.id]?.amount || 0;
+      html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, amt?fmt(amt):'0');
+    });
+    const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
+    html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt?fmt(royaltyAmt):'0');
+    grid.innerHTML = html;
+    applyExpHubCardOrder();
+    grid._sortableInited = false;
+    initExpHubSortable();
+    return;
+  }
+  // 스켈레톤 있음 → 금액 셀만 textContent 갱신
+  const parents = _expHubCatParents();
+  parents.forEach(cat=>{
+    const cell = grid.querySelector(`[data-amt-cell="cat-${cat.id}"]`);
+    if(!cell) return;
+    const amt = catSums?.[cat.id]?.amount || 0;
+    cell.textContent = amt ? fmt(amt) : '0';
+  });
+  const royaltyCell = grid.querySelector('[data-amt-cell="royalty"]');
+  if(royaltyCell){
+    const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
+    royaltyCell.textContent = royaltyAmt ? fmt(royaltyAmt) : '0';
+  }
 }
 async function saveExpHubCardOrder(){
   if(!currentStore) return;
@@ -12523,8 +12554,9 @@ async function saveExpHubCardOrder(){
 // 2026-05-15 최적화: 직렬 await 8개 → Promise.all 1번 묶음 (사장님 "엄청 느림" 호소)
 async function loadExpHubData(){
   if(!currentStore) return;
-  // 동적 그리드: expCategories 없으면 자리만 표시 (백그라운드 로드 후 재진입 시 카드 노출)
-  // 카드 생성·순서 적용은 합산 끝나고 renderExpHubCatCards 안에서.
+  // 진입 즉시 스켈레톤 (캐시 기반 외곽·아이콘·제목 = 0~30ms)
+  // 금액은 비동기로 채움 → "없어졌다 생기는 느낌" 해결 (2026-05-19)
+  renderExpHubCatSkeleton();
   const sid=currentStore.id;
   const ym=new Date().toISOString().slice(0,7);
   const [y,m]=ym.split('-').map(Number);
@@ -12655,7 +12687,7 @@ async function loadExpHubData(){
   }catch(e){ catSums._royalty = {amount:0, rate:0}; }
 
   // ── 카드 동적 생성 (활성 expense parent + 로열티) ──
-  renderExpHubCatCards(catSums);
+  updateExpHubCatAmounts(catSums);
 
   // ── 카테고리 활성 개수 (도구 영역 분류 관리 부제) ──
   try{
