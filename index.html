@@ -3597,13 +3597,22 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // 2026-05-19: usageMetadata 추출 + ai_usage_logs DB 저장 + window.lastAIUsage 글로벌 박음
 //             → 토스트로 토큰·비용 즉시 표시 + 관리자 대시보드 데이터 누적
 let lastAIUsage = null; // 최근 AI 호출 토큰·비용 (토스트용)
-// gemini-2.5-flash 가격 (2026-05 기준): input $0.30/1M, output+thinking $2.50/1M, 환율 1400원/$
+// Gemini 모델별 가격 (환율 1400원/$ 기준, 2026-05 공식 가격)
+// 사장님이 Worker 모델 교체 시 _CURRENT_GEMINI_MODEL도 같이 변경
+const _CURRENT_GEMINI_MODEL = 'gemini-2.5-flash'; // Worker에서 사용하는 모델과 일치시킬 것
+const _GEMINI_PRICING = {
+  'gemini-2.5-flash':       { in:  420, out: 3500 }, // $0.30 / $2.50 per 1M
+  'gemini-2.5-flash-lite':  { in:  140, out:  560 }, // $0.10 / $0.40 per 1M
+  'gemini-2.0-flash':       { in:  140, out:  560 }, // $0.10 / $0.40 per 1M
+  'gemini-2.0-flash-lite':  { in:  105, out:  420 }, // $0.075/ $0.30 per 1M
+  'gemini-1.5-flash':       { in:  105, out:  420 },
+  'gemini-1.5-flash-8b':    { in:  52.5,out:  210 },
+};
 function _calcGeminiCostWon(promptTokens, outputTokens, thinkingTokens){
-  const inputRate = 420; // 원 / 1M tokens
-  const outputRate = 3500;
-  const input = (promptTokens||0) * inputRate / 1000000;
-  const output = ((outputTokens||0) + (thinkingTokens||0)) * outputRate / 1000000;
-  return Math.round((input + output) * 10000) / 10000; // 소수점 4자리
+  const rates = _GEMINI_PRICING[_CURRENT_GEMINI_MODEL] || _GEMINI_PRICING['gemini-2.5-flash'];
+  const input = (promptTokens||0) * rates.in / 1000000;
+  const output = ((outputTokens||0) + (thinkingTokens||0)) * rates.out / 1000000;
+  return Math.round((input + output) * 10000) / 10000;
 }
 function _logAIUsage(feature, usage, durationMs, success, errorMsg){
   try{
@@ -3611,7 +3620,7 @@ function _logAIUsage(feature, usage, durationMs, success, errorMsg){
     sb.from('ai_usage_logs').insert({
       store_id: currentStore.id,
       feature: feature || 'unknown',
-      model: 'gemini-2.5-flash',
+      model: _CURRENT_GEMINI_MODEL,
       prompt_tokens: usage?.promptTokenCount || 0,
       output_tokens: usage?.candidatesTokenCount || 0,
       thinking_tokens: usage?.thoughtsTokenCount || 0,
@@ -4608,51 +4617,60 @@ async function runAI() {
   setLoad(true,'AI 분석 중...');
   try {
     const catList = getCatListForPrompt();
-    // ─── 새 기능: 모드별 프롬프트 분기 (거래처면 양식·카테고리 알고 시작 / 직구면 품목별 분류) ───
-    const modeHint = rcpMode === 'vendor'
-      ? `\n[모드: 거래처 영수증 — 매우 중요]\n- 사용자가 거래처를 "${rcpVendorName}"로 이미 선택했어요.\n- ⚠️ vendor 필드: 빈 문자열 "" 박기 (사용자 선택 우선, AI 추출 무시 = 토큰·오류 방지)\n- 모든 품목의 category는 무조건 "${rcpCatName || '식자재'}" 사용 (사용자 사전 선택, 다른 카테고리 추정 금지)\n- 거래명세서 양식이면 "단가/수량/합계" 컬럼 정확히 추출 → unitPrice/qty 반드시 채울 것 (없으면 null/1)\n- 한 영수증에 같은 양식 여러 품목 → 각 품목 행으로 분리`
-      : `\n[모드: 직구 영수증]\n- 마트/일반 영수증/배민 양식 등. 한 영수증에 카테고리가 섞일 수 있음 (예: 양파=식자재>야채, 고무장갑=비품).\n- 품목별로 적절한 category를 [${catList}] 에서 정확히 골라줘.\n- 단가/수량 보일 때만 unitPrice/qty 채울 것 (영수증에 없으면 null/1)`;
-    const prompt=`한국 영수증/거래명세서를 분석해 JSON 배열로만 응답하세요. 설명/주석 금지.
+    const isVendorModeAI = rcpMode === 'vendor';
+    // ─── 비용 다이어트 (2026-05-19) — 짧은 키 + 거래처 모드 c·v 생략 ───
+    // 옛 키: date,vendor,item,unitPrice,qty,totalPrice,category → 새 키: d,v,i,u,q,p,c
+    // 거래처 모드: v="" + c 생략 (클라이언트가 박음) — 출력 토큰 30~50% 절감
+    const modeHint = isVendorModeAI
+      ? `\n[모드: 거래처 — 매우 중요]\n- 거래처 = "${rcpVendorName}" 이미 선택됨. v="" 박을 것 (출력 안 함)\n- c 필드 생략 가능 (모든 행 카테고리 동일, 클라이언트가 박음)\n- 거래명세서 양식이면 단가(u)·수량(q)·합계(p) 정확히 추출`
+      : `\n[모드: 직구]\n- 마트·배민 등. 한 영수증에 카테고리 섞임. 품목별 c를 [${catList}]에서 정확히 골라`;
+    const prompt=`한국 영수증을 JSON 배열로만 응답. 설명/주석 금지. 비용 절감 위해 키는 짧게 사용.
 ${modeHint}
 
-[필드]
-- date: YYYY-MM-DD (거래일시. "2025.08.13" "25-08-13" "8/13" 모두 인식. 없으면 오늘)
-- vendor: 상호명만 추출 (사업자번호/주소/전화/"감사합니다"/"영수증" 등 제외)
-- item: 품목명 (여러 개면 각 행으로 분리)
-- unitPrice: 단가 (숫자, 없으면 null)
-- qty: 수량 (정수, 없으면 1)
-- totalPrice: 실제 결제 금액 (할인/쿠폰 반영 후 최종가, 원 단위 정수)
-- category: 아래 목록에서 가장 적합한 하나 정확히 복붙
-  [${catList}]
+[필드 (짧은 키)]
+- d: 날짜 YYYY-MM-DD (없으면 오늘)
+- v: 상호명 (거래처 모드면 "")
+- i: 품목명
+- u: 단가 (없으면 null)
+- q: 수량 (없으면 1)
+- p: 결제 금액 (정수, 할인 반영 최종가)
+- c: 카테고리 (거래처 모드면 생략) — 목록: [${catList}]
 
 [규칙]
-1. "합계/소계/부가세/봉사료/결제금액" 같은 요약 행은 제외
-2. 마트 할인 처리: "김치 5,000원 → 할인 -500 → 4,500원"이면 totalPrice=4500 (할인 후 금액만)
-3. 행사가/할인가 표시되면 할인가를 totalPrice로 (원가 X)
-4. 상호명 못찾으면 vendor=""
-5. 숫자에서 쉼표/원 기호 제거, 음수 금지
-6. 흐릿해도 근접 추정 (빈 배열 금지)
-7. 품목별 category 각각 판단 (한 영수증이어도 다를 수 있음)
-8. vendor 우선순위: 거래명세서·세금계산서는 "공급자" 또는 상단 매장명 (절대 "공급받는자" X). 일반 영수증은 상단 매장명. 배민은 매장명 (배달지 주소 NOT)
-9. totalPrice 우선순위: "거래대금합계" > "받을금액" > "총결제금액" > "총주문금액" > "합계액" > "결제금액". 차감·할인 반영된 최종 1개 행만
-10. 누적 금액 절대 totalPrice 아님 — 무시: "전미수/당일입금/금일합계/총합계(누적)/잔액/현잔액/금일채권" (단, 거래명세서의 "총합계" 가 단일 거래분이면 OK)
-11. 주류·도매 계산서: "용기보증금"/"빈용기보증금"은 별도 행. 진짜 결제액은 "거래대금합계"
-12. 면세(*표시)/과세 구분은 무시 — totalPrice만 봐도 됨
+1. "합계/소계/부가세/결제금액" 요약행 제외
+2. 할인 적용 후 최종가만 p로 (원가 X)
+3. 상호명 못 찾으면 v=""
+4. 숫자에서 쉼표/원 제거, 음수 금지
+5. 흐릿해도 근접 추정 (빈 배열 X)
+6. 직구 모드는 품목별 c 각각 (식자재>야채 / 비품 등 섞일 수 있음)
+7. v 우선순위: 거래명세서면 "공급자"(공급받는자 X). 일반은 상단 매장명. 배민은 매장명(배달지 X)
+8. p 우선순위: "거래대금합계" > "받을금액" > "총결제금액" > "합계액" > "결제금액". 차감·할인 반영 최종 1개
+9. 누적금액 절대 p 아님: "전미수/당일입금/금일합계/누적/잔액/채권" 무시
+10. 주류·도매: "용기보증금"은 별도 행. 진짜 결제는 "거래대금합계"
+11. 면세(*표시)/과세 구분 무시 — p만
 
 [예시]
 [
- {"date":"2025-08-13","vendor":"대봄야채","item":"양파 10kg","unitPrice":15000,"qty":2,"totalPrice":30000,"category":"식자재>야채"},
- {"date":"2025-08-13","vendor":"행복한정육점","item":"삼겹살 2kg","unitPrice":18000,"qty":2,"totalPrice":36000,"category":"식자재>육류"},
- {"date":"2025-08-13","vendor":"이마트","item":"라면 5개입","unitPrice":null,"qty":1,"totalPrice":4500,"category":"식자재>공산품"},
- {"date":"2025-08-13","vendor":"이마트","item":"휴지 30롤 (행사)","unitPrice":null,"qty":1,"totalPrice":12900,"category":"비품"},
- {"date":"2026-04-09","vendor":"(주)순창국제","item":"위즈복대-날치알 500g","unitPrice":9400,"qty":30,"totalPrice":282000,"category":"식자재>공산품"},
- {"date":"2026-04-08","vendor":"대명주류상사","item":"참이슬","unitPrice":81273,"qty":11,"totalPrice":100400,"category":"주류"},
- {"date":"2026-03-29","vendor":"이래관","item":"더블클래식B","unitPrice":8000,"qty":2,"totalPrice":16000,"category":"식자재>공산품"}
-]`;
-    let list=await callGemini([
+ {"d":"2025-08-13","v":"대봄야채","i":"양파 10kg","u":15000,"q":2,"p":30000,"c":"식자재>야채"},
+ {"d":"2025-08-13","v":"이마트","i":"휴지 30롤","u":null,"q":1,"p":12900,"c":"비품"},
+ {"d":"2026-04-09","v":"","i":"위즈복대-날치알 500g","u":9400,"q":30,"p":282000}
+]
+(마지막 예시 = 거래처 모드: v="" + c 생략)`;
+    let raw=await callGemini([
       {text:prompt},
       {inline_data:{mime_type:'image/jpeg',data:b64}}
     ], 30, 'receipt_ocr');
+    // 짧은 키 → 옛 키 매핑 (응답 호환). 거래처 모드면 c 자동 박음.
+    const defaultCat = isVendorModeAI ? (rcpCatName || '식자재') : '';
+    let list = (raw||[]).map(x => ({
+      date: x.d || x.date || ymdLocal(new Date()),
+      vendor: x.v ?? x.vendor ?? '',
+      item: x.i || x.item || '',
+      unitPrice: x.u ?? x.unitPrice ?? null,
+      qty: x.q ?? x.qty ?? null,
+      totalPrice: x.p ?? x.totalPrice ?? 0,
+      category: x.c || x.category || defaultCat
+    }));
     // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
     list=await applyRulesToReceipt(list);
     rowCount=0;
