@@ -4775,30 +4775,35 @@ async function runAI() {
     //  · page_info: {current, total} 신설 — 영수증 "Page (N/M)" 인쇄 감지
     //  · 멀티페이지: parts에 inline_data 여러 개 → AI가 통합 분석
     const modeHint = isVendorModeAI
-      ? `[모드:거래처] vendor="${rcpVendorName}" 이미 선택. v·c 출력 X.
-[BOX/EA] q=(BOX×단위)+EA. 예: 단위20·BOX1·EA10→q=30 / 단위8·BOX1·EA0→q=8.`
-      : `[모드:직구] 마트·배민. 품목별 c를 [${catList}]에서 선택.`;
+      ? `[모드:거래처] vendor="${rcpVendorName}" 이미 선택. v·c·d 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
+[BOX/EA] q=(BOX×단위)+EA. ⚠️ BOX=0이면 단위 무시, EA가 q.
+  · 단위20·BOX1·EA10→q=30
+  · 단위8·BOX1·EA0→q=8
+  · 단위40·BOX0·EA5→q=5  ← BOX 0
+  · 단위12·BOX0·EA5→q=5  ← BOX 0`
+      : `[모드:직구] 마트·배민. d 출력 X. vendor 최상위 1번. 영수증 1장 = 같은 날짜·매장.
+품목별 c를 [${catList}]에서 선택.`;
     const multiPageHint = pageCount>1
-      ? `\n[멀티페이지] 사진 ${pageCount}장 = 같은 영수증의 다른 페이지. 모든 페이지 행을 items에 통합.`
+      ? `\n[멀티페이지] 사진 ${pageCount}장 = 같은 영수증의 다른 페이지. 모든 페이지 행을 items에 통합. date·vendor·total_sum은 1번만.`
       : '';
     const prompt=`한국 영수증을 JSON으로만 응답. 설명·주석 X.
 ${modeHint}${multiPageHint}
 
 [응답]
-{
-  "items": [ ${isVendorModeAI ? '{d,i,u,q,p}' : '{d,v,i,u,q,p,c}'} 행 배열 ],
+{${isVendorModeAI ? '' : `
+  "vendor": "상호명",`}
+  "date": "영수증 발행일 YYYY-MM-DD",
+  "items": [ ${isVendorModeAI ? '{i,u,q,p}' : '{i,u,q,p,c}'} 행 배열 ],
   "total_sum": 영수증 박스값(정수,없으면 null) — 우선순위: 금일합계>합계액>결제금액. 전미수·총합계·잔액·누계·채권 무시,
-  "page_info": {"current":현재페이지,"total":총페이지수} — 영수증에 "Page (N/M)" 또는 "N/M" 인쇄 시. 없으면 {"current":1,"total":1}
+  "page_info": {"current":현재페이지,"total":총페이지수} — 영수증에 "Page (N/M)" 인쇄 시. 없으면 {"current":1,"total":1}
 }
 
 [필드]
-- d:날짜 YYYY-MM-DD (없으면 오늘)
-- v:상호명 (거래명세서=공급자, 배민=매장명. 거래처 모드 출력 X)
 - i:품목명
 - u:단가 (없으면 null)
-- q:수량 (없으면 1)
-- p:영수증 [합계] 컬럼 인쇄값 그대로 정수. u×q 계산 X — 1~2원 차이도 영수증 인쇄 우선 (회계 증빙)
-- c:카테고리 (거래처 모드 출력 X)
+- q:수량 (없으면 1) ${isVendorModeAI ? '— BOX/EA 정확히 적용. BOX 0 = EA만.' : ''}
+- p:영수증 [합계] 컬럼 인쇄값 그대로 정수. u×q 계산 X — 1~2원 차이도 영수증 인쇄 우선 (회계 증빙)${isVendorModeAI ? '' : `
+- c:카테고리 [${catList}]`}
 
 [규칙]
 - 합계행·소계·부가세·할인전·외상행·용기보증금 = 제외
@@ -4806,9 +4811,9 @@ ${modeHint}${multiPageHint}
 - 흐릿해도 근접 추정
 - 면세(*)/과세 무시 — p만
 
-[예시 — 거래명세서]
-{"items":[{"d":"2026-04-09","i":"위즈복대-날치알 500g","u":9400,"q":30,"p":282000},{"d":"2026-04-09","i":"집게피쉬볼 500g","u":5800,"q":20,"p":115999}],"total_sum":1416049,"page_info":{"current":1,"total":2}}
-(집게피쉬볼 = 단가×수량=116,000이지만 영수증 인쇄 115,999 그대로 박음. 회계 증빙 우선)`;
+[예시 — 거래명세서 (BOX/EA 박힘)]
+{"date":"2026-04-09","items":[{"i":"위즈복대-날치알 500g","u":9400,"q":30,"p":282000},{"i":"넙적분모자 250g","u":1100,"q":5,"p":5500},{"i":"두부피쉬볼 500g","u":5800,"q":5,"p":29000}],"total_sum":1416049,"page_info":{"current":1,"total":2}}
+(넙적분모자 = 단위40·BOX0·EA5 → q=5 / 두부피쉬볼 = 단위12·BOX0·EA5 → q=5. BOX 0이면 EA만)`;
     // AI 단독 (2026-05-19 (4)): OCR 제거 — Gemini Flash 단독 (3차 best ~95%+) + High demand 시 GPT-4o fallback
     const aiModel = isVendorModeAI ? 'gemini-2.5-flash' : 'gemini-2.5-flash-lite';
     // 모든 페이지를 parts에 박음 (Gemini multi-image 지원)
@@ -4834,13 +4839,16 @@ ${modeHint}${multiPageHint}
       }
     }
     // 응답 호환: 옛 배열 형식과 새 객체 형식 둘 다 받음
+    // 2026-05-19 (4)+ 출력 다이어트: date·vendor 최상위 1번 → 행 fallback
     const itemsRaw = Array.isArray(raw) ? raw : (raw?.items || []);
     const receiptTotalSum = Array.isArray(raw) ? null : (raw?.total_sum || null);
     const pageInfo = (raw && raw.page_info && typeof raw.page_info.total==='number') ? raw.page_info : null;
+    const respDate = (!Array.isArray(raw) && raw?.date) ? raw.date : null;
+    const respVendor = (!Array.isArray(raw) && raw?.vendor) ? raw.vendor : '';
     const defaultCat = isVendorModeAI ? (rcpCatName || '식자재') : '';
     let list = itemsRaw.map(x => ({
-      date: x.d || x.date || ymdLocal(new Date()),
-      vendor: x.v ?? x.vendor ?? '',
+      date: x.d || x.date || respDate || ymdLocal(new Date()),
+      vendor: x.v ?? x.vendor ?? respVendor ?? '',
       item: x.i || x.item || '',
       unitPrice: x.u ?? x.unitPrice ?? null,
       qty: x.q ?? x.qty ?? null,
@@ -4852,6 +4860,7 @@ ${modeHint}${multiPageHint}
     // 임계값 = max(100원, 0.5%) — 2026-05-19 (4) 사장님 호소: 회계 기준 5% 너무 느슨
     // 1원 차이(반올림) = 자동 통과, 100원 이내·0.5% 이내 = 정상, 그 외 = ⚠️ catch
     // 예: 116,000 vs 115,999 (1원) → 통과 / 282,000 vs 28,200 (253,800원) → catch
+    // 2026-05-19 (4)+ 시각화: 의심행을 it._suspect에 박아 표 행 자체에 ⚠️ 표시 (토스트 사라져도 영구)
     const suspectRows = [];
     list.forEach((it,idx)=>{
       const u = parseFloat(it.unitPrice)||0;
@@ -4861,7 +4870,11 @@ ${modeHint}${multiPageHint}
         const calc = u*q;
         const diff = Math.abs(calc-p);
         const threshold = Math.max(100, Math.max(calc,p) * 0.005);
-        if(diff > threshold){ suspectRows.push({idx:idx+1, item:it.item, u, q, p, calc:Math.round(calc), diff}); }
+        if(diff > threshold){
+          const calcInt = Math.round(calc);
+          suspectRows.push({idx:idx+1, item:it.item, u, q, p, calc:calcInt, diff});
+          it._suspect = {calc:calcInt, diff};
+        }
       }
     });
     if(suspectRows.length){
@@ -4971,8 +4984,13 @@ function buildReceiptRow(i={}) {
   const learnBadge=cat?`<span class="rcp-learn-badge" title="저장 시 AI 학습됨">✨</span>`:'';
   // AI 원본 텍스트 보존 (사장님 정정 학습용 — 데이터 속성)
   const origItem = String(i.item||'').replace(/"/g,'&quot;');
-  return `<tr id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
-    <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" data-action="openReasonSheet|${idx}">X</button></td>
+  // ⚠️ 의심행 시각화 (2026-05-19 (4)+) — 행 배경 노란색 + X 옆 ⚠️ + 클릭시 차이 안내 툴팁
+  // 토스트는 8초면 사라지지만 행 시각화는 영구. 사장님이 어느 행이 사고인지 즉시 인지.
+  const suspect = i._suspect;
+  const rowStyle = suspect ? ' style="background:#FEF3C7;"' : '';
+  const suspectMark = suspect ? `<span title="단가×수량(${fmt(suspect.calc)}) ≠ 합계 — ${fmt(suspect.diff)}원 차이. 수량 확인 필요" style="display:inline-block;margin-left:3px;font-size:13px;cursor:help;vertical-align:middle;">⚠️</span>` : '';
+  return `<tr id="row-${idx}"${rowStyle} data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
+    <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" data-action="openReasonSheet|${idx}">X</button>${suspectMark}</td>
     <td class="col-vendor"><input type="text" class="c-v" value="${esc(i.vendor||'')}"></td>
     <td><input type="text" class="c-i" value="${esc(i.item||'')}"></td>
     <td><input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></td>
