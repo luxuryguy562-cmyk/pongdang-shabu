@@ -12477,7 +12477,8 @@ function renderExpHubCatCards(catSums){
     !c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense'
   ).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   let html = '';
-  const mkCard = (cardId, action, iconId, title, amt, sub)=>{
+  // 부제(이번달·건수·%) 제거 — 사장님 결정 2026-05-18: 큰 숫자만, 통일감 + 짤림 해결
+  const mkCard = (cardId, action, iconId, title, amt)=>{
     return `<button type="button" class="hub-mini" data-card-id="${cardId}" data-action="${action}">
       <div class="hub-mini-left">
         <span class="hub-mini-icon"><svg><use href="#${iconId}"/></svg></span>
@@ -12485,21 +12486,16 @@ function renderExpHubCatCards(catSums){
       </div>
       <div class="hub-mini-right">
         <span class="hub-mini-amt">${amt?fmt(amt):'0'}</span>
-        <span class="hub-mini-sub">${esc(sub)}</span>
       </div>
     </button>`;
   };
   parents.forEach(cat=>{
     const amt = catSums?.[cat.id]?.amount || 0;
-    const cnt = catSums?.[cat.id]?.count || 0;
-    const sub = cnt ? `${cnt}건 · 이번달` : '이번달';
-    html += mkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, amt, sub);
+    html += mkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, amt);
   });
   // 로열티 카드 (카테고리 X — 매출 × 요율 계산 기반)
   const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
-  const royaltyRate = (catSums && catSums._royalty) ? catSums._royalty.rate : 0;
-  const royaltySub = royaltyRate>0 ? `${(royaltyRate*100).toFixed(1)}% · 이번달` : '요율 미설정';
-  html += mkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt, royaltySub);
+  html += mkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt);
   grid.innerHTML = html;
   // 카드 생성 후 순서·드래그 적용
   applyExpHubCardOrder();
