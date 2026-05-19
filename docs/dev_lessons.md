@@ -1999,3 +1999,95 @@ ellipsis 단독은 **데이터 의미 손실** 가능 → designer 실격.
 ### 적용 위치
 - `agents/designer.md` 절대 규칙 7~10에 디테일 의무 추가
 - `agents/reviewer.md` 자가 체크에 디테일 항목 추가
+
+---
+
+## 95. CSS ID 셀렉터는 매칭 위치 검증 필수 — `#resTable th.col-vendor` 헷갈림 (2026-05-19)
+
+### 사건
+사장님 "표 밀렸어. 거래처 컬럼 그대로 있고" 호소.
+원인: CSS `#resultArea.vendor-mode #resTable th.col-vendor { display:none }` 박았는데, `#resTable`은 `<tbody>` id라 **thead의 거래처 헤더는 매칭 안 됨**. 본문만 숨고 헤더 살아남아 컬럼 정렬 통째 밀림.
+
+### 교훈
+**ID 셀렉터 박을 때 실제 DOM 매칭 위치 검증 필수.**
+- HTML 구조에서 ID가 어디(thead/tbody/wrapper) 박혀있는지 확인
+- thead·tbody 양쪽 매칭 필요하면 **클래스 단독**으로 (`.col-vendor`)
+- 또는 `#resultArea th.col-vendor, #resultArea td.col-vendor` 명시
+
+### 적용 위치
+- `agents/designer.md` 절대 규칙 11 (셀렉터 검증 + 모바일 360px 실측 폭 표 의무)
+- `agents/reviewer.md` 자가 체크에 셀렉터 검증 추가
+
+---
+
+## 96. Naver Clova OCR Custom URL은 외부 직접 호출 금지 — API Gateway 자동 연동 필수 (2026-05-19 사장님과 1시간 troubleshoot)
+
+### 사건
+사장님이 Naver Cloud → CLOVA OCR Domain 생성 → "API Gateway 수동 연동" 섹션의 **CLOVA OCR Invoke URL** (`clovaocr-api-kr.ncloud.com/external/v1/.../general`)을 Cloudflare Worker 환경변수 `CLOVA_URL`에 박음.
+
+→ 외부 호출 시 **계속 1002 에러 (Authorization Failed)**
+
+진단 시도 4회:
+1. URL `/general` 누락 의심 — 추가해도 X
+2. Secret Key 재발급 — X
+3. VPC vs Classic 환경 의심 — Classic 폐기됨, X
+4. Premium 플랜 결제 의심 — X
+
+### 진짜 원인 (Naver 공식 가이드 사장님이 발견)
+> "안전한 서비스 제공을 위해 외부 서비스에 바로 공개하지 않고... **반드시 API Gateway와 연동**하여 사용하도록 설계"
+
+`clovaocr-api-kr.ncloud.com/...` URL = 내부 직접 URL. 외부에서 호출 차단.
+
+### 해결
+1. CLOVA OCR Domain → "**API Gateway 연동**" 버튼 → **자동 연동** 선택
+2. 자동으로 API Gateway에 Product + API + Stage 생성
+3. **APIGW Invoke URL** (`xxxxxxxxxx.apigw.ntruss.com/custom/v1/.../general`) 받기
+4. Secret Key도 **자동 연동 화면에서 새로 생성** (Domain Secret Key와 별개)
+5. 두 값을 Cloudflare Worker에 박음
+
+### 교훈
+- **Naver Clova OCR 외부 호출 = API Gateway 자동 연동 필수**
+- "API Gateway 수동 연동" 섹션의 URL은 **표시용** (실제 외부 호출 안 됨)
+- 공식 가이드 먼저 읽기 (CTO 죄송)
+
+### 적용 위치
+- `docs/services.md`에 Naver Clova OCR 설정 절차 박음
+
+---
+
+## 97. 거래명세서 OCR LLM Vision의 표 인식 한계 (2026-05-19 사장님 매장 거래명세서 16행)
+
+### 사건
+사장님 "거래명세서 OCR = 어플 살길. 정확도 높여야" 호소.
+
+순창국제 거래명세서 (16행 BOX/EA 시스템) 정확도 추이:
+- 1차 Gemini 2.5-flash + thinking ON: ~80% (행 일부 잘못, 비용 5~10원)
+- 2차 gemini-2.5-flash-lite (다이어트): ~30% (행 매핑 다 밀림, 비용 1.1원)
+- **3차 동적 모델 (거래처=flash / 직구=lite) ★ best**: **~95%+** (단가/수량/카테고리 거의 정확, 합계 116,000 vs 115,999 1건만 호소, 거래처 6원 / 직구 1원)
+- 4차 Clova OCR + GPT-4o-mini Hybrid: 6% (1/16, 행 통째 시프트)
+- 5차 (1002 디버깅, 호출 실패)
+- 6차 Clova OCR + GPT-4o full + 이미지 Hybrid + boundingPoly 정밀: 62.5% (10/16, 4차의 10배 개선이지만 3차 best 미달)
+  - 정확: 행 1, 4, 6, 7, 8, 9, 10, 11, 12, 16
+  - 오류: 행 2, 3, 5 (BOX/EA 적용 잘못) + 행 13 누락 → 14, 15 시프트
+
+### ★ 핵심 통찰 — 3차 시점이 정확도 best
+- 사장님 매장 운영상 가장 좋았던 시점
+- 남은 1건 호소 = 합계 반올림 (116,000 vs 115,999) = 회계상 영수증 원본 그대로 박는 게 맞음
+- 다만 high demand 발생 시 Multi-Provider fallback 필요 → **D안 (3차 회귀 + fallback) 다음 세션 후보**
+
+### 교훈 — LLM Vision의 본질적 한계
+표 셀 정확 매핑 + BOX/EA 같은 복잡한 양식 = **LLM 100% 어려움**. 80~90%가 한계.
+
+100% 정확도 추구 시:
+- **Clova OCR Document 모드** (General보다 표 인식 강함, 90~95%)
+- **GPT 2단계 검증** (1차 추출 + 2차 자체 검증, 85~90%)
+- **사람 검증** (사장님 catch 도구로 보완) — **현실적**
+
+### 차별 무기 — Hybrid 접근
+- AI 자동 추출 + 사장님 catch 도구 (합계 박스, 의심 행 토스트)
+- 정확도 80% + 사장님 수정 = 100% 도달
+- 캐시노트·자비스도 같은 패턴 (마이데이터 메인, OCR 보조)
+
+### 적용 위치
+- `docs/todo_next_session.md`에 거래명세서 정확도 다음 카드 박음 (A안 GPT 2단계 / B안 Clova Document)
+- `docs/work_log.md` 2026-05-19 Phase 4 상세 기록
