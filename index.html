@@ -3599,7 +3599,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let lastAIUsage = null; // 최근 AI 호출 토큰·비용 (토스트용)
 // Gemini 모델별 가격 (환율 1400원/$ 기준, 2026-05 공식 가격)
 // 사장님이 Worker 모델 교체 시 _CURRENT_GEMINI_MODEL도 같이 변경
-const _CURRENT_GEMINI_MODEL = 'gemini-2.5-flash'; // Worker에서 사용하는 모델과 일치시킬 것
+const _CURRENT_GEMINI_MODEL = 'gemini-2.0-flash-lite'; // Worker와 일치 (2026-05-19 사장님 결정 ③ — 비용 다이어트 A안)
 const _GEMINI_PRICING = {
   'gemini-2.5-flash':       { in:  420, out: 3500 }, // $0.30 / $2.50 per 1M
   'gemini-2.5-flash-lite':  { in:  140, out:  560 }, // $0.10 / $0.40 per 1M
