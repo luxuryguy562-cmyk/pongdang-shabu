@@ -4,6 +4,48 @@
 
 ---
 
+## [2026-05-19 (4)] 영수증 AI 분석 — OCR 제거 + Gemini 단독 + GPT-4o vision fallback
+
+### 상태: 구현완료 (사장님 실측 검증 대기)
+### 브랜치: `claude/improve-receipt-ai-analysis-CNmn2`
+### 트리거: 사장님 "ai만 쓰는게 낫다. clova ocr 썻음에도 정확도가 떨어졌었고, 굳이 ocr 쓸 필요가 없다"
+
+### 사장님 가설 + critic 검증
+- 사장님 주장: OCR 빼고 AI 단독 가자
+- 검증: work_log 6단계 표가 명백히 정당화
+  - AI 단독(1·2·3차) = 80~95% (3차 best)
+  - OCR+AI Hybrid(4·6차) = 6%·62.5% (행 시프트 사고)
+- → CTO 동의. D안(3차 best 회귀 + AI fallback) 채택.
+
+### 작업 내용 (index.html)
+- `runAI()` (4670~) provider 분기 단순화:
+  - 변경 전: 거래처 `'clova+gpt'` / 직구 `'gpt'` (둘 다 OCR 거침)
+  - 변경 후: 모두 `provider='gemini'` 메인
+    - 거래처 모드 = `gemini-2.5-flash`
+    - 직구·POS 모드 = `gemini-2.5-flash-lite`
+- High demand·과부하·빈응답·JSON 실패 → `gpt-4o` vision 단독 fallback 1회 (OCR 거치지 않음)
+- 토스트: `🔄 GPT-4o 백업` 프리픽스로 fallback 발동 가시화
+- 프롬프트(BOX/EA, total_sum 박스) 한 글자도 안 건드림 → 3차 best 정확도 유지
+
+### 검증
+- node --check 통과 (600,454자 JS)
+- 호출 측 `'clova+gpt'` 잔재 0건 (callGemini 함수 내부 호환성용만 잔존, 호출 X)
+- DB 변경 없음
+
+### 비용·정확도 기대
+| 시나리오 | 모델 | 비용 | 정확도 |
+|---|---|---|---|
+| 거래처 (메인) | gemini-2.5-flash | ~6원 | ~95%+ |
+| 직구·POS (메인) | gemini-2.5-flash-lite | ~1원 | ~80~90% |
+| Fallback 발동 시 | gpt-4o vision | ~6~10원 | 미검증 |
+
+### 다음 세션 확인
+- Worker `_provider='gemini'` 응답에 `_modelUsed`·`_costWon` 박는지 ai_usage_logs로 확인
+- GPT-4o vision 단독 정확도 (fallback 발동 시 추적)
+- 사장님 실측 정확도 표본 (거래명세서 + 직구 영수증 각 1장)
+
+---
+
 ## [2026-05-19] 대규모 세션 — 4단계 작업 (PR #152~#174, 23개 PR)
 
 ### 상태: 진행 중 마무리 (사장님 결정 대기: 거래명세서 정확도 GPT 2단계 검증 OR Clova Document)
