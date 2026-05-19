@@ -793,6 +793,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
     </symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2.96a1 1 0 0 1 1.8.85c-.32 5.7-1.93 14.32-9.5 16.2"/>
+      <path d="M2 21c0-3 1.85-5.36 5.08-6"/>
+    </symbol>
+    <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      <path d="m3.3 7 8.7 5 8.7-5"/>
+      <path d="M12 22V12"/>
+    </symbol>
     <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M3 12L12 3l9 9"/>
       <path d="M5 10v10h14V10"/>
@@ -1383,19 +1392,29 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [Hub] 지출 허브 (관리자 전용) ══ -->
 <div id="expHubCont" class="container">
-  <button type="button" class="hub-full" data-action="nav|receipt">
-    <span class="hub-full-icon"><svg><use href="#i-receipt"/></svg></span>
-    <div style="flex:1;min-width:0;">
-      <div class="hub-full-title">영수증 등록·내역</div>
-      <div class="hub-full-sub" id="expHeroInfo">사진 찍으면 AI가 자동 분석</div>
-    </div>
-    <span style="color:var(--gray-400);font-size:20px;">›</span>
-  </button>
-  <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">📦 카테고리 (드래그로 순서 변경)</div>
-  <div class="hub-grid" id="expHubCatGrid">
+  <!-- 영수증 등록 + 수동 입력 (가로 2분할) -->
+  <div style="display:flex;gap:10px;margin-bottom:14px;">
+    <button type="button" class="hub-full" style="flex:1;margin-bottom:0;padding:14px 12px;" data-action="nav|receipt">
+      <span class="hub-full-icon" style="margin-right:8px;"><svg><use href="#i-receipt"/></svg></span>
+      <div style="flex:1;min-width:0;text-align:left;">
+        <div class="hub-full-title" style="font-size:14px;">영수증 등록</div>
+        <div class="hub-full-sub" style="font-size:11px;" id="expHeroInfo">사진 자동 분류</div>
+      </div>
+    </button>
+    <button type="button" class="hub-full" style="flex:1;margin-bottom:0;padding:14px 12px;" data-action="openManualReceiptShortcut">
+      <span class="hub-full-icon" style="margin-right:8px;"><svg><use href="#i-document"/></svg></span>
+      <div style="flex:1;min-width:0;text-align:left;">
+        <div class="hub-full-title" style="font-size:14px;">✏️ 수동 입력</div>
+        <div class="hub-full-sub" style="font-size:11px;">한두 줄 빠르게</div>
+      </div>
+    </button>
+  </div>
+  <!-- 거래 채널 -->
+  <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">🚚 거래 채널</div>
+  <div class="hub-grid" id="expHubChannelGrid">
     <button type="button" class="hub-mini" data-card-id="vendors" data-action="nav|vendors">
       <span class="hub-mini-icon"><svg><use href="#i-building"/></svg></span>
-      <span class="hub-mini-title">거래처</span>
+      <span class="hub-mini-title">거래처 관리</span>
       <span class="hub-mini-amt" id="expMiniVendor">-</span>
       <span class="hub-mini-sub" id="expMiniVendorSub">이번달</span>
     </button>
@@ -1405,23 +1424,43 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <span class="hub-mini-amt" id="expMiniDirect">-</span>
       <span class="hub-mini-sub" id="expMiniDirectSub">이번달</span>
     </button>
+  </div>
+  <!-- 카테고리 (영수증·수동입력 자동 합산) -->
+  <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">📦 카테고리 <span style="font-weight:500;color:var(--gray-400);">(영수증·수동입력 자동 합산)</span></div>
+  <div class="hub-grid" id="expHubCatGrid">
+    <button type="button" class="hub-mini" data-card-id="food" data-action="openCatReceipt|food">
+      <span class="hub-mini-icon"><svg><use href="#i-leaf"/></svg></span>
+      <span class="hub-mini-title">식자재</span>
+      <span class="hub-mini-amt" id="expMiniFood">-</span>
+      <span class="hub-mini-sub" id="expMiniFoodSub">이번달</span>
+    </button>
+    <button type="button" class="hub-mini" data-card-id="supplies" data-action="openCatReceipt|supplies">
+      <span class="hub-mini-icon"><svg><use href="#i-box"/></svg></span>
+      <span class="hub-mini-title">비품</span>
+      <span class="hub-mini-amt" id="expMiniSupplies">-</span>
+      <span class="hub-mini-sub" id="expMiniSuppliesSub">이번달</span>
+    </button>
     <button type="button" class="hub-mini" data-card-id="etcExp" data-action="openCatReceipt|etc">
       <span class="hub-mini-icon"><svg><use href="#i-folder"/></svg></span>
       <span class="hub-mini-title">기타</span>
       <span class="hub-mini-amt" id="expMiniEtc">-</span>
       <span class="hub-mini-sub" id="expMiniEtcSub">이번달</span>
     </button>
-    <button type="button" class="hub-mini" data-card-id="fixedcost" data-action="nav|fixedcost">
-      <span class="hub-mini-icon"><svg><use href="#i-calendar"/></svg></span>
-      <span class="hub-mini-title">고정비</span>
-      <span class="hub-mini-amt" id="expMiniFixed">-</span>
-      <span class="hub-mini-sub" id="expMiniFixedSub">월 예상</span>
-    </button>
+  </div>
+  <!-- 정기·계산 지출 -->
+  <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin:14px 0 6px 4px;">💰 정기·계산 지출</div>
+  <div class="hub-grid" id="expHubFixedGrid">
     <button type="button" class="hub-mini" data-card-id="wage" data-action="nav|wage">
       <span class="hub-mini-icon"><svg><use href="#i-clock"/></svg></span>
       <span class="hub-mini-title">인건비</span>
       <span class="hub-mini-amt" id="expMiniWage">-</span>
       <span class="hub-mini-sub" id="expMiniWageSub">이번달</span>
+    </button>
+    <button type="button" class="hub-mini" data-card-id="fixedcost" data-action="nav|fixedcost">
+      <span class="hub-mini-icon"><svg><use href="#i-calendar"/></svg></span>
+      <span class="hub-mini-title">고정비</span>
+      <span class="hub-mini-amt" id="expMiniFixed">-</span>
+      <span class="hub-mini-sub" id="expMiniFixedSub">월 예상</span>
     </button>
     <button type="button" class="hub-mini" data-card-id="royalty" data-action="nav|royalty">
       <span class="hub-mini-icon"><svg><use href="#i-coins"/></svg></span>
@@ -1469,7 +1508,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </button>
 </div>
 
-<!-- ══ 카테고리별 영수증 목록 (직구·기타 카드 진입) ══ -->
+<!-- ══ 카테고리별 영수증 목록 (직구·식자재·비품·기타 진입 공통) ══ -->
 <div id="catReceiptCont" class="container">
   <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
@@ -1478,14 +1517,28 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="catReceiptTitle" style="font-size:18px;font-weight:900;color:var(--gray-900);">직구</div>
       <div id="catReceiptTotal" style="font-size:13px;color:var(--gray-600);font-weight:600;">이번달 0원 · 0건</div>
     </div>
-    <input type="month" id="catReceiptMonth" class="input-inline" style="width:140px;" data-change="onCatReceiptMonthChange|this">
   </div>
+  <!-- 필터 줄 -->
   <div style="display:flex;gap:8px;margin-bottom:14px;">
-    <button class="btn btn-primary" style="flex:1;padding:14px;font-size:14px;font-weight:700;" data-action="openCatReceiptInput|photo">📸 영수증 사진</button>
-    <button class="btn btn-secondary" style="flex:1;padding:14px;font-size:14px;font-weight:700;" data-action="openCatReceiptInput|manual">✏️ 수동 입력</button>
+    <button class="btn btn-secondary" style="flex:1;padding:10px 12px;font-size:13px;text-align:left;display:flex;justify-content:space-between;align-items:center;" data-action="openCatReceiptFilterSheet">
+      <span>🔍 거래방법: <b id="catReceiptFilterLabel">전체</b></span>
+      <span style="color:var(--gray-400);">▾</span>
+    </button>
+    <input type="month" id="catReceiptMonth" class="input-inline" style="width:140px;flex-shrink:0;" data-change="onCatReceiptMonthChange|this">
   </div>
   <div id="catReceiptBody">
     <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>
+  </div>
+</div>
+
+<!-- 카테고리 영수증 거래방법 필터 시트 -->
+<div class="sheet-overlay" id="catReceiptFilterSheet">
+  <div class="sheet" style="padding:18px;max-height:75vh;overflow-y:auto;">
+    <div style="font-size:16px;font-weight:800;color:var(--gray-900);margin-bottom:14px;">거래방법 선택</div>
+    <div id="catReceiptFilterList">
+      <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>
+    </div>
+    <button class="btn btn-secondary" style="width:100%;margin-top:10px;padding:12px;" data-action="closeSheet|catReceiptFilterSheet">닫기</button>
   </div>
 </div>
 
@@ -4035,15 +4088,28 @@ function manualReceipt(){
 // XSS 방지 헬퍼 (가이드 박스용)
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// ─── 새 기능: 카테고리별 영수증 목록 (직구·기타 카드 클릭 진입) ───
-let catReceiptMode = null;   // 'direct' | 'etc'
+// ─── 새 기능: 카테고리별 영수증 목록 (직구·식자재·비품·기타 진입 공통) ───
+let catReceiptMode = null;   // 'direct' | 'food' | 'supplies' | 'etc'
 let catReceiptMonth = (new Date()).toISOString().slice(0,7);
+let catReceiptFilter = 'all'; // 'all' | 'direct' | 'vendor:<id>'
+let catReceiptRowsCache = []; // 거래처별 합계 계산용
+
+// 헬퍼: 카테고리 id 풀 (parent + 자식)
+function _collectCatIdsByName(name){
+  const parents = (expCategories||[]).filter(c=>c.name===name && !c.parent_id);
+  const ids = [];
+  parents.forEach(p=>{
+    ids.push(p.id);
+    (expCategories||[]).filter(c=>c.parent_id===p.id).forEach(ch=>ids.push(ch.id));
+  });
+  return ids;
+}
 
 function openCatReceipt(mode){
   if(!guardStore()) return;
   catReceiptMode = mode;
+  catReceiptFilter = 'all';
   nav('catReceipt');
-  // 헤더는 nav 호출 후 catReceipt actions에서 loadCatReceiptData가 채움
   const mEl = document.getElementById('catReceiptMonth');
   if(mEl && !mEl.value) mEl.value = catReceiptMonth;
 }
@@ -4059,47 +4125,111 @@ async function loadCatReceiptData(){
   const totalEl = document.getElementById('catReceiptTotal');
   const titleEl = document.getElementById('catReceiptTitle');
   const iconEl = document.getElementById('catReceiptIcon');
-  // 헤더 셋
-  if(catReceiptMode === 'direct'){
-    titleEl.textContent = '직구';
-    iconEl.textContent = '🛒';
-  } else {
-    titleEl.textContent = '기타';
-    iconEl.textContent = '📂';
-  }
+  // 모드별 헤더
+  const modeMeta = {
+    direct:   {title:'직구',   icon:'🛒'},
+    food:     {title:'식자재', icon:'🥬'},
+    supplies: {title:'비품',   icon:'📦'},
+    etc:      {title:'기타',   icon:'📂'},
+  };
+  const meta = modeMeta[catReceiptMode] || modeMeta.direct;
+  titleEl.textContent = meta.title;
+  iconEl.textContent = meta.icon;
   body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
   const [y,m] = catReceiptMonth.split('-').map(Number);
   const lastDay = new Date(y,m,0).getDate();
   const start = catReceiptMonth+'-01', end = catReceiptMonth+'-'+String(lastDay).padStart(2,'0');
-  // 카테고리 id 풀: 기타 모드면 기타+자식 소분류 id들
-  const etcCat = (expCategories||[]).find(c=>c.name==='기타' && !c.parent_id);
-  const etcAllIds = etcCat ? [etcCat.id, ...(expCategories||[]).filter(c=>c.parent_id===etcCat.id).map(c=>c.id)] : [];
   let q = sb.from('receipts')
-    .select('id,receipt_date,vendor,item,total_price,category,category_id,input_method,note')
+    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note')
     .eq('store_id', currentStore.id)
     .gte('receipt_date', start).lte('receipt_date', end)
     .order('receipt_date', {ascending:false});
+  // 모드별 쿼리
   if(catReceiptMode === 'direct'){
-    // 직구 = vendor_id NULL & 카테고리 ≠ 기타 (사장님 결정: 직구·기타 배타적)
     q = q.is('vendor_id', null);
-    if(etcAllIds.length){
-      // category_id NULL은 직구로 포함, 기타 카테고리만 제외
-      q = q.or(`category_id.is.null,category_id.not.in.(${etcAllIds.join(',')})`);
+  } else if(catReceiptMode === 'food'){
+    const ids = _collectCatIdsByName('식자재');
+    if(!ids.length){
+      body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">식자재 카테고리가 없어요</div>';
+      totalEl.textContent = '이번달 0원 · 0건';
+      return;
     }
+    q = q.in('category_id', ids);
+  } else if(catReceiptMode === 'supplies'){
+    const ids = _collectCatIdsByName('비품');
+    if(!ids.length){
+      body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">비품 카테고리가 없어요</div>';
+      totalEl.textContent = '이번달 0원 · 0건';
+      return;
+    }
+    q = q.in('category_id', ids);
   } else if(catReceiptMode === 'etc'){
-    if(!etcAllIds.length){
+    const ids = _collectCatIdsByName('기타');
+    if(!ids.length){
       body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">기타 카테고리가 없어요</div>';
       totalEl.textContent = '이번달 0원 · 0건';
       return;
     }
-    q = q.in('category_id', etcAllIds);
+    q = q.in('category_id', ids);
   }
   const {data, error} = await q;
   if(error){
     body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;">불러오기 실패: ${esc(error.message||'')}</div>`;
     return;
   }
-  renderCatReceiptList(data||[]);
+  catReceiptRowsCache = data||[];
+  renderCatReceiptList(catReceiptRowsCache);
+}
+
+// 거래방법 필터 시트 — 직구만 / 거래처별
+function openCatReceiptFilterSheet(){
+  const list = document.getElementById('catReceiptFilterList');
+  // 현재 결과에서 거래처별 합계 추출
+  const vendorAgg = {}; // {vendor_id: {name, total, count}}
+  let directTotal = 0, directCount = 0;
+  (catReceiptRowsCache||[]).forEach(r=>{
+    if(r.note && r.note!=='정상') return;
+    const amt = r.total_price||0;
+    if(!r.vendor_id){
+      directTotal += amt; directCount++;
+    } else {
+      if(!vendorAgg[r.vendor_id]) vendorAgg[r.vendor_id] = {name:r.vendor||'(이름 없음)', total:0, count:0};
+      vendorAgg[r.vendor_id].total += amt;
+      vendorAgg[r.vendor_id].count++;
+    }
+  });
+  // 합계 큰 순 정렬
+  const vendorList = Object.entries(vendorAgg).sort((a,b)=>b[1].total-a[1].total);
+  const mkRow = (val, label, sub, checked) => `<button class="btn btn-secondary" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;background:${checked?'#EBF3FF':'#fff'};border:1px solid ${checked?'var(--blue)':'var(--gray-200)'};" data-action="pickCatReceiptFilter|${val}">
+    <span style="font-size:14px;font-weight:${checked?'800':'600'};">${esc(label)}</span>
+    <span style="font-size:11px;color:var(--gray-500);">${esc(sub)}</span>
+  </button>`;
+  let html = '';
+  html += mkRow('all', '전체', `${(catReceiptRowsCache||[]).length}건`, catReceiptFilter==='all');
+  html += mkRow('direct', '🛒 직구만', `${directCount}건 · ${fmt(directTotal)}원`, catReceiptFilter==='direct');
+  if(vendorList.length){
+    html += '<div style="height:1px;background:var(--gray-200);margin:10px 0;"></div>';
+    vendorList.forEach(([vid, v])=>{
+      html += mkRow('vendor:'+vid, `🏪 ${v.name}`, `${v.count}건 · ${fmt(v.total)}원`, catReceiptFilter===('vendor:'+vid));
+    });
+  }
+  list.innerHTML = html;
+  openSheet('catReceiptFilterSheet');
+}
+
+function pickCatReceiptFilter(val){
+  catReceiptFilter = val;
+  closeSheet('catReceiptFilterSheet');
+  // 라벨 변경
+  let label = '전체';
+  if(val === 'direct') label = '🛒 직구만';
+  else if(val.startsWith('vendor:')){
+    const vid = val.split(':')[1];
+    const r = (catReceiptRowsCache||[]).find(x=>x.vendor_id===vid);
+    label = '🏪 ' + (r?.vendor || '거래처');
+  }
+  document.getElementById('catReceiptFilterLabel').textContent = label;
+  renderCatReceiptList(catReceiptRowsCache);
 }
 
 function renderCatReceiptList(rows){
@@ -4107,38 +4237,49 @@ function renderCatReceiptList(rows){
   rcpRecords = rows;
   const body = document.getElementById('catReceiptBody');
   const totalEl = document.getElementById('catReceiptTotal');
-  if(!rows.length){
-    body.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">이번달 영수증이 없어요.<br>위 버튼으로 새로 등록해보세요.</div>';
+  // 거래방법 필터 적용
+  const filtered = rows.filter(r=>{
+    if(catReceiptFilter === 'all') return true;
+    if(catReceiptFilter === 'direct') return !r.vendor_id;
+    if(catReceiptFilter.startsWith('vendor:')) return r.vendor_id === catReceiptFilter.split(':')[1];
+    return true;
+  });
+  if(!filtered.length){
+    body.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">조건에 맞는 영수증이 없어요.<br>필터를 [전체]로 바꿔보세요.</div>';
     totalEl.textContent = '이번달 0원 · 0건';
     return;
   }
   let total = 0;
-  rows.forEach(r=>{ if(r.note==='정상') total += (r.total_price||0); });
-  totalEl.textContent = `이번달 ${fmt(total)}원 · ${rows.length}건`;
+  filtered.forEach(r=>{ if(r.note==='정상') total += (r.total_price||0); });
+  totalEl.textContent = `이번달 ${fmt(total)}원 · ${filtered.length}건`;
   const html = `
     <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead>
         <tr style="background:var(--gray-50);color:var(--gray-700);font-weight:700;">
-          <th style="text-align:left;padding:8px 6px;white-space:nowrap;">날짜</th>
-          <th style="text-align:left;padding:8px 6px;">가게</th>
-          <th style="text-align:left;padding:8px 6px;">품목</th>
-          <th style="text-align:right;padding:8px 6px;white-space:nowrap;">금액</th>
-          <th style="text-align:left;padding:8px 6px;white-space:nowrap;">분류</th>
+          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">날짜</th>
+          <th style="text-align:center;padding:8px 6px;">가게</th>
+          <th style="text-align:center;padding:8px 6px;">품목</th>
+          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">금액</th>
+          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">분류</th>
+          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">거래</th>
           <th style="text-align:center;padding:8px 6px;white-space:nowrap;">📸/✏️</th>
         </tr>
       </thead>
       <tbody>
-      ${rows.map(r=>{
+      ${filtered.map(r=>{
         const im = r.input_method==='photo'?'📸':(r.input_method==='manual'?'✏️':'');
         const off = r.note && r.note!=='정상';
         const catLabel = formatRcpCatLabel(r.category||'');
+        const channel = r.vendor_id ? '🏪' : '🛒';
+        const amt = r.total_price||0;
         return `<tr style="border-top:1px solid var(--gray-100);${off?'opacity:0.5;text-decoration:line-through;':''};cursor:pointer;" data-action="openReceiptEdit|${r.id}">
           <td style="padding:8px 6px;white-space:nowrap;">${(r.receipt_date||'').slice(5)}</td>
-          <td style="padding:8px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.vendor||'-')}</td>
-          <td style="padding:8px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.item||'-')}</td>
-          <td style="padding:8px 6px;text-align:right;white-space:nowrap;font-weight:700;">${fmt(r.total_price||0)}</td>
+          <td style="padding:8px 6px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.vendor||'-')}</td>
+          <td style="padding:8px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.item||'-')}</td>
+          <td style="padding:8px 6px;text-align:right;white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums;">${amt?fmt(amt):'-'}</td>
           <td style="padding:8px 6px;color:var(--gray-600);font-size:11px;white-space:nowrap;">${esc(catLabel)}</td>
+          <td style="padding:8px 6px;text-align:center;font-size:14px;">${channel}</td>
           <td style="padding:8px 6px;text-align:center;font-size:14px;">${im}</td>
         </tr>`;
       }).join('')}
@@ -4178,6 +4319,14 @@ async function openRcpReceiptFromVendor(vendorId, method){
       showRcpUploadUI();
     }
   }, 60);
+}
+
+// 지출 허브 [✏️ 수동 입력] 큰 카드 → 영수증 탭 + 수동 모드 자동
+function openManualReceiptShortcut(){
+  if(!guardStore()) return;
+  rcpEntryReturn = null; // 모드 선택 화면에서 시작이므로 자동 복귀 X
+  nav('receipt');
+  setTimeout(()=>setRcpMode('manual'), 60);
 }
 
 // 카테고리 화면에서 [📸 영수증 사진] 또는 [✏️ 수동 입력] 버튼 → 영수증 탭으로 이동
@@ -12332,13 +12481,23 @@ async function loadExpHubData(){
     setText('expFullCat', `활성 ${list.length}개`);
   }catch(e){}
 
-  // 마케팅/세금 카테고리 id 미리 추출 (expense_category_amounts in 필터용)
+  // 카테고리별 id 풀 — parent + 자식 통합 (사장님이 소분류 추가해도 자동 반영)
+  // ⚠️ "기타" 카테고리가 중복 생성된 매장 발견(2026-05-18) → 같은 이름 parent 모두 포함
+  const collectCatIds = (name)=>{
+    const parents = (expCategories||[]).filter(c=>c.name===name && !c.parent_id);
+    const ids = [];
+    parents.forEach(p=>{
+      ids.push(p.id);
+      (expCategories||[]).filter(c=>c.parent_id===p.id).forEach(ch=>ids.push(ch.id));
+    });
+    return ids;
+  };
   const marketingCat=(expCategories||[]).find(c=>c.name==='마케팅' && !c.parent_id);
   const taxCat=(expCategories||[]).find(c=>c.name==='세금' && !c.parent_id);
-  const etcCat=(expCategories||[]).find(c=>c.name==='기타' && !c.parent_id);
   const ecaCatIds=[marketingCat?.id, taxCat?.id].filter(Boolean);
-  // 기타 카테고리 + 자식 소분류 모두 포함 (사장님이 비품·간식 소분류를 기타 산하로 정리 가능)
-  const etcAllIds = etcCat ? [etcCat.id, ...(expCategories||[]).filter(c=>c.parent_id===etcCat.id).map(c=>c.id)] : [];
+  const foodAllIds = collectCatIds('식자재');
+  const suppliesAllIds = collectCatIds('비품');
+  const etcAllIds = collectCatIds('기타');
 
   // ━━ 모든 DB 호출 병렬 발사 (직렬 8회 → 1회 Promise.all) ━━
   // 2026-05-18: settlements 추가 (인건비 차감 합산 통일)
@@ -12357,29 +12516,42 @@ async function loadExpHubData(){
     sb.from('settlements').select('items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end)
   ]);
 
-  // 영수증 + 직구·기타 카드 합산 (한 번에 분류)
-  // ⚠️ 사장님 결정: 직구는 거래방법, 기타는 카테고리 → 직구·기타는 배타적 분류
-  // 직구 = vendor_id NULL AND 카테고리 ≠ 기타 (마트에서 산 식자재·일반)
-  // 기타 = 카테고리 = 기타 (거래방법 무관, vendor_id 유무 상관없음)
+  // 영수증 → 그리드 4섹션 합산 (한 번에 분류)
+  // ⚠️ designer 새 안: 거래방법(거래처/직구) ↔ 카테고리(식자재/비품/기타) = 다른 차원
+  //    한 영수증이 거래방법 카드 + 카테고리 카드 양쪽에 잡혀도 정상 (차원 분리)
   try{
     const rc=rcRes.data||[];
-    let cnt=0, sum=0, directSum=0, directCnt=0, etcSum=0, etcCnt=0;
+    let cnt=0, sum=0;
+    let directSum=0, directCnt=0;
+    let foodSum=0, foodCnt=0;
+    let suppliesSum=0, suppliesCnt=0;
+    let etcSum=0, etcCnt=0;
+    const foodIdSet = new Set(foodAllIds);
+    const suppliesIdSet = new Set(suppliesAllIds);
     const etcIdSet = new Set(etcAllIds);
     rc.forEach(r=>{
       const amt = r.total_price||0;
       cnt++; sum += amt;
-      const isEtc = r.category_id && etcIdSet.has(r.category_id);
-      if(!r.vendor_id && !isEtc){ directSum += amt; directCnt++; }
-      if(isEtc){ etcSum += amt; etcCnt++; }
+      if(!r.vendor_id){ directSum += amt; directCnt++; }
+      if(r.category_id){
+        if(foodIdSet.has(r.category_id)){ foodSum += amt; foodCnt++; }
+        else if(suppliesIdSet.has(r.category_id)){ suppliesSum += amt; suppliesCnt++; }
+        else if(etcIdSet.has(r.category_id)){ etcSum += amt; etcCnt++; }
+      }
     });
-    setText('expHeroInfo', cnt>0?`이번달 ${cnt}건 · ${fmt(sum)}원`:'사진 찍으면 AI가 자동 분석');
+    setText('expHeroInfo', cnt>0?`이번달 ${cnt}건 · ${fmt(sum)}원`:'사진 자동 분류');
     setText('expMiniDirect', directSum?fmt(directSum):'0');
-    setText('expMiniDirectSub', directCnt?`${directCnt}건`:'이번달');
+    setText('expMiniDirectSub', directCnt?`${directCnt}건 · 이번달`:'이번달');
+    setText('expMiniFood', foodSum?fmt(foodSum):'0');
+    setText('expMiniFoodSub', foodCnt?`${foodCnt}건 · 이번달`:'이번달');
+    setText('expMiniSupplies', suppliesSum?fmt(suppliesSum):'0');
+    setText('expMiniSuppliesSub', suppliesCnt?`${suppliesCnt}건 · 이번달`:'이번달');
     setText('expMiniEtc', etcSum?fmt(etcSum):'0');
-    setText('expMiniEtcSub', etcCnt?`${etcCnt}건`:'이번달');
+    setText('expMiniEtcSub', etcCnt?`${etcCnt}건 · 이번달`:'이번달');
   }catch(e){
-    setText('expHeroInfo','사진 찍으면 AI가 자동 분석');
-    setText('expMiniDirect','-'); setText('expMiniEtc','-');
+    setText('expHeroInfo','사진 자동 분류');
+    setText('expMiniDirect','-'); setText('expMiniFood','-');
+    setText('expMiniSupplies','-'); setText('expMiniEtc','-');
   }
 
   // 고정비 (마케팅/세금 합산용 fcByCat도 여기서 구성)
