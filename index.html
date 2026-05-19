@@ -128,17 +128,27 @@ table{width:100%;border-collapse:collapse;}
 th{padding:9px 6px;font-size:11px;font-weight:700;color:var(--gray-600);background:var(--gray-100);text-align:center;}
 td{padding:10px 5px;font-size:12px;border-bottom:1px solid var(--gray-100);text-align:center;vertical-align:middle;}
 /* 영수증 결과지 전용 — 단가·수량 컬럼 추가 (2026-05-19 사장님 호소 + 가격 추세 분석 기반) */
+/* 가로 스크롤 보장 + 컬럼별 min-width로 잘림 방지 */
+#resultArea .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 #resTable td,#rgeTable td{padding:8px 3px;font-size:11px;}
 #resTable th,#rgeTable th{padding:8px 3px;font-size:10px;}
 #resTable td input,#rgeTable td input{padding:5px 4px;font-size:11px;}
-#resTable .c-u{text-align:right;font-variant-numeric:tabular-nums;}
-#resTable .c-q{text-align:right;font-variant-numeric:tabular-nums;}
-#resTable .c-p{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
-#rgeTable .c-u,#rgeTable .c-q{text-align:right;font-variant-numeric:tabular-nums;}
-#rgeTable .c-p{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
+#resTable td,#resTable th{white-space:nowrap;}
+#rgeTable td,#rgeTable th{white-space:nowrap;}
+#resTable .c-v{min-width:64px;}
+#resTable .c-i{min-width:110px;}
+#resTable .c-u{text-align:right;font-variant-numeric:tabular-nums;min-width:62px;}
+#resTable .c-q{text-align:right;font-variant-numeric:tabular-nums;min-width:44px;}
+#resTable .c-p{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;min-width:78px;}
+#resTable .c-cBtn{min-width:78px;}
+#rgeTable .c-i{min-width:110px;}
+#rgeTable .c-u,#rgeTable .c-q{text-align:right;font-variant-numeric:tabular-nums;min-width:50px;}
+#rgeTable .c-q{min-width:42px;}
+#rgeTable .c-p{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;min-width:76px;}
+#rgeTable .c-cBtn{min-width:78px;}
 /* 거래처 모드 = vendor 컬럼 숨김 (이미 선택됨, 폭 절약) */
-#resultArea.vendor-mode #resTable th.col-vendor,
-#resultArea.vendor-mode #resTable td.col-vendor{display:none;}
+/* ⚠️ thead와 tbody 둘 다 매칭해야 함 — #resTable은 tbody id라 thead 안 잡힘 (2026-05-19 셀렉터 버그 수정) */
+#resultArea.vendor-mode .col-vendor{display:none;}
 td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 tr.row-off{opacity:.35;filter:grayscale(1);}
 td input.c-v,td input.c-i,td input.c-p{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
@@ -4745,12 +4755,12 @@ function buildReceiptRow(i={}) {
   const origItem = String(i.item||'').replace(/"/g,'&quot;');
   return `<tr id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" data-action="openReasonSheet|${idx}">X</button></td>
-    <td class="col-vendor"><input type="text" class="c-v" value="${i.vendor||''}"></td>
-    <td><input type="text" class="c-i" value="${i.item||''}"></td>
+    <td class="col-vendor"><input type="text" class="c-v" value="${esc(i.vendor||'')}"></td>
+    <td><input type="text" class="c-i" value="${esc(i.item||'')}"></td>
     <td><input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></td>
     <td><input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></td>
     <td><input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this"></td>
-    <td><span class="rcp-cat-cell">${learnBadge}<button type="button" class="c-cBtn${emptyCls}" data-action="openReceiptCatPicker|${idx}">${label}</button></span></td>
+    <td class="col-cat"><span class="rcp-cat-cell">${learnBadge}<button type="button" class="c-cBtn${emptyCls}" data-action="openReceiptCatPicker|${idx}">${label}</button></span></td>
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
   </tr>`;
 }
