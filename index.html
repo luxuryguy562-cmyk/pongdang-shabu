@@ -130,7 +130,10 @@ td{padding:10px 5px;font-size:12px;border-bottom:1px solid var(--gray-100);text-
 td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 tr.row-off{opacity:.35;filter:grayscale(1);}
 td input.c-v,td input.c-i,td input.c-p{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
-/* 영수증 분류 학습 시그널 (2026-05-19) — 사용자 변경 시 ✨ 페이드인 */
+/* 영수증 분류 학습 시그널 (2026-05-19) — 사용자 변경 시 ✨ 페이드인 + 셀 가운데 정렬 (사장님 호소) */
+.rcp-cat-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+.rcp-learn-badge{font-size:14px;color:var(--success);line-height:1;display:inline-block;}
+.rcp-cat-cell .c-cBtn{text-align:center;}
 .rcp-learn-badge-pulse{animation:rcpLearnPulse 0.6s ease-out;}
 @keyframes rcpLearnPulse{
   0%{opacity:0;transform:scale(0.5);}
@@ -1279,8 +1282,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">취소</button>
       </div>
       <div id="resultArea" style="display:none;">
-        <!-- 학습 안내 박스 (2026-05-19 사장님 호소: ✨ 의미 불명) -->
-        <div style="background:#EBF3FF;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#1E40AF;line-height:1.55;">
+        <!-- 학습 안내 박스 (2026-05-19 사장님 호소: ✨ 의미 불명 + 위 버튼과 간격) -->
+        <div style="background:#EBF3FF;border-radius:10px;padding:12px 14px;margin-top:16px;margin-bottom:14px;font-size:12px;color:#1E40AF;line-height:1.6;">
           💡 <b>✨ 표시된 행은 다음 영수증 분류에 AI가 자동 활용해요.</b><br>
           분류를 바꾸면 그것도 학습됩니다.
         </div>
@@ -4616,7 +4619,6 @@ function openReceiptCatPicker(idx){
           const b=document.createElement('span');
           b.className='rcp-learn-badge rcp-learn-badge-pulse';
           b.title='저장 시 AI 학습됨';
-          b.style.cssText='font-size:12px;color:var(--success);margin-right:3px;display:inline-block;';
           b.textContent='✨';
           cell.insertBefore(b, cell.firstChild);
         } else if(!cat && oldBadge){
@@ -4640,7 +4642,7 @@ function buildReceiptRow(i={}) {
   const emptyCls=cat?'':' empty';
   // ✨ = 학습 대상 (분류 박힌 모든 행, 저장 시 learnClassification 호출됨)
   // 2026-05-19 사장님 호소: ✨ 의미 명확화 + 분류 있는 모든 행 일관 표시
-  const learnBadge=cat?`<span class="rcp-learn-badge" title="저장 시 AI 학습됨" style="font-size:12px;color:var(--success);margin-right:3px;display:inline-block;">✨</span>`:'';
+  const learnBadge=cat?`<span class="rcp-learn-badge" title="저장 시 AI 학습됨">✨</span>`:'';
   return `<tr id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}">
     <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" data-action="openReasonSheet|${idx}">X</button></td>
     <td><input type="text" class="c-v" value="${i.vendor||''}"></td>
