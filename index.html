@@ -579,9 +579,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 /* 그룹 표 (D안 — 2026-05-20 ERP 패턴, 사장님 호소 "따로 노는 느낌" 해소)
    카드 X → 한 표 안에 그룹 헤더 행 + 본문 행 / 같은 영수증 = 좌측 컬러바
-   thead th sticky (iOS Safari 호환) — 한 박스 안에 헤더+본문 통합 */
-.grp-tbl{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;overflow:hidden;}
-.grp-tbl thead th{position:sticky;top:calc(60px + env(safe-area-inset-top, 0));z-index:5;background:var(--gray-50);font-size:10px;font-weight:700;color:var(--gray-500);padding:8px 2px;text-align:center;border-bottom:1px solid var(--gray-200);letter-spacing:0.3px;}
+   thead 자체에 sticky (2026-05-20 (2) 사장님 호소 "헤더 겹침" 수정 — th sticky는 thead 행 높이를 0으로 만들어 첫 본문 행에 겹치는 버그) */
+.grp-tbl-wrap{border:1px solid var(--gray-200);border-radius:10px;background:#fff;}
+.grp-tbl{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;background:#fff;}
+.grp-tbl thead{position:sticky;top:calc(60px + env(safe-area-inset-top, 0));z-index:5;background:var(--gray-50);}
+.grp-tbl thead th{background:var(--gray-50);font-size:10px;font-weight:700;color:var(--gray-500);padding:8px 2px;text-align:center;border-bottom:1px solid var(--gray-200);letter-spacing:0.3px;}
+/* 첫 컬럼 좌측 모서리 둥글게 (wrapper border-radius 안에서) */
+.grp-tbl thead th:first-child{border-top-left-radius:10px;}
+.grp-tbl thead th:last-child{border-top-right-radius:10px;}
 /* 그룹 헤더 행 — 거래처 · 합계 + 액션 버튼 */
 .grp-tbl .grp-hdr td{background:var(--gray-50);font-size:12px;font-weight:800;padding:7px 8px;border-top:6px solid #fff;border-bottom:1px solid var(--gray-200);color:var(--text);}
 .grp-tbl .grp-hdr.first td{border-top:none;}
@@ -4700,7 +4705,7 @@ function renderCatReceiptList(rows){
     byDate[d].push(g);
   });
   const dates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-  let html = `<table class="grp-tbl">
+  let html = `<div class="grp-tbl-wrap"><table class="grp-tbl">
     <colgroup><col/><col style="width:64px"/><col style="width:44px"/><col style="width:76px"/><col style="width:22px"/></colgroup>
     <thead><tr><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
     <tbody>`;
@@ -4742,7 +4747,7 @@ function renderCatReceiptList(rows){
       });
     });
   });
-  html += `</tbody></table>`;
+  html += `</tbody></table></div>`;
   body.innerHTML = html;
 }
 
@@ -5527,7 +5532,7 @@ function renderReceiptList(){
   });
   // 2026-05-20 D안 갈아엎기: 한 표 안 그룹 헤더 행 + 본문 행 (ERP 패턴, 사장님 호소 "따로 노는 느낌" 해소)
   const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-  let html=`<table class="grp-tbl">
+  let html=`<div class="grp-tbl-wrap"><table class="grp-tbl">
     <colgroup><col/><col style="width:48px"/><col style="width:64px"/><col style="width:44px"/><col style="width:76px"/><col style="width:22px"/></colgroup>
     <thead><tr><th>품목</th><th>분류</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
     <tbody>`;
@@ -5575,7 +5580,7 @@ function renderReceiptList(){
       });
     });
   });
-  html+=`</tbody></table>`;
+  html+=`</tbody></table></div>`;
   body.innerHTML=html;
 }
 
@@ -9876,7 +9881,7 @@ async function loadVendorOrders(){
     g.total+=(r.amount||0);
   });
   // 2026-05-20 D안 갈아엎기: 한 표 안 그룹 헤더 행 + 본문 행 (ERP 패턴, 사장님 호소 "따로 노는 느낌" 해소)
-  let html=`<table class="grp-tbl">
+  let html=`<div class="grp-tbl-wrap"><table class="grp-tbl">
     <colgroup><col/><col style="width:64px"/><col style="width:44px"/><col style="width:76px"/><col style="width:22px"/></colgroup>
     <thead><tr><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
     <tbody>`;
@@ -9907,7 +9912,7 @@ async function loadVendorOrders(){
         +`</tr>`;
     });
   });
-  html+=`</tbody></table>`;
+  html+=`</tbody></table></div>`;
   document.getElementById('orderListData').innerHTML=html;
 }
 // 주문 입력/편집 공통 시트 — 멀티행 accordion 패턴 (2026-05-20 사장님 D 패턴)
