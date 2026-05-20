@@ -3632,9 +3632,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <!-- AI 비용 패널 -->
     <div id="adminAiPanel">
-      <!-- 메인 카드: 이번달 사용액 (큰 글씨) -->
+      <!-- 기간 모드 토글 + 날짜 네비 -->
+      <div class="card" style="margin-bottom:8px;padding:10px;">
+        <div style="display:flex;gap:4px;margin-bottom:8px;background:var(--gray-100);padding:3px;border-radius:10px;">
+          <button class="admin-view-btn" data-view="day" data-action="setAdminViewMode|day"
+            style="flex:1;padding:7px;font-size:12px;font-weight:700;border:0;background:transparent;border-radius:7px;cursor:pointer;color:var(--gray-500);">📅 일별</button>
+          <button class="admin-view-btn" data-view="month" data-action="setAdminViewMode|month"
+            style="flex:1;padding:7px;font-size:12px;font-weight:700;border:0;background:var(--white);border-radius:7px;cursor:pointer;color:var(--text);">📆 월별</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <button class="btn btn-secondary" style="padding:8px 14px;font-size:14px;font-weight:700;min-width:44px;" data-action="moveAdminView|-1">◀</button>
+          <div style="flex:1;text-align:center;">
+            <div id="adminViewLabel" style="font-size:14px;font-weight:800;color:var(--text);">-</div>
+            <button id="adminGoTodayBtn" class="btn btn-secondary" style="padding:4px 10px;font-size:10px;color:var(--gray-500);margin-top:2px;display:none;" data-action="goAdminToToday">오늘로</button>
+          </div>
+          <button class="btn btn-secondary" style="padding:8px 14px;font-size:14px;font-weight:700;min-width:44px;" data-action="moveAdminView|1">▶</button>
+        </div>
+      </div>
+      <!-- 메인 카드: 선택 기간 사용액 (큰 글씨) -->
       <div class="card" id="adminMainCard" style="margin-bottom:10px;padding:18px;background:linear-gradient(135deg, var(--blue-light) 0%, var(--white) 100%);">
-        <div style="font-size:11px;color:var(--gray-600);font-weight:700;margin-bottom:4px;">💰 이번달 사용액 (실제)</div>
+        <div id="adminMainTitle" style="font-size:11px;color:var(--gray-600);font-weight:700;margin-bottom:4px;">💰 사용액</div>
         <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
           <span id="adminMainCost" style="font-size:30px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1;">-</span>
           <span id="adminMainTrend" style="font-size:11px;color:var(--gray-500);text-align:right;font-variant-numeric:tabular-nums;"></span>
@@ -3654,7 +3671,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </div>
       </div>
       <div class="card" style="margin-bottom:12px;padding:14px;">
-        <div style="font-size:14px;font-weight:800;margin-bottom:8px;">📋 매장별 (이번달)</div>
+        <div id="adminByStoreTitle" style="font-size:14px;font-weight:800;margin-bottom:8px;">📋 매장별</div>
         <div id="adminByStoreContent" style="font-size:12px;color:var(--gray-600);">로딩 중...</div>
       </div>
       <div class="card" style="margin-bottom:12px;padding:14px;">
@@ -15812,6 +15829,71 @@ let _adminAuthed = false;
 let _adminCurrentTab = 'ai';
 let _adminAllStores = [];
 let _adminAllRules = [];
+// 일/월 네비게이션 상태 — 2026-05-20 추가
+let _adminViewMode = 'month'; // 'day' | 'month'
+let _adminViewDate = new Date(); // 선택된 기준 시점
+
+function _getAdminViewRange(){
+  const date = _adminViewDate;
+  if(_adminViewMode === 'day'){
+    const start = new Date(date); start.setHours(0,0,0,0);
+    const end = new Date(start); end.setDate(end.getDate()+1);
+    const dayName = ['일','월','화','수','목','금','토'][start.getDay()];
+    return { start, end, label: `${start.getMonth()+1}월 ${start.getDate()}일 (${dayName})`, shortLabel: `${start.getMonth()+1}/${start.getDate()}` };
+  } else {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth()+1, 1);
+    return { start, end, label: `${start.getFullYear()}년 ${start.getMonth()+1}월`, shortLabel: `${start.getMonth()+1}월` };
+  }
+}
+
+function _getAdminCompareRange(){
+  const date = _adminViewDate;
+  if(_adminViewMode === 'day'){
+    const start = new Date(date); start.setHours(0,0,0,0); start.setDate(start.getDate()-1);
+    const end = new Date(start); end.setDate(end.getDate()+1);
+    return { start, end, label: '어제' };
+  } else {
+    const start = new Date(date.getFullYear(), date.getMonth()-1, 1);
+    const end = new Date(date.getFullYear(), date.getMonth(), 1);
+    return { start, end, label: '지난달' };
+  }
+}
+
+function _isAdminViewCurrent(){
+  const today = new Date();
+  if(_adminViewMode === 'day'){
+    return _adminViewDate.toDateString() === today.toDateString();
+  }
+  return _adminViewDate.getFullYear() === today.getFullYear() && _adminViewDate.getMonth() === today.getMonth();
+}
+
+function setAdminViewMode(mode){
+  _adminViewMode = mode;
+  document.querySelectorAll('.admin-view-btn').forEach(b=>{
+    const active = b.dataset.view === mode;
+    b.style.background = active ? 'var(--white)' : 'transparent';
+    b.style.color = active ? 'var(--text)' : 'var(--gray-500)';
+  });
+  // 모드 바뀌면 현재 시점으로 리셋
+  _adminViewDate = new Date();
+  loadAdminDashboard();
+}
+
+function moveAdminView(deltaStr){
+  const d = parseInt(deltaStr, 10);
+  if(_adminViewMode === 'day'){
+    _adminViewDate.setDate(_adminViewDate.getDate() + d);
+  } else {
+    _adminViewDate.setMonth(_adminViewDate.getMonth() + d);
+  }
+  loadAdminDashboard();
+}
+
+function goAdminToToday(){
+  _adminViewDate = new Date();
+  loadAdminDashboard();
+}
 
 async function _sha256(str){
   const buf = new TextEncoder().encode(str);
@@ -15927,46 +16009,67 @@ async function loadAdminDashboard(){
     });
 
     const now = new Date();
+    // 시점 라벨 갱신
+    const view = _getAdminViewRange();
+    const compare = _getAdminCompareRange();
+    const labelEl = document.getElementById('adminViewLabel');
+    if(labelEl) labelEl.textContent = view.label;
+    const goTodayBtn = document.getElementById('adminGoTodayBtn');
+    if(goTodayBtn) goTodayBtn.style.display = _isAdminViewCurrent() ? 'none' : 'inline-block';
+    const mainTitleEl = document.getElementById('adminMainTitle');
+    if(mainTitleEl) mainTitleEl.textContent = `💰 ${view.label} 사용액 (실제)`;
+    const byStoreTitleEl = document.getElementById('adminByStoreTitle');
+    if(byStoreTitleEl) byStoreTitleEl.textContent = `📋 매장별 (${view.shortLabel})`;
+
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    const yestStart = new Date(todayStart); yestStart.setDate(yestStart.getDate()-1);
-    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
-    const lastMonthStart = new Date(monthStart); lastMonthStart.setMonth(lastMonthStart.getMonth()-1);
     const last7Start = new Date(Date.now() - 7*24*60*60*1000);
 
-    const [today, yesterday, month, lastMonth, last7, allMonth, cum] = await Promise.all([
-      sb.from('ai_usage_logs').select('estimated_cost_won, total_tokens, success, duration_ms, model').gte('called_at', todayStart.toISOString()),
-      sb.from('ai_usage_logs').select('estimated_cost_won').gte('called_at', yestStart.toISOString()).lt('called_at', todayStart.toISOString()),
-      sb.from('ai_usage_logs').select('estimated_cost_won, total_tokens, success, duration_ms, model, called_at').gte('called_at', monthStart.toISOString()),
-      sb.from('ai_usage_logs').select('estimated_cost_won').gte('called_at', lastMonthStart.toISOString()).lt('called_at', monthStart.toISOString()),
+    const [today, main, compare_, last7, cum] = await Promise.all([
+      sb.from('ai_usage_logs').select('estimated_cost_won').gte('called_at', todayStart.toISOString()),
+      sb.from('ai_usage_logs').select('estimated_cost_won, total_tokens, success, duration_ms, model, store_id, called_at').gte('called_at', view.start.toISOString()).lt('called_at', view.end.toISOString()),
+      sb.from('ai_usage_logs').select('estimated_cost_won').gte('called_at', compare.start.toISOString()).lt('called_at', compare.end.toISOString()),
       sb.from('ai_usage_logs').select('success, model').gte('called_at', last7Start.toISOString()),
-      sb.from('ai_usage_logs').select('store_id, estimated_cost_won').gte('called_at', monthStart.toISOString()),
-      sb.from('ai_usage_logs').select('estimated_cost_won, called_at').order('called_at', {ascending:true}).limit(50000), // 누적 전체 (적당히 크게)
+      sb.from('ai_usage_logs').select('estimated_cost_won, called_at').order('called_at', {ascending:true}).limit(50000),
     ]);
 
     const todayRows = today.data || [];
-    const yestRows = yesterday.data || [];
-    const monthRows = month.data || [];
-    const lastMonthRows = lastMonth.data || [];
+    const mainRows = main.data || [];
+    const compareRows = compare_.data || [];
     const last7Rows = last7.data || [];
-    const allMonthRows = allMonth.data || [];
     const cumRows = cum.data || [];
 
-    // 일평균 (이번달 — 오늘 포함 N일째)
-    const daysInMonthSoFar = Math.max(1, now.getDate());
-    const monthCost = monthRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
-    const yestCost = yestRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
-    const lastMonthCost = lastMonthRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
-    // 어제 대비 (오늘 사용액 vs 어제 같은 시각까지 — 단순화하여 어제 24시간 vs 오늘 현재까지)
+    // 메인 (선택 시점)
+    const mainCost = mainRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    const mainCount = mainRows.length;
+    const compareCost = compareRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
     const todayCost = todayRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
-    let trend = '';
-    if(yestCost > 0){
-      const pct = Math.round((todayCost - yestCost) / yestCost * 100);
-      if(pct > 0) trend = `어제 대비 ▲${pct}%`;
-      else if(pct < 0) trend = `어제 대비 ▼${-pct}%`;
-      else trend = '어제 동일';
-    } else if(todayCost > 0){
-      trend = '어제 0원';
+    const todayCount = todayRows.length;
+
+    // 일평균 — 월별 모드면 해당 월 일수(현재 월이면 오늘까지, 과거 월이면 그 달 전체), 일별 모드면 X
+    let dailyAvg = 0;
+    let daysInPeriod = 0;
+    if(_adminViewMode === 'month'){
+      const isCurrentMonth = (view.start.getFullYear() === now.getFullYear() && view.start.getMonth() === now.getMonth());
+      if(isCurrentMonth){
+        daysInPeriod = Math.max(1, now.getDate());
+      } else {
+        const lastDay = new Date(view.start.getFullYear(), view.start.getMonth()+1, 0).getDate();
+        daysInPeriod = lastDay;
+      }
+      dailyAvg = Math.round(mainCost / daysInPeriod);
     }
+
+    // 비교 트렌드
+    let trend = '';
+    if(compareCost > 0){
+      const pct = Math.round((mainCost - compareCost) / compareCost * 100);
+      if(pct > 0) trend = `${compare.label} 대비 ▲${pct}%`;
+      else if(pct < 0) trend = `${compare.label} 대비 ▼${-pct}%`;
+      else trend = `${compare.label} 동일`;
+    } else if(mainCost > 0){
+      trend = `${compare.label} 0원`;
+    }
+
     // 누적 (전체 ai_usage_logs)
     const cumCost = cumRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
     let serviceDays = 0;
@@ -15976,15 +16079,11 @@ async function loadAdminDashboard(){
     }
 
     const stats = {
-      todayCount: todayRows.length,
-      todayCost,
-      yestCost,
-      monthCount: monthRows.length,
-      monthCost,
-      lastMonthCost,
-      daysInMonthSoFar,
-      dailyAvg: daysInMonthSoFar > 0 ? Math.round(monthCost / daysInMonthSoFar) : 0,
-      avgDuration: monthRows.length ? Math.round(monthRows.reduce((a,r)=>a+(r.duration_ms||0),0) / monthRows.length) : 0,
+      todayCount, todayCost,
+      mainCount, mainCost,
+      compareCost, compareLabel: compare.label,
+      dailyAvg, daysInPeriod,
+      avgDuration: mainRows.length ? Math.round(mainRows.reduce((a,r)=>a+(r.duration_ms||0),0) / mainRows.length) : 0,
       modelDist: {},
       failRate: 0,
       gptFallback: 0,
@@ -15993,7 +16092,7 @@ async function loadAdminDashboard(){
       cumCount: cumRows.length,
       serviceDays,
     };
-    monthRows.forEach(r=>{
+    mainRows.forEach(r=>{
       const key = _shortModelName(r.model);
       stats.modelDist[key] = (stats.modelDist[key]||0) + 1;
     });
@@ -16006,7 +16105,7 @@ async function loadAdminDashboard(){
     renderAdminMainCard(stats);
     renderAdminCumCard(stats);
     renderAdminAiCards(stats);
-    renderAdminByStoreTable(allMonthRows);
+    renderAdminByStoreTable(mainRows);
     const range = document.getElementById('adminSimRange');
     if(range) updateAdminSim(range);
 
@@ -16022,21 +16121,19 @@ function renderAdminMainCard(s){
   const trendEl = document.getElementById('adminMainTrend');
   const subEl = document.getElementById('adminMainSub');
   if(!costEl) return;
-  costEl.textContent = fmt(Math.round(s.monthCost||0))+'원';
-  // 트렌드 색
+  costEl.textContent = fmt(Math.round(s.mainCost||0))+'원';
   let trendColor = 'var(--gray-500)';
   if(s.trend && s.trend.includes('▲')) trendColor = 'var(--danger)';
   else if(s.trend && s.trend.includes('▼')) trendColor = 'var(--success)';
   trendEl.textContent = s.trend || '';
   trendEl.style.color = trendColor;
-  // 보조: 호출수 / 일평균 / 지난달 비교
   const parts = [];
-  parts.push(`호출 ${fmt(s.monthCount)}회`);
-  parts.push(`일평균 ${fmt(s.dailyAvg)}원`);
-  if(s.lastMonthCost > 0){
-    const diff = s.monthCost - s.lastMonthCost;
+  parts.push(`호출 ${fmt(s.mainCount)}회`);
+  if(s.dailyAvg > 0) parts.push(`일평균 ${fmt(s.dailyAvg)}원`);
+  if(s.compareCost > 0){
+    const diff = (s.mainCost||0) - s.compareCost;
     const sign = diff > 0 ? '+' : diff < 0 ? '-' : '';
-    parts.push(`지난달 ${fmt(s.lastMonthCost)}원 (${sign}${fmt(Math.abs(Math.round(diff)))}원)`);
+    parts.push(`${s.compareLabel} ${fmt(Math.round(s.compareCost))}원 (${sign}${fmt(Math.abs(Math.round(diff)))}원)`);
   }
   subEl.textContent = parts.join(' · ');
 }
@@ -16059,11 +16156,12 @@ function renderAdminCumCard(s){
 function renderAdminAiCards(s){
   const grid = document.getElementById('adminAiCardGrid');
   if(!grid) return;
+  const periodLabel = _adminViewMode === 'day' ? '선택일' : '선택월';
   const cards = [
-    { icon:'📅', title:'오늘 사용', main: fmt(Math.round(s.todayCost||0))+'원', sub: fmt(s.todayCount)+'회 호출' },
-    { icon:'📊', title:'모델 분포 (이번달)', isModel: true },
-    { icon:'⚠️', title:'실패율 (7일)', main: s.failRate+'%', sub: 'GPT 백업 '+s.gptFallback+'회' },
-    { icon:'⏱', title:'평균 응답', main: (s.avgDuration ? (s.avgDuration/1000).toFixed(1)+'초' : '-'), sub: '이번달 평균' },
+    { icon:'📅', title:'오늘 사용 (항상)', main: fmt(Math.round(s.todayCost||0))+'원', sub: fmt(s.todayCount)+'회 호출' },
+    { icon:'📊', title:`모델 분포 (${periodLabel})`, isModel: true },
+    { icon:'⚠️', title:'실패율 (7일 고정)', main: s.failRate+'%', sub: 'GPT 백업 '+s.gptFallback+'회' },
+    { icon:'⏱', title:`평균 응답 (${periodLabel})`, main: (s.avgDuration ? (s.avgDuration/1000).toFixed(1)+'초' : '-'), sub: `${fmt(s.mainCount)}회 기준` },
   ];
   grid.innerHTML = cards.map(c=>{
     let body;
