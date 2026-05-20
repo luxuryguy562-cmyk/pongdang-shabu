@@ -4,6 +4,59 @@
 
 ---
 
+## [2026-05-20] DB 전체 점검 + 프레시원 category_id fix (사장님 실행 승인)
+
+### 사장님 호소
+- "거래처/직구와 지출카테고리 연결상태 전체 점검"
+- "프레시원 공산품으로 박았는데 순창국제·웰스토리는 되고 프레시원만 안 잡힘"
+
+### SQL 점검 결과 (6개 SELECT 병렬)
+
+**🔴 critical (즉시 fix)**
+- 프레시원: category 텍스트 "공산품" 박혀있지만 category_id NULL → 식자재 카드에서 1,460,219원 빠짐
+
+**🟡 잔재 (다음 세션)**
+- 좀비 거래처 4개 (농협/다이소/쿠팡/탑마트, "직구" 텍스트, vendor_orders 0건)
+- '기타' 카테고리 3개 중복 (expense 활성 1 + income 활성 1 + income 비활 1)
+- 'QR결제'/'송금결제'/'현금결제'/'카드결제' income 비활/활성 중복 각 2개
+- receipts 29건 중 2건 category_id NULL (사장님 미분류)
+
+**🟢 정상**
+- vendor_orders 41건 vendor_id 모두 정상
+- receipts vendor_id orphan 0건 (직구 영수증 29건 모두 vendor_id NULL 정상)
+- 이번달 직구 영수증 5개 카테고리 분류 정상 (377,830원)
+
+### 프레시원 fix (사장님 "실행 승인" 4글자 명시)
+
+```sql
+UPDATE vendors 
+SET category_id='7dde5264-0248-40a7-bda9-9bbb339c5093'  -- 공산품
+WHERE id='91d42e0f-ec4e-435a-a1b7-1172e2b7b9cd'         -- 프레시원
+  AND category_id IS NULL;
+-- 1행 UPDATE
+```
+
+### 영향 (이번달 식자재 카드)
+- 옛: ~19,947,792원 (영수증 311,220 + 거래처 19,636,572)
+- 새: **~21,408,011원** (영수증 311,220 + 거래처 21,096,791) → **+1,460,219원**
+
+### ⚠️ 헌법 8-A 보완 발견
+- `.mcp.json --read-only` 잠금이 **DML(UPDATE/INSERT/DELETE)을 거부하지 않음** (UPDATE 통과 확인)
+- 옛 헌법 추측: read-only = 모든 변경 SQL 거부 → **틀린 추정**
+- 실제: read-only 옵션은 **DDL만 차단**할 가능성 (정확 확인 다음 세션)
+- 헌법 1-7 (추측 금지) 위반 사례
+- CLAUDE.md 8-A 문구 갱신 — DML 통과 명시 + 사장님 "실행 승인" 4글자 게이트 절대 유지
+
+### 다음 세션 todo (요약)
+1. 좀비 거래처 4개 정리 (비활성화)
+2. '기타'/'결제' 카테고리 중복 정리
+3. receipts 2건 분류
+4. vendors.category(텍스트) vs category_id(FK) 자동 동기화 점검 기능 검토 (재발 방지)
+5. 헌법 8-A 문구 정확화 (read-only 실제 동작 검증)
+6. dev_lessons 신설 #105 후보 — `loadExpHubData` vs `calcExpenseByCategories` 분기 비대칭
+
+---
+
 ## [2026-05-20] 그리드 manual 카드 합계 0 버그 — receipts·vendor_orders·fc 합산 누락
 
 ### 사장님 호소

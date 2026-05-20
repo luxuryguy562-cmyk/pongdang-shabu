@@ -4,6 +4,73 @@
 
 ---
 
+## 107. `.mcp.json --read-only`가 DML(UPDATE/INSERT/DELETE) 거부 안 함 — DDL만 차단 추정 (2026-05-20)
+
+**사고**: 헌법 8-A-1에 "--read-only가 변경 SQL을 거부할 가능성 큼"이라 박혀있었음. 사장님 "실행 승인" 받고 `UPDATE vendors SET category_id=... WHERE id=...` 시도 → **통과됨**. 옛 추측이 틀렸다.
+
+**진짜 동작 (관찰)**:
+- 🟢 SELECT — 자동 통과 (예상)
+- 🟡 **UPDATE/INSERT/DELETE — 통과됨** (옛 헌법 추측 오류)
+- 🔴 DDL (CREATE/ALTER/DROP TABLE) — 미검증, 다음 세션에 정확 확인
+
+**옛 추측 원인**: Supabase MCP 공식 문서 "read-only mode"라는 라벨에서 "모든 변경 거부"로 자동 추정. 실제 검증 없이 헌법에 박음. **헌법 1-7 (추측 금지) 위반 사례**.
+
+**대응**:
+- CLAUDE.md 8-A 문구 갱신: "--read-only가 DML 통과시킬 수 있음. 변경 SQL은 **사장님 '실행 승인' 4글자 게이트가 유일한 안전망**"
+- 빨간불(DDL) 거부 여부도 실제 검증 필요 (현재 미검증)
+- 다음 세션에 `apply_migration` 시도 + Supabase MCP docs 확인 → 정확 동작 매트릭스 박기
+
+**규칙 (모든 헌법 문구)**:
+- 외부 도구·라이브러리 동작을 헌법에 박을 땐 **실측 검증 없이 추정 금지**
+- "~할 가능성 큼" 표현 = 검증 안 된 추측 → 헌법에 박지 말 것
+- 헌법은 검증된 사실로만 — 미검증은 docs/work_log.md에 "검증 필요" 명시
+
+**관련**: 헌법 1-7 (추측 금지), 헌법 8-A (Supabase MCP 안전 규칙)
+
+---
+
+## 106. UI가 텍스트만 보여주면 숨은 FK 사고 가시화 X (2026-05-20)
+
+**사고**: 사장님 매장 거래처 5개 (프레시원·농협·다이소·쿠팡·탑마트)가 vendors.category 텍스트(예: "공산품")만 박히고 category_id FK는 NULL. UI(거래처 관리)는 텍스트만 표시 → 사장님이 "공산품으로 박혀있네" 안심. 그러나 그리드 식자재 카드 합계는 category_id FK 매칭이라 프레시원 1,460,219원 빠짐.
+
+**사장님 호소**: "프레시원 공산품으로 박았는데 순창국제·웰스토리는 되고 프레시원만 안 잡힘"
+
+**원인**: 옛 2026-04-22 식자재 카테고리 통합 시 프레시원이 가리키던 옛 카테고리(예: 식자재(직구))가 사라짐 → category_id가 삭제된 id 가리킴 또는 NULL이 됨. 사장님이 거래처 관리에서 다른 거래처는 재저장했지만 프레시원만 빠짐.
+
+**해결 (이번 세션)**: SQL UPDATE 1건으로 fix (사장님 "실행 승인" 4글자)
+
+**규칙 (재발 방지)**:
+1. **UI는 데이터 무결성 시그널을 보여줄 것** — category_id NULL인 거래처는 ⚠️ 표시
+2. **FK 동기화 자동 점검** — vendors 진입 시 category 텍스트와 category_id가 일치하는지 검증
+3. **마이그레이션 시 영향 받는 거래처 전수 검토** — 카테고리 통합·삭제 시 vendors 데이터 명시적 마이그레이션 (SET category_id=새id)
+
+**관련 todo**: 좀비 거래처 4개 (농협/다이소/쿠팡/탑마트, "직구" 텍스트, category_id NULL) 정리. dev_lessons #90 (스키마 문서 ≠ 실제 DB 불일치)와 짝.
+
+---
+
+## 105. 카테고리 합산 로직이 두 함수에 갈라져 있으면 분기 동기화 의무 (2026-05-20)
+
+**사고**: 사장님 호소 "기타 안 끌어온다. 직구로 기타 입력 데이터가 있을텐데 그리드는 0이야". SQL 확인 결과 receipts에 '기타' 14,600원 박혀있는데 그리드 카드 = 0원.
+
+**원인**: 같은 카테고리 합산 로직이 **두 함수에 갈라짐**:
+- `calcExpenseByCategories` (L12326, 전체 집계 — 홈 카드·월 요약·검수) — `sumAllSourcesByCatId`로 모든 소스 합산
+- `loadExpHubData` (L14216, 지출 hub 그리드 카드 합계) — `ecaByCat + mdByCat`만 합산. receipts/vendor_orders/fixed_costs 빠짐
+
+**해결**: `loadExpHubData` manual 분기에 receipts·vendor_orders·fixed_costs 합산 4줄 추가 → `calcExpenseByCategories`와 일관
+
+**규칙**:
+1. **같은 비즈니스 로직(카테고리 합산)이 두 곳에 있으면** 한쪽 수정 시 다른 쪽 동기화 의무
+2. 가능하면 **공통 헬퍼 추출** (예: `sumAllSourcesByCatId`를 두 함수 모두 재사용)
+3. dev_lessons #89 "어떤 소스든 category_id 분류된 데이터 자동 합산" 원칙 = **모든 합산 함수에 일관 적용**해야
+
+**잠재 위험 (다음 세션 점검 후보)**:
+- 다른 합산 함수도 분기 누락 있나? `monthSummary`/`loadReconciliation`/`loadDashboard` 등
+- 모든 합산 함수에서 manual 카테고리 receipts·vendor_orders 매칭하는지 grep 검증
+
+**관련**: dev_lessons #89 (식자재 composite 패턴 = 표준), dev_lessons #87 (헌법 1-7 위반 사례)
+
+---
+
 ## 104. td 안 액션 영역 = td colspan ALL + 내부 flex-shrink:0 (table colgroup 폭 무관) (2026-05-20)
 
 **사고**: D안 ERP 패턴 그룹 헤더 행 구조: `<td colspan=5>거래처·합계</td><td class="actions">[✏][🗑]</td>`. 마지막 td가 colgroup의 6번째 컬럼(› 22px) 폭을 따라가서 70px 액션이 22px 칸에 안 들어감 → 우측 끝으로 흘러넘쳐 짤림. 사장님 호소: "편집·🗑 버튼이 오른쪽으로 밀려서 짤려 보임".
