@@ -4,6 +4,99 @@
 
 ---
 
+## 104. td 안 액션 영역 = td colspan ALL + 내부 flex-shrink:0 (table colgroup 폭 무관) (2026-05-20)
+
+**사고**: D안 ERP 패턴 그룹 헤더 행 구조: `<td colspan=5>거래처·합계</td><td class="actions">[✏][🗑]</td>`. 마지막 td가 colgroup의 6번째 컬럼(› 22px) 폭을 따라가서 70px 액션이 22px 칸에 안 들어감 → 우측 끝으로 흘러넘쳐 짤림. 사장님 호소: "편집·🗑 버튼이 오른쪽으로 밀려서 짤려 보임".
+
+**원인**: table-layout:fixed에서 td 폭 = colgroup 정의 폭. colspan 안 한 마지막 td는 마지막 col 폭에 종속. 액션 영역이 그 폭보다 크면 시각상 오버플로우.
+
+**해결**: 그룹 헤더 행 = **td 1개 colspan=ALL** + 내부 `<div class="grp-hdr-row" style="display:flex;">` 좌우 분할
+```html
+<tr class="grp-hdr">
+  <td colspan="6">
+    <div class="grp-hdr-row">
+      <div class="grp-hdr-info">거래처·합계 (flex:1, min-width:0, ellipsis)</div>
+      <div class="grp-hdr-actions">[✏][🗑] (flex-shrink:0, 자연폭)</div>
+    </div>
+  </td>
+</tr>
+```
+
+**실측 폭 안전 (모바일 360px)** — 천만단위까지 검증:
+- 액션 70px (flex-shrink:0 고정)
+- 합계 ~95px (flex-shrink:0, "99,999,999원")
+- 이모지 ~40px (font-size:0.9em)
+- 거래처 ~110~140px (잉여 흡수, ellipsis)
+- 합 ~315~345px ≤ 모바일 폭 안전 영역
+
+**규칙 (앞으로 비슷한 패턴)**:
+- table 행에 액션 버튼 박을 때 → colgroup 폭에 의존 X. td colspan=ALL + 내부 flex 분할.
+- 액션 영역 = flex-shrink:0 + min-width:32px (터치)
+- 사장님 "센스있게" 명시 = 실측 폭 표(천만단위 시나리오 포함) 사전 검증 의무
+
+**관련**: 헌법 designer 규칙 11 (실측 폭 표 의무), dev_lessons #85 (표 정렬·너비), #91 (좌측 이름 짤림 = 우측 영역 과부하)
+
+---
+
+## 103. thead th sticky가 thead 행 높이를 0으로 만든다 (iOS Safari) (2026-05-20)
+
+**사고**: D안 ERP 패턴 (한 표 안 그룹 헤더 행 + 본문 행) 적용 후 사장님 호소: "헤더가 본문 첫 행에 겹쳐 보임". 첫 그룹의 thead 텍스트("단가·수량·금액")가 첫 본문 행("우삼겹(미국)") 위에 시각 중복.
+
+**원인**: `<th>` 각각에 `position:sticky` 박으면 thead의 layout 행 높이가 0으로 처리됨 (브라우저 따라). 결과: 본문 첫 행이 thead가 있어야 할 자리부터 그려지고, sticky th는 그 위에 z-index로 떠 있음 → 시각 겹침.
+
+**부수 원인**: `.grp-tbl{overflow:hidden}`이 sticky 컨텍스트를 표 안에 가둠 → 페이지 스크롤 기준 sticky 안 작동.
+
+**해결**:
+1. **`<thead>` 자체에 `position:sticky`** (th에서는 제거) → thead 행이 정상 layout 자리 차지
+2. **`.grp-tbl{overflow:hidden}` 제거** → 페이지 스크롤 기준 sticky 작동
+3. table을 `.grp-tbl-wrap` div로 감쌈 → 둥근 모서리는 wrapper에서 처리 (overflow:hidden 없어도 OK)
+
+**규칙**:
+- 표 안 sticky 헤더는 `<thead>` 자체에 박을 것 (th 아닌)
+- 표 자체에 `overflow:hidden` 박지 말 것 (sticky 죽임). 모서리는 wrapper에서.
+
+**브라우저 호환**: thead position:sticky는 iOS Safari 16.4+, Android Chrome 91+ 안정.
+
+**관련**: 헌법 designer 규칙 11, dev_lessons #100 (표 정렬), #102 (모바일 표×카드 한계)
+
+---
+
+## 102. 모바일 표×카드 결합 = 본질적 분리감. ERP 패턴이 해법 (2026-05-20)
+
+**사고**: 영수증·거래처 기록 표시 통일 작업에서 사장님 반복 호소: "헤더가 카드와 따로 노는 느낌". sticky 헤더(grid box) + 카드(별도 box) 시각 분리감이 시각 일치(border-left 컬러바 트릭, padding 매칭 등) 적용해도 해소 안 됨.
+
+**advisor 조사 (단순 동조 X)**:
+- **데스크탑 ERP** (SAP/Oracle/이카운트/더존): 헤더(`<thead>`)와 본문(`<tbody>`)이 같은 표 안. border-collapse로 시각 연결.
+- **모바일 회계** (토스/카카오뱅크/KB가계부): **표×카드 결합 자체를 안 씀**. 거래내역 = 카드 리스트 + 라벨 인라인.
+
+**결론**: 모바일 + 표×카드 결합은 본질적 한계. 시각 일치 100% 시켜도 박스 안 박스 구조상 위화감 남음.
+
+**채택 — D안 (ERP 패턴)**:
+1. 카드 박스 제거 → 한 표(`.grp-tbl`) 안에 다 통합
+2. `<thead>` sticky → 헤더와 본문이 같은 박스 안
+3. 그룹 헤더 행 (`.grp-hdr`): 거래처·합계·액션 한 줄
+4. 본문 행 (`.grp-body`): 좌측 컬러바(border-left 3px)로 그룹 인디케이션
+5. 날짜 그룹 헤더 행 (`.grp-date`)
+
+**옵션 비교 (사장님 결정 받기 위해 제시)**:
+| 옵션 | 패턴 | 분리감 | 모바일 UX |
+|---|---|---|---|
+| A. 표×카드 + sticky div | 옛 안 | 본질적 한계 | 보통 |
+| B. 카드 안 thead 복귀 | 옛옛 안 | 해소 | 보통, 공간 ↓ |
+| C. 인라인 라벨 (토스) | 카드 + 라벨 인라인 | 완전 해소 | 최고 |
+| D. 표 + 컬러바 (ERP) ⭐ | 한 표 안 그룹 | 해소 | 데스크탑 친숙 |
+
+사장님 선택: D안 (한 번 가보자 — 이후 호소 발생 시 다음 페이즈에 C안 검토 가능).
+
+**규칙**:
+- 모바일 + 표 형식이 본질적으로 필요한 경우 = D안 ERP 패턴 권장
+- 표×카드 결합 = "분리감" 호소 시 시각 일치 트릭으로 해결 안 됨 = 본질적 한계 솔직 보고
+- C안(토스 스타일)도 옵션으로 제시 (사장님이 다른 비즈니스 화면에서 채택 가능)
+
+**관련**: 헌법 advisor 규칙 (사장님 의견도 비판적 검토), dev_lessons #60 (디자인 변화 = 패러다임 변경이 임팩트), #103 (thead sticky 구현)
+
+---
+
 ## 101. 멀티행 입력 = D 패턴([✓ 입력] + [+ 행 추가] 분리)이 모바일 표준 (2026-05-20)
 
 **사고 방지 (advisor 의무 — 단순 동조 X)**: 거래처 주문 멀티 입력 시트 설계 시 CTO 1차 초안 = "[+ 다음 품목]" 한 버튼이 "입력 완료 + 새 행 추가" 두 의미 겸함. 사장님 짚으심: "**다음품목으로 하는건 알림기능이 부족**. 다 기재하고 입력을 누르면 위로 접히고, 행 추가?로 펼치고, 다 하면 저장하는 개념".
