@@ -14213,12 +14213,25 @@ async function loadExpHubData(){
         }
       });
     }
-    // manual (expense_category_amounts + mydata 자동 매칭)
+    // manual (모든 소스 매칭 — dev_lessons #89 일관)
+    // 사장님 호소 2026-05-20: "직구로 기타 입력했는데 그리드는 0" — receipts 빠뜨려서 발생
+    // calcExpenseByCategories의 sumAllSourcesByCatId와 일관 (eca+mydata+receipts+vendor_orders+fc)
     else { // 'manual' 또는 기타
       ids.forEach(id=>{
         amt += ecaByCat[id]||0;
         amt += mdByCat[id]||0;
       });
+      // receipts(영수증) 매칭 — 사장님이 직구로 manual 카테고리(기타/세금/마케팅) 분류한 케이스
+      (rcRes.data||[]).forEach(r=>{
+        if(r.category_id && ids.has(r.category_id)){ amt += r.total_price||0; cnt++; }
+      });
+      // vendor_orders(거래처 주문) 매칭 — 거래처 카테고리가 manual인 경우
+      (voRes.data||[]).forEach(o=>{
+        const cid = vendorCatMap[o.vendor_id];
+        if(cid && ids.has(cid)){ amt += o.amount||0; cnt++; }
+      });
+      // fixed_costs.category 텍스트 매칭 — 마케팅/세금 자동이체 (calcExpenseByCategories 일관)
+      amt += fcByCatText[p.name]||0;
     }
     catSums[p.id] = {amount: amt, count: cnt, cat: p};
   });
