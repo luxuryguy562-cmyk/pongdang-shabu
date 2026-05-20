@@ -2329,6 +2329,22 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div id="fcListData"><div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div></div>
 </div>
 
+<!-- ══ [7-A] manual 카테고리 진입 화면 (세금·마케팅·기타) ══ -->
+<!-- 2026-05-20 신설 — mydata_transactions 자동 분류 거래내역 + sub_category 누적 합계 -->
+<div id="manualCatCont" class="container">
+  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;">
+    <div style="flex:1;min-width:0;">
+      <div id="manualCatHeaderTitle" style="font-size:18px;font-weight:700;color:var(--gray-900);">⚖️ 세금</div>
+      <div id="manualCatHeaderDesc" style="font-size:12px;color:var(--gray-600);margin-top:3px;">통장·카드 자동 분류 거래내역</div>
+    </div>
+  </div>
+  <!-- 항목별 누적 합계 (sub_category 자동 그룹) -->
+  <div id="manualCatSubSummary" style="margin-bottom:14px;"></div>
+  <!-- 거래내역 표 또는 빈 상태 가이드 -->
+  <div id="manualCatTxList"></div>
+</div>
+
 <!-- ══ [8] 직원관리 ══ -->
 <div id="staffCont" class="container">
   <div style="display:flex;gap:8px;margin-bottom:12px;">
@@ -4178,7 +4194,7 @@ function nav(tab, el) {
     sales:'dashboard',
     receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
     explist:'expHub', recon:'expHub', reserve:'expHub', expcat:'expHub',
-    royalty:'expHub', catReceipt:'expHub',
+    royalty:'expHub', catReceipt:'expHub', manualCat:'expHub',
   };
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
@@ -4215,6 +4231,7 @@ function nav(tab, el) {
     busHub: loadBusHubData,
     expHub: loadExpHubData,
     catReceipt: loadCatReceiptData,
+    manualCat: loadManualCatView,
   };
   if (actions[tab]) actions[tab]();
   if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); renderExtraRevenueInputs(); recalcSettle2(); initSettleDate(); loadOpeningAmount(); }
@@ -4544,6 +4561,125 @@ function openCatReceipt(mode){
   nav('catReceipt');
   const mEl = document.getElementById('catReceiptMonth');
   if(mEl && !mEl.value) mEl.value = catReceiptMonth;
+}
+
+// ══════════════════════════════════════════
+// manual 카테고리 진입 화면 (세금·마케팅·기타) — 2026-05-20 신설
+// data_source='manual' 카테고리 카드 클릭 → 진입
+// mydata_transactions 자동 분류 거래내역 + sub_category 누적 합계
+// ══════════════════════════════════════════
+let currentManualCatName = null;
+const MANUAL_CAT_META = {
+  '세금':   {emoji:'⚖️', desc:'통장·카드 자동 분류 세금·4대보험 거래내역'},
+  '마케팅': {emoji:'📢', desc:'광고·행사·홍보 비용 거래내역'},
+  '기타':   {emoji:'📂', desc:'분류되지 않은 기타 지출 거래내역'},
+};
+function openManualCatView(catName){
+  if(!guardStore()) return;
+  currentManualCatName = catName || '세금';
+  nav('manualCat');
+}
+async function loadManualCatView(){
+  if(!currentStore) return;
+  const cat = currentManualCatName || '세금';
+  const meta = MANUAL_CAT_META[cat] || {emoji:'📂', desc:`${cat} 거래내역`};
+  document.getElementById('manualCatHeaderTitle').textContent = `${meta.emoji} ${cat}`;
+  document.getElementById('manualCatHeaderDesc').textContent = meta.desc;
+  // mydata 조회 (해당 카테고리)
+  const {data:txs, error} = await sb.from('mydata_transactions')
+    .select('id, tx_date, description, merchant_name, amount, sub_category, exclude_from_settlement')
+    .eq('store_id', currentStore.id)
+    .eq('category', cat)
+    .order('tx_date', {ascending:false});
+  if(error){ console.error('[loadManualCatView]', error); errToast(cat+' 조회', error); return; }
+  // 정산제외 건 분리 (환급금 등은 합계에서 제외)
+  const validTxs = (txs||[]).filter(t=>!t.exclude_from_settlement);
+  renderManualCatSubSummary(validTxs, cat);
+  renderManualCatTxList(validTxs, cat);
+}
+function renderManualCatSubSummary(txs, cat){
+  const container = document.getElementById('manualCatSubSummary');
+  if(!container) return;
+  if(!txs.length){ container.innerHTML = ''; return; }
+  // 올해 누적: sub_category별 합계
+  const thisYear = new Date().getFullYear();
+  const subSums = {};
+  let totalYear = 0;
+  txs.forEach(t=>{
+    const year = parseInt((t.tx_date||'').slice(0,4),10);
+    if(year!==thisYear) return;
+    const sub = (t.sub_category||'').trim() || '(분류없음)';
+    const amt = Math.abs(t.amount||0);
+    subSums[sub] = (subSums[sub]||0) + amt;
+    totalYear += amt;
+  });
+  const subEntries = Object.entries(subSums).sort((a,b)=>b[1]-a[1]);
+  if(subEntries.length===0){
+    container.innerHTML = `
+      <div class="card" style="padding:14px;background:var(--gray-50);">
+        <div style="font-size:12px;color:var(--gray-600);">${thisYear}년 ${cat} 거래내역 없음</div>
+      </div>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="card" style="padding:14px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);">
+      <div style="font-size:11px;color:var(--gray-600);margin-bottom:4px;">${thisYear}년 누적</div>
+      <div style="font-size:22px;font-weight:700;color:var(--gray-900);margin-bottom:12px;font-variant-numeric:tabular-nums;">${fmt(totalYear)}원</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${subEntries.map(([sub,amt])=>`
+          <span style="background:rgba(255,255,255,0.75);padding:6px 10px;border-radius:8px;font-size:11px;font-weight:600;color:var(--gray-700);">
+            ${esc(sub)} <b style="color:var(--blue);font-variant-numeric:tabular-nums;">${fmt(amt)}</b>
+          </span>
+        `).join('')}
+      </div>
+    </div>`;
+}
+function renderManualCatTxList(txs, cat){
+  const container = document.getElementById('manualCatTxList');
+  if(!container) return;
+  // 빈 상태 — 가이드 + 업로드 버튼
+  if(!txs.length){
+    container.innerHTML = `
+      <div class="empty-state" style="padding:30px 14px;text-align:center;background:var(--gray-50);border-radius:14px;">
+        <div style="font-size:48px;margin-bottom:8px;">📋</div>
+        <p style="font-size:14px;color:var(--gray-800);font-weight:600;margin-bottom:8px;">아직 ${cat} 거래내역이 없습니다</p>
+        <p style="font-size:12px;color:var(--gray-600);line-height:1.7;">통장·카드 엑셀을 업로드하면<br>학습 규칙으로 자동 분류돼서<br>여기에 거래내역이 쌓입니다.</p>
+        <button class="btn btn-primary btn-sm" style="margin-top:16px;padding:8px 16px;" data-action="nav|explist">엑셀 업로드 화면으로 ›</button>
+      </div>`;
+    return;
+  }
+  // 이번달 우선 표시 + 없으면 전체 최근 50건
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthTxs = txs.filter(t=>(t.tx_date||'').slice(0,7)===thisMonth);
+  const showTxs = monthTxs.length ? monthTxs : txs.slice(0, 50);
+  const headerLabel = monthTxs.length
+    ? `이번달 ${monthTxs.length}건`
+    : `이번달 없음 · 최근 ${showTxs.length}건 표시`;
+  let html = `<div style="font-size:12px;color:var(--gray-700);font-weight:600;margin:6px 0 8px;padding:0 4px;">${headerLabel}</div>`;
+  html += '<div style="border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;">';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">';
+  html += '<colgroup><col style="width:44px;"><col><col style="width:80px;"><col style="width:80px;"></colgroup>';
+  html += '<thead><tr style="background:var(--gray-100);">';
+  html += '<th style="text-align:center;padding:8px 4px;font-size:11px;color:var(--gray-700);">날짜</th>';
+  html += '<th style="text-align:center;padding:8px 4px;font-size:11px;color:var(--gray-700);">내용</th>';
+  html += '<th style="text-align:center;padding:8px 4px;font-size:11px;color:var(--gray-700);">분류</th>';
+  html += '<th style="text-align:center;padding:8px 4px;font-size:11px;color:var(--gray-700);">금액</th>';
+  html += '</tr></thead><tbody>';
+  showTxs.forEach(t=>{
+    const date = (t.tx_date||'').slice(5).replace('-','/');
+    const desc = esc(t.description || t.merchant_name || '-');
+    const sub = esc((t.sub_category||'').trim() || '(분류없음)');
+    const amt = Math.abs(t.amount||0);
+    html += `<tr style="border-top:1px solid var(--gray-100);">
+      <td style="text-align:center;padding:10px 4px;color:var(--gray-700);font-size:11px;">${date}</td>
+      <td style="text-align:left;padding:10px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${desc}">${desc}</td>
+      <td style="text-align:center;padding:10px 4px;color:var(--gray-600);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${sub}</td>
+      <td style="text-align:right;padding:10px 6px;font-variant-numeric:tabular-nums;font-weight:700;font-size:12px;">${fmt(amt)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
 }
 
 function onCatReceiptMonthChange(el){
@@ -13865,12 +14001,12 @@ function _expCatIcon(name){ return _expCatIconMap[name] || 'i-folder'; }
 //   - receipts/composite/vendor_orders → openCatReceipt|cat:<id> (표 + 필터)
 //   - attendance → nav|wage
 //   - fixed_costs → openFcCategory|<카테고리명> (카테고리별 분리 진입)
-//   - manual → goCategoryDetail|<name> (잠시 기존 — 사장님 결정 9·10 뒤로)
+//   - manual → openManualCatView|<카테고리명> (세금·마케팅·기타 mydata 거래내역, 2026-05-20)
 function _expCatAction(cat){
   const ds = cat.data_source || 'manual';
   if(ds==='attendance') return 'nav|wage';
   if(ds==='fixed_costs') return 'openFcCategory|'+cat.name;
-  if(ds==='manual') return 'goCategoryDetail|'+cat.name;
+  if(ds==='manual') return 'openManualCatView|'+cat.name;
   // receipts / composite / vendor_orders
   return 'openCatReceipt|cat:'+cat.id;
 }
@@ -14477,6 +14613,51 @@ async function loadClassificationRules(){
   storeClassRules=data||[];
   // 규칙이 0개면 시드 마이그레이션 실행
   if(storeClassRules.length===0) await seedDefaultRules();
+  // 세금 키워드 부족분 보충 (옛 매장은 세금 시드 없을 수 있음 — 2026-05-20)
+  await seedTaxRulesIfMissing();
+}
+
+// ─── 세금 학습 규칙 시드 (없는 키워드만 보충, 2026-05-20) ───
+// 자영업자가 자주 내는 세금·4대보험 키워드 미리 등록
+// 다음에 사장님이 mydata 업로드 시 자동 분류 작동
+async function seedTaxRulesIfMissing(){
+  if(!currentStore) return;
+  const taxSeeds=[
+    // 국세
+    {keyword:'국세청',     tx_type:'bank', sub_category:'국세'},
+    {keyword:'홈택스',     tx_type:'bank', sub_category:'홈택스'},
+    {keyword:'부가세',     tx_type:'bank', sub_category:'부가세'},
+    {keyword:'종합소득세', tx_type:'bank', sub_category:'종합소득세'},
+    {keyword:'원천세',     tx_type:'bank', sub_category:'원천세'},
+    // 지방세·자동차세
+    {keyword:'지방세',     tx_type:'bank', sub_category:'지방소득세'},
+    {keyword:'주민세',     tx_type:'bank', sub_category:'주민세'},
+    {keyword:'자동차세',   tx_type:'bank', sub_category:'자동차세'},
+    {keyword:'면허세',     tx_type:'bank', sub_category:'면허세'},
+    {keyword:'환경개선부담금', tx_type:'bank', sub_category:'환경부담금'},
+    // 4대보험
+    {keyword:'국민연금',   tx_type:'bank', sub_category:'국민연금'},
+    {keyword:'건강보험',   tx_type:'bank', sub_category:'건강보험'},
+    {keyword:'고용보험',   tx_type:'bank', sub_category:'고용보험'},
+    {keyword:'산재보험',   tx_type:'bank', sub_category:'산재보험'},
+    {keyword:'4대보험',    tx_type:'bank', sub_category:'4대보험'},
+  ];
+  // 이미 박힌 세금 키워드 조회
+  const{data:existing}=await sb.from('classification_rules')
+    .select('keyword,tx_type').eq('store_id',currentStore.id).eq('category','세금');
+  const existSet=new Set((existing||[]).map(r=>`${r.keyword}__${r.tx_type}`));
+  const toInsert=taxSeeds.filter(s=>!existSet.has(`${s.keyword}__${s.tx_type}`));
+  if(toInsert.length===0) return;
+  const rows=toInsert.map(s=>({
+    store_id:currentStore.id, keyword:s.keyword, match_type:'contains',
+    tx_type:s.tx_type, category:'세금', sub_category:s.sub_category||'',
+    exclude_from_settlement:false, priority:30,
+  }));
+  const{error}=await sb.from('classification_rules').insert(rows);
+  if(error){ console.warn('[seedTaxRulesIfMissing]', error); return; }
+  // 캐시 갱신
+  const{data}=await sb.from('classification_rules').select('*').eq('store_id',currentStore.id).order('priority');
+  storeClassRules=data||[];
 }
 
 // ─── 시드: 기존 퐁당샤브 규칙 → DB 마이그레이션 ───

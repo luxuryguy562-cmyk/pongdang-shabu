@@ -4,6 +4,62 @@
 
 ---
 
+## [2026-05-20] 세금·마케팅·기타 통합 화면 (manualCat) + 세금 학습 규칙 시드
+
+### 상태: 브랜치 push, main 자동 머지 진행
+### 브랜치: `claude/fix-expense-grid-categories-GZsNZ` (같은 브랜치 연속 작업)
+
+### 사장님 호소 + 결정
+- "세금은 어떻게 할까? 매장들이 내는 세금 다 항목으로 넣을까? 세무시스템은 없어서 애매"
+- CTO critic: "단순 합계는 빈 화면 아님. 식자재 카드처럼 거래내역 표 + 항목별 합계"
+- 사장님 선택: **B안 (A+ 화면 + 학습 규칙 같이)**
+- 추가 컨텍스트: "지금 수기 입력 안 하고 mydata 연동 대기 중"
+
+### 진단 (SQL)
+- 사장님 매장 mydata_transactions 전체 0건 (아직 mydata 업로드 안 한 상태)
+- classification_rules 세금 카테고리 1건 (`장기요양환급` — 환급금이라 잘못된 학습)
+- 세금 카테고리 expense_categories 1건 (id eb9b8d4a..., data_source='manual', 자식 X)
+
+### 작업 (한 PR로 통합)
+
+**Phase 1: 세금 학습 규칙 시드** (`seedTaxRulesIfMissing`)
+- loadClassificationRules 끝에 자동 호출 (옛 매장 보충용)
+- 키워드 15개: 국세청·홈택스·부가세·종소세·원천세·지방세·주민세·자동차세·면허세·환경개선부담금·국민연금·건강보험·고용보험·산재보험·4대보험
+- 모두 `category='세금'`, `tx_type='bank'`, `priority=30`
+- 이미 박힌 키워드는 스킵 (`existSet` 체크)
+- 사장님 매장 진입 시 → 14건 INSERT (장기요양환급 제외)
+
+**Phase 2: manualCat 통합 화면** (세금·마케팅·기타 일관 패턴)
+- `_expCatAction` manual 분기 → `openManualCatView|<카테고리명>`
+- 새 컨테이너 `#manualCatCont` (헤더·sub_category 합계·거래내역 표·빈 상태 가이드)
+- 새 함수: `openManualCatView`, `loadManualCatView`, `renderManualCatSubSummary`, `renderManualCatTxList`
+- 상수 `MANUAL_CAT_META` (세금=⚖️, 마케팅=📢, 기타=📂)
+- nav `actions`/`parentTabMap`에 `manualCat` 등록
+- UI 구성:
+  - 상단: 헤더 (이모지·카테고리명·설명)
+  - 중단: ${올해}년 누적 + sub_category 칩 (그라데이션 카드)
+  - 하단: 이번달 거래내역 표 (날짜·내용·분류·금액) — 없으면 최근 50건
+  - 빈 상태: "엑셀 업로드 화면으로 ›" 버튼
+
+### 진입 흐름
+1. 사장님 앱 진입 → loadClassificationRules → 세금 시드 14건 자동 INSERT
+2. 지출관리 → 세금/마케팅/기타 카드 클릭 → openManualCatView → manualCat 화면
+3. mydata 0건 = 빈 상태 가이드 (사장님이 통장 엑셀 업로드 동기부여)
+4. mydata 업로드 시 → 학습 규칙 자동 분류 → 다음 진입 시 거래내역 표 표시
+
+### 검증
+- ✅ node --check 통과
+- ✅ 심볼 29건 정의·참조 일관
+- ✅ 빈 상태 시뮬레이션: 사장님 매장(mydata 0건) → 가이드 + 업로드 버튼
+- ⏳ 사장님 mydata 업로드 후 실측 검증 (학습 규칙 자동 분류 작동 확인)
+
+### 잔재 / 다음 세션 todo
+- `장기요양환급` 잘못된 학습 규칙 정정 (사장님이 학습 관리 화면에서 수정 또는 자동 정리)
+- 외부 매장 신규 시드 검토 (사장님 매장 한정에서 통합 시드로)
+- 사장님 mydata 업로드 후 정확도 검증
+
+---
+
 ## [2026-05-20] 공과금/고정비 카드 분리 진입 + 라벨 카테고리별 분기
 
 ### 상태: 브랜치 push, main 자동 머지 대기
