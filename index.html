@@ -3632,13 +3632,34 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <!-- AI 비용 패널 -->
     <div id="adminAiPanel">
+      <!-- 메인 카드: 이번달 사용액 (큰 글씨) -->
+      <div class="card" id="adminMainCard" style="margin-bottom:10px;padding:18px;background:linear-gradient(135deg, var(--blue-light) 0%, var(--white) 100%);">
+        <div style="font-size:11px;color:var(--gray-600);font-weight:700;margin-bottom:4px;">💰 이번달 사용액 (실제)</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
+          <span id="adminMainCost" style="font-size:30px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1;">-</span>
+          <span id="adminMainTrend" style="font-size:11px;color:var(--gray-500);text-align:right;font-variant-numeric:tabular-nums;"></span>
+        </div>
+        <div id="adminMainSub" style="font-size:12px;color:var(--gray-600);margin-top:6px;font-variant-numeric:tabular-nums;">호출 - / 일평균 -</div>
+      </div>
+      <!-- 작은 카드 5개 -->
       <div id="adminAiCardGrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;"></div>
+      <!-- 누적 카드 (서비스 시작 후 총합) -->
+      <div class="card" id="adminCumCard" style="margin-bottom:12px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <div>
+            <div style="font-size:11px;color:var(--gray-500);font-weight:700;">📚 누적 사용액 (서비스 시작 후)</div>
+            <div id="adminCumSub" style="font-size:11px;color:var(--gray-500);margin-top:2px;font-variant-numeric:tabular-nums;">-</div>
+          </div>
+          <div id="adminCumCost" style="font-size:20px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;">-</div>
+        </div>
+      </div>
       <div class="card" style="margin-bottom:12px;padding:14px;">
         <div style="font-size:14px;font-weight:800;margin-bottom:8px;">📋 매장별 (이번달)</div>
         <div id="adminByStoreContent" style="font-size:12px;color:var(--gray-600);">로딩 중...</div>
       </div>
       <div class="card" style="margin-bottom:12px;padding:14px;">
-        <div style="font-size:14px;font-weight:800;margin-bottom:10px;">💡 매장 N개일 때 월 AI 비용 추정</div>
+        <div style="font-size:14px;font-weight:800;margin-bottom:4px;">💡 매장 N개일 때 월 AI 비용 추정 (미래 예측)</div>
+        <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px;">외부 매장 권유 시 손익 판단용 · 위 "실제 사용액"과 다름</div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <span style="font-size:11px;color:var(--gray-500);min-width:36px;">매장</span>
           <input type="range" id="adminSimRange" min="1" max="200" value="50" style="flex:1;" data-input="updateAdminSim|this">
@@ -3653,8 +3674,32 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <!-- 학습 규칙 패널 -->
     <div id="adminRulesPanel" style="display:none;">
+      <!-- 안내 박스 (펼침/접힘) -->
+      <div class="card" style="margin-bottom:10px;padding:12px;background:var(--blue-light);">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" data-action="toggleAdminRulesHelp">
+          <div style="font-size:13px;font-weight:800;">🧠 학습 규칙이란? <span style="font-size:11px;color:var(--gray-600);font-weight:600;">(탭하면 자세히)</span></div>
+          <span id="adminRulesHelpArrow" style="font-size:12px;color:var(--gray-600);">▾</span>
+        </div>
+        <div id="adminRulesHelpBody" style="display:none;margin-top:10px;font-size:12px;color:var(--gray-700);line-height:1.7;">
+          영수증 AI가 한번 분류한 걸 사장님이 정정해주면, 그 정정을 노트에 적어둡니다.<br>
+          다음번 같은 키워드 나오면 <b>AI한테 안 물어보고 바로 자동 분류</b> → 시간·비용 절약.<br>
+          <br>
+          <b>표 컬럼 설명</b>:
+          <ul style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+            <li><b>매장</b>: 어느 매장의 학습 노트인지</li>
+            <li><b>키워드</b>: 영수증 품목명에서 뽑은 핵심 단어 (예: "양파", "위즈복대")</li>
+            <li><b>분류</b>: 그 키워드를 어떤 카테고리로 분류할지 (예: 식자재>야채)</li>
+            <li><b>표시명</b>: 키워드 대신 보여줄 정정된 이름 (예: "위즈복대" → "날치알")</li>
+            <li><b>적용</b>: 그 학습이 지금 영수증에서 몇 건에 적용되고 있는지 (0이면 한 번도 안 쓰이는 학습 = 정리 후보)</li>
+          </ul>
+          <div style="margin-top:8px;font-size:11px;color:var(--gray-600);">
+            💡 <b>잘못 학습된 규칙은 행 탭 → 편집·삭제 가능.</b><br>
+            💡 영수증 삭제 시, 그 영수증으로 만들어진 학습 노트도 자동 정리됨 (다른 영수증이 안 쓰는 경우).
+          </div>
+        </div>
+      </div>
       <div class="card" style="margin-bottom:12px;padding:12px;">
-        <input id="adminRuleSearch" class="input-field" type="text" placeholder="키워드·표시명 검색..."
+        <input id="adminRuleSearch" class="input-field" type="text" placeholder="키워드·표시명·매장명 검색..."
           style="margin-bottom:0;padding:10px;font-size:13px;" data-input="filterAdminRules|this">
       </div>
       <div id="adminRulesContent">로딩 중...</div>
@@ -15881,31 +15926,72 @@ async function loadAdminDashboard(){
       return {...s, bizGroup, bizSubLabel};
     });
 
+    const now = new Date();
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const yestStart = new Date(todayStart); yestStart.setDate(yestStart.getDate()-1);
     const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+    const lastMonthStart = new Date(monthStart); lastMonthStart.setMonth(lastMonthStart.getMonth()-1);
     const last7Start = new Date(Date.now() - 7*24*60*60*1000);
 
-    const [today, month, last7, allMonth] = await Promise.all([
+    const [today, yesterday, month, lastMonth, last7, allMonth, cum] = await Promise.all([
       sb.from('ai_usage_logs').select('estimated_cost_won, total_tokens, success, duration_ms, model').gte('called_at', todayStart.toISOString()),
-      sb.from('ai_usage_logs').select('estimated_cost_won, total_tokens, success, duration_ms, model').gte('called_at', monthStart.toISOString()),
+      sb.from('ai_usage_logs').select('estimated_cost_won').gte('called_at', yestStart.toISOString()).lt('called_at', todayStart.toISOString()),
+      sb.from('ai_usage_logs').select('estimated_cost_won, total_tokens, success, duration_ms, model, called_at').gte('called_at', monthStart.toISOString()),
+      sb.from('ai_usage_logs').select('estimated_cost_won').gte('called_at', lastMonthStart.toISOString()).lt('called_at', monthStart.toISOString()),
       sb.from('ai_usage_logs').select('success, model').gte('called_at', last7Start.toISOString()),
       sb.from('ai_usage_logs').select('store_id, estimated_cost_won').gte('called_at', monthStart.toISOString()),
+      sb.from('ai_usage_logs').select('estimated_cost_won, called_at').order('called_at', {ascending:true}).limit(50000), // 누적 전체 (적당히 크게)
     ]);
 
     const todayRows = today.data || [];
+    const yestRows = yesterday.data || [];
     const monthRows = month.data || [];
+    const lastMonthRows = lastMonth.data || [];
     const last7Rows = last7.data || [];
     const allMonthRows = allMonth.data || [];
+    const cumRows = cum.data || [];
+
+    // 일평균 (이번달 — 오늘 포함 N일째)
+    const daysInMonthSoFar = Math.max(1, now.getDate());
+    const monthCost = monthRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    const yestCost = yestRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    const lastMonthCost = lastMonthRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    // 어제 대비 (오늘 사용액 vs 어제 같은 시각까지 — 단순화하여 어제 24시간 vs 오늘 현재까지)
+    const todayCost = todayRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    let trend = '';
+    if(yestCost > 0){
+      const pct = Math.round((todayCost - yestCost) / yestCost * 100);
+      if(pct > 0) trend = `어제 대비 ▲${pct}%`;
+      else if(pct < 0) trend = `어제 대비 ▼${-pct}%`;
+      else trend = '어제 동일';
+    } else if(todayCost > 0){
+      trend = '어제 0원';
+    }
+    // 누적 (전체 ai_usage_logs)
+    const cumCost = cumRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    let serviceDays = 0;
+    if(cumRows.length){
+      const firstDate = new Date(cumRows[0].called_at);
+      serviceDays = Math.max(1, Math.ceil((now - firstDate) / (24*60*60*1000)));
+    }
 
     const stats = {
       todayCount: todayRows.length,
-      todayCost: todayRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0),
+      todayCost,
+      yestCost,
       monthCount: monthRows.length,
-      monthCost: monthRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0),
+      monthCost,
+      lastMonthCost,
+      daysInMonthSoFar,
+      dailyAvg: daysInMonthSoFar > 0 ? Math.round(monthCost / daysInMonthSoFar) : 0,
       avgDuration: monthRows.length ? Math.round(monthRows.reduce((a,r)=>a+(r.duration_ms||0),0) / monthRows.length) : 0,
       modelDist: {},
       failRate: 0,
       gptFallback: 0,
+      trend,
+      cumCost,
+      cumCount: cumRows.length,
+      serviceDays,
     };
     monthRows.forEach(r=>{
       const key = _shortModelName(r.model);
@@ -15917,12 +16003,13 @@ async function loadAdminDashboard(){
     }
     stats.gptFallback = last7Rows.filter(r=>(r.model||'').startsWith('gpt-4o')).length;
 
+    renderAdminMainCard(stats);
+    renderAdminCumCard(stats);
     renderAdminAiCards(stats);
     renderAdminByStoreTable(allMonthRows);
     const range = document.getElementById('adminSimRange');
     if(range) updateAdminSim(range);
 
-    const now = new Date();
     if(refreshEl) refreshEl.textContent = `마지막 갱신 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   } catch(e){
     console.warn('[admin] load failed:', e);
@@ -15930,13 +16017,51 @@ async function loadAdminDashboard(){
   }
 }
 
+function renderAdminMainCard(s){
+  const costEl = document.getElementById('adminMainCost');
+  const trendEl = document.getElementById('adminMainTrend');
+  const subEl = document.getElementById('adminMainSub');
+  if(!costEl) return;
+  costEl.textContent = fmt(Math.round(s.monthCost||0))+'원';
+  // 트렌드 색
+  let trendColor = 'var(--gray-500)';
+  if(s.trend && s.trend.includes('▲')) trendColor = 'var(--danger)';
+  else if(s.trend && s.trend.includes('▼')) trendColor = 'var(--success)';
+  trendEl.textContent = s.trend || '';
+  trendEl.style.color = trendColor;
+  // 보조: 호출수 / 일평균 / 지난달 비교
+  const parts = [];
+  parts.push(`호출 ${fmt(s.monthCount)}회`);
+  parts.push(`일평균 ${fmt(s.dailyAvg)}원`);
+  if(s.lastMonthCost > 0){
+    const diff = s.monthCost - s.lastMonthCost;
+    const sign = diff > 0 ? '+' : diff < 0 ? '-' : '';
+    parts.push(`지난달 ${fmt(s.lastMonthCost)}원 (${sign}${fmt(Math.abs(Math.round(diff)))}원)`);
+  }
+  subEl.textContent = parts.join(' · ');
+}
+
+function renderAdminCumCard(s){
+  const costEl = document.getElementById('adminCumCost');
+  const subEl = document.getElementById('adminCumSub');
+  if(!costEl) return;
+  costEl.textContent = s.cumCost > 0 ? fmt(Math.round(s.cumCost))+'원' : '-';
+  const subParts = [];
+  if(s.cumCount > 0) subParts.push(`호출 ${fmt(s.cumCount)}회`);
+  if(s.serviceDays > 0) subParts.push(`${s.serviceDays}일째`);
+  if(s.cumCount > 0 && s.serviceDays > 0){
+    const dailyAvg = Math.round(s.cumCost / s.serviceDays);
+    subParts.push(`일평균 ${fmt(dailyAvg)}원`);
+  }
+  subEl.textContent = subParts.join(' · ') || '데이터 없음';
+}
+
 function renderAdminAiCards(s){
   const grid = document.getElementById('adminAiCardGrid');
   if(!grid) return;
   const cards = [
-    { icon:'💰', title:'오늘 호출', main: fmt(s.todayCount)+'회', sub: (s.todayCost? fmt(Math.round(s.todayCost))+'원' : '-') },
-    { icon:'💰', title:'이번달 호출', main: fmt(s.monthCount)+'회', sub: (s.monthCost? fmt(Math.round(s.monthCost))+'원' : '-') },
-    { icon:'📊', title:'모델 분포', isModel: true },
+    { icon:'📅', title:'오늘 사용', main: fmt(Math.round(s.todayCost||0))+'원', sub: fmt(s.todayCount)+'회 호출' },
+    { icon:'📊', title:'모델 분포 (이번달)', isModel: true },
     { icon:'⚠️', title:'실패율 (7일)', main: s.failRate+'%', sub: 'GPT 백업 '+s.gptFallback+'회' },
     { icon:'⏱', title:'평균 응답', main: (s.avgDuration ? (s.avgDuration/1000).toFixed(1)+'초' : '-'), sub: '이번달 평균' },
   ];
@@ -16094,6 +16219,15 @@ function renderLearningRulesTable(rules){
       <tbody>${rows}</tbody>
     </table>
   </div>`;
+}
+
+function toggleAdminRulesHelp(){
+  const body = document.getElementById('adminRulesHelpBody');
+  const arrow = document.getElementById('adminRulesHelpArrow');
+  if(!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  if(arrow) arrow.textContent = open ? '▴' : '▾';
 }
 
 function filterAdminRules(input){
