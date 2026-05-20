@@ -3619,6 +3619,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <div id="adminLastRefresh" style="font-size:11px;color:var(--gray-500);margin-top:2px;">로딩 중...</div>
       </div>
       <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" style="padding:8px 10px;font-size:12px;font-weight:700;" data-action="downloadAdminCsv" title="선택 기간 CSV 다운로드">📥</button>
         <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;font-weight:700;" data-action="loadAdminDashboard">↻</button>
         <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;font-weight:700;color:var(--gray-500);" data-action="closeAdminOverlay">✕</button>
       </div>
@@ -3661,6 +3662,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
       <!-- 작은 카드 5개 -->
       <div id="adminAiCardGrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;"></div>
+      <!-- 일별 추이 차트 (Chart.js) -->
+      <div class="card" id="adminChartCard" style="margin-bottom:12px;padding:14px;">
+        <div style="font-size:14px;font-weight:800;margin-bottom:8px;" id="adminChartTitle">📈 일별 추이</div>
+        <div style="position:relative;height:180px;">
+          <canvas id="adminChartCanvas"></canvas>
+        </div>
+        <div id="adminChartEmpty" style="display:none;text-align:center;font-size:12px;color:var(--gray-500);padding:40px 0;">데이터 없음</div>
+      </div>
       <!-- 누적 카드 (서비스 시작 후 총합) -->
       <div class="card" id="adminCumCard" style="margin-bottom:12px;padding:14px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
@@ -3670,6 +3679,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
           </div>
           <div id="adminCumCost" style="font-size:20px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;">-</div>
         </div>
+      </div>
+      <!-- DB 사용량 카드 -->
+      <div class="card" id="adminDbCard" style="margin-bottom:12px;padding:14px;">
+        <div style="font-size:14px;font-weight:800;margin-bottom:8px;">💾 Supabase DB 사용량</div>
+        <div id="adminDbContent" style="font-size:12px;color:var(--gray-600);">로딩 중...</div>
+      </div>
+      <!-- 에러 로그 카드 -->
+      <div class="card" id="adminErrCard" style="margin-bottom:12px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:14px;font-weight:800;">🐞 최근 에러 (선택 기간)</div>
+          <span id="adminErrCount" style="font-size:11px;color:var(--gray-500);"></span>
+        </div>
+        <div id="adminErrContent" style="font-size:12px;color:var(--gray-600);">로딩 중...</div>
       </div>
       <div class="card" style="margin-bottom:12px;padding:14px;">
         <div id="adminByStoreTitle" style="font-size:14px;font-weight:800;margin-bottom:8px;">📋 매장별</div>
@@ -15967,6 +15989,8 @@ function closeAdminOverlay(){
   if(inp) inp.value = '';
   const msg = document.getElementById('adminPinMsg');
   if(msg) msg.textContent = '';
+  // Chart 메모리 해제
+  if(typeof destroyChart === 'function') destroyChart('admin');
 }
 
 async function submitAdminPin(){
@@ -16134,7 +16158,10 @@ async function loadAdminDashboard(){
     renderAdminMainCard(stats);
     renderAdminCumCard(stats);
     renderAdminAiCards(stats);
+    renderAdminChart(mainRows);
+    renderAdminErrors(mainRows);
     renderAdminByStoreTable(mainRows);
+    loadAdminDbUsage();
     const range = document.getElementById('adminSimRange');
     if(range) updateAdminSim(range);
 
@@ -16271,6 +16298,201 @@ function _renderAdminStoreRow(s){
     <span style="color:var(--gray-700);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${s.name||'(이름 없음)'}</span>
     <span style="font-variant-numeric:tabular-nums;color:var(--gray-600);margin-left:8px;white-space:nowrap;">${countStr} / ${costStr}</span>
   </div>`;
+}
+
+// ─── 3차: Chart.js 일별 추이 + 에러 로그 + CSV + DB 사용량 (2026-05-20) ───
+
+function renderAdminChart(mainRows){
+  const canvas = document.getElementById('adminChartCanvas');
+  const emptyEl = document.getElementById('adminChartEmpty');
+  const titleEl = document.getElementById('adminChartTitle');
+  if(!canvas) return;
+  destroyChart('admin');
+  // 모드 따라 라벨·그룹화
+  let bucketLabel, groupKey;
+  if(_adminViewMode === 'day'){
+    bucketLabel = '시간별';
+    titleEl.textContent = '📈 시간별 추이 (선택일)';
+    groupKey = (r) => new Date(r.called_at).getHours();
+  } else {
+    bucketLabel = '일별';
+    titleEl.textContent = '📈 일별 추이 (선택월)';
+    groupKey = (r) => new Date(r.called_at).getDate();
+  }
+  if(!mainRows.length){
+    canvas.style.display = 'none';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  canvas.style.display = 'block';
+  emptyEl.style.display = 'none';
+  // 그룹별 합계
+  const bucket = {};
+  mainRows.forEach(r=>{
+    const k = groupKey(r);
+    if(!bucket[k]) bucket[k] = { cost:0, cnt:0 };
+    bucket[k].cost += Number(r.estimated_cost_won||0);
+    bucket[k].cnt += 1;
+  });
+  // x축 라벨 = 일별이면 1~말일, 시간별이면 0~23
+  let labels, dataCost, dataCnt;
+  if(_adminViewMode === 'day'){
+    labels = Array.from({length:24}, (_,i)=>i+'시');
+    dataCost = labels.map((_,i)=>Math.round((bucket[i]?.cost)||0));
+    dataCnt  = labels.map((_,i)=>(bucket[i]?.cnt)||0);
+  } else {
+    const view = _getAdminViewRange();
+    const lastDay = new Date(view.start.getFullYear(), view.start.getMonth()+1, 0).getDate();
+    labels = Array.from({length:lastDay}, (_,i)=>(i+1)+'');
+    dataCost = labels.map((_,i)=>Math.round((bucket[i+1]?.cost)||0));
+    dataCnt  = labels.map((_,i)=>(bucket[i+1]?.cnt)||0);
+  }
+  chartInstances['admin'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'비용(원)', data:dataCost, backgroundColor:'rgba(59,130,246,0.7)', borderColor:'rgba(59,130,246,1)', borderWidth:1, yAxisID:'y' },
+        { label:'호출수', data:dataCnt, type:'line', borderColor:'rgba(220,38,38,0.9)', backgroundColor:'rgba(220,38,38,0.1)', borderWidth:2, pointRadius:2, tension:0.3, yAxisID:'y1' },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display:true, labels:{ font:{size:10}, boxWidth:12 } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` } }
+      },
+      scales: {
+        x: { ticks: { font:{size:9}, maxRotation:0, autoSkip:true } },
+        y: { position:'left', ticks:{ font:{size:9}, callback:(v)=>v.toLocaleString() }, title:{display:true, text:'비용', font:{size:9}} },
+        y1: { position:'right', ticks:{ font:{size:9} }, grid:{ drawOnChartArea:false }, title:{display:true, text:'호출수', font:{size:9}} },
+      }
+    }
+  });
+}
+
+function renderAdminErrors(mainRows){
+  const cont = document.getElementById('adminErrContent');
+  const cnt = document.getElementById('adminErrCount');
+  if(!cont) return;
+  const errs = mainRows.filter(r=>!r.success).sort((a,b)=>new Date(b.called_at)-new Date(a.called_at)).slice(0, 5);
+  if(cnt) cnt.textContent = `총 ${mainRows.filter(r=>!r.success).length}건`;
+  if(!errs.length){
+    cont.innerHTML = '<div style="color:var(--success);font-size:12px;">✅ 에러 없음</div>';
+    return;
+  }
+  cont.innerHTML = errs.map(e=>{
+    const d = new Date(e.called_at);
+    const time = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const msg = (e.error_msg||'(메시지 없음)').slice(0, 80);
+    const model = _shortModelName(e.model);
+    return `<div style="padding:6px 0;border-bottom:1px solid var(--gray-200);">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500);">
+        <span>${time} · ${model}</span>
+        <span style="color:var(--danger);">실패</span>
+      </div>
+      <div style="font-size:11px;color:var(--gray-700);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${msg.replace(/"/g,'&quot;')}">${msg}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAdminDbUsage(){
+  const cont = document.getElementById('adminDbContent');
+  if(!cont) return;
+  cont.innerHTML = '<div style="color:var(--gray-500);">조회 중...</div>';
+  try {
+    // 주요 테이블 행수 + 추정 크기 (anon key로 가능한 범위)
+    const [aiL, rcps, mydat, vendOrd, atts, settl] = await Promise.all([
+      sb.from('ai_usage_logs').select('id', {count:'exact', head:true}),
+      sb.from('receipts').select('id', {count:'exact', head:true}),
+      sb.from('mydata_transactions').select('id', {count:'exact', head:true}),
+      sb.from('vendor_orders').select('id', {count:'exact', head:true}),
+      sb.from('attendance_logs').select('id', {count:'exact', head:true}),
+      sb.from('settlements').select('id', {count:'exact', head:true}),
+    ]);
+    const rows = [
+      ['ai_usage_logs', aiL.count||0],
+      ['receipts', rcps.count||0],
+      ['mydata_transactions', mydat.count||0],
+      ['vendor_orders', vendOrd.count||0],
+      ['attendance_logs', atts.count||0],
+      ['settlements', settl.count||0],
+    ];
+    const totalRows = rows.reduce((a,[,c])=>a+c, 0);
+    // 추정 크기: 평균 행당 1.5KB로 가정 (보수적)
+    const estMb = Math.round((totalRows * 1.5) / 1024 * 10) / 10;
+    const pct = Math.min(100, Math.round(estMb / 500 * 100));
+    const barColor = pct > 80 ? 'var(--danger)' : pct > 50 ? 'var(--warn,#f59e0b)' : 'var(--success)';
+    const tableHtml = rows.map(([t,c])=>`<div style="display:flex;justify-content:space-between;font-size:11px;line-height:1.6;"><span style="color:var(--gray-600);">${t}</span><span style="font-variant-numeric:tabular-nums;font-weight:700;">${fmt(c)}행</span></div>`).join('');
+    cont.innerHTML = `
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+          <span>주요 6개 테이블 합계</span>
+          <span style="font-weight:700;font-variant-numeric:tabular-nums;">${fmt(totalRows)}행</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+          <span>추정 크기 (행×1.5KB)</span>
+          <span style="font-weight:700;font-variant-numeric:tabular-nums;">${estMb} MB / 500 MB</span>
+        </div>
+        <div style="height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${barColor};"></div>
+        </div>
+        <div style="font-size:10px;color:var(--gray-500);margin-top:4px;text-align:right;">무료 한도 500MB 대비 ${pct}%</div>
+      </div>
+      <div style="border-top:1px solid var(--gray-200);padding-top:8px;margin-top:8px;">
+        ${tableHtml}
+      </div>
+      <div style="font-size:10px;color:var(--gray-500);margin-top:6px;">⚠️ 추정값 — 정확한 크기는 Supabase 대시보드 확인</div>
+    `;
+  } catch(e){
+    cont.innerHTML = `<div style="color:var(--danger);">조회 실패: ${e.message||e}</div>`;
+  }
+}
+
+function downloadAdminCsv(){
+  const view = _getAdminViewRange();
+  setLoad(true, 'CSV 생성 중...');
+  sb.from('ai_usage_logs')
+    .select('store_id, feature, model, prompt_tokens, output_tokens, thinking_tokens, total_tokens, estimated_cost_won, duration_ms, success, error_msg, called_at')
+    .gte('called_at', view.start.toISOString())
+    .lt('called_at', view.end.toISOString())
+    .order('called_at', {ascending:true})
+    .then(({data, error})=>{
+      setLoad(false);
+      if(error){ toast('CSV 생성 실패: '+error.message,'error'); return; }
+      if(!data || !data.length){ toast('해당 기간 데이터 없음','warn'); return; }
+      // 매장명 매핑
+      const storeMap = {}; _adminAllStores.forEach(s=>{ storeMap[s.id] = s.name; });
+      const headers = ['called_at','store_name','feature','model','prompt_tokens','output_tokens','thinking_tokens','total_tokens','estimated_cost_won','duration_ms','success','error_msg'];
+      const rows = data.map(r=>{
+        return [
+          r.called_at,
+          storeMap[r.store_id] || r.store_id || '',
+          r.feature || '',
+          r.model || '',
+          r.prompt_tokens||0,
+          r.output_tokens||0,
+          r.thinking_tokens||0,
+          r.total_tokens||0,
+          r.estimated_cost_won||0,
+          r.duration_ms||0,
+          r.success ? 'OK' : 'FAIL',
+          (r.error_msg||'').replace(/"/g,'""').replace(/[\r\n]+/g,' '),
+        ].map(v => /[",\n]/.test(String(v)) ? `"${v}"` : String(v)).join(',');
+      });
+      const csv = '﻿' + headers.join(',') + '\n' + rows.join('\n'); // BOM = Excel 한글 호환
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ai_usage_${view.shortLabel.replace(/\//g,'-').replace(/[^\w\d-]/g,'_')}_${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast(`CSV 다운로드 — ${data.length}행`,'success');
+    });
 }
 
 function updateAdminSim(rangeEl){
