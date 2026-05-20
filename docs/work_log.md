@@ -4,6 +4,33 @@
 
 ---
 
+## [2026-05-20] 그리드 manual 카드 합계 0 버그 — receipts·vendor_orders·fc 합산 누락
+
+### 사장님 호소
+- "기타 안 끌어온다. 직구로 기타 입력 데이터가 있을텐데 기타 그리드가 0이야"
+
+### 진단 (SQL)
+- 사장님 매장 receipts에 '기타' 카테고리 = **이번달 14,600원** 박혀있음 (2026-05, 1건)
+- 그러나 그리드 기타 카드 = 0원 표시
+- 원인: `loadExpHubData` (L14216~) manual 분기가 `ecaByCat + mdByCat`만 합산. receipts/vendor_orders/fixed_costs 빠짐
+- `calcExpenseByCategories` (L12326)의 `sumAllSourcesByCatId`는 모두 합산 — **두 함수 비대칭**이 사고 원인
+
+### 수정 (4줄 추가)
+manual 분기에 다음 합산 추가:
+- receipts (category_id 매칭)
+- vendor_orders (vendors.category_id 매칭)
+- fixed_costs.category 텍스트 매칭 (calcExpenseByCategories 일관)
+
+### 영향
+- 기타 카드: 0 → 14,600원 (이번달 직구 영수증)
+- 마케팅·세금 카드: 동일 패턴 자동 적용 (manual 카테고리 전부)
+- dev_lessons #89 "어떤 소스든 category_id로 분류된 데이터 자동 합산" 원칙 복원
+
+### 잠재 위험 (다음 세션 점검 후보)
+- `loadExpHubData` vs `calcExpenseByCategories` 두 함수에 같은 분기 로직 중복 → 한쪽 수정 시 다른 쪽 동기화 의무. dev_lessons #105 후보 (재발 방지 교훈)
+
+---
+
 ## [2026-05-20] 세금·마케팅·기타 통합 화면 (manualCat) + 세금 학습 규칙 시드
 
 ### 상태: 브랜치 push, main 자동 머지 진행
