@@ -4,6 +4,79 @@
 
 ---
 
+## [2026-05-20] 거래처 주문 멀티행 입력 + 정렬 갱신 (`order_group_id`)
+
+### 상태: DB 마이그레이션 + 코드 main 머지 완료
+### 브랜치: `claude/standardize-transaction-display-nWMBf` → main
+
+### 사장님 호소 (직전 작업 검증 후 추가 짚으심)
+- 거래처 주문 그룹핑이 (vendor_id+order_date) fallback만 의존 → 같은 날짜 별도 영수증도 한 카드로 묶임. "100% 맞다고 볼 수 없음"
+- 영수증 OCR은 한 사진 = 한 영수증 = 한 그룹 명시적. 수동입력은 행 단위라 그룹 의도 휘발 → 멀티행 입력 필요
+- 한글 가변 컬럼(품목·분류) 좌측 정렬이 짧은 데이터(3~8자)에선 헤더 가운데와 정렬축 어긋남 → 가운데 정렬이 정돈
+- 거래처 행 품목 가변 영역이 너무 넓음 → 가운데 정렬로 자연스럽게 해결
+
+### 사장님 결정 (이번 세션)
+1. **A**. 정렬: 품목·분류·메모 가운데 (dev_lessons #85 갱신)
+2. **B**. 멀티행 accordion + **D 패턴** ([✓ 입력] + [+ 행 추가] 분리) — 모바일 회계 SaaS 표준
+3. **C**. DB 컬럼 `vendor_orders.order_group_id UUID` 추가 (receipts.receipt_group_id 패턴 동일)
+4. **D**. 편집 모드 = 그룹 전체 멀티 (행 추가/삭제/수정), DELETE+INSERT 패턴
+
+### DB 마이그레이션 — `add_vendor_orders_order_group_id_20260520` (사장님 "실행승인" 명시)
+```sql
+ALTER TABLE vendor_orders ADD COLUMN order_group_id UUID;
+CREATE INDEX idx_vendor_orders_group_id ON vendor_orders(order_group_id);
+COMMENT ON COLUMN vendor_orders.order_group_id IS '한 영수증/주문건의 멀티 행 묶음 ID. NULL = 옛 데이터 또는 단일 입력.';
+```
+- 영향 행 수: 0 (default NULL)
+- 옛 행 호환: 모두 NULL → (vendor_id+order_date) fallback 그룹핑
+
+### 작업 내역 (index.html, +309/-78 = 합 +231 라인)
+
+**CSS 갱신**:
+- `.ord-item`/`.ord-cat`/`.ord-memo` 가운데 정렬 (좌측 padding 제거)
+- `.ord-draft-card` 신설 — 누적된 행 카드 (한 줄 요약 + ✏/✕ 액션)
+
+**시트 HTML 갈아엎기 (`#addOrderSheet`, line 3423~)**:
+- 단일 입력 폼 → 멀티행 accordion
+- 누적된 행 영역 `#orderDraftList`
+- 펼친 폼 영역 `#orderDraftForm` (라벨·품목·단가/수량·금액·메모·[✓ 입력])
+- [+ 행 추가] 버튼 `#orderDraftAddBtn` (폼 접힌 상태에서만 표시)
+- 합계 sticky `#orderDraftSum` + [취소] / [✓ 저장]
+- 편집 모드 [🗑 이 주문 그룹 통째 삭제]
+
+**JS 새 함수 13개**:
+- 폼 헬퍼: `_resetOrderDraftForm`, `_refreshOrderDraftFormLabel`, `_refreshOrderDraftCommitBtn`, `_showOrderDraftForm`
+- 입력 핸들러: `onOrderDraftInput`, `onOrderAmtInput`, (기존 `onOrderUnitQtyInput` 활성화 검증 추가)
+- 리스트 렌더: `_renderOrderDraftList`, `_updateOrderDraftSum`
+- 액션: `expandOrderDraftForm`, `commitOrderDraftRow`, `editOrderDraftRow`, `removeOrderDraftRow`
+
+**JS 함수 재작성**:
+- `openAddOrderSheet` — draft 빈 배열 + 폼 자동 펼침
+- `openEditOrderSheet` — 같은 group_id 다 로드 (NULL이면 vendor_id+order_date fallback) + 모두 접힌 상태
+- `saveOrder` — 폼 자동 commit + DELETE+INSERT 패턴 (편집) / N행 INSERT (신규) + 같은 group_id
+- `deleteOrderFromSheet` — 그룹 통째 삭제 (group_id 또는 fallback ids 배열)
+
+**`loadVendorOrders` 그룹핑 키 갱신**: `r.order_group_id ? 'g:'+id : 'f:'+vendor+'|'+date`
+
+### 검증
+- node --check 통과 (~653K chars JS, 1 block)
+- DB 컬럼 추가 확인 (`information_schema.columns` SELECT)
+- 옛 데이터 호환 — order_group_id=NULL 그대로 fallback 그룹핑
+
+### 사장님 검증 시나리오
+1. `https://pongdang-shabu.pages.dev` → 영수증/거래처 기록 → 품목·분류 가운데 정돈 확인
+2. 거래처 → 거래처 카드 진입 → 주문 입력 → 멀티행 시트 진입
+3. 행 1 채우고 [✓ 입력] → 위로 접힘 → [+ 행 추가] 노출
+4. 행 2 채우고 [✓ 입력] → 합계 자동 갱신
+5. [✓ 저장] → 같은 order_group_id로 N행 INSERT → 주문 기록에 한 카드로 묶임 확인
+6. 카드 [✏] 클릭 → 그룹 전체 로드 → 행 추가/삭제/수정 → [✓ 저장] (DELETE+INSERT)
+7. [🗑 그룹 통째 삭제] 확인
+
+### 다음 페이즈 (todo_next_session 합의 그대로)
+- 외부 매장 권유 준비 / 공과금 미납 알림 / 거래처 차액 추적
+
+---
+
 ## [2026-05-20] 영수증·거래처 기록 표시 통일 (그룹 카드 + 미니 표)
 
 ### 상태: main 머지 완료

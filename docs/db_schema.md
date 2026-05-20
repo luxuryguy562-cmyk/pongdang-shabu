@@ -303,11 +303,13 @@ franchises (프랜차이즈/브랜드)
 | vendors | vendor_orders |
 |---------|---------------|
 | id, store_id, name, **category** (text), **category_id** (FK→expense_categories ON DELETE SET NULL), is_active | store_id, vendor_id(FK), order_date |
-| | item, **unit_price** (int, nullable), **quantity** (numeric, nullable), amount, memo, source |
+| | item, **unit_price** (int, nullable), **quantity** (numeric, nullable), amount, memo, source, **order_group_id** (uuid, nullable) |
 
 > ⚠️ **2026-05-15 추가** (vendor_orders): `unit_price`, `quantity` 컬럼. UI에서 단가×수량 자동 곱셈해서 amount 채우되, 사장님이 amount 직접 수정 가능 (할인/운송비 포함 등).
 >
 > ⚠️ **2026-05-15 추가** (vendors): `category_id` FK 도입 (PR #119). 거래처 편집창 대분류+소분류 2단 select. category_id = 자식 우선, 없으면 부모. `category` 텍스트는 UI 표시·calcExpense 호환용으로 유지 (saveVendor에서 동기화).
+>
+> ⚠️ **2026-05-20 추가** (vendor_orders): `order_group_id UUID` (nullable). 한 영수증/주문건의 멀티 행 묶음 ID. **receipts.receipt_group_id 패턴 동일**. 수동 입력 시트가 멀티행 accordion으로 갈아엎어지면서 1회 [✓ 저장] = 같은 group_id로 N행 INSERT. 옛 데이터·단일 입력 = NULL → (vendor_id+order_date) fallback 그룹핑(loadVendorOrders). 마이그레이션: `add_vendor_orders_order_group_id_20260520`. 인덱스 `idx_vendor_orders_group_id`. 롤백: `DROP INDEX IF EXISTS idx_vendor_orders_group_id; ALTER TABLE vendor_orders DROP COLUMN IF EXISTS order_group_id;`.
 >
 > **calcExpense 매칭 (2026-05-15 PR #120 갈아엎기)**:
 > - `vendor_orders` source 카테고리: `o.vendors?.category_id === cat.id` (FK 직접)
