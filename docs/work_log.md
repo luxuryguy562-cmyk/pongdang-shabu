@@ -4,6 +4,184 @@
 
 ---
 
+## [2026-05-20] 관리자 대시보드 1차+2차+3차 완료 (#admin) — AI 비용·차트·CSV·DB·에러·학습규칙
+
+### 상태: 1차/2차/3차 모두 구현 + UX 강화 완료, main 머지
+### 브랜치: `claude/admin-dashboard-HDLZM` → main
+### 미리보기: `claude-admin-dashboard-hdlzm.pongdang-shabu.pages.dev`
+### 운영: `pongdang-shabu.pages.dev/#admin` (PIN 1260)
+
+### 진행 흐름 (한 세션, 커밋 8개)
+1. **호칭 정정** — Claude가 "사장님(=김은성=어플 주인)"과 "owner(=이송은=매장 사용자)" 두 사람을 한 덩어리로 묶는 사고 발생 → docs 정정 + dev_lessons #96 신설
+2. **1차+2차 핵심 구현** (+549 라인) — adminOverlay HTML + JS 함수 17개 + B안 자동 학습 정리
+3. **docs 업데이트** — work_log/todo/plan
+4. **UX 강화** — "얼마나 썼는지" 메인 카드(30px) + 누적 카드 + 학습 규칙 안내 박스
+5. **일/월 토글 + 날짜 네비** — ◀▶ + "오늘로" + 시점 기준 SQL 분기 + 데이트피커 (사장님 추가 요청)
+6. **모델 분포 슬라이스 3→6** — 사장님 짚음 "Gemini·GPT 다 보여야"
+7. **3차 완료** — Chart.js 일별/시간별 추이 + CSV 다운로드 + DB 사용량 + 에러 로그
+8. **main 머지**
+
+### 사장님 결정 (이번 세션)
+1. **범위**: 1차+2차 핵심 → UX 강화 → 일/월 네비 → 모델 분포 확장 → 3차 (한 세션 다 마무리)
+2. **진입**: 해시 라우팅 `#admin` + PIN 4자리 `1260`
+3. **B안 자동 학습 정리**: 박기 (영수증 삭제 시 고아 학습 노트 자동 청소)
+4. **권한**: 김은성(어플 주인) 본인만. owner 게이트가 아닌 PIN 단독
+5. **매장 그룹핑**: 가입 유형 대분류·소분류 (🏯프랜차이즈 / 🏢다매장 / 🏪개인사업자)
+6. **시점 토글**: 일별/월별 + 데이트피커 + ◀▶ + "오늘로"
+7. **모델 분포**: 상위 6개 표시 (+나머지 카운트)
+8. **3차 항목**: Chart, CSV, DB 사용량, 에러 로그 다 박음
+
+### docs 정정 — 헌법 1-7 추측 금지 일관 (사장님 분노 호소)
+> "나는 김은성, 어플 개발자+주인. 이송은은 논산점 사장이고 어플 사용자일 뿐. 이 개념이 아직도 안 잡혀있네... 어딘가에 이상하게 적혀있다는 뜻이겠지"
+
+- `business_rules.md` #7 — 두 사람 5열 표(역할/테이블/게이트/권한) 명문화 + 절대 금지 4종
+- `dev_lessons.md` #96 신설 — 김은성(어플 주인) vs 이송은(매장 owner) 절대 분리
+
+### 작업 내역 총합 (index.html, +900 라인 이상)
+**HTML**: adminOverlay (풀스크린 + PIN 패널 + 대시보드 패널 + 서브탭 + 모드 토글 + 날짜 네비 + 데이트피커 + 메인 카드 + 그리드 카드 + 차트 카드 + 누적·DB·에러·매장별·시뮬·학습규칙 카드 + 안내 박스) / learningRuleEditSheet
+
+**JS 함수 27개**:
+- 권한·진입: `_sha256`, `initAdminMode`, `openAdminOverlay`, `closeAdminOverlay`, `submitAdminPin`
+- 시점 네비: `_getAdminViewRange`, `_getAdminCompareRange`, `_isAdminViewCurrent`, `setAdminViewMode`, `moveAdminView`, `goAdminToToday`, `onAdminDateInput`, `_syncAdminDateInput`
+- 카드 렌더: `renderAdminMainCard`, `renderAdminCumCard`, `renderAdminAiCards`, `renderAdminByStoreTable`, `_renderAdminStoreRow`
+- 3차: `renderAdminChart`, `renderAdminErrors`, `loadAdminDbUsage`, `downloadAdminCsv`
+- 시뮬: `updateAdminSim`
+- 학습 규칙: `loadAdminLearningRules`, `renderLearningRulesTable`, `filterAdminRules`, `openLearningRuleEditSheet`, `saveLearningRule`, `deleteLearningRule`, `toggleAdminRulesHelp`
+- B안: `cleanupOrphanRulesByItems`
+- 진입: `switchAdminTab`, `loadAdminDashboard`
+
+**수정 함수 1개**: `deleteReceiptGroup` — B안 hook 호출 + 정리 결과 토스트
+
+**이벤트 리스너 2개**: `window.hashchange` + `adminPinInput` keydown (Enter=확인)
+
+### PIN 처리
+- `ADMIN_PIN_HASH` = SHA-256("1260") = `9c19f29d0e6fefa21eec58f6ff4d0cf807b63d0ed146f1fea0874506b66c35ee`
+- 코드 검색해도 PIN 원문 안 보임
+- 변경 시: `echo -n "<새PIN>" | sha256sum`으로 재계산 후 상수 박음
+- 3회 실패 = 60초 잠금 (브루트포스 방어)
+
+### DB 변경
+**없음** — 기존 테이블만 SELECT/DELETE/UPDATE (`ai_usage_logs`, `classification_rules`, `stores`, `franchises`, `receipts`)
+
+### Supabase 실측 데이터 (사장님 매장 모델 분포)
+| 모델 | 호출 | 비용 | 실패 |
+|---|---|---|---|
+| gemini-2.5-flash | 19 | 50.01원 | 9 |
+| gemini-2.5-flash-lite | 4 | 1.92원 | 0 |
+| gemini-2.0-flash-lite | 2 | 0.69원 | 1 |
+| gpt-4o-mini | 1 | 7.82원 | 0 |
+| clova+gpt-4o-mini | 1 | 7.97원 | 0 |
+| clova+gpt-4o | 1 | 30.52원 | 0 |
+
+→ GPT-4o vision fallback 실제 발동 0건 (Gemini가 한 번도 안 망함). gpt-4o-mini·clova는 5/19 PR #173·#174 Multi-Provider 테스트 잔재.
+
+### 검증
+- node --check 통과 (~628,000 chars JS, 5 blocks)
+- 새 함수 27개 + 변수 9개 중복 0건
+- 기존 `deleteReceiptGroup` 흐름 보호 (try/catch — B안 실패해도 영수증 삭제는 성공)
+- 미리보기 DB = 운영 DB 동일 (services.md 정책 일관)
+
+### 한계 (다음 페이즈 후보)
+- [ ] PIN 6~8자리 강화 (외부 매장 권유 직전)
+- [ ] RLS 정책 강화 (현재 `USING(true)` → 매장 격리 엄격화)
+- [ ] 매장 활동 모니터 (이탈 매장 조기 발견 — freemium 도입 후)
+- [ ] 가격·결제 가맹 (Phase 1-D Freemium)
+
+### 사장님 검증 시나리오
+1. `https://pongdang-shabu.pages.dev/#admin` → PIN `1260` → 통과
+2. [📅 일별]/[📆 월별] 토글 + ◀▶ + 데이트피커 동작
+3. 메인 카드 "이번달 사용액" 큰 글씨 + 트렌드(▲▼) + 일평균/지난달 비교
+4. 카드 4종 (오늘/모델분포 6개+/실패율7일/평균응답)
+5. 📈 Chart.js 차트 (일별=시간별, 월별=일별 막대+라인)
+6. 📚 누적 / 💾 DB 사용량 / 🐞 에러 로그 / 📋 매장별 그룹핑 / 💡 시뮬
+7. 📥 헤더 버튼 → CSV 다운로드
+8. 🧠 학습 규칙 탭 — 안내 박스(▾) + 6열 표 + 검색 + 행 탭→편집 시트
+9. PIN 3회 실패 → 60초 잠금
+
+---
+
+## [2026-05-20 옛 항목 보존] 관리자 대시보드 초기 진행 (1차+2차 핵심) — 통합됨
+
+### 사장님 결정 (이번 세션)
+1. **범위**: 1차+2차 핵심만 (차트·CSV·매장활동·DB사용량은 다음 세션)
+2. **진입**: 해시 라우팅 `#admin` + PIN
+3. **B안 자동 학습 정리**: 박기
+4. **권한**: **김은성(어플 주인) 본인만**. owner 권한 아님 — owner는 매장 단위 권한, 시스템 권한 아님 (사장님 정정 명시)
+5. **PIN**: 4자리 `1260` (외부 매장 권유 직전 6~8자리로 강화 예정)
+6. **매장 그룹핑**: 가입 유형 대분류·소분류 (🏯프랜차이즈 / 🏢다매장 / 🏪개인사업자)
+
+### 사장님 결정적 짚음 (헌법 1-7, 3-1 일관)
+> "나는 김은성, 어플 개발자+주인. 이송은은 논산점 사장이고 어플 사용자일 뿐. 이 개념이 아직도 안 잡혀있네... 어딘가에 이상하게 적혀있다는 뜻이겠지"
+
+CTO가 옛 docs의 "사용자=김은성" 잔재(2026-05-05 1차 정정 시점 표현) 그대로 읽고 "사장님=owner=이송은" 한 덩어리로 묶음 → admin 게이트를 `auth_level==='owner'` + 이송은 PIN으로 설계 → 정반대 잘못. 김은성은 employees에 row 없어서 PIN 자체도 없는데.
+
+### docs 정정 (이번 세션 1차 작업)
+- `business_rules.md` #7 — 두 사람 5열 표(역할/테이블/게이트/권한) 명문화 + 절대 금지 4종
+- `dev_lessons.md` #96 신설 — 김은성(어플 주인) vs 이송은(매장 owner) 절대 분리. 재발 시 자동 차단
+
+### 작업 내역 (index.html, +549 라인)
+- **HTML**: `adminOverlay` (풀스크린 + PIN 패널 + 대시보드 패널 + 서브탭) / `learningRuleEditSheet`
+- **JS 함수 17개**:
+  - `_sha256(str)` — Web Crypto API SHA-256
+  - `initAdminMode()` / `openAdminOverlay()` / `closeAdminOverlay()` — hash 감지 + 진입/이탈
+  - `submitAdminPin()` — PIN 검증 (3회 실패 60초 잠금)
+  - `switchAdminTab(tab)` — AI/Rules 서브탭 토글
+  - `loadAdminDashboard()` — Promise.all 4쿼리 병렬 (오늘/이번달/7일/이번달 매장별)
+  - `renderAdminAiCards(stats)` — 카드 5개 그리드 (2열 minmax(0,1fr))
+  - `renderAdminByStoreTable(rows)` — 가입 유형 그룹핑 (🏯/🏢/🏪)
+  - `_renderAdminStoreRow(s)` — 매장 한 행
+  - `updateAdminSim(range)` — 시뮬 슬라이더 (월 비용 추정)
+  - `loadAdminLearningRules()` — classification_rules + receipts join으로 적용 영수증 수 계산
+  - `renderLearningRulesTable(rules)` — 5열 표 (매장/키워드/분류/표시명/적용수)
+  - `filterAdminRules(input)` — 검색 필터
+  - `openLearningRuleEditSheet(id)` / `saveLearningRule()` / `deleteLearningRule()` — CRUD
+  - `cleanupOrphanRulesByItems(items)` — B안 hook
+- **수정 함수 1개**: `deleteReceiptGroup()` — 삭제 후 `cleanupOrphanRulesByItems` 호출, 토스트 메시지에 정리 결과 추가
+- **이벤트 리스너 2개**: `window.hashchange` (DOMContentLoaded 안) + `adminPinInput` keydown (Enter=확인)
+- **초기 진입**: DOMContentLoaded에서 `initAdminMode()` 호출 (즐겨찾기 #admin 진입 즉시 처리)
+
+### PIN 처리
+- `ADMIN_PIN_HASH` 상수 = SHA-256("1260") = `9c19f29d0e6fefa21eec58f6ff4d0cf807b63d0ed146f1fea0874506b66c35ee`
+- 코드 검색해도 PIN 원문 안 보임
+- 변경 시: `echo -n "<새PIN>" | sha256sum`으로 재계산 후 상수 박음
+
+### B안 자동 학습 정리 로직
+1. `deleteReceiptGroup` 진입 시 삭제 대상 행의 `item` 추출
+2. `normalizeItemKeyword`로 각 item 정규화 → 키워드 set
+3. 각 키워드별 같은 매장 classification_rules 존재 확인
+4. 존재하면 같은 매장 다른 영수증에 키워드 포함 여부 확인 (`ilike %kw%`)
+5. 0건이면 classification_rules도 DELETE
+6. 토스트에 정리 결과 추가 ("학습 노트 N개도 같이 정리됨")
+
+### DB 변경
+**없음** — 기존 테이블만 SELECT/DELETE/UPDATE (`ai_usage_logs`, `classification_rules`, `stores`, `franchises`, `receipts`)
+
+### 검증
+- node --check 통과 (627,025 chars JS, 5 blocks)
+- 새 함수 17개 + 변수 7개 중복 0건
+- 기존 `deleteReceiptGroup` 흐름 보호 (try/catch로 B안 실패해도 영수증 삭제는 성공 처리)
+
+### 한계 (다음 세션 후속)
+- [ ] Chart.js 일별 비용 추이 (3차)
+- [ ] CSV 다운로드 (3차, profit_advisor 검증 가능성 충족)
+- [ ] 기간 필터 (오늘/이번주/이번달/지난달/사용자지정)
+- [ ] 매장 활동 모니터 (이탈 매장 조기 발견)
+- [ ] Supabase DB 사용량 (무료 한도 추적)
+- [ ] 에러 로그 모음
+- [ ] PIN 보안 강화 (외부 매장 권유 직전 6~8자리)
+- [ ] RLS 정책 강화 (현재 USING(true) → owner별 매장 격리, 어플 주인 service_role)
+
+### 사장님 검증 시나리오
+1. `https://pongdang-shabu.pages.dev/#admin` 진입
+2. PIN `1260` 입력 → 통과
+3. 📊 AI 비용 탭 — 카드 5개·매장별 표·시뮬 슬라이더 정상
+4. 🧠 학습 규칙 탭 — 목록 표시, 검색 동작, 행 탭→편집 시트 동작
+5. 학습 규칙 편집·저장·삭제 동작
+6. (선택) 영수증 1개 삭제 후 토스트에 "학습 노트도 정리됨" 표시 확인 (B안)
+7. PIN 잘못 3회 입력 시 60초 잠금 확인
+
+---
+
 ## [2026-05-19 (4)++] 영수증 AI 사장님 검증 통과 — 16/16 정확 + 4.0원
 
 ### 상태: 사장님 검증 ✅ 완료

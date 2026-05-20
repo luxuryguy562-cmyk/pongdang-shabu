@@ -3595,6 +3595,181 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div id="dailyDetailContent" style="overflow:auto;height:calc(100% - 90px);-webkit-overflow-scrolling:touch;"></div>
 </div>
 
+<!-- ══ 관리자 대시보드 (어플 주인 전용, #admin 진입) — 2026-05-20 신설 ══ -->
+<!-- 김은성(어플 개발자+주인) 전용. employees·매장 인증 무관. PIN 게이트만. dev_lessons #96 -->
+<div id="adminOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:6000;overflow-y:auto;">
+  <!-- 단계 1: PIN 입력 -->
+  <div id="adminPinPanel" style="max-width:360px;margin:80px auto 0;padding:32px 24px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px;">🛡️</div>
+    <div style="font-size:22px;font-weight:900;margin-bottom:6px;">관리자 모드</div>
+    <div style="font-size:13px;color:var(--gray-600);margin-bottom:24px;">어플 주인 전용 화면입니다.</div>
+    <input id="adminPinInput" class="input-field" type="password" inputmode="numeric" placeholder="PIN 입력" maxlength="8" autocomplete="off"
+      style="text-align:center;font-size:20px;font-weight:700;padding:18px;border-radius:14px;letter-spacing:6px;margin-bottom:14px;">
+    <button class="btn btn-primary btn-full" data-action="submitAdminPin"
+      style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;margin-bottom:8px;">확인</button>
+    <button class="btn btn-secondary btn-full" data-action="closeAdminOverlay"
+      style="padding:14px;font-size:13px;border-radius:14px;color:var(--gray-600);">취소 (매장 화면으로)</button>
+    <div id="adminPinMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;"></div>
+  </div>
+  <!-- 단계 2: 대시보드 본체 -->
+  <div id="adminDashPanel" style="display:none;padding:14px;max-width:480px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-top:8px;">
+      <div>
+        <div style="font-size:18px;font-weight:900;">🛡️ 관리자 대시보드</div>
+        <div id="adminLastRefresh" style="font-size:11px;color:var(--gray-500);margin-top:2px;">로딩 중...</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" style="padding:8px 10px;font-size:12px;font-weight:700;" data-action="downloadAdminCsv" title="선택 기간 CSV 다운로드">📥</button>
+        <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;font-weight:700;" data-action="loadAdminDashboard">↻</button>
+        <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;font-weight:700;color:var(--gray-500);" data-action="closeAdminOverlay">✕</button>
+      </div>
+    </div>
+    <!-- 서브탭 -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--gray-100);padding:4px;border-radius:12px;">
+      <button class="admin-sub-btn" data-tab="ai" data-action="switchAdminTab|ai"
+        style="flex:1;padding:10px;font-size:13px;font-weight:700;border:0;background:var(--white);border-radius:8px;cursor:pointer;">📊 AI 비용</button>
+      <button class="admin-sub-btn" data-tab="rules" data-action="switchAdminTab|rules"
+        style="flex:1;padding:10px;font-size:13px;font-weight:700;border:0;background:transparent;border-radius:8px;cursor:pointer;color:var(--gray-500);">🧠 학습 규칙</button>
+    </div>
+    <!-- AI 비용 패널 -->
+    <div id="adminAiPanel">
+      <!-- 기간 모드 토글 + 날짜 네비 -->
+      <div class="card" style="margin-bottom:8px;padding:10px;">
+        <div style="display:flex;gap:4px;margin-bottom:8px;background:var(--gray-100);padding:3px;border-radius:10px;">
+          <button class="admin-view-btn" data-view="day" data-action="setAdminViewMode|day"
+            style="flex:1;padding:7px;font-size:12px;font-weight:700;border:0;background:transparent;border-radius:7px;cursor:pointer;color:var(--gray-500);">📅 일별</button>
+          <button class="admin-view-btn" data-view="month" data-action="setAdminViewMode|month"
+            style="flex:1;padding:7px;font-size:12px;font-weight:700;border:0;background:var(--white);border-radius:7px;cursor:pointer;color:var(--text);">📆 월별</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <button class="btn btn-secondary" style="padding:8px 14px;font-size:14px;font-weight:700;min-width:44px;" data-action="moveAdminView|-1">◀</button>
+          <div style="flex:1;text-align:center;min-width:0;">
+            <input type="date" id="adminViewDateInput" data-change="onAdminDateInput|this"
+              style="border:0;background:transparent;font-size:14px;font-weight:800;color:var(--text);text-align:center;width:100%;padding:4px 0;cursor:pointer;font-family:inherit;">
+            <button id="adminGoTodayBtn" class="btn btn-secondary" style="padding:4px 10px;font-size:10px;color:var(--gray-500);margin-top:2px;display:none;" data-action="goAdminToToday">오늘로</button>
+          </div>
+          <button class="btn btn-secondary" style="padding:8px 14px;font-size:14px;font-weight:700;min-width:44px;" data-action="moveAdminView|1">▶</button>
+        </div>
+      </div>
+      <!-- 메인 카드: 선택 기간 사용액 (큰 글씨) -->
+      <div class="card" id="adminMainCard" style="margin-bottom:10px;padding:18px;background:linear-gradient(135deg, var(--blue-light) 0%, var(--white) 100%);">
+        <div id="adminMainTitle" style="font-size:11px;color:var(--gray-600);font-weight:700;margin-bottom:4px;">💰 사용액</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
+          <span id="adminMainCost" style="font-size:30px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1;">-</span>
+          <span id="adminMainTrend" style="font-size:11px;color:var(--gray-500);text-align:right;font-variant-numeric:tabular-nums;"></span>
+        </div>
+        <div id="adminMainSub" style="font-size:12px;color:var(--gray-600);margin-top:6px;font-variant-numeric:tabular-nums;">호출 - / 일평균 -</div>
+      </div>
+      <!-- 작은 카드 5개 -->
+      <div id="adminAiCardGrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;"></div>
+      <!-- 일별 추이 차트 (Chart.js) -->
+      <div class="card" id="adminChartCard" style="margin-bottom:12px;padding:14px;">
+        <div style="font-size:14px;font-weight:800;margin-bottom:8px;" id="adminChartTitle">📈 일별 추이</div>
+        <div style="position:relative;height:180px;">
+          <canvas id="adminChartCanvas"></canvas>
+        </div>
+        <div id="adminChartEmpty" style="display:none;text-align:center;font-size:12px;color:var(--gray-500);padding:40px 0;">데이터 없음</div>
+      </div>
+      <!-- 누적 카드 (서비스 시작 후 총합) -->
+      <div class="card" id="adminCumCard" style="margin-bottom:12px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <div>
+            <div style="font-size:11px;color:var(--gray-500);font-weight:700;">📚 누적 사용액 (서비스 시작 후)</div>
+            <div id="adminCumSub" style="font-size:11px;color:var(--gray-500);margin-top:2px;font-variant-numeric:tabular-nums;">-</div>
+          </div>
+          <div id="adminCumCost" style="font-size:20px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;">-</div>
+        </div>
+      </div>
+      <!-- DB 사용량 카드 -->
+      <div class="card" id="adminDbCard" style="margin-bottom:12px;padding:14px;">
+        <div style="font-size:14px;font-weight:800;margin-bottom:8px;">💾 Supabase DB 사용량</div>
+        <div id="adminDbContent" style="font-size:12px;color:var(--gray-600);">로딩 중...</div>
+      </div>
+      <!-- 에러 로그 카드 -->
+      <div class="card" id="adminErrCard" style="margin-bottom:12px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:14px;font-weight:800;">🐞 최근 에러 (선택 기간)</div>
+          <span id="adminErrCount" style="font-size:11px;color:var(--gray-500);"></span>
+        </div>
+        <div id="adminErrContent" style="font-size:12px;color:var(--gray-600);">로딩 중...</div>
+      </div>
+      <div class="card" style="margin-bottom:12px;padding:14px;">
+        <div id="adminByStoreTitle" style="font-size:14px;font-weight:800;margin-bottom:8px;">📋 매장별</div>
+        <div id="adminByStoreContent" style="font-size:12px;color:var(--gray-600);">로딩 중...</div>
+      </div>
+      <div class="card" style="margin-bottom:12px;padding:14px;">
+        <div style="font-size:14px;font-weight:800;margin-bottom:4px;">💡 매장 N개일 때 월 AI 비용 추정 (미래 예측)</div>
+        <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px;">외부 매장 권유 시 손익 판단용 · 위 "실제 사용액"과 다름</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--gray-500);min-width:36px;">매장</span>
+          <input type="range" id="adminSimRange" min="1" max="200" value="50" style="flex:1;" data-input="updateAdminSim|this">
+          <span id="adminSimStoreCount" style="font-size:13px;font-weight:800;min-width:46px;text-align:right;font-variant-numeric:tabular-nums;">50개</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:10px;background:var(--gray-100);border-radius:8px;">
+          <span style="font-size:11px;color:var(--gray-600);">월 예상 AI 비용</span>
+          <span id="adminSimCost" style="font-size:18px;font-weight:900;color:var(--blue);font-variant-numeric:tabular-nums;">-</span>
+        </div>
+        <div id="adminSimBasis" style="font-size:10px;color:var(--gray-500);margin-top:6px;text-align:right;">기준값 계산 중...</div>
+      </div>
+    </div>
+    <!-- 학습 규칙 패널 -->
+    <div id="adminRulesPanel" style="display:none;">
+      <!-- 안내 박스 (펼침/접힘) -->
+      <div class="card" style="margin-bottom:10px;padding:12px;background:var(--blue-light);">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" data-action="toggleAdminRulesHelp">
+          <div style="font-size:13px;font-weight:800;">🧠 학습 규칙이란? <span style="font-size:11px;color:var(--gray-600);font-weight:600;">(탭하면 자세히)</span></div>
+          <span id="adminRulesHelpArrow" style="font-size:12px;color:var(--gray-600);">▾</span>
+        </div>
+        <div id="adminRulesHelpBody" style="display:none;margin-top:10px;font-size:12px;color:var(--gray-700);line-height:1.7;">
+          영수증 AI가 한번 분류한 걸 사장님이 정정해주면, 그 정정을 노트에 적어둡니다.<br>
+          다음번 같은 키워드 나오면 <b>AI한테 안 물어보고 바로 자동 분류</b> → 시간·비용 절약.<br>
+          <br>
+          <b>표 컬럼 설명</b>:
+          <ul style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+            <li><b>매장</b>: 어느 매장의 학습 노트인지</li>
+            <li><b>키워드</b>: 영수증 품목명에서 뽑은 핵심 단어 (예: "양파", "위즈복대")</li>
+            <li><b>분류</b>: 그 키워드를 어떤 카테고리로 분류할지 (예: 식자재>야채)</li>
+            <li><b>표시명</b>: 키워드 대신 보여줄 정정된 이름 (예: "위즈복대" → "날치알")</li>
+            <li><b>적용</b>: 그 학습이 지금 영수증에서 몇 건에 적용되고 있는지 (0이면 한 번도 안 쓰이는 학습 = 정리 후보)</li>
+          </ul>
+          <div style="margin-top:8px;font-size:11px;color:var(--gray-600);">
+            💡 <b>잘못 학습된 규칙은 행 탭 → 편집·삭제 가능.</b><br>
+            💡 영수증 삭제 시, 그 영수증으로 만들어진 학습 노트도 자동 정리됨 (다른 영수증이 안 쓰는 경우).
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:12px;padding:12px;">
+        <input id="adminRuleSearch" class="input-field" type="text" placeholder="키워드·표시명·매장명 검색..."
+          style="margin-bottom:0;padding:10px;font-size:13px;" data-input="filterAdminRules|this">
+      </div>
+      <div id="adminRulesContent">로딩 중...</div>
+    </div>
+  </div>
+</div>
+
+<!-- 학습 규칙 편집 시트 -->
+<div class="sheet" id="learningRuleEditSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">✎ 학습 노트 편집</div>
+  <input type="hidden" id="ruleEditId">
+  <div style="margin-bottom:10px;">
+    <label style="font-size:11px;color:var(--gray-600);font-weight:700;">키워드</label>
+    <input id="ruleEditKeyword" class="input-field" type="text" style="margin-top:4px;">
+  </div>
+  <div style="margin-bottom:10px;">
+    <label style="font-size:11px;color:var(--gray-600);font-weight:700;">표시명 (정정된 이름, 없으면 비워두기)</label>
+    <input id="ruleEditDisplayItem" class="input-field" type="text" placeholder="(원본 그대로 사용)" style="margin-top:4px;">
+  </div>
+  <div style="margin-bottom:10px;font-size:12px;color:var(--gray-600);line-height:1.7;">
+    분류: <span id="ruleEditCategory" style="color:var(--text);font-weight:700;">-</span><br>
+    매장: <span id="ruleEditStoreName" style="color:var(--text);font-weight:700;">-</span><br>
+    적용된 영수증: <span id="ruleEditAppliedCount" style="color:var(--blue);font-weight:700;">-</span>개
+  </div>
+  <button class="btn btn-primary btn-full" data-action="saveLearningRule">저장</button>
+  <button class="btn btn-danger btn-full" style="margin-top:6px;" data-action="deleteLearningRule">🗑 이 학습 노트 삭제</button>
+  <button class="btn btn-secondary btn-full" style="margin-top:6px;" data-action="closeAllSheets">취소</button>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 // 설정
@@ -5583,6 +5758,8 @@ async function deleteReceiptGroup(editKey){
   if(!records.length) return;
   const n=records.length;
   if(!confirm(`이 영수증의 ${n}개 행 전부 삭제할까요? 되돌릴 수 없어요.`)) return;
+  // 삭제될 영수증 item 목록 추출 (B안: 고아 학습 노트 정리용)
+  const deletedItems = records.map(r=>r.item).filter(Boolean);
   setLoad(true,'삭제 중...');
   let error=null;
   if(k.type==='grp'){
@@ -5590,9 +5767,18 @@ async function deleteReceiptGroup(editKey){
   } else {
     ({error}=await sb.from('receipts').delete().eq('id',k.id).eq('store_id',currentStore.id));
   }
+  if(error){ setLoad(false); return errToast('삭제', error); }
+  // B안: 영수증 삭제 후 고아 학습 노트 자동 정리 (관리자 대시보드 명세 — dev_lessons #96 연계)
+  let cleanupResult = { cleaned: 0, kept: 0, cleanedKeywords: [] };
+  if(typeof cleanupOrphanRulesByItems === 'function' && deletedItems.length){
+    try { cleanupResult = await cleanupOrphanRulesByItems(deletedItems); } catch(e){ console.warn('[B안 cleanup]', e); }
+  }
   setLoad(false);
-  if(error) return errToast('삭제', error);
-  toast(`${n}개 행 삭제됐어요`,'success');
+  let msg = `${n}개 행 삭제됐어요`;
+  if(cleanupResult.cleaned > 0){
+    msg += `\n+ 학습 노트 ${cleanupResult.cleaned}개도 같이 정리됨 (${cleanupResult.cleanedKeywords.slice(0,3).join(', ')}${cleanupResult.cleanedKeywords.length>3?' 외':''})`;
+  }
+  toast(msg,'success');
   if(document.getElementById('catReceiptCont')?.classList.contains('active')){
     await loadCatReceiptData();
   } else {
@@ -15655,6 +15841,843 @@ if('serviceWorker' in navigator){
   }
 }
 
+// ─── 새 기능: 관리자 대시보드 (어플 주인 전용, #admin) — 2026-05-20 ───
+// 김은성(어플 개발자=어플 주인) 전용 화면. employees·매장 인증 무관, PIN 게이트만.
+// dev_lessons #96 (사장님 != owner — 두 사람 분리)
+// SHA-256("1260") = 9c19f29d... (PIN 변경 시 echo -n "<새PIN>" | sha256sum 재계산)
+const ADMIN_PIN_HASH = '9c19f29d0e6fefa21eec58f6ff4d0cf807b63d0ed146f1fea0874506b66c35ee';
+let _adminPinFailCount = 0;
+let _adminLockedUntil = 0;
+let _adminAuthed = false;
+let _adminCurrentTab = 'ai';
+let _adminAllStores = [];
+let _adminAllRules = [];
+// 일/월 네비게이션 상태 — 2026-05-20 추가
+let _adminViewMode = 'month'; // 'day' | 'month'
+let _adminViewDate = new Date(); // 선택된 기준 시점
+
+function _getAdminViewRange(){
+  const date = _adminViewDate;
+  if(_adminViewMode === 'day'){
+    const start = new Date(date); start.setHours(0,0,0,0);
+    const end = new Date(start); end.setDate(end.getDate()+1);
+    const dayName = ['일','월','화','수','목','금','토'][start.getDay()];
+    return { start, end, label: `${start.getMonth()+1}월 ${start.getDate()}일 (${dayName})`, shortLabel: `${start.getMonth()+1}/${start.getDate()}` };
+  } else {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth()+1, 1);
+    return { start, end, label: `${start.getFullYear()}년 ${start.getMonth()+1}월`, shortLabel: `${start.getMonth()+1}월` };
+  }
+}
+
+function _getAdminCompareRange(){
+  const date = _adminViewDate;
+  if(_adminViewMode === 'day'){
+    const start = new Date(date); start.setHours(0,0,0,0); start.setDate(start.getDate()-1);
+    const end = new Date(start); end.setDate(end.getDate()+1);
+    return { start, end, label: '어제' };
+  } else {
+    const start = new Date(date.getFullYear(), date.getMonth()-1, 1);
+    const end = new Date(date.getFullYear(), date.getMonth(), 1);
+    return { start, end, label: '지난달' };
+  }
+}
+
+function _isAdminViewCurrent(){
+  const today = new Date();
+  if(_adminViewMode === 'day'){
+    return _adminViewDate.toDateString() === today.toDateString();
+  }
+  return _adminViewDate.getFullYear() === today.getFullYear() && _adminViewDate.getMonth() === today.getMonth();
+}
+
+function setAdminViewMode(mode){
+  _adminViewMode = mode;
+  document.querySelectorAll('.admin-view-btn').forEach(b=>{
+    const active = b.dataset.view === mode;
+    b.style.background = active ? 'var(--white)' : 'transparent';
+    b.style.color = active ? 'var(--text)' : 'var(--gray-500)';
+  });
+  // 모드 바뀌면 현재 시점으로 리셋
+  _adminViewDate = new Date();
+  loadAdminDashboard();
+}
+
+function moveAdminView(deltaStr){
+  const d = parseInt(deltaStr, 10);
+  if(_adminViewMode === 'day'){
+    _adminViewDate.setDate(_adminViewDate.getDate() + d);
+  } else {
+    _adminViewDate.setMonth(_adminViewDate.getMonth() + d);
+  }
+  loadAdminDashboard();
+}
+
+function goAdminToToday(){
+  _adminViewDate = new Date();
+  loadAdminDashboard();
+}
+
+function onAdminDateInput(input){
+  const val = (input.value||'').trim();
+  if(!val) return;
+  if(_adminViewMode === 'day'){
+    // "2026-05-20" 형태
+    const [y,m,d] = val.split('-').map(Number);
+    if(y && m && d) _adminViewDate = new Date(y, m-1, d);
+  } else {
+    // "2026-05" 형태 (month input)
+    const [y,m] = val.split('-').map(Number);
+    if(y && m) _adminViewDate = new Date(y, m-1, 1);
+  }
+  loadAdminDashboard();
+}
+
+// input type=date/month value 갱신용
+function _syncAdminDateInput(){
+  const input = document.getElementById('adminViewDateInput');
+  if(!input) return;
+  const d = _adminViewDate;
+  if(_adminViewMode === 'day'){
+    input.type = 'date';
+    input.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  } else {
+    input.type = 'month';
+    input.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+}
+
+async function _sha256(str){
+  const buf = new TextEncoder().encode(str);
+  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function initAdminMode(){
+  const hash = (location.hash||'').toLowerCase();
+  if(hash === '#admin') openAdminOverlay();
+}
+
+function openAdminOverlay(){
+  const ov = document.getElementById('adminOverlay');
+  if(!ov) return;
+  ov.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  const msg = document.getElementById('adminPinMsg');
+  const now = Date.now();
+  if(now < _adminLockedUntil){
+    const sec = Math.ceil((_adminLockedUntil - now)/1000);
+    if(msg) msg.textContent = `잠금 중 (${sec}초 후 다시)`;
+  }
+  if(_adminAuthed){
+    document.getElementById('adminPinPanel').style.display = 'none';
+    document.getElementById('adminDashPanel').style.display = 'block';
+    loadAdminDashboard();
+  } else {
+    document.getElementById('adminPinPanel').style.display = 'block';
+    document.getElementById('adminDashPanel').style.display = 'none';
+    setTimeout(()=>{ const inp = document.getElementById('adminPinInput'); if(inp) inp.focus(); }, 100);
+  }
+}
+
+function closeAdminOverlay(){
+  const ov = document.getElementById('adminOverlay');
+  if(ov) ov.style.display = 'none';
+  document.body.style.overflow = '';
+  if(location.hash === '#admin') history.replaceState(null, '', location.pathname + location.search);
+  const inp = document.getElementById('adminPinInput');
+  if(inp) inp.value = '';
+  const msg = document.getElementById('adminPinMsg');
+  if(msg) msg.textContent = '';
+  // Chart 메모리 해제
+  if(typeof destroyChart === 'function') destroyChart('admin');
+}
+
+async function submitAdminPin(){
+  const input = document.getElementById('adminPinInput');
+  const msg = document.getElementById('adminPinMsg');
+  const now = Date.now();
+  if(now < _adminLockedUntil){
+    const sec = Math.ceil((_adminLockedUntil - now)/1000);
+    msg.textContent = `잠금 중. ${sec}초 후 다시.`;
+    return;
+  }
+  const pin = (input.value||'').trim();
+  if(!pin){ msg.textContent = 'PIN을 입력해주세요.'; return; }
+  msg.textContent = '확인 중...';
+  const hash = await _sha256(pin);
+  if(hash === ADMIN_PIN_HASH){
+    _adminPinFailCount = 0;
+    _adminAuthed = true;
+    msg.textContent = '';
+    input.value = '';
+    document.getElementById('adminPinPanel').style.display = 'none';
+    document.getElementById('adminDashPanel').style.display = 'block';
+    switchAdminTab('ai');
+    loadAdminDashboard();
+  } else {
+    _adminPinFailCount++;
+    if(_adminPinFailCount >= 3){
+      _adminLockedUntil = Date.now() + 60*1000;
+      _adminPinFailCount = 0;
+      msg.textContent = '3회 실패 — 60초 잠금';
+    } else {
+      msg.textContent = `PIN 불일치 (${_adminPinFailCount}/3)`;
+    }
+    input.value = '';
+  }
+}
+
+function switchAdminTab(tab){
+  _adminCurrentTab = tab;
+  document.querySelectorAll('.admin-sub-btn').forEach(b=>{
+    const active = b.dataset.tab === tab;
+    b.style.background = active ? 'var(--white)' : 'transparent';
+    b.style.color = active ? 'var(--text)' : 'var(--gray-500)';
+  });
+  document.getElementById('adminAiPanel').style.display = (tab==='ai') ? 'block' : 'none';
+  document.getElementById('adminRulesPanel').style.display = (tab==='rules') ? 'block' : 'none';
+  if(tab === 'rules' && !_adminAllRules.length) loadAdminLearningRules();
+}
+
+async function loadAdminDashboard(){
+  const refreshEl = document.getElementById('adminLastRefresh');
+  if(refreshEl) refreshEl.textContent = '로딩 중...';
+  try {
+    const {data: stores} = await sb.from('stores').select('id, name, franchise_id, owner_user_id, is_active');
+    const {data: francs} = await sb.from('franchises').select('id, name');
+    const fMap = {}; (francs||[]).forEach(f=>{ fMap[f.id] = f.name; });
+    const ownerCount = {};
+    (stores||[]).forEach(s=>{ if(s.owner_user_id && !s.franchise_id){ ownerCount[s.owner_user_id] = (ownerCount[s.owner_user_id]||0)+1; }});
+    _adminAllStores = (stores||[]).map(s=>{
+      let bizGroup = '🏪 개인사업자';
+      let bizSubLabel = null;
+      if(s.franchise_id){
+        bizGroup = '🏯 프랜차이즈';
+        bizSubLabel = fMap[s.franchise_id] || '(본사명 없음)';
+      } else if(s.owner_user_id && ownerCount[s.owner_user_id] >= 2){
+        bizGroup = '🏢 다매장 사업자';
+        bizSubLabel = '운영자 ' + s.owner_user_id.slice(0,8);
+      }
+      return {...s, bizGroup, bizSubLabel};
+    });
+
+    const now = new Date();
+    // 시점 라벨 갱신
+    const view = _getAdminViewRange();
+    const compare = _getAdminCompareRange();
+    _syncAdminDateInput();
+    const goTodayBtn = document.getElementById('adminGoTodayBtn');
+    if(goTodayBtn) goTodayBtn.style.display = _isAdminViewCurrent() ? 'none' : 'inline-block';
+    const mainTitleEl = document.getElementById('adminMainTitle');
+    if(mainTitleEl) mainTitleEl.textContent = `💰 ${view.label} 사용액 (실제)`;
+    const byStoreTitleEl = document.getElementById('adminByStoreTitle');
+    if(byStoreTitleEl) byStoreTitleEl.textContent = `📋 매장별 (${view.shortLabel})`;
+
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const last7Start = new Date(Date.now() - 7*24*60*60*1000);
+
+    const [today, main, compare_, last7, cum] = await Promise.all([
+      sb.from('ai_usage_logs').select('estimated_cost_won').gte('called_at', todayStart.toISOString()),
+      sb.from('ai_usage_logs').select('estimated_cost_won, total_tokens, success, duration_ms, model, store_id, called_at').gte('called_at', view.start.toISOString()).lt('called_at', view.end.toISOString()),
+      sb.from('ai_usage_logs').select('estimated_cost_won').gte('called_at', compare.start.toISOString()).lt('called_at', compare.end.toISOString()),
+      sb.from('ai_usage_logs').select('success, model').gte('called_at', last7Start.toISOString()),
+      sb.from('ai_usage_logs').select('estimated_cost_won, called_at').order('called_at', {ascending:true}).limit(50000),
+    ]);
+
+    const todayRows = today.data || [];
+    const mainRows = main.data || [];
+    const compareRows = compare_.data || [];
+    const last7Rows = last7.data || [];
+    const cumRows = cum.data || [];
+
+    // 메인 (선택 시점)
+    const mainCost = mainRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    const mainCount = mainRows.length;
+    const compareCost = compareRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    const todayCost = todayRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    const todayCount = todayRows.length;
+
+    // 일평균 — 월별 모드면 해당 월 일수(현재 월이면 오늘까지, 과거 월이면 그 달 전체), 일별 모드면 X
+    let dailyAvg = 0;
+    let daysInPeriod = 0;
+    if(_adminViewMode === 'month'){
+      const isCurrentMonth = (view.start.getFullYear() === now.getFullYear() && view.start.getMonth() === now.getMonth());
+      if(isCurrentMonth){
+        daysInPeriod = Math.max(1, now.getDate());
+      } else {
+        const lastDay = new Date(view.start.getFullYear(), view.start.getMonth()+1, 0).getDate();
+        daysInPeriod = lastDay;
+      }
+      dailyAvg = Math.round(mainCost / daysInPeriod);
+    }
+
+    // 비교 트렌드
+    let trend = '';
+    if(compareCost > 0){
+      const pct = Math.round((mainCost - compareCost) / compareCost * 100);
+      if(pct > 0) trend = `${compare.label} 대비 ▲${pct}%`;
+      else if(pct < 0) trend = `${compare.label} 대비 ▼${-pct}%`;
+      else trend = `${compare.label} 동일`;
+    } else if(mainCost > 0){
+      trend = `${compare.label} 0원`;
+    }
+
+    // 누적 (전체 ai_usage_logs)
+    const cumCost = cumRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0),0);
+    let serviceDays = 0;
+    if(cumRows.length){
+      const firstDate = new Date(cumRows[0].called_at);
+      serviceDays = Math.max(1, Math.ceil((now - firstDate) / (24*60*60*1000)));
+    }
+
+    const stats = {
+      todayCount, todayCost,
+      mainCount, mainCost,
+      compareCost, compareLabel: compare.label,
+      dailyAvg, daysInPeriod,
+      avgDuration: mainRows.length ? Math.round(mainRows.reduce((a,r)=>a+(r.duration_ms||0),0) / mainRows.length) : 0,
+      modelDist: {},
+      failRate: 0,
+      gptFallback: 0,
+      trend,
+      cumCost,
+      cumCount: cumRows.length,
+      serviceDays,
+    };
+    mainRows.forEach(r=>{
+      const key = _shortModelName(r.model);
+      stats.modelDist[key] = (stats.modelDist[key]||0) + 1;
+    });
+    if(last7Rows.length){
+      const fails = last7Rows.filter(r=>!r.success).length;
+      stats.failRate = Math.round(fails / last7Rows.length * 1000) / 10;
+    }
+    stats.gptFallback = last7Rows.filter(r=>(r.model||'').startsWith('gpt-4o')).length;
+
+    renderAdminMainCard(stats);
+    renderAdminCumCard(stats);
+    renderAdminAiCards(stats);
+    renderAdminChart(mainRows);
+    renderAdminErrors(mainRows);
+    renderAdminByStoreTable(mainRows);
+    loadAdminDbUsage();
+    const range = document.getElementById('adminSimRange');
+    if(range) updateAdminSim(range);
+
+    if(refreshEl) refreshEl.textContent = `마지막 갱신 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  } catch(e){
+    console.warn('[admin] load failed:', e);
+    if(refreshEl) refreshEl.textContent = `로드 실패: ${e.message||e}`;
+  }
+}
+
+function renderAdminMainCard(s){
+  const costEl = document.getElementById('adminMainCost');
+  const trendEl = document.getElementById('adminMainTrend');
+  const subEl = document.getElementById('adminMainSub');
+  if(!costEl) return;
+  costEl.textContent = fmt(Math.round(s.mainCost||0))+'원';
+  let trendColor = 'var(--gray-500)';
+  if(s.trend && s.trend.includes('▲')) trendColor = 'var(--danger)';
+  else if(s.trend && s.trend.includes('▼')) trendColor = 'var(--success)';
+  trendEl.textContent = s.trend || '';
+  trendEl.style.color = trendColor;
+  const parts = [];
+  parts.push(`호출 ${fmt(s.mainCount)}회`);
+  if(s.dailyAvg > 0) parts.push(`일평균 ${fmt(s.dailyAvg)}원`);
+  if(s.compareCost > 0){
+    const diff = (s.mainCost||0) - s.compareCost;
+    const sign = diff > 0 ? '+' : diff < 0 ? '-' : '';
+    parts.push(`${s.compareLabel} ${fmt(Math.round(s.compareCost))}원 (${sign}${fmt(Math.abs(Math.round(diff)))}원)`);
+  }
+  subEl.textContent = parts.join(' · ');
+}
+
+function renderAdminCumCard(s){
+  const costEl = document.getElementById('adminCumCost');
+  const subEl = document.getElementById('adminCumSub');
+  if(!costEl) return;
+  costEl.textContent = s.cumCost > 0 ? fmt(Math.round(s.cumCost))+'원' : '-';
+  const subParts = [];
+  if(s.cumCount > 0) subParts.push(`호출 ${fmt(s.cumCount)}회`);
+  if(s.serviceDays > 0) subParts.push(`${s.serviceDays}일째`);
+  if(s.cumCount > 0 && s.serviceDays > 0){
+    const dailyAvg = Math.round(s.cumCost / s.serviceDays);
+    subParts.push(`일평균 ${fmt(dailyAvg)}원`);
+  }
+  subEl.textContent = subParts.join(' · ') || '데이터 없음';
+}
+
+function renderAdminAiCards(s){
+  const grid = document.getElementById('adminAiCardGrid');
+  if(!grid) return;
+  const periodLabel = _adminViewMode === 'day' ? '선택일' : '선택월';
+  const cards = [
+    { icon:'📅', title:'오늘 사용 (항상)', main: fmt(Math.round(s.todayCost||0))+'원', sub: fmt(s.todayCount)+'회 호출' },
+    { icon:'📊', title:`모델 분포 (${periodLabel})`, isModel: true },
+    { icon:'⚠️', title:'실패율 (7일 고정)', main: s.failRate+'%', sub: 'GPT 백업 '+s.gptFallback+'회' },
+    { icon:'⏱', title:`평균 응답 (${periodLabel})`, main: (s.avgDuration ? (s.avgDuration/1000).toFixed(1)+'초' : '-'), sub: `${fmt(s.mainCount)}회 기준` },
+  ];
+  grid.innerHTML = cards.map(c=>{
+    let body;
+    if(c.isModel){
+      const total = Object.values(s.modelDist).reduce((a,n)=>a+n, 0);
+      const sorted = Object.entries(s.modelDist).sort((a,b)=>b[1]-a[1]);
+      const items = sorted.slice(0,6); // 상위 6개까지 (옛 3개 → 사장님 짚음: 다 보여야)
+      const rest = sorted.length - items.length;
+      body = items.length
+        ? items.map(([m,n])=>{ const pct = total?Math.round(n/total*100):0; return `<div style="display:flex;justify-content:space-between;font-size:10px;line-height:1.5;"><span style="color:var(--gray-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${m}</span><span style="font-weight:700;font-variant-numeric:tabular-nums;margin-left:4px;">${pct}%</span></div>`; }).join('') + (rest>0 ? `<div style="font-size:9px;color:var(--gray-500);margin-top:2px;">+${rest}개 더</div>` : '')
+        : '<div style="font-size:11px;color:var(--gray-500);">데이터 없음</div>';
+    } else {
+      body = `<div style="font-size:17px;font-weight:900;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.main||'-'}</div>
+              <div style="font-size:11px;color:var(--gray-500);text-align:right;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.sub||''}</div>`;
+    }
+    return `<div class="card" style="padding:12px;min-width:0;overflow:hidden;border-radius:14px;">
+      <div style="font-size:11px;color:var(--gray-500);font-weight:700;margin-bottom:6px;">${c.icon} ${c.title}</div>
+      ${body}
+    </div>`;
+  }).join('');
+}
+
+function renderAdminByStoreTable(allMonthRows){
+  const cont = document.getElementById('adminByStoreContent');
+  if(!cont) return;
+  if(!_adminAllStores.length){
+    cont.innerHTML = '<div style="color:var(--gray-500);">매장 없음</div>';
+    return;
+  }
+  const byStore = {};
+  allMonthRows.forEach(r=>{
+    if(!byStore[r.store_id]) byStore[r.store_id] = { count:0, cost:0 };
+    byStore[r.store_id].count += 1;
+    byStore[r.store_id].cost += Number(r.estimated_cost_won||0);
+  });
+  const groups = {};
+  _adminAllStores.forEach(s=>{
+    const key = s.bizGroup;
+    if(!groups[key]) groups[key] = { stores: [], subgroups: {} };
+    const stat = byStore[s.id] || { count:0, cost:0 };
+    if(s.bizSubLabel){
+      if(!groups[key].subgroups[s.bizSubLabel]) groups[key].subgroups[s.bizSubLabel] = [];
+      groups[key].subgroups[s.bizSubLabel].push({ ...s, ...stat });
+    } else {
+      groups[key].stores.push({ ...s, ...stat });
+    }
+  });
+  const totalCount = allMonthRows.length;
+  const totalCost = allMonthRows.reduce((a,r)=>a+Number(r.estimated_cost_won||0), 0);
+  let html = '';
+  const groupOrder = ['🏯 프랜차이즈','🏢 다매장 사업자','🏪 개인사업자'];
+  groupOrder.forEach(gk=>{
+    const g = groups[gk];
+    if(!g) return;
+    html += `<div style="margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:800;color:var(--gray-700);padding:6px 0;border-bottom:1px solid var(--gray-200);">${gk}</div>`;
+    Object.entries(g.subgroups).forEach(([subKey, ss])=>{
+      const subCnt = ss.reduce((a,r)=>a+r.count, 0);
+      const subCost = ss.reduce((a,r)=>a+r.cost, 0);
+      html += `<div style="margin:6px 0 4px 8px;font-size:11px;font-weight:700;color:var(--gray-600);display:flex;justify-content:space-between;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%;">· ${subKey}</span><span style="font-variant-numeric:tabular-nums;">${fmt(subCnt)}회 / ${fmt(Math.round(subCost))}원</span></div>`;
+      ss.forEach(s=>{ html += _renderAdminStoreRow(s); });
+    });
+    g.stores.forEach(s=>{ html += _renderAdminStoreRow(s); });
+    html += `</div>`;
+  });
+  html += `<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;margin-top:10px;padding-top:8px;border-top:2px solid var(--text);"><span>합계</span><span style="font-variant-numeric:tabular-nums;">${fmt(totalCount)}회 / ${fmt(Math.round(totalCost))}원</span></div>`;
+  if(_adminAllStores.length === 1){
+    html += `<div style="margin-top:10px;padding:8px;background:var(--blue-light);border-radius:8px;font-size:11px;color:var(--gray-700);">💡 다른 매장이 늘면 이 화면에서 비교됩니다.</div>`;
+  }
+  cont.innerHTML = html;
+}
+
+function _renderAdminStoreRow(s){
+  const indent = s.bizSubLabel ? 16 : 8;
+  const costStr = s.cost ? fmt(Math.round(s.cost))+'원' : '-';
+  const countStr = (s.count||0)+'회';
+  return `<div style="display:flex;justify-content:space-between;padding:4px 0 4px ${indent}px;font-size:12px;align-items:baseline;">
+    <span style="color:var(--gray-700);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${s.name||'(이름 없음)'}</span>
+    <span style="font-variant-numeric:tabular-nums;color:var(--gray-600);margin-left:8px;white-space:nowrap;">${countStr} / ${costStr}</span>
+  </div>`;
+}
+
+// ─── 3차: Chart.js 일별 추이 + 에러 로그 + CSV + DB 사용량 (2026-05-20) ───
+
+function renderAdminChart(mainRows){
+  const canvas = document.getElementById('adminChartCanvas');
+  const emptyEl = document.getElementById('adminChartEmpty');
+  const titleEl = document.getElementById('adminChartTitle');
+  if(!canvas) return;
+  destroyChart('admin');
+  // 모드 따라 라벨·그룹화
+  let bucketLabel, groupKey;
+  if(_adminViewMode === 'day'){
+    bucketLabel = '시간별';
+    titleEl.textContent = '📈 시간별 추이 (선택일)';
+    groupKey = (r) => new Date(r.called_at).getHours();
+  } else {
+    bucketLabel = '일별';
+    titleEl.textContent = '📈 일별 추이 (선택월)';
+    groupKey = (r) => new Date(r.called_at).getDate();
+  }
+  if(!mainRows.length){
+    canvas.style.display = 'none';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  canvas.style.display = 'block';
+  emptyEl.style.display = 'none';
+  // 그룹별 합계
+  const bucket = {};
+  mainRows.forEach(r=>{
+    const k = groupKey(r);
+    if(!bucket[k]) bucket[k] = { cost:0, cnt:0 };
+    bucket[k].cost += Number(r.estimated_cost_won||0);
+    bucket[k].cnt += 1;
+  });
+  // x축 라벨 = 일별이면 1~말일, 시간별이면 0~23
+  let labels, dataCost, dataCnt;
+  if(_adminViewMode === 'day'){
+    labels = Array.from({length:24}, (_,i)=>i+'시');
+    dataCost = labels.map((_,i)=>Math.round((bucket[i]?.cost)||0));
+    dataCnt  = labels.map((_,i)=>(bucket[i]?.cnt)||0);
+  } else {
+    const view = _getAdminViewRange();
+    const lastDay = new Date(view.start.getFullYear(), view.start.getMonth()+1, 0).getDate();
+    labels = Array.from({length:lastDay}, (_,i)=>(i+1)+'');
+    dataCost = labels.map((_,i)=>Math.round((bucket[i+1]?.cost)||0));
+    dataCnt  = labels.map((_,i)=>(bucket[i+1]?.cnt)||0);
+  }
+  chartInstances['admin'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'비용(원)', data:dataCost, backgroundColor:'rgba(59,130,246,0.7)', borderColor:'rgba(59,130,246,1)', borderWidth:1, yAxisID:'y' },
+        { label:'호출수', data:dataCnt, type:'line', borderColor:'rgba(220,38,38,0.9)', backgroundColor:'rgba(220,38,38,0.1)', borderWidth:2, pointRadius:2, tension:0.3, yAxisID:'y1' },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display:true, labels:{ font:{size:10}, boxWidth:12 } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` } }
+      },
+      scales: {
+        x: { ticks: { font:{size:9}, maxRotation:0, autoSkip:true } },
+        y: { position:'left', ticks:{ font:{size:9}, callback:(v)=>v.toLocaleString() }, title:{display:true, text:'비용', font:{size:9}} },
+        y1: { position:'right', ticks:{ font:{size:9} }, grid:{ drawOnChartArea:false }, title:{display:true, text:'호출수', font:{size:9}} },
+      }
+    }
+  });
+}
+
+function renderAdminErrors(mainRows){
+  const cont = document.getElementById('adminErrContent');
+  const cnt = document.getElementById('adminErrCount');
+  if(!cont) return;
+  const errs = mainRows.filter(r=>!r.success).sort((a,b)=>new Date(b.called_at)-new Date(a.called_at)).slice(0, 5);
+  if(cnt) cnt.textContent = `총 ${mainRows.filter(r=>!r.success).length}건`;
+  if(!errs.length){
+    cont.innerHTML = '<div style="color:var(--success);font-size:12px;">✅ 에러 없음</div>';
+    return;
+  }
+  cont.innerHTML = errs.map(e=>{
+    const d = new Date(e.called_at);
+    const time = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const msg = (e.error_msg||'(메시지 없음)').slice(0, 80);
+    const model = _shortModelName(e.model);
+    return `<div style="padding:6px 0;border-bottom:1px solid var(--gray-200);">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500);">
+        <span>${time} · ${model}</span>
+        <span style="color:var(--danger);">실패</span>
+      </div>
+      <div style="font-size:11px;color:var(--gray-700);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${msg.replace(/"/g,'&quot;')}">${msg}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAdminDbUsage(){
+  const cont = document.getElementById('adminDbContent');
+  if(!cont) return;
+  cont.innerHTML = '<div style="color:var(--gray-500);">조회 중...</div>';
+  try {
+    // 주요 테이블 행수 + 추정 크기 (anon key로 가능한 범위)
+    const [aiL, rcps, mydat, vendOrd, atts, settl] = await Promise.all([
+      sb.from('ai_usage_logs').select('id', {count:'exact', head:true}),
+      sb.from('receipts').select('id', {count:'exact', head:true}),
+      sb.from('mydata_transactions').select('id', {count:'exact', head:true}),
+      sb.from('vendor_orders').select('id', {count:'exact', head:true}),
+      sb.from('attendance_logs').select('id', {count:'exact', head:true}),
+      sb.from('settlements').select('id', {count:'exact', head:true}),
+    ]);
+    const rows = [
+      ['ai_usage_logs', aiL.count||0],
+      ['receipts', rcps.count||0],
+      ['mydata_transactions', mydat.count||0],
+      ['vendor_orders', vendOrd.count||0],
+      ['attendance_logs', atts.count||0],
+      ['settlements', settl.count||0],
+    ];
+    const totalRows = rows.reduce((a,[,c])=>a+c, 0);
+    // 추정 크기: 평균 행당 1.5KB로 가정 (보수적)
+    const estMb = Math.round((totalRows * 1.5) / 1024 * 10) / 10;
+    const pct = Math.min(100, Math.round(estMb / 500 * 100));
+    const barColor = pct > 80 ? 'var(--danger)' : pct > 50 ? 'var(--warn,#f59e0b)' : 'var(--success)';
+    const tableHtml = rows.map(([t,c])=>`<div style="display:flex;justify-content:space-between;font-size:11px;line-height:1.6;"><span style="color:var(--gray-600);">${t}</span><span style="font-variant-numeric:tabular-nums;font-weight:700;">${fmt(c)}행</span></div>`).join('');
+    cont.innerHTML = `
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+          <span>주요 6개 테이블 합계</span>
+          <span style="font-weight:700;font-variant-numeric:tabular-nums;">${fmt(totalRows)}행</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+          <span>추정 크기 (행×1.5KB)</span>
+          <span style="font-weight:700;font-variant-numeric:tabular-nums;">${estMb} MB / 500 MB</span>
+        </div>
+        <div style="height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${barColor};"></div>
+        </div>
+        <div style="font-size:10px;color:var(--gray-500);margin-top:4px;text-align:right;">무료 한도 500MB 대비 ${pct}%</div>
+      </div>
+      <div style="border-top:1px solid var(--gray-200);padding-top:8px;margin-top:8px;">
+        ${tableHtml}
+      </div>
+      <div style="font-size:10px;color:var(--gray-500);margin-top:6px;">⚠️ 추정값 — 정확한 크기는 Supabase 대시보드 확인</div>
+    `;
+  } catch(e){
+    cont.innerHTML = `<div style="color:var(--danger);">조회 실패: ${e.message||e}</div>`;
+  }
+}
+
+function downloadAdminCsv(){
+  const view = _getAdminViewRange();
+  setLoad(true, 'CSV 생성 중...');
+  sb.from('ai_usage_logs')
+    .select('store_id, feature, model, prompt_tokens, output_tokens, thinking_tokens, total_tokens, estimated_cost_won, duration_ms, success, error_msg, called_at')
+    .gte('called_at', view.start.toISOString())
+    .lt('called_at', view.end.toISOString())
+    .order('called_at', {ascending:true})
+    .then(({data, error})=>{
+      setLoad(false);
+      if(error){ toast('CSV 생성 실패: '+error.message,'error'); return; }
+      if(!data || !data.length){ toast('해당 기간 데이터 없음','warn'); return; }
+      // 매장명 매핑
+      const storeMap = {}; _adminAllStores.forEach(s=>{ storeMap[s.id] = s.name; });
+      const headers = ['called_at','store_name','feature','model','prompt_tokens','output_tokens','thinking_tokens','total_tokens','estimated_cost_won','duration_ms','success','error_msg'];
+      const rows = data.map(r=>{
+        return [
+          r.called_at,
+          storeMap[r.store_id] || r.store_id || '',
+          r.feature || '',
+          r.model || '',
+          r.prompt_tokens||0,
+          r.output_tokens||0,
+          r.thinking_tokens||0,
+          r.total_tokens||0,
+          r.estimated_cost_won||0,
+          r.duration_ms||0,
+          r.success ? 'OK' : 'FAIL',
+          (r.error_msg||'').replace(/"/g,'""').replace(/[\r\n]+/g,' '),
+        ].map(v => /[",\n]/.test(String(v)) ? `"${v}"` : String(v)).join(',');
+      });
+      const csv = '﻿' + headers.join(',') + '\n' + rows.join('\n'); // BOM = Excel 한글 호환
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ai_usage_${view.shortLabel.replace(/\//g,'-').replace(/[^\w\d-]/g,'_')}_${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast(`CSV 다운로드 — ${data.length}행`,'success');
+    });
+}
+
+function updateAdminSim(rangeEl){
+  const n = parseInt(rangeEl.value, 10);
+  document.getElementById('adminSimStoreCount').textContent = fmt(n)+'개';
+  const perCallWon = 4.0;
+  const callsPerDay = 5;
+  const days = 30;
+  const monthly = perCallWon * callsPerDay * days * n;
+  document.getElementById('adminSimCost').textContent = fmt(Math.round(monthly))+'원';
+  document.getElementById('adminSimBasis').textContent = `기준: ${perCallWon}원/호출 × ${callsPerDay}호출/일 × ${days}일`;
+}
+
+async function loadAdminLearningRules(){
+  const cont = document.getElementById('adminRulesContent');
+  if(cont) cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-500);">로딩 중...</div>';
+  try {
+    const {data: rules} = await sb.from('classification_rules')
+      .select('id, store_id, keyword, category, sub_category, display_item, tx_type, priority, created_at')
+      .order('created_at', {ascending:false});
+    const {data: receipts} = await sb.from('receipts').select('item, store_id');
+    const ruleApplied = {};
+    (rules||[]).forEach(r=>{ ruleApplied[r.id] = 0; });
+    (receipts||[]).forEach(rcp=>{
+      const itm = (rcp.item||'').toLowerCase();
+      (rules||[]).forEach(r=>{
+        if(r.store_id !== rcp.store_id) return;
+        const kw = (r.keyword||'').toLowerCase();
+        if(kw && itm.includes(kw)) ruleApplied[r.id] += 1;
+      });
+    });
+    _adminAllRules = (rules||[]).map(r=>{
+      const store = _adminAllStores.find(s=>s.id === r.store_id);
+      return { ...r, _storeName: store?.name || '(매장 없음)', _appliedCount: ruleApplied[r.id] || 0 };
+    });
+    renderLearningRulesTable(_adminAllRules);
+  } catch(e){
+    if(cont) cont.innerHTML = `<div style="padding:20px;color:var(--danger);">로드 실패: ${e.message||e}</div>`;
+  }
+}
+
+function renderLearningRulesTable(rules){
+  const cont = document.getElementById('adminRulesContent');
+  if(!cont) return;
+  if(!rules.length){
+    cont.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--gray-500);">학습 노트 없음</div>';
+    return;
+  }
+  const rows = rules.map(r=>{
+    const catLabel = r.sub_category ? `${r.category}>${r.sub_category}` : r.category;
+    const displayItem = r.display_item || '-';
+    return `<tr data-rid="${r.id}" data-action="openLearningRuleEditSheet|${r.id}" style="cursor:pointer;border-bottom:1px solid var(--gray-200);">
+      <td style="padding:8px 6px;font-size:11px;color:var(--gray-600);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r._storeName}">${r._storeName}</td>
+      <td style="padding:8px 6px;font-size:12px;font-weight:700;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.keyword}">${r.keyword}</td>
+      <td style="padding:8px 6px;font-size:11px;color:var(--gray-700);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${catLabel}">${catLabel}</td>
+      <td style="padding:8px 6px;font-size:11px;color:var(--gray-700);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${displayItem}">${displayItem}</td>
+      <td style="padding:8px 6px;font-size:11px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--blue);">${r._appliedCount}</td>
+    </tr>`;
+  }).join('');
+  cont.innerHTML = `<div class="card" style="padding:8px;">
+    <div style="font-size:11px;color:var(--gray-500);margin:0 0 6px 4px;">총 ${rules.length}개 · 행 탭=편집</div>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+      <colgroup>
+        <col style="width:18%;"><col style="width:22%;"><col style="width:24%;"><col style="width:22%;"><col style="width:14%;">
+      </colgroup>
+      <thead>
+        <tr style="background:var(--gray-100);">
+          <th style="padding:6px 4px;font-size:10px;font-weight:700;text-align:center;">매장</th>
+          <th style="padding:6px 4px;font-size:10px;font-weight:700;text-align:center;">키워드</th>
+          <th style="padding:6px 4px;font-size:10px;font-weight:700;text-align:center;">분류</th>
+          <th style="padding:6px 4px;font-size:10px;font-weight:700;text-align:center;">표시명</th>
+          <th style="padding:6px 4px;font-size:10px;font-weight:700;text-align:center;">적용</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function toggleAdminRulesHelp(){
+  const body = document.getElementById('adminRulesHelpBody');
+  const arrow = document.getElementById('adminRulesHelpArrow');
+  if(!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  if(arrow) arrow.textContent = open ? '▴' : '▾';
+}
+
+function filterAdminRules(input){
+  const q = (input.value||'').trim().toLowerCase();
+  if(!q){ renderLearningRulesTable(_adminAllRules); return; }
+  const filtered = _adminAllRules.filter(r=>{
+    return (r.keyword||'').toLowerCase().includes(q)
+      || (r.display_item||'').toLowerCase().includes(q)
+      || (r.category||'').toLowerCase().includes(q)
+      || (r.sub_category||'').toLowerCase().includes(q)
+      || (r._storeName||'').toLowerCase().includes(q);
+  });
+  renderLearningRulesTable(filtered);
+}
+
+function openLearningRuleEditSheet(id){
+  const r = _adminAllRules.find(x=>x.id === id);
+  if(!r) return;
+  document.getElementById('ruleEditId').value = r.id;
+  document.getElementById('ruleEditKeyword').value = r.keyword||'';
+  document.getElementById('ruleEditDisplayItem').value = r.display_item||'';
+  const catLabel = r.sub_category ? `${r.category}>${r.sub_category}` : r.category;
+  document.getElementById('ruleEditCategory').textContent = catLabel;
+  document.getElementById('ruleEditStoreName').textContent = r._storeName;
+  document.getElementById('ruleEditAppliedCount').textContent = r._appliedCount;
+  openSheet('learningRuleEditSheet');
+}
+
+async function saveLearningRule(){
+  const id = document.getElementById('ruleEditId').value;
+  if(!id) return;
+  const keyword = (document.getElementById('ruleEditKeyword').value||'').trim();
+  const displayItem = (document.getElementById('ruleEditDisplayItem').value||'').trim();
+  if(!keyword){ toast('키워드를 입력해주세요.','error'); return; }
+  setLoad(true, '저장 중...');
+  try {
+    const {error} = await sb.from('classification_rules').update({ keyword, display_item: displayItem || null }).eq('id', id);
+    if(error) throw error;
+    closeAllSheets();
+    toast('학습 노트 저장됨','success');
+    await loadAdminLearningRules();
+  } catch(e){
+    toast('저장 실패: '+(e.message||e), 'error');
+  } finally { setLoad(false); }
+}
+
+async function deleteLearningRule(){
+  const id = document.getElementById('ruleEditId').value;
+  if(!id) return;
+  if(!confirm('이 학습 노트를 삭제하시겠어요?\n\n다시 학습하려면 영수증 분류를 다시 정정해야 합니다.')) return;
+  setLoad(true, '삭제 중...');
+  try {
+    const {error} = await sb.from('classification_rules').delete().eq('id', id);
+    if(error) throw error;
+    closeAllSheets();
+    toast('학습 노트 삭제됨','success');
+    await loadAdminLearningRules();
+  } catch(e){
+    toast('삭제 실패: '+(e.message||e), 'error');
+  } finally { setLoad(false); }
+}
+
+// B안: 영수증 그룹 삭제 시 고아 학습 노트 자동 정리
+async function cleanupOrphanRulesByItems(items){
+  try {
+    if(!items?.length || !currentStore) return { cleaned: 0, kept: 0, cleanedKeywords: [] };
+    const keywords = new Set();
+    items.forEach(it=>{
+      const norm = (typeof normalizeItemKeyword === 'function') ? normalizeItemKeyword(it) : (it||'').slice(0,8);
+      if(norm) keywords.add(norm);
+    });
+    if(!keywords.size) return { cleaned: 0, kept: 0, cleanedKeywords: [] };
+    let cleaned = 0, kept = 0;
+    const cleanedKeywords = [];
+    for(const kw of keywords){
+      const {data: rules} = await sb.from('classification_rules')
+        .select('id, keyword')
+        .eq('store_id', currentStore.id)
+        .eq('keyword', kw);
+      if(!rules?.length) continue;
+      const {data: otherRcps} = await sb.from('receipts')
+        .select('id')
+        .eq('store_id', currentStore.id)
+        .ilike('item', `%${kw}%`)
+        .limit(1);
+      if(otherRcps?.length){ kept++; continue; }
+      for(const r of rules){
+        await sb.from('classification_rules').delete().eq('id', r.id);
+        cleaned++;
+        cleanedKeywords.push(kw);
+      }
+    }
+    return { cleaned, kept, cleanedKeywords };
+  } catch(e){
+    console.warn('[cleanupOrphanRules] failed:', e);
+    return { cleaned: 0, kept: 0, cleanedKeywords: [] };
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async()=>{
   // ─── 중앙 이벤트 위임 (CSP 인라인 핸들러 대체) ───
   document.addEventListener('click',e=>{
@@ -15674,6 +16697,15 @@ document.addEventListener('DOMContentLoaded', async()=>{
     if(el) _dispatchAction('data-input', el);
   });
 
+  // ─── 관리자 모드 진입 — #admin hash 감지 (어플 주인 전용, dev_lessons #96) ───
+  window.addEventListener('hashchange', initAdminMode);
+  // PIN 입력 엔터키 = 확인
+  const adminPinInp = document.getElementById('adminPinInput');
+  if(adminPinInp){
+    adminPinInp.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); submitAdminPin(); } });
+  }
+  // 초기 진입 시 hash 체크 (즐겨찾기 #admin 진입 케이스)
+  initAdminMode();
 
   initAttDate();recalcSettle2();initSchedDate();
 
