@@ -3642,8 +3642,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
           <button class="btn btn-secondary" style="padding:8px 14px;font-size:14px;font-weight:700;min-width:44px;" data-action="moveAdminView|-1">◀</button>
-          <div style="flex:1;text-align:center;">
-            <div id="adminViewLabel" style="font-size:14px;font-weight:800;color:var(--text);">-</div>
+          <div style="flex:1;text-align:center;min-width:0;">
+            <input type="date" id="adminViewDateInput" data-change="onAdminDateInput|this"
+              style="border:0;background:transparent;font-size:14px;font-weight:800;color:var(--text);text-align:center;width:100%;padding:4px 0;cursor:pointer;font-family:inherit;">
             <button id="adminGoTodayBtn" class="btn btn-secondary" style="padding:4px 10px;font-size:10px;color:var(--gray-500);margin-top:2px;display:none;" data-action="goAdminToToday">오늘로</button>
           </div>
           <button class="btn btn-secondary" style="padding:8px 14px;font-size:14px;font-weight:700;min-width:44px;" data-action="moveAdminView|1">▶</button>
@@ -15895,6 +15896,35 @@ function goAdminToToday(){
   loadAdminDashboard();
 }
 
+function onAdminDateInput(input){
+  const val = (input.value||'').trim();
+  if(!val) return;
+  if(_adminViewMode === 'day'){
+    // "2026-05-20" 형태
+    const [y,m,d] = val.split('-').map(Number);
+    if(y && m && d) _adminViewDate = new Date(y, m-1, d);
+  } else {
+    // "2026-05" 형태 (month input)
+    const [y,m] = val.split('-').map(Number);
+    if(y && m) _adminViewDate = new Date(y, m-1, 1);
+  }
+  loadAdminDashboard();
+}
+
+// input type=date/month value 갱신용
+function _syncAdminDateInput(){
+  const input = document.getElementById('adminViewDateInput');
+  if(!input) return;
+  const d = _adminViewDate;
+  if(_adminViewMode === 'day'){
+    input.type = 'date';
+    input.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  } else {
+    input.type = 'month';
+    input.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+}
+
 async function _sha256(str){
   const buf = new TextEncoder().encode(str);
   const hashBuf = await crypto.subtle.digest('SHA-256', buf);
@@ -16012,8 +16042,7 @@ async function loadAdminDashboard(){
     // 시점 라벨 갱신
     const view = _getAdminViewRange();
     const compare = _getAdminCompareRange();
-    const labelEl = document.getElementById('adminViewLabel');
-    if(labelEl) labelEl.textContent = view.label;
+    _syncAdminDateInput();
     const goTodayBtn = document.getElementById('adminGoTodayBtn');
     if(goTodayBtn) goTodayBtn.style.display = _isAdminViewCurrent() ? 'none' : 'inline-block';
     const mainTitleEl = document.getElementById('adminMainTitle');
