@@ -556,17 +556,24 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .order-tbl tr.ord-row:active td{background:var(--gray-100);}
 .order-tbl tr.ord-row td{padding:9px 2px;border-bottom:1px solid var(--gray-100);font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .order-tbl .ord-date{font-size:10px;font-weight:700;color:var(--gray-600);font-variant-numeric:tabular-nums;text-align:center;}
-.order-tbl .ord-item{font-weight:600;color:var(--gray-700);text-align:left;padding-left:4px;}
+.order-tbl .ord-item{font-weight:600;color:var(--gray-700);text-align:center;}
 .order-tbl .ord-unit, .order-tbl .ord-qty{text-align:right;font-variant-numeric:tabular-nums;color:var(--gray-600);font-size:11px;padding-right:4px;}
 .order-tbl .ord-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:11px;padding-right:4px;}
-.order-tbl .ord-memo{color:var(--gray-500);font-size:10px;text-align:left;padding-left:4px;}
-/* 분류 컬럼 (영수증 행 전용) — 소분류명 좌측 정렬, ellipsis */
-.order-tbl .ord-cat{font-size:10px;color:var(--gray-600);text-align:left;padding-left:4px;}
+.order-tbl .ord-memo{color:var(--gray-500);font-size:10px;text-align:center;}
+/* 분류 컬럼 (영수증 행 전용) — 짧은 한글 텍스트는 가운데 정돈 (2026-05-20 사장님 짚으심 — dev_lessons #85 보강) */
+.order-tbl .ord-cat{font-size:10px;color:var(--gray-600);text-align:center;}
 /* 의심행(_suspect) 노랑 배경 + 오답행 회색 취소선 (영수증) */
 .order-tbl tr.ord-row.suspect td{background:#FEF9C3;}
 .order-tbl tr.ord-row.err td{opacity:0.55;text-decoration:line-through;}
 /* › 화살표 = "행 탭하면 편집" iOS 표준 시각 큐 (설명 없이 직관) */
 .order-tbl .ord-arrow{text-align:center;color:var(--gray-400);font-size:14px;padding:0;}
+/* 주문 멀티행 입력 — 누적된 행 카드 (2026-05-20 사장님 D 패턴 accordion) */
+.ord-draft-card{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;}
+.ord-draft-card .odc-info{flex:1;min-width:0;overflow:hidden;}
+.ord-draft-card .odc-item{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ord-draft-card .odc-detail{font-size:11px;color:var(--gray-500);font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ord-draft-card .odc-actions{display:flex;gap:4px;flex-shrink:0;}
+.ord-draft-card .odc-actions button{padding:6px 9px;font-size:11px;font-weight:700;}
 
 /* ─ 대시보드 월요약 레거시 (토스 스타일) */
 .dash-summ-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--gray-100);}
@@ -3420,26 +3427,50 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
-<!-- 주문 수동 입력 -->
+<!-- 주문 수동 입력 — 멀티행 accordion 패턴 (2026-05-20 사장님 D 패턴)
+     [✓ 입력] = 현재 행 임시 저장 + 위로 접힘
+     [+ 행 추가] = 새 빈 행 펼침 (명시적 액션)
+     [✓ 저장] = 전체 그룹 같은 order_group_id로 일괄 INSERT -->
 <div class="sheet" id="addOrderSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title">주문 입력</div>
   <select id="orderVendorInput" class="input-field"></select>
   <input id="orderDateInput" class="input-field" placeholder="날짜 (YYYY-MM-DD)" type="date">
-  <input id="orderItemInput" class="input-field" placeholder="품목명" type="text">
-  <!-- 단가 × 수량 = 금액 자동 계산 (사장님이 금액 직접 수정도 가능) -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-    <input id="orderUnitInput" class="input-field" placeholder="단가 (원, 선택)" type="text" inputmode="numeric" data-input="onOrderUnitQtyInput|this">
-    <input id="orderQtyInput" class="input-field" placeholder="수량 (선택)" type="number" inputmode="decimal" step="0.01" data-input="onOrderUnitQtyInput|this">
+
+  <!-- 누적된 행 카드들 (입력 완료된 행) -->
+  <div id="orderDraftList" style="margin:10px 0 0;display:flex;flex-direction:column;gap:6px;"></div>
+
+  <!-- 펼쳐진 입력 폼 (한 행) -->
+  <div id="orderDraftForm" style="border:1px solid var(--gray-200);border-radius:10px;padding:12px;margin-top:10px;background:var(--gray-50);">
+    <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:8px;" id="orderDraftFormLabel">── 품목 1 ──</div>
+    <input id="orderItemInput" class="input-field" placeholder="품목명" type="text" data-input="onOrderDraftInput|this" style="margin-bottom:6px;">
+    <!-- 단가 × 수량 = 금액 자동 계산 (사장님이 금액 직접 수정도 가능) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+      <input id="orderUnitInput" class="input-field" placeholder="단가 (선택)" type="text" inputmode="numeric" data-input="onOrderUnitQtyInput|this">
+      <input id="orderQtyInput" class="input-field" placeholder="수량 (선택)" type="number" inputmode="decimal" step="0.01" data-input="onOrderUnitQtyInput|this">
+    </div>
+    <input id="orderAmtInput" class="input-field" placeholder="금액 (원)" type="text" inputmode="numeric" data-input="onOrderAmtInput|this" style="margin-bottom:6px;">
+    <input id="orderMemoInput" class="input-field" placeholder="메모 (선택)" type="text" style="margin-bottom:8px;">
+    <button class="btn btn-primary" id="orderDraftCommitBtn" style="width:100%;padding:12px;font-size:13px;font-weight:700;opacity:0.5;" data-action="commitOrderDraftRow" disabled>✓ 입력</button>
   </div>
-  <input id="orderAmtInput" class="input-field" placeholder="금액 (원)" type="text" inputmode="numeric" data-input="formatNumberInput|this">
-  <input id="orderMemoInput" class="input-field" placeholder="메모" type="text">
-  <div class="action-group">
-    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
-    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveOrder">저장</button>
+
+  <!-- + 행 추가 (폼 접힌 상태에서만 표시) -->
+  <button id="orderDraftAddBtn" class="btn btn-secondary" style="display:none;width:100%;padding:14px;font-size:14px;font-weight:700;margin-top:10px;color:var(--blue);border:1px dashed var(--blue);background:var(--blue-light);" data-action="expandOrderDraftForm">＋ 행 추가</button>
+
+  <!-- 합계 + 저장 영역 -->
+  <div style="border-top:1px solid var(--gray-200);margin-top:12px;padding-top:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-size:13px;font-weight:700;color:var(--gray-700);">합계</span>
+      <span id="orderDraftSum" style="font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;">0원</span>
+    </div>
+    <div class="action-group">
+      <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+      <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveOrder">✓ 저장</button>
+    </div>
   </div>
-  <!-- 편집 모드에서만 표시 — 행 클릭으로 진입 시 (사장님 옵션 A 2026-05-15) -->
-  <button id="orderDeleteBtn" class="btn btn-danger" style="display:none;width:100%;padding:12px;margin-top:8px;font-size:13px;" data-action="deleteOrderFromSheet">🗑 이 주문 삭제</button>
+
+  <!-- 편집 모드에서만 표시 — 그룹 통째 삭제 -->
+  <button id="orderDeleteBtn" class="btn btn-danger" style="display:none;width:100%;padding:12px;margin-top:8px;font-size:13px;" data-action="deleteOrderFromSheet">🗑 이 주문 그룹 통째 삭제</button>
 </div>
 
 <!-- 지출 카테고리 추가/편집 -->
@@ -9765,18 +9796,20 @@ async function loadVendorOrders(){
     document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>주문내역이 없습니다</p></div>';
     return;
   }
-  // 2026-05-20 갈아엎기: 평탄 7컬럼 표 → 그룹 카드(vendor_id+order_date) + 내부 5컬럼 미니 표 + ›
+  // 2026-05-20 갈아엎기: 평탄 7컬럼 표 → 그룹 카드(order_group_id 우선, fallback=(vendor_id+order_date)) + 내부 5컬럼 미니 표
   //  · 영수증 기록과 같은 패턴 (그룹 카드 헤더 + .order-tbl 미니 표)
   //  · 같은 영수증/주문건이 시각적으로 한 묶음 (사장님 호소 2026-05-20)
-  //  · 메모 컬럼 제거 + 행 탭→편집 시트에서 입력. 메모 있는 행은 품목명 옆 💬 인디케이터
-  //  · 날짜는 그룹 헤더로 이동 (행마다 반복 X → 폭 여유)
+  //  · order_group_id 있는 행 = 정확한 그룹 (수동 멀티 입력)
+  //  · order_group_id=NULL 옛 행 = (vendor_id+order_date) fallback 그룹 (옛 데이터 호환)
+  //  · 메모 컬럼 제거 + 행 탭→편집 시트. 메모 있는 행은 품목명 옆 💬
   //  · 컬럼: 품목(가변) / 단가(54) / 수량(38) / 금액(64) / ›(22)
-  const showVendor = !vendorId; // 전체 보기일 때만 거래처명 표시
-  // (vendor_id + order_date) 기준 그룹핑
+  const showVendor = !vendorId;
   const groups=[];
   const byKey={};
   data.forEach(r=>{
-    const key=(r.vendor_id||'-')+'|'+(r.order_date||'-');
+    const key=r.order_group_id
+      ? 'g:'+r.order_group_id
+      : 'f:'+(r.vendor_id||'-')+'|'+(r.order_date||'-');
     if(!byKey[key]){
       const g={key, vendorName:r.vendors?.name||'(거래처 없음)', date:r.order_date||'', rows:[], total:0};
       byKey[key]=g;
@@ -9827,17 +9860,171 @@ async function loadVendorOrders(){
   });
   document.getElementById('orderListData').innerHTML=html;
 }
-// 주문 입력/편집 공통 시트 — editOrderId가 있으면 편집, 없으면 신규
-// currentVendorDetailId가 있으면 그 거래처로 고정 입력 (다른 거래처로 입력 못 함)
-let editOrderId=null;
+// 주문 입력/편집 공통 시트 — 멀티행 accordion 패턴 (2026-05-20 사장님 D 패턴)
+//  · _orderDraftRows = [{item,unit_price,qty,amount,memo,_origId?}, ...]  현재 시트 안 입력 행들
+//  · _orderEditingGroupId = 편집 모드의 order_group_id (신규는 null)
+//  · _orderEditingFallbackIds = 옛 데이터(order_group_id=NULL) 편집 모드일 때 DELETE 대상 row id 배열
+//  · _orderDraftEditIdx = 폼에 현재 로드된 행의 인덱스 (null = 새 행 입력 중)
+let editOrderId=null; // (호환용, 옛 코드 참조 잔재 가능성 대비)
 let currentVendorDetailId=null;
+let _orderDraftRows=[];
+let _orderEditingGroupId=null;
+let _orderEditingFallbackIds=[];
+let _orderDraftEditIdx=null;
+
+function _resetOrderDraftForm(){
+  document.getElementById('orderItemInput').value='';
+  document.getElementById('orderUnitInput').value='';
+  document.getElementById('orderQtyInput').value='';
+  document.getElementById('orderAmtInput').value='';
+  document.getElementById('orderMemoInput').value='';
+  _refreshOrderDraftCommitBtn();
+}
+function _refreshOrderDraftFormLabel(){
+  // "── 품목 N ──" 라벨 (저장된 행 + 1)
+  const idx=(_orderDraftEditIdx!=null)?_orderDraftEditIdx+1:(_orderDraftRows.length+1);
+  const el=document.getElementById('orderDraftFormLabel');
+  if(el) el.textContent=`── 품목 ${idx}${_orderDraftEditIdx!=null?' (수정 중)':''} ──`;
+}
+function _refreshOrderDraftCommitBtn(){
+  // 폼에 품목 + 금액 둘 다 있어야 [✓ 입력] 활성
+  const item=(document.getElementById('orderItemInput').value||'').trim();
+  const amt=unFmt(document.getElementById('orderAmtInput').value)||0;
+  const btn=document.getElementById('orderDraftCommitBtn');
+  if(!btn) return;
+  const ok=!!item && amt>0;
+  btn.disabled=!ok;
+  btn.style.opacity=ok?'1':'0.5';
+}
+function onOrderDraftInput(el){_refreshOrderDraftCommitBtn();}
+function onOrderAmtInput(el){formatNumberInput(el);_refreshOrderDraftCommitBtn();}
+// 단가/수량 입력 시 금액 자동 계산 (사장님이 amt 직접 수정 가능 — 마지막 입력 우선)
+function onOrderUnitQtyInput(el){
+  if(el && el.id==='orderUnitInput') formatNumberInput(el);
+  const unit=unFmt(document.getElementById('orderUnitInput').value);
+  const qty=parseFloat(document.getElementById('orderQtyInput').value)||0;
+  if(unit>0 && qty>0){
+    document.getElementById('orderAmtInput').value=Math.round(unit*qty).toLocaleString();
+  }
+  _refreshOrderDraftCommitBtn();
+}
+function _renderOrderDraftList(){
+  const wrap=document.getElementById('orderDraftList');
+  if(!wrap) return;
+  let html='';
+  _orderDraftRows.forEach((r,i)=>{
+    const unitTxt=r.unit_price?fmt(r.unit_price):'-';
+    const qtyTxt=(r.qty!=null&&r.qty!=='')?String(r.qty):'-';
+    const memoFlag=r.memo?' 💬':'';
+    const detail=(r.unit_price&&r.qty)?`${unitTxt} × ${qtyTxt}`:(r.memo?'메모 있음':'');
+    html+=`<div class="ord-draft-card">
+      <div class="odc-info">
+        <div class="odc-item">✅ ${esc(r.item||'-')}${memoFlag}</div>
+        ${detail?`<div class="odc-detail">${detail}</div>`:''}
+      </div>
+      <div style="font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0;">${fmt(r.amount||0)}원</div>
+      <div class="odc-actions">
+        <button class="btn btn-secondary" data-action="editOrderDraftRow|${i}">✏</button>
+        <button class="btn btn-danger" data-action="removeOrderDraftRow|${i}">✕</button>
+      </div>
+    </div>`;
+  });
+  wrap.innerHTML=html;
+  _updateOrderDraftSum();
+}
+function _updateOrderDraftSum(){
+  const sum=_orderDraftRows.reduce((a,r)=>a+(r.amount||0),0);
+  const el=document.getElementById('orderDraftSum');
+  if(el) el.textContent=fmt(sum)+'원';
+}
+function _showOrderDraftForm(show){
+  document.getElementById('orderDraftForm').style.display=show?'':'none';
+  document.getElementById('orderDraftAddBtn').style.display=show?'none':'';
+}
+function expandOrderDraftForm(){
+  // 새 빈 행 펼침. 폼 보이고 [+ 행 추가] 숨김.
+  _orderDraftEditIdx=null;
+  _resetOrderDraftForm();
+  _refreshOrderDraftFormLabel();
+  _showOrderDraftForm(true);
+  setTimeout(()=>document.getElementById('orderItemInput')?.focus(),100);
+}
+function commitOrderDraftRow(){
+  // [✓ 입력] — 폼 값을 draft 리스트에 push (또는 update). 폼 접고 [+ 행 추가] 보임.
+  const item=(document.getElementById('orderItemInput').value||'').trim();
+  const unit=unFmt(document.getElementById('orderUnitInput').value)||null;
+  const qty=parseFloat(document.getElementById('orderQtyInput').value)||null;
+  const amt=unFmt(document.getElementById('orderAmtInput').value)||0;
+  const memo=(document.getElementById('orderMemoInput').value||'').trim()||null;
+  if(!item) return toast('품목을 입력하세요','warn');
+  if(!amt) return toast('금액을 입력하세요','warn');
+  const row={item,unit_price:unit,qty,amount:amt,memo};
+  if(_orderDraftEditIdx!=null){
+    // 편집 중인 행 보존: 옛 row의 _origId 유지 (DELETE 대상 추적)
+    const old=_orderDraftRows[_orderDraftEditIdx];
+    if(old?._origId) row._origId=old._origId;
+    _orderDraftRows[_orderDraftEditIdx]=row;
+  } else {
+    _orderDraftRows.push(row);
+  }
+  _orderDraftEditIdx=null;
+  _renderOrderDraftList();
+  _showOrderDraftForm(false);
+}
+function editOrderDraftRow(idx){
+  // 카드 [✏] — 폼에 그 행 로드, 다른 펼친 행 자동 commit 시도 (값 있으면)
+  const i=parseInt(idx,10);
+  if(!(i>=0 && i<_orderDraftRows.length)) return;
+  // 현재 폼이 펼쳐져 있으면 (다른 행 편집/새 행 입력 중) 자동 임시저장 시도 → 비어있으면 무시
+  const formVisible=document.getElementById('orderDraftForm').style.display!=='none';
+  if(formVisible){
+    const curItem=(document.getElementById('orderItemInput').value||'').trim();
+    const curAmt=unFmt(document.getElementById('orderAmtInput').value)||0;
+    if(curItem && curAmt>0) commitOrderDraftRow();
+    // 빈 폼이면 그냥 버림
+  }
+  const r=_orderDraftRows[i];
+  _orderDraftEditIdx=i;
+  document.getElementById('orderItemInput').value=r.item||'';
+  document.getElementById('orderUnitInput').value=r.unit_price?fmt(r.unit_price):'';
+  document.getElementById('orderQtyInput').value=(r.qty!=null&&r.qty!=='')?r.qty:'';
+  document.getElementById('orderAmtInput').value=r.amount?fmt(r.amount):'';
+  document.getElementById('orderMemoInput').value=r.memo||'';
+  _refreshOrderDraftFormLabel();
+  _refreshOrderDraftCommitBtn();
+  _showOrderDraftForm(true);
+}
+function removeOrderDraftRow(idx){
+  const i=parseInt(idx,10);
+  if(!(i>=0 && i<_orderDraftRows.length)) return;
+  if(_orderDraftRows.length<=1 && document.getElementById('orderDraftForm').style.display==='none'){
+    // 마지막 행을 지우는 케이스 → 폼 자동 펼침 (저장할 게 없으면 안 됨)
+    _orderDraftRows.splice(i,1);
+    _renderOrderDraftList();
+    expandOrderDraftForm();
+    return;
+  }
+  _orderDraftRows.splice(i,1);
+  // 편집 중인 행이 사라지면 폼 리셋
+  if(_orderDraftEditIdx===i){
+    _orderDraftEditIdx=null;
+    _resetOrderDraftForm();
+    _showOrderDraftForm(false);
+  } else if(_orderDraftEditIdx!=null && _orderDraftEditIdx>i){
+    _orderDraftEditIdx--;
+  }
+  _renderOrderDraftList();
+}
 function openAddOrderSheet(){
   if(!guardStore())return;
   editOrderId=null;
+  _orderEditingGroupId=null;
+  _orderEditingFallbackIds=[];
+  _orderDraftRows=[];
+  _orderDraftEditIdx=null;
   const titleEl=document.querySelector('#addOrderSheet .sheet-title');
   const sel=document.getElementById('orderVendorInput');
   if(currentVendorDetailId){
-    // 거래처 상세에서 진입 = 그 거래처 고정. 셀렉트 숨김.
     const v=vendors.find(x=>x.id===currentVendorDetailId);
     if(titleEl) titleEl.textContent=`주문 입력 — ${v?.name||'-'}${v?.category?' · '+v.category:''}`;
     sel.innerHTML=`<option value="${currentVendorDetailId}" selected>${v?.name||'-'}</option>`;
@@ -9848,47 +10035,50 @@ function openAddOrderSheet(){
     sel.style.display='';
   }
   document.getElementById('orderDateInput').value=ymdLocal(new Date());
-  document.getElementById('orderItemInput').value='';
-  document.getElementById('orderUnitInput').value='';
-  document.getElementById('orderQtyInput').value='';
-  document.getElementById('orderAmtInput').value='';
-  document.getElementById('orderMemoInput').value='';
+  _renderOrderDraftList();
+  expandOrderDraftForm();
   const delBtn=document.getElementById('orderDeleteBtn');
-  if(delBtn) delBtn.style.display='none'; // 신규는 삭제 버튼 숨김
+  if(delBtn) delBtn.style.display='none';
   openSheet('addOrderSheet');
-}
-// 단가/수량 입력 시 금액 자동 계산 (사장님이 amt 직접 수정 가능 — 마지막 입력 우선)
-// 단가 입력은 콤마 자동 포맷, 수량은 소수 가능이라 그대로
-function onOrderUnitQtyInput(el){
-  if(el && el.id==='orderUnitInput') formatNumberInput(el);
-  const unit=unFmt(document.getElementById('orderUnitInput').value);
-  const qty=parseFloat(document.getElementById('orderQtyInput').value)||0;
-  if(unit>0 && qty>0){
-    document.getElementById('orderAmtInput').value=Math.round(unit*qty).toLocaleString();
-  }
 }
 async function openEditOrderSheet(id){
   if(!guardStore())return;
   setLoad(true,'주문 정보 로드 중...');
+  // 1) 클릭한 행 먼저 가져옴 → order_group_id 확인
   const{data:o,error}=await sb.from('vendor_orders').select('*').eq('id',id).eq('store_id',currentStore.id).maybeSingle();
+  if(error||!o){setLoad(false);return toast('주문을 찾을 수 없습니다.','error');}
+  // 2) 같은 그룹의 모든 행 로드 (group_id 있으면 같은 group_id, 없으면 vendor_id+order_date fallback)
+  let groupRows=[];
+  if(o.order_group_id){
+    const{data:gd}=await sb.from('vendor_orders').select('*').eq('store_id',currentStore.id).eq('order_group_id',o.order_group_id).order('id');
+    groupRows=gd||[o];
+    _orderEditingGroupId=o.order_group_id;
+    _orderEditingFallbackIds=[];
+  } else {
+    const{data:gd}=await sb.from('vendor_orders').select('*').eq('store_id',currentStore.id).eq('vendor_id',o.vendor_id).eq('order_date',o.order_date).is('order_group_id',null).order('id');
+    groupRows=gd||[o];
+    _orderEditingGroupId=null;
+    _orderEditingFallbackIds=groupRows.map(r=>r.id);
+  }
   setLoad(false);
-  if(error||!o) return toast('주문을 찾을 수 없습니다.','error');
   editOrderId=id;
+  _orderDraftRows=groupRows.map(r=>({
+    item:r.item||'',unit_price:r.unit_price,qty:r.quantity,amount:r.amount||0,memo:r.memo||null,_origId:r.id
+  }));
+  _orderDraftEditIdx=null;
   const titleEl=document.querySelector('#addOrderSheet .sheet-title');
   const sel=document.getElementById('orderVendorInput');
   const v=vendors.find(x=>x.id===o.vendor_id);
-  // 편집 시에도 거래처 변경 불가 — 잘못 입력했으면 삭제 후 새로 등록이 안전
   if(titleEl) titleEl.textContent=`주문 편집 — ${v?.name||'-'}${v?.category?' · '+v.category:''}`;
   sel.innerHTML=`<option value="${o.vendor_id}" selected>${v?.name||'-'}</option>`;
   sel.style.display='none';
   document.getElementById('orderDateInput').value=o.order_date;
-  document.getElementById('orderItemInput').value=o.item||'';
-  document.getElementById('orderUnitInput').value=o.unit_price?fmt(o.unit_price):'';
-  document.getElementById('orderQtyInput').value=o.quantity||'';
-  document.getElementById('orderAmtInput').value=o.amount?fmt(o.amount):'';
-  document.getElementById('orderMemoInput').value=o.memo||'';
+  _renderOrderDraftList();
+  // 편집 진입 시 폼은 접힌 상태 ([+ 행 추가] 노출) — 사장님이 행 카드 클릭하면 펼침
+  _resetOrderDraftForm();
+  _showOrderDraftForm(false);
   const delBtn=document.getElementById('orderDeleteBtn');
-  if(delBtn) delBtn.style.display=''; // 편집 모드 → 삭제 버튼 노출
+  if(delBtn) delBtn.style.display=''; // 편집 모드 → 그룹 통째 삭제 버튼 노출
   openSheet('addOrderSheet');
 }
 async function deleteOrder(id){
@@ -9900,49 +10090,90 @@ async function deleteOrder(id){
   toast('삭제됐어요','success');
   loadVendorOrders();
 }
-// 편집 시트 안 삭제 버튼 (옵션 A — 사장님 2026-05-15)
 async function deleteOrderFromSheet(){
-  if(!editOrderId) return;
-  const id=editOrderId;
-  if(!confirm('이 주문 기록을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.')) return;
+  // 그룹 통째 삭제 (편집 모드 전용)
+  const isGroup=!!_orderEditingGroupId || (_orderEditingFallbackIds.length>0);
+  if(!isGroup) return;
+  const cnt=_orderEditingGroupId
+    ? _orderDraftRows.length
+    : _orderEditingFallbackIds.length;
+  if(!confirm(`이 주문 그룹 ${cnt}건을 통째로 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
   setLoad(true,'삭제 중...');
-  const{error}=await sb.from('vendor_orders').delete().eq('id',id).eq('store_id',currentStore.id);
+  let delQuery=sb.from('vendor_orders').delete().eq('store_id',currentStore.id);
+  if(_orderEditingGroupId){
+    delQuery=delQuery.eq('order_group_id',_orderEditingGroupId);
+  } else {
+    delQuery=delQuery.in('id',_orderEditingFallbackIds);
+  }
+  const{error}=await delQuery;
   setLoad(false);
   if(error) return errToast('삭제', error);
   toast('삭제됐어요','success');
   editOrderId=null;
+  _orderEditingGroupId=null;
+  _orderEditingFallbackIds=[];
+  _orderDraftRows=[];
   closeAllSheets();
   loadVendorOrders();
-  loadVendors(); // vendorMonthTotals 재계산
+  loadVendors();
 }
 async function saveOrder(){
   if(!guardStore())return;
-  const vendorId=document.getElementById('orderVendorInput').value;const date=document.getElementById('orderDateInput').value;
-  const item=document.getElementById('orderItemInput').value;
-  const unit=unFmt(document.getElementById('orderUnitInput').value)||null;
-  const qty=parseFloat(document.getElementById('orderQtyInput').value)||null;
-  const amt=unFmt(document.getElementById('orderAmtInput').value)||0;
-  const memo=document.getElementById('orderMemoInput').value;
-  if(!vendorId||!date||!amt)return toast('거래처, 날짜, 금액은 필수입니다.','warn');
-  setLoad(true,editOrderId?'수정 중...':'저장 중...');
-  const payload={vendor_id:vendorId,order_date:date,item:item||null,unit_price:unit,quantity:qty,amount:amt,memo:memo||null};
-  const{error}=editOrderId
-    ? await sb.from('vendor_orders').update(payload).eq('id',editOrderId).eq('store_id',currentStore.id)
-    : await sb.from('vendor_orders').insert({...payload,store_id:currentStore.id,source:'manual'});
+  const vendorId=document.getElementById('orderVendorInput').value;
+  const date=document.getElementById('orderDateInput').value;
+  if(!vendorId||!date) return toast('거래처, 날짜는 필수입니다.','warn');
+  // 현재 폼에 값 있으면 자동 commit
+  const curItem=(document.getElementById('orderItemInput').value||'').trim();
+  const curAmt=unFmt(document.getElementById('orderAmtInput').value)||0;
+  const formVisible=document.getElementById('orderDraftForm').style.display!=='none';
+  if(formVisible && curItem && curAmt>0){
+    commitOrderDraftRow();
+  }
+  if(!_orderDraftRows.length) return toast('품목을 1개 이상 입력하세요','warn');
+  const isEdit=!!(_orderEditingGroupId || _orderEditingFallbackIds.length>0);
+  setLoad(true,isEdit?'수정 중...':'저장 중...');
+  // 편집 모드: 옛 그룹 행 통째 DELETE + 새 그룹 INSERT (DELETE+INSERT 패턴이 가장 안전 — 행 수 변동 대응)
+  if(isEdit){
+    let delQuery=sb.from('vendor_orders').delete().eq('store_id',currentStore.id);
+    if(_orderEditingGroupId){
+      delQuery=delQuery.eq('order_group_id',_orderEditingGroupId);
+    } else {
+      delQuery=delQuery.in('id',_orderEditingFallbackIds);
+    }
+    const{error:delErr}=await delQuery;
+    if(delErr){setLoad(false);return errToast('수정(삭제)',delErr);}
+  }
+  // 그룹 ID: 편집이면 기존 group_id 재사용, 신규면 새 UUID
+  const groupId=_orderEditingGroupId||(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(16).slice(2));
+  const payload=_orderDraftRows.map(r=>({
+    store_id:currentStore.id,
+    vendor_id:vendorId,
+    order_date:date,
+    item:r.item||null,
+    unit_price:r.unit_price,
+    quantity:r.qty,
+    amount:r.amount||0,
+    memo:r.memo||null,
+    source:'manual',
+    order_group_id:groupId
+  }));
+  const{error:insErr}=await sb.from('vendor_orders').insert(payload);
   setLoad(false);
-  if(error)return errToast(editOrderId?'수정':'저장', error);
-  toast(editOrderId?'수정됐어요':'저장됐어요','success');
-  // 즉시 캐시 갱신 (사장님 체감 — 추가 케이스 정확, await 안 기다림)
-  if(!editOrderId){
-    const _vid=vendorId;
-    if(!vendorMonthTotals[_vid]) vendorMonthTotals[_vid]={total:0,count:0};
-    vendorMonthTotals[_vid].total += amt;
-    vendorMonthTotals[_vid].count += 1;
+  if(insErr) return errToast(isEdit?'수정':'저장',insErr);
+  toast(isEdit?'수정됐어요':`${_orderDraftRows.length}건 저장됐어요`,'success');
+  // 신규 케이스 즉시 캐시 갱신
+  if(!isEdit){
+    const sumAmt=_orderDraftRows.reduce((a,r)=>a+(r.amount||0),0);
+    if(!vendorMonthTotals[vendorId]) vendorMonthTotals[vendorId]={total:0,count:0};
+    vendorMonthTotals[vendorId].total+=sumAmt;
+    vendorMonthTotals[vendorId].count+=_orderDraftRows.length;
   }
   editOrderId=null;
+  _orderEditingGroupId=null;
+  _orderEditingFallbackIds=[];
+  _orderDraftRows=[];
   closeAllSheets();
   loadVendorOrders();
-  // 백그라운드 정합 (수정 차이 반영 + 거래처 리스트 렌더, await 없이 화면은 즉시 닫힘)
   loadVendors();
 }
 
