@@ -568,10 +568,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* › 화살표 = "행 탭하면 편집" iOS 표준 시각 큐 (설명 없이 직관) */
 .order-tbl .ord-arrow{text-align:center;color:var(--gray-400);font-size:14px;padding:0;}
 /* 화면 상단 sticky 표 헤더 — 카드마다 표 헤더 반복 X, 1번만 (2026-05-20 D안)
-   카드 안 표(.order-tbl)의 colgroup 폭과 grid-template-columns 매칭 */
-.tbl-sticky-header{position:sticky;top:calc(60px + env(safe-area-inset-top, 0));z-index:5;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;margin:0 0 10px;font-size:10px;font-weight:700;color:var(--gray-500);letter-spacing:0.3px;display:grid;align-items:center;}
-.tbl-sticky-header.cols-5{grid-template-columns:100px 64px 44px 76px 22px;}
-.tbl-sticky-header.cols-6{grid-template-columns:100px 48px 64px 44px 76px 22px;}
+   카드 안 표(.order-tbl)의 colgroup과 정렬축 일치 시키는 핵심:
+   ① border-left:3px transparent — 카드 좌측 컬러바와 시작 위치 동일하게 맞춤
+   ② grid 첫 컬럼=1fr (잉여 폭 흡수) — 카드 안 colgroup 첫 col=auto와 같은 동작
+   ③ 카드와 padding 10px 좌우 동일 → 끝 위치도 일치 */
+.tbl-sticky-header{position:sticky;top:calc(60px + env(safe-area-inset-top, 0));z-index:5;background:var(--gray-50);border:1px solid var(--gray-200);border-left:3px solid transparent;border-radius:10px;padding:7px 10px;margin:0 0 8px;font-size:10px;font-weight:700;color:var(--gray-500);letter-spacing:0.3px;display:grid;align-items:center;box-sizing:border-box;}
+.tbl-sticky-header.cols-5{grid-template-columns:1fr 64px 44px 76px 22px;}
+.tbl-sticky-header.cols-6{grid-template-columns:1fr 48px 64px 44px 76px 22px;}
 .tbl-sticky-header span{text-align:center;}
 /* 주문 멀티행 입력 — 누적된 행 카드 (2026-05-20 사장님 D 패턴 accordion) */
 .ord-draft-card{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;}
@@ -4691,7 +4694,7 @@ function renderCatReceiptList(rows){
         <div style="padding:4px 10px;">
           <table class="order-tbl">
             <colgroup>
-              <col style="width:100px"/>
+              <col/>
               <col style="width:64px"/>
               <col style="width:44px"/>
               <col style="width:76px"/>
@@ -5523,7 +5526,7 @@ function renderReceiptList(){
         <div style="padding:4px 10px;">
           <table class="order-tbl">
             <colgroup>
-              <col style="width:100px"/>
+              <col/>
               <col style="width:48px"/>
               <col style="width:64px"/>
               <col style="width:44px"/>
@@ -9870,7 +9873,7 @@ async function loadVendorOrders(){
       <div style="padding:4px 10px;">
         <table class="order-tbl">
           <colgroup>
-            <col style="width:100px"/>
+            <col/>
             <col style="width:64px"/>
             <col style="width:44px"/>
             <col style="width:76px"/>
