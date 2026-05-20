@@ -587,15 +587,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 첫 컬럼 좌측 모서리 둥글게 (wrapper border-radius 안에서) */
 .grp-tbl thead th:first-child{border-top-left-radius:10px;}
 .grp-tbl thead th:last-child{border-top-right-radius:10px;}
-/* 그룹 헤더 행 — 거래처 · 합계 + 액션 버튼 */
-.grp-tbl .grp-hdr td{background:var(--gray-50);font-size:12px;font-weight:800;padding:7px 8px;border-top:6px solid #fff;border-bottom:1px solid var(--gray-200);color:var(--text);}
+/* 그룹 헤더 행 — 거래처 · 합계 + 액션 버튼 (2026-05-20 (3) 사장님 호소 액션 짤림 수정)
+   td colspan=ALL 1개 + 내부 flex 분할 → 액션 우측 끝 고정, 거래처 자동 잘림(ellipsis)
+   천만단위 합계 들어가도 안 깨지는 안전 폭 계산: 액션 70 + 합계 95 + 이모지 40 + gap 15 + 거래처 110 = 330px @ 360px 화면 */
+.grp-tbl .grp-hdr td{background:var(--gray-50);padding:9px 8px;border-top:6px solid #fff;border-bottom:1px solid var(--gray-200);color:var(--text);}
 .grp-tbl .grp-hdr.first td{border-top:none;}
 .grp-tbl .grp-hdr td:first-child{border-left:3px solid var(--blue);padding-left:8px;}
-.grp-tbl .grp-hdr-info{display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden;}
-.grp-tbl .grp-hdr-info .name{font-weight:800;overflow:hidden;text-overflow:ellipsis;}
-.grp-tbl .grp-hdr-info .sum{font-weight:900;font-variant-numeric:tabular-nums;flex-shrink:0;}
-.grp-tbl .grp-hdr-actions{text-align:right;white-space:nowrap;}
-.grp-tbl .grp-hdr-actions .btn{padding:4px 7px;font-size:10px;font-weight:700;margin-left:3px;}
+.grp-hdr-row{display:flex;align-items:center;gap:6px;}
+.grp-hdr-info{flex:1;min-width:0;display:flex;align-items:baseline;gap:5px;white-space:nowrap;overflow:hidden;font-size:13px;}
+.grp-hdr-info .emoji{flex-shrink:0;font-size:0.9em;}
+.grp-hdr-info .name{font-weight:800;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.grp-hdr-info .sum{font-weight:900;font-variant-numeric:tabular-nums;flex-shrink:0;}
+.grp-hdr-info .err-tag{font-size:10px;color:var(--gray-500);flex-shrink:0;}
+.grp-hdr-actions{flex-shrink:0;white-space:nowrap;display:flex;gap:4px;}
+.grp-hdr-actions .btn{padding:5px 9px;font-size:11px;font-weight:700;min-width:32px;}
 /* 본문 행 — 같은 영수증임을 첫 컬럼 좌측 컬러바로 표시 */
 .grp-tbl .grp-body{cursor:pointer;}
 .grp-tbl .grp-body:active td{background:var(--gray-100);}
@@ -4719,15 +4724,18 @@ function renderCatReceiptList(rows){
       const photoBadge = g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'');
       const errBadge = g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
       html += `<tr class="grp-hdr${firstGroup?' first':''}">
-        <td colspan="4"><div class="grp-hdr-info">
-          <span class="name">${photoBadge?photoBadge+' ':''}🧾 ${esc(g.vendor||'(거래처 없음)')}</span>
-          <span class="sum">· ${fmt(g.total)}원</span>
-          ${errBadge}
+        <td colspan="5"><div class="grp-hdr-row">
+          <div class="grp-hdr-info">
+            ${photoBadge?`<span class="emoji">${photoBadge} 🧾</span>`:`<span class="emoji">🧾</span>`}
+            <span class="name">${esc(g.vendor||'(거래처 없음)')}</span>
+            <span class="sum">· ${fmt(g.total)}원</span>
+            ${errBadge}
+          </div>
+          <div class="grp-hdr-actions">
+            <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
+            <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
+          </div>
         </div></td>
-        <td class="grp-hdr-actions">
-          <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
-          <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
-        </td>
       </tr>`;
       firstGroup = false;
       g.rows.forEach(r=>{
@@ -5546,15 +5554,18 @@ function renderReceiptList(){
       const photoBadge=g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'');
       const errBadge=g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
       html+=`<tr class="grp-hdr${firstGroup?' first':''}">
-        <td colspan="5"><div class="grp-hdr-info">
-          <span class="name">${photoBadge?photoBadge+' ':''}🧾 ${esc(g.vendor||'(거래처 없음)')}</span>
-          <span class="sum">· ${fmt(g.total)}원</span>
-          ${errBadge}
+        <td colspan="6"><div class="grp-hdr-row">
+          <div class="grp-hdr-info">
+            ${photoBadge?`<span class="emoji">${photoBadge} 🧾</span>`:`<span class="emoji">🧾</span>`}
+            <span class="name">${esc(g.vendor||'(거래처 없음)')}</span>
+            <span class="sum">· ${fmt(g.total)}원</span>
+            ${errBadge}
+          </div>
+          <div class="grp-hdr-actions">
+            <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
+            <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
+          </div>
         </div></td>
-        <td class="grp-hdr-actions">
-          <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
-          <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
-        </td>
       </tr>`;
       firstGroup=false;
       g.rows.forEach(r=>{
@@ -9888,11 +9899,17 @@ async function loadVendorOrders(){
   let firstGroup=true;
   groups.forEach(g=>{
     const dateShort=(g.date||'').slice(5).replace('-','/');
-    const vendorHeader=showVendor?`🧾 ${esc(g.vendorName)} · ${dateShort||'-'}`:`📅 ${dateShort||'-'}`;
+    // 거래처 주문은 액션 버튼 없음 (행 자체 클릭이 편집) — 통일 구조 유지, actions 영역 비움
+    const vendorEmoji = showVendor ? '🧾' : '📅';
+    const vendorName = showVendor ? esc(g.vendorName) : (dateShort||'-');
+    const vendorSub = showVendor && dateShort ? ` · ${dateShort}` : '';
     html+=`<tr class="grp-hdr${firstGroup?' first':''}">
-      <td colspan="5"><div class="grp-hdr-info">
-        <span class="name">${vendorHeader}</span>
-        <span class="sum">· ${fmt(g.total)}원</span>
+      <td colspan="5"><div class="grp-hdr-row">
+        <div class="grp-hdr-info">
+          <span class="emoji">${vendorEmoji}</span>
+          <span class="name">${vendorName}${vendorSub}</span>
+          <span class="sum">· ${fmt(g.total)}원</span>
+        </div>
       </div></td>
     </tr>`;
     firstGroup=false;
