@@ -560,6 +560,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .order-tbl .ord-unit, .order-tbl .ord-qty{text-align:right;font-variant-numeric:tabular-nums;color:var(--gray-600);font-size:11px;padding-right:4px;}
 .order-tbl .ord-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:11px;padding-right:4px;}
 .order-tbl .ord-memo{color:var(--gray-500);font-size:10px;text-align:left;padding-left:4px;}
+/* 분류 컬럼 (영수증 행 전용) — 소분류명 좌측 정렬, ellipsis */
+.order-tbl .ord-cat{font-size:10px;color:var(--gray-600);text-align:left;padding-left:4px;}
+/* 의심행(_suspect) 노랑 배경 + 오답행 회색 취소선 (영수증) */
+.order-tbl tr.ord-row.suspect td{background:#FEF9C3;}
+.order-tbl tr.ord-row.err td{opacity:0.55;text-decoration:line-through;}
 /* › 화살표 = "행 탭하면 편집" iOS 표준 시각 큐 (설명 없이 직관) */
 .order-tbl .ord-arrow{text-align:center;color:var(--gray-400);font-size:14px;padding:0;}
 
@@ -5434,7 +5439,10 @@ function renderReceiptList(){
       const editKey=g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
       const photoBadge=g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'');
       const errBadge=g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
-      // 그룹 카드 (좌측 컬러바 + 헤더 + 행 리스트)
+      // 그룹 카드 (좌측 컬러바 + 헤더 + 미니 표)
+      // 2026-05-20: 옛 2줄 디브 행 → .order-tbl 미니 표 (6컬럼)으로 갈아엎기 — 거래처 주문과 통일
+      //  컬럼: 품목(가변) / 분류(56) / 단가(54) / 수량(38) / 금액(64) / ›(22)
+      //  회계 정석: 금액 우측 끝. 분류는 품목 옆 (사장님 짚으심 2026-05-20)
       html+=`<div class="rcp-group-card" style="background:#fff;border:1px solid var(--gray-200);border-left:3px solid var(--blue);border-radius:10px;margin-bottom:10px;overflow:hidden;${g.hasErr?'opacity:0.85;':''}">
         <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
           <div style="flex:1;min-width:0;overflow:hidden;">
@@ -5444,23 +5452,41 @@ function renderReceiptList(){
           <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:11px;font-weight:700;" data-action="openReceiptGroupEdit|${editKey}">✏ 편집</button>
           <button type="button" class="btn btn-danger" style="padding:6px 8px;font-size:11px;font-weight:700;" data-action="deleteReceiptGroup|${editKey}">🗑</button>
         </div>
-        <div style="padding:8px 12px;">`;
+        <div style="padding:6px 10px;">
+          <table class="order-tbl">
+            <colgroup>
+              <col/>
+              <col style="width:56px"/>
+              <col style="width:54px"/>
+              <col style="width:38px"/>
+              <col style="width:64px"/>
+              <col style="width:22px"/>
+            </colgroup>
+            <thead><tr><th>품목</th><th>분류</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
+            <tbody>`;
       g.rows.forEach(r=>{
         const isErr=r.note!=='정상';
-        const catLabel=r.category||'미분류';
-        // 단가 × 수량 부가 정보 (있을 때만 표시)
-        const unitQtyHtml = (r.unit_price && r.qty)
-          ? `<span style="margin-left:6px;color:var(--gray-400);">· ${fmt(r.unit_price)} × ${r.qty}</span>`
-          : '';
-        html+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;${isErr?'opacity:0.5;text-decoration:line-through;':''}">
-          <div style="flex:1;min-width:0;overflow:hidden;">
-            <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.item||'(품목 없음)')}</div>
-            <div style="font-size:10px;color:var(--gray-500);margin-top:2px;">🏷 ${esc(catLabel)}${unitQtyHtml}</div>
-          </div>
-          <div style="font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0;">${fmt(r.total_price||0)}원</div>
-        </div>`;
+        const suspect=!!r._suspect;
+        // 분류 = 소분류명만 (풀라벨은 행 탭→편집시트에서). "식자재>채소" → "채소"
+        const catRaw=r.category||'';
+        const catShort=catRaw.includes('>')?catRaw.split('>').pop().trim():catRaw||'-';
+        const unitTxt=r.unit_price?fmt(r.unit_price):'-';
+        const qtyTxt=(r.qty!=null&&r.qty!=='')?String(r.qty):'-';
+        const cls=['ord-row'];
+        if(isErr) cls.push('err');
+        if(suspect) cls.push('suspect');
+        const itemTxt=esc(r.item||'(품목 없음)');
+        const catTxt=esc(catShort);
+        html+=`<tr class="${cls.join(' ')}" data-action="openReceiptEdit|${r.id}">`
+          +`<td class="ord-item" title="${itemTxt}">${itemTxt}</td>`
+          +`<td class="ord-cat" title="${esc(catRaw||'미분류')}">${catTxt}</td>`
+          +`<td class="ord-unit">${unitTxt}</td>`
+          +`<td class="ord-qty">${qtyTxt}</td>`
+          +`<td class="ord-amt">${fmt(r.total_price||0)}</td>`
+          +`<td class="ord-arrow">›</td>`
+          +`</tr>`;
       });
-      html+=`</div></div>`;
+      html+=`</tbody></table></div></div>`;
     });
   });
   body.innerHTML=html;
@@ -9739,51 +9765,66 @@ async function loadVendorOrders(){
     document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>주문내역이 없습니다</p></div>';
     return;
   }
-  // 한 행 7컬럼 (사장님 옵션 A 2026-05-15): 날짜/품목/단가/수량/금액/메모/›
-  // 행 탭 = 편집 시트 (시트 안에 🗑 삭제 버튼) — ✎/🗑 컬럼 제거로 폭 여유
-  // dev_lessons #85: 헤더=가운데, 본문 숫자=우측, 텍스트=좌측, 짤림은 ellipsis+title
-  const showVendor = !vendorId;
-  // 모바일 360px 본문 ~328px 기준 데이터 최대 폭:
-  //   단가/금액 "10,400" / "983,944" (7글자 최대) + tabular-nums 11px ≈ 50~60px
-  //   수량 "94.5" / "999" → 36px
-  //   날짜 "5/15" → 32px
-  //   › 22px 고정
-  let html='<table class="order-tbl"><colgroup>'
-    +'<col style="width:32px"/>'   // 날짜
-    +'<col/>'                       // 품목 (가변, 메인)
-    +'<col style="width:56px"/>'   // 단가
-    +'<col style="width:38px"/>'   // 수량 (소수점 대비)
-    +'<col style="width:62px"/>'   // 금액
-    +'<col style="width:48px"/>'   // 메모 (ellipsis)
-    +'<col style="width:22px"/>'   // ›
-    +'</colgroup><thead><tr>'
-    +'<th>날짜</th>'
-    +'<th>품목</th>'
-    +'<th>단가</th>'
-    +'<th>수량</th>'
-    +'<th>금액</th>'
-    +'<th>메모</th>'
-    +'<th></th></tr></thead><tbody>';
+  // 2026-05-20 갈아엎기: 평탄 7컬럼 표 → 그룹 카드(vendor_id+order_date) + 내부 5컬럼 미니 표 + ›
+  //  · 영수증 기록과 같은 패턴 (그룹 카드 헤더 + .order-tbl 미니 표)
+  //  · 같은 영수증/주문건이 시각적으로 한 묶음 (사장님 호소 2026-05-20)
+  //  · 메모 컬럼 제거 + 행 탭→편집 시트에서 입력. 메모 있는 행은 품목명 옆 💬 인디케이터
+  //  · 날짜는 그룹 헤더로 이동 (행마다 반복 X → 폭 여유)
+  //  · 컬럼: 품목(가변) / 단가(54) / 수량(38) / 금액(64) / ›(22)
+  const showVendor = !vendorId; // 전체 보기일 때만 거래처명 표시
+  // (vendor_id + order_date) 기준 그룹핑
+  const groups=[];
+  const byKey={};
   data.forEach(r=>{
-    const dateShort=(r.order_date||'').slice(5).replace('-','/');
-    const itemTxt=r.item||'-';
-    const unitTxt=r.unit_price?fmt(r.unit_price):'-';
-    const qtyTxt=r.quantity!=null&&r.quantity!==''?String(r.quantity):'-';
-    const memoParts=[];
-    if(showVendor && r.vendors?.name) memoParts.push(r.vendors.name);
-    if(r.memo) memoParts.push(r.memo);
-    const memoTxt=memoParts.length?memoParts.join(' · '):'-';
-    html+=`<tr class="ord-row" data-action="openEditOrderSheet|${r.id}">`
-      +`<td class="ord-date">${dateShort||'-'}</td>`
-      +`<td class="ord-item" title="${itemTxt}">${itemTxt}</td>`
-      +`<td class="ord-unit">${unitTxt}</td>`
-      +`<td class="ord-qty">${qtyTxt}</td>`
-      +`<td class="ord-amt">${fmt(r.amount)}</td>`
-      +`<td class="ord-memo" title="${memoTxt}">${memoTxt}</td>`
-      +`<td class="ord-arrow">›</td>`
-      +`</tr>`;
+    const key=(r.vendor_id||'-')+'|'+(r.order_date||'-');
+    if(!byKey[key]){
+      const g={key, vendorName:r.vendors?.name||'(거래처 없음)', date:r.order_date||'', rows:[], total:0};
+      byKey[key]=g;
+      groups.push(g);
+    }
+    const g=byKey[key];
+    g.rows.push(r);
+    g.total+=(r.amount||0);
   });
-  html+='</tbody></table>';
+  let html='';
+  groups.forEach(g=>{
+    const dateShort=(g.date||'').slice(5).replace('-','/');
+    const vendorHeader=showVendor?`🧾 ${esc(g.vendorName)} · ${dateShort||'-'}`:`📅 ${dateShort||'-'}`;
+    html+=`<div class="rcp-group-card" style="background:#fff;border:1px solid var(--gray-200);border-left:3px solid var(--blue);border-radius:10px;margin-bottom:10px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
+        <div style="flex:1;min-width:0;overflow:hidden;">
+          <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${vendorHeader}</div>
+          <div style="font-size:14px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;margin-top:2px;">${fmt(g.total)}원</div>
+        </div>
+      </div>
+      <div style="padding:6px 10px;">
+        <table class="order-tbl">
+          <colgroup>
+            <col/>
+            <col style="width:54px"/>
+            <col style="width:38px"/>
+            <col style="width:64px"/>
+            <col style="width:22px"/>
+          </colgroup>
+          <thead><tr><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
+          <tbody>`;
+    g.rows.forEach(r=>{
+      const itemRaw=r.item||'-';
+      const memoFlag=r.memo?' 💬':'';
+      const itemTxt=esc(itemRaw)+memoFlag;
+      const itemTitle=esc(r.memo?`${itemRaw} · 메모: ${r.memo}`:itemRaw);
+      const unitTxt=r.unit_price?fmt(r.unit_price):'-';
+      const qtyTxt=(r.quantity!=null&&r.quantity!=='')?String(r.quantity):'-';
+      html+=`<tr class="ord-row" data-action="openEditOrderSheet|${r.id}">`
+        +`<td class="ord-item" title="${itemTitle}">${itemTxt}</td>`
+        +`<td class="ord-unit">${unitTxt}</td>`
+        +`<td class="ord-qty">${qtyTxt}</td>`
+        +`<td class="ord-amt">${fmt(r.amount||0)}</td>`
+        +`<td class="ord-arrow">›</td>`
+        +`</tr>`;
+    });
+    html+=`</tbody></table></div></div>`;
+  });
   document.getElementById('orderListData').innerHTML=html;
 }
 // 주문 입력/편집 공통 시트 — editOrderId가 있으면 편집, 없으면 신규
