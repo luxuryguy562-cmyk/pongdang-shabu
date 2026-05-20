@@ -4,6 +4,95 @@
 
 ---
 
+## [2026-05-20] 3개 화면 표시 통일 — D안 ERP 패턴 + 멀티행 입력 (한 세션 마무리)
+
+### 상태: main 머지 완료, 사장님 만족 보고
+### 브랜치: `claude/standardize-transaction-display-nWMBf` → main
+
+### 사장님 호소 진행 흐름 (한 세션, 사장님 짚으심 7회)
+1. "영수증/거래처/카테고리 기록 표시가 다 다름. 영수증 패턴 좋고 거래처 단조로움. 같은 영수증인지 표시 X" — 첫 호소
+2. "단가/수량/금액 안 보임 + 한 항목 두 줄 차지" — 영수증 미니 표 갈아엎기
+3. "금액은 우측 끝(회계 정석), 분류 품목 옆" — 컬럼 순서 정정
+4. "메모 필요할까?" — 컬럼 제거 + 💬 인디케이터
+5. "수동 입력 멀티행 필요. 다음품목 시그널 부족 → [✓ 입력]+[+ 행 추가] 분리" — D 패턴 accordion
+6. "카드마다 헤더 반복 = 공간 과다. 거래처 폭 너무 넓음 + 짧은 한글 가운데 정렬" — sticky 헤더 + 폭 조정 + 가운데 정렬
+7. "따로 노는 느낌. ERP에선 어떻게?" — **D안 채택** (한 표 안 그룹 헤더 행 + 본문 행)
+8. "헤더가 본문 행에 겹쳐 보임" — thead th sticky → thead 자체 sticky로 수정
+9. "액션 버튼 우측 끝으로 밀려 짤림. 센스있게 천만단위까지 안전하게" — td colspan ALL + 내부 flex 분할
+
+### 사장님 결정 (이번 세션)
+1. **A**. 영수증 행 1줄 미니 표 (품목·분류·단가·수량·금액·›)
+2. **B**. 거래처 주문 그룹 카드 (vendor_id+order_date or order_group_id)
+3. **C**. 메모 컬럼 제거 + 💬 인디케이터 (DB 보존)
+4. **D**. 멀티행 accordion 입력 ([✓ 입력]+[+ 행 추가] 분리 = D 패턴)
+5. **E**. 그룹 카드 패턴 catReceipt에도 적용 (식자재/주류/공산품/비품 카드 진입 화면)
+6. **F**. 카드 헤더 1줄 + 표 헤더 sticky 1번 (-41% 공간)
+7. **G**. 짧은 한글 가운데 정렬 + 거래처 표 컬럼 폭 조정
+8. **H**. **D안 ERP 패턴** — 카드 박스 제거 + 한 표 안 그룹 행 + 좌측 컬러바
+9. **I**. 그룹 헤더 td colspan=ALL + 내부 flex (액션 flex-shrink:0)
+
+### DB 마이그레이션 (사장님 "실행승인" 명시)
+- `add_vendor_orders_order_group_id_20260520`: `ALTER TABLE vendor_orders ADD COLUMN order_group_id UUID` + 인덱스
+- 영향 행 0건 (default NULL). 옛 데이터 호환: NULL → (vendor_id+order_date) fallback 그룹핑
+
+### 보류 (다음 페이즈)
+- 지출카테고리 통일 마케팅·세금 (사장님 윤곽: 세금 = 하드코딩 항목 / 마케팅 = 거래처 추가하듯 + 설명/분석 필드) — `todo_next_session.md` 박음
+
+### 작업 내역 (index.html, 누적 +500 라인 이상)
+**CSS**:
+- `.tbl-sticky-header` (cols-5/6) — 화면 상단 sticky 헤더 (옛, .grp-tbl로 대체됨, CSS 잔재 무해)
+- `.grp-tbl-wrap` / `.grp-tbl` / `.grp-hdr` / `.grp-body` / `.grp-date` — D안 ERP 패턴
+- `.grp-hdr-row` / `.grp-hdr-info` / `.grp-hdr-actions` — td 1개 내부 flex 분할
+- `.ord-draft-card` — 멀티행 입력 누적 카드
+
+**HTML**:
+- `#addOrderSheet` 시트 갈아엎기 — 멀티행 accordion + 폼 + draft list + sticky 합계
+
+**JS 새 함수 13개 (멀티행 입력)**:
+- `_resetOrderDraftForm` / `_refreshOrderDraftFormLabel` / `_refreshOrderDraftCommitBtn` / `_showOrderDraftForm`
+- `onOrderDraftInput` / `onOrderAmtInput`
+- `_renderOrderDraftList` / `_updateOrderDraftSum`
+- `expandOrderDraftForm` / `commitOrderDraftRow` / `editOrderDraftRow` / `removeOrderDraftRow`
+
+**JS 함수 재작성**:
+- `renderCatReceiptList` — D안 ERP 패턴 + 분류 컬럼 제거 (5컬럼)
+- `renderReceiptList` — D안 ERP 패턴 + 분류 유지 (6컬럼)
+- `loadVendorOrders` — D안 ERP 패턴 + order_group_id 우선 그룹핑 (5컬럼)
+- `openAddOrderSheet` / `openEditOrderSheet` — 멀티행 그룹 로드
+- `saveOrder` — DELETE+INSERT 패턴 (편집) / N행 INSERT (신규) + 같은 group_id
+- `deleteOrderFromSheet` — 그룹 통째 삭제 (group_id 또는 fallback ids)
+
+### 실측 폭 안전 (모바일 360px)
+| 영역 | 폭 | 처리 |
+|---|---|---|
+| 액션 [✏][🗑] | 70px | flex-shrink:0 우측 끝 고정 |
+| 합계 (천만단위) | ~95px | flex-shrink:0 tabular-nums |
+| 이모지 (📸 🧾) | ~40px | font-size:0.9em |
+| 거래처 (가변) | ~110~140px | flex:1 + min-width:0 + ellipsis |
+
+### 검증
+- node --check 통과 (~656K chars JS, 1 block)
+- 함수 정의 모두 존재
+- 옛 데이터(order_group_id=NULL / receipt_group_id=NULL) 호환 그대로
+
+### dev_lessons 신설
+- #102 모바일 표×카드 결합 한계 → D안 ERP 패턴 채택 기준
+- #103 thead th sticky가 thead 행 높이 0으로 만드는 iOS Safari 버그
+- #104 td 안 액션 영역 = td colspan ALL + 내부 flex-shrink:0 (table colgroup 폭 무관)
+
+### 사장님 검증 시나리오
+1. `https://pongdang-shabu.pages.dev` 강제 새로고침
+2. 영수증 → 📋 기록 내역 / 식자재 등 카테고리 카드 / 거래처 카드 → 주문 기록
+3. 한 표 안에 그룹 헤더 행 + 좌측 컬러바 본문 행 확인
+4. 액션 [✏][🗑] 우측 끝 보이는지
+5. 거래처 + 주문 수동 입력 → 멀티행 [✓ 입력] → 접힘 → [+ 행 추가] → 반복 → [✓ 저장]
+
+### 다음 페이즈 후보 (todo_next_session)
+- 지출카테고리 통일 (세금·마케팅) — 사장님 윤곽 있음
+- 외부 매장 권유 준비 / 공과금 미납 알림 / 거래처 차액 추적
+
+---
+
 ## [2026-05-20] 거래처 주문 멀티행 입력 + 정렬 갱신 (`order_group_id`)
 
 ### 상태: DB 마이그레이션 + 코드 main 머지 완료
