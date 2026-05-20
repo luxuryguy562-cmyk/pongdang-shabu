@@ -2318,10 +2318,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [7] 고정비 ══ -->
 <div id="fixedcostCont" class="container">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-    <p style="font-size:12px;color:var(--gray-600);margin:0;">예상 월 금액을 적어두면 모든 달 가마감에 자동 반영됩니다.</p>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
+    <div style="flex:1;min-width:0;">
+      <div id="fcHeaderTitle" style="font-size:16px;font-weight:700;color:var(--gray-900);">📅 고정비</div>
+      <div id="fcHeaderDesc" style="font-size:12px;color:var(--gray-600);margin-top:2px;">월별 고정 지출 항목</div>
+    </div>
     <button class="btn btn-primary btn-sm" data-action="openAddFcSheet">+ 추가</button>
   </div>
+  <p id="fcHelperText" style="font-size:11px;color:var(--gray-500);margin:0 0 12px 0;">금액을 적어두면 모든 달 가마감에 자동 반영됩니다.</p>
   <div id="fcListData"><div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div></div>
 </div>
 
@@ -3596,14 +3600,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="sheet-title" id="addFcTitle">고정비 추가</div>
   <input id="fcNameInput" class="input-field" placeholder="항목명 (예: 로열티, 임대료)" type="text">
   <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">유형 (어느 카테고리로 집계할지)</div>
-  <select id="fcCatInput" class="input-field">
+  <select id="fcCatInput" class="input-field" data-change="updateFcSheetLabelsFromEvt|this">
     <option value="고정비">고정비 (월세·인터넷 등 변동 없음)</option>
     <option value="공과금">공과금 (전기·가스 등 변동)</option>
     <option value="마케팅">마케팅</option>
     <option value="세금">세금</option>
   </select>
-  <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">예상 월 금액 (가마감 자동 집계)</div>
-  <input id="fcEstimatedMonthly" class="input-field" type="text" inputmode="numeric" placeholder="예: 2,000,000 (월 200만원)" data-input="formatNumberInput|this">
+  <div id="fcAmtLabel" style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">월 고정 금액 (가마감 자동 집계)</div>
+  <input id="fcEstimatedMonthly" class="input-field" type="text" inputmode="numeric" placeholder="예: 2,000,000 (월세)" data-input="formatNumberInput|this">
   <div style="display:flex;gap:8px;align-items:center;">
     <div style="flex:1;">
       <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">자동이체 예정일</div>
@@ -4012,6 +4016,9 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
 // ══════════════════════════════════════════
 let currentStore = null;
 let employees = [], roles = [], vendors = [], fixedCosts = [];
+// 고정비 화면 진입 시 카테고리 필터 (null=전체, '공과금'/'고정비'/'공과금/고정비'/'마케팅'/'세금')
+// '/'로 묶인 통합형은 split해서 매칭 → 옛 통합 카드 동작 보존
+let currentFcFilter = null;
 let vendorMonthTotals = {}; // {vendor_id: {total, count}} — 이번달 거래처별 주문 합계 (카드 표시용)
 let settings = {};
 let selectedEmpId = null, selectedEmpCtx = 'att';
@@ -10310,11 +10317,41 @@ async function loadFixedCosts(){
 }
 // fixed_costs.category → 뱃지 CSS 클래스 매핑
 const FC_BADGE_CLASS={'고정비':'fixed','공과금':'utility','마케팅':'marketing','세금':'tax'};
+// 카테고리별 헤더 메타 (아이콘·제목·설명) — 사장님 결정 2026-05-20
+// '공과금': 매달 변동 (전기·가스) / '고정비': 박혀있는 금액 (월세·인터넷) / 통합·기타: 옛 동작
+const FC_HEADER_META={
+  '공과금':   {emoji:'⚡', title:'공과금', desc:'매달 변동되는 자동이체 항목 (예: 전기·가스·수도)'},
+  '고정비':   {emoji:'📅', title:'고정비', desc:'매달 변동 없는 자동이체 항목 (예: 월세·인터넷)'},
+  '마케팅':   {emoji:'📢', title:'마케팅', desc:'광고비·행사비 등'},
+  '세금':     {emoji:'💰', title:'세금',   desc:'자동이체로 빠지는 세금'},
+  '공과금/고정비':{emoji:'📅', title:'공과금·고정비', desc:'월별 고정 지출 항목'},
+};
+// 필터 카테고리명 → 매칭 허용 카테고리 배열 ('공과금/고정비' 통합 카드는 split)
+function _fcAllowedCats(filter){
+  if(!filter) return null; // null = 전체
+  return filter.split('/').map(s=>s.trim()).filter(Boolean);
+}
+// 헤더 라벨 갱신 (renderFcList에서 자동 호출)
+function updateFcHeader(){
+  const titleEl=document.getElementById('fcHeaderTitle');
+  const descEl=document.getElementById('fcHeaderDesc');
+  if(!titleEl||!descEl) return;
+  const filter=currentFcFilter;
+  const meta=FC_HEADER_META[filter] || {emoji:'📅', title:'고정비·공과금', desc:'월별 고정 지출 항목'};
+  titleEl.textContent=`${meta.emoji} ${meta.title}`;
+  descEl.textContent=meta.desc;
+}
 function renderFcList(){
-  document.getElementById('fcListData').innerHTML=fixedCosts.length?fixedCosts.map(fc=>{
+  updateFcHeader();
+  const allowedCats=_fcAllowedCats(currentFcFilter);
+  const filtered=allowedCats ? fixedCosts.filter(fc=>allowedCats.includes(fc.category||'고정비')) : fixedCosts;
+  const emptyLabel=currentFcFilter || '고정비';
+  document.getElementById('fcListData').innerHTML=filtered.length?filtered.map(fc=>{
     const est=fc.estimated_monthly||0;
     const cat=fc.category||'고정비';
     const badgeCls=FC_BADGE_CLASS[cat]||'fixed';
+    // 카테고리별 금액 라벨 분기 — 공과금=변동(예상), 고정비=박힘(고정)
+    const amtLabel = cat==='공과금' ? '예상 월 금액' : (cat==='고정비' ? '월 고정 금액' : '예상 월 금액');
     return `
     <div class="fixedcost-item ${fc.is_active?'':'inactive'}" style="display:flex;align-items:center;gap:8px;padding:14px 12px;border-bottom:1px solid var(--gray-100);">
       <div style="flex:1;min-width:0;">
@@ -10323,15 +10360,80 @@ function renderFcList(){
       </div>
       <div style="text-align:right;font-variant-numeric:tabular-nums;min-width:100px;">
         <div style="font-size:14px;font-weight:700;color:${est>0?'var(--gray-900)':'var(--gray-400)'};">${est>0?fmt(est)+'원':'미입력'}</div>
-        <div style="font-size:10px;color:var(--gray-500);margin-top:2px;">예상 월 금액</div>
+        <div style="font-size:10px;color:var(--gray-500);margin-top:2px;">${amtLabel}</div>
       </div>
       <button class="btn btn-secondary btn-sm" data-action="openEditFcSheet|${fc.id}">편집</button>
       ${fc.is_active?`<button class="btn btn-danger btn-sm" data-action="toggleFc|${fc.id}|false">숨김</button>`:`<button class="btn btn-success btn-sm" data-action="toggleFc|${fc.id}|true">복원</button>`}
     </div>`;
-  }).join(''):'<div class="empty-state"><div class="empty-icon">📋</div><p>등록된 고정비가 없습니다</p></div>';
+  }).join(''):`<div class="empty-state"><div class="empty-icon">📋</div><p>등록된 ${emptyLabel}이(가) 없습니다</p></div>`;
 }
-function openAddFcSheet(){if(!guardStore())return;document.getElementById('addFcTitle').innerText='고정비 추가';document.getElementById('fcNameInput').value='';document.getElementById('fcCatInput').value='고정비';document.getElementById('editFcId').value='';document.getElementById('fcEstimatedMonthly').value='';document.getElementById('fcExpectedDay').value='';document.getElementById('fcToleranceDays').value='3';openSheet('addFcSheet');}
-function openEditFcSheet(id){const fc=fixedCosts.find(x=>x.id===id);if(!fc)return;document.getElementById('addFcTitle').innerText='고정비 편집';document.getElementById('fcNameInput').value=fc.name;document.getElementById('fcCatInput').value=fc.category||'고정비';document.getElementById('editFcId').value=fc.id;document.getElementById('fcEstimatedMonthly').value=fc.estimated_monthly?fmt(fc.estimated_monthly):'';document.getElementById('fcExpectedDay').value=fc.expected_day||'';document.getElementById('fcToleranceDays').value=fc.tolerance_days||3;openSheet('addFcSheet');}
+// 시트 라벨/placeholder 분기 — 공과금=예상(변동) / 고정비=월 고정 / 그 외=예상
+function updateFcSheetLabels(cat){
+  const amtLabel=document.getElementById('fcAmtLabel');
+  const amtInput=document.getElementById('fcEstimatedMonthly');
+  if(!amtLabel||!amtInput) return;
+  if(cat==='공과금'){
+    amtLabel.textContent='예상 월 금액 (변동 — 가마감 자동 집계)';
+    amtInput.placeholder='예: 300,000 (전기 평균)';
+  } else if(cat==='고정비'){
+    amtLabel.textContent='월 고정 금액 (가마감 자동 집계)';
+    amtInput.placeholder='예: 2,000,000 (월세)';
+  } else {
+    amtLabel.textContent='예상 월 금액 (가마감 자동 집계)';
+    amtInput.placeholder='예: 500,000';
+  }
+}
+function updateFcSheetLabelsFromEvt(el){ updateFcSheetLabels(el.value); }
+// 카테고리 셀렉트 잠금/해제 — currentFcFilter가 단일 카테고리면 잠금, 통합('공과금/고정비')이거나 null이면 해제
+function _setFcCatLockState(catSel, lockedCat){
+  if(lockedCat){
+    catSel.value=lockedCat;
+    catSel.disabled=true;
+    catSel.style.background='var(--gray-100)';
+    catSel.style.color='var(--gray-700)';
+    catSel.style.cursor='not-allowed';
+  } else {
+    catSel.disabled=false;
+    catSel.style.background='';
+    catSel.style.color='';
+    catSel.style.cursor='';
+  }
+}
+function openAddFcSheet(){
+  if(!guardStore())return;
+  const allowedCats=_fcAllowedCats(currentFcFilter);
+  // 단일 카테고리 필터면 잠금, 통합/null이면 해제
+  const lockedCat=(allowedCats && allowedCats.length===1) ? allowedCats[0] : null;
+  const defaultCat=lockedCat || (allowedCats && allowedCats[0]) || '고정비';
+  document.getElementById('addFcTitle').innerText=defaultCat+' 추가';
+  document.getElementById('fcNameInput').value='';
+  const catSel=document.getElementById('fcCatInput');
+  catSel.value=defaultCat;
+  _setFcCatLockState(catSel, lockedCat);
+  document.getElementById('editFcId').value='';
+  document.getElementById('fcEstimatedMonthly').value='';
+  document.getElementById('fcExpectedDay').value='';
+  document.getElementById('fcToleranceDays').value='3';
+  updateFcSheetLabels(catSel.value);
+  openSheet('addFcSheet');
+}
+function openEditFcSheet(id){
+  const fc=fixedCosts.find(x=>x.id===id);
+  if(!fc)return;
+  const cat=fc.category||'고정비';
+  document.getElementById('addFcTitle').innerText=cat+' 편집';
+  document.getElementById('fcNameInput').value=fc.name;
+  const catSel=document.getElementById('fcCatInput');
+  catSel.value=cat;
+  // 편집은 셀렉트 잠금 X — 사장님이 다른 카테고리로 옮기고 싶을 수 있음
+  _setFcCatLockState(catSel, null);
+  document.getElementById('editFcId').value=fc.id;
+  document.getElementById('fcEstimatedMonthly').value=fc.estimated_monthly?fmt(fc.estimated_monthly):'';
+  document.getElementById('fcExpectedDay').value=fc.expected_day||'';
+  document.getElementById('fcToleranceDays').value=fc.tolerance_days||3;
+  updateFcSheetLabels(cat);
+  openSheet('addFcSheet');
+}
 async function saveFc(){
   if(!guardStore())return;const name=document.getElementById('fcNameInput').value.trim();if(!name)return toast('항목명을 입력하세요.','warn');
   const cat=document.getElementById('fcCatInput').value;const eid=document.getElementById('editFcId').value;
@@ -13762,15 +13864,21 @@ function _expCatIcon(name){ return _expCatIconMap[name] || 'i-folder'; }
 // 카테고리 카드 클릭 시 어디로? (data_source 기반)
 //   - receipts/composite/vendor_orders → openCatReceipt|cat:<id> (표 + 필터)
 //   - attendance → nav|wage
-//   - fixed_costs → nav|fixedcost
+//   - fixed_costs → openFcCategory|<카테고리명> (카테고리별 분리 진입)
 //   - manual → goCategoryDetail|<name> (잠시 기존 — 사장님 결정 9·10 뒤로)
 function _expCatAction(cat){
   const ds = cat.data_source || 'manual';
   if(ds==='attendance') return 'nav|wage';
-  if(ds==='fixed_costs') return 'nav|fixedcost';
+  if(ds==='fixed_costs') return 'openFcCategory|'+cat.name;
   if(ds==='manual') return 'goCategoryDetail|'+cat.name;
   // receipts / composite / vendor_orders
   return 'openCatReceipt|cat:'+cat.id;
+}
+// 고정비 카테고리별 진입 (공과금 카드면 공과금 항목만, 고정비 카드면 고정비만 — 사장님 호소 2026-05-20)
+// 통합 카드('공과금/고정비')는 옛 통합 동작 보존: split해서 매칭 (renderFcList 참조)
+function openFcCategory(catName){
+  currentFcFilter = catName || null;
+  nav('fixedcost');
 }
 
 // ─── 진입 즉시 스켈레톤 렌더 (2026-05-19 사장님 "없어졌다 생기는 느낌" 해결) ───

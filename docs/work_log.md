@@ -4,6 +4,52 @@
 
 ---
 
+## [2026-05-20] 공과금/고정비 카드 분리 진입 + 라벨 카테고리별 분기
+
+### 상태: 브랜치 push, main 자동 머지 대기
+### 브랜치: `claude/fix-expense-grid-categories-GZsNZ`
+
+### 사장님 호소
+- "지출 그리드에서 공과금/고정비 나눴는데 안에 들어가면 둘 다 똑같이 다 보임. 이름만 다른 그리드 2개. 묶음이라 그런가?"
+
+### 진단 (묶음 아님)
+- 카드는 분리됐는데 둘 다 같은 `nav|fixedcost` 액션 → 같은 화면(`#fixedcostCont`)에 카테고리 필터 X → 전체 표시
+- `expense_categories` DB 레벨 분리는 정상 (사장님 매장 2026-05-18 (6) 마이그레이션)
+
+### 사장님 결정
+- ✅ 카드 클릭 시 카테고리별 화면 분리 (필터링)
+- ✅ "+ 추가" 카테고리 셀렉트 = 현재 카테고리로 잠금(회색 readonly 표시)
+- ✅ 라벨 분기: **고정비="월 고정 금액"** (박혀있는 금액, 변경 시 사장님 체크) / **공과금="예상 월 금액"** (매달 변동)
+- ✅ placeholder 분기: 고정비=`예: 2,000,000 (월세)` / 공과금=`예: 300,000 (전기 평균)`
+- ✅ 헤더 아이콘·제목·설명 카테고리별 분기 (외부 매장 권유 대비)
+- ✅ 통합 카드(`공과금/고정비`, 다른 매장) = split 매칭 → 옛 동작 보존
+
+### critic 정정 (사장님 짚음)
+- CTO 초기 비판: "DB가 같은 컬럼이라 라벨 통일이 단순" → 사장님 반박: "고정비는 2년 계약 기반 박혀있는 금액. 공과금은 매달 변동. 사장님이 머릿속에서 처리하는 방식이 다름"
+- CTO 인정: 변동 빈도 차이를 못 봤음. 라벨 분기 채택 (사장님 의견 옳음, 헌법 3-1 무비판적 동조 X = 비판 후 사장님 근거가 더 강하면 인정도 OK)
+
+### 변경 (index.html)
+- 전역 `currentFcFilter` 도입 (L4019~21)
+- `#fixedcostCont` 헤더 동적화 (L2321~28): `fcHeaderTitle`/`fcHeaderDesc`/`fcHelperText`
+- `#fcCatInput` 셀렉트에 `data-change="updateFcSheetLabelsFromEvt|this"` 추가
+- 새 함수: `openFcCategory(catName)`, `updateFcHeader()`, `updateFcSheetLabels(cat)`, `updateFcSheetLabelsFromEvt(el)`, `_fcAllowedCats(filter)`, `_setFcCatLockState(catSel, lockedCat)`
+- 상수: `FC_HEADER_META` (카테고리별 아이콘·제목·설명)
+- `_expCatAction`: `fixed_costs` 분기 → `openFcCategory|<카테고리명>` 반환
+- `renderFcList`: `_fcAllowedCats`로 필터 + `cat==='공과금'/'고정비'` 라벨 분기
+- `openAddFcSheet`: lockedCat 박힘, `_setFcCatLockState`로 회색 잠금
+- `openEditFcSheet`: 편집 시 셀렉트 활성 유지(사장님이 다른 카테고리로 이동 가능)
+
+### 검증
+- ✅ node --check 통과
+- ✅ 사장님 매장 (분리됨) 시뮬레이션: 공과금 카드 → 공과금만, 고정비 카드 → 고정비만
+- ✅ 다른 매장 (통합 '공과금/고정비') 시뮬레이션: 통합 카드 → 둘 다 (split 매칭)
+- ⏳ 사장님 실측 검증 대기
+
+### dev_lessons 후보 (다음 세션 정리 시)
+- 카드 분리만 하고 진입 화면 분리 안 한 = "이름만 다른 그리드 2개" 사고 패턴. 카드 분리 시 진입 컨텍스트(currentXFilter) 같이 분리 필수.
+
+---
+
 ## [2026-05-20] 3개 화면 표시 통일 — D안 ERP 패턴 + 멀티행 입력 (한 세션 마무리)
 
 ### 상태: main 머지 완료, 사장님 만족 보고
