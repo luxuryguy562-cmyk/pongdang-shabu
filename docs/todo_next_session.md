@@ -2,6 +2,50 @@
 
 ---
 
+## 🆕 2026-05-20 추가 — DB 무결성 점검 잔재 + 헌법 보강
+
+### 🟡 vendors 데이터 정리 (이번 세션 점검 발견)
+1. **좀비 거래처 4개** (농협/다이소/쿠팡/탑마트, "직구" 텍스트, vendor_orders 0건, category_id NULL)
+   - 비활성화 (is_active=false) 또는 hard delete 검토
+   - 사장님 결정: "직구는 거래처 아니라 영수증 채널" → 거래처 등록에서 빼는 게 맞나?
+
+2. **'기타' 카테고리 3개 중복** (옛 todo + 이번 점검 재확인)
+   - expense 활성 1개 (사용 중)
+   - income 활성 1개 (매출 카테고리, sort_order=20)
+   - income 비활 1개 (sort_order=18, 옛 데이터)
+   - → income 비활 1개 hard delete, 나머지 2개 유지 (expense/income 다른 용도라 OK)
+
+3. **'결제' 카테고리 중복 4종** (QR/송금/현금/카드 각 income 비활/활성 중복)
+   - 비활성 4개 정리 검토
+
+4. **receipts 2건 category_id NULL** (사장님 미분류 영수증)
+   - 영수증 기록내역에서 사장님이 직접 분류
+
+5. **vendors FK 자동 점검 기능** (재발 방지 — dev_lessons #106)
+   - 진입 시 category 텍스트와 category_id 일치 검증
+   - 불일치하면 ⚠️ 표시 + 사장님께 알림
+
+### 🟡 헌법·문서 보강
+6. **헌법 8-A 갱신** (dev_lessons #107)
+   - `.mcp.json --read-only`가 DML 통과시키는 거 실측 확인
+   - DDL 거부 여부 실측 (apply_migration 시도)
+   - 정확 동작 매트릭스 박기
+   - 변경 SQL의 유일한 안전망 = 사장님 "실행 승인" 4글자 명시
+
+7. **`loadExpHubData` vs `calcExpenseByCategories` 분기 동기화** (dev_lessons #105)
+   - 다른 합산 함수도 분기 누락 있는지 grep 검증
+   - 공통 헬퍼 추출 검토 (sumAllSourcesByCatId 재사용)
+
+### 🟢 이번 세션 완료
+- ✅ 공과금/고정비 카드 클릭 시 카테고리별 분리 진입 (PR #176)
+- ✅ 세금·마케팅·기타 통합 진입 화면 manualCat (PR #177)
+- ✅ 세금 학습 규칙 시드 15건 자동 INSERT
+- ✅ 그리드 manual 카드 receipts·vendor_orders·fc 합산 누락 fix (PR #178)
+- ✅ 프레시원 category_id 박기 (SQL UPDATE, 사장님 실행 승인)
+- ✅ 식자재 카드 +1,460,219원 복원
+
+---
+
 ## ✅ 2026-05-20 완료 — 영수증·거래처·카테고리 표시 통일 (D안 ERP + 멀티행)
 
 ### 한 세션 마무리 결과 (사장님 짚으심 9회, main 머지 8회)

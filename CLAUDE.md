@@ -274,10 +274,15 @@ to: [다음 에이전트]
 
 ---
 
-## 제8조-A. Supabase MCP 도구 안전 규칙 (2026-05-17 신설)
+## 제8조-A. Supabase MCP 도구 안전 규칙 (2026-05-17 신설, 2026-05-20 실측 정정)
 
 > 사장님이 claude.ai에서 Supabase OAuth 커넥터를 승인하여 Judypapa 조직에 광범위 권한(프로젝트 삭제 포함)을 부여한 상태.
-> 그러나 `.mcp.json`이 `--read-only`로 잠겨 있어 MCP 서버 레벨에서 변경 도구를 거부함. 본 조항은 이 2중 안전망을 명문화한다.
+> `.mcp.json`이 `--read-only`로 잠겨 있다.
+>
+> ⚠️ **2026-05-20 실측 발견 (헌법 1-7 추측 금지 위반 사례 — dev_lessons #107)**:
+> 옛 본 조항은 "`--read-only`가 변경 도구를 거부할 가능성 큼"이라 추측 박았으나, **실제로 `UPDATE` SQL이 통과됨** (프레시원 category_id fix 시 확인).
+> → `--read-only`는 **DDL만 차단**하는 것으로 추정 (DDL 거부 여부 다음 세션 정확 검증).
+> → **DML(INSERT/UPDATE/DELETE)의 유일한 안전망 = 사장님 "실행 승인" 4글자 게이트** (8-A-4).
 
 ### 8-A-1. 1차 방어선 — `.mcp.json --read-only` 절대 유지
 - `.mcp.json`의 `--read-only` 플래그는 **절대 임의로 제거하지 않는다.**
@@ -291,9 +296,10 @@ to: [다음 에이전트]
 - `get_*` 계열: `get_project_url`, `get_anon_key`/`get_publishable_api_key`, `get_logs`, `get_advisors`
 - `execute_sql` (단, **SELECT 구문만**)
 
-**🟡 노란불 — 사장님 승인 필수 (변경 작업)**
-- `execute_sql` (INSERT / UPDATE / DELETE / WITH ... 변경 SQL) — 1차 방어선이 거부할 가능성 큼
-- 변경 SQL 실행 전: SQL 본문 + 한글 설명 + 영향 행 수 추정 → 사장님 "OK" → 실행 → 결과 보고
+**🟡 노란불 — 사장님 "실행 승인" 4글자 필수 (변경 작업)**
+- `execute_sql` (INSERT / UPDATE / DELETE / WITH ... 변경 SQL) — **`--read-only`가 거부 안 함 (2026-05-20 실측)**
+- 변경 SQL 실행 전: SQL 본문 + 한글 설명 + 영향 행 수 추정 + 백업 SELECT → 사장님 **"실행 승인" 4글자** → 실행 → 검증 SELECT
+- 옛 "OK"만으로는 실행 금지 (애매 = 빨간불 취급, 8-A-4)
 
 **🔴 빨간불 — 절대 자동 호출 금지 (사장님이 "실행 승인" 명시한 1회만)**
 - `apply_migration` (DDL: 테이블/컬럼 생성·변경·삭제)
