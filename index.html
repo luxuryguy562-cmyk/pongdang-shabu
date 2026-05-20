@@ -4622,7 +4622,12 @@ function pickCatReceiptFilter(val){
 }
 
 function renderCatReceiptList(rows){
-  // openReceiptEdit(id)는 rcpRecords 글로벌에서 영수증을 찾음 → catReceipt 행 클릭 편집 가능하게 공유
+  // 2026-05-20 갈아엎기: 평탄 7컬럼 표 → 영수증 기록 내역과 동일 그룹 카드 패턴
+  //  · 카테고리 필터링은 카드 안 행 단위 (한 영수증의 그 카테고리 행만 카드에 풀)
+  //  · 그 카테고리 합계만 헤더에 표시 (영수증 전체 합계 X)
+  //  · 카드 [✏ 편집] = openReceiptGroupEdit (영수증 통째 편집, 다른 카테고리 행도 시트에서 확인 가능)
+  //  · 카드 [🗑] = deleteReceiptGroup (영수증 통째 삭제)
+  // openReceiptEdit(id)는 rcpRecords 글로벌에서 영수증을 찾음 → 행 클릭 편집 가능하게 공유
   rcpRecords = rows;
   const body = document.getElementById('catReceiptBody');
   const totalEl = document.getElementById('catReceiptTotal');
@@ -4642,44 +4647,69 @@ function renderCatReceiptList(rows){
     totalEl.textContent = '이번달 0원 · 0건';
     return;
   }
+  // 그룹 카드 패턴 (영수증 기록 내역과 동일)
+  const groups = _groupReceipts(filtered);
   let total = 0;
-  filtered.forEach(r=>{ if(r.note==='정상') total += (r.total_price||0); });
+  groups.forEach(g=>{ total += g.total; });
   totalEl.textContent = `이번달 ${fmt(total)}원 · ${filtered.length}건`;
-  const html = `
-    <div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead>
-        <tr style="background:var(--gray-50);color:var(--gray-700);font-weight:700;">
-          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">날짜</th>
-          <th style="text-align:center;padding:8px 6px;">가게</th>
-          <th style="text-align:center;padding:8px 6px;">품목</th>
-          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">금액</th>
-          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">분류</th>
-          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">거래</th>
-          <th style="text-align:center;padding:8px 6px;white-space:nowrap;">📸/✏️</th>
-        </tr>
-      </thead>
-      <tbody>
-      ${filtered.map(r=>{
-        const im = r.input_method==='photo'?'📸':(r.input_method==='manual'?'✏️':'');
-        const off = r.note && r.note!=='정상';
-        const catLabel = formatRcpCatLabel(r.category||'');
-        const channel = r.vendor_id ? '🏪' : '🛒';
-        const amt = r.total_price||0;
-        return `<tr style="border-top:1px solid var(--gray-100);${off?'opacity:0.5;text-decoration:line-through;':''};cursor:pointer;" data-action="openReceiptEdit|${r.id}">
-          <td style="padding:8px 6px;white-space:nowrap;">${(r.receipt_date||'').slice(5)}</td>
-          <td style="padding:8px 6px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.vendor||'-')}</td>
-          <td style="padding:8px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.item||'-')}</td>
-          <td style="padding:8px 6px;text-align:right;white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums;">${amt?fmt(amt):'-'}</td>
-          <td style="padding:8px 6px;color:var(--gray-600);font-size:11px;white-space:nowrap;">${esc(catLabel)}</td>
-          <td style="padding:8px 6px;text-align:center;font-size:14px;">${channel}</td>
-          <td style="padding:8px 6px;text-align:center;font-size:14px;">${im}</td>
-        </tr>`;
-      }).join('')}
-      </tbody>
-    </table>
-    </div>
-  `;
+  // 날짜로 묶음 (sticky 헤더)
+  const byDate = {};
+  groups.forEach(g=>{
+    const d = g.date || '-';
+    if(!byDate[d]) byDate[d] = [];
+    byDate[d].push(g);
+  });
+  const dates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  let html = '';
+  dates.forEach(d=>{
+    html += `<div style="font-size:12px;font-weight:700;color:var(--gray-600);padding:10px 2px 6px;position:sticky;top:0;background:#fff;z-index:2;">📅 ${d}</div>`;
+    byDate[d].forEach(g=>{
+      const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
+      const photoBadge = g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'');
+      const errBadge = g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
+      html += `<div class="rcp-group-card" style="background:#fff;border:1px solid var(--gray-200);border-left:3px solid var(--blue);border-radius:10px;margin-bottom:10px;overflow:hidden;${g.hasErr?'opacity:0.85;':''}">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
+          <div style="flex:1;min-width:0;overflow:hidden;">
+            <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${photoBadge?photoBadge+' ':''}🧾 ${esc(g.vendor||'(거래처 없음)')}${errBadge}</div>
+            <div style="font-size:14px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;margin-top:2px;">${fmt(g.total)}원</div>
+          </div>
+          <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:11px;font-weight:700;" data-action="openReceiptGroupEdit|${editKey}">✏ 편집</button>
+          <button type="button" class="btn btn-danger" style="padding:6px 8px;font-size:11px;font-weight:700;" data-action="deleteReceiptGroup|${editKey}">🗑</button>
+        </div>
+        <div style="padding:6px 10px;">
+          <table class="order-tbl">
+            <colgroup>
+              <col style="width:100px"/>
+              <col style="width:48px"/>
+              <col style="width:64px"/>
+              <col style="width:44px"/>
+              <col style="width:76px"/>
+              <col style="width:22px"/>
+            </colgroup>
+            <thead><tr><th>품목</th><th>분류</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
+            <tbody>`;
+      g.rows.forEach(r=>{
+        const isErr = r.note!=='정상';
+        const catRaw = r.category||'';
+        const catShort = catRaw.includes('>') ? catRaw.split('>').pop().trim() : catRaw||'-';
+        const unitTxt = r.unit_price?fmt(r.unit_price):'-';
+        const qtyTxt = (r.qty!=null && r.qty!=='') ? String(r.qty) : '-';
+        const cls = ['ord-row'];
+        if(isErr) cls.push('err');
+        const itemTxt = esc(r.item||'(품목 없음)');
+        const catTxt = esc(catShort);
+        html += `<tr class="${cls.join(' ')}" data-action="openReceiptEdit|${r.id}">`
+          + `<td class="ord-item" title="${itemTxt}">${itemTxt}</td>`
+          + `<td class="ord-cat" title="${esc(catRaw||'미분류')}">${catTxt}</td>`
+          + `<td class="ord-unit">${unitTxt}</td>`
+          + `<td class="ord-qty">${qtyTxt}</td>`
+          + `<td class="ord-amt">${fmt(r.total_price||0)}</td>`
+          + `<td class="ord-arrow">›</td>`
+          + `</tr>`;
+      });
+      html += `</tbody></table></div></div>`;
+    });
+  });
   body.innerHTML = html;
 }
 
@@ -5486,11 +5516,11 @@ function renderReceiptList(){
         <div style="padding:6px 10px;">
           <table class="order-tbl">
             <colgroup>
-              <col/>
-              <col style="width:56px"/>
-              <col style="width:54px"/>
-              <col style="width:38px"/>
+              <col style="width:100px"/>
+              <col style="width:48px"/>
               <col style="width:64px"/>
+              <col style="width:44px"/>
+              <col style="width:76px"/>
               <col style="width:22px"/>
             </colgroup>
             <thead><tr><th>품목</th><th>분류</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
