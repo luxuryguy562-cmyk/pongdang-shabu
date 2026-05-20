@@ -16167,9 +16167,11 @@ function renderAdminAiCards(s){
     let body;
     if(c.isModel){
       const total = Object.values(s.modelDist).reduce((a,n)=>a+n, 0);
-      const items = Object.entries(s.modelDist).sort((a,b)=>b[1]-a[1]).slice(0,3);
+      const sorted = Object.entries(s.modelDist).sort((a,b)=>b[1]-a[1]);
+      const items = sorted.slice(0,6); // 상위 6개까지 (옛 3개 → 사장님 짚음: 다 보여야)
+      const rest = sorted.length - items.length;
       body = items.length
-        ? items.map(([m,n])=>{ const pct = total?Math.round(n/total*100):0; return `<div style="display:flex;justify-content:space-between;font-size:11px;line-height:1.5;"><span style="color:var(--gray-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m}</span><span style="font-weight:700;font-variant-numeric:tabular-nums;">${pct}%</span></div>`; }).join('')
+        ? items.map(([m,n])=>{ const pct = total?Math.round(n/total*100):0; return `<div style="display:flex;justify-content:space-between;font-size:10px;line-height:1.5;"><span style="color:var(--gray-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${m}</span><span style="font-weight:700;font-variant-numeric:tabular-nums;margin-left:4px;">${pct}%</span></div>`; }).join('') + (rest>0 ? `<div style="font-size:9px;color:var(--gray-500);margin-top:2px;">+${rest}개 더</div>` : '')
         : '<div style="font-size:11px;color:var(--gray-500);">데이터 없음</div>';
     } else {
       body = `<div style="font-size:17px;font-weight:900;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.main||'-'}</div>
