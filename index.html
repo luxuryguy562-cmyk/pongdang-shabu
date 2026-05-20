@@ -576,6 +576,35 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .tbl-sticky-header.cols-5{grid-template-columns:1fr 64px 44px 76px 22px;}
 .tbl-sticky-header.cols-6{grid-template-columns:1fr 48px 64px 44px 76px 22px;}
 .tbl-sticky-header span{text-align:center;}
+
+/* 그룹 표 (D안 — 2026-05-20 ERP 패턴, 사장님 호소 "따로 노는 느낌" 해소)
+   카드 X → 한 표 안에 그룹 헤더 행 + 본문 행 / 같은 영수증 = 좌측 컬러바
+   thead th sticky (iOS Safari 호환) — 한 박스 안에 헤더+본문 통합 */
+.grp-tbl{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;overflow:hidden;}
+.grp-tbl thead th{position:sticky;top:calc(60px + env(safe-area-inset-top, 0));z-index:5;background:var(--gray-50);font-size:10px;font-weight:700;color:var(--gray-500);padding:8px 2px;text-align:center;border-bottom:1px solid var(--gray-200);letter-spacing:0.3px;}
+/* 그룹 헤더 행 — 거래처 · 합계 + 액션 버튼 */
+.grp-tbl .grp-hdr td{background:var(--gray-50);font-size:12px;font-weight:800;padding:7px 8px;border-top:6px solid #fff;border-bottom:1px solid var(--gray-200);color:var(--text);}
+.grp-tbl .grp-hdr.first td{border-top:none;}
+.grp-tbl .grp-hdr td:first-child{border-left:3px solid var(--blue);padding-left:8px;}
+.grp-tbl .grp-hdr-info{display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden;}
+.grp-tbl .grp-hdr-info .name{font-weight:800;overflow:hidden;text-overflow:ellipsis;}
+.grp-tbl .grp-hdr-info .sum{font-weight:900;font-variant-numeric:tabular-nums;flex-shrink:0;}
+.grp-tbl .grp-hdr-actions{text-align:right;white-space:nowrap;}
+.grp-tbl .grp-hdr-actions .btn{padding:4px 7px;font-size:10px;font-weight:700;margin-left:3px;}
+/* 본문 행 — 같은 영수증임을 첫 컬럼 좌측 컬러바로 표시 */
+.grp-tbl .grp-body{cursor:pointer;}
+.grp-tbl .grp-body:active td{background:var(--gray-100);}
+.grp-tbl .grp-body td{padding:8px 2px;font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--gray-100);}
+.grp-tbl .grp-body td:first-child{border-left:3px solid var(--blue);padding-left:8px;font-weight:600;color:var(--gray-700);text-align:center;}
+.grp-tbl .grp-body .gb-cat{font-size:10px;color:var(--gray-600);text-align:center;}
+.grp-tbl .grp-body .gb-unit, .grp-tbl .grp-body .gb-qty{text-align:right;font-variant-numeric:tabular-nums;color:var(--gray-600);padding-right:4px;}
+.grp-tbl .grp-body .gb-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;padding-right:4px;}
+.grp-tbl .grp-body .gb-arrow{text-align:center;color:var(--gray-400);font-size:14px;padding:0;}
+.grp-tbl .grp-body.err td{opacity:0.55;text-decoration:line-through;}
+.grp-tbl .grp-body.suspect td{background:#FEF9C3;}
+/* 날짜 헤더 행 — 그룹 위에 sticky 라벨 */
+.grp-tbl .grp-date td{background:#fff;font-size:11px;font-weight:700;color:var(--gray-600);padding:10px 8px 4px;border-top:1px solid var(--gray-100);}
+.grp-tbl .grp-date.first td{border-top:none;padding-top:6px;}
 /* 주문 멀티행 입력 — 누적된 행 카드 (2026-05-20 사장님 D 패턴 accordion) */
 .ord-draft-card{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;}
 .ord-draft-card .odc-info{flex:1;min-width:0;overflow:hidden;}
@@ -1377,7 +1406,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </div>
         <input type="month" id="rcpListMonth" class="input-inline" style="width:140px;" data-change="onRcpListMonthChange|this">
       </div>
-      <div class="tbl-sticky-header cols-6"><span>품목</span><span>분류</span><span>단가</span><span>수량</span><span>금액</span><span></span></div>
       <div id="rcpListBody">
         <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>
       </div>
@@ -1619,7 +1647,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </button>
     <input type="month" id="catReceiptMonth" class="input-inline" style="width:140px;flex-shrink:0;" data-change="onCatReceiptMonthChange|this">
   </div>
-  <div class="tbl-sticky-header cols-5"><span>품목</span><span>단가</span><span>수량</span><span>금액</span><span></span></div>
   <div id="catReceiptBody">
     <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>
   </div>
@@ -2238,7 +2265,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <!-- 주문 수동 입력 버튼은 데이터 위 (사장님 요청 2026-05-15 — 데이터 많으면 스크롤 부담) -->
     <button class="btn btn-primary btn-full" style="margin-bottom:10px;" data-action="openAddOrderSheet">+ 주문 수동 입력</button>
-    <div class="tbl-sticky-header cols-5"><span>품목</span><span>단가</span><span>수량</span><span>금액</span><span></span></div>
     <div id="orderListData"></div>
   </div>
   <!-- 📊 대조 & 단가 (거래처 장표 ↔ 내 송금 일별 대조 + 품목별 월 비교) -->
@@ -4659,12 +4685,14 @@ function renderCatReceiptList(rows){
     totalEl.textContent = '이번달 0원 · 0건';
     return;
   }
-  // 그룹 카드 패턴 (영수증 기록 내역과 동일)
+  // 2026-05-20 D안 갈아엎기: 카드×표 결합 → 한 표 안 그룹 헤더 행 + 본문 행 (ERP 패턴)
+  // 같은 영수증 = 좌측 컬러바 + 그룹 헤더 행 / 본문 행 클릭 = 그 영수증 행 편집
+  // 분류 컬럼 X (카테고리 한정 화면이라 정보 가치 X) = 5컬럼
   const groups = _groupReceipts(filtered);
   let total = 0;
   groups.forEach(g=>{ total += g.total; });
   totalEl.textContent = `이번달 ${fmt(total)}원 · ${filtered.length}건`;
-  // 날짜로 묶음 (sticky 헤더)
+  // 날짜 그룹핑
   const byDate = {};
   groups.forEach(g=>{
     const d = g.date || '-';
@@ -4672,53 +4700,49 @@ function renderCatReceiptList(rows){
     byDate[d].push(g);
   });
   const dates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-  let html = '';
+  let html = `<table class="grp-tbl">
+    <colgroup><col/><col style="width:64px"/><col style="width:44px"/><col style="width:76px"/><col style="width:22px"/></colgroup>
+    <thead><tr><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
+    <tbody>`;
+  let firstDate = true;
   dates.forEach(d=>{
-    html += `<div style="font-size:12px;font-weight:700;color:var(--gray-600);padding:10px 2px 6px;position:sticky;top:0;background:#fff;z-index:2;">📅 ${d}</div>`;
+    html += `<tr class="grp-date${firstDate?' first':''}"><td colspan="5">📅 ${esc(d)}</td></tr>`;
+    firstDate = false;
+    let firstGroup = true;
     byDate[d].forEach(g=>{
       const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
       const photoBadge = g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'');
       const errBadge = g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
-      // 2026-05-20 D안: 카드 헤더 1줄 압축 + 카드 안 표 헤더 제거 + 분류 컬럼 제거 (catReceipt는 카테고리 한정 화면 — 분류 정보 가치 X)
-      // 컬럼: 품목(100) / 단가(64) / 수량(44) / 금액(76) / ›(22) = 5컬럼
-      html += `<div class="rcp-group-card" style="background:#fff;border:1px solid var(--gray-200);border-left:3px solid var(--blue);border-radius:10px;margin-bottom:8px;overflow:hidden;${g.hasErr?'opacity:0.85;':''}">
-        <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
-          <div style="flex:1;min-width:0;overflow:hidden;display:flex;align-items:baseline;gap:6px;white-space:nowrap;">
-            <span style="font-size:12px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;">${photoBadge?photoBadge+' ':''}🧾 ${esc(g.vendor||'(거래처 없음)')}</span>
-            <span style="font-size:13px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0;">· ${fmt(g.total)}원</span>
-            ${errBadge}
-          </div>
-          <button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:10px;font-weight:700;" data-action="openReceiptGroupEdit|${editKey}">✏</button>
-          <button type="button" class="btn btn-danger" style="padding:4px 6px;font-size:10px;font-weight:700;" data-action="deleteReceiptGroup|${editKey}">🗑</button>
-        </div>
-        <div style="padding:4px 10px;">
-          <table class="order-tbl">
-            <colgroup>
-              <col/>
-              <col style="width:64px"/>
-              <col style="width:44px"/>
-              <col style="width:76px"/>
-              <col style="width:22px"/>
-            </colgroup>
-            <tbody>`;
+      html += `<tr class="grp-hdr${firstGroup?' first':''}">
+        <td colspan="4"><div class="grp-hdr-info">
+          <span class="name">${photoBadge?photoBadge+' ':''}🧾 ${esc(g.vendor||'(거래처 없음)')}</span>
+          <span class="sum">· ${fmt(g.total)}원</span>
+          ${errBadge}
+        </div></td>
+        <td class="grp-hdr-actions">
+          <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
+          <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
+        </td>
+      </tr>`;
+      firstGroup = false;
       g.rows.forEach(r=>{
         const isErr = r.note!=='정상';
         const unitTxt = r.unit_price?fmt(r.unit_price):'-';
         const qtyTxt = (r.qty!=null && r.qty!=='') ? String(r.qty) : '-';
-        const cls = ['ord-row'];
+        const cls = ['grp-body'];
         if(isErr) cls.push('err');
         const itemTxt = esc(r.item||'(품목 없음)');
         html += `<tr class="${cls.join(' ')}" data-action="openReceiptEdit|${r.id}">`
-          + `<td class="ord-item" title="${itemTxt}">${itemTxt}</td>`
-          + `<td class="ord-unit">${unitTxt}</td>`
-          + `<td class="ord-qty">${qtyTxt}</td>`
-          + `<td class="ord-amt">${fmt(r.total_price||0)}</td>`
-          + `<td class="ord-arrow">›</td>`
+          + `<td title="${itemTxt}">${itemTxt}</td>`
+          + `<td class="gb-unit">${unitTxt}</td>`
+          + `<td class="gb-qty">${qtyTxt}</td>`
+          + `<td class="gb-amt">${fmt(r.total_price||0)}</td>`
+          + `<td class="gb-arrow">›</td>`
           + `</tr>`;
       });
-      html += `</tbody></table></div></div>`;
     });
   });
+  html += `</tbody></table>`;
   body.innerHTML = html;
 }
 
@@ -5501,64 +5525,57 @@ function renderReceiptList(){
     if(!byDate[d]) byDate[d]=[];
     byDate[d].push(g);
   });
+  // 2026-05-20 D안 갈아엎기: 한 표 안 그룹 헤더 행 + 본문 행 (ERP 패턴, 사장님 호소 "따로 노는 느낌" 해소)
   const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-  let html='';
+  let html=`<table class="grp-tbl">
+    <colgroup><col/><col style="width:48px"/><col style="width:64px"/><col style="width:44px"/><col style="width:76px"/><col style="width:22px"/></colgroup>
+    <thead><tr><th>품목</th><th>분류</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
+    <tbody>`;
+  let firstDate=true;
   dates.forEach(d=>{
-    html+=`<div style="font-size:12px;font-weight:700;color:var(--gray-600);padding:10px 2px 6px;position:sticky;top:0;background:#fff;z-index:2;">📅 ${d}</div>`;
+    html+=`<tr class="grp-date${firstDate?' first':''}"><td colspan="6">📅 ${esc(d)}</td></tr>`;
+    firstDate=false;
+    let firstGroup=true;
     byDate[d].forEach(g=>{
       const editKey=g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
       const photoBadge=g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'');
       const errBadge=g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
-      // 그룹 카드 (좌측 컬러바 + 1줄 헤더 + 미니 표)
-      // 2026-05-20 D안: 카드 헤더 1줄 압축 (거래처 · 합계 · ✏ 🗑) + 카드 안 표 헤더 제거
-      //  → 화면 상단 sticky 표 헤더(.tbl-sticky-header.cols-6)가 컬럼 의미 1번만 표시
-      //  · 컬럼: 품목(100) / 분류(48) / 단가(64) / 수량(44) / 금액(76) / ›(22)
-      html+=`<div class="rcp-group-card" style="background:#fff;border:1px solid var(--gray-200);border-left:3px solid var(--blue);border-radius:10px;margin-bottom:8px;overflow:hidden;${g.hasErr?'opacity:0.85;':''}">
-        <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
-          <div style="flex:1;min-width:0;overflow:hidden;display:flex;align-items:baseline;gap:6px;white-space:nowrap;">
-            <span style="font-size:12px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;">${photoBadge?photoBadge+' ':''}🧾 ${esc(g.vendor||'(거래처 없음)')}</span>
-            <span style="font-size:13px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0;">· ${fmt(g.total)}원</span>
-            ${errBadge}
-          </div>
-          <button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:10px;font-weight:700;" data-action="openReceiptGroupEdit|${editKey}">✏</button>
-          <button type="button" class="btn btn-danger" style="padding:4px 6px;font-size:10px;font-weight:700;" data-action="deleteReceiptGroup|${editKey}">🗑</button>
-        </div>
-        <div style="padding:4px 10px;">
-          <table class="order-tbl">
-            <colgroup>
-              <col/>
-              <col style="width:48px"/>
-              <col style="width:64px"/>
-              <col style="width:44px"/>
-              <col style="width:76px"/>
-              <col style="width:22px"/>
-            </colgroup>
-            <tbody>`;
+      html+=`<tr class="grp-hdr${firstGroup?' first':''}">
+        <td colspan="5"><div class="grp-hdr-info">
+          <span class="name">${photoBadge?photoBadge+' ':''}🧾 ${esc(g.vendor||'(거래처 없음)')}</span>
+          <span class="sum">· ${fmt(g.total)}원</span>
+          ${errBadge}
+        </div></td>
+        <td class="grp-hdr-actions">
+          <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
+          <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
+        </td>
+      </tr>`;
+      firstGroup=false;
       g.rows.forEach(r=>{
         const isErr=r.note!=='정상';
         const suspect=!!r._suspect;
-        // 분류 = 소분류명만 (풀라벨은 행 탭→편집시트에서). "식자재>채소" → "채소"
         const catRaw=r.category||'';
         const catShort=catRaw.includes('>')?catRaw.split('>').pop().trim():catRaw||'-';
         const unitTxt=r.unit_price?fmt(r.unit_price):'-';
         const qtyTxt=(r.qty!=null&&r.qty!=='')?String(r.qty):'-';
-        const cls=['ord-row'];
+        const cls=['grp-body'];
         if(isErr) cls.push('err');
         if(suspect) cls.push('suspect');
         const itemTxt=esc(r.item||'(품목 없음)');
         const catTxt=esc(catShort);
         html+=`<tr class="${cls.join(' ')}" data-action="openReceiptEdit|${r.id}">`
-          +`<td class="ord-item" title="${itemTxt}">${itemTxt}</td>`
-          +`<td class="ord-cat" title="${esc(catRaw||'미분류')}">${catTxt}</td>`
-          +`<td class="ord-unit">${unitTxt}</td>`
-          +`<td class="ord-qty">${qtyTxt}</td>`
-          +`<td class="ord-amt">${fmt(r.total_price||0)}</td>`
-          +`<td class="ord-arrow">›</td>`
+          +`<td title="${itemTxt}">${itemTxt}</td>`
+          +`<td class="gb-cat" title="${esc(catRaw||'미분류')}">${catTxt}</td>`
+          +`<td class="gb-unit">${unitTxt}</td>`
+          +`<td class="gb-qty">${qtyTxt}</td>`
+          +`<td class="gb-amt">${fmt(r.total_price||0)}</td>`
+          +`<td class="gb-arrow">›</td>`
           +`</tr>`;
       });
-      html+=`</tbody></table></div></div>`;
     });
   });
+  html+=`</tbody></table>`;
   body.innerHTML=html;
 }
 
@@ -9858,28 +9875,22 @@ async function loadVendorOrders(){
     g.rows.push(r);
     g.total+=(r.amount||0);
   });
-  let html='';
+  // 2026-05-20 D안 갈아엎기: 한 표 안 그룹 헤더 행 + 본문 행 (ERP 패턴, 사장님 호소 "따로 노는 느낌" 해소)
+  let html=`<table class="grp-tbl">
+    <colgroup><col/><col style="width:64px"/><col style="width:44px"/><col style="width:76px"/><col style="width:22px"/></colgroup>
+    <thead><tr><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
+    <tbody>`;
+  let firstGroup=true;
   groups.forEach(g=>{
     const dateShort=(g.date||'').slice(5).replace('-','/');
     const vendorHeader=showVendor?`🧾 ${esc(g.vendorName)} · ${dateShort||'-'}`:`📅 ${dateShort||'-'}`;
-    // 2026-05-20 D안: 카드 헤더 1줄 압축 + 카드 안 표 헤더 제거 — 화면 상단 sticky 헤더 1번이 컬럼 의미 표시
-    html+=`<div class="rcp-group-card" style="background:#fff;border:1px solid var(--gray-200);border-left:3px solid var(--blue);border-radius:10px;margin-bottom:8px;overflow:hidden;">
-      <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
-        <div style="flex:1;min-width:0;overflow:hidden;display:flex;align-items:baseline;gap:6px;white-space:nowrap;">
-          <span style="font-size:12px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;">${vendorHeader}</span>
-          <span style="font-size:13px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0;">· ${fmt(g.total)}원</span>
-        </div>
-      </div>
-      <div style="padding:4px 10px;">
-        <table class="order-tbl">
-          <colgroup>
-            <col/>
-            <col style="width:64px"/>
-            <col style="width:44px"/>
-            <col style="width:76px"/>
-            <col style="width:22px"/>
-          </colgroup>
-          <tbody>`;
+    html+=`<tr class="grp-hdr${firstGroup?' first':''}">
+      <td colspan="5"><div class="grp-hdr-info">
+        <span class="name">${vendorHeader}</span>
+        <span class="sum">· ${fmt(g.total)}원</span>
+      </div></td>
+    </tr>`;
+    firstGroup=false;
     g.rows.forEach(r=>{
       const itemRaw=r.item||'-';
       const memoFlag=r.memo?' 💬':'';
@@ -9887,16 +9898,16 @@ async function loadVendorOrders(){
       const itemTitle=esc(r.memo?`${itemRaw} · 메모: ${r.memo}`:itemRaw);
       const unitTxt=r.unit_price?fmt(r.unit_price):'-';
       const qtyTxt=(r.quantity!=null&&r.quantity!=='')?String(r.quantity):'-';
-      html+=`<tr class="ord-row" data-action="openEditOrderSheet|${r.id}">`
-        +`<td class="ord-item" title="${itemTitle}">${itemTxt}</td>`
-        +`<td class="ord-unit">${unitTxt}</td>`
-        +`<td class="ord-qty">${qtyTxt}</td>`
-        +`<td class="ord-amt">${fmt(r.amount||0)}</td>`
-        +`<td class="ord-arrow">›</td>`
+      html+=`<tr class="grp-body" data-action="openEditOrderSheet|${r.id}">`
+        +`<td title="${itemTitle}">${itemTxt}</td>`
+        +`<td class="gb-unit">${unitTxt}</td>`
+        +`<td class="gb-qty">${qtyTxt}</td>`
+        +`<td class="gb-amt">${fmt(r.amount||0)}</td>`
+        +`<td class="gb-arrow">›</td>`
         +`</tr>`;
     });
-    html+=`</tbody></table></div></div>`;
   });
+  html+=`</tbody></table>`;
   document.getElementById('orderListData').innerHTML=html;
 }
 // 주문 입력/편집 공통 시트 — 멀티행 accordion 패턴 (2026-05-20 사장님 D 패턴)
