@@ -2,6 +2,32 @@
 
 ---
 
+## ✅ 2026-05-21 완료 — 지출 카테고리 그리드 vendor_orders 합산 표시
+
+### 사장님 호소
+- "거래처주문수동입력이 식자재 그리드 표에 안 나옴" (행복한정육점 케이스)
+- "거래방법과 지출카테고리 차이 인식 못 함"
+
+### 완료 (PR #180 + #181)
+- ✅ `loadCatReceiptData`에 vendor_orders 병합 (메모리 필터)
+- ✅ 정규화 헬퍼 `_normalizeExpenseRow` / `_groupExpenseRows`
+- ✅ source별 클릭 분기 (openReceiptEdit / openEditOrderSheet)
+- ✅ `_refreshAfterOrderChange`: 활성 화면 자동 fresh
+- ✅ 거래처 주문 카드 헤더 [✏편집][🗑삭제] 노출 (영수증과 통일감)
+- ✅ 신규 `deleteOrderGroupFromCard` (group_id 일괄 삭제)
+
+### 사장님 골든패스 (실측 대기)
+- [ ] 식자재 카드 → 행복한정육점 거래처 주문 보이는지
+- [ ] [✏][🗑] 헤더 버튼 정상 동작
+- [ ] 거래처 탭 ↔ 식자재 그리드 양쪽 편집 가능
+
+### 잔여 (다음 세션 진입 트리거)
+- 세금/마케팅/기타 manualCat 화면 정비 (todo 343행 A항목 — 별도 작업)
+- 좀비 거래처 4개 정리 (농협/다이소/쿠팡/탑마트, vendor_orders 0건)
+- catReceipt 외 다른 화면도 "카드합계 vs 진입그리드 불일치" 점검 (dev_lessons #108)
+
+---
+
 ## 🆕 2026-05-20 추가 — DB 무결성 점검 잔재 + 헌법 보강
 
 ### 🟡 vendors 데이터 정리 (이번 세션 점검 발견)

@@ -16,16 +16,38 @@
 - 카드 합계는 `calcExpenseByCategories`가 vendor_orders + receipts 합산 → **정확**
 - 카드 vs 진입 그리드 데이터 소스 불일치 = 사장님 호소 본질
 
-### 변경 내역
+### 변경 내역 (PR #180 + #181)
+
+**PR #180 — 통합 표시**
 - 신규 헬퍼 `_normalizeExpenseRow(row, source)` / `_groupExpenseRows(rows)`
-- `loadCatReceiptData`: 카테고리 모드일 때 vendor_orders 병합 쿼리 (vendors.category_id IN [cat.id, ...child_ids])
+- `loadCatReceiptData`: 카테고리 모드일 때 vendor_orders 병합 조회 + 메모리에서 vendors.category_id IN [parent, ...children] 필터
 - `renderCatReceiptList`: 정규화 행 기반 + source별 클릭 분기 (openReceiptEdit / openEditOrderSheet)
 - `openCatReceiptFilterSheet`: 거래처별 vendor_id 통합 합산
+- `_refreshAfterOrderChange`: 주문 시트 저장/삭제 후 catReceipt 활성 화면이면 그 화면도 fresh
 - DB 변경 X (SELECT만 추가)
 
+**PR #181 — 통일감 (사장님 "헤더버튼 노출해")**
+- 거래처 주문 카드 헤더에도 영수증과 동일한 [✏][🗑] 버튼 노출
+- 신규 `deleteOrderGroupFromCard(editKey)`: 'g:<orderGroupId>' 또는 's:<rowId>' 파싱, group_id 일괄 DELETE
+
+### 표시 패턴 (4채널 모두 한 표에)
+| 거래방법 | 데이터 출처 | 그룹 헤더 |
+|---|---|---|
+| 거래처 영수증(사진) | receipts.vendor_id 박힘 | 📸 🧾 + [✏][🗑] |
+| 거래처 영수증(수동) | receipts.vendor_id 박힘 | ✏️ 🧾 + [✏][🗑] |
+| 거래처 주문 입력 | vendor_orders | 🏪 🧾 + [✏][🗑] |
+| 직구 영수증/수동 | receipts.vendor_id NULL | 📸/✏️ 🧾 + [✏][🗑] |
+
 ### 진입 트리거
-- 사장님 "ok"
-- todo_next_session.md 364행 "manual 카테고리 카드 화면 신설" + 66행 "vendor_orders + receipts 자동 집계 통일" 합의 진행
+- 사장님 "ok" → 코드 작성
+- 사장님 "통일감 주자 헤더버튼 노출해" → 헤더 버튼 추가
+- todo_next_session.md 66~70행 "vendor_orders + receipts 자동 집계 통일" 합의 진행 완료
+
+### 사장님 골든패스 (앱 테스트 대기)
+- [ ] 식자재 카드 → 행복한정육점 거래처 주문이 🏪 🧾 카드로 표시
+- [ ] 거래처 주문 카드 헤더 [✏][🗑] 보이는지
+- [ ] 거래처 탭에서도, 식자재 그리드에서도 같은 데이터 편집·삭제 가능
+- [ ] 직구 카드 진입 → vendor_orders 안 보이고 receipts만 표시
 
 ---
 
