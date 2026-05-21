@@ -8721,9 +8721,10 @@ function toggleTooltip(id){const el=document.getElementById(id);if(el)el.style.d
 function fmtMan(v){return v>=0?fmt(Math.round(v/10000)):'-'+fmt(Math.round(Math.abs(v)/10000));}
 
 
-async function loadDashboard(){
+async function loadDashboard(force){
   if(!currentStore){document.getElementById('dashSummaryGrid').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
-  setLoad(true,'데이터 조회 중...');
+  // 2026-05-21 Phase B: SWR — force=true는 백그라운드 fresh, 사장님 화면 무음
+  if(!force) setLoad(true,'데이터 조회 중...');
   // 기타매출 누적 카드는 백그라운드로 갱신 (대시보드 메인 흐름 차단 안 함)
   renderExtraRevenueDashboard().catch(e=>console.warn('[dashExtraRevenue]',e.message));
   try{
@@ -8765,45 +8766,45 @@ async function loadDashboard(){
       dashSaleSource=_upsCached;
     }catch(_){dashSaleSource='settle';}
 
-    const [
-      settleRes,        // 매출 당월
-      fcRes,            // 고정비
-      royaltyTxRes,     // 로열티 (진마감용)
-      prevSettleRes,    // 매출 전월
-      voRes2,           // 거래처 주문 당월 (지출 집계 + 일별 분배 공유)
-      rcRes2,           // 영수증 당월 (공유)
-      attRes2,          // 근태 당월 (공유)
-      prevVoRes,        // 거래처 전월 (일별)
-      prevRcRes,        // 영수증 전월 (일별)
-      prevAttRes,       // 근태 전월 (일별)
-      setRes2           // 마감정산 당월 (차감 일자별 분배 + 인건비 통일, 2026-05-18)
-    ]=await Promise.all([
-      // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
-      // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
-      dashSaleSource==='ups'
-        ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
-        :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
-      // 고정비 — 항목별 예상 월 금액 1회 입력 (모든 달 동일 적용)
-      sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
-      // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
-      dashMode==='final'
-        ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
-        :Promise.resolve({data:null}),
-      // ── 전월 매출 ──
-      // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
-      dashSaleSource==='ups'
-        ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
-        :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
-      // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
-      sb.from('vendor_orders').select('amount,order_date,vendors(category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-      sb.from('receipts').select('total_price,category_id,receipt_date').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
-      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
-      // ── 전월 일별 식자재/영수증/인건비 ──
-      sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
-      sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',pStart).lte('receipt_date',pEnd),
-      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
-      sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end)
-    ]);
+    // 2026-05-21 Phase B: SWR 캐시 (5분 TTL). 캐시 hit이면 즉시 렌더 + 5초 후 백그라운드 fresh
+    const _dashKey=`dash_${sid}_${ym}_${dashSaleSource}_${dashMode||'auto'}`;
+    let _dashPack = !force ? cacheGet(_dashKey, 300000) : null;
+    let settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2;
+    if(_dashPack){
+      ({settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2} = _dashPack);
+    } else {
+      [settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2]=await Promise.all([
+        // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
+        // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
+        dashSaleSource==='ups'
+          ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
+          :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
+        // 고정비 — 항목별 예상 월 금액 1회 입력 (모든 달 동일 적용)
+        sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
+        // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
+        dashMode==='final'
+          ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
+          :Promise.resolve({data:null}),
+        // ── 전월 매출 ──
+        dashSaleSource==='ups'
+          ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
+          :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
+        // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
+        sb.from('vendor_orders').select('amount,order_date,vendors(category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+        sb.from('receipts').select('total_price,category_id,receipt_date').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+        sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+        // ── 전월 일별 식자재/영수증/인건비 ──
+        sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
+        sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',pStart).lte('receipt_date',pEnd),
+        sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
+        sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end)
+      ]);
+      cacheSet(_dashKey, {settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2});
+    }
+    // SWR: 캐시 hit이면 5초 후 백그라운드로 fresh 호출 (force=true → setLoad 무음)
+    if(_dashPack && !force){
+      setTimeout(()=>loadDashboard(true).catch(_=>{}), 5000);
+    }
 
     // 지출 카테고리 집계는 prefetch한 데이터로 메모리 처리 (calcExpenseByCategories 내부 DB 호출 0번)
     // 2026-05-18: 반환 객체화 {results, childAmounts} — 자식 amount도 함께
@@ -9480,7 +9481,7 @@ async function loadDashboard(){
       topCard.style.display='none';
     }
 
-  }catch(e){console.error('대시보드 오류:',e);}finally{setLoad(false);}
+  }catch(e){console.error('대시보드 오류:',e);}finally{if(!force) setLoad(false);}
 }
 
 // ─── 새 기능: 매출 빠른 입력 시트 (마감정산 형식, 2026-05-15) ─── //
@@ -9544,7 +9545,7 @@ async function saveQuickSalesInput(){
     }
     closeSheet('quickSalesInputSheet');
     toast('매출 저장됐어요','success');
-    await loadDashboard();
+    await loadDashboard(true);
   }catch(e){
     console.error('매출 저장:',e);
     toast('저장 실패: '+e.message,'error');
@@ -9590,7 +9591,7 @@ async function markDateAsClosed(date){
     closeSheet('calCellActionSheet');
     toast('휴무로 표시됐어요','success');
     if(document.getElementById('salesCalendarSheet').style.display!=='none')await renderSalesCalendar();
-    await loadDashboard();
+    await loadDashboard(true);
   }catch(e){
     console.error('휴무 저장:',e);
     toast('저장 실패: '+e.message,'error');
@@ -12487,7 +12488,7 @@ async function manualCrawl(){
     if(data.error) return toast('수집 실패: '+data.error,'error');
     if(data.saved_days>0){
       toast(`수집 완료! ${data.saved_days}일치 저장`,'success');
-      loadDashboard();
+      loadDashboard(true);
     } else {
       toast('수집된 매출 데이터가 없습니다.','warn');
     }
@@ -12532,7 +12533,7 @@ async function saveLaborConfirm(){
     category_id:laborCat.id,store_id:currentStore.id,year_month:dashMonthStr,amount:amt,memo:'확정 인건비'
   },{onConflict:'category_id,year_month'});
   setLoad(false);if(error)return errToast('저장', error);
-  toast('확정 인건비 저장됐어요','success');loadDashboard();
+  toast('확정 인건비 저장됐어요','success');loadDashboard(true);
 }
 
 // ── 카테고리별 지출 집계 (핵심 함수)
@@ -14501,7 +14502,8 @@ async function saveExpHubCardOrder(){
 
 // ─── 지출 허브: 카드별 동적 정보 ───
 // 2026-05-15 최적화: 직렬 await 8개 → Promise.all 1번 묶음 (사장님 "엄청 느림" 호소)
-async function loadExpHubData(){
+// 2026-05-21 Phase B: SWR 캐시 (5분 TTL + 5초 백그라운드 fresh)
+async function loadExpHubData(force){
   if(!currentStore) return;
   // 진입 즉시 스켈레톤 (캐시 기반 외곽·아이콘·제목 = 0~30ms)
   // 금액은 비동기로 채움 → "없어졌다 생기는 느낌" 해결 (2026-05-19)
@@ -14533,18 +14535,31 @@ async function loadExpHubData(){
   ).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
 
   // ━━ Promise.all (mydata는 select로 변경 — 카테고리별 매칭 위해) ━━
-  const [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes] = await Promise.all([
-    sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
-    sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
-    sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
-    sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle(),
-    sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym),
-    sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
-    sb.from('mydata_transactions').select('category_id,amount').eq('store_id',sid).gte('tx_date',start).lte('tx_date',end),
-    sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending'),
-    sb.from('settlements').select('items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end),
-    sb.from('vendor_orders').select('vendor_id,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end)
-  ]);
+  // 2026-05-21 Phase B: SWR 캐시 진입
+  const _expKey=`exp_${sid}_${ym}`;
+  let _expPack = !force ? cacheGet(_expKey, 300000) : null;
+  let rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes;
+  if(_expPack){
+    ({rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes} = _expPack);
+  } else {
+    [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes] = await Promise.all([
+      sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+      sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
+      sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
+      sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle(),
+      sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym),
+      sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+      sb.from('mydata_transactions').select('category_id,amount').eq('store_id',sid).gte('tx_date',start).lte('tx_date',end),
+      sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending'),
+      sb.from('settlements').select('items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end),
+      sb.from('vendor_orders').select('vendor_id,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end)
+    ]);
+    cacheSet(_expKey, {rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes});
+  }
+  // SWR: 캐시 hit이면 5초 후 백그라운드 fresh
+  if(_expPack && !force){
+    setTimeout(()=>loadExpHubData(true).catch(_=>{}), 5000);
+  }
 
   // ── 영수증 hero info (전체 합) ──
   try{
