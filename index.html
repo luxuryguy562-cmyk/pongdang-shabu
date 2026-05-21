@@ -4712,15 +4712,20 @@ async function loadCatReceiptData(){
   const [y,m] = catReceiptMonth.split('-').map(Number);
   const lastDay = new Date(y,m,0).getDate();
   const start = catReceiptMonth+'-01', end = catReceiptMonth+'-'+String(lastDay).padStart(2,'0');
-  let q = sb.from('receipts')
-    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note')
+  // 2026-05-21: receipts + vendor_orders 통합 조회 (사장님 호소: "거래처주문수동입력이 그리드 표에 없음")
+  //  · 직구 모드 = receipts only (vendor_orders는 항상 vendor_id 있음 — 매칭 X)
+  //  · 카테고리 모드 = receipts(category_id IN ids) + vendor_orders(vendors.category_id IN ids)
+  let rq = sb.from('receipts')
+    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty')
     .eq('store_id', currentStore.id)
     .gte('receipt_date', start).lte('receipt_date', end)
     .order('receipt_date', {ascending:false});
+  let oq = null;
+  let catIdSet = null; // 카테고리 모드일 때 vendor_orders 메모리 필터용 (식자재 + 자식 ids)
   if(catReceiptMode === 'direct'){
-    q = q.is('vendor_id', null);
+    rq = rq.is('vendor_id', null);
+    // vendor_orders 조회 안 함
   } else if(catReceiptMode.startsWith('cat:')){
-    // 카테고리 parent + 자식 모두 포함
     if(!catParent){
       body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-500);font-size:13px;">카테고리를 찾을 수 없어요</div>';
       totalEl.textContent = '이번달 0원 · 0건';
@@ -4728,20 +4733,36 @@ async function loadCatReceiptData(){
     }
     const childIds = (expCategories||[]).filter(c=>c.parent_id===catParent.id).map(c=>c.id);
     const ids = [catParent.id, ...childIds];
-    q = q.in('category_id', ids);
+    catIdSet = new Set(ids);
+    rq = rq.in('category_id', ids);
+    // vendor_orders: 전체 받고 메모리에서 vendors.category_id 필터
+    // (calcExpenseByCategories와 동일 패턴 — PostgREST embedded filter 회피)
+    oq = sb.from('vendor_orders')
+      .select('id,order_date,vendor_id,item,amount,unit_price,quantity,memo,order_group_id,vendors(name,category_id)')
+      .eq('store_id', currentStore.id)
+      .gte('order_date', start).lte('order_date', end)
+      .order('order_date', {ascending:false});
   }
-  const {data, error} = await q;
-  if(error){
-    body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;">불러오기 실패: ${esc(error.message||'')}</div>`;
+  const [rRes, oRes] = await Promise.all([rq, oq || Promise.resolve({data:[], error:null})]);
+  if(rRes.error){
+    body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;">불러오기 실패: ${esc(rRes.error.message||'')}</div>`;
     return;
   }
-  catReceiptRowsCache = data||[];
+  if(oRes.error){ console.error('vendor_orders 조회 실패', oRes.error); }
+  // rcpRecords 글로벌은 receipts 원본만 (openReceiptEdit / openReceiptGroupEdit 호환)
+  rcpRecords = rRes.data || [];
+  // 정규화 + vendor_orders는 vendors.category_id IN catIdSet 메모리 필터 (좀비 거래처 자동 제외)
+  const normReceipts = (rRes.data||[]).map(r=>_normalizeExpenseRow(r,'receipt'));
+  const normOrders = catIdSet
+    ? (oRes.data||[]).filter(r=>r.vendors && catIdSet.has(r.vendors.category_id)).map(r=>_normalizeExpenseRow(r,'order'))
+    : [];
+  catReceiptRowsCache = normReceipts.concat(normOrders);
   renderCatReceiptList(catReceiptRowsCache);
 }
 
-// 거래방법 필터 시트 — 모드별 분기
-//   직구 모드 = 가게별 (vendor 텍스트 그룹) — "직구만" 옵션 X (전부 직구)
-//   식자재·비품·기타 모드 = 직접구입(=vendor_id NULL) + 거래처별
+// 거래방법 필터 시트 — 모드별 분기 (2026-05-21 정규화 행 기반)
+//   직구 모드 = 가게별 (vendor 텍스트 그룹) — receipts only
+//   식자재/주류/비품/기타 모드 = 직접구입(=receipt vendor_id NULL) + 거래처별 (receipts + vendor_orders 합산)
 function openCatReceiptFilterSheet(){
   const list = document.getElementById('catReceiptFilterList');
   const mkRow = (val, label, sub, checked) => `<button class="btn btn-secondary" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;background:${checked?'#EBF3FF':'#fff'};border:1px solid ${checked?'var(--blue)':'var(--gray-200)'};" data-action="pickCatReceiptFilter|${val}">
@@ -4751,13 +4772,14 @@ function openCatReceiptFilterSheet(){
   let html = '';
   html += mkRow('all', '전체', `${(catReceiptRowsCache||[]).length}건`, catReceiptFilter==='all');
   if(catReceiptMode === 'direct'){
-    // 직구 모드: vendor 텍스트 그룹 (가게별)
+    // 직구 모드: receipt 행만, vendor 텍스트 그룹 (가게별)
     const shopAgg = {}; // {name: {total, count}}
     (catReceiptRowsCache||[]).forEach(r=>{
+      if(r._source !== 'receipt') return;
       if(r.note && r.note!=='정상') return;
-      const name = (r.vendor||'(이름 없음)').trim() || '(이름 없음)';
+      const name = (r.vendor||'').trim() || '(이름 없음)';
       if(!shopAgg[name]) shopAgg[name] = {total:0, count:0};
-      shopAgg[name].total += r.total_price||0;
+      shopAgg[name].total += r.amount||0;
       shopAgg[name].count++;
     });
     const shopList = Object.entries(shopAgg).sort((a,b)=>b[1].total-a[1].total);
@@ -4768,15 +4790,15 @@ function openCatReceiptFilterSheet(){
       });
     }
   } else {
-    // 식자재/비품/기타 모드: 직접구입 + 거래처별
+    // 카테고리 모드: 직접구입(receipt vendor_id NULL) + 거래처별 (receipts + vendor_orders 합산)
     const vendorAgg = {}; // {vendor_id: {name, total, count}}
     let directTotal = 0, directCount = 0;
     (catReceiptRowsCache||[]).forEach(r=>{
       if(r.note && r.note!=='정상') return;
-      const amt = r.total_price||0;
-      if(!r.vendor_id){
+      const amt = r.amount||0;
+      if(r._source==='receipt' && !r.vendor_id){
         directTotal += amt; directCount++;
-      } else {
+      } else if(r.vendor_id){
         if(!vendorAgg[r.vendor_id]) vendorAgg[r.vendor_id] = {name:r.vendor||'(이름 없음)', total:0, count:0};
         vendorAgg[r.vendor_id].total += amt;
         vendorAgg[r.vendor_id].count++;
@@ -4798,7 +4820,7 @@ function openCatReceiptFilterSheet(){
 function pickCatReceiptFilter(val){
   catReceiptFilter = val;
   closeSheet('catReceiptFilterSheet');
-  // 라벨 변경
+  // 라벨 변경 (정규화 행 호환 — vendor 필드 직접 사용)
   let label = '전체';
   if(val === 'direct') label = '🛒 직접구입';
   else if(val.startsWith('vendor:')){
@@ -4813,35 +4835,32 @@ function pickCatReceiptFilter(val){
 }
 
 function renderCatReceiptList(rows){
-  // 2026-05-20 갈아엎기: 평탄 7컬럼 표 → 영수증 기록 내역과 동일 그룹 카드 패턴
-  //  · 카테고리 필터링은 카드 안 행 단위 (한 영수증의 그 카테고리 행만 카드에 풀)
-  //  · 그 카테고리 합계만 헤더에 표시 (영수증 전체 합계 X)
-  //  · 카드 [✏ 편집] = openReceiptGroupEdit (영수증 통째 편집, 다른 카테고리 행도 시트에서 확인 가능)
-  //  · 카드 [🗑] = deleteReceiptGroup (영수증 통째 삭제)
-  // openReceiptEdit(id)는 rcpRecords 글로벌에서 영수증을 찾음 → 행 클릭 편집 가능하게 공유
-  rcpRecords = rows;
+  // 2026-05-21 갈아엎기: receipts only → receipts + vendor_orders 통합 (정규화 행 기반)
+  //  · rows = _normalizeExpenseRow 정규화 행 배열 ({_source, id, date, vendor, vendor_id, item, unit, qty, amount, group_id, ...})
+  //  · 거래방법 필터: 직접구입(direct) = receipt+vendor_id NULL / vendor:<id> = 같은 vendor_id 양쪽 합산
+  //  · 그룹핑: 영수증과 거래처 주문은 다른 카드 (source 분리). 같은 거래처라도 채널 다르면 카드 분리
+  //  · 행 클릭: receipt → openReceiptEdit, order → openEditOrderSheet
+  //  · 그룹 헤더 [✏][🗑]: receipt 그룹만. order 그룹은 행 클릭으로 시트 진입(거기서 그룹 통째 편집 가능)
+  // rcpRecords는 loadCatReceiptData에서 receipts 원본만 박았음 (openReceiptEdit 호환)
   const body = document.getElementById('catReceiptBody');
   const totalEl = document.getElementById('catReceiptTotal');
   // 거래방법 필터 적용
   const filtered = rows.filter(r=>{
     if(catReceiptFilter === 'all') return true;
-    if(catReceiptFilter === 'direct') return !r.vendor_id;
+    if(catReceiptFilter === 'direct') return r._source==='receipt' && !r.vendor_id;
     if(catReceiptFilter.startsWith('vendor:')) return r.vendor_id === catReceiptFilter.split(':')[1];
     if(catReceiptFilter.startsWith('shop:')){
       const name = decodeURIComponent(catReceiptFilter.split(':')[1]);
-      return ((r.vendor||'').trim() || '(이름 없음)') === name;
+      return r._source==='receipt' && (((r.vendor||'').trim() || '(이름 없음)') === name);
     }
     return true;
   });
   if(!filtered.length){
-    body.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">조건에 맞는 영수증이 없어요.<br>필터를 [전체]로 바꿔보세요.</div>';
+    body.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">조건에 맞는 내역이 없어요.<br>필터를 [전체]로 바꿔보세요.</div>';
     totalEl.textContent = '이번달 0원 · 0건';
     return;
   }
-  // 2026-05-20 D안 갈아엎기: 카드×표 결합 → 한 표 안 그룹 헤더 행 + 본문 행 (ERP 패턴)
-  // 같은 영수증 = 좌측 컬러바 + 그룹 헤더 행 / 본문 행 클릭 = 그 영수증 행 편집
-  // 분류 컬럼 X (카테고리 한정 화면이라 정보 가치 X) = 5컬럼
-  const groups = _groupReceipts(filtered);
+  const groups = _groupExpenseRows(filtered);
   let total = 0;
   groups.forEach(g=>{ total += g.total; });
   totalEl.textContent = `이번달 ${fmt(total)}원 · ${filtered.length}건`;
@@ -4863,36 +4882,50 @@ function renderCatReceiptList(rows){
     firstDate = false;
     let firstGroup = true;
     byDate[d].forEach(g=>{
-      const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
-      const photoBadge = g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'');
+      const isOrder = g.source === 'order';
+      // 헤더 이모지: 거래처 주문 = 🏪 / 영수증 = 입력 방식별 📸 또는 ✏️
+      const headerIcon = isOrder
+        ? '🏪 🧾'
+        : (g.inputMethod==='photo' ? '📸 🧾' : (g.inputMethod==='manual' ? '✏️ 🧾' : '🧾'));
       const errBadge = g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
+      // 헤더 액션: 영수증 그룹만 [✏][🗑]. 거래처 주문 그룹은 행 클릭으로 진입 (openEditOrderSheet가 그룹 통째 편집 시트)
+      let actionsHtml = '';
+      if(!isOrder){
+        const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
+        actionsHtml = `<div class="grp-hdr-actions">
+            <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
+            <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
+          </div>`;
+      }
       html += `<tr class="grp-hdr${firstGroup?' first':''}">
         <td colspan="5"><div class="grp-hdr-row">
           <div class="grp-hdr-info">
-            ${photoBadge?`<span class="emoji">${photoBadge} 🧾</span>`:`<span class="emoji">🧾</span>`}
+            <span class="emoji">${headerIcon}</span>
             <span class="name">${esc(g.vendor||'(거래처 없음)')}</span>
             <span class="sum">· ${fmt(g.total)}원</span>
             ${errBadge}
-          </div>
-          <div class="grp-hdr-actions">
-            <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
-            <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
-          </div>
+          </div>${actionsHtml}
         </div></td>
       </tr>`;
       firstGroup = false;
       g.rows.forEach(r=>{
         const isErr = r.note!=='정상';
-        const unitTxt = r.unit_price?fmt(r.unit_price):'-';
+        const unitTxt = r.unit?fmt(r.unit):'-';
         const qtyTxt = (r.qty!=null && r.qty!=='') ? String(r.qty) : '-';
         const cls = ['grp-body'];
         if(isErr) cls.push('err');
-        const itemTxt = esc(r.item||'(품목 없음)');
-        html += `<tr class="${cls.join(' ')}" data-action="openReceiptEdit|${r.id}">`
-          + `<td title="${itemTxt}">${itemTxt}</td>`
+        // 거래처 주문 행은 메모 있으면 💬 표시 (loadVendorOrders와 일관)
+        const memoFlag = (r._source==='order' && r.memo) ? ' 💬' : '';
+        const itemRaw = r.item || '(품목 없음)';
+        const itemTxt = esc(itemRaw) + memoFlag;
+        const itemTitle = (r._source==='order' && r.memo) ? esc(itemRaw + ' · 메모: ' + r.memo) : esc(itemRaw);
+        // 행 클릭: source별 분기
+        const clickAction = r._source === 'order' ? `openEditOrderSheet|${r.id}` : `openReceiptEdit|${r.id}`;
+        html += `<tr class="${cls.join(' ')}" data-action="${clickAction}">`
+          + `<td title="${itemTitle}">${itemTxt}</td>`
           + `<td class="gb-unit">${unitTxt}</td>`
           + `<td class="gb-qty">${qtyTxt}</td>`
-          + `<td class="gb-amt">${fmt(r.total_price||0)}</td>`
+          + `<td class="gb-amt">${fmt(r.amount||0)}</td>`
           + `<td class="gb-arrow">›</td>`
           + `</tr>`;
       });
@@ -5637,6 +5670,82 @@ async function loadReceiptList(){
 }
 
 // 영수증 그룹핑: receipt_group_id 같은 행끼리 묶음, NULL은 id별 단일 그룹 (옛 영수증 호환)
+// 2026-05-21 신설: receipts ↔ vendor_orders 행을 공통 객체로 정규화
+//  · _source = 'receipt' | 'order' (행 클릭·그룹 헤더 분기용)
+//  · 컬럼 차이 흡수: total_price↔amount / qty↔quantity / receipt_group_id↔order_group_id / receipt_date↔order_date
+//  · vendor_orders는 "정상"만 (오답 개념 없음). input_method = 'manual' 고정 (거래처 수동 입력).
+function _normalizeExpenseRow(row, source){
+  if(source==='order'){
+    return {
+      _source:'order',
+      _origin:row,
+      id:row.id,
+      date:row.order_date||'',
+      vendor:row.vendors?.name||'',
+      vendor_id:row.vendor_id||null,
+      item:row.item||'',
+      unit:row.unit_price||null,
+      qty:(row.quantity!=null&&row.quantity!=='')?row.quantity:null,
+      amount:row.amount||0,
+      group_id:row.order_group_id||null,
+      input_method:'manual',
+      note:'정상',
+      memo:row.memo||''
+    };
+  }
+  // receipt
+  return {
+    _source:'receipt',
+    _origin:row,
+    id:row.id,
+    date:row.receipt_date||'',
+    vendor:row.vendor||'',
+    vendor_id:row.vendor_id||null,
+    item:row.item||'',
+    unit:row.unit_price||null,
+    qty:(row.qty!=null&&row.qty!=='')?row.qty:null,
+    amount:row.total_price||0,
+    group_id:row.receipt_group_id||null,
+    input_method:row.input_method||null,
+    note:row.note||'정상',
+    memo:''
+  };
+}
+
+// 2026-05-21 신설: 정규화 행 그룹핑 (영수증 그룹 + 거래처 주문 그룹 동시 처리)
+//  · group_id 있음 = '<src>:g:<groupId>' (정확한 그룹)
+//  · group_id NULL = '<src>:s:<rowId>' (옛 데이터 = 1행짜리 그룹)
+//  · src 분리 = 같은 거래처·같은 날짜라도 영수증과 거래처주문은 다른 카드로 표시
+function _groupExpenseRows(normRows){
+  const groups=[];
+  const byKey={};
+  normRows.forEach(r=>{
+    const key=r.group_id ? (r._source+':g:'+r.group_id) : (r._source+':s:'+r.id);
+    if(!byKey[key]){
+      const g={
+        key,
+        source:r._source,
+        groupId:r.group_id,
+        recId:r.group_id?null:r.id,
+        date:r.date,
+        vendor:r.vendor,
+        vendor_id:r.vendor_id,
+        rows:[],
+        total:0,
+        hasErr:false,
+        inputMethod:r.input_method
+      };
+      byKey[key]=g;
+      groups.push(g);
+    }
+    const g=byKey[key];
+    g.rows.push(r);
+    if(r.note==='정상') g.total+=(r.amount||0);
+    if(r.note!=='정상') g.hasErr=true;
+  });
+  return groups;
+}
+
 function _groupReceipts(records){
   const groups=[]; // [{groupKey, groupId|null, recId|null, date, vendor, rows[], total, hasErr, inputMethod}]
   const byGroupId={};
@@ -10256,6 +10365,18 @@ function openAddOrderSheet(){
   if(delBtn) delBtn.style.display='none';
   openSheet('addOrderSheet');
 }
+// 2026-05-21 신설: 주문 저장/삭제 후 화면 갱신 — 거래처 탭이면 loadVendorOrders, catReceipt 화면 진입이면 loadCatReceiptData
+//  · catReceipt 화면에서 거래처 주문 행 클릭으로 시트 진입한 케이스(사장님 호소) 대응
+//  · 둘 중 active한 화면만 fresh 로드 (백그라운드 호출 최소화)
+function _refreshAfterOrderChange(){
+  loadVendors(); // 매장 캐시 갱신 (어디서 진입했든 OK)
+  const catRcpCont = document.getElementById('catReceiptCont');
+  if(catRcpCont && catRcpCont.classList.contains('active')){
+    loadCatReceiptData();
+  } else {
+    loadVendorOrders();
+  }
+}
 async function openEditOrderSheet(id){
   if(!guardStore())return;
   setLoad(true,'주문 정보 로드 중...');
@@ -10303,7 +10424,7 @@ async function deleteOrder(id){
   setLoad(false);
   if(error) return errToast('삭제', error);
   toast('삭제됐어요','success');
-  loadVendorOrders();
+  _refreshAfterOrderChange();
 }
 async function deleteOrderFromSheet(){
   // 그룹 통째 삭제 (편집 모드 전용)
@@ -10329,8 +10450,7 @@ async function deleteOrderFromSheet(){
   _orderEditingFallbackIds=[];
   _orderDraftRows=[];
   closeAllSheets();
-  loadVendorOrders();
-  loadVendors();
+  _refreshAfterOrderChange();
 }
 async function saveOrder(){
   if(!guardStore())return;
@@ -10388,8 +10508,7 @@ async function saveOrder(){
   _orderEditingFallbackIds=[];
   _orderDraftRows=[];
   closeAllSheets();
-  loadVendorOrders();
-  loadVendors();
+  _refreshAfterOrderChange();
 }
 
 // 거래처 파일 업로드 (컬럼 매칭)

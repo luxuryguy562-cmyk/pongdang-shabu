@@ -4,6 +4,31 @@
 
 ---
 
+## [2026-05-21] 지출 카테고리 그리드에 vendor_orders 합산 표시 (거래방법×지출카테고리 분리)
+
+### 사장님 호소
+- "거래처영수증·거래처주문수동입력 내용이 지출카테고리 그리드 내 표에 없음"
+- "행복한정육점 거래처 수동입력했는데 식자재 그리드에 안 나옴"
+- "거래방법(채널)과 지출카테고리(분류) 차이를 아직 인식 못 함"
+
+### 원인 (코드 사실, 추측 아님)
+- `loadCatReceiptData` (index.html:4690): `receipts` 테이블만 조회 → vendor_orders 누락
+- 카드 합계는 `calcExpenseByCategories`가 vendor_orders + receipts 합산 → **정확**
+- 카드 vs 진입 그리드 데이터 소스 불일치 = 사장님 호소 본질
+
+### 변경 내역
+- 신규 헬퍼 `_normalizeExpenseRow(row, source)` / `_groupExpenseRows(rows)`
+- `loadCatReceiptData`: 카테고리 모드일 때 vendor_orders 병합 쿼리 (vendors.category_id IN [cat.id, ...child_ids])
+- `renderCatReceiptList`: 정규화 행 기반 + source별 클릭 분기 (openReceiptEdit / openEditOrderSheet)
+- `openCatReceiptFilterSheet`: 거래처별 vendor_id 통합 합산
+- DB 변경 X (SELECT만 추가)
+
+### 진입 트리거
+- 사장님 "ok"
+- todo_next_session.md 364행 "manual 카테고리 카드 화면 신설" + 66행 "vendor_orders + receipts 자동 집계 통일" 합의 진행
+
+---
+
 ## [2026-05-20] DB 전체 점검 + 프레시원 category_id fix (사장님 실행 승인)
 
 ### 사장님 호소
