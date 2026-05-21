@@ -4,6 +4,82 @@
 
 ---
 
+## [2026-05-22] 정산현황 탭 v17 전면 개편 (mockup 17번 누적)
+
+### 사장님 원래 요청
+> "우리 주정산표가 너무 보기 어려워. 일별 상세비교로 표만들어서 가로로까지해서 했지만, 그것마저도 불편함. 전체적 개편이 필요한데. 우리 지금 홈정산에서 매출 누르면 캘린더로 오늘매출과, 그날의순수익이 보이잖아. 이거를 좀 활용하는 방안 없을까?"
+
+### 작업 흐름 — mockup 17번 반복
+- v1~v17 (1500+줄) 17번 반복 통해 사장님 결정 누적
+- 핵심 결정 10가지:
+  1. 월~일 7일 회계 주차 (1주 = 그 달 첫 일요일 직전 월요일)
+  2. 매출 대비 % (회계 표준)
+  3. 휴무 = 매출 0 + 고정비 일할 음수 (사장님 매장 -150,000원/일)
+  4. 동일 기준일 비교 (5/21 → 4/21까지만)
+  5. 1주차 vs 전월 마지막 회계주
+  6. 원 단위 정확 표기 (캘린더 셀만 압축)
+  7. 보조사 fix (매출이/지출이/매출은)
+  8. 강도 차별 (🚀최고 / 🚨최악)
+  9. + 그 외 event delegation (1곳)
+  10. 예비비 = 진마감 기반 (별도 페이지 진입)
+
+### 코드 변경 (사장님 "ok 실행 승인" 후)
+- **Phase 1**: CSS 180줄 추가 (.mode-tabs, .month-card, .wk-3box, .gantt-*, .forecast-box, .v17-modal 등)
+- **Phase 2**: HTML 구조 갈아엎기 — 옛 #dashSettleCont 안 (월요약+주단위요약+가마감토글+일별상세버튼) 모두 삭제, #v17MonthView + #v17WeekView 신설
+- **Phase 3**: JS 함수 23개 신설 (v17BuildAccountingWeeks, v17SumMonth, v17MomTag, v17MomComment, v17RenderMonthCard, v17RenderCalendar, v17RenderWeekCards, v17RenderWeekViewSingle, v17OpenWeekModal, v17OpenDailySheet 등) + setV17Context로 옛 loadDashboard 데이터 매핑
+- **Phase 4**: 옛 openDailyDetail 199줄 + closeDailyDetail + _pivotData + 가마감/진마감 토글 삭제. 옛 #dashSummaryGrid / #dashDailyTable / switchDashMode null safe 처리
+- **Phase 6**: 헌법 7-2 단서 추가 (정산현황 탭은 원 단위)
+
+### Mockup 진화 (요약)
+| 버전 | 사장님 결정 |
+|---|---|
+| v1 | A/B/C안 토글 비교 |
+| v2 | 주별 카드 중심 |
+| v3 | 캘린더 메인 + 모달 |
+| v4 | 간트 누적 + 원 단위 |
+| v5 | 회계 주차 + 매출 강조 |
+| v6 | 끼임 박스 자동 |
+| v7 | A안 확정 (7일 통째) |
+| v8 | 매출 라벨 + 1주 비교 |
+| v9 | 매출 폰트 통일 + 주별 시트 |
+| v10 | 13항목 + 색상 차별 |
+| v11 | 매출대비 % 명확화 |
+| v12 | 휴무 고정비 + 카드 펼침 |
+| v13 | 월/주차 토글 둘 다 |
+| v14 | 월 카드 + 월말 예상 |
+| v15 | 동일 기준일 비교 fix |
+| v16 | 문어체 9 케이스 |
+| v17 | 보조사 + 강도 + 끼임박스 이동 (확정) |
+
+### 검증
+- node --check JS 파싱 OK (1/1)
+- grep 잔재 0: openDailyDetail, closeDailyDetail, _pivotData, dailyDetailModal, openDailyDetailBtn
+- dashSummaryGrid / dashDailyTable / dashMode* 잔재는 모두 null safe 가드 (DOM 없어도 동작)
+
+### 백업·롤백
+- 백업 sha: `d691685` (mockup v17 완료 직전)
+- 문제 발견 시: `git revert <문제 커밋>` → push → main 머지 = 1분 안 복구
+
+### 사장님 골든패스 (배포 후 검증)
+- [ ] 정산현황 탭 진입 → [📅 월 보기] 디폴트
+- [ ] 월 카드 = 매출/지출/순수익 + 월말예상 + 간트 + 범례 + 전월동일대비 + 문어체
+- [ ] [📆 주차 보기] 토글 → 진행중 주차 자동
+- [ ] 주차 ◀▶ 이동 → 1주차에 끼임 박스 자동 (달력 위)
+- [ ] 진입 카드 → 모달 → 카드 5개 비교
+- [ ] 모달 안 + 그 외 ▾ 누르면 펼침
+- [ ] 캘린더 셀 탭 → 일별 시트 (지출/순수익 %)
+- [ ] 캘린더 우상단 칩 → 카테고리 필터 시트
+- [ ] 예비비 잔고 버튼 → 사이드메뉴 진입
+- [ ] 기타매출 카드 = 맨 아래
+
+### Phase 5 (예비비 진마감) 보류
+- 옛 calcReserveBalance (가마감 기반) 그대로 유지
+- 사장님 결정: "예비비 정산 제외 + 수동 기재 + 사이드메뉴 진입"
+- 예비비 잔고 버튼 = 사이드메뉴 진입 링크 역할 (옛 그대로)
+- 진마감 기반 자동 적립은 별도 작업 (사장님 매장 마이데이터 양 충분해지면)
+
+---
+
 ## [2026-05-21] 후속 fix 3건 (근무계획 UX) — PR #190 / #191 / #192
 
 ### 사장님 호소 흐름
