@@ -2,6 +2,125 @@
 
 ---
 
+## 🔥🔥🔥 최우선 — v17 정산현황 탭 전면 개편 (Phase 2~7 이어가기)
+
+### 사장님 명시
+- "ok 실행 승인" + "오류없을때까지 확인 후 완료보고"
+- 옵션 1 (다음 세션 이어가기) 채택
+- 진입 트리거: "v17 작업 이어가기" 한 줄
+
+### 현재 상태 (2026-05-22 세션 종료 시점)
+- 백업 sha: `d691685` (mockup v17 완료 직전)
+- **Phase 1 완료 + main 머지** (sha `0be9974`): CSS 약 180줄 추가 (사용 안 되는 신규 클래스, 사장님 앱 영향 0)
+- **Phase 2 revert** (sha `0d87351`): HTML 구조 변경 후 옛 JS와 충돌 위험으로 안전 revert
+- **사장님 앱 = 정상 작동** (옛 정산현황 탭 그대로)
+
+### 작업 계획 (전체 ~2000줄 변경)
+
+| Phase | 작업 | 작업량 | 상태 |
+|---|---|---|---|
+| 0 | 백업 sha 기록 | — | ✅ d691685 |
+| 1 | CSS 신규 (.month-card, .wk-3box, .gantt-* 등) | 약 180줄 | ✅ main 머지 |
+| 2 | HTML 구조 (#dashSettleCont 안 갈아엎기 + #v17WeekModal 등 신설) | 약 80줄 | ⏸️ 다음 세션 |
+| 3 | JS 함수 신설 (700줄) — mockup v17 함수들 + 데이터 매핑 (DAYS → DB) | 약 700줄 | ⏸️ 가장 큼 |
+| 4 | 옛 JS 삭제 (openDailyDetail, closeDailyDetail, _pivotData, loadDashboard 안 옛 렌더 로직) | 약 200줄 삭제 | ⏸️ |
+| 5 | 예비비 진마감 기반 갈아엎기 (calcReserveBalance) + 폴백 | 약 100줄 | ⏸️ |
+| 6 | 헌법·docs 갱신 (헌법 7-2 단서 / business_rules 기준값 표 / plan / dev_lessons) | 5개 파일 | ⏸️ |
+| 7 | tester (node --check + grep 잔재 0 + 사장님 골든패스) + deployer push | 검증 | ⏸️ |
+
+### Phase 2 HTML 변경 내용 (다음 세션 재적용)
+mockup v17 그대로 + 사장님 매장 ID 매핑. **revert된 commit `e7b051e`의 diff 확인 후 재적용 가능**.
+
+핵심:
+- 옛 #dashSettleCont 안: 가마감/진마감 토글, 월요약 카드(#dashSummaryGrid), 주단위 요약 카드(#dashDailyTable), 일별 상세비교 버튼(#openDailyDetailBtn) 모두 삭제
+- 신설: .mode-tabs 토글 + #v17MonthView + #v17WeekView + 진입 카드 + 예비비 잔고 버튼 + 기타매출 카드(보존)
+- 옛 #dailyDetailModal HTML 삭제 + 신설: #v17WeekModal + #v17DailySheet + #v17FilterSheet
+
+### Phase 3 데이터 매핑 (가장 어려움)
+- mockup의 `DAYS[m-DD] = {sale,vendor,att,fixed,receipt,royalty,exp,profit,holiday}` 구조
+- 실 DB 매핑:
+  - `sale` = `sales_daily.card + cash + cash_receipt + qr + etc`
+  - `vendor` = `vendor_orders.amount` (식자재 카테고리 + 카드/현금 결제 vendor receipts 통합)
+  - `att` = `attendance_logs.calculated_wage` (월급제 제외, 일할 분배)
+  - `fixed` = `fixed_cost_amounts.amount` (월 단위 / 일할)
+  - `receipt` = `receipts.total_price` (비품 카테고리)
+  - `royalty` = sale × `store_settings.royalty_rate`
+  - `holiday` = `sales_daily.source = 'closed'`
+
+- 옛 loadDashboard 안 (라인 8717~9488) 이미 이 fetch 코드 있음. 재사용 + DAYS 객체로 변환만 추가.
+
+### Phase 3 신설 함수 (mockup v17 그대로 카피)
+- `genMomComment(dS, dE)` — 9 케이스 문어체 (보조사 + 강도)
+- `momTag(curr, prev, type)` — 색상 차별 (sale/profit=초록 / expense/category=빨강)
+- `getWeekRangeLabel(ref)` — 주차 날짜 범위 ("4/27~5/3")
+- `buildAccountingWeeks(year, monthIdx)` — 월~일 7일 회계주
+- `sumMonthDataUpTo(targetM, maxDay)` — 동일 기준일 비교
+- `calcPrevMonthLastWeek()` — 1주 vs 전월 마지막주
+- `autoFontClass(v)` / `cellAutoFs(txt)` — 자동 폰트
+- `fmtNoWon(v)` / `fmtNoWonSigned(v)` / `fmtKrwCompact(v)` — 포맷터
+- `renderMonthCard()` — 월 카드 렌더
+- `renderCalendar()` — v17 캘린더 렌더
+- `renderWeekCards()` — 모달 안 5개 카드 + _allWeekData/_allWeekHtml 캐시
+- `openWeekModal()` / `closeWeekModal()`
+- `renderWeekViewSingle()` — 주차 보기 (카드 1개 + 한 줄 달력 + 끼임 박스 이동)
+- `moveWeek(dir)` — 주차 좌우 네비
+- `openDailySheet(d)` / `closeDailySheet()` — 셀 탭 시트 (지출/순수익 %)
+- `openFilterSheet()` / `closeFilterSheet()` — 카테고리 필터
+- 모드 토글 핸들러 (월/주차)
+- + 그 외 펼침 delegation (body 단위 1곳)
+
+### Phase 4 삭제 대상 (검수 게이트)
+- `openDailyDetail` / `closeDailyDetail` 함수 (라인 ~12103~12298)
+- `_pivotData` 변수
+- HTML: #dailyDetailModal, #openDailyDetailBtn (이미 Phase 2에서 삭제 예정)
+- 이벤트 리스너 (라인 ~17856~17857)
+- 옛 loadDashboard 안 월요약/주단위 렌더 코드 (라인 ~9043, 9378)
+- .pv-* / .pivot-tbl CSS (45곳 grep) — 모두 옛 피벗 전용
+
+### Phase 5 예비비 진마감 갈아엎기
+- 옛 `calcReserveBalance` = 가마감 (sales_daily 기반 순이익 × rate)
+- 새: 진마감 (mydata_transactions 기반 실제 출금 × rate)
+- 폴백: 마이데이터 0건 시 가마감 (외부 매장 권유 시 대비)
+
+### Phase 6 헌법·docs 갱신
+- 헌법 7-2: "정산현황 탭(v17)은 원 단위 정확 표기, 다른 화면은 만원 단위 유지" 단서
+- business_rules.md: 매출 대비 비율% 기준값 표 명문화 (식자재 30% / 인건비 25% / 공과금 15% / 비품 5%)
+- plan.md: #5(대시보드) + #34(예비비) 갱신
+- work_log.md: 본 세션 작업 기록
+- dev_lessons.md: mockup 17번 반복 협업 패턴
+
+### Phase 7 검증
+- node --check (HTML 안 script 파싱)
+- grep 잔재 0: openDailyDetail, _pivotData, dashSummaryGrid, dashDailyTable, dashModeProvisional, .pv-, .pivot-tbl
+- 사장님 골든패스 10가지 (계획서 8절)
+
+### 핵심 결정사항 (mockup 17번 누적 — 사장님 OK)
+1. 월~일 7일 회계 주차 (1주 = 그 달 첫 일요일 직전 월요일)
+2. 매출 대비 % (회계 표준, 옛 결정 v11)
+3. 휴무 = 매출 0 + 고정비 -150,000원 (사장님 매장)
+4. 동일 기준일 비교 (5/21 → 4/21)
+5. 1주차 vs 전월 마지막 회계주 비교
+6. 정확한 원 단위 (캘린더 셀만 압축)
+7. 보조사 fix (매출이/지출이/매출은)
+8. 강도 차별 (🚀최고 / 🚨최악)
+9. + 그 외 event delegation (1곳 통합)
+10. 예비비 = 진마감 기반 자동 + v17 안 잔고 버튼 (사이드메뉴 진입)
+
+### 사장님 골든패스 (Phase 7 검증)
+- [ ] 정산현황 탭 진입 → 월 보기 디폴트
+- [ ] 월 카드 = 3박스 + 월말 예상 + 간트 + 범례 + 전월동일대비 + 문어체
+- [ ] 주차 보기 토글 → 진행중 주차 자동 진입
+- [ ] 주차 ◀▶ 이동 → 1주차에 끼임 박스 자동 (달력 위)
+- [ ] 진입 카드 → 모달 → 카드 5개 비교
+- [ ] 모달 안 + 그 외 ▾ 누르면 펼침 (delegation OK)
+- [ ] 캘린더 셀 탭 → 일별 시트 (지출/순수익 %)
+- [ ] 캘린더 우상단 칩 → 카테고리 필터 시트
+- [ ] 예비비 잔고 버튼 → 사이드메뉴 진입
+- [ ] 기타매출 카드 = 맨 아래
+- [ ] 첫 진입 1초 이내 (속도 옛 PR #188 효과 유지)
+
+---
+
 ## ✅ 2026-05-21 후속 — 근무계획 UX 정리 (PR #190 / #191 / #192)
 
 ### PR #190 (긴급 fix) — work_schedules.is_off 컬럼 누락
