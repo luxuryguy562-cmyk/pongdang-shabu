@@ -4888,9 +4888,19 @@ function renderCatReceiptList(rows){
         ? '🏪 🧾'
         : (g.inputMethod==='photo' ? '📸 🧾' : (g.inputMethod==='manual' ? '✏️ 🧾' : '🧾'));
       const errBadge = g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
-      // 헤더 액션: 영수증 그룹만 [✏][🗑]. 거래처 주문 그룹은 행 클릭으로 진입 (openEditOrderSheet가 그룹 통째 편집 시트)
+      // 헤더 액션: 영수증 / 거래처 주문 모두 [✏편집][🗑삭제] 노출 (통일감 — 사장님 2026-05-21)
+      //  · 영수증: openReceiptGroupEdit (그룹 통째 편집 시트) / deleteReceiptGroup (그룹 통째 삭제)
+      //  · 거래처 주문: openEditOrderSheet (행 id 1개 줘도 시트가 group_id로 그룹 전체 자동 로드)
+      //                 / deleteOrderGroupFromCard (group_id 기반 일괄 DELETE, fallback=단행)
       let actionsHtml = '';
-      if(!isOrder){
+      if(isOrder){
+        const editId = g.rows[0]?.id || g.recId; // 시트는 어떤 행 id든 받으면 group_id로 그룹 전체 로드
+        const delKey = g.groupId ? ('g:'+g.groupId) : ('s:'+g.recId);
+        actionsHtml = `<div class="grp-hdr-actions">
+            <button type="button" class="btn btn-secondary" data-action="openEditOrderSheet|${editId}">✏</button>
+            <button type="button" class="btn btn-danger" data-action="deleteOrderGroupFromCard|${delKey}">🗑</button>
+          </div>`;
+      } else {
         const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
         actionsHtml = `<div class="grp-hdr-actions">
             <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
@@ -10416,6 +10426,36 @@ async function openEditOrderSheet(id){
   const delBtn=document.getElementById('orderDeleteBtn');
   if(delBtn) delBtn.style.display=''; // 편집 모드 → 그룹 통째 삭제 버튼 노출
   openSheet('addOrderSheet');
+}
+// 2026-05-21 신설: catReceipt 화면 거래처 주문 카드 헤더 [🗑] — 그룹 통째 삭제
+//  · editKey = 'g:<orderGroupId>' (정확한 그룹) | 's:<rowId>' (옛 데이터 fallback = 단일 행)
+//  · group_id 있으면 같은 group_id 일괄 DELETE, fallback이면 그 행 1개만 DELETE
+async function deleteOrderGroupFromCard(editKey){
+  if(!guardStore()) return;
+  const sepIdx = editKey.indexOf(':');
+  const type = editKey.slice(0, sepIdx);
+  const key = editKey.slice(sepIdx+1);
+  if(!type || !key) return toast('잘못된 그룹 키','error');
+  // 삭제 대상 건수 미리 카운트 (사장님에게 보여줌)
+  let cnt = 0;
+  if(type === 'g'){
+    (catReceiptRowsCache||[]).forEach(r=>{ if(r._source==='order' && r.group_id===key) cnt++; });
+  } else {
+    cnt = 1;
+  }
+  if(!confirm(`이 주문 그룹 ${cnt}건을 통째로 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+  setLoad(true,'삭제 중...');
+  let delQuery = sb.from('vendor_orders').delete().eq('store_id', currentStore.id);
+  if(type === 'g'){
+    delQuery = delQuery.eq('order_group_id', key);
+  } else {
+    delQuery = delQuery.eq('id', key);
+  }
+  const {error} = await delQuery;
+  setLoad(false);
+  if(error) return errToast('삭제', error);
+  toast(`${cnt}건 삭제됐어요`,'success');
+  _refreshAfterOrderChange();
 }
 async function deleteOrder(id){
   if(!confirm('이 주문 기록을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.')) return;
