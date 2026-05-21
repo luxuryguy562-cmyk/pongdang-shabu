@@ -4,6 +4,65 @@
 
 ---
 
+## [2026-05-21] 속도 개선 3 Phase (캐시 인프라 + SWR + Chart fix) — PR #188
+
+### 사장님 호소
+- "쓰레기코드들, 쓸데없는데 있는 코드들 파악 후 최적화"
+- "왜 이렇게 느린건지? 단순 수식계산일 뿐일텐데. 홈화면 5~6초, 느릴 땐 10초도, 지출관리 3~4초"
+- 자동 동기화 = "거슬린 적 없음, 나중에" → 외부 매장 권유 페이즈에 묶기
+
+### 진단 (DB·코드 측정값)
+- index.html 18,233줄 (헌법 7,500줄은 옛 수치)
+- 함수 정의 954개 (function 556 + arrow 398)
+- console.log 0건, inline onclick HTML 0건, sales_records 0건 → 이미 깨끗
+- loadDashboard: sb.from 14쿼리 (실제 'settle' 모드 ~12개 실행)
+- loadExpHubData: sb.from 10쿼리
+- 데이터 0행 테이블: mydata_transactions, fixed_cost_amounts, expense_category_amounts, daily_sales(3쿼리 분기 안 실행)
+- DB 백업 테이블 11개 (옛 마이그레이션 잔재 — 미정리)
+- RLS 비활성 3개: stores, franchises, ai_usage_logs (외부 매장 받기 전 해결 필수)
+- Realtime 구독 코드 0건 (자동 동기화 X 원인 = 코드 자체 없음)
+
+### CTO critic 정신
+- 사장님 호소 "쓰레기 코드"는 막연 → 본채(index.html) 이미 깨끗, 진짜 문제 = 속도 + 자동 동기화
+- 자동 동기화 = 사장님 1매장 + 직원 같이 있을 때 가치 미미, 외부 매장 받을 때 폭증 → 보류
+- 속도 = 매일·매번 체감, 사장님 "심각" 명시 → 우선
+
+### 사장님 결정 (대화 중)
+1. ✅ 속도 개선 (A안) 먼저
+2. ✅ 3 Phase 다 진행 (옵션 1, CTO 추천)
+3. ✅ 끝까지 + tester까지 + 보고 (자동 머지까지)
+4. 자동 동기화·외부 매장 = 보류 (다음 페이즈)
+
+### 변경 내역
+- **Phase A** (91f9d0b, ~50줄): cacheGet/Set/Invalidate 캐시 헬퍼 인프라 + _upsCheck 5분 캐시
+- **Phase B** (2a6e3cd, ~80줄): loadDashboard/loadExpHubData SWR 5분 TTL 캐시 (메모리 + sessionStorage dual) + 5초 백그라운드 fresh + 호출처 4곳 force=true
+- **Phase C** (db5c39c, ~20줄): destroyChart try/catch robust + loadExpCategories 5분 캐시 + 편집 3곳 invalidate
+- 합계: index.html +206줄 / -68줄 (net +138줄). DB 변경 0
+
+### 효과 (목표)
+- 홈 5~10초 → 두 번째 진입부터 1초 이내
+- 지출관리 3~4초 → 1초 이내
+- 5초 SWR로 stale 위험 자동 무효화
+
+### 검증 (헌법 11-4)
+- node --check 통과 ✅
+- 캐시 헬퍼 사용 정합 (cacheGet 6, cacheSet 6) ✅
+- force=true 호출 9개 (SWR 2 + 저장/확정 7) ✅
+- PD_CACHE_VERSION 박힘 (다음 배포 시 옛 캐시 자동 무효화) ✅
+
+### 다음 페이즈 후보
+- 사장님 골든패스 검증 결과 따라 추가 캐시 invalidate (혹시 stale 발견 시)
+- 자동 동기화 (외부 매장 권유와 묶기)
+- 외부 매장 권유 준비 (PIN 강화·RLS·Freemium)
+- 영수증 OCR Phase 0 마무리 (사장님 사진 2차 5장 + 답변)
+
+### 백업·롤백
+- 백업 커밋: e8d98e5 (Merge PR #187, 2026-05-21)
+- 단계별 커밋: 91f9d0b → 2a6e3cd → db5c39c
+- 롤백: `git revert <문제 커밋>` → push → main 머지 = 1분 안 복구
+
+---
+
 ## [2026-05-21] 근태 서브탭 통합 + 시간그리드 v2 (안 ③) + 주단위 일괄 입력
 
 ### 사장님 호소
