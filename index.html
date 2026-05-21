@@ -392,20 +392,37 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .recon-header span:nth-child(4){flex:1;text-align:right;}
 .recon-header span:nth-child(5){width:36px;flex-shrink:0;}
 
-/* ─ 근무계획 간트 */
+/* ─ 근무계획 간트 (안 ③ 시간그리드 v2: 영업존 배경 + 메이저/마이너 격자 + 짝수 시간 숫자) */
 .gantt-header{display:flex;border-bottom:2px solid var(--gray-200);}
 .gantt-emp-col{min-width:44px;width:44px;font-size:9px;font-weight:700;color:var(--gray-600);padding:3px 2px;flex-shrink:0;text-align:center;}
-/* .gantt-hour 정의는 영업일 회전축 블록(아래)에서 통일 */
-.gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--gray-100);min-height:22px;}
+.gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--gray-100);min-height:24px;}
 .gantt-name{min-width:44px;width:44px;font-size:10px;font-weight:700;padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
-/* 영업일 회전축: 24시 이후(75%~100%)는 옅은 파랑 배경으로 '익일 새벽' 시각 분리 */
-.gantt-bar-area{flex:1;position:relative;height:18px;display:flex;background:linear-gradient(to right,transparent 0,transparent 75%,rgba(99,102,241,0.07) 75%,rgba(99,102,241,0.07) 100%);}
+/* 영업일 회전축: 6~11시(비영업, 0~20.83%) 옅은 회색 / 11~24시(영업, 20.83~75%) 흰 / 24~30시(새벽, 75~100%) 옅은 파랑 */
+.gantt-bar-area{flex:1;position:relative;height:22px;display:flex;
+  background:linear-gradient(to right,
+    rgba(241,245,249,0.7) 0%, rgba(241,245,249,0.7) 20.83%,
+    #ffffff 20.83%, #ffffff 75%,
+    rgba(99,102,241,0.07) 75%, rgba(99,102,241,0.07) 100%);
+}
 /* 자정선 (24시 위치, 축 75% 지점) */
 .gantt-bar-area::after{content:'';position:absolute;left:75%;top:-2px;bottom:-2px;border-left:2px dashed rgba(220,38,38,0.85);pointer-events:none;z-index:2;}
-.gantt-hour{flex:1;font-size:9px;text-align:center;color:var(--gray-500);padding:3px 0;}
-.gantt-bg-col{flex:1;border-left:1px solid var(--gray-100);}
-.gantt-bar{position:absolute;height:14px;top:2px;border-radius:3px;background:var(--blue);opacity:.85;display:flex;align-items:center;overflow:hidden;}
+/* 시간 라벨 — 짝수 시간 메이저(진하게), 홀수 시간 마이너(점) */
+.gantt-hour{flex:1;font-size:9px;text-align:center;color:var(--gray-500);padding:3px 0;line-height:1;}
+.gantt-hour.major{color:var(--gray-700);font-weight:700;}
+.gantt-hour.mid{color:#dc2626;font-weight:800;}
+.gantt-hour .dot{display:inline-block;width:2px;height:2px;background:var(--gray-400);border-radius:50%;vertical-align:middle;}
+/* 격자 — 짝수 시간 메이저(실선) / 홀수 시간 마이너(점선) */
+.gantt-bg-col{flex:1;border-left:1px solid transparent;}
+.gantt-bg-col.minor{border-left:1px dashed rgba(148,163,184,0.28);}
+.gantt-bg-col.major{border-left:1px solid rgba(100,116,139,0.32);}
+/* 막대 */
+.gantt-bar{position:absolute;height:14px;top:4px;border-radius:3px;background:var(--blue);opacity:.85;display:flex;align-items:center;overflow:hidden;}
 .gantt-bar.confirmed{background:var(--success);}
+/* 계획 막대 (점선 빈 박스) — 안에 시각 라벨 */
+.gantt-bar.plan{background:transparent;border:1.5px dashed rgba(100,116,139,0.7);height:18px;top:2px;opacity:1;justify-content:center;}
+.gantt-bar.plan .plan-lbl{font-size:9px;color:var(--gray-600);font-weight:600;white-space:nowrap;text-shadow:none;padding:0 2px;}
+/* 결근 빗금 (텍스트 없음, 빗금만) */
+.gantt-bar.absent{background:repeating-linear-gradient(45deg,rgba(239,68,68,0.85),rgba(239,68,68,0.85) 4px,rgba(254,202,202,0.85) 4px,rgba(254,202,202,0.85) 8px);border:1px solid rgba(239,68,68,0.85);height:18px;top:2px;}
 .gantt-day-section{margin-bottom:10px;}
 .gantt-day-label{font-size:12px;font-weight:700;color:var(--text);padding:6px 4px 4px;display:flex;justify-content:space-between;align-items:center;}
 .gantt-day-label .day-date{color:var(--gray-600);font-weight:600;}
@@ -1701,8 +1718,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="sub-tabs">
       <button class="sub-tab active" data-action="attTab|manual|this">⏰ 출퇴근</button>
       <button class="sub-tab" data-action="attTab|caps|this" style="display:none !important;">캡스 업로드</button>
-      <button class="sub-tab" data-action="attTab|all|this">📋 근무 기록</button>
-      <button class="sub-tab" data-action="attTab|sched|this">📅 근무 계획</button>
+      <button class="sub-tab" data-action="attTab|all|this">📋 기록</button>
     </div>
     <div id="attManual">
       <!-- ⏰ 상태 변환 카드 (G안: 출근 전 / 근무 중 / 퇴근 후 3색)
@@ -1759,23 +1775,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div id="attDayDetail" class="att-day-detail"></div>
     </div>
   </div>
-  <!-- ── 근무계획 (근태 서브탭으로 통합, attTab('sched') 시 표시) ── -->
-  <!-- 2026-05-12: 근무 기록과 동일 레이아웃 (월 달력 + 일별 상세) — 사장님 통일 요청 -->
-  <div class="card" id="schedCard" style="display:none;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <button class="btn btn-secondary btn-sm" data-action="moveSchedMonth|-1">‹</button>
-      <div style="flex:1;text-align:center;font-size:15px;font-weight:700;" id="vSchedMonth">-</div>
-      <button class="btn btn-secondary btn-sm" data-action="moveSchedMonth|1">›</button>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <div style="font-size:11px;font-weight:700;color:var(--gray-600);flex-shrink:0;">👥 직원별 보기</div>
-      <select id="schedEmpFilter" class="input-field" style="flex:1;padding:10px 14px;font-size:13px;" data-change="loadScheduleMonth">
-        <option value="">전체</option>
-      </select>
-    </div>
-    <div id="schedCalendar"></div>
-    <div id="schedDayDetail" class="att-day-detail"></div>
-  </div>
+  <!-- 옛 근무계획 카드(schedCard) 폐기 — 2026-05-21 근태 📋 기록 통합 (계획+실제 한 화면).
+       단일 일정 등록·편집은 openSchedSheet 시트 재사용, 주단위 일괄 입력은 weeklyPlanSheet 신설. -->
 </div>
 
 <!-- ══ [3.5] 영업개시 보고 ══ -->
@@ -3433,7 +3434,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
-<!-- 근무 계획 등록/편집 시트 -->
+<!-- 근무 계획 등록/편집 시트 (단일 일정 — 카드 클릭 편집용) -->
 <div class="sheet" id="addSchedSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addSchedTitle">희망근무 등록</div>
@@ -3453,6 +3454,38 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <div class="action-group" style="margin-top:14px;">
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveSchedule">💾 저장</button>
+  </div>
+</div>
+
+<!-- 주단위 일괄 입력 시트 — 한 직원의 월~일 7일치 한 번에 등록 (사장님 요청 2026-05-21) -->
+<div class="sheet" id="weeklyPlanSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">📅 주 일정 일괄 등록</div>
+
+  <!-- 직원 선택 (manager만 선택 가능, staff는 본인 자동) -->
+  <div class="input-row manager-only" data-action="openEmpSheet|wp">
+    <label>직원</label><span id="wpEmp" class="val empty">선택</span>
+  </div>
+
+  <!-- 주 이동 -->
+  <div style="display:flex;align-items:center;gap:8px;margin:10px 0;">
+    <button class="btn btn-secondary btn-sm" data-action="moveWeeklyPlan|-1">‹</button>
+    <div style="flex:1;text-align:center;font-size:13px;font-weight:700;" id="wpWeekLabel">-</div>
+    <button class="btn btn-secondary btn-sm" data-action="moveWeeklyPlan|1">›</button>
+  </div>
+
+  <!-- 7요일 카드 -->
+  <div id="wpDayCards" style="display:flex;flex-direction:column;gap:6px;"></div>
+
+  <!-- 도움말 -->
+  <div style="font-size:11px;color:var(--gray-500);margin-top:10px;padding:8px 10px;background:var(--gray-50);border-radius:8px;line-height:1.4;">
+    💡 시각은 30분 단위로만 선택 가능 (정시 또는 정시:30).<br>
+    💡 직원을 먼저 선택하면 옛 일정이 자동으로 채워집니다.
+  </div>
+
+  <div class="action-group" style="margin-top:14px;">
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveWeeklyPlan">💾 7일 일괄 저장</button>
   </div>
 </div>
 
@@ -4219,7 +4252,8 @@ function nav(tab, el) {
     vendors: loadVendors,
     fixedcost: loadFixedCosts,
     attendance: initAttDate,
-    schedule: initSchedDate,
+    // schedule: 2026-05-21 폐기 (근태 서브탭으로 통합). schedule 라우트 호출 시 attendance로 흡수.
+    schedule: initAttDate,
     wage: loadWageSummary,
     explist: initExplist,
     expcat: loadExpCategories,
@@ -6190,27 +6224,15 @@ async function deleteReceiptGroupFromSheet(){
 function attTab(tab,el){
   document.querySelectorAll('#attendanceCont .sub-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  // 호환: 'list'(폐기됨) → 'all' 통합 매핑
-  if(tab==='list') tab='all';
-  const schedCard=document.getElementById('schedCard');
-  const attCard=document.querySelector('#attendanceCont > .card:first-of-type');
-  if(tab==='sched'){
-    // 근태 카드 본문(서브탭 제외) 숨김 + 근무계획 카드 표시
-    if(attCard) attCard.querySelectorAll(':scope > div:not(.sub-tabs)').forEach(d=>d.style.display='none');
-    if(schedCard) schedCard.style.display='block';
-    if(typeof loadScheduleMonth==='function') loadScheduleMonth();
-    return;
-  }
-  // 그 외 탭 — 근무계획 카드 숨김, 근태 카드 본문 복원
-  if(schedCard) schedCard.style.display='none';
-  if(attCard) attCard.querySelectorAll(':scope > div:not(.sub-tabs)').forEach(d=>d.style.display='');
+  // 호환: 'list'(F안 폐기됨) / 'sched'(2026-05-21 통합 폐기됨) → 'all' 통합 매핑
+  if(tab==='list' || tab==='sched') tab='all';
   // att 카드 안 패널 토글 (List 패널은 F안에서 폐기됨)
   ['Manual','Caps','All'].forEach(t=>{const d=document.getElementById('att'+t);if(d)d.style.display='none';});
   const panel = document.getElementById('att'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(panel) panel.style.display='block';
   if(tab==='all'){
     document.getElementById('vAllMonth').innerText = attAllMonth;
-    loadAttAll(); // 안에서 본인 모드면 주간 간트도 호출
+    loadAttAll(); // 안에서 본인 모드면 주간 간트도 호출. work_schedules 동시 로드 → 계획+실제 통합 표시
   }
 }
 function initAttDate(){
@@ -6429,6 +6451,14 @@ function selectEmpFromSheet(id,name){
     const el=document.getElementById('vSchedEmp');el.innerText=name;el.classList.remove('empty');
     closeSheet('empSheet');
     return;
+  } else if(selectedEmpCtx==='wp'){
+    // 주단위 일괄 입력 시트에서 호출: wpEmpId 채우고 기존 일정 자동 로드
+    wpEmpId=id;
+    const el=document.getElementById('wpEmp');
+    if(el){el.innerText=name; el.classList.remove('empty');}
+    closeSheet('empSheet');
+    renderWpDayCards(); // 옛 일정 자동 채움
+    return;
   }
   closeAllSheets();
 }
@@ -6552,20 +6582,37 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
   const empF = (sel?.value) || (currentEmp && !isManager ? currentEmp.id : '');
   if(empF) query = query.eq('employee_id', empF);
 
+  // ─── 새 기능: 근무계획(work_schedules) 동시 로드 (계획+실제 통합 표시용) ───
+  let schedQuery = sb.from('work_schedules')
+    .select('*, employees(name)')
+    .eq('store_id', currentStore.id)
+    .gte('work_date', startDate)
+    .lte('work_date', endDate)
+    .limit(500);
+  if(empF) schedQuery = schedQuery.eq('employee_id', empF);
+
   setLoad(true,'조회 중...');
-  const {data, error} = await query;
+  const [{data, error}, {data:schedData, error:schedErr}] = await Promise.all([query, schedQuery]);
   setLoad(false);
   if(error) console.error('근태 조회 오류:',error);
+  if(schedErr) console.error('근무계획 조회 오류:',schedErr);
 
   // 편집용 인덱스 데이터
   window._attListData = data||[];
 
-  // dayMap 빌드
+  // dayMap 빌드 (실제)
   attAllDayMap = {};
   (data||[]).forEach(r=>{
     if(!r.work_date) return;
     (attAllDayMap[r.work_date] = attAllDayMap[r.work_date]||[]).push(r);
   });
+  // 계획 dayMap (renderAttDayDetail에서 참조)
+  window._attSchedDayMap = {};
+  (schedData||[]).forEach(s=>{
+    if(!s.work_date) return;
+    (window._attSchedDayMap[s.work_date] = window._attSchedDayMap[s.work_date]||[]).push(s);
+  });
+  window._attSchedListData = schedData||[];
 
   // 모드 판정
   const isSingleView = !!empF;
@@ -6635,16 +6682,28 @@ function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
     if(dateStr===todayStr) cls.push('today');
     if(dateStr===selectedDate) cls.push('active');
     let dotsHtml = '<div class="att-cal-dots"></div>';
-    // 1인 모드: 색점 숨기고 시간을 크게 / 다인 모드: 색점 + 합계
+    // 1인 모드: 색점 숨기고 시간을 크게 / 다인 모드: 실제 색점 + 계획 점(연한)
     if(isSingleView){
       dotsHtml = '<div class="att-cal-dots"></div>';
-    } else if(logs.length){
-      const sorted = [...logs].sort((a,b)=>(b.total_work_min||0)-(a.total_work_min||0));
-      const visible = sorted.slice(0,3);
-      const more = sorted.length-3;
-      let dots = visible.map(r=>`<span class="att-cal-dot" style="background:${empColor(r.employee_id)}"></span>`).join('');
+    } else {
+      const schedRows = (window._attSchedDayMap && window._attSchedDayMap[dateStr]) || [];
+      const actualEmpIds = new Set(logs.map(r=>r.employee_id));
+      const planOnlyEmpIds = schedRows.filter(s=>s.employee_id && !s.is_off && !actualEmpIds.has(s.employee_id)).map(s=>s.employee_id);
+      const dotItems = [];
+      // 실제 (진한 색 점)
+      const sortedLogs = [...logs].sort((a,b)=>(b.total_work_min||0)-(a.total_work_min||0));
+      sortedLogs.slice(0,3).forEach(r=>{
+        dotItems.push(`<span class="att-cal-dot" style="background:${empColor(r.employee_id)}"></span>`);
+      });
+      // 계획만 (연한 색 점 — 윤곽선만)
+      planOnlyEmpIds.slice(0, Math.max(0, 3-dotItems.length)).forEach(eid=>{
+        dotItems.push(`<span class="att-cal-dot" style="background:transparent;border:1.5px dashed ${empColor(eid)};"></span>`);
+      });
+      const totalDistinct = sortedLogs.length + planOnlyEmpIds.length;
+      const more = totalDistinct - dotItems.length;
+      let dots = dotItems.join('');
       if(more>0) dots += `<span class="att-cal-more">+${more}</span>`;
-      dotsHtml = `<div class="att-cal-dots">${dots}</div>`;
+      if(dots) dotsHtml = `<div class="att-cal-dots">${dots}</div>`;
     }
     // 빈 날도 일별 상세로 이동 — '+' 별도 표시 없이 통일 (사장님 의견 2026-05-12)
     const isEmpty = !logs.length;
@@ -6671,31 +6730,46 @@ function renderAttDayDetail(date, logs, isSingleView){
   }
   const dow = ['일','월','화','수','목','금','토'][new Date(date+'T00:00:00').getDay()];
   const empF = document.getElementById('attEmpFilter')?.value || (currentEmp && !isManager ? currentEmp.id : '');
-  if(!logs || !logs.length){
-    const addBtnEmpty = isManager
-      ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 일정등록</span>`
-      : '';
+  // 계획만 있고 실제 없는 경우는 아래 통합 렌더 로직에서 처리하도록 logs 비어도 계획 있으면 계속 진행
+  const planRowsCheck = (window._attSchedDayMap && window._attSchedDayMap[date]) || [];
+  const hasPlanOnly = !((logs||[]).length) && planRowsCheck.some(p=>p.employee_id && !p.is_off);
+  if((!logs || !logs.length) && !hasPlanOnly){
+    const headerBtns = `
+      <span class="att-day-add-btn" data-action="openWeeklyPlanSheet|${date}">📅 주 일정</span>
+      ${isManager ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 실제 입력</span>` : ''}
+    `;
     const note = isManager
       ? ''
       : `<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--gray-400);">출퇴근 누락 시 관리자에게 등록을 요청하세요</div>`;
-    target.innerHTML = `<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnEmpty}</span><span style="font-size:10px;color:var(--gray-400);">기록 없음</span></div>${note}`;
+    target.innerHTML = `<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${headerBtns}</span><span style="font-size:10px;color:var(--gray-400);">기록 없음</span></div>${note}`;
     return;
   }
-  const totalMin  = logs.reduce((a,r)=>a+(r.total_work_min||0),0);
-  const totalWage = logs.reduce((a,r)=>a+(r.calculated_wage||0),0);
+  const safeLogs = logs || [];
+  const totalMin  = safeLogs.reduce((a,r)=>a+(r.total_work_min||0),0);
+  const totalWage = safeLogs.reduce((a,r)=>a+(r.calculated_wage||0),0);
   const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const allData = window._attListData || [];
-  const addBtnHtml = isManager
-    ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 일정등록</span>`
-    : '';
+  const headerBtns = `
+    <span class="att-day-add-btn" data-action="openWeeklyPlanSheet|${date}">📅 주 일정</span>
+    ${isManager ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 실제 입력</span>` : ''}
+  `;
 
   let html = `<div class="gantt-day-label">
-    <span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span>
+    <span>📅 ${date.slice(5)} (${dow})${headerBtns}</span>
     <span><span style="font-size:11px;color:var(--gray-500);font-weight:600;margin-right:10px;">${fmtHourDecimal(totalMin)}</span><span style="font-size:12px;color:var(--blue);font-weight:800;">${fmt(totalWage)}원</span></span>
   </div>`;
-  html += `<div class="gantt-header"><div class="att-row-label" style="visibility:hidden;">x</div>${ganttHours.map(h=>`<div class="gantt-hour"${h===24?' style="color:#dc2626;font-weight:700;"':''}>${h%3===0?(h>=24?h-24:h):''}</div>`).join('')}</div>`;
+  html += `<div class="gantt-header"><div class="att-row-label" style="visibility:hidden;">x</div>${renderGanttHourCells()}</div>`;
 
-  const sorted = [...logs].sort((a,b)=>{
+  // ─── 새 기능: 계획(work_schedules) + 실제(attendance_logs) 통합 렌더 ───
+  // 케이스: 계획O 실제O = 점선+보라 겹침 / 계획X 실제O = 보라만 / 계획O 실제X = 점선+빗금(결근)
+  const planRows = (window._attSchedDayMap && window._attSchedDayMap[date]) || [];
+  // (직원ID) → 계획 (1직원당 하루 1개 가정, 옛 upsert onConflict와 동일)
+  const planByEmp = {};
+  planRows.forEach(p=>{ if(p.employee_id) planByEmp[p.employee_id]=p; });
+  // 실제는 직원별 여러 행 가능 → 직원ID 기반 매칭 사용 후 매칭된 계획 제거
+  const usedPlanEmpIds = new Set();
+
+  const sorted = [...safeLogs].sort((a,b)=>{
     const ta = a.app_in?new Date(a.app_in).getTime():9e15;
     const tb = b.app_in?new Date(b.app_in).getTime():9e15;
     return ta-tb;
@@ -6705,6 +6779,28 @@ function renderAttDayDetail(date, logs, isSingleView){
     const color = empColor(r.employee_id);
     const inT   = r.app_in  ? new Date(r.app_in)  : null;
     const outT  = r.app_out ? new Date(r.app_out) : null;
+
+    // 계획 막대 (있으면)
+    let planBar = '';
+    const plan = planByEmp[r.employee_id];
+    if(plan && !plan.is_off){
+      const psH = parseHour(plan.wish_start || plan.start_time);
+      let peH   = parseHour(plan.wish_end   || plan.end_time);
+      if(psH!=null && peH!=null){
+        if(peH<psH) peH += 24;
+        if(peH>psH){
+          const pLeft  = Math.max(0,(psH-GANTT_START)/GANTT_SPAN*100);
+          const pWidth = Math.min(100-pLeft,(peH-psH)/GANTT_SPAN*100);
+          const psLbl  = String(Math.floor(psH)).padStart(2,'0')+':'+(psH%1?'30':'00');
+          const pe24   = peH>=24?peH-24:peH;
+          const peLbl  = String(Math.floor(pe24)).padStart(2,'0')+':'+(pe24%1?'30':'00')+(peH>=24?'(익)':'');
+          planBar = `<div class="gantt-bar plan" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"><span class="plan-lbl">${psLbl}~${peLbl}</span></div>`;
+          usedPlanEmpIds.add(r.employee_id);
+        }
+      }
+    }
+
+    // 실제 막대 (텍스트 없음)
     let bar = '';
     if(inT){
       const sH = inT.getHours()+inT.getMinutes()/60;
@@ -6729,7 +6825,8 @@ function renderAttDayDetail(date, logs, isSingleView){
     html += `<div class="gantt-row" ${clickable?`data-action="openEditAttByIdx|${idx}" style="cursor:pointer;"`:''}>
       <div class="att-row-label"><span class="dot" style="background:${color}"></span>${(r.employees?.name||'?').slice(0,4)}</div>
       <div class="gantt-bar-area">
-        ${ganttHours.map(()=>`<div class="gantt-bg-col"></div>`).join('')}
+        ${renderGanttBgCols()}
+        ${planBar}
         ${bar}
       </div>
     </div>
@@ -6738,6 +6835,49 @@ function renderAttDayDetail(date, logs, isSingleView){
       <span class="wage">${wageLabel}</span>
     </div>`;
   });
+
+  // 계획만 있고 실제 없는 직원 (결근) = 빗금 전용 행
+  const todayStr = new Date().toISOString().slice(0,10);
+  const isPast = date < todayStr;
+  planRows.forEach(p=>{
+    if(!p.employee_id) return;
+    if(usedPlanEmpIds.has(p.employee_id)) return;
+    if(p.is_off) return; // 휴무는 행 자체 안 그림
+    const empName = p.employees?.name || '?';
+    const color = empColor(p.employee_id);
+    const psH = parseHour(p.wish_start || p.start_time);
+    let peH   = parseHour(p.wish_end   || p.end_time);
+    let planBar = '', absentBar = '';
+    if(psH!=null && peH!=null){
+      if(peH<psH) peH += 24;
+      if(peH>psH){
+        const pLeft  = Math.max(0,(psH-GANTT_START)/GANTT_SPAN*100);
+        const pWidth = Math.min(100-pLeft,(peH-psH)/GANTT_SPAN*100);
+        const psLbl  = String(Math.floor(psH)).padStart(2,'0')+':'+(psH%1?'30':'00');
+        const pe24   = peH>=24?peH-24:peH;
+        const peLbl  = String(Math.floor(pe24)).padStart(2,'0')+':'+(pe24%1?'30':'00')+(peH>=24?'(익)':'');
+        planBar = `<div class="gantt-bar plan" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"><span class="plan-lbl">${psLbl}~${peLbl}</span></div>`;
+        // 결근: 과거 날짜인 경우만 빗금
+        if(isPast){
+          absentBar = `<div class="gantt-bar absent" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
+        }
+      }
+    }
+    const planClick = isManager ? `data-action="openSchedSheet|${date}|${p.id}" style="cursor:pointer;"` : '';
+    html += `<div class="gantt-row" ${planClick}>
+      <div class="att-row-label"><span class="dot" style="background:${color}"></span>${empName.slice(0,4)}</div>
+      <div class="gantt-bar-area">
+        ${renderGanttBgCols()}
+        ${planBar}
+        ${absentBar}
+      </div>
+    </div>
+    <div class="att-row-meta">
+      <span><span class="time">${isPast?'결근':'예정'}</span><span class="hours" style="color:${isPast?'var(--danger)':'var(--gray-500)'};">${isPast?'미출근':''}</span></span>
+      <span class="wage" style="color:var(--gray-400);">-</span>
+    </div>`;
+  });
+
   target.innerHTML = html;
 }
 
@@ -6838,7 +6978,7 @@ async function loadMyAttGantt(){
   const fmtWorkTime=(min)=>{if(min==null)return'';const h=Math.floor(min/60);const m=min%60;return h>0?(m>0?h+'h'+m+'m':h+'h'):(m+'m');};
 
   // 주간 간트차트 (근무계획 스타일)
-  const bgCols=ganttHours.map(()=>`<div class="gantt-bg-col"></div>`).join('');
+  const bgCols=renderGanttBgCols();
   let ganttHtml='';
   days.forEach(day=>{
     const log=logMap[day.date];
@@ -6871,7 +7011,7 @@ async function loadMyAttGantt(){
     else if(!isPast&&!isToday) ganttHtml+=`<span style="font-size:10px;color:var(--gray-400);">${sched?'예정':''}</span>`;
 
     ganttHtml+=`</div>
-      <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour"${h===24?' style="color:#dc2626;font-weight:700;"':''}>${h%3===0?(h>=24?h-24:h):''}</div>`).join('')}</div>`;
+      <div class="gantt-header"><div class="gantt-emp-col"></div>${renderGanttHourCells()}</div>`;
 
     // 바 그리기
     let bars='';
@@ -7016,159 +7156,15 @@ async function commitCaps(){
 // 옛 schedTab — sub-tab 제거됨. 데드코드 (호출처 없음). 안전망으로 잔류.
 function schedTab(tab,el){}
 
-// ─── 근무 계획 (월 달력 + 일별 상세, 2026-05-12 통일) ─────────
-let schedMonth = new Date().toISOString().slice(0,7);
-let schedDayMap = {};
-let schedSelectedDate = null;
-function initSchedDate(){
-  schedMonth = new Date().toISOString().slice(0,7);
-  schedSelectedDate = null;
-}
-function moveSchedMonth(dir){
-  const d=new Date(schedMonth+'-01');d.setMonth(d.getMonth()+dir);
-  schedMonth=d.toISOString().slice(0,7);
-  schedSelectedDate=null;
-  loadScheduleMonth();
-}
-function fillSchedEmpFilter(){
-  const sel=document.getElementById('schedEmpFilter');
-  if(!sel) return;
-  const cur=sel.value;
-  if(!isManager){
-    // 직원 모드: 본인 고정 (필터 숨김)
-    sel.innerHTML=currentEmp?`<option value="${currentEmp.id}">${currentEmp.name}</option>`:'<option value="">-</option>';
-    sel.style.display='none';
-    return;
-  }
-  sel.style.display='';
-  const opts=['<option value="">전체</option>'];
-  (employees||[]).filter(e=>e.is_active!==false).forEach(e=>{
-    opts.push(`<option value="${e.id}">${e.name}</option>`);
-  });
-  sel.innerHTML=opts.join('');
-  if(cur) sel.value=cur;
-}
-async function loadScheduleMonth(){
-  if(!currentStore){
-    const cal=document.getElementById('schedCalendar');
-    if(cal) cal.innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';
-    return;
-  }
-  const lbl=document.getElementById('vSchedMonth');
-  if(lbl) lbl.innerText=schedMonth;
-  fillSchedEmpFilter();
-  const [y,m]=schedMonth.split('-').map(Number);
-  const lastDay=new Date(y,m,0).getDate();
-  const start=schedMonth+'-01', end=schedMonth+'-'+String(lastDay).padStart(2,'0');
-  const sel=document.getElementById('schedEmpFilter');
-  const empF=isManager?(sel?.value||''):(currentEmp?.id||'');
-  let q=sb.from('work_schedules').select('*,employees(name)').eq('store_id',currentStore.id).gte('work_date',start).lte('work_date',end);
-  if(empF) q=q.eq('employee_id',empF);
-  const{data}=await q.order('wish_start');
-  schedDayMap={};
-  (data||[]).forEach(r=>{(schedDayMap[r.work_date]=schedDayMap[r.work_date]||[]).push(r);});
-  const today=new Date().toISOString().slice(0,10);
-  if(!schedSelectedDate || !schedSelectedDate.startsWith(schedMonth)){
-    if(today.startsWith(schedMonth)) schedSelectedDate=today;
-    else if(Object.keys(schedDayMap).length) schedSelectedDate=Object.keys(schedDayMap).sort().pop();
-    else schedSelectedDate=null;
-  }
-  renderSchedCalendar();
-  renderSchedDayDetail(schedSelectedDate);
-}
-function renderSchedCalendar(){
-  const target=document.getElementById('schedCalendar');
-  if(!target) return;
-  const [y,m]=schedMonth.split('-').map(Number);
-  const lastDay=new Date(y,m,0).getDate();
-  const startDow=new Date(y,m-1,1).getDay();
-  const todayStr=new Date().toISOString().slice(0,10);
-  const dows=['일','월','화','수','목','금','토'];
-  let html='<div class="att-cal">';
-  dows.forEach((d,i)=>{
-    const cls=i===0?'sun':(i===6?'sat':'');
-    html+=`<div class="att-cal-head ${cls}">${d}</div>`;
-  });
-  for(let i=0;i<startDow;i++) html+=`<div class="att-cal-cell empty"></div>`;
-  for(let d=1;d<=lastDay;d++){
-    const dateStr=`${schedMonth}-${String(d).padStart(2,'0')}`;
-    const dow=(startDow+d-1)%7;
-    const scheds=schedDayMap[dateStr]||[];
-    const cls=[];
-    if(dow===0) cls.push('sun');
-    if(dow===6) cls.push('sat');
-    if(dateStr===todayStr) cls.push('today');
-    if(dateStr===schedSelectedDate) cls.push('active');
-    // 셀 탭 = 일별 상세 표시, 등록은 헤더 [＋ 일정등록] 버튼 (근무 기록과 동일 패턴, 2026-05-13 통일)
-    let dotsHtml='<div class="att-cal-dots"></div>';
-    if(scheds.length){
-      const visible=scheds.slice(0,3);
-      const more=scheds.length-3;
-      let dots=visible.map(s=>`<span class="att-cal-dot" style="background:${typeof empColor==='function'?empColor(s.employee_id):'#94A3B8'}"></span>`).join('');
-      if(more>0) dots+=`<span class="att-cal-more">+${more}</span>`;
-      dotsHtml=`<div class="att-cal-dots">${dots}</div>`;
-    }
-    html+=`<div class="att-cal-cell ${cls.join(' ')}" data-action="pickSchedDay|${dateStr}">
-      <div class="att-cal-day">${d}</div>
-      ${dotsHtml}
-      <div class="att-cal-sum">&nbsp;</div>
-    </div>`;
-  }
-  html+='</div>';
-  target.innerHTML=html;
-}
-function pickSchedDay(date){
-  schedSelectedDate=date;
-  renderSchedCalendar();
-  renderSchedDayDetail(date);
-  document.getElementById('schedDayDetail')?.scrollIntoView({behavior:'smooth',block:'start'});
-}
-function renderSchedDayDetail(date){
-  const target=document.getElementById('schedDayDetail');
-  if(!target) return;
-  if(!date){
-    target.innerHTML='<div class="att-day-empty">위 캘린더에서 날짜를 선택하세요</div>';
-    return;
-  }
-  const dow=['일','월','화','수','목','금','토'][new Date(date+'T00:00:00').getDay()];
-  const scheds=schedDayMap[date]||[];
-  // 헤더 [＋ 일정등록] — 근태와 동일 패턴 (2026-05-13 통일). staff 본인 일정 등록 가능 → 권한 가드 없음
-  const addBtnHtml=` <span class="att-day-add-btn" data-action="openSchedSheet|${date}">＋ 일정등록</span>`;
-  if(!scheds.length){
-    target.innerHTML=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span><span style="font-size:10px;color:var(--gray-400);">예정 없음</span></div>`;
-    return;
-  }
-  let html=`<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${addBtnHtml}</span><span style="font-size:11px;color:var(--blue);font-weight:700;">${scheds.length}명</span></div>`;
-  scheds.forEach(s=>{
-    const empName=s.employees?.name||'-';
-    const start=s.wish_start?s.wish_start.slice(0,5):'-';
-    const end=s.wish_end?s.wish_end.slice(0,5):'-';
-    const memo=s.memo?`<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">${s.memo}</div>`:'';
-    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--gray-200);border-radius:10px;margin-bottom:6px;background:#fff;">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:var(--text);">${empName}</div>
-        <div style="font-size:12px;color:var(--gray-600);">${start} ~ ${end}</div>
-        ${memo}
-      </div>
-      <div style="display:flex;gap:4px;flex-shrink:0;">
-        <button class="btn btn-secondary btn-sm" style="padding:6px 10px;font-size:12px;" data-action="openSchedSheet|${date}|${s.id}">편집</button>
-        <button class="btn btn-danger btn-sm" style="padding:6px 8px;font-size:12px;" data-action="deleteSchedule|${s.id}">🗑</button>
-      </div>
-    </div>`;
-  });
-  target.innerHTML=html;
-}
+// ─── 근무 계획 단일 일정 편집용 시트 (2026-05-21 옛 월 달력·일별 상세 함수 폐기. 통합 화면에서 카드 클릭 시 진입) ─────────
+let schedDayMap = {}; // legacy — 통합 화면은 window._attSchedDayMap 사용. 잔재 변수 (다른 곳 참조 안 함)
 function openSchedSheet(date, schedId){
   if(!guardStore()) return;
-  // 셀 탭 시 일별 상세도 갱신 (selected 셀 동기화)
-  if(date){
-    schedSelectedDate=date;
-    renderSchedCalendar();
-    renderSchedDayDetail(date);
-  }
   document.getElementById('vSchedDate').innerText=date||'-';
   if(schedId){
-    const s=(schedDayMap[date]||[]).find(x=>String(x.id)===String(schedId));
+    // 2026-05-21: schedDayMap 폐기, 통합 화면의 window._attSchedDayMap 사용
+    const dayPlans = (window._attSchedDayMap && window._attSchedDayMap[date]) || [];
+    const s = dayPlans.find(x=>String(x.id)===String(schedId));
     if(s){
       document.getElementById('addSchedTitle').innerText='희망근무 편집';
       document.getElementById('vSchedEmp').innerText=s.employees?.name||'-';
@@ -7200,7 +7196,8 @@ async function deleteSchedule(schedId){
   setLoad(false);
   if(error) return errToast('삭제', error);
   toast('삭제됐어요','success');
-  await loadScheduleMonth();
+  closeSheet('addSchedSheet');
+  await loadAttList();
 }
 async function saveSchedule(){
   if(!guardStore()) return;
@@ -7223,12 +7220,164 @@ async function saveSchedule(){
   if(error) return errToast('저장', error);
   document.getElementById('vSchedMemo').value='';
   closeSheet('addSchedSheet');
-  // 달력 + 일별 상세 갱신 — 저장한 날짜로 선택일 이동
-  schedMonth=date.slice(0,7);
-  schedSelectedDate=date;
-  await loadScheduleMonth();
+  // 통합 화면 갱신 — 저장한 날짜로 선택일 이동 후 근태 통합 캘린더 새로고침
+  attAllMonth=date.slice(0,7);
+  attAllSelectedDate=date;
+  await loadAttList();
   toast('희망근무가 등록됐습니다!','success');
 }
+// ─── 새 기능: 주단위 일괄 입력 (사장님 요청 2026-05-21) ───
+// 한 직원의 월~일 7일치 work_schedules를 한 시트에서 일괄 등록.
+// 시각은 30분 단위 (정시 or :30) 스크롤 picker.
+let wpEmpId=null, wpWeekStart='';
+function openWeeklyPlanSheet(date){
+  if(!guardStore()) return;
+  // 기본 = 클릭한 날짜의 월요일
+  wpWeekStart = getWeekStart(date || ymdLocal(new Date()));
+  // staff면 본인 자동 / manager면 선택
+  if(!isManager && currentEmp){
+    wpEmpId = currentEmp.id;
+    const el=document.getElementById('wpEmp');
+    if(el){el.innerText=currentEmp.name; el.classList.remove('empty');}
+  } else {
+    wpEmpId = null;
+    const el=document.getElementById('wpEmp');
+    if(el){el.innerText='선택'; el.classList.add('empty');}
+  }
+  renderWpDayCards();
+  openSheet('weeklyPlanSheet');
+}
+function moveWeeklyPlan(dir){
+  const d=new Date(wpWeekStart);
+  d.setDate(d.getDate()+parseInt(dir)*7);
+  wpWeekStart = ymdLocal(d);
+  renderWpDayCards();
+}
+async function renderWpDayCards(){
+  const days = getWeekDays(wpWeekStart);
+  // 라벨: "5/19(월) ~ 5/25(일)"
+  const labelEl = document.getElementById('wpWeekLabel');
+  if(labelEl) labelEl.innerText = `${days[0].label} ~ ${days[6].label}`;
+  // 기존 데이터 로드 (직원 선택돼 있으면)
+  let existing = {};
+  if(wpEmpId){
+    const {data} = await sb.from('work_schedules')
+      .select('work_date,wish_start,wish_end,is_off')
+      .eq('store_id', currentStore.id)
+      .eq('employee_id', wpEmpId)
+      .gte('work_date', days[0].date)
+      .lte('work_date', days[6].date);
+    (data||[]).forEach(r=>{ existing[r.work_date] = r; });
+  }
+  const target = document.getElementById('wpDayCards');
+  if(!target) return;
+  let html = '';
+  days.forEach((day, idx)=>{
+    const ex = existing[day.date] || {};
+    const isOff = !!ex.is_off;
+    const start = ex.wish_start ? ex.wish_start.slice(0,5) : '';
+    const end   = ex.wish_end   ? ex.wish_end.slice(0,5)   : '';
+    const dow = day.label.match(/\((.+)\)/)?.[1] || '';
+    const isWeekend = dow==='토' || dow==='일';
+    html += `<div class="wp-day-card" data-day-idx="${idx}" data-date="${day.date}" style="border:1px solid var(--gray-200);border-radius:10px;padding:10px 12px;background:#fff;${isOff?'opacity:0.5;':''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:13px;font-weight:700;color:${isWeekend?(dow==='일'?'var(--danger)':'var(--blue)'):'var(--text)'};">${day.label}</div>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--gray-600);cursor:pointer;">
+          <input type="checkbox" data-action="toggleWpOff|${idx}" ${isOff?'checked':''} style="width:14px;height:14px;">
+          휴무
+        </label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;${isOff?'pointer-events:none;opacity:0.4;':''}">
+        <div class="input-row" style="margin:0;padding:8px 10px;" data-action="openTimePicker|wp:${idx}:start">
+          <label style="font-size:11px;">출근</label>
+          <span id="wpDay${idx}Start" class="val ${start?'':'empty'}">${start||'-'}</span>
+        </div>
+        <div class="input-row" style="margin:0;padding:8px 10px;" data-action="openTimePicker|wp:${idx}:end">
+          <label style="font-size:11px;">퇴근</label>
+          <span id="wpDay${idx}End" class="val ${end?'':'empty'}">${end||'-'}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+  target.innerHTML = html;
+}
+function toggleWpOff(idx){
+  const card = document.querySelector(`.wp-day-card[data-day-idx="${idx}"]`);
+  if(!card) return;
+  const cb = card.querySelector('input[type="checkbox"]');
+  const isOff = cb?.checked;
+  card.style.opacity = isOff ? '0.5' : '';
+  const timeBlock = card.querySelector(':scope > div:last-child');
+  if(timeBlock){
+    timeBlock.style.pointerEvents = isOff ? 'none' : '';
+    timeBlock.style.opacity = isOff ? '0.4' : '';
+  }
+}
+async function saveWeeklyPlan(){
+  if(!guardStore()) return;
+  if(!wpEmpId) return toast('직원을 선택하세요.','warn');
+  const days = getWeekDays(wpWeekStart);
+  const rows = [];
+  let validCount = 0;
+  for(let idx=0; idx<7; idx++){
+    const card = document.querySelector(`.wp-day-card[data-day-idx="${idx}"]`);
+    if(!card) continue;
+    const isOff = card.querySelector('input[type="checkbox"]')?.checked;
+    const startTxt = document.getElementById(`wpDay${idx}Start`)?.innerText || '';
+    const endTxt   = document.getElementById(`wpDay${idx}End`)?.innerText   || '';
+    const date = card.getAttribute('data-date');
+    // 휴무 = is_off:true, 시각 null
+    if(isOff){
+      rows.push({
+        store_id: currentStore.id, employee_id: wpEmpId, work_date: date,
+        wish_start: null, wish_end: null, is_off: true, status: '희망'
+      });
+      validCount++;
+      continue;
+    }
+    // 시각 입력 없으면 = 등록 안 함 (해당 일은 빈 일정으로 둠 = 기존 row 있으면 삭제)
+    if((!startTxt || startTxt==='-') && (!endTxt || endTxt==='-')){
+      // 기존 row 삭제
+      rows.push({ _delete:true, work_date: date });
+      continue;
+    }
+    if(!startTxt || startTxt==='-' || !endTxt || endTxt==='-'){
+      return toast(`${days[idx].label} 출근·퇴근 시각을 모두 입력하거나 둘 다 비워주세요.`,'warn');
+    }
+    rows.push({
+      store_id: currentStore.id, employee_id: wpEmpId, work_date: date,
+      wish_start: startTxt+':00', wish_end: endTxt+':00', is_off: false, status: '희망'
+    });
+    validCount++;
+  }
+  if(!validCount && !rows.some(r=>r._delete)){
+    return toast('등록할 일정이 없습니다.','warn');
+  }
+  setLoad(true,'저장 중...');
+  // 삭제 대상
+  const deleteDates = rows.filter(r=>r._delete).map(r=>r.work_date);
+  const upsertRows  = rows.filter(r=>!r._delete);
+  let lastError = null;
+  if(deleteDates.length){
+    const {error} = await sb.from('work_schedules').delete()
+      .eq('store_id', currentStore.id)
+      .eq('employee_id', wpEmpId)
+      .in('work_date', deleteDates);
+    if(error) lastError = error;
+  }
+  if(upsertRows.length){
+    const {error} = await sb.from('work_schedules').upsert(upsertRows, {onConflict:'store_id,employee_id,work_date'});
+    if(error) lastError = error;
+  }
+  setLoad(false);
+  if(lastError) return errToast('주 일정 저장', lastError);
+  closeSheet('weeklyPlanSheet');
+  toast(`${validCount}일 등록됐어요`,'success');
+  // 통합 화면 새로고침
+  attAllMonth = days[0].date.slice(0,7);
+  await loadAttList();
+}
+
 // 주간 간트 유틸
 function getWeekStart(dateStr){
   const d=new Date(dateStr);
@@ -7258,6 +7407,26 @@ function moveGanttWeek(dir){
 // 마감조처럼 자정 넘는 근무도 한 줄에 연속 표시. 24시 위치(축 75%)는 자정선.
 const GANTT_START=6,GANTT_END=30,GANTT_SPAN=GANTT_END-GANTT_START;
 const ganttHours=Array.from({length:GANTT_SPAN},(_,i)=>i+GANTT_START);
+
+// ─── 새 기능: 시간그리드 v2 안 ③ 헬퍼 (3곳 동기화) ───
+// 짝수 시간만 숫자, 홀수는 점(·). 자정 빨강 강조. 24 이후는 -24 (25→01).
+function renderGanttHourCells(){
+  return ganttHours.map(h=>{
+    const isMid=h===24;
+    const isEven=h%2===0;
+    const display=isMid?'0':(isEven?(h>=24?String(h-24):String(h)):'<span class="dot"></span>');
+    const cls=isMid?'mid':(isEven?'major':'');
+    return `<div class="gantt-hour ${cls}">${display}</div>`;
+  }).join('');
+}
+// 격자 — 짝수=메이저(실선), 홀수=마이너(점선), 자정선은 ::after로 별도
+function renderGanttBgCols(){
+  return ganttHours.map(h=>{
+    if(h===GANTT_START) return `<div class="gantt-bg-col"></div>`; // 첫 칸 테두리 없음
+    const cls=(h%2===0)?'major':'minor';
+    return `<div class="gantt-bg-col ${cls}"></div>`;
+  }).join('');
+}
 
 async function renderGanttWeek(){
   if(!currentStore){document.getElementById('ganttChart').innerHTML='<div class="empty-state"><p>매장을 먼저 선택하세요</p></div>';return;}
@@ -7293,7 +7462,7 @@ function renderGanttFiltered(){
     else if(oc.includes("'"+ganttSelectedDay+"'")) b.classList.add('active');
   });
   const showDays=ganttSelectedDay==='all'?days:days.filter(d=>d.date===ganttSelectedDay);
-  const bgCols=ganttHours.map(()=>`<div class="gantt-bg-col"></div>`).join('');
+  const bgCols=renderGanttBgCols();
   let html='';
   showDays.forEach(day=>{
     const dayData=allData.filter(r=>r.work_date===day.date);
@@ -7303,7 +7472,7 @@ function renderGanttFiltered(){
         <span>${day.label}${isToday?' (오늘)':''}</span>
         <span class="day-count">${dayData.length}명</span>
       </div>
-      <div class="gantt-header"><div class="gantt-emp-col"></div>${ganttHours.map(h=>`<div class="gantt-hour"${h===24?' style="color:#dc2626;font-weight:700;"':''}>${h%3===0?(h>=24?h-24:h):''}</div>`).join('')}</div>`;
+      <div class="gantt-header"><div class="gantt-emp-col"></div>${renderGanttHourCells()}</div>`;
     if(!dayData.length){
       html+=`<div style="padding:8px;text-align:center;font-size:11px;color:var(--gray-400);">등록된 근무 없음</div>`;
     } else {
@@ -11270,17 +11439,18 @@ function openTimePicker(ctx){
   timePickerCtx=ctx;
   const hC=document.getElementById('pHour'),mC=document.getElementById('pMin');
   const isSchedCtx=ctx==='schedStart'||ctx==='schedEnd';
+  const isWeeklyCtx=ctx.startsWith('wp:'); // 주단위 일괄 입력 (wp:0:start, wp:3:end 등)
   // 제목 변경
   const titleEl=document.getElementById('timeSheetTitle');
-  if(titleEl) titleEl.innerText=isSchedCtx?'시간 선택 (시간 단위)':'시간 선택';
+  if(titleEl) titleEl.innerText=(isSchedCtx||isWeeklyCtx)?'시간 선택 (30분 단위)':'시간 선택';
   hC.innerHTML='';mC.innerHTML='';
   for(let i=0;i<24;i++) hC.innerHTML+=`<div class="picker-item" data-val="${i}">${String(i).padStart(2,'0')}시</div>`;
-  if(isSchedCtx){
-    // 근무계획: 30분 단위만
+  if(isSchedCtx||isWeeklyCtx){
+    // 근무계획: 30분 단위 (정시 또는 정시:30)
     mC.innerHTML='<div class="picker-item" data-val="0">00분</div><div class="picker-item" data-val="30">30분</div>';
-    mC.style.display='none'; // 분 컬럼 숨김 (시간만)
+    mC.style.display='';
   } else {
-    // 근태: 분 단위
+    // 근태: 1분 단위
     mC.style.display='';
     for(let i=0;i<60;i++) mC.innerHTML+=`<div class="picker-item" data-val="${i}">${String(i).padStart(2,'0')}분</div>`;
   }
@@ -11288,20 +11458,30 @@ function openTimePicker(ctx){
   openSheet('timeSheet');
   setTimeout(()=>{
     hC.scrollTo({top:now.getHours()*50});
-    if(!isSchedCtx) mC.scrollTo({top:now.getMinutes()*50});
+    if(isSchedCtx||isWeeklyCtx) mC.scrollTo({top:0});
+    else mC.scrollTo({top:now.getMinutes()*50});
     updatePickerActive(hC);
-    if(!isSchedCtx) updatePickerActive(mC);
+    updatePickerActive(mC);
   },150);
 }
 function confirmTime(){
   const isSchedCtx=timePickerCtx==='schedStart'||timePickerCtx==='schedEnd';
+  const isWeeklyCtx=timePickerCtx.startsWith('wp:');
   const h=String(getPV('pHour')).padStart(2,'0');
-  const m=isSchedCtx?'00':String(getPV('pMin')).padStart(2,'0');
+  const m=String(getPV('pMin')).padStart(2,'0');
+  // 주단위 일괄 입력: ctx = 'wp:{dayIdx}:{start|end}'
+  if(isWeeklyCtx){
+    const [, dayIdx, kind] = timePickerCtx.split(':');
+    const el=document.getElementById(`wpDay${dayIdx}${kind==='start'?'Start':'End'}`);
+    if(el){el.innerText=`${h}:${m}`;el.classList.remove('empty');}
+    closeSheet('timeSheet');
+    return;
+  }
   const targets={start:'vStart',end:'vEnd',schedStart:'vSchedStart',schedEnd:'vSchedEnd'};
   const id=targets[timePickerCtx];
   if(id){const el=document.getElementById(id);if(el){el.innerText=`${h}:${m}`;el.classList.remove('empty');}}
-  // 'start'/'end' (사후 등록 시트)는 시트가 열려 있어야 하므로 timeSheet만 닫음
-  if(timePickerCtx==='start'||timePickerCtx==='end') closeSheet('timeSheet'); else closeAllSheets();
+  // 'start'/'end' (사후 등록 시트), 'schedStart'/'schedEnd' (단일 계획 시트)는 시트가 열려 있어야 하므로 timeSheet만 닫음
+  if(timePickerCtx==='start'||timePickerCtx==='end'||isSchedCtx) closeSheet('timeSheet'); else closeAllSheets();
 }
 
 
@@ -17534,7 +17714,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   // 초기 진입 시 hash 체크 (즐겨찾기 #admin 진입 케이스)
   initAdminMode();
 
-  initAttDate();recalcSettle2();initSchedDate();
+  initAttDate();recalcSettle2();
 
   // 매장 복원: 로그인에 필요한 것만 먼저 로드 (직원목록)
   const savedStore=localStorage.getItem('pd_store');
