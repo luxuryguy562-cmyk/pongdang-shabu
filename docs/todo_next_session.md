@@ -2,6 +2,39 @@
 
 ---
 
+## 🔥 2026-05-21 (진행 중) — 속도 개선 3 Phase (~150줄, DB 변경 0)
+
+### 사장님 호소 (2026-05-21)
+- "왜 이렇게 느린건지를 설명해봐. 단순 수식계산일 뿐일텐데. 아직도 홈화면 5~6초, 느릴 땐 10초도 걸리는느낌, 지출관리화면도 굉장히 느림 3~4초"
+- 자동 동기화 = "거슬린 적은 없고, 어 왜 안되지? 나중에 하면되겟지 정도" → 보류 (외부 매장 권유 때 묶기)
+
+### 진단 (측정값)
+- loadDashboard: sb.from 14쿼리 (정적), 실제 'settle' 모드 분기 시 ~12쿼리 실행
+- 데이터 0행 테이블: daily_sales(3쿼리, 분기로 안 실행), mydata_transactions(1쿼리), reconciliation, expense_category_amounts
+- 캐시: 부분만 있음 (홈 dashboard 자체엔 없음)
+- Chart.js destroy 누락 위험 (new Chart 1건, destroy 패턴 명확치 않음)
+
+### Phase 작전 (사장님 OK 2026-05-21)
+- **Phase A — 작은 잔재 정리**: `_upsCheck` 5분 캐시 (10줄)
+- **Phase B — Stale-While-Revalidate 캐시 (메인)**: cacheGet/Set/Invalidate 헬퍼 + loadDashboard/loadExpHubData 캐시 진입 + 9곳 invalidate (~100줄)
+- **Phase C — Chart.js destroy fix**: new Chart 직전 ?.destroy() (~10줄)
+
+### 효과 목표
+- 홈: 5~10초 → **1초 이내** (두 번째 진입부터)
+- 지출관리: 3~4초 → 1초 이내
+
+### 백업 지점·롤백
+- 백업 커밋: `e8d98e5` (Merge PR #187, 2026-05-21)
+- 단계별 커밋: Phase A → Phase B → Phase C 각각 별도 커밋 + push
+- 롤백: `git revert <문제 커밋>` → push → main 머지 = 1분 안 복구
+- DB 변경 0 → DB 롤백 불필요
+
+### 다음 세션 진입 시
+- 본 페이즈 완료 → main 머지 후 사장님 골든패스 5개 검증
+- 잔여: 자동 동기화는 외부 매장 권유 페이즈에 묶기
+
+---
+
 ## ✅ 2026-05-21 완료 — 근태 서브탭 통합 + 시간그리드 v2 + 주단위 일괄 입력
 
 ### 사장님 호소

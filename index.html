@@ -4314,6 +4314,42 @@ function closeAllSheets() {
 }
 const fmt = n => (n||0).toLocaleString();
 const unFmt = s => parseInt((s||'0').replace(/,/g,''))||0;
+// ─── 데이터 캐시 (속도 개선 2026-05-21) ─── //
+// stale-while-revalidate 패턴 인프라: 메모리 + sessionStorage dual
+// 사용: cacheGet(key, ttlMs) / cacheSet(key, data) / cacheInvalidate(prefix)
+const _pdCacheMem = {};
+const PD_CACHE_VERSION = 1; // 코드 배포 시 버전 ↑ = 옛 캐시 자동 무효화
+function cacheGet(key, ttlMs=300000){
+  const m=_pdCacheMem[key];
+  if(m && Date.now()-m.t<ttlMs && m.v===PD_CACHE_VERSION) return m.d;
+  try{
+    const raw=sessionStorage.getItem('pd_cache_'+key);
+    if(raw){
+      const p=JSON.parse(raw);
+      if(p && p.v===PD_CACHE_VERSION && Date.now()-p.t<ttlMs){
+        _pdCacheMem[key]={t:p.t,d:p.d,v:p.v};
+        return p.d;
+      }
+    }
+  }catch(_){}
+  return null;
+}
+function cacheSet(key, data){
+  const obj={t:Date.now(),d:data,v:PD_CACHE_VERSION};
+  _pdCacheMem[key]=obj;
+  try{ sessionStorage.setItem('pd_cache_'+key, JSON.stringify(obj)); }catch(_){}
+}
+function cacheInvalidate(prefix){
+  Object.keys(_pdCacheMem).forEach(k=>{ if(k.startsWith(prefix)) delete _pdCacheMem[k]; });
+  try{
+    const rm=[];
+    for(let i=0;i<sessionStorage.length;i++){
+      const k=sessionStorage.key(i);
+      if(k && k.startsWith('pd_cache_'+prefix)) rm.push(k);
+    }
+    rm.forEach(k=>sessionStorage.removeItem(k));
+  }catch(_){}
+}
 // 로컬(한국) 시간 기준 YYYY-MM-DD 문자열 — toISOString().split('T')[0] 시간대 버그 회피용 (2026-05-15 #69)
 function ymdLocal(date){
   const d=date instanceof Date?date:new Date(date);
@@ -8716,10 +8752,17 @@ async function loadDashboard(){
 
     // ─── 자동 모드 판별 (토글 제거됨, 2026-05-15) ─── //
     // daily_sales에 최근 3일 내 데이터 있으면 ups(영구 모드), 없으면 settle(임시 모드)
+    // 2026-05-21 Phase A: 5분 캐시 (매번 sb fetch 낭비 방지 — 사장님 매장은 0행이라 결과 뻔함)
     try{
-      const _y3=new Date(today.getTime()-3*24*3600e3).toISOString().slice(0,10);
-      const{data:_upsCheck}=await sb.from('daily_sales').select('sale_date').eq('store_id',sid).gte('sale_date',_y3).limit(1);
-      dashSaleSource=(_upsCheck&&_upsCheck.length>0)?'ups':'settle';
+      const _upsKey=`upsCheck_${sid}`;
+      let _upsCached=cacheGet(_upsKey, 300000);
+      if(_upsCached===null){
+        const _y3=new Date(today.getTime()-3*24*3600e3).toISOString().slice(0,10);
+        const{data:_upsCheck}=await sb.from('daily_sales').select('sale_date').eq('store_id',sid).gte('sale_date',_y3).limit(1);
+        _upsCached=(_upsCheck&&_upsCheck.length>0)?'ups':'settle';
+        cacheSet(_upsKey, _upsCached);
+      }
+      dashSaleSource=_upsCached;
     }catch(_){dashSaleSource='settle';}
 
     const [
