@@ -9635,9 +9635,11 @@ async function loadDashboard(force){
       (settleRes?.data||[]).forEach(s=>{
         if(s.source==='closed'){ const d=s.date?.slice(8); if(d) holidayDays.add(d); }
       });
+      // fixed_costs source 카테고리 이름 목록 (사장님 매장: '고정비' + '공과금')
+      const fixedCatNames = (typeof fixedCats !== 'undefined' && fixedCats) ? fixedCats.map(c=>c.name) : [];
       setV17Context({
         year: y, monthIdx: mo-1, lastDay, passedDays, today, isCurrent,
-        dailySalesMap, dailyExpTotal, dailyCatMap, srcToCat,
+        dailySalesMap, dailyExpTotal, dailyCatMap, srcToCat, fixedCatNames,
         prevDailyMap, holidayDays,
       });
       v17RenderAll();
@@ -9921,32 +9923,38 @@ function v17MomComment(dS, dE){
 
 // loadDashboard 끝에서 호출 — 옛 데이터를 v17 컨텍스트로 변환
 function setV17Context(args){
-  // args = {year, monthIdx, lastDay, passedDays, today, dailySalesMap, dailyExpTotal, dailyCatMap, srcToCat, isCurrent}
+  // args = {year, monthIdx, lastDay, passedDays, dailySalesMap, dailyExpTotal, dailyCatMap, srcToCat, fixedCatNames, isCurrent}
   const ctx = {
     YEAR: args.year, MONTH_IDX: args.monthIdx, TARGET_MONTH: args.monthIdx+1,
     LAST_DAY: args.lastDay, TODAY: args.passedDays, IS_CURRENT: args.isCurrent,
     DAYS: {}, WEEKS: [], srcToCat: args.srcToCat||{},
     catMap: v17MapCatKey(args.srcToCat),
   };
+  // fixed_costs source 카테고리 이름 목록 (사장님 매장: '고정비' + '공과금' 둘 다)
+  const fixedCatNames = (args.fixedCatNames && args.fixedCatNames.length) ? args.fixedCatNames : [ctx.catMap.fixed];
   // DAYS 변환 (이번달)
   const mapKey = ctx.catMap;
+  function _sumFixed(cat){
+    let f = 0;
+    fixedCatNames.forEach(nm=>{ f += cat[nm] || 0; });
+    return f;
+  }
   for(let d=1; d<=args.lastDay; d++){
     const dd = String(d).padStart(2,'0');
     const key = `${ctx.TARGET_MONTH}-${dd}`;
     const sale = args.dailySalesMap[dd] || args.dailySalesMap[d] || 0;
     const exp = args.dailyExpTotal[dd] || args.dailyExpTotal[d] || 0;
     const cat = args.dailyCatMap[dd] || args.dailyCatMap[d] || {};
-    // 휴무 판단: 매출 0 + source closed (또는 sale 0 + exp만 fixed)
     const isHoliday = args.holidayDays?.has?.(dd) || args.holidayDays?.has?.(d) || false;
+    const fxd = _sumFixed(cat);
     if(isHoliday && sale===0){
-      const fxd = cat[mapKey.fixed] || 0;
       ctx.DAYS[key] = {holiday:true, sale:0, vendor:0, att:0, fixed:fxd, receipt:0, royalty:0, exp:fxd, profit:-fxd};
     } else if(sale > 0 || exp > 0) {
       ctx.DAYS[key] = {
         sale,
         vendor:  cat[mapKey.vendor]  || 0,
         att:     cat[mapKey.att]     || 0,
-        fixed:   cat[mapKey.fixed]   || 0,
+        fixed:   fxd,
         receipt: cat[mapKey.receipt] || 0,
         royalty: cat[mapKey.royalty] || 0,
         exp,
