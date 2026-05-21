@@ -4,6 +4,43 @@
 
 ---
 
+## [2026-05-21] 후속 fix 3건 (근무계획 UX) — PR #190 / #191 / #192
+
+### 사장님 호소 흐름
+1. "긴급버그 — 주단위 근태계획 저장 안됨, SQL인데 이게 왜 필요해?" → **PR #190** (is_off 컬럼 누락 fix)
+2. "근무계획 삭제·수정하는 기능도 없네" → **PR #191** (addSchedSheet 🗑 삭제 버튼 누락 fix)
+3. "권채현 화~일 휴무 자동 채워짐 + 휴무 찍지 말고 공란 = 자동 휴무이게 해" → **PR #192** (휴무 체크박스 제거, UX 단순화)
+
+### PR #190 — work_schedules.is_off 컬럼 누락 fix
+- 코드 11곳 사용 vs DB 8컬럼에 is_off 없음
+- 통합 PR #185 시 마이그레이션 SQL 누락
+- 사장님 "실행 승인" → `ALTER TABLE work_schedules ADD COLUMN IF NOT EXISTS is_off boolean DEFAULT false`
+- db_schema.md 정정 (옛 start_time/end_time 표기 → 실제 wish_start/wish_end)
+- dev_lessons #112 신설
+
+### PR #191 — addSchedSheet 🗑 삭제 버튼 추가
+- deleteSchedule() 함수는 있는데 시트에 호출 버튼 누락 (PR #185 잔재)
+- 편집 모드(schedId 있음)일 때만 노출
+- deleteScheduleFromSheet() 신설 (data-action 라우터 호환)
+
+### PR #192 — 주 일정 시트 휴무 체크박스 제거 (UX 단순화)
+- DB 측정: 권채현 화~일 6행 is_off=true 박혀있음 (사장님 짐작 정확)
+- saveWeeklyPlan: 휴무 분기 제거. 빈 칸 = row delete
+- renderWpDayCards: 옛 is_off=true row → 빈 칸으로 렌더
+- 도움말 + 토스트 메시지 갱신
+- 옛 6행 = 사장님이 다시 시트 열고 저장 시 자동 정리 (DB 직접 안 건드림)
+- dev_lessons #113 신설 (UX 단순화 패턴)
+
+### 잔재 패턴 인식
+이번 세션에 통합 PR #185 잔재 3건 catch:
+1. is_off DB 컬럼 누락 (#190)
+2. 삭제 버튼 UI 누락 (#191)
+3. 휴무 체크박스 UX 과잉 (#192, 사장님 호소로 발견)
+
+→ dev_lessons #112에 박은 "통합 PR 시 코드↔DB↔UI 매트릭스 검증 의무"가 진짜 필요한 이유.
+
+---
+
 ## [2026-05-21] 긴급 fix — work_schedules.is_off 컬럼 누락 (PR #185 잔재) — PR #190
 
 ### 사장님 호소
