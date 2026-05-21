@@ -4,6 +4,31 @@
 
 ---
 
+## 108. 카드 합계 vs 진입 그리드 데이터 소스 불일치 (2026-05-21)
+
+**사고**: 지출 카테고리 카드(식자재) 합계는 `calcExpenseByCategories`가 receipts+vendor_orders 합산해서 정확. 그러나 카드 클릭 진입 화면(`loadCatReceiptData`)은 receipts only 조회. 사장님이 "거래처주문수동입력이 그리드 표에 안 나옴"이라 호소.
+
+**사장님 직관 적중**: "거래방법과 지출카테고리의 차이를 아직도 인식 못한 것 같다" → 정확. 코드가 두 개념을 분리 못 함.
+- **거래방법(채널)** = 어떻게 입력했나: 거래처 영수증(📸/✏️) · 거래처 수동입력(vendor_orders) · 직구 영수증
+- **지출카테고리(분류)** = 무엇으로 분류됐나: 식자재 · 주류 · 비품 · ...
+- 한 카테고리에 N가지 거래방법 데이터가 모일 수 있음. 그리드는 모두 표시해야 함.
+
+**해결 (PR #180)**:
+- 정규화 헬퍼 `_normalizeExpenseRow(row, source)` — receipts↔vendor_orders 컬럼 차이 흡수 (`total_price↔amount`, `qty↔quantity`, `receipt_group_id↔order_group_id`, `receipt_date↔order_date`)
+- 그룹핑 헬퍼 `_groupExpenseRows(normRows)` — `_source` 분리 + group_id 또는 1행 fallback
+- 행 정규화 → source별 클릭 분기 (`openReceiptEdit` vs `openEditOrderSheet`)
+
+**규칙 (재발 방지)**:
+- 카드 합계와 진입 그리드는 **같은 데이터 소스**여야 함 (단일 진실의 원천)
+- `calcExpense`가 N개 테이블 합산하면 그리드도 N개 테이블 통합해야 함
+- 두 데이터 소스 한 화면 통합 = 정규화 객체 패턴 (행에 `_source` 박아 클릭 분기)
+- 헬퍼 함수 점검: `loadXxxData` 함수와 `calcXxxByCategories`가 같은 소스 쓰는지 grep
+- 다음 비슷한 케이스(catReceipt 외 화면)도 점검 필요 — 합계 vs 진입 그리드 불일치 grep
+
+**관련**: 헌법 1-5 (기존 기능 보호) · 1-6 (정당한 갈아엎기) · #105 (loadExpHubData vs calcExpenseByCategories 분기 동기화)
+
+---
+
 ## 107. `.mcp.json --read-only`가 DML(UPDATE/INSERT/DELETE) 거부 안 함 — DDL만 차단 추정 (2026-05-20)
 
 **사고**: 헌법 8-A-1에 "--read-only가 변경 SQL을 거부할 가능성 큼"이라 박혀있었음. 사장님 "실행 승인" 받고 `UPDATE vendors SET category_id=... WHERE id=...` 시도 → **통과됨**. 옛 추측이 틀렸다.
