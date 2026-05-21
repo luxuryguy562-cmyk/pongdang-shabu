@@ -4,6 +4,59 @@
 
 ---
 
+## 116. 큰 갈아엎기 후 옛 DOM 참조 잔재 = 첫 진입 throw 위험 (2026-05-22 v17 hotfix2)
+
+### 사례
+v17 전면 개편 시 옛 `#dashSummaryGrid`, `#dashDailyTable`, `#dashModeProvisional/Final` 등 null safe 가드 처리. 단 `#dashPassedLabel`은 깜빡 누락 → 사장님 첫 로그인 시 throw → `setV17Context` 호출 안 됨 → 월 카드 + 캘린더 비어있음.
+
+### 진단
+- 옛 코드 700+ 줄 안에서 옛 DOM 직접 호출 위치 다수. grep으로 식별 후 모두 `if(_el)` 가드 처리 필요.
+- 한 곳이라도 누락하면 첫 진입 시 throw 위험.
+
+### 결론
+- 큰 갈아엎기 시 **옛 DOM 모든 참조를 grep으로 카운트 + 각각 null safe 가드 확인**.
+- 헌법 11-4 잔재 검증 게이트에 "DOM 참조 null safe 확인" 추가 권고.
+- 갈아엎기 후 사장님 로그인 시뮬레이션 (또는 사장님께 첫 진입 콘솔 로그 부탁) 필수.
+
+---
+
+## 115. 사장님께 "확인 부탁" 떠넘기지 말고 Supabase MCP로 직접 검증 (2026-05-22 v17)
+
+### 사례
+v17 정산현황 탭 전면 개편 머지 후 "사장님이 골든패스 직접 확인 부탁" 보고. 사장님 호소: "엥? 니가 데이터 읽고 확인하면 되잖아. 왜 나한테 확인필요를?"
+
+### 진단
+- Supabase MCP `execute_sql`로 사장님 매장 DB 데이터 직접 조회 가능 (헌법 8-A 초록불)
+- 옛 srcToCat 매핑 + 사장님 매장 카테고리 구조 = 정적 분석으로는 한계
+- 매장 실 데이터로 검증 안 하면 사장님이 사용 중 발견 = 부담 떠넘기기
+
+### 결론
+- 큰 변경 후 항상 `list_projects` + `execute_sql`로 매장 데이터 검증
+- 옛 코드의 데이터 매핑(srcToCat, dailyCatMap)과 매장 카테고리 구조 점검
+- 발견된 차이 = 즉시 hotfix
+- 사장님이 발견 전에 CTO가 발견하는 게 진짜 작업
+
+### 본 사례 발견 사항
+- 사장님 매장 `fixed_costs` source 카테고리 **2개** ('고정비' + '공과금')
+- 옛 `srcToCat` 첫 매치 하나만 → v17 '공과금' 누락
+- → hotfix1 PR #195로 모든 fixed_costs 카테고리 합산 처리
+
+---
+
+## 114. 큰 작업 단계별 commit + push 정책 — push 보류로 사장님 앱 보호 (2026-05-22 v17)
+
+### 사례
+v17 작업 = 2000+ 줄 변경. Phase 1 (CSS만, 안전) push 했지만 Phase 2 (HTML 구조)에서 옛 JS가 사라진 DOM 참조 위험 인지 → Phase 2 commit만 + push 보류 → revert.
+
+### 결론
+- 큰 갈아엎기 = Phase 1~N 분리 + 각 Phase commit
+- **사장님 앱이 깨질 수 있는 Phase = push 보류 + 다음 Phase까지 묶어서 한 번에 push**
+- 사장님 앱 보호 우선 (헌법 1-2: push = main 자동 머지 = 사장님 매장 즉시 반영)
+- 한 세션에 다 못 끝낼 경우 → 다음 세션 인계 (todo_next_session.md)
+- Stop hook이 unpushed commit 경고 시 → 위험하면 revert (push 강요 X)
+
+---
+
 ## 113. "공란 = 자동 X" UX 패턴 — 명시적 체크박스보다 단순 (2026-05-21 사장님 호소)
 
 ### 사례
