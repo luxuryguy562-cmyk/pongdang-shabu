@@ -8714,7 +8714,12 @@ function moveDashMonth(dir){
   dashMonthStr=d.toISOString().slice(0,7);
   loadDashboard();
 }
-function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}}
+function destroyChart(id){
+  if(chartInstances[id]){
+    try{chartInstances[id].destroy();}catch(_){} // 2026-05-21 Phase C: destroy throw 보호
+    delete chartInstances[id];
+  }
+}
 function toggleTooltip(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none';}
 
 // 만원 단위 포맷 헬퍼
@@ -11789,10 +11794,17 @@ let expCatColorSel = '#0050FF';
 let dashSaleSource = 'settle'; // 'settle' = sales_daily (매출 관리와 동일) | 'ups' = 업솔루션 daily_sales
 let dashMode = 'provisional'; // 'provisional' | 'final'
 
-async function loadExpCategories(){
+async function loadExpCategories(force){
   if(!currentStore) return;
   // 비활성 포함 전체 로드 (대시보드에서 과거 거래 집계에 필요)
-  const{data}=await sb.from('expense_categories').select('*').eq('store_id',currentStore.id).order('sort_order');
+  // 2026-05-21 Phase C: 5분 캐시 (카테고리는 자주 안 바뀜 — 매번 fetch 낭비 방지)
+  const _catKey=`expCats_${currentStore.id}`;
+  let data = !force ? cacheGet(_catKey, 300000) : null;
+  if(!data){
+    const r=await sb.from('expense_categories').select('*').eq('store_id',currentStore.id).order('sort_order');
+    data=r.data;
+    if(data) cacheSet(_catKey, data);
+  }
   expCategories=data||[];
   // 카테고리 변경 즉시 거래처 필터·편집창 셀렉트도 갱신 (헌법 10조 2번)
   if(typeof refreshVendorListFilter==='function') refreshVendorListFilter();
@@ -11949,7 +11961,7 @@ async function reorderExpCats(box){
   const results=await Promise.all(updates);
   setLoad(false);
   if(results.some(r=>r.error)){toast('순서 저장 실패','error');}
-  await loadExpCategories();
+  await loadExpCategories(true);
 }
 
 let editExpCatParentId=null; // 소분류 추가 시 부모 ID
@@ -12055,7 +12067,7 @@ async function saveExpCat(){
   }
   const{error}=eid?await sb.from('expense_categories').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('expense_categories').insert(payload);
   setLoad(false);if(error)return errToast('저장', error);
-  closeAllSheets();await loadExpCategories();
+  closeAllSheets();await loadExpCategories(true);
 }
 
 // (moveExpCat 제거 — SortableJS 드래그로 대체. reorderExpCats 사용)
@@ -12073,7 +12085,7 @@ async function deleteExpCat(id,name){
     await sb.from('expense_categories').update({is_active:false}).in('id',childIds).eq('store_id',currentStore.id);
   }
   await sb.from('expense_categories').update({is_active:false}).eq('id',id).eq('store_id',currentStore.id);
-  await loadExpCategories();
+  await loadExpCategories(true);
 }
 
 // ══════════════════════════════════════════
