@@ -114,11 +114,19 @@ franchises (프랜차이즈/브랜드)
 | check_in_ip, check_out_ip | IP 기록 |
 
 ### work_schedules
-| 컬럼 | 용도 |
-|------|------|
-| store_id, employee_id, work_date | 복합 unique |
-| start_time, end_time | 시작/종료 (HH:MM) |
-| is_off (bool) | 휴무 |
+> 2026-05-21 갱신: 실제 DB 컬럼명으로 정정 (옛 start_time/end_time 표기는 오류). is_off 컬럼은 통합 PR #185 시 누락됐다가 PR #190에서 ALTER ADD.
+
+| 컬럼 | 타입 | 용도 |
+|------|------|------|
+| id | uuid PK | uuid_generate_v4() |
+| store_id | uuid | 매장 |
+| employee_id | uuid | 직원 |
+| work_date | date NOT NULL | 근무일 |
+| wish_start | time | 희망 출근 (HH:MM:SS) |
+| wish_end | time | 희망 퇴근 |
+| status | text default '희망' | '희망' / '확정' 등 |
+| memo | text | 비고 |
+| is_off | boolean default false | 휴무 여부 (2026-05-21 ADD) |
 - upsert onConflict: `store_id, employee_id, work_date`
 
 ### daily_sales
