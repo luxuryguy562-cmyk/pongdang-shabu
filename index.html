@@ -10161,16 +10161,25 @@ async function loadVendorOrders(){
   let firstGroup=true;
   groups.forEach(g=>{
     const dateShort=(g.date||'').slice(5).replace('-','/');
-    // 거래처 주문은 액션 버튼 없음 (행 자체 클릭이 편집) — 통일 구조 유지, actions 영역 비움
+    // 2026-05-21 통일감: 헤더에 [✏편집][🗑삭제] 노출 (catReceipt/영수증과 동일 패턴)
+    //  · g.key 형식: 'g:<orderGroupId>' (정확한 그룹) 또는 'f:<vendor_id>|<order_date>' (옛 fallback)
+    //  · [✏] = openEditOrderSheet (시트가 group_id 또는 vendor+date fallback로 그룹 전체 자동 로드)
+    //  · [🗑] = deleteOrderGroupFromCard (g:/f: 모두 지원)
     const vendorEmoji = showVendor ? '🧾' : '📅';
     const vendorName = showVendor ? esc(g.vendorName) : (dateShort||'-');
     const vendorSub = showVendor && dateShort ? ` · ${dateShort}` : '';
+    const editId = g.rows[0]?.id;
+    // g.key는 'g:<orderGroupId>' 또는 'f:<vendor_id>|<order_date>' — 그대로 deleteOrderGroupFromCard에 전달
     html+=`<tr class="grp-hdr${firstGroup?' first':''}">
       <td colspan="5"><div class="grp-hdr-row">
         <div class="grp-hdr-info">
           <span class="emoji">${vendorEmoji}</span>
           <span class="name">${vendorName}${vendorSub}</span>
           <span class="sum">· ${fmt(g.total)}원</span>
+        </div>
+        <div class="grp-hdr-actions">
+          <button type="button" class="btn btn-secondary" data-action="openEditOrderSheet|${editId}">✏</button>
+          <button type="button" class="btn btn-danger" data-action="deleteOrderGroupFromCard|${g.key}">🗑</button>
         </div>
       </div></td>
     </tr>`;
@@ -10427,30 +10436,43 @@ async function openEditOrderSheet(id){
   if(delBtn) delBtn.style.display=''; // 편집 모드 → 그룹 통째 삭제 버튼 노출
   openSheet('addOrderSheet');
 }
-// 2026-05-21 신설: catReceipt 화면 거래처 주문 카드 헤더 [🗑] — 그룹 통째 삭제
-//  · editKey = 'g:<orderGroupId>' (정확한 그룹) | 's:<rowId>' (옛 데이터 fallback = 단일 행)
-//  · group_id 있으면 같은 group_id 일괄 DELETE, fallback이면 그 행 1개만 DELETE
+// 2026-05-21 신설/2026-05-21 확장: 거래처 주문 카드 헤더 [🗑] — 그룹 통째 삭제
+//  · catReceipt 화면 = 'g:<orderGroupId>' | 's:<rowId>' (1행짜리)
+//  · vendor_detail 화면 = 'g:<orderGroupId>' | 'f:<vendorId>|<order_date>' (옛 데이터 vendor+date fallback)
+//  · cnt 계산을 DB COUNT로 (캐시 비의존 → 어디서 호출해도 안전)
 async function deleteOrderGroupFromCard(editKey){
   if(!guardStore()) return;
   const sepIdx = editKey.indexOf(':');
   const type = editKey.slice(0, sepIdx);
   const key = editKey.slice(sepIdx+1);
   if(!type || !key) return toast('잘못된 그룹 키','error');
-  // 삭제 대상 건수 미리 카운트 (사장님에게 보여줌)
   let cnt = 0;
-  if(type === 'g'){
-    (catReceiptRowsCache||[]).forEach(r=>{ if(r._source==='order' && r.group_id===key) cnt++; });
-  } else {
-    cnt = 1;
-  }
-  if(!confirm(`이 주문 그룹 ${cnt}건을 통째로 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
-  setLoad(true,'삭제 중...');
   let delQuery = sb.from('vendor_orders').delete().eq('store_id', currentStore.id);
   if(type === 'g'){
+    const {count} = await sb.from('vendor_orders').select('id',{count:'exact',head:true})
+      .eq('store_id', currentStore.id).eq('order_group_id', key);
+    cnt = count || 0;
     delQuery = delQuery.eq('order_group_id', key);
-  } else {
+  } else if(type === 's'){
+    // catReceipt 1행짜리 fallback (정확한 단행 삭제)
+    cnt = 1;
     delQuery = delQuery.eq('id', key);
+  } else if(type === 'f'){
+    // vendor_detail fallback = (vendor_id+order_date) 같은 옛 데이터 (order_group_id IS NULL) 통째
+    const pipeIdx = key.indexOf('|');
+    const vid = key.slice(0, pipeIdx);
+    const date = key.slice(pipeIdx+1);
+    if(!vid || !date) return toast('잘못된 fallback 키','error');
+    const {count} = await sb.from('vendor_orders').select('id',{count:'exact',head:true})
+      .eq('store_id', currentStore.id).eq('vendor_id', vid).eq('order_date', date).is('order_group_id', null);
+    cnt = count || 0;
+    delQuery = delQuery.eq('vendor_id', vid).eq('order_date', date).is('order_group_id', null);
+  } else {
+    return toast('잘못된 그룹 키 타입','error');
   }
+  if(!cnt) return toast('삭제할 행이 없어요','warn');
+  if(!confirm(`이 주문 그룹 ${cnt}건을 통째로 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+  setLoad(true,'삭제 중...');
   const {error} = await delQuery;
   setLoad(false);
   if(error) return errToast('삭제', error);
