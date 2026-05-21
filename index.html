@@ -3931,31 +3931,35 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
-<!-- v17 일별 시트 (캘린더 셀 탭) -->
-<div class="sheet" id="v17DailySheet" style="display:none;">
-  <div class="sheet-grab"></div>
-  <div class="sheet-hd">
-    <div><span class="dt" id="v17ShtDate">-</span><span class="day" id="v17ShtDay">-</span></div>
-    <button class="sheet-close" id="v17DailySheetClose">✕ 닫기</button>
+<!-- v17 일별 시트 (캘린더 셀 탭) — 옛 .sheet-overlay 패턴 -->
+<div class="sheet-overlay" id="v17DailySheet">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title"><span id="v17ShtDate">-</span> <span style="font-size:13px;color:var(--gray-500);margin-left:6px;" id="v17ShtDay">-</span></div>
+      <button class="sheet-close" id="v17DailySheetClose">✕</button>
+    </div>
+    <div class="v17-sht-summary">
+      <div><div class="lb">매출</div><div class="vl" style="color:var(--blue);" id="v17ShtSale">-</div></div>
+      <div><div class="lb">지출</div><div class="vl" style="color:#EF4444;" id="v17ShtExp">-<span class="vp" id="v17ShtExpPct"></span></div></div>
+      <div><div class="lb">순수익</div><div class="vl" id="v17ShtProfit">-<span class="vp" id="v17ShtProfitPct"></span></div></div>
+    </div>
+    <div id="v17ShtCats"></div>
+    <p style="font-size:11px;color:var(--gray-400);margin:14px 0 0;text-align:center;">매출 대비 % · 기준 초과 빨강</p>
   </div>
-  <div class="v17-sht-summary">
-    <div><div class="lb">매출</div><div class="vl" style="color:var(--blue);" id="v17ShtSale">-</div></div>
-    <div><div class="lb">지출</div><div class="vl" style="color:#EF4444;" id="v17ShtExp">-<span class="vp" id="v17ShtExpPct"></span></div></div>
-    <div><div class="lb">순수익</div><div class="vl" id="v17ShtProfit">-<span class="vp" id="v17ShtProfitPct"></span></div></div>
-  </div>
-  <div id="v17ShtCats"></div>
-  <p style="font-size:11px;color:var(--gray-400);margin:14px 0 0;text-align:center;">매출 대비 % · 기준 초과 빨강</p>
 </div>
 
 <!-- v17 카테고리 필터 시트 -->
-<div class="sheet" id="v17FilterSheet" style="display:none;">
-  <div class="sheet-grab"></div>
-  <div class="sheet-hd">
-    <div class="dt">⚙️ 캘린더 표시 옵션</div>
-    <button class="sheet-close" id="v17FilterSheetClose">✕</button>
+<div class="sheet-overlay" id="v17FilterSheet">
+  <div class="sheet" style="max-height:80vh;overflow-y:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">⚙️ 캘린더 표시 옵션</div>
+      <button class="sheet-close" id="v17FilterSheetClose">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px;line-height:1.5;">셀에 보일 정보. 카테고리 선택 시 비율% + 색상 강조.</div>
+    <div id="v17FilterList"></div>
   </div>
-  <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px;line-height:1.5;">셀에 보일 정보. 카테고리 선택 시 비율% + 색상 강조.</div>
-  <div id="v17FilterList"></div>
 </div>
 
 <!-- ══ 관리자 대시보드 (어플 주인 전용, #admin 진입) — 2026-05-20 신설 ══ -->
@@ -10485,8 +10489,7 @@ function v17OpenDailySheet(d){
   const dayName = ['일','월','화','수','목','금','토'][dt.getDay()];
   document.getElementById('v17ShtDate').textContent = `${ctx.TARGET_MONTH}/${d}`;
   document.getElementById('v17ShtDay').textContent = `(${dayName})`;
-  const sheet = document.getElementById('v17DailySheet');
-  if(sheet){ sheet.style.display='block'; sheet.classList.add('open'); }
+  openSheet('v17DailySheet');
 }
 
 // ─── 필터 시트 ───
@@ -10515,15 +10518,12 @@ function v17OpenFilterSheet(){
       v17CloseAllSheets();
     });
   });
-  const sheet = document.getElementById('v17FilterSheet');
-  if(sheet){ sheet.style.display='block'; sheet.classList.add('open'); }
+  openSheet('v17FilterSheet');
 }
 
 function v17CloseAllSheets(){
-  ['v17DailySheet','v17FilterSheet'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el){ el.classList.remove('open'); el.style.display='none'; }
-  });
+  closeSheet('v17DailySheet');
+  closeSheet('v17FilterSheet');
 }
 
 function v17OpenWeekModal(){
