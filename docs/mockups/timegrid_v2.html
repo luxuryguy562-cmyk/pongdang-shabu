@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>시간그리드 v2 — 안 ③ 상세 + 근무기록·계획 통합</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --border:#e5e7eb; --text:#1f2937; --muted:#6b7280;
+    --gray-50:#fafbfc; --gray-100:#f1f5f9; --gray-200:#e5e7eb; --gray-300:#cbd5e1;
+    --gray-400:#94a3b8; --gray-500:#64748b; --gray-600:#475569; --gray-700:#334155;
+    --blue:#6366f1; --blue-d:#4f46e5;
+    --plan:#cbd5e1; --plan-edge:#94a3b8;
+    --actual:#6366f1; --actual-edge:#4f46e5;
+    --absent:#ef4444;
+    --midnight:#dc2626;
+    --biz:#ffffff;          /* 영업존 배경 */
+    --offhour:#f1f5f9;      /* 비영업 배경 */
+    --night:rgba(99,102,241,0.07); /* 자정 후 새벽 */
+    --ok:#16a34a; --warn:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif;color:var(--text);background:var(--bg);font-size:14px;line-height:1.5}
+  body{padding:14px;padding-bottom:60px;max-width:980px;margin:0 auto}
+  h1{font-size:18px;margin-bottom:6px}
+  h2{font-size:15px;margin:14px 0 6px}
+  .lead{color:var(--muted);font-size:13px;margin-bottom:14px}
+  .scenario{background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px}
+  .scenario b{color:#b45309}
+
+  .section{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px}
+  .section.featured{border:2px solid #facc15;background:linear-gradient(180deg,#fffbeb 0%,#fff 60%)}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+  .b-best{background:#fef3c7;color:#b45309}
+  .b-curr{background:#e5e7eb;color:#374151}
+  .b-new{background:#dcfce7;color:#166534}
+  .sec-title{font-size:15px;font-weight:700;margin-bottom:2px}
+  .sec-sub{color:var(--muted);font-size:12px;margin-bottom:10px}
+
+  /* ── 모바일 폭 시뮬레이션 프레임 ── */
+  .phone-frame{
+    max-width:360px;margin:0 auto;background:#fff;
+    border:1px solid var(--border);border-radius:14px;
+    padding:10px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  .phone-frame.wide{max-width:414px}
+  .phone-frame.tablet{max-width:none}
+  .frame-label{font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px}
+
+  /* ── 간트 (실제 index.html 패턴 거의 동일) ── */
+  .gantt-day-label{font-size:12px;font-weight:700;color:var(--text);padding:6px 4px 4px;display:flex;justify-content:space-between;align-items:center}
+  .gantt-day-label .right{font-size:11px;color:var(--gray-500);font-weight:600}
+
+  .gantt-header{display:flex;border-bottom:2px solid var(--gray-200);}
+  .gantt-emp-col{min-width:44px;width:44px;font-size:9px;font-weight:700;color:var(--gray-600);padding:3px 2px;flex-shrink:0;text-align:center;}
+
+  /* 시간 칸 — 안 ③ 핵심 */
+  .gantt-hour{
+    flex:1;font-size:9px;text-align:center;color:var(--gray-500);
+    padding:3px 0;line-height:1;
+  }
+  .gantt-hour.major{color:var(--gray-700);font-weight:700}
+  .gantt-hour.mid{color:var(--midnight);font-weight:800}
+  .gantt-hour .dot{display:inline-block;width:2px;height:2px;background:var(--gray-400);border-radius:50%;vertical-align:middle}
+
+  /* 바 영역 — 안 ③ 영업존 배경 + 격자 */
+  .gantt-bar-area{
+    flex:1;position:relative;height:22px;display:flex;
+    /* 11시~24시 영업존 흰, 그 외 회색 (24시간 6~30 기준 = 시각 6→30) */
+    /* 6→11 = 비영업 (위치 0~20.83%) / 11→24 = 영업 (20.83→75%) / 24→30 = 새벽 (75→100%) */
+    background:
+      linear-gradient(to right,
+        var(--offhour) 0%, var(--offhour) 20.83%,
+        var(--biz) 20.83%, var(--biz) 75%,
+        var(--night) 75%, var(--night) 100%
+      );
+  }
+  /* 자정선 */
+  .gantt-bar-area::after{content:'';position:absolute;left:75%;top:-2px;bottom:-2px;border-left:2px dashed rgba(220,38,38,0.85);pointer-events:none;z-index:2;}
+
+  /* 격자 — 메이저(짝수 시간) vs 마이너(홀수) */
+  .gantt-bg-col{flex:1;border-left:1px solid transparent}
+  .gantt-bg-col.minor{border-left:1px dashed rgba(148,163,184,.28)}
+  .gantt-bg-col.major{border-left:1px solid rgba(100,116,139,.35)}
+  .gantt-bg-col.midnight{border-left:2px dashed transparent} /* 자정선은 ::after로 그리므로 칸 자체는 투명 */
+
+  /* 행 */
+  .gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--gray-100);min-height:24px;}
+  .gantt-name{min-width:44px;width:44px;font-size:10px;font-weight:700;padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+
+  /* 막대 */
+  .gantt-bar{position:absolute;height:14px;top:4px;border-radius:3px;background:var(--blue);opacity:.85;display:flex;align-items:center;overflow:hidden;font-size:9px;color:#fff;padding-left:3px;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.25)}
+  .gantt-bar.plan{background:transparent;border:1.5px dashed var(--plan-edge);height:18px;top:2px;opacity:1}
+  .gantt-bar.plan .lbl{color:var(--gray-700);text-shadow:none;font-weight:600}
+  .gantt-bar.actual{background:var(--actual);opacity:.85}
+  .gantt-bar.absent{background:repeating-linear-gradient(45deg,var(--absent),var(--absent) 4px,#fecaca 4px,#fecaca 8px);color:#fff}
+
+  /* 범례 */
+  .legend{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:14px;font-size:11px;color:#374151}
+  .lg{display:flex;align-items:center;gap:5px}
+  .lg-box{display:inline-block;width:14px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.1)}
+  .lg-plan{background:transparent;border:1.5px dashed var(--plan-edge)}
+  .lg-actual{background:var(--actual)}
+  .lg-absent{background:repeating-linear-gradient(45deg,var(--absent),var(--absent) 4px,#fecaca 4px,#fecaca 8px)}
+  .lg-mid{display:inline-block;width:0;border-left:2px dashed var(--midnight);height:14px}
+  .lg-biz{background:var(--biz);border:1px solid var(--gray-300)}
+  .lg-off{background:var(--offhour);border:1px solid var(--gray-300)}
+
+  /* 장단점 */
+  .pros,.cons,.note{font-size:13px;padding:8px 10px;border-radius:8px;margin-top:8px}
+  .pros{background:#ecfdf5;border-left:3px solid var(--ok);color:#065f46}
+  .cons{background:#fef2f2;border-left:3px solid var(--absent);color:#991b1b}
+  .note{background:#eff6ff;border-left:3px solid #3b82f6;color:#1e3a8a}
+
+  .verdict{background:#fef9c3;border:1px solid #facc15;padding:10px 12px;border-radius:10px;margin-top:14px;font-size:13px}
+  .verdict b{color:#a16207}
+
+  .foot{margin-top:24px;padding:12px;text-align:center;color:var(--muted);font-size:12px;border-top:1px dashed var(--border)}
+
+  /* 두 mockup 좌우 비교 */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:720px){ .compare{grid-template-columns:1fr} }
+
+  /* 통합 화면 헤더 — 토글 */
+  .tabbar{display:flex;gap:6px;margin-bottom:8px}
+  .tab{flex:1;text-align:center;padding:8px 4px;font-size:12px;font-weight:700;border-radius:8px;border:1px solid var(--border);color:var(--gray-600);background:#fff;cursor:pointer}
+  .tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+</style>
+</head>
+<body>
+
+<h1>📊 시간그리드 v2 — 안 ③ 상세 + 근무기록·계획 통합</h1>
+<p class="lead">사장님 호소 두 가지(시간그리드 직관성 / 근무기록·계획 합치기) 검토 mockup. 사장님 결정 = "한 화면 + 계획·실제 겹침" + "안 ③, 안 깨지면".</p>
+
+<div class="scenario">
+  <b>시나리오</b> · 5/13(수) 사장님 매장 영업 11:00~24:00.<br>
+  · 김알바: 계획 11~17, 실제 11:05~17:00 (5분 지각)<br>
+  · 이주방: 계획 11~22, 실제 11:00~21:30 (30분 조퇴)<br>
+  · 박마감: 계획 18~02(익), 실제 18:00~02:15(익) (마감조 정상)<br>
+  · 신알바: 계획 13~18, 실제 없음 (⚠️ 결근)
+</div>
+
+<div class="legend">
+  <span class="lg"><span class="lg-box lg-plan"></span>계획(점선 테두리)</span>
+  <span class="lg"><span class="lg-box lg-actual"></span>실제 근무(보라)</span>
+  <span class="lg"><span class="lg-box lg-absent"></span>결근(빗금)</span>
+  <span class="lg"><span class="lg-mid"></span>자정선</span>
+  <span class="lg"><span class="lg-box lg-biz"></span>영업존</span>
+  <span class="lg"><span class="lg-box lg-off"></span>비영업</span>
+</div>
+
+
+<!-- ─────────────────────────────────────────────
+     ❶ 시간그리드 자체 — 옛 vs 안 ③ 좌우 비교
+     ───────────────────────────────────────────── -->
+<div class="section">
+  <div class="sec-title">❶ 시간그리드 자체 비교 (모바일 폭 360px 가정)</div>
+  <div class="sec-sub">왼쪽 = 현재 운영 중 / 오른쪽 = 안 ③ 적용</div>
+
+  <div class="compare">
+    <!-- 왼쪽: 현재 -->
+    <div>
+      <div class="phone-frame">
+        <div class="frame-label">현재 (3시간 단위 숫자 · 격자 거의 안 보임)</div>
+        <div class="gantt-day-label">
+          <span>📅 5/13 (수)</span>
+          <span class="right">근무 4건</span>
+        </div>
+        <!-- 헤더 -->
+        <div class="gantt-header">
+          <div class="gantt-emp-col"></div>
+          <!-- 6~30시 24칸. 현재처럼 3h마다만 숫자, 나머지 빈칸. 격자 거의 안 보임 -->
+          <div style="flex:1;display:flex">
+            <!-- 6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25(=01),26(=02),27(=03),28(=04),29(=05) -->
+            <div class="gantt-hour">6</div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour">9</div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour">12</div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour">15</div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour">18</div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour">21</div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour mid">0</div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour">3</div>
+            <div class="gantt-hour"></div>
+            <div class="gantt-hour"></div>
+          </div>
+        </div>
+        <!-- 행 (현재 스타일: 격자 거의 안 보임) -->
+        <div class="gantt-row">
+          <div class="gantt-name">김알바</div>
+          <div class="gantt-bar-area" style="background:none">
+            <!-- 흐릿한 회색 격자만 -->
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <!-- 11~17 막대: 5/24=20.83% ~ 11/24=45.83% -->
+            <div class="gantt-bar actual" style="left:20.83%;width:25%">11~17</div>
+          </div>
+        </div>
+        <div class="gantt-row">
+          <div class="gantt-name">박마감</div>
+          <div class="gantt-bar-area" style="background:none">
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <div style="flex:1;border-left:1px solid #f1f5f9"></div>
+            <!-- 18~26(=02익): 12/24=50% ~ 20/24=83.33% (8h) -->
+            <div class="gantt-bar actual" style="left:50%;width:33.33%">18~02</div>
+          </div>
+        </div>
+        <div class="cons" style="font-size:11px;padding:6px 8px">❌ 막대가 어디서 시작/끝나는지 즉시 안 보임. 격자 거의 안 보임.</div>
+      </div>
+    </div>
+
+    <!-- 오른쪽: 안 ③ -->
+    <div>
+      <div class="phone-frame">
+        <div class="frame-label">안 ③ (영업존 배경 + 짝수시간 숫자 + 메이저 격자)</div>
+        <div class="gantt-day-label">
+          <span>📅 5/13 (수)</span>
+          <span class="right">근무 4건</span>
+        </div>
+        <!-- 헤더: 짝수 시간 숫자, 홀수는 가운데 점 -->
+        <div class="gantt-header">
+          <div class="gantt-emp-col"></div>
+          <div style="flex:1;display:flex">
+            <div class="gantt-hour major">6</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">8</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">10</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">12</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">14</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">16</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">18</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">20</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">22</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour mid">0</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">2</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+            <div class="gantt-hour major">4</div>
+            <div class="gantt-hour"><span class="dot"></span></div>
+          </div>
+        </div>
+        <!-- 행 -->
+        <div class="gantt-row">
+          <div class="gantt-name">김알바</div>
+          <div class="gantt-bar-area">
+            <div class="gantt-bg-col"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <!-- 11~17 -->
+            <div class="gantt-bar actual" style="left:20.83%;width:25%">11~17</div>
+          </div>
+        </div>
+        <div class="gantt-row">
+          <div class="gantt-name">박마감</div>
+          <div class="gantt-bar-area">
+            <div class="gantt-bg-col"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bg-col major"></div>
+            <div class="gantt-bg-col minor"></div>
+            <div class="gantt-bar actual" style="left:50%;width:33.33%">18~02</div>
+          </div>
+        </div>
+        <div class="pros" style="font-size:11px;padding:6px 8px">✅ 영업존 흰 배경으로 11~24 시각 즉시 인지. 짝수 시간 숫자 + 메이저 격자로 어디든 위치 추정 가능. 자정선 빨강 점선 유지.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:12px">
+    <b>안 깨짐 검증 포인트</b> ·
+    한 칸 폭 = (360 - 44(이름) - 28(좌우패딩)) / 24 ≈ <b>12.0px</b>.
+    9px 폰트 숫자 한 자리는 ~5.5px → 충분. 두 자리(10, 12, 14...) ~10.5px → 살짝 빠듯하지만 padding 0 + line-height 1로 안 깨짐.
+    숫자 칸 12개 (짝수만) ⇒ 충돌 없음. <b>홀수 칸은 점(·) 1개</b>라 ~2px만 차지.
+  </div>
+</div>
+
+
+<!-- ─────────────────────────────────────────────
+     ❷ 다른 폭(414px·태블릿)에서도 안 깨지나
+     ───────────────────────────────────────────── -->
+<div class="section">
+  <div class="sec-title">❷ 다른 폭에서도 안 깨짐 (sanity check)</div>
+
+  <h2>📱 414px (아이폰 Pro Max 계열)</h2>
+  <div class="phone-frame wide">
+    <div class="gantt-day-label"><span>📅 5/13 (수)</span><span class="right">근무 4건</span></div>
+    <div class="gantt-header">
+      <div class="gantt-emp-col"></div>
+      <div style="flex:1;display:flex">
+        <div class="gantt-hour major">6</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">8</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">10</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">12</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">14</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">16</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">18</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">20</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">22</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour mid">0</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">2</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">4</div><div class="gantt-hour"><span class="dot"></span></div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-name">박마감</div>
+      <div class="gantt-bar-area">
+        <div class="gantt-bg-col"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div>
+        <div class="gantt-bar actual" style="left:50%;width:33.33%">18:00~02:15</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:14px">💻 태블릿/PC (980px)</h2>
+  <div class="phone-frame tablet">
+    <div class="gantt-day-label"><span>📅 5/13 (수)</span><span class="right">근무 4건 · 28.6h</span></div>
+    <div class="gantt-header">
+      <div class="gantt-emp-col"></div>
+      <div style="flex:1;display:flex">
+        <div class="gantt-hour major">6</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">8</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">10</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">12</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">14</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">16</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">18</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">20</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">22</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour mid">0</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">2</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">4</div><div class="gantt-hour"><span class="dot"></span></div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-name">김알바</div>
+      <div class="gantt-bar-area">
+        <div class="gantt-bg-col"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div>
+        <div class="gantt-bar actual" style="left:20.83%;width:25%">11:05~17:00 · 5.9h</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros" style="margin-top:8px">✅ 폭이 커지면 막대 안에 시각·시간 메타까지 표시 가능. 360px에선 막대 짧으면 메타 숨기고 hover/tap으로 별도 표시.</div>
+</div>
+
+
+<!-- ─────────────────────────────────────────────
+     ❸ 통합 화면 — 근무기록 + 근무계획 (한 화면 + 겹침)
+     ───────────────────────────────────────────── -->
+<div class="section featured">
+  <div class="sec-title">❸ 통합 화면 — 근무기록 + 근무계획 <span class="badge b-new">사장님 결정</span></div>
+  <div class="sec-sub">한 행에 <b>계획(점선 빈 박스)</b> + <b>실제(보라 채워진 박스)</b> 겹침. 결근은 빗금. 한눈에 "계획 대비 실제" 인지.</div>
+
+  <div class="phone-frame">
+    <!-- 상단 토글 -->
+    <div class="tabbar">
+      <div class="tab active">📋 일자별</div>
+      <div class="tab">👤 직원별</div>
+      <div class="tab">🗓 주간 간트</div>
+    </div>
+
+    <div class="gantt-day-label">
+      <span>📅 5/13 (수) · 근무 4건</span>
+      <span class="right">28.6h · 28.6만원</span>
+    </div>
+
+    <!-- 헤더 안 ③ -->
+    <div class="gantt-header">
+      <div class="gantt-emp-col"></div>
+      <div style="flex:1;display:flex">
+        <div class="gantt-hour major">6</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">8</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">10</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">12</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">14</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">16</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">18</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">20</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">22</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour mid">0</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">2</div><div class="gantt-hour"><span class="dot"></span></div>
+        <div class="gantt-hour major">4</div><div class="gantt-hour"><span class="dot"></span></div>
+      </div>
+    </div>
+
+    <!-- 김알바: 계획 11~17 + 실제 11:05~17 (5분 지각) -->
+    <div class="gantt-row">
+      <div class="gantt-name">김알바</div>
+      <div class="gantt-bar-area">
+        <div class="gantt-bg-col"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div>
+        <!-- 계획 11~17 -->
+        <div class="gantt-bar plan" style="left:20.83%;width:25%"><span class="lbl">계획</span></div>
+        <!-- 실제 11.083~17 -->
+        <div class="gantt-bar actual" style="left:21.18%;width:24.65%">실제 5.9h</div>
+      </div>
+    </div>
+
+    <!-- 이주방: 계획 11~22 + 실제 11~21.5 (30분 조퇴) -->
+    <div class="gantt-row">
+      <div class="gantt-name">이주방</div>
+      <div class="gantt-bar-area">
+        <div class="gantt-bg-col"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div>
+        <div class="gantt-bar plan" style="left:20.83%;width:45.83%"><span class="lbl">계획 11~22</span></div>
+        <div class="gantt-bar actual" style="left:20.83%;width:43.75%">실제 10.5h ⚠️ 조퇴</div>
+      </div>
+    </div>
+
+    <!-- 박마감: 계획 18~02익 + 실제 18~02:15익 -->
+    <div class="gantt-row">
+      <div class="gantt-name">박마감</div>
+      <div class="gantt-bar-area">
+        <div class="gantt-bg-col"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div>
+        <!-- 계획 18~26(=02익): 12/24=50% ~ 20/24=83.33% (33.33%) -->
+        <div class="gantt-bar plan" style="left:50%;width:33.33%"><span class="lbl">계획 8h</span></div>
+        <!-- 실제 18~26.25(=02:15익): 50% ~ 84.38% (34.38%) -->
+        <div class="gantt-bar actual" style="left:50%;width:34.38%">실제 8.25h</div>
+      </div>
+    </div>
+
+    <!-- 신알바: 결근 -->
+    <div class="gantt-row">
+      <div class="gantt-name">신알바</div>
+      <div class="gantt-bar-area">
+        <div class="gantt-bg-col"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div><div class="gantt-bg-col major"></div><div class="gantt-bg-col minor"></div>
+        <!-- 계획 13~18 -->
+        <div class="gantt-bar plan" style="left:29.17%;width:20.83%"><span class="lbl">계획 5h</span></div>
+        <!-- 결근: 계획 자리에 빗금 -->
+        <div class="gantt-bar absent" style="left:29.17%;width:20.83%">⚠️ 결근</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros">
+    ✅ <b>계획(점선)</b> vs <b>실제(보라)</b> 한 행에 겹쳐 — 지각/조퇴/연장 즉시 인지<br>
+    ✅ <b>결근(빨강 빗금)</b> = 계획만 있고 실제 없음 — 한눈에<br>
+    ✅ 박마감 마감조 = 한 줄로 18~02익 쭉 (자정선 빨강 점선)<br>
+    ✅ "근무기록" 탭과 "근무계획" 탭이 한 화면으로 통합 — 이중 진입 사라짐<br>
+    ✅ 옛 두 탭 → 새 탭 1개 (근태 안에서 "📋 기록" 통일)
+  </div>
+  <div class="cons">
+    ⚠️ 계획 없이 실제만 있는 경우 (등록 안 한 야간 근무) → 보라색 박스만 단독 표시<br>
+    ⚠️ 점선 + 채움 두 막대 겹침 = 막대 높이 살짝 다름 (계획 18px, 실제 14px). 안 깨짐 검증 OK
+  </div>
+</div>
+
+
+<!-- ─────────────────────────────────────────────
+     ❹ 옛/새 동작 비교 — 진입 경로
+     ───────────────────────────────────────────── -->
+<div class="section">
+  <div class="sec-title">❹ 진입 경로 변경</div>
+
+  <h2>🔴 옛 구조</h2>
+  <div class="note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">
+    <b>근태 탭</b> → 📋 기록 (실제 출퇴근)<br>
+    <b>근무계획 탭</b> → 일별 상세 (사전 계획)<br>
+    → 사장님이 "오늘 계획 vs 실제 비교" 하려면 두 탭 왔다갔다 + 시선 분산
+  </div>
+
+  <h2 style="margin-top:14px">🟢 새 구조</h2>
+  <div class="note" style="background:#ecfdf5;border-color:#bbf7d0;color:#065f46">
+    <b>근태 탭</b> → 📋 기록 (계획 + 실제 한 화면)<br>
+    <b>근무계획 탭</b> → <b>폐기</b> (또는 "+ 일정등록" 단일 동선 유지)<br>
+    → 한 화면에서 등록(+버튼) · 비교(겹침) · 편집(셀 탭) 모두 가능
+  </div>
+
+  <div class="note" style="margin-top:8px">
+    <b>마이그레이션 결정 필요</b>:<br>
+    A. 근무계획 탭 통째 폐기, 모든 동작 근태 탭 안으로 (가장 깨끗)<br>
+    B. 근무계획 탭 유지하되 화면 = 근태 통합 화면과 동일 (UI 통일, 코드 분기 줄임)<br>
+    C. 근무계획 탭 = 주간 간트(여러 일자 한눈)만 남김, 일별은 근태 탭으로 (역할 분리)
+  </div>
+</div>
+
+
+<div class="verdict">
+  <b>💡 사장님 결정 정리</b><br>
+  · 시간그리드 안 ③ ⇒ 영업존 흰 배경 + 짝수 시간 숫자 + 메이저/마이너 격자. 안 깨짐 검증 완료(360/414/980).<br>
+  · 통합 ⇒ 한 행에 계획·실제 겹침 + 결근 빗금.<br>
+  · 진입 경로 ⇒ 위 ❹에서 A/B/C 중 선택.<br>
+  · DB 변경 0 (CSS/JS 함수만).<br>
+  · 예상 작업량 ≈ 100~150줄 (간트 함수 3곳 + CSS 블록).
+</div>
+
+<div class="foot">
+  pongdang-shabu · 시간그리드 v2 mockup · 2026-05-21
+</div>
+
+</body></html>
