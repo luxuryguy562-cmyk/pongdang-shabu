@@ -3455,6 +3455,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveSchedule">💾 저장</button>
   </div>
+  <!-- 2026-05-21: 편집 모드일 때만 노출되는 삭제 버튼 (옛 PR #185 시 누락 fix) -->
+  <button id="schedDeleteBtn" class="btn btn-danger btn-full" style="margin-top:8px;border-radius:16px;padding:14px;font-size:14px;display:none;" data-action="deleteScheduleFromSheet">🗑 이 일정 삭제</button>
 </div>
 
 <!-- 주단위 일괄 입력 시트 — 한 직원의 월~일 7일치 한 번에 등록 (사장님 요청 2026-05-21) -->
@@ -7197,6 +7199,8 @@ let schedDayMap = {}; // legacy — 통합 화면은 window._attSchedDayMap 사�
 function openSchedSheet(date, schedId){
   if(!guardStore()) return;
   document.getElementById('vSchedDate').innerText=date||'-';
+  // 2026-05-21: 편집 모드 분기 + 삭제 버튼 노출 (PR #185 시 누락 fix)
+  const delBtn=document.getElementById('schedDeleteBtn');
   if(schedId){
     // 2026-05-21: schedDayMap 폐기, 통합 화면의 window._attSchedDayMap 사용
     const dayPlans = (window._attSchedDayMap && window._attSchedDayMap[date]) || [];
@@ -7209,6 +7213,7 @@ function openSchedSheet(date, schedId){
       document.getElementById('vSchedEnd').innerText=s.wish_end?s.wish_end.slice(0,5):'-';
       document.getElementById('vSchedMemo').value=s.memo||'';
     }
+    if(delBtn){ delBtn.style.display='block'; delBtn.dataset.schedId=schedId; }
   } else {
     document.getElementById('addSchedTitle').innerText='희망근무 등록';
     if(!isManager && currentEmp){
@@ -7221,8 +7226,14 @@ function openSchedSheet(date, schedId){
     document.getElementById('vSchedStart').innerText='-';
     document.getElementById('vSchedEnd').innerText='-';
     document.getElementById('vSchedMemo').value='';
+    if(delBtn){ delBtn.style.display='none'; delBtn.dataset.schedId=''; }
   }
   openSheet('addSchedSheet');
+}
+// 2026-05-21: 시트 안 삭제 버튼 핸들러 (data-action 호환)
+function deleteScheduleFromSheet(){
+  const id=document.getElementById('schedDeleteBtn')?.dataset.schedId;
+  if(id) deleteSchedule(id);
 }
 async function deleteSchedule(schedId){
   if(!guardStore()||!schedId) return;
