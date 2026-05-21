@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>주정산표 v9 — 매출 폰트 통일 + 주별 상세 시트 + 노란 끼임 박스</title>
+<style>
+  :root{
+    --blue:#0050FF;--blue-light:#E6EEFF;
+    --gray-50:#FAFBFC;--gray-100:#F2F4F6;--gray-200:#E5E8EB;--gray-300:#D1D6DB;
+    --gray-400:#B0B8C1;--gray-500:#8B95A1;--gray-600:#6B7684;--gray-700:#4E5968;
+    --text:#191F28;--white:#fff;--bg:#F9FAFB;
+    --danger:#F04452;--success:#10B981;--warn:#F59E0B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;background:#E5E7EB;color:var(--text);font-size:14px;}
+  .page{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh;}
+  .top-bar{position:sticky;top:0;z-index:50;background:var(--white);padding:10px 12px;border-bottom:1px solid var(--gray-200);box-shadow:0 1px 6px rgba(0,0,0,0.04);}
+  .top-title{font-size:13px;font-weight:800;color:var(--text);}
+  .top-sub{font-size:11px;color:var(--gray-600);margin-top:3px;line-height:1.5;}
+  .content{padding:12px;}
+  .card{background:var(--white);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;background:var(--gray-100);color:var(--gray-700);gap:4px;}
+  .btn.tiny{padding:5px 10px;font-size:11px;}
+  .month-nav{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
+  .month-nav .navbtn{flex:0 0 38px;padding:6px;background:var(--white);border-radius:8px;font-size:14px;font-weight:800;color:var(--gray-700);border:1px solid var(--gray-200);cursor:pointer;}
+  .month-label{flex:1;text-align:center;font-size:16px;font-weight:900;}
+  .summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .sum-box{background:var(--gray-50);border-radius:10px;padding:10px 8px;text-align:center;}
+  .sum-box .lb{font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:3px;}
+  .sum-box .vl{font-size:13.5px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+  .sum-box .vl.blue{color:var(--blue);}
+  .sum-box .vl.green{color:#10B981;}
+  .sum-box .vl.red{color:#EF4444;}
+  /* 캘린더 (그대로) */
+  .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .cal-head .ttl{font-size:14px;font-weight:800;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+  .cal-wkh{font-size:10px;font-weight:800;text-align:center;padding:5px 0;color:var(--gray-500);}
+  .cal-wkh.sun{color:#EF4444;}
+  .cal-wkh.sat{color:#3B82F6;}
+  .cal-cell{min-height:58px;border-radius:8px;padding:4px 3px;display:flex;flex-direction:column;gap:1px;background:var(--gray-50);border:1px solid var(--gray-100);overflow:hidden;cursor:pointer;}
+  .cal-cell.empty{background:transparent;border:none;cursor:default;}
+  .cal-cell.today{background:var(--blue-light);border:1.5px solid var(--blue);}
+  .cal-cell.future{background:transparent;border:1px dashed var(--gray-200);cursor:default;}
+  .cal-cell.closed{background:#FEF3C7;border-color:#FCD34D;}
+  .cal-cell.closed .cc-day{color:#92400E;}
+  .cal-cell .cc-day{font-size:10px;font-weight:800;color:var(--gray-700);}
+  .cal-cell.sun .cc-day{color:#EF4444;}
+  .cal-cell.sat .cc-day{color:#3B82F6;}
+  .cal-cell .cc-sale{font-size:9.5px;font-weight:800;color:var(--blue);line-height:1.2;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;}
+  .cal-cell .cc-profit{font-size:9px;font-weight:700;line-height:1.2;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;}
+  .cal-cell .cc-cat{font-size:10px;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;}
+  .cc-profit.pos{color:#10B981;}
+  .cc-profit.neg{color:#EF4444;}
+  .cal-cell.today .cc-day{color:var(--blue);}
+  .cal-cell.heat-good{background:#DCFCE7;border-color:#86EFAC;}
+  .cal-cell.heat-warn{background:#FEF9C3;border-color:#FDE047;}
+  .cal-cell.heat-bad{background:#FEE2E2;border-color:#FCA5A5;}
+  /* 진입 카드 */
+  .enter-card{background:linear-gradient(135deg,#0050FF 0%,#3B82F6 100%);color:#fff;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,80,255,0.2);}
+  .enter-card .ttl{font-size:14px;font-weight:900;}
+  .enter-card .sub{font-size:11px;opacity:0.85;margin-top:3px;}
+  .enter-card .arrow{font-size:22px;font-weight:300;}
+  /* 풀스크린 모달 */
+  .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:200;display:none;flex-direction:column;}
+  .modal.open{display:flex;}
+  .modal-hd{position:sticky;top:0;background:var(--white);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-200);z-index:5;}
+  .modal-hd .ttl{font-size:15px;font-weight:900;}
+  .modal-hd .sub{font-size:11px;color:var(--gray-500);font-weight:700;margin-top:2px;}
+  .modal-close{background:var(--gray-100);border:0;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--gray-700);cursor:pointer;}
+  .modal-body{flex:1;overflow-y:auto;padding:10px 12px 20px;-webkit-overflow-scrolling:touch;}
+  /* 주별 카드 (v5) */
+  .wk-card{background:var(--white);border-radius:12px;padding:12px;margin-bottom:9px;box-shadow:0 1px 2px rgba(0,0,0,0.04);position:relative;cursor:pointer;transition:transform 0.1s ease;}
+  .wk-card:active{transform:scale(0.985);}
+  .wk-card.current{border:2px solid var(--blue);padding:10px;}
+  .wk-card.current::before{content:'진행중';position:absolute;top:-7px;right:10px;background:var(--blue);color:#fff;font-size:9px;font-weight:800;padding:1.5px 6px;border-radius:5px;letter-spacing:0.3px;}
+  /* 헤더: 주차 라벨 (날짜 범위) */
+  .wk-label{font-size:11px;font-weight:800;color:var(--gray-500);margin-bottom:4px;letter-spacing:-0.2px;}
+  .wk-label b{color:var(--text);font-size:13px;}
+  /* 매출 큰 글씨 + 상승률 */
+  .wk-sale-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--gray-100);}
+  .wk-sale-left{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .wk-sale-amt{font-size:21px;font-weight:900;color:var(--blue);letter-spacing:-0.3px;font-variant-numeric:tabular-nums;}
+  .wk-sale-mom{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .wk-sale-mom.up{color:#EF4444;}
+  .wk-sale-mom.down{color:#10B981;}
+  .wk-sale-mom.same{color:var(--gray-400);}
+  .wk-profit{font-size:14px;font-weight:900;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;text-align:right;line-height:1.3;}
+  .wk-profit-lb{font-size:9px;font-weight:700;color:var(--gray-500);display:block;}
+  .wk-profit.pos{color:#10B981;}
+  .wk-profit.neg{color:#EF4444;}
+  /* 지출 한 줄 */
+  .wk-exp{display:flex;justify-content:space-between;font-size:11px;color:var(--gray-600);font-weight:700;margin-bottom:8px;}
+  .wk-exp b{color:var(--text);font-weight:800;font-variant-numeric:tabular-nums;}
+  .wk-exp .pct{color:var(--gray-400);font-size:10.5px;margin-left:3px;}
+  /* 간트 누적 막대 */
+  .gantt-stack{display:flex;height:14px;border-radius:5px;overflow:hidden;background:var(--gray-100);margin-bottom:8px;}
+  .gantt-stack > span{height:100%;position:relative;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;letter-spacing:-0.3px;}
+  .gantt-stack > span.over{background-image:repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0, rgba(0,0,0,0.18) 3px, transparent 3px, transparent 7px);}
+  .gantt-stack > span.profit{background:#DCFCE7;color:#10B981 !important;}
+  .gantt-stack > span.loss{background:#FEE2E2;color:#EF4444 !important;}
+  /* ★ 범례 한 줄 고정 (상위 3개 식자재·인건비·공과금) */
+  .gantt-legend{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;}
+  .gantt-legend .lg{display:flex;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:700;color:var(--gray-700);font-variant-numeric:tabular-nums;min-width:0;padding:4px 6px;background:var(--gray-50);border-radius:6px;overflow:hidden;white-space:nowrap;}
+  .gantt-legend .lg .dot{width:7px;height:7px;border-radius:2px;display:inline-block;flex-shrink:0;}
+  .gantt-legend .lg .nm{flex-shrink:1;overflow:hidden;text-overflow:ellipsis;}
+  .gantt-legend .lg .pct{font-weight:800;color:var(--text);flex-shrink:0;}
+  .gantt-legend .lg.over{color:#EF4444;background:#FEE2E2;}
+  .gantt-legend .lg.over .pct{color:#EF4444;}
+  /* "+ 그 외 N% (탭)" 작은 표시 */
+  .gantt-rest{font-size:10px;color:var(--gray-400);font-weight:700;text-align:center;margin-bottom:6px;}
+  /* 카드 탭 안내 */
+  .wk-tap-hint{font-size:9.5px;color:var(--gray-400);font-weight:700;text-align:center;margin-top:6px;border-top:1px dashed var(--gray-200);padding-top:6px;}
+  /* vs 전주 */
+  .wk-mom{padding-top:8px;border-top:1px dashed var(--gray-200);font-size:11px;color:var(--gray-600);font-weight:700;line-height:1.5;font-variant-numeric:tabular-nums;}
+  .wk-mom .up{color:#EF4444;font-weight:800;}
+  .wk-mom .down{color:#10B981;font-weight:800;}
+  .wk-mom .same{color:var(--gray-400);}
+  /* 안내 박스 */
+  .info-strip{padding:8px 12px;background:#FEF9C3;border-radius:8px;font-size:10.5px;color:#854D0E;line-height:1.5;margin-bottom:10px;}
+  /* 끼임 안내 (노란 톤 강조 — v9) */
+  .cross-note{font-size:11px;color:#854D0E;font-weight:700;background:#FEF9C3;padding:8px 10px;border-radius:8px;margin-bottom:8px;line-height:1.5;border-left:3px solid #F59E0B;}
+  .cross-note b{color:#713F12;}
+  /* 시트 공통 */
+  .sheet-bg{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;z-index:300;}
+  .sheet-bg.open{display:block;}
+  .sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;background:var(--white);border-radius:18px 18px 0 0;padding:14px 14px 28px;z-index:301;box-shadow:0 -4px 20px rgba(0,0,0,0.15);display:none;max-height:85vh;overflow-y:auto;}
+  .sheet.open{display:block;}
+  .sheet-grab{width:36px;height:4px;background:var(--gray-300);border-radius:2px;margin:-4px auto 10px;}
+  .sheet-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .sheet-hd .dt{font-size:16px;font-weight:900;}
+  .sheet-hd .day{font-size:11px;color:var(--gray-500);margin-left:6px;font-weight:700;}
+  .sheet-close{background:var(--gray-100);border:0;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--gray-700);cursor:pointer;}
+  .sht-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;padding:12px;background:var(--gray-50);border-radius:10px;}
+  .sht-summary .lb{font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:2px;}
+  .sht-summary .vl{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+  .sht-summary .vp{font-size:10px;font-weight:700;margin-left:3px;color:var(--gray-400);}
+  .sht-cat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);}
+  .sht-cat-row:last-child{border-bottom:0;}
+  .sht-cat-row .cn{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;}
+  .sht-cat-row .cn .dot{width:9px;height:9px;border-radius:50%;}
+  .sht-cat-row .vl{font-size:13px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+  .sht-cat-row .pct{font-size:11px;color:var(--gray-500);font-weight:700;margin-left:4px;}
+  .sht-cat-row .pct.over{color:#EF4444;}
+  .sht-cat-row .pct.good{color:#10B981;}
+  /* 필터 시트 */
+  .filter-row{padding:14px 8px;border-bottom:1px solid var(--gray-100);font-size:14px;font-weight:700;color:var(--text);cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+  .filter-row:last-child{border-bottom:0;}
+  .filter-row.active{color:var(--blue);}
+  .filter-row .dot{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:8px;}
+  .filter-row .check{color:var(--blue);font-size:18px;display:none;}
+  .filter-row.active .check{display:inline;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top-bar">
+    <div class="top-title">📊 주정산표 v9 — 사용자 관점 검토 반영</div>
+    <div class="top-sub">매출 폰트 통일 · 카드 탭 시 상세 시트 · 끼임 박스 노란 톤 📌 · 노란 안내 중복 제거</div>
+  </div>
+  <div class="content">
+    <div class="month-nav">
+      <button class="navbtn">‹</button>
+      <div class="month-label">2026년 5월</div>
+      <button class="navbtn">›</button>
+    </div>
+    <div class="card">
+      <div class="summary-row">
+        <div class="sum-box"><div class="lb">월 매출</div><div class="vl blue" id="mthSale">-</div></div>
+        <div class="sum-box"><div class="lb">월 지출</div><div class="vl red" id="mthExp">-</div></div>
+        <div class="sum-box"><div class="lb">순수익</div><div class="vl green" id="mthProfit">-</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="cal-head">
+        <div class="ttl" id="calMode">📅 일별 매출 + 순수익</div>
+        <button class="btn tiny" id="filterBtn">⚙️ 표시</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <p style="font-size:10px;color:var(--gray-400);margin:8px 0 0;text-align:center;">셀 탭 → 그 날 카테고리 상세</p>
+    </div>
+    <div class="enter-card" id="enterWeekModal">
+      <div>
+        <div class="ttl">📊 주별 카테고리 비교</div>
+        <div class="sub">식자재·인건비 비율 한눈에 보기</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="card" style="text-align:center;background:var(--gray-100);padding:10px;">
+      <button class="btn" style="font-size:11px;">📊 옛 일별 상세비교 (피벗) ›</button>
+      <div style="font-size:10px;color:var(--gray-500);margin-top:4px;">일단 보존</div>
+    </div>
+  </div>
+</div>
+
+<!-- 풀스크린 주별 모달 -->
+<div class="modal" id="weekModal">
+  <div class="modal-hd">
+    <div>
+      <div class="ttl">📊 주별 카테고리 비교</div>
+      <div class="sub">2026년 5월 · 월~일 7일 회계 주차</div>
+    </div>
+    <button class="modal-close" id="weekModalClose">✕ 닫기</button>
+  </div>
+  <div class="modal-body">
+    <div id="weekCardsContainer"></div>
+  </div>
+</div>
+
+<!-- 주별 상세 시트 (v9 신설 — 카드 탭 시 진입) -->
+<div class="sheet" id="weekDetailSheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-hd">
+    <div><span class="dt" id="wkShtTitle">-</span><span class="day" id="wkShtRange">-</span></div>
+    <button class="sheet-close sheet-x">✕ 닫기</button>
+  </div>
+  <div class="sht-summary">
+    <div><div class="lb">매출 (7일)</div><div class="vl" style="color:var(--blue);" id="wkShtSale">-</div></div>
+    <div><div class="lb">지출</div><div class="vl" style="color:#EF4444;" id="wkShtExp">-<span class="vp" id="wkShtExpPct"></span></div></div>
+    <div><div class="lb">순수익</div><div class="vl" id="wkShtProfit">-<span class="vp" id="wkShtProfitPct"></span></div></div>
+  </div>
+  <div id="wkShtCats"></div>
+  <p style="font-size:11px;color:var(--gray-400);margin:14px 0 0;text-align:center;">7일 통째 매출 대비 % · 기준 초과 빨강</p>
+</div>
+
+<!-- 일별 시트 -->
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="dailySheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-hd">
+    <div><span class="dt" id="sheetDate">-</span><span class="day" id="sheetDay">-</span></div>
+    <button class="sheet-close sheet-x">✕ 닫기</button>
+  </div>
+  <div class="sht-summary">
+    <div><div class="lb">매출</div><div class="vl" style="color:var(--blue);" id="shtSale">-</div></div>
+    <div><div class="lb">지출</div><div class="vl" style="color:#EF4444;" id="shtExp">-<span class="vp" id="shtExpPct"></span></div></div>
+    <div><div class="lb">순수익</div><div class="vl" id="shtProfit">-<span class="vp" id="shtProfitPct"></span></div></div>
+  </div>
+  <div id="shtCats"></div>
+  <p style="font-size:11px;color:var(--gray-400);margin:14px 0 0;text-align:center;">매출 대비 % · 기준 초과 빨강</p>
+</div>
+
+<!-- 필터 시트 -->
+<div class="sheet" id="filterSheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-hd">
+    <div class="dt">⚙️ 캘린더 표시 옵션</div>
+    <button class="sheet-close sheet-x">✕</button>
+  </div>
+  <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px;line-height:1.5;">셀에 보일 정보. 카테고리 선택 시 비율% + 색상 강조.</div>
+  <div id="filterList"></div>
+</div>
+
+<script>
+const THRESH = {vendor:30, att:25, fixed:15, receipt:5};
+const CAT_COLOR = {vendor:'#F59E0B', att:'#8B5CF6', fixed:'#6B7684', receipt:'#10B981', royalty:'#EC4899'};
+const CAT_NAME = {vendor:'식자재', att:'인건비', fixed:'공과금', receipt:'비품', royalty:'로열티'};
+
+// 4월 + 5월 더미. key = "M-DD"
+const DAYS = {};
+function gen(m, d, sale, vendorPct, attPct, fxd, rcpPct, holiday){
+  const key = `${m}-${String(d).padStart(2,'0')}`;
+  if(holiday){DAYS[key]={holiday:true};return;}
+  const saleW = sale * 10000 + Math.floor(Math.random()*9000);
+  const vendor = Math.round(saleW * vendorPct / 100);
+  const att = Math.round(saleW * attPct / 100);
+  const fixed = fxd * 10000;
+  const receipt = Math.round(saleW * rcpPct / 100);
+  const royalty = Math.round(saleW * 0.05);
+  const exp = vendor + att + fixed + receipt + royalty;
+  DAYS[key] = {sale:saleW, vendor, att, fixed, receipt, royalty, exp, profit:saleW-exp};
+}
+// 4월 마지막주 (4/20~4/26 = 0주, 4/27~4/30 = 1주 첫 4일)
+gen(4,20, 140, 27, 21, 15, 2);
+gen(4,21, 135, 28, 23, 15, 2);
+gen(4,22, 145, 26, 22, 15, 3);
+gen(4,23, 150, 28, 21, 15, 2);
+gen(4,24, 160, 27, 20, 15, 3);
+gen(4,25, 0, 0,0,0,0, true); // 토 휴무
+gen(4,26, 195, 26, 18, 15, 4); // 일
+gen(4,27, 132, 30, 23, 15, 2);
+gen(4,28, 128, 31, 24, 15, 2);
+gen(4,29, 138, 29, 22, 15, 2);
+gen(4,30, 155, 27, 21, 15, 3);
+// 5월
+gen(5, 1, 142, 28, 22, 15, 2);
+gen(5, 2, 198, 26, 19, 15, 3);
+gen(5, 3, 215, 27, 18, 15, 4);
+gen(5, 4, 128, 31, 23, 15, 2);
+gen(5, 5, 135, 29, 22, 15, 1);
+gen(5, 6, 110, 33, 25, 15, 3);
+gen(5, 7, 145, 28, 23, 15, 2);
+gen(5, 8, 130, 30, 24, 15, 2);
+gen(5, 9, 0, 0,0,0,0, true);
+gen(5,10, 188, 25, 18, 15, 2);
+gen(5,11, 122, 32, 24, 15, 3);
+gen(5,12, 138, 28, 22, 15, 2);
+gen(5,13, 118, 36, 26, 15, 4);
+gen(5,14, 152, 27, 21, 15, 2);
+gen(5,15, 142, 29, 23, 15, 1);
+gen(5,16, 0, 0,0,0,0, true);
+gen(5,17, 205, 24, 17, 15, 3);
+gen(5,18, 135, 30, 23, 15, 2);
+gen(5,19, 128, 31, 24, 15, 2);
+gen(5,20, 145, 29, 22, 15, 2);
+gen(5,21, 158, 28, 21, 15, 3);
+
+const TODAY = 21;
+const LAST_DAY = 31;
+const FIRST_DOW = new Date(2026, 4, 1).getDay(); // 5월 1일 요일
+
+// ─── 회계 주차 계산 (월~일 7일 통째) ───
+// 1주 시작 = 5월의 첫 일요일 직전 월요일 (5월 첫 일요일이 5/3 → 1주 시작 = 4/27)
+function buildAccountingWeeks(year, monthIdx){
+  // 그 달의 첫 일요일 찾기
+  const first = new Date(year, monthIdx, 1);
+  const firstDow = first.getDay(); // 0=일
+  // 첫 일요일이 며칠인지
+  let firstSunday;
+  if(firstDow === 0) firstSunday = 1;
+  else firstSunday = 8 - firstDow; // 예: 금(5) → 8-5=3
+  // 1주 시작 = 첫 일요일에서 6일 빼기 (월요일)
+  const firstMondayMonth = monthIdx + 1;
+  let firstMondayDay = firstSunday - 6;
+  let weeks = [];
+  let cursorM, cursorD;
+  if(firstMondayDay <= 0){
+    // 전월로 넘어감
+    const prevMonthLastDay = new Date(year, monthIdx, 0).getDate();
+    cursorM = monthIdx; // 1-indexed 4월
+    cursorD = prevMonthLastDay + firstMondayDay; // 음수+last
+  } else {
+    cursorM = firstMondayMonth;
+    cursorD = firstMondayDay;
+  }
+  // 7일씩 묶기. 마지막 주 시작이 이번달 안에 있을 때까지
+  while(true){
+    const wk = [];
+    for(let i=0;i<7;i++){
+      wk.push({m:cursorM, d:cursorD});
+      // 다음 날
+      const lastDayThisMonth = new Date(year, cursorM, 0).getDate();
+      cursorD++;
+      if(cursorD > lastDayThisMonth){
+        cursorM++; cursorD = 1;
+      }
+    }
+    weeks.push(wk);
+    // 다음 주 첫날이 이번달(monthIdx+1)을 넘어가면 종료
+    // (단 시작이 monthIdx+1 안이거나, monthIdx+2 첫날 = 다음달 1일이면 종료)
+    const nextStart = wk[wk.length-1]; // 이미 다음날로 cursor 이동했지만 wk last는 마지막일
+    // 종료 조건: 다음 wk[0]이 이번달(monthIdx+1)이 아닌 다음달(monthIdx+2)이면 끝
+    if(cursorM > monthIdx+1) break;
+  }
+  return weeks;
+}
+
+const WEEKS = buildAccountingWeeks(2026, 4); // 5월 (monthIdx=4)
+const TARGET_MONTH = 5;
+
+let currentCat = 'default';
+
+// ─── 포맷터 ───
+function fmtKrw(v){
+  const sign = v<0?'-':'';
+  return sign + Math.abs(v).toLocaleString('ko-KR') + '원';
+}
+function fmtKrwSigned(v){
+  if(v>=0) return '+' + v.toLocaleString('ko-KR') + '원';
+  return '-' + Math.abs(v).toLocaleString('ko-KR') + '원';
+}
+function fmtKrwCompact(v){
+  const a = Math.abs(v);
+  if(a >= 10000000) return (v<0?'-':'') + (a/10000000).toFixed(1) + '천만';
+  if(a >= 10000) return (v<0?'-':'') + Math.round(a/10000) + '만';
+  return v.toLocaleString('ko-KR');
+}
+
+// ─── 월 요약 (5월만) ───
+function renderMonthSummary(){
+  let totalSale=0, totalExp=0;
+  Object.entries(DAYS).forEach(([key,d])=>{
+    const [m] = key.split('-').map(Number);
+    if(m !== TARGET_MONTH) return;
+    if(d.holiday) return;
+    totalSale += d.sale; totalExp += d.exp;
+  });
+  document.getElementById('mthSale').textContent = fmtKrw(totalSale);
+  document.getElementById('mthExp').textContent = fmtKrw(totalExp);
+  document.getElementById('mthProfit').textContent = fmtKrwSigned(totalSale - totalExp);
+}
+
+// ─── 캘린더 (5월만, 그대로) ───
+function renderCalendar(){
+  const modeLabel = currentCat==='default'?'📅 일별 매출 + 순수익':`📅 ${CAT_NAME[currentCat]} 비율 (매출 대비)`;
+  document.getElementById('calMode').textContent = modeLabel;
+  let html = '';
+  ['일','월','화','수','목','금','토'].forEach((wk,i)=>{
+    const cls = i===0?'sun':(i===6?'sat':'');
+    html += `<div class="cal-wkh ${cls}">${wk}</div>`;
+  });
+  for(let i=0;i<FIRST_DOW;i++) html += `<div class="cal-cell empty"></div>`;
+  for(let d=1; d<=LAST_DAY; d++){
+    const key = `5-${String(d).padStart(2,'0')}`;
+    const data = DAYS[key];
+    const isToday = d===TODAY;
+    const isFuture = d>TODAY;
+    const dow = (FIRST_DOW + d - 1) % 7;
+    const wkCls = dow===0?'sun':(dow===6?'sat':'');
+    const todayCls = isToday?' today':'';
+    if(isFuture){
+      html += `<div class="cal-cell future ${wkCls}"><span class="cc-day">${d}</span></div>`;
+      continue;
+    }
+    if(!data || data.holiday){
+      html += `<div class="cal-cell closed${todayCls} ${wkCls}" data-day="${d}">
+        <span class="cc-day">${d}</span>
+        <span style="font-size:12px;text-align:center;">🏖</span>
+      </div>`;
+      continue;
+    }
+    if(currentCat!=='default'){
+      const catVal = data[currentCat] || 0;
+      const pct = data.sale>0 ? (catVal/data.sale*100) : 0;
+      const th = THRESH[currentCat];
+      let heatCls = pct > th ? ' heat-bad' : (pct > th*0.85 ? ' heat-warn' : ' heat-good');
+      html += `<div class="cal-cell${heatCls}${todayCls} ${wkCls}" data-day="${d}">
+        <span class="cc-day">${d}</span>
+        <span class="cc-cat">${fmtKrwCompact(catVal)}</span>
+        <span class="cc-profit ${pct>th?'neg':'pos'}">${pct.toFixed(0)}%</span>
+      </div>`;
+    } else {
+      html += `<div class="cal-cell${todayCls} ${wkCls}" data-day="${d}">
+        <span class="cc-day">${d}</span>
+        <span class="cc-sale">${fmtKrwCompact(data.sale)}</span>
+        <span class="cc-profit ${data.profit>=0?'pos':'neg'}">${data.profit>=0?'+':''}${fmtKrwCompact(data.profit)}</span>
+      </div>`;
+    }
+  }
+  document.getElementById('calGrid').innerHTML = html;
+  document.querySelectorAll('.cal-cell[data-day]').forEach(cell=>{
+    cell.addEventListener('click',()=>openDailySheet(parseInt(cell.dataset.day)));
+  });
+}
+
+// ─── 전월 마지막 회계주 합산 (1주 vs 비교용) ───
+function calcPrevMonthLastWeek(){
+  // 5월 1주가 4/27~5/3이면, 전월(4월)의 마지막 회계주 = 4/20~4/26
+  // 일반화: 5월 1주 시작일 - 7일 = 전주 시작일
+  if(!WEEKS.length) return null;
+  const w1start = WEEKS[0][0]; // 1주 첫날 (예: 4/27)
+  const startDate = new Date(2026, w1start.m-1, w1start.d);
+  const prevDays = [];
+  for(let i=7;i>=1;i--){
+    const dt = new Date(startDate);
+    dt.setDate(dt.getDate() - i);
+    prevDays.push({m: dt.getMonth()+1, d: dt.getDate()});
+  }
+  let s=0, vendor=0, att=0;
+  prevDays.forEach(day=>{
+    const key = `${day.m}-${String(day.d).padStart(2,'0')}`;
+    const data = DAYS[key];
+    if(!data||data.holiday) return;
+    s += data.sale; vendor += data.vendor; att += data.att;
+  });
+  return {s, vendor, att, days:prevDays};
+}
+
+// ─── 주별 카드 (v8 — A안 유지 + 1주 비교 + 매출 라벨 + 범례 상위 3개 + 동적 멘트) ───
+function renderWeekCards(){
+  const weekData = [];
+  WEEKS.forEach((wk,i)=>{
+    let s=0, e=0, vendor=0, att=0, fixed=0, receipt=0, royalty=0;
+    let hasData=false, isCurrent=false;
+    let firstDaysOutCount=0, lastDaysOutCount=0;
+    let outsideMonths = new Set();
+    let firstOutDays=[], lastOutDays=[];
+    wk.forEach((day,di)=>{
+      const key = `${day.m}-${String(day.d).padStart(2,'0')}`;
+      const data=DAYS[key];
+      if(day.m===TARGET_MONTH && day.d>TODAY) return;
+      if(day.m>TARGET_MONTH) return;
+      const isOutsideMonth = (day.m !== TARGET_MONTH);
+      if(isOutsideMonth){
+        outsideMonths.add(day.m);
+        if(di<3){firstDaysOutCount++; firstOutDays.push(day);}
+        else {lastDaysOutCount++; lastOutDays.push(day);}
+      }
+      if(!data||data.holiday) return;
+      hasData=true;
+      if(day.m===TARGET_MONTH && day.d===TODAY) isCurrent=true;
+      s += data.sale; e += data.exp;
+      vendor += data.vendor; att += data.att;
+      fixed += data.fixed; receipt += data.receipt; royalty += data.royalty;
+    });
+    weekData.push({
+      wi:i, wk, hasData, isCurrent,
+      s, e, vendor, att, fixed, receipt, royalty,
+      firstDaysOutCount, lastDaysOutCount,
+      firstOutDays, lastOutDays,
+      outsideMonths:[...outsideMonths],
+    });
+  });
+  // 1주 비교용 전월 마지막주
+  const prevMonthLast = calcPrevMonthLastWeek();
+
+  let html = '';
+  weekData.forEach((w,idx)=>{
+    if(!w.hasData) return;
+    const profit = w.s - w.e;
+    const profitCls = profit>=0?'pos':'neg';
+    const isCurClass = w.isCurrent ? ' current' : '';
+
+    // 주 범위 라벨: "4/27 ~ 5/3"
+    const startDay = w.wk[0], endDay = w.wk[6];
+    const startLabel = `${startDay.m}/${startDay.d}`;
+    const endLabel = startDay.m===endDay.m ? `${endDay.d}` : `${endDay.m}/${endDay.d}`;
+    const fullRangeLabel = `${startLabel} ~ ${endLabel}`;
+
+    // 끼임 자연어 안내 (있을 때만) — 동적 멘트
+    let crossNote = '';
+    if(w.firstDaysOutCount > 0){
+      // 첫 며칠이 전월 끝
+      const otherM = w.firstOutDays[0].m;
+      const fd = w.firstOutDays[0].d;
+      const ld = w.firstOutDays[w.firstOutDays.length-1].d;
+      const range = fd===ld ? `${otherM}/${fd}` : `${otherM}/${fd}~${ld}`;
+      crossNote = `<div class="cross-note">📌 이 주는 ${otherM}월 끝(${range})이 같이 들어있어요. 그래서 카드 매출이 위 ${TARGET_MONTH}월 매출 합계와 달라요.</div>`;
+    } else if(w.lastDaysOutCount > 0){
+      // 마지막 며칠이 다음달 시작
+      const otherM = w.lastOutDays[0].m;
+      const fd = w.lastOutDays[0].d;
+      const ld = w.lastOutDays[w.lastOutDays.length-1].d;
+      const range = fd===ld ? `${otherM}/${fd}` : `${otherM}/${fd}~${ld}`;
+      crossNote = `<div class="cross-note">📌 이 주는 ${otherM}월 시작(${range})이 같이 들어있어요. 그래서 카드 매출이 위 ${TARGET_MONTH}월 매출 합계와 달라요.</div>`;
+    }
+
+    // 매출 상승률 (vs 전주, 7일 통째 기준)
+    // 1주(idx=0)는 전월 마지막주(prevMonthLast)와 비교
+    let saleMomHtml = '';
+    let prevWeekRef = idx>0 ? weekData[idx-1] : (prevMonthLast && prevMonthLast.s>0 ? prevMonthLast : null);
+    let prevWeekLabel = idx>0 ? `${weekData[idx-1].wi+1}주` : '전월 마지막주';
+    if(prevWeekRef && prevWeekRef.s>0 && w.s>0){
+      const dS = Math.round((w.s-prevWeekRef.s)/prevWeekRef.s*100);
+      if(dS>0) saleMomHtml = `<span class="wk-sale-mom up">▲${dS}%</span>`;
+      else if(dS<0) saleMomHtml = `<span class="wk-sale-mom down">▼${Math.abs(dS)}%</span>`;
+      else saleMomHtml = `<span class="wk-sale-mom same">━</span>`;
+    }
+
+    // 간트 스택 (7일 통째)
+    const cats = ['vendor','att','fixed','receipt','royalty'];
+    let stackHtml = '';
+    cats.forEach(c=>{
+      const v = w[c]||0;
+      const pct = w.s>0 ? (v/w.s*100) : 0;
+      const th = THRESH[c]||0;
+      const overCls = (th && pct>th) ? ' over' : '';
+      const showText = pct >= 7;
+      stackHtml += `<span class="${overCls.trim()}" style="background:${CAT_COLOR[c]};width:${pct}%;">${showText?pct.toFixed(0)+'%':''}</span>`;
+    });
+    const profitPct = w.s>0 ? (profit/w.s*100) : 0;
+    if(profit>=0){
+      stackHtml += `<span class="profit" style="width:${profitPct}%;">${profitPct>=7?'+'+profitPct.toFixed(0)+'%':''}</span>`;
+    } else {
+      const lossPct = Math.abs(profitPct);
+      stackHtml += `<span class="loss" style="width:${lossPct}%;">${lossPct>=7?'-'+lossPct.toFixed(0)+'%':''}</span>`;
+    }
+
+    // 범례 (상위 3개 고정: 식자재·인건비·공과금 — 사장님 결정)
+    const topCats = ['vendor','att','fixed'];
+    let legendHtml = '';
+    let restPct = 0;
+    topCats.forEach(c=>{
+      const v = w[c]||0;
+      const pct = w.s>0 ? (v/w.s*100) : 0;
+      const th = THRESH[c]||0;
+      const overCls = (th && pct>th) ? ' over' : '';
+      const icon = (th && pct>th) ? ' ⚠️' : '';
+      legendHtml += `<span class="lg${overCls}">
+        <span class="dot" style="background:${CAT_COLOR[c]};"></span>
+        <span class="nm">${CAT_NAME[c]}</span>
+        <span class="pct">${pct.toFixed(0)}%${icon}</span>
+      </span>`;
+    });
+    // 그 외 카테고리 합 % (비품·로열티)
+    ['receipt','royalty'].forEach(c=>{
+      restPct += w.s>0 ? ((w[c]||0)/w.s*100) : 0;
+    });
+    let restHtml = restPct>0 ? `<div class="gantt-rest">+ 그 외 ${restPct.toFixed(0)}% (비품·로열티)</div>` : '';
+
+    const expPct = w.s>0 ? Math.round(w.e/w.s*100) : 0;
+
+    // vs 전주 한 줄 (1주는 전월 마지막주와 비교)
+    let momHtml = '';
+    if(prevWeekRef && prevWeekRef.s>0){
+      const pw = prevWeekRef;
+      const dS = Math.round((w.s-pw.s)/pw.s*100);
+      const dV = pw.vendor>0 ? Math.round((w.vendor-pw.vendor)/pw.vendor*100) : 0;
+      const dA = pw.att>0 ? Math.round((w.att-pw.att)/pw.att*100) : 0;
+      const sI = dS>0?`<span class="up">▲${dS}%</span>`:dS<0?`<span class="down">▼${Math.abs(dS)}%</span>`:`<span class="same">━</span>`;
+      const vI = dV>0?`<span class="up">▲${dV}%</span>`:dV<0?`<span class="down">▼${Math.abs(dV)}%</span>`:`<span class="same">━</span>`;
+      const aI = dA>0?`<span class="up">▲${dA}%</span>`:dA<0?`<span class="down">▼${Math.abs(dA)}%</span>`:`<span class="same">━</span>`;
+      momHtml = `<div class="wk-mom">vs ${prevWeekLabel}: 매출 ${sI} · 식자재 ${vI} · 인건비 ${aI}</div>`;
+    }
+
+    html += `
+      <div class="wk-card${isCurClass}" data-wk="${w.wi}">
+        <div class="wk-label"><b>${w.wi+1}주</b>  ${fullRangeLabel}</div>
+        ${crossNote}
+        <div class="wk-sale-row">
+          <div class="wk-sale-left">
+            <div>
+              <span class="wk-sale-lb">매출</span>
+              <span class="wk-sale-amt">${fmtKrw(w.s)}</span>
+              ${saleMomHtml}
+            </div>
+          </div>
+          <div class="wk-profit ${profitCls}">
+            <span class="wk-profit-lb">순수익</span>
+            ${profit>=0?'+':''}${fmtKrw(profit)}
+          </div>
+        </div>
+        <div class="wk-exp">
+          <span>지출 <b>${fmtKrw(w.e)}</b><span class="pct">(${expPct}%)</span></span>
+        </div>
+        <div class="gantt-stack">${stackHtml}</div>
+        <div class="gantt-legend">${legendHtml}</div>
+        ${restHtml}
+        ${momHtml}
+        <div class="wk-tap-hint">탭 → 카테고리 전체 상세</div>
+      </div>`;
+  });
+  document.getElementById('weekCardsContainer').innerHTML = html;
+  // 캐시 + 카드 클릭 핸들러
+  _weekDataCache = weekData;
+  document.querySelectorAll('.wk-card[data-wk]').forEach(card=>{
+    card.addEventListener('click',()=>openWeekSheet(parseInt(card.dataset.wk)));
+  });
+}
+
+// ─── 주별 상세 시트 (v9 신설) ───
+let _weekDataCache = [];
+function openWeekSheet(wi){
+  const w = _weekDataCache.find(x=>x.wi===wi);
+  if(!w) return;
+  const startDay = w.wk[0], endDay = w.wk[6];
+  const startLabel = `${startDay.m}/${startDay.d}`;
+  const endLabel = startDay.m===endDay.m ? `${endDay.d}` : `${endDay.m}/${endDay.d}`;
+  document.getElementById('wkShtTitle').textContent = `${w.wi+1}주 상세`;
+  document.getElementById('wkShtRange').textContent = `(${startLabel} ~ ${endLabel})`;
+
+  const profit = w.s - w.e;
+  const expPct = w.s>0 ? (w.e/w.s*100).toFixed(0) : 0;
+  const profitPct = w.s>0 ? (profit/w.s*100).toFixed(0) : 0;
+  document.getElementById('wkShtSale').textContent = fmtKrw(w.s);
+  document.getElementById('wkShtExp').innerHTML = `${fmtKrw(w.e)}<span class="vp">${expPct}%</span>`;
+  const pEl = document.getElementById('wkShtProfit');
+  pEl.innerHTML = `${profit>=0?'+':''}${fmtKrw(profit)}<span class="vp">${profit>=0?'+':''}${profitPct}%</span>`;
+  pEl.style.color = profit>=0?'#10B981':'#EF4444';
+
+  const cats = ['vendor','att','fixed','receipt','royalty'];
+  let html = '';
+  cats.forEach(c=>{
+    const v = w[c]||0;
+    const pct = w.s>0 ? (v/w.s*100) : 0;
+    const th = THRESH[c];
+    let pctCls = 'pct';
+    let icon = '';
+    if(th){
+      if(pct>th){pctCls += ' over';icon=' ⚠️';}
+      else if(pct<th*0.85) pctCls += ' good';
+    }
+    html += `<div class="sht-cat-row">
+      <div class="cn"><span class="dot" style="background:${CAT_COLOR[c]};"></span>${CAT_NAME[c]}</div>
+      <div><span class="vl">${fmtKrw(v)}</span><span class="${pctCls}">${pct.toFixed(1)}%${icon}</span></div>
+    </div>`;
+  });
+  document.getElementById('wkShtCats').innerHTML = html;
+  closeAllSheets();
+  document.getElementById('sheetBg').classList.add('open');
+  document.getElementById('weekDetailSheet').classList.add('open');
+}
+
+// ─── 일별 시트 ───
+function openDailySheet(d){
+  const key = `5-${String(d).padStart(2,'0')}`;
+  const data = DAYS[key];
+  closeAllSheets();
+  if(!data || data.holiday){
+    document.getElementById('shtSale').textContent = '-';
+    document.getElementById('shtExp').innerHTML = '-';
+    document.getElementById('shtProfit').innerHTML = '-';
+    document.getElementById('shtCats').innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--gray-400);font-size:13px;">🏖 휴무</div>`;
+  } else {
+    const expPct = data.sale>0 ? (data.exp/data.sale*100).toFixed(0) : 0;
+    const profitPct = data.sale>0 ? (data.profit/data.sale*100).toFixed(0) : 0;
+    document.getElementById('shtSale').textContent = fmtKrw(data.sale);
+    document.getElementById('shtExp').innerHTML = `${fmtKrw(data.exp)}<span class="vp">${expPct}%</span>`;
+    const p = data.profit;
+    const pEl = document.getElementById('shtProfit');
+    pEl.innerHTML = `${fmtKrwSigned(p)}<span class="vp">${p>=0?'+':''}${profitPct}%</span>`;
+    pEl.style.color = p>=0?'#10B981':'#EF4444';
+    const cats = ['vendor','att','fixed','receipt','royalty'];
+    let html = '';
+    cats.forEach(c=>{
+      const v = data[c]||0;
+      const pct = data.sale>0 ? (v/data.sale*100) : 0;
+      const th = THRESH[c];
+      let pctCls = 'pct';
+      let icon = '';
+      if(th){
+        if(pct>th){pctCls += ' over';icon=' ⚠️';}
+        else if(pct<th*0.85) pctCls += ' good';
+      }
+      html += `<div class="sht-cat-row">
+        <div class="cn"><span class="dot" style="background:${CAT_COLOR[c]};"></span>${CAT_NAME[c]}</div>
+        <div><span class="vl">${fmtKrw(v)}</span><span class="${pctCls}">${pct.toFixed(1)}%${icon}</span></div>
+      </div>`;
+    });
+    document.getElementById('shtCats').innerHTML = html;
+  }
+  const dt = new Date(2026, 4, d);
+  const dayName = ['일','월','화','수','목','금','토'][dt.getDay()];
+  document.getElementById('sheetDate').textContent = `5/${d}`;
+  document.getElementById('sheetDay').textContent = `(${dayName})`;
+  document.getElementById('sheetBg').classList.add('open');
+  document.getElementById('dailySheet').classList.add('open');
+}
+
+function openFilterSheet(){
+  closeAllSheets();
+  const opts = [
+    {key:'default', name:'매출 + 순수익', color:'#0050FF'},
+    {key:'vendor', name:'식자재 비율', color:'#F59E0B'},
+    {key:'att', name:'인건비 비율', color:'#8B5CF6'},
+    {key:'fixed', name:'공과금 비율', color:'#6B7684'},
+    {key:'receipt', name:'비품 비율', color:'#10B981'},
+  ];
+  let html = '';
+  opts.forEach(o=>{
+    const active = o.key===currentCat ? 'active' : '';
+    html += `<div class="filter-row ${active}" data-cat="${o.key}">
+      <span><span class="dot" style="background:${o.color};"></span>${o.name}</span>
+      <span class="check">✓</span>
+    </div>`;
+  });
+  document.getElementById('filterList').innerHTML = html;
+  document.querySelectorAll('.filter-row[data-cat]').forEach(row=>{
+    row.addEventListener('click',()=>{
+      currentCat = row.dataset.cat;
+      renderCalendar();
+      closeAllSheets();
+    });
+  });
+  document.getElementById('sheetBg').classList.add('open');
+  document.getElementById('filterSheet').classList.add('open');
+}
+
+function closeAllSheets(){
+  document.getElementById('sheetBg').classList.remove('open');
+  document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+}
+document.querySelectorAll('.sheet-x').forEach(b=>b.addEventListener('click',closeAllSheets));
+document.getElementById('sheetBg').addEventListener('click',closeAllSheets);
+document.getElementById('filterBtn').addEventListener('click',openFilterSheet);
+document.getElementById('enterWeekModal').addEventListener('click',()=>{
+  renderWeekCards();
+  document.getElementById('weekModal').classList.add('open');
+});
+document.getElementById('weekModalClose').addEventListener('click',()=>{
+  document.getElementById('weekModal').classList.remove('open');
+});
+
+renderMonthSummary();
+renderCalendar();
+</script>
+</body>
+</html>

@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>주정산표 v2 — 주별 카드 메인 + 캘린더 보조</title>
+<style>
+  :root{
+    --blue:#0050FF;--blue-light:#E6EEFF;
+    --gray-50:#FAFBFC;--gray-100:#F2F4F6;--gray-200:#E5E8EB;--gray-300:#D1D6DB;
+    --gray-400:#B0B8C1;--gray-500:#8B95A1;--gray-600:#6B7684;--gray-700:#4E5968;
+    --text:#191F28;--white:#fff;--bg:#F9FAFB;
+    --danger:#F04452;--success:#10B981;--warn:#F59E0B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;background:#E5E7EB;color:var(--text);font-size:14px;}
+  .page{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh;}
+  .top-bar{position:sticky;top:0;z-index:50;background:var(--white);padding:10px 12px;border-bottom:1px solid var(--gray-200);box-shadow:0 1px 6px rgba(0,0,0,0.04);}
+  .top-title{font-size:13px;font-weight:800;color:var(--text);}
+  .top-sub{font-size:11px;color:var(--gray-600);margin-top:3px;line-height:1.5;}
+
+  .content{padding:12px;}
+  .card{background:var(--white);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  .card-title{font-size:14px;font-weight:800;margin-bottom:10px;color:var(--text);display:flex;justify-content:space-between;align-items:center;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;background:var(--gray-100);color:var(--gray-700);gap:4px;}
+  .btn.primary{background:var(--blue);color:var(--white);}
+  .btn.tiny{padding:5px 10px;font-size:11px;}
+
+  /* 월 네비 */
+  .month-nav{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
+  .month-nav .navbtn{flex:0 0 38px;padding:6px;background:var(--white);border-radius:8px;font-size:14px;font-weight:800;color:var(--gray-700);border:1px solid var(--gray-200);cursor:pointer;}
+  .month-label{flex:1;text-align:center;font-size:16px;font-weight:900;}
+
+  /* 월 요약 (간단) */
+  .summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .sum-box{background:var(--gray-50);border-radius:10px;padding:10px 8px;text-align:center;}
+  .sum-box .lb{font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:3px;}
+  .sum-box .vl{font-size:14px;font-weight:900;}
+  .sum-box .vl.blue{color:var(--blue);}
+  .sum-box .vl.green{color:#10B981;}
+  .sum-box .vl.red{color:#EF4444;}
+
+  /* ───── 주별 카드 (메인 — 영웅) ───── */
+  .wk-card{background:var(--white);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);position:relative;}
+  .wk-card.current{border:2px solid var(--blue);}
+  .wk-card.current::before{content:'진행중';position:absolute;top:-8px;left:14px;background:var(--blue);color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:0.5px;}
+  .wk-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .wk-head .wk-no{font-size:15px;font-weight:900;color:var(--text);}
+  .wk-head .wk-range{font-size:11px;color:var(--gray-500);font-weight:700;margin-left:6px;}
+  .wk-head .wk-profit{font-size:18px;font-weight:900;letter-spacing:-0.5px;}
+  .wk-head .wk-profit.pos{color:#10B981;}
+  .wk-head .wk-profit.neg{color:#EF4444;}
+  .wk-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--gray-600);font-weight:700;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--gray-100);}
+  .wk-meta b{font-weight:800;}
+  .wk-meta .blue{color:var(--blue);}
+  .wk-meta .red{color:#EF4444;}
+  /* 카테고리 막대 */
+  .cat-bar-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11.5px;}
+  .cat-bar-row .nm{font-weight:700;min-width:48px;color:var(--text);font-size:12px;}
+  .cat-bar-row .bar-wrap{flex:1;height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden;position:relative;}
+  .cat-bar-row .bar{height:100%;border-radius:4px;transition:width 0.3s;}
+  .cat-bar-row .bar.over{background:repeating-linear-gradient(45deg, currentColor, currentColor 4px, rgba(255,255,255,0.3) 4px, rgba(255,255,255,0.3) 8px);}
+  .cat-bar-row .th-mark{position:absolute;top:-1px;bottom:-1px;width:2px;background:#374151;opacity:0.5;}
+  .cat-bar-row .amt{font-weight:800;color:var(--text);min-width:48px;text-align:right;font-size:11.5px;}
+  .cat-bar-row .pct{font-weight:800;min-width:38px;text-align:right;font-size:11.5px;}
+  .cat-bar-row .pct.over{color:#EF4444;}
+  .cat-bar-row .pct.warn{color:#F59E0B;}
+  .cat-bar-row .pct.good{color:var(--gray-600);}
+  /* vs 전주 비교 */
+  .wk-mom{margin-top:10px;padding-top:10px;border-top:1px solid var(--gray-100);font-size:11px;color:var(--gray-600);font-weight:700;line-height:1.5;}
+  .wk-mom .up{color:#EF4444;}
+  .wk-mom .down{color:#10B981;}
+  .wk-mom .same{color:var(--gray-400);}
+  /* 일별 펼치기 */
+  .wk-expand{margin-top:10px;padding-top:10px;border-top:1px dashed var(--gray-200);}
+  .wk-expand .expand-btn{width:100%;background:none;border:0;padding:6px;font-size:11.5px;color:var(--gray-500);font-weight:700;cursor:pointer;}
+  .wk-expand .day-list{display:none;margin-top:6px;}
+  .wk-expand .day-list.open{display:block;}
+  .wk-expand .day-row{display:flex;justify-content:space-between;padding:6px 0;font-size:11.5px;border-bottom:1px solid var(--gray-100);cursor:pointer;}
+  .wk-expand .day-row:last-child{border-bottom:0;}
+  .wk-expand .day-row .d-date{font-weight:700;min-width:40px;}
+  .wk-expand .day-row .d-sale{color:var(--blue);font-weight:700;}
+  .wk-expand .day-row .d-profit{font-weight:800;}
+  .wk-expand .day-row .d-profit.pos{color:#10B981;}
+  .wk-expand .day-row .d-profit.neg{color:#EF4444;}
+
+  /* ───── 캘린더 (보조) ───── */
+  .cal-card{background:var(--white);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .cal-head .ttl{font-size:13px;font-weight:800;}
+  .cal-head .sub{font-size:11px;color:var(--gray-500);font-weight:700;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+  .cal-wkh{font-size:10px;font-weight:800;text-align:center;padding:5px 0;color:var(--gray-500);}
+  .cal-wkh.sun{color:#EF4444;}
+  .cal-wkh.sat{color:#3B82F6;}
+  .cal-cell{min-height:54px;border-radius:8px;padding:4px 3px;display:flex;flex-direction:column;gap:1px;background:var(--gray-50);border:1px solid var(--gray-100);overflow:hidden;cursor:pointer;}
+  .cal-cell.empty{background:transparent;border:none;cursor:default;}
+  .cal-cell.today{background:var(--blue-light);border:1.5px solid var(--blue);}
+  .cal-cell.future{background:transparent;border:1px dashed var(--gray-200);cursor:default;}
+  .cal-cell.closed{background:#FEF3C7;border-color:#FCD34D;}
+  .cal-cell.closed .cc-day{color:#92400E;}
+  .cal-cell .cc-day{font-size:10px;font-weight:800;color:var(--gray-700);}
+  .cal-cell.sun .cc-day{color:#EF4444;}
+  .cal-cell.sat .cc-day{color:#3B82F6;}
+  .cal-cell .cc-sale{font-size:9.5px;font-weight:800;color:var(--blue);line-height:1.25;letter-spacing:-0.3px;}
+  .cal-cell .cc-profit{font-size:9px;font-weight:700;line-height:1.2;letter-spacing:-0.3px;}
+  .cal-cell .cc-cat{font-size:10px;font-weight:800;line-height:1.2;letter-spacing:-0.3px;}
+  .cc-profit.pos{color:#10B981;}
+  .cc-profit.neg{color:#EF4444;}
+  .cal-cell.today .cc-day{color:var(--blue);}
+  .cal-cell.heat-good{background:#DCFCE7;border-color:#86EFAC;}
+  .cal-cell.heat-warn{background:#FEF9C3;border-color:#FDE047;}
+  .cal-cell.heat-bad{background:#FEE2E2;border-color:#FCA5A5;}
+
+  /* ───── 시트 공통 ───── */
+  .sheet-bg{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;z-index:100;}
+  .sheet-bg.open{display:block;}
+  .sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;background:var(--white);border-radius:18px 18px 0 0;padding:14px 14px 28px;z-index:101;box-shadow:0 -4px 20px rgba(0,0,0,0.15);display:none;max-height:85vh;overflow-y:auto;}
+  .sheet.open{display:block;}
+  .sheet-grab{width:36px;height:4px;background:var(--gray-300);border-radius:2px;margin:-4px auto 10px;}
+  .sheet-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .sheet-hd .dt{font-size:16px;font-weight:900;}
+  .sheet-hd .day{font-size:11px;color:var(--gray-500);margin-left:6px;font-weight:700;}
+  .sheet-close{background:var(--gray-100);border:0;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--gray-700);cursor:pointer;}
+
+  /* 일별 시트 — % 추가 */
+  .sht-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;padding:12px;background:var(--gray-50);border-radius:10px;}
+  .sht-summary .lb{font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:2px;}
+  .sht-summary .vl{font-size:15px;font-weight:900;}
+  .sht-summary .vp{font-size:10px;font-weight:700;margin-left:3px;color:var(--gray-400);}
+  .sht-cat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);}
+  .sht-cat-row:last-child{border-bottom:0;}
+  .sht-cat-row .cn{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;}
+  .sht-cat-row .cn .dot{width:9px;height:9px;border-radius:50%;}
+  .sht-cat-row .vl{font-size:13px;font-weight:800;color:var(--text);}
+  .sht-cat-row .pct{font-size:11px;color:var(--gray-500);font-weight:700;margin-left:4px;}
+  .sht-cat-row .pct.over{color:#EF4444;}
+  .sht-cat-row .pct.good{color:#10B981;}
+
+  /* 필터 시트 (캘린더 표시 옵션) */
+  .filter-row{padding:14px 8px;border-bottom:1px solid var(--gray-100);font-size:14px;font-weight:700;color:var(--text);cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+  .filter-row:last-child{border-bottom:0;}
+  .filter-row.active{color:var(--blue);}
+  .filter-row .dot{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:8px;}
+  .filter-row .check{color:var(--blue);font-size:18px;display:none;}
+  .filter-row.active .check{display:inline;}
+
+  /* 안내 박스 */
+  .info{padding:10px 12px;background:#FEF9C3;border-radius:10px;font-size:11px;color:#854D0E;line-height:1.55;margin-bottom:10px;}
+  .info b{color:#713F12;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top-bar">
+    <div class="top-title">📊 주정산표 v2 — 주별 카드 메인 + 캘린더 보조</div>
+    <div class="top-sub">사장님 결정: 주별 = 메인 KPI / 일별 캘린더 = 이상치 탐지 보조</div>
+  </div>
+
+  <div class="content">
+    <!-- 월 네비 -->
+    <div class="month-nav">
+      <button class="navbtn">‹</button>
+      <div class="month-label">2026년 5월</div>
+      <button class="navbtn">›</button>
+    </div>
+
+    <!-- 월 요약 (간단) -->
+    <div class="card">
+      <div class="summary-row">
+        <div class="sum-box"><div class="lb">월 매출</div><div class="vl blue">2,890만</div></div>
+        <div class="sum-box"><div class="lb">월 지출</div><div class="vl red">2,015만</div></div>
+        <div class="sum-box"><div class="lb">순수익</div><div class="vl green">+875만</div></div>
+      </div>
+    </div>
+
+    <!-- ───── 메인: 주별 카드 ───── -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 4px 8px;">
+      <div style="font-size:15px;font-weight:900;">📊 주별 카테고리 비율</div>
+      <button class="btn tiny">기준% 설정 ›</button>
+    </div>
+    <div id="weekCardsContainer"></div>
+
+    <!-- ───── 보조: 캘린더 ───── -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:18px 4px 8px;">
+      <div style="font-size:15px;font-weight:900;">📅 일별 매출 (이상치 탐지)</div>
+      <button class="btn tiny" id="filterBtn">⚙️ 표시 옵션</button>
+    </div>
+    <div class="cal-card">
+      <div class="cal-head">
+        <div class="ttl" id="calMode">매출 + 순수익</div>
+        <div class="sub">셀 탭 → 그 날 상세</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <!-- 옛 피벗 진입 보존 -->
+    <div class="card" style="text-align:center;background:var(--gray-100);padding:10px;">
+      <button class="btn" style="font-size:11px;">📊 옛 일별 상세비교 (피벗) ›</button>
+      <div style="font-size:10px;color:var(--gray-500);margin-top:4px;">진행 보고 판단 — 일단 보존 (사장님 답변)</div>
+    </div>
+  </div>
+</div>
+
+<!-- 일별 상세 시트 -->
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="dailySheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-hd">
+    <div><span class="dt" id="sheetDate">-</span><span class="day" id="sheetDay">-</span></div>
+    <button class="sheet-close sheet-x">✕ 닫기</button>
+  </div>
+  <div class="sht-summary">
+    <div><div class="lb">매출</div><div class="vl" style="color:var(--blue);" id="shtSale">-</div></div>
+    <div><div class="lb">지출</div><div class="vl" style="color:#EF4444;" id="shtExp">-<span class="vp" id="shtExpPct">-</span></div></div>
+    <div><div class="lb">순수익</div><div class="vl" id="shtProfit">-<span class="vp" id="shtProfitPct">-</span></div></div>
+  </div>
+  <div id="shtCats"></div>
+  <p style="font-size:11px;color:var(--gray-400);margin:14px 0 0;text-align:center;">매출 대비 % · 기준 초과 빨강</p>
+</div>
+
+<!-- 캘린더 표시 옵션 필터 시트 (바텀시트, 칩 X) -->
+<div class="sheet" id="filterSheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-hd">
+    <div class="dt">⚙️ 캘린더 표시 옵션</div>
+    <button class="sheet-close sheet-x">✕</button>
+  </div>
+  <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px;line-height:1.5;">셀에 보일 정보를 골라요. 카테고리 선택 시 비율% + 색상 강조 표시.</div>
+  <div id="filterList"></div>
+</div>
+
+<script>
+// ─── 더미 데이터 (사장님 매장 평균값 흉내, 5월 1~21일) ───
+const THRESH = {vendor:30, att:25, fixed:15, receipt:5};
+const CAT_COLOR = {vendor:'#F59E0B', att:'#8B5CF6', fixed:'#6B7684', receipt:'#10B981', royalty:'#EC4899'};
+const CAT_NAME = {vendor:'식자재', att:'인건비', fixed:'공과금', receipt:'비품', royalty:'로열티'};
+
+const DAYS = {};
+function gen(d, sale, vendorPct, attPct, fxd, rcpPct, holiday){
+  if(holiday){DAYS[d]={holiday:true};return;}
+  const vendor=Math.round(sale*vendorPct/100);
+  const att=Math.round(sale*attPct/100);
+  const fixed=fxd;
+  const receipt=Math.round(sale*rcpPct/100);
+  const royalty=Math.round(sale*0.05);
+  const exp=vendor+att+fixed+receipt+royalty;
+  DAYS[d]={sale,vendor,att,fixed,receipt,royalty,exp,profit:sale-exp};
+}
+gen( 1, 142, 28, 22, 15, 2);
+gen( 2, 198, 26, 19, 15, 3);
+gen( 3, 215, 27, 18, 15, 4);
+gen( 4, 128, 31, 23, 15, 2);
+gen( 5, 135, 29, 22, 15, 1);
+gen( 6, 110, 33, 25, 15, 3);
+gen( 7, 145, 28, 23, 15, 2);
+gen( 8, 130, 30, 24, 15, 2);
+gen( 9, 0, 0,0,0,0, true);
+gen(10, 188, 25, 18, 15, 2);
+gen(11, 122, 32, 24, 15, 3);
+gen(12, 138, 28, 22, 15, 2);
+gen(13, 118, 36, 26, 15, 4);
+gen(14, 152, 27, 21, 15, 2);
+gen(15, 142, 29, 23, 15, 1);
+gen(16, 0, 0,0,0,0, true);
+gen(17, 205, 24, 17, 15, 3);
+gen(18, 135, 30, 23, 15, 2);
+gen(19, 128, 31, 24, 15, 2);
+gen(20, 145, 29, 22, 15, 2);
+gen(21, 158, 28, 21, 15, 3);
+
+const TODAY = 21;
+const LAST_DAY = 31;
+const FIRST_DOW = new Date(2026, 4, 1).getDay();
+
+// 주차 (월~일 기준이 한국 회계에서 자연스러움. 단 5월 1일=금 → 첫 주 = 1~3)
+const WEEKS = [[1,2,3],[4,5,6,7,8,9,10],[11,12,13,14,15,16,17],[18,19,20,21,22,23,24],[25,26,27,28,29,30,31]];
+
+let currentCat = 'default';
+let selDay = null;
+
+// ─── 주별 카드 렌더 ───
+function renderWeekCards(){
+  let html = '';
+  const passed = TODAY;
+  const weekData = [];
+  WEEKS.forEach((wk,i)=>{
+    let s=0,e=0,vendor=0,att=0,fixed=0,receipt=0,royalty=0,hasData=false,isCurrent=false;
+    wk.forEach(d=>{
+      const data=DAYS[d];
+      if(!data) return;
+      if(data.holiday) return;
+      if(d>passed) return;
+      hasData=true;
+      if(d===passed||(wk[0]<=passed&&wk[wk.length-1]>=passed)) isCurrent=true;
+      s+=data.sale; e+=data.exp; vendor+=data.vendor; att+=data.att; fixed+=data.fixed; receipt+=data.receipt; royalty+=data.royalty;
+    });
+    weekData.push({wi:i,wk,s,e,vendor,att,fixed,receipt,royalty,hasData,isCurrent});
+  });
+
+  weekData.forEach((w,idx)=>{
+    if(!w.hasData) return;
+    const profit = w.s - w.e;
+    const profitCls = profit>=0?'pos':'neg';
+    const isCurClass = w.isCurrent ? ' current' : '';
+    const range = `${w.wk[0]}~${w.isCurrent ? TODAY : w.wk[w.wk.length-1]}`;
+
+    // 카테고리 막대 5개
+    const cats = ['vendor','att','fixed','receipt','royalty'];
+    let catRows = '';
+    cats.forEach(c=>{
+      const v = w[c] || 0;
+      const pct = w.s>0 ? (v/w.s*100) : 0;
+      const th = THRESH[c] || 0;
+      const color = CAT_COLOR[c];
+      let pctCls = 'good';
+      let icon = '';
+      if(th && pct>th){pctCls='over';icon=' ⚠️';}
+      else if(th && pct>th*0.85){pctCls='warn';}
+      // 막대 너비 (스케일: 최대 40%까지 풀폭)
+      const barW = Math.min(pct, 40) / 40 * 100;
+      // 기준선 위치 (th/40 * 100%)
+      const thW = th ? (th/40*100) : null;
+      const barOver = (th && pct>th) ? ' over' : '';
+      catRows += `
+        <div class="cat-bar-row">
+          <span class="nm">${CAT_NAME[c]}</span>
+          <span class="bar-wrap">
+            <span class="bar${barOver}" style="background:${color};color:${color};width:${barW}%;"></span>
+            ${thW?`<span class="th-mark" style="left:${thW}%;"></span>`:''}
+          </span>
+          <span class="amt">${v}만</span>
+          <span class="pct ${pctCls}">${pct.toFixed(0)}%${icon}</span>
+        </div>`;
+    });
+
+    // vs 전주
+    let momHtml = '';
+    if(idx>0){
+      const pw = weekData[idx-1];
+      if(pw.hasData && pw.s>0){
+        const dS = ((w.s-pw.s)/pw.s*100).toFixed(0);
+        const dV = pw.vendor>0 ? ((w.vendor-pw.vendor)/pw.vendor*100).toFixed(0) : 0;
+        const dA = pw.att>0 ? ((w.att-pw.att)/pw.att*100).toFixed(0) : 0;
+        const sIcon = dS>0?`<span class="up">▲${dS}%</span>`:dS<0?`<span class="down">▼${Math.abs(dS)}%</span>`:`<span class="same">━</span>`;
+        const vIcon = dV>0?`<span class="up">▲${dV}%</span>`:dV<0?`<span class="down">▼${Math.abs(dV)}%</span>`:`<span class="same">━</span>`;
+        const aIcon = dA>0?`<span class="up">▲${dA}%</span>`:dA<0?`<span class="down">▼${Math.abs(dA)}%</span>`:`<span class="same">━</span>`;
+        momHtml = `<div class="wk-mom">vs ${pw.wi+1}주: 매출 ${sIcon} · 식자재 ${vIcon} · 인건비 ${aIcon}</div>`;
+      }
+    }
+
+    // 일별 펼치기
+    let dayRows = '';
+    w.wk.forEach(d=>{
+      const data=DAYS[d];
+      if(!data||data.holiday||d>passed) return;
+      const dt = new Date(2026,4,d);
+      const dayNm = ['일','월','화','수','목','금','토'][dt.getDay()];
+      const p = data.profit;
+      dayRows += `<div class="day-row" data-day="${d}">
+        <span class="d-date">5/${d} (${dayNm})</span>
+        <span class="d-sale">${data.sale}만</span>
+        <span class="d-profit ${p>=0?'pos':'neg'}">${p>=0?'+':''}${p}만</span>
+      </div>`;
+    });
+
+    html += `
+      <div class="wk-card${isCurClass}">
+        <div class="wk-head">
+          <div><span class="wk-no">${w.wi+1}주</span><span class="wk-range">5/${range}</span></div>
+          <div class="wk-profit ${profitCls}">${profit>=0?'+':''}${profit}만</div>
+        </div>
+        <div class="wk-meta">
+          <span>매출 <b class="blue">${w.s}만</b></span>
+          <span>지출 <b class="red">${w.e}만</b> <span style="color:var(--gray-400);">(${w.s>0?(w.e/w.s*100).toFixed(0):0}%)</span></span>
+        </div>
+        ${catRows}
+        ${momHtml}
+        <div class="wk-expand">
+          <button class="expand-btn" data-wkex="${w.wi}">▼ 이 주 일별 보기</button>
+          <div class="day-list" data-wklist="${w.wi}">${dayRows}</div>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('weekCardsContainer').innerHTML = html;
+
+  // 일별 펼치기
+  document.querySelectorAll('.expand-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const wi = btn.dataset.wkex;
+      const list = document.querySelector(`[data-wklist="${wi}"]`);
+      list.classList.toggle('open');
+      btn.textContent = list.classList.contains('open') ? '▲ 접기' : '▼ 이 주 일별 보기';
+    });
+  });
+  // 일별 행 클릭 → 일별 시트
+  document.querySelectorAll('.day-row[data-day]').forEach(row=>{
+    row.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      openDailySheet(parseInt(row.dataset.day));
+    });
+  });
+}
+
+// ─── 캘린더 렌더 ───
+function renderCalendar(){
+  const modeLabel = currentCat==='default'?'매출 + 순수익':`${CAT_NAME[currentCat]} 비율 (매출 대비)`;
+  document.getElementById('calMode').textContent = modeLabel;
+
+  let html = '';
+  ['일','월','화','수','목','금','토'].forEach((wk,i)=>{
+    const cls = i===0?'sun':(i===6?'sat':'');
+    html += `<div class="cal-wkh ${cls}">${wk}</div>`;
+  });
+  for(let i=0;i<FIRST_DOW;i++) html += `<div class="cal-cell empty"></div>`;
+  for(let d=1; d<=LAST_DAY; d++){
+    const data = DAYS[d];
+    const isToday = d===TODAY;
+    const isFuture = d>TODAY;
+    const dow = (FIRST_DOW + d - 1) % 7;
+    const wkCls = dow===0?'sun':(dow===6?'sat':'');
+    const todayCls = isToday?' today':'';
+    if(isFuture){
+      html += `<div class="cal-cell future ${wkCls}"><span class="cc-day">${d}</span></div>`;
+      continue;
+    }
+    if(!data || data.holiday){
+      html += `<div class="cal-cell closed${todayCls} ${wkCls}" data-day="${d}">
+        <span class="cc-day">${d}</span>
+        <span style="font-size:12px;text-align:center;">🏖</span>
+      </div>`;
+      continue;
+    }
+    if(currentCat!=='default'){
+      const catVal = data[currentCat] || 0;
+      const pct = data.sale>0 ? (catVal/data.sale*100) : 0;
+      const th = THRESH[currentCat];
+      let heatCls = '';
+      if(pct > th) heatCls = ' heat-bad';
+      else if(pct > th*0.85) heatCls = ' heat-warn';
+      else heatCls = ' heat-good';
+      html += `<div class="cal-cell${heatCls}${todayCls} ${wkCls}" data-day="${d}">
+        <span class="cc-day">${d}</span>
+        <span class="cc-cat">${catVal}만</span>
+        <span class="cc-profit ${pct>th?'neg':'pos'}">${pct.toFixed(0)}%</span>
+      </div>`;
+    } else {
+      html += `<div class="cal-cell${todayCls} ${wkCls}" data-day="${d}">
+        <span class="cc-day">${d}</span>
+        <span class="cc-sale">${data.sale}만</span>
+        <span class="cc-profit ${data.profit>=0?'pos':'neg'}">${data.profit>=0?'+':''}${data.profit}만</span>
+      </div>`;
+    }
+  }
+  document.getElementById('calGrid').innerHTML = html;
+
+  document.querySelectorAll('.cal-cell[data-day]').forEach(cell=>{
+    cell.addEventListener('click',()=>{
+      openDailySheet(parseInt(cell.dataset.day));
+    });
+  });
+}
+
+// ─── 일별 시트 ───
+function openDailySheet(d){
+  const data = DAYS[d];
+  closeAllSheets();
+  if(!data || data.holiday){
+    document.getElementById('shtSale').textContent = '-';
+    document.getElementById('shtExp').innerHTML = '-';
+    document.getElementById('shtProfit').innerHTML = '-';
+    document.getElementById('shtCats').innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--gray-400);font-size:13px;">🏖 휴무</div>`;
+  } else {
+    const expPct = data.sale>0 ? (data.exp/data.sale*100).toFixed(0) : 0;
+    const profitPct = data.sale>0 ? (data.profit/data.sale*100).toFixed(0) : 0;
+    document.getElementById('shtSale').textContent = data.sale+'만';
+    document.getElementById('shtExp').innerHTML = `${data.exp}만<span class="vp">${expPct}%</span>`;
+    const p = data.profit;
+    const pEl = document.getElementById('shtProfit');
+    pEl.innerHTML = `${p>=0?'+':''}${p}만<span class="vp">${p>=0?'+':''}${profitPct}%</span>`;
+    pEl.style.color = p>=0?'#10B981':'#EF4444';
+
+    const cats = ['vendor','att','fixed','receipt','royalty'];
+    let html = '';
+    cats.forEach(c=>{
+      const v = data[c]||0;
+      const pct = data.sale>0 ? (v/data.sale*100) : 0;
+      const th = THRESH[c];
+      let pctCls = 'pct';
+      let icon = '';
+      if(th){
+        if(pct>th){pctCls += ' over';icon=' ⚠️';}
+        else if(pct<th*0.85) pctCls += ' good';
+      }
+      html += `<div class="sht-cat-row">
+        <div class="cn"><span class="dot" style="background:${CAT_COLOR[c]};"></span>${CAT_NAME[c]}</div>
+        <div><span class="vl">${v}만</span><span class="${pctCls}">${pct.toFixed(1)}%${icon}</span></div>
+      </div>`;
+    });
+    document.getElementById('shtCats').innerHTML = html;
+  }
+  const dt = new Date(2026, 4, d);
+  const dayName = ['일','월','화','수','목','금','토'][dt.getDay()];
+  document.getElementById('sheetDate').textContent = `5/${d}`;
+  document.getElementById('sheetDay').textContent = `(${dayName})`;
+  document.getElementById('sheetBg').classList.add('open');
+  document.getElementById('dailySheet').classList.add('open');
+}
+
+// ─── 필터 시트 (캘린더 표시 옵션) ───
+function openFilterSheet(){
+  closeAllSheets();
+  const opts = [
+    {key:'default', name:'매출 + 순수익', color:'#0050FF'},
+    {key:'vendor', name:'식자재 비율', color:'#F59E0B'},
+    {key:'att', name:'인건비 비율', color:'#8B5CF6'},
+    {key:'fixed', name:'공과금 비율', color:'#6B7684'},
+    {key:'receipt', name:'비품 비율', color:'#10B981'},
+  ];
+  let html = '';
+  opts.forEach(o=>{
+    const active = o.key===currentCat ? 'active' : '';
+    html += `<div class="filter-row ${active}" data-cat="${o.key}">
+      <span><span class="dot" style="background:${o.color};"></span>${o.name}</span>
+      <span class="check">✓</span>
+    </div>`;
+  });
+  document.getElementById('filterList').innerHTML = html;
+  document.querySelectorAll('.filter-row[data-cat]').forEach(row=>{
+    row.addEventListener('click',()=>{
+      currentCat = row.dataset.cat;
+      renderCalendar();
+      closeAllSheets();
+    });
+  });
+  document.getElementById('sheetBg').classList.add('open');
+  document.getElementById('filterSheet').classList.add('open');
+}
+
+function closeAllSheets(){
+  document.getElementById('sheetBg').classList.remove('open');
+  document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+}
+document.querySelectorAll('.sheet-x').forEach(b=>b.addEventListener('click',closeAllSheets));
+document.getElementById('sheetBg').addEventListener('click',closeAllSheets);
+document.getElementById('filterBtn').addEventListener('click',openFilterSheet);
+
+renderWeekCards();
+renderCalendar();
+</script>
+</body>
+</html>
