@@ -3482,7 +3482,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <!-- 도움말 -->
   <div style="font-size:11px;color:var(--gray-500);margin-top:10px;padding:8px 10px;background:var(--gray-50);border-radius:8px;line-height:1.4;">
     💡 시각은 30분 단위로만 선택 가능 (정시 또는 정시:30).<br>
-    💡 직원을 먼저 선택하면 옛 일정이 자동으로 채워집니다.
+    💡 출근·퇴근 <b>비워두면 자동 휴무</b>로 저장됩니다.
   </div>
 
   <div class="action-group" style="margin-top:14px;">
@@ -7321,20 +7321,16 @@ async function renderWpDayCards(){
   let html = '';
   days.forEach((day, idx)=>{
     const ex = existing[day.date] || {};
+    // 2026-05-21: 휴무 체크박스 제거 (사장님 호소 "공란 = 자동 휴무")
+    // 옛 is_off=true row는 빈 칸으로 표시 → 다시 저장 시 자동 row delete (정리)
     const isOff = !!ex.is_off;
-    const start = ex.wish_start ? ex.wish_start.slice(0,5) : '';
-    const end   = ex.wish_end   ? ex.wish_end.slice(0,5)   : '';
+    const start = (!isOff && ex.wish_start) ? ex.wish_start.slice(0,5) : '';
+    const end   = (!isOff && ex.wish_end)   ? ex.wish_end.slice(0,5)   : '';
     const dow = day.label.match(/\((.+)\)/)?.[1] || '';
     const isWeekend = dow==='토' || dow==='일';
-    html += `<div class="wp-day-card" data-day-idx="${idx}" data-date="${day.date}" style="border:1px solid var(--gray-200);border-radius:10px;padding:10px 12px;background:#fff;${isOff?'opacity:0.5;':''}">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <div style="font-size:13px;font-weight:700;color:${isWeekend?(dow==='일'?'var(--danger)':'var(--blue)'):'var(--text)'};">${day.label}</div>
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--gray-600);cursor:pointer;">
-          <input type="checkbox" data-action="toggleWpOff|${idx}" ${isOff?'checked':''} style="width:14px;height:14px;">
-          휴무
-        </label>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;${isOff?'pointer-events:none;opacity:0.4;':''}">
+    html += `<div class="wp-day-card" data-day-idx="${idx}" data-date="${day.date}" style="border:1px solid var(--gray-200);border-radius:10px;padding:10px 12px;background:#fff;">
+      <div style="font-size:13px;font-weight:700;color:${isWeekend?(dow==='일'?'var(--danger)':'var(--blue)'):'var(--text)'};margin-bottom:6px;">${day.label}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
         <div class="input-row" style="margin:0;padding:8px 10px;" data-action="openTimePicker|wp:${idx}:start">
           <label style="font-size:11px;">출근</label>
           <span id="wpDay${idx}Start" class="val ${start?'':'empty'}">${start||'-'}</span>
@@ -7348,46 +7344,25 @@ async function renderWpDayCards(){
   });
   target.innerHTML = html;
 }
-function toggleWpOff(idx){
-  const card = document.querySelector(`.wp-day-card[data-day-idx="${idx}"]`);
-  if(!card) return;
-  const cb = card.querySelector('input[type="checkbox"]');
-  const isOff = cb?.checked;
-  card.style.opacity = isOff ? '0.5' : '';
-  const timeBlock = card.querySelector(':scope > div:last-child');
-  if(timeBlock){
-    timeBlock.style.pointerEvents = isOff ? 'none' : '';
-    timeBlock.style.opacity = isOff ? '0.4' : '';
-  }
-}
 async function saveWeeklyPlan(){
   if(!guardStore()) return;
   if(!wpEmpId) return toast('직원을 선택하세요.','warn');
   const days = getWeekDays(wpWeekStart);
   const rows = [];
   let validCount = 0;
+  // 2026-05-21: 휴무 체크박스 제거. 빈 칸 = 자동 휴무 (= row delete)
   for(let idx=0; idx<7; idx++){
     const card = document.querySelector(`.wp-day-card[data-day-idx="${idx}"]`);
     if(!card) continue;
-    const isOff = card.querySelector('input[type="checkbox"]')?.checked;
     const startTxt = document.getElementById(`wpDay${idx}Start`)?.innerText || '';
     const endTxt   = document.getElementById(`wpDay${idx}End`)?.innerText   || '';
     const date = card.getAttribute('data-date');
-    // 휴무 = is_off:true, 시각 null
-    if(isOff){
-      rows.push({
-        store_id: currentStore.id, employee_id: wpEmpId, work_date: date,
-        wish_start: null, wish_end: null, is_off: true, status: '희망'
-      });
-      validCount++;
-      continue;
-    }
-    // 시각 입력 없으면 = 등록 안 함 (해당 일은 빈 일정으로 둠 = 기존 row 있으면 삭제)
+    // 빈 칸 = 자동 휴무 → 기존 row 있으면 삭제, 없으면 패스
     if((!startTxt || startTxt==='-') && (!endTxt || endTxt==='-')){
-      // 기존 row 삭제
       rows.push({ _delete:true, work_date: date });
       continue;
     }
+    // 한쪽만 입력 = 사용자 실수 방지
     if(!startTxt || startTxt==='-' || !endTxt || endTxt==='-'){
       return toast(`${days[idx].label} 출근·퇴근 시각을 모두 입력하거나 둘 다 비워주세요.`,'warn');
     }
@@ -7419,7 +7394,9 @@ async function saveWeeklyPlan(){
   setLoad(false);
   if(lastError) return errToast('주 일정 저장', lastError);
   closeSheet('weeklyPlanSheet');
-  toast(`${validCount}일 등록됐어요`,'success');
+  // 휴무(빈 칸)는 7 - validCount. 메시지에 명시
+  const offCount = 7 - validCount;
+  toast(`${validCount}일 출근 / ${offCount}일 휴무 저장됐어요`,'success');
   // 통합 화면 새로고침
   attAllMonth = days[0].date.slice(0,7);
   await loadAttList();
