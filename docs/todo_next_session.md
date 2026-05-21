@@ -2,11 +2,31 @@
 
 ---
 
-## ✅ 2026-05-21 긴급 fix — work_schedules.is_off 컬럼 누락 (PR #190)
+## ✅ 2026-05-21 후속 — 근무계획 UX 정리 (PR #190 / #191 / #192)
 
+### PR #190 (긴급 fix) — work_schedules.is_off 컬럼 누락
 - 통합 PR #185에서 코드는 is_off 박는데 DB ADD COLUMN SQL 누락 → 첫 저장 시도까지 잠복
 - ALTER TABLE 1줄로 fix (사장님 "실행 승인")
 - db_schema.md 정정 + dev_lessons #112 신설
+
+### PR #191 — addSchedSheet 🗑 삭제 버튼 추가
+- 삭제·수정 함수는 있는데 시트에 호출 UI 누락 (PR #185 잔재)
+- 편집 모드에만 노출 + dataset에 schedId 박음
+- deleteScheduleFromSheet() 핸들러 신설
+
+### PR #192 — 휴무 체크박스 제거 (공란 = 자동 휴무)
+- 사장님 호소: "휴무 찍지 말고 공란 = 자동 휴무"
+- DB 측정으로 권채현 6행 옛 휴무 row 잔재 확인
+- 휴무 체크박스 + toggleWpOff 제거. 빈 칸 = row delete
+- 옛 휴무 row는 사장님 다시 저장 시 자동 정리
+- dev_lessons #113 신설 ("공란 = 자동 X" UX 패턴)
+
+### 잔재 정리 다음 세션 권고
+- 다른 직원의 옛 is_off=true row도 같은 방식 점진 정리 (사장님 시트 다시 저장 시)
+- 또는 사장님 "실행 승인" 받고 SQL 1줄 일괄 정리:
+  ```sql
+  DELETE FROM work_schedules WHERE store_id='<sid>' AND is_off=true;
+  ```
 
 ---
 
