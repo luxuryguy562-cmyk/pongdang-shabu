@@ -4,6 +4,82 @@
 
 ---
 
+## [2026-05-21] 근태 서브탭 통합 + 시간그리드 v2 (안 ③) + 주단위 일괄 입력
+
+### 사장님 호소
+- "근무기록·근무계획 합치는 논의가 시간그리드 결정 단계에서 멈춤"
+- "시간그리드가 6/9/12 단위만 숫자 + 구분선 희미 → 직관성 X"
+- "근무계획은 주단위 일괄 입력이 나음. 시각은 정시/정시:30 스크롤"
+
+### 사장님 결정 (대화 중)
+1. 통합 = **한 화면 + 계획·실제 겹침** (mockup `gantt_compare.html` 보너스 + `timegrid_v2.html` 안 ③)
+2. 시간그리드 = **안 ③** (영업존 흰 배경 / 비영업 회색 / 자정 후 옅은 파랑)
+3. 진입 경로 = **A** (sched 서브탭 폐기, 근태 `📋 기록`으로 일원화)
+4. 막대 텍스트 규칙:
+   - 계획 막대 (점선): 가운데 시각 라벨 `11:00~17:00`
+   - 실제 막대 (보라): **텍스트 없음**
+   - 어긋난 부분 점선 영역: **텍스트 없음** (빈 박스만)
+   - 결근 빗금: **텍스트 없음** (`⚠️ 결근` 제거)
+5. 주단위 일괄 입력: 한 직원 × 월~일 7일치 한 시트, 시각 30분 단위 스크롤
+
+### 변경 내역 (PR #185 + 본 PR)
+**mockup (PR #185)**
+- `docs/mockups/timegrid_v2.html` 신규 (594줄) — 사장님 시각 검토용
+
+**코드 (본 PR)**
+- **CSS** (line 395~):
+  - `.gantt-bar-area` 영업존 배경 (6~11 회색 / 11~24 흰 / 24~30 옅은 파랑)
+  - `.gantt-hour.major/.mid` 시간 라벨 강조
+  - `.gantt-bg-col.major/.minor` 메이저/마이너 격자
+  - `.gantt-bar.plan` 점선 빈 박스 + 시각 라벨 / `.gantt-bar.absent` 빗금
+- **헬퍼 함수 신설** (line 7259~):
+  - `renderGanttHourCells()` — 짝수 숫자 / 홀수 점(·) / 자정 빨강
+  - `renderGanttBgCols()` — 메이저/마이너 자동 클래스
+- **3곳 동기화**: `renderAttDayDetail` (L6696) / `loadMyAttGantt` (L6874) / `renderGanttFiltered` (L7306)
+- **서브탭 통합**: `📅 근무 계획` 버튼 제거 + `📋 근무 기록` → `📋 기록`. `attTab` 'sched' → 'all' 흡수
+- **schedCard DOM 폐기** (line 1762~1778)
+- **renderAttDayDetail 확장** (line 6707~6864):
+  - work_schedules 병합 → 한 직원 한 행에 계획(점선)+실제(보라) 겹침
+  - 계획만 있고 실제 없는 직원 = 결근 행 (과거만 빗금)
+  - 빈 날(logs=0)도 계획만 있으면 렌더 진행
+- **loadAttList work_schedules 병합 조회** (Promise.all, `window._attSchedDayMap` 저장)
+- **캘린더 셀**에 계획 점(점선 윤곽선) 표시 — 실제 색점 + 계획 점선 점
+- **주단위 일괄 입력 시트** (`weeklyPlanSheet` 신규):
+  - 7요일 카드 (월~일) — 휴무 토글 + 출근/퇴근
+  - 시각 picker = 30분 단위 (정시/정시:30)
+  - 직원 선택 시 옛 일정 자동 채움
+  - 저장 = 7번 upsert + delete 분기 (빈 일은 기존 삭제)
+- **30분 단위 picker** (openTimePicker `wp:*` ctx 분기 추가)
+- **헤더 버튼 새 패턴**: `📅 주 일정` (모두) + `＋ 실제 입력` (관리자만)
+- **단일 일정 편집 살림**: openSchedSheet → window._attSchedDayMap에서 조회 (옛 schedDayMap 폐기)
+- **데드코드 정리**: loadScheduleMonth/renderSchedCalendar/renderSchedDayDetail/moveSchedMonth/pickSchedDay/fillSchedEmpFilter/initSchedDate 제거 (~140줄)
+- **DB 변경 0** (work_schedules는 기존 SELECT/UPSERT/DELETE만 활용)
+
+### 검증
+- node --check 통과 (JS 14322 줄)
+- grep 잔재 0건 (옛 `h%3===0`, sched 서브탭 버튼, 미사용 sched 함수 호출)
+- mockup `timegrid_v2.html`로 모바일 360/414 + 태블릿 980 안 깨짐 사전 검증
+
+### 영향 범위
+- 함수: attTab, loadAttList, renderAttDayDetail, renderAttCalendar (캘린더 점 통합), openSchedSheet (편집 진입 데이터 소스 변경), saveSchedule/deleteSchedule (loadAttList 호출로 변경)
+- DOM: 1705 서브탭 1개 제거 / 1762~ schedCard 제거 / 3437 weeklyPlanSheet 신규
+- CSS: gantt-* 블록 전면 개편
+- DB: 변경 0
+
+### 사장님 골든패스 (실측 대기)
+- [ ] 근태 → 📋 기록 진입: 시간그리드 영업존 흰 배경 + 짝수 시간 숫자 보이는지
+- [ ] 사장님 매장 어제 데이터에 계획·실제 한 행에 겹쳐 보이는지
+- [ ] 계획 막대 점선에 `11:00~17:00` 시각 라벨 + 실제 막대 보라 텍스트 없음
+- [ ] 결근 = 빗금만 (텍스트 X)
+- [ ] 일별 상세 헤더 `📅 주 일정` 클릭 → 주단위 시트 진입 → 7요일 카드
+- [ ] 시각 picker 스크롤 = 정시 / 정시:30 두 옵션만
+- [ ] 직원 선택 후 옛 일정 자동 채움 / 저장 시 7일 일괄 처리
+
+### 진입 트리거
+- 사장님 "일단 해봐" + "주단위 일괄 + 30분 단위 스크롤 추가" → 본 PR
+
+---
+
 ## [2026-05-21] 지출 카테고리 그리드에 vendor_orders 합산 표시 (거래방법×지출카테고리 분리)
 
 ### 사장님 호소
