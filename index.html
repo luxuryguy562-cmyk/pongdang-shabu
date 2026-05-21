@@ -10450,7 +10450,7 @@ function v17OpenDailySheet(d){
   const ctx = _v17Ctx; if(!ctx) return;
   const key = `${ctx.TARGET_MONTH}-${String(d).padStart(2,'0')}`;
   const data = ctx.DAYS[key];
-  v17CloseAllSheets();
+  // v17CloseAllSheets() 호출 X — setTimeout 경쟁 조건으로 시트 즉시 닫힘 버그
   if(!data || data.holiday){
     document.getElementById('v17ShtSale').textContent = '-';
     document.getElementById('v17ShtExp').innerHTML = '-';
@@ -10494,7 +10494,7 @@ function v17OpenDailySheet(d){
 
 // ─── 필터 시트 ───
 function v17OpenFilterSheet(){
-  v17CloseAllSheets();
+  // v17CloseAllSheets() 호출 X — setTimeout 경쟁 조건으로 시트 즉시 닫힘 버그
   const opts = [
     {key:'default', name:'매출 + 순수익', color:'#0050FF'},
     {key:'vendor',  name:'식자재 비율',   color:'#F59E0B'},
