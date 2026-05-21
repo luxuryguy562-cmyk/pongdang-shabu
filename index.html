@@ -8964,7 +8964,9 @@ async function loadDashboard(force){
     const pLastDay=new Date(pY,pMo,0).getDate();
     const pStart=pYm+'-01', pEnd=pYm+'-'+String(pLastDay).padStart(2,'0');
 
-    document.getElementById('dashPassedLabel').innerText=`${lastDay}일 중 ${passedDays}일 경과`;
+    // v17: 옛 dashPassedLabel 폐기 (월 카드의 mc-label로 대체)
+    const _dplEl = document.getElementById('dashPassedLabel');
+    if(_dplEl) _dplEl.innerText = `${lastDay}일 중 ${passedDays}일 경과`;
 
     // ══ 병렬 데이터 로드 ══
     // N+1 정리: 두 Promise.all 통합. vendor_orders/receipts/attendance_logs/fixed_costs 1번씩만 받아
