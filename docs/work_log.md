@@ -4,6 +4,33 @@
 
 ---
 
+## [2026-05-21] 긴급 fix — work_schedules.is_off 컬럼 누락 (PR #185 잔재) — PR #190
+
+### 사장님 호소
+"긴급버그 — 주단위 근태계획 저장 안됨, SQL인데 이게 왜 필요하지? 원래 있던 기능 합친 건데"
+
+### 진단 (DB 측정 + 코드 grep)
+- 코드: `is_off` 사용 11곳 (SELECT 9, INSERT 2 — saveWeeklyPlan 7369·7385)
+- DB: work_schedules 컬럼 8개에 `is_off` 없음
+- 원인: 통합 PR #185 시 코드는 `is_off` 박는데 DB ADD COLUMN SQL 누락
+- 잠복 원인: 데이터 0행이라 첫 저장 시도까지 발견 안 됨
+
+### 처방 (사장님 "실행 승인" 4글자)
+```sql
+ALTER TABLE public.work_schedules ADD COLUMN IF NOT EXISTS is_off boolean DEFAULT false;
+```
+- apply_migration 호출 (헌법 8-A 빨간불 1회)
+- 검증: information_schema 확인 → is_off boolean default false ✅
+
+### docs 동반 갱신
+- db_schema.md: work_schedules 실제 컬럼 8→9 + 옛 표기(start_time/end_time) → 실제(wish_start/wish_end) 정정
+- dev_lessons #112 신설 — "코드 vs DB 스키마 불일치 — 통합 PR 시 마이그레이션 SQL 누락 검증 의무"
+
+### 사장님 검증 대기
+- 7일 일괄 저장 다시 시도 → 성공 여부
+
+---
+
 ## [2026-05-21] 속도 개선 3 Phase (캐시 인프라 + SWR + Chart fix) — PR #188
 
 ### 사장님 호소

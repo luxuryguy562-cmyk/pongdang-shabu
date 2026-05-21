@@ -2,6 +2,14 @@
 
 ---
 
+## ✅ 2026-05-21 긴급 fix — work_schedules.is_off 컬럼 누락 (PR #190)
+
+- 통합 PR #185에서 코드는 is_off 박는데 DB ADD COLUMN SQL 누락 → 첫 저장 시도까지 잠복
+- ALTER TABLE 1줄로 fix (사장님 "실행 승인")
+- db_schema.md 정정 + dev_lessons #112 신설
+
+---
+
 ## ✅ 2026-05-21 완료 — 속도 개선 3 Phase (PR #188, sha 51966f6)
 
 ### 사장님 호소 (2026-05-21)

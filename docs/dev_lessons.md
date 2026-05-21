@@ -4,6 +4,38 @@
 
 ---
 
+## 112. 코드 vs DB 스키마 불일치 — 통합 PR 시 마이그레이션 SQL 누락 검증 의무 (2026-05-21)
+
+### 사건
+사장님 호소: "주단위 근태계획 저장 안 됨, SQL인데 이게 왜 필요하지? 원래 있던 기능 합친 건데"
+
+### 진단 (헌법 1-7 추측 금지)
+- 코드 grep: `is_off` 사용 11곳 (SELECT 9, INSERT 2)
+- DB 측정: `work_schedules` 컬럼 8개에 `is_off` 없음
+- 결과: 통합 PR #185(근태 서브탭 통합·시간그리드 v2)에서 코드는 `is_off` 박는 새 설계인데 DB ADD COLUMN SQL 누락
+- 데이터 0행이라 첫 저장 시도까지 잠복 → 사장님이 처음 발견
+
+### 해결
+- `ALTER TABLE work_schedules ADD COLUMN is_off boolean DEFAULT false` (PR #190, 사장님 "실행 승인")
+- db_schema.md 갱신 — work_schedules 실제 컬럼 8→9 + 옛 표기(start_time/end_time) → 실제(wish_start/wish_end) 정정
+
+### 교훈
+- **통합/리팩터링 PR은 코드 변경 + DB 스키마 변경 매트릭스를 명시 의무**. coder가 새 컬럼 박을 때 같이 DDL 마이그레이션 SQL 박았어야.
+- reviewer 체크리스트에 "INSERT/UPDATE 컬럼 모두 information_schema에 존재 확인" 추가.
+- 데이터 0행 테이블은 회귀 사각지대 — 골든패스에 "저장 시도" 의무 포함.
+- 헌법 11-4 사후 검증 3단 게이트에 "코드 컬럼명 ↔ DB 컬럼명 grep 비교" 추가.
+
+### 재발 방지 grep 패턴
+```bash
+# INSERT 시 새 컬럼 박는 코드 찾기 → information_schema와 비교
+grep -oE "sb\.from\('([^']+)'\)\.upsert|insert" index.html
+```
+
+### 옛 표기 정정
+- docs/db_schema.md work_schedules: `start_time/end_time` → 실제 `wish_start/wish_end`. 옛 표기는 작성자의 추정이었음.
+
+---
+
 ## 111. 막대 시각 텍스트는 "어긋난 자리에만 보임" 디자인 — 사장님 직관 (2026-05-21)
 
 ### 사장님 결정
