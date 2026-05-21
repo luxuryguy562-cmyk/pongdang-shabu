@@ -4,6 +4,47 @@
 
 ---
 
+## 118. 시트 즉시 open할 때 closeAllSheets 먼저 호출 X — setTimeout 경쟁 (2026-05-22 v17 hotfix4)
+
+### 사례
+v17 캘린더 셀 탭 → 일별 시트가 올라왔다가 **즉시 사라짐** (사장님 호소).
+
+원인:
+1. `v17OpenDailySheet(d)` 시작에서 `v17CloseAllSheets()` 호출 (혹시 다른 시트 열려있을까봐)
+2. 옛 `closeSheet(id)` 함수는 `setTimeout(()=>display='none', 300)` 예약 (애니메이션 후 숨김)
+3. 그 후 `openSheet(id)` 호출 → `display:flex` + 10ms 후 `.show` 클래스
+4. **300ms 후**: 1번에서 예약된 setTimeout 발동 → `display='none'` → 사라짐
+
+### 결론
+- **이미 닫힌 시트엔 close 호출 X** — close가 setTimeout 예약을 남김
+- 시트 열기 시 다른 시트가 열려있는지 먼저 확인 (`.show` 클래스 검사) 후 필요할 때만 close
+- 또는 close + open 사이 충분한 delay (300ms+) 보장
+- v17 같은 단독 시트 = `openSheet(id)` 단순 호출이 가장 안전
+
+### 일반화
+- setTimeout 기반 transition은 race condition 위험. open/close 빠른 연속 호출 시 의도와 반대 결과.
+- 라이브러리 (예: bottom-sheet) 활용 시 항상 race condition 시나리오 시뮬.
+
+---
+
+## 117. 옛 .sheet 패턴 모방 시 .sheet-overlay 구조 빠뜨림 X (2026-05-22 v17 hotfix3)
+
+### 사례
+v17 시트 신설 시 `.sheet` 단독 + `display:none` + `.open` 토글 패턴 사용. 결과: 시트 안 보임.
+
+원인:
+- 옛 `.sheet` CSS: `transform:translateY(100%)` (화면 아래 숨김) + `transition:transform .42s`
+- `.show` 클래스로 transform 풀어야 보임
+- v17은 display만 풀고 transform 그대로 → 화면 아래 100% 위치
+- 어두운 배경 (.sheet-overlay)도 없음
+
+### 결론
+- 옛 패턴을 모방할 땐 **CSS + 구조 + 헬퍼 함수 세트로 통째로 활용**
+- 단독 패턴 신설 시 새 CSS도 같이
+- 옛 코드의 `openSheet(id)` / `closeSheet(id)` 헬퍼 활용이 가장 안전 (시트 패턴 자동 처리)
+
+---
+
 ## 116. 큰 갈아엎기 후 옛 DOM 참조 잔재 = 첫 진입 throw 위험 (2026-05-22 v17 hotfix2)
 
 ### 사례
