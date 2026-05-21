@@ -2242,25 +2242,40 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
   <!-- ═══ A. 정산현황 ═══ -->
   <div id="dashSettleCont">
-    <!-- 월 네비게이션 (사장님 피드백 2026-05-15: 월 단위 카드 컨테이너 위로 이동) -->
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-      <button class="btn btn-secondary btn-sm" id="dashPrevBtn">‹</button>
-      <span id="dashMonthLabel" style="flex:1;text-align:center;font-size:16px;font-weight:800;">-</span>
-      <button class="btn btn-secondary btn-sm" id="dashNextBtn">›</button>
+    <!-- v17 정산현황 (2026-05-22 전면 개편). mockup: docs/mockups/weekly_settle_calendar_v17.html -->
+    <!-- 모드 토글 [월/주차] -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="v17ModeMonth" data-mode="month">📅 월 보기</button>
+      <button class="mode-tab" id="v17ModeWeek" data-mode="week">📆 주차 보기</button>
     </div>
-    <!-- 가마감/진마감 토글 (별도 PR에서 "예상/확정"으로 갈아엎을 예정) -->
-    <div style="display:flex;gap:0;margin-bottom:14px;background:var(--gray-100);border-radius:12px;padding:3px;">
-      <button id="dashModeProvisional" class="btn btn-primary btn-sm" style="flex:1;font-size:12px;border-radius:10px;">가마감 (예측)</button>
-      <button id="dashModeFinal" class="btn btn-sm" style="flex:1;font-size:12px;border-radius:10px;background:transparent;color:var(--gray-600);">진마감 (확정)</button>
-    </div>
-    <!-- A-1. 월 요약 카드 -->
-    <div class="card" style="padding:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div class="card-title" style="margin-bottom:0;">월 요약 <span id="dashPassedLabel" style="font-size:11px;color:var(--gray-400);font-weight:600;"></span></div>
+
+    <!-- 월 보기 컨테이너 -->
+    <div id="v17MonthView">
+      <!-- 월 네비 -->
+      <div class="v17-month-nav">
+        <button class="navbtn" id="dashPrevBtn">‹</button>
+        <span class="month-label" id="dashMonthLabel">-</span>
+        <button class="navbtn" id="dashNextBtn">›</button>
       </div>
-      <div id="dashSummaryGrid"></div>
-      <!-- 예비비 잔고 미니 -->
-      <div id="dashReserveBalanceMini" style="margin-top:12px;padding:10px 14px;background:var(--blue-light);border-radius:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+      <!-- 월 카드 (매출/지출/순수익 + 월말 예상 + 간트 + 범례 + 전월동일대비 + 문어체) -->
+      <div id="v17MonthCard"></div>
+      <!-- 월 캘린더 -->
+      <div class="card">
+        <div class="v17-cal-head">
+          <button class="cal-chip" id="v17CalFilterBtn"><span id="v17CalModeChip">📊 매출+순수익 ▾</span></button>
+        </div>
+        <div class="v17-cal-grid" id="v17CalGrid"></div>
+      </div>
+      <!-- 주별 카테고리 비교 진입 카드 -->
+      <div class="enter-card" id="v17EnterModal">
+        <div>
+          <div class="ttl">📊 주별 카테고리 비교</div>
+          <div class="sub">식자재·인건비 비율 한눈에 보기</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+      <!-- 예비비 잔고 (사이드메뉴 진입 링크) -->
+      <div id="dashReserveBalanceMini" style="padding:10px 14px;background:var(--blue-light);border-radius:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:10px;">
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="font-size:14px;">🏦</span>
           <span style="font-size:12px;font-weight:700;color:var(--blue);">예비비 잔고</span>
@@ -2272,18 +2287,25 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
-    <!-- A-2. 일별 정산 -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div class="card-title" style="margin-bottom:0;">주단위 요약</div>
-        <button class="btn btn-secondary btn-sm" id="openDailyDetailBtn" style="font-size:11px;padding:6px 12px;">일별 상세비교 ›</button>
+    <!-- 주차 보기 컨테이너 -->
+    <div id="v17WeekView" style="display:none;">
+      <div class="week-nav">
+        <button class="navbtn" id="v17WeekPrevBtn">‹</button>
+        <span class="week-label" id="v17WeekNavLabel">-</span>
+        <button class="navbtn" id="v17WeekNextBtn">›</button>
       </div>
-      <div id="dashDailyTable"></div>
+      <!-- 그 주 카드 1개 -->
+      <div id="v17SingleWeekCard"></div>
+      <!-- 끼임 박스 (1주차에만, 카드 밖 달력 위) -->
+      <div id="v17WeekCrossNote"></div>
+      <!-- 한 줄 달력 (요일 7개 셀) -->
+      <div class="card">
+        <div style="font-size:11px;color:var(--gray-500);font-weight:700;margin-bottom:8px;">📅 그 주 일별</div>
+        <div class="week-cal" id="v17WeekCalRow"></div>
+      </div>
     </div>
 
-    <!-- A-5. 일별 차트 — 2026-05-15 제거 (사장님 요청, 주단위 요약 카드와 정보 중복) -->
-
-    <!-- A-6. 기타매출 (매장별 동적 항목) -->
+    <!-- 기타매출 (매장별 동적 항목, 맨 아래 — 사장님 결정) -->
     <div class="card" id="dashExtraRevenueCard" style="display:none;">
       <div class="card-title"><svg class="icon-inline"><use href="#i-coins"/></svg>기타매출 누적</div>
       <p class="card-sub">장부와 별도로 관리되는 매출. 항목별 월/전체 누적.</p>
@@ -3901,16 +3923,42 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   <button class="btn btn-secondary btn-full" data-action="closeAllSheets">취소</button>
 </div>
 
-<!-- 풀스크린 일별 상세 모달 (body 직하위) -->
-<div id="dailyDetailModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#FFFFFF;z-index:9000;overflow:hidden;">
-  <div id="dailyDetailHeader" style="position:sticky;top:0;background:var(--white);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-200);z-index:3;">
-    <span style="font-size:16px;font-weight:800;">일별 상세 비교</span>
-    <button class="btn btn-secondary btn-sm" id="closeDailyDetailBtn" style="font-size:12px;">닫기 ✕</button>
+<!-- v17 주별 카테고리 비교 풀스크린 모달 (body 직하위) — 2026-05-22 신설 -->
+<div class="v17-modal" id="v17WeekModal">
+  <div class="v17-modal-hd">
+    <div class="ttl">📊 주별 카테고리 비교</div>
+    <button class="v17-modal-close" id="v17WeekModalClose">✕ 닫기</button>
   </div>
-  <div id="dailyThresholdBar" style="position:sticky;top:46px;background:var(--white);padding:6px 12px;border-bottom:1px solid var(--gray-200);z-index:2;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-    <span style="font-size:10px;font-weight:700;color:var(--gray-400);margin-right:2px;">기준%</span>
+  <div class="v17-modal-body">
+    <div id="v17WeekCardsContainer"></div>
   </div>
-  <div id="dailyDetailContent" style="overflow:auto;height:calc(100% - 90px);-webkit-overflow-scrolling:touch;"></div>
+</div>
+
+<!-- v17 일별 시트 (셀 탭 시 진입, body 직하위) -->
+<div class="sheet" id="v17DailySheet" style="display:none;">
+  <div class="sheet-grab"></div>
+  <div class="sheet-hd">
+    <div><span class="dt" id="v17ShtDate">-</span><span class="day" id="v17ShtDay">-</span></div>
+    <button class="sheet-close" id="v17DailySheetClose">✕ 닫기</button>
+  </div>
+  <div class="v17-sht-summary">
+    <div><div class="lb">매출</div><div class="vl" style="color:var(--blue);" id="v17ShtSale">-</div></div>
+    <div><div class="lb">지출</div><div class="vl" style="color:#EF4444;" id="v17ShtExp">-<span class="vp" id="v17ShtExpPct"></span></div></div>
+    <div><div class="lb">순수익</div><div class="vl" id="v17ShtProfit">-<span class="vp" id="v17ShtProfitPct"></span></div></div>
+  </div>
+  <div id="v17ShtCats"></div>
+  <p style="font-size:11px;color:var(--gray-400);margin:14px 0 0;text-align:center;">매출 대비 % · 기준 초과 빨강</p>
+</div>
+
+<!-- v17 카테고리 필터 시트 (캘린더 모드 전환, body 직하위) -->
+<div class="sheet" id="v17FilterSheet" style="display:none;">
+  <div class="sheet-grab"></div>
+  <div class="sheet-hd">
+    <div class="dt">⚙️ 캘린더 표시 옵션</div>
+    <button class="sheet-close" id="v17FilterSheetClose">✕</button>
+  </div>
+  <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px;line-height:1.5;">셀에 보일 정보. 카테고리 선택 시 비율% + 색상 강조.</div>
+  <div id="v17FilterList"></div>
 </div>
 
 <!-- ══ 관리자 대시보드 (어플 주인 전용, #admin 진입) — 2026-05-20 신설 ══ -->
