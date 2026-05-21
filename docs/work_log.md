@@ -26,6 +26,19 @@
 - 영향: `setV17Context` 호출 안 됨 → 월 카드 + 캘린더 비어있음 (사장님 사진)
 - Fix: `if(_dplEl)` 가드 추가
 
+**Hotfix3 (PR #198)**: 캘린더 셀 시트 안 보임
+- v17 시트가 옛 `.sheet` 단독 패턴 (display:none + .open 토글)
+- 옛 `.sheet` 기본 CSS = `transform:translateY(100%)` → 화면 아래 숨김
+- 옛 패턴은 `.sheet-overlay` > `.sheet` 구조 + `.show` 클래스
+- Fix: 두 시트를 `.sheet-overlay`로 감싸기 + 옛 `openSheet`/`closeSheet` 헬퍼 활용
+
+**Hotfix4 (PR #199)**: 셀 탭 시 시트 올라왔다가 즉시 사라짐 (사장님 호소)
+- `v17OpenDailySheet` 시작에서 `v17CloseAllSheets()` 호출
+- 옛 `closeSheet`는 `setTimeout(()=>display='none', 300)` 예약
+- 그 후 `openSheet` 호출 → `display:flex` + 10ms 후 show (잠시 보임)
+- 300ms 후: 예약된 setTimeout 발동 → display='none' → **시트 사라짐**
+- Fix: `v17CloseAllSheets()` 호출 제거 (불필요)
+
 ### 핵심 교훈 (사장님 호소: "왜 나한테 확인필요를?")
 
 **Supabase MCP `execute_sql`로 매장 데이터 직접 검증 가능**:

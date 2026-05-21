@@ -22,10 +22,19 @@
 - 마이데이터 없는 매장은 폴백 (가마감 옛 방식 유지)
 - 사이드메뉴 → 예비비 관리 페이지 = 옛 그대로 보존, 계산 로직만 갱신
 
-### 새 dev_lessons (3건)
+### 새 dev_lessons (5건)
 - #114 큰 작업 단계별 push 정책 (push 보류로 사장님 앱 보호)
 - #115 사장님께 "확인 부탁" 떠넘기지 말고 Supabase MCP로 직접 검증
 - #116 큰 갈아엎기 후 옛 DOM 참조 잔재 = 첫 진입 throw 위험
+- #117 옛 .sheet 패턴 모방 시 .sheet-overlay 구조 빠뜨림 X
+- #118 시트 즉시 open할 때 closeAllSheets 먼저 호출 X (setTimeout 경쟁)
+
+### PR 5건 main 머지
+- PR #194 v17 메인 작업 (Phase 1~4 + 6)
+- PR #195 hotfix1 (공과금 누락)
+- PR #196 hotfix2 (dashPassedLabel null safe)
+- PR #198 hotfix3 (시트 .sheet-overlay 패턴)
+- PR #199 hotfix4 (시트 즉시 닫힘 — setTimeout 경쟁)
 
 ---
 
