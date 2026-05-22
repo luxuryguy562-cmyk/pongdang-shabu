@@ -3946,6 +3946,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div id="v17ShtCats"></div>
     <p style="font-size:11px;color:var(--gray-400);margin:14px 0 0;text-align:center;">매출 대비 % · 기준 초과 빨강</p>
+    <!-- 휴무 표시/해제 버튼 (2026-05-22 복원) -->
+    <div style="margin-top:14px;border-top:1px solid var(--gray-100);padding-top:14px;">
+      <button id="v17ShtMarkClosedBtn" class="btn btn-secondary btn-full" style="padding:12px;display:none;" data-action="v17MarkClosed">🏖 휴무로 표시</button>
+      <button id="v17ShtMarkOpenBtn" class="btn btn-secondary btn-full" style="padding:12px;display:none;" data-action="v17MarkOpen">🔄 휴무 해제</button>
+    </div>
   </div>
 </div>
 
@@ -10142,13 +10147,22 @@ function v17RenderCalendar(){
       html += `<div class="v17-cal-cell future ${wkCls}"><span class="cc-day">${d}</span></div>`;
       continue;
     }
-    if(!data || data.holiday){
-      const fxdLoss = data ? -(data.fixed||0) : 0;
+    // 명시적 휴무(sales_daily.source='closed')만 휴무 셀로 표시
+    if(data && data.holiday){
+      const fxdLoss = -(data.fixed||0);
       const lossTxt = fxdLoss ? v17FmtCompact(fxdLoss) : '';
       html += `<div class="v17-cal-cell closed${todayCls} ${wkCls}" data-day="${d}">
         <span class="cc-day">${d}</span>
         <span style="font-size:11px;text-align:center;line-height:1;">🏖</span>
         ${lossTxt?`<span class="cc-profit neg${v17CellAutoFs(lossTxt)}">${lossTxt}</span>`:''}
+      </div>`;
+      continue;
+    }
+    // 데이터 없음 = 빈 셀 (휴무 X, 영업했지만 마감 안 한 날 또는 미래)
+    if(!data){
+      html += `<div class="v17-cal-cell${todayCls} ${wkCls}" data-day="${d}" style="background:var(--gray-50);">
+        <span class="cc-day">${d}</span>
+        <span style="font-size:9px;text-align:center;color:var(--gray-300);">-</span>
       </div>`;
       continue;
     }
@@ -10446,16 +10460,27 @@ function v17MoveWeek(dir){
 }
 
 // ─── 일별 시트 (셀 탭) ───
+let _v17SheetSelectedDate = null; // 휴무 표시/해제 버튼용
 function v17OpenDailySheet(d){
   const ctx = _v17Ctx; if(!ctx) return;
   const key = `${ctx.TARGET_MONTH}-${String(d).padStart(2,'0')}`;
   const data = ctx.DAYS[key];
   // v17CloseAllSheets() 호출 X — setTimeout 경쟁 조건으로 시트 즉시 닫힘 버그
-  if(!data || data.holiday){
+  // 셀 날짜 저장 (휴무 표시/해제 버튼용)
+  _v17SheetSelectedDate = `${ctx.YEAR}-${String(ctx.TARGET_MONTH).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const isHoliday = !!(data && data.holiday);
+  const isEmpty = !data;
+  // 버튼 토글
+  const btnMark = document.getElementById('v17ShtMarkClosedBtn');
+  const btnUnmark = document.getElementById('v17ShtMarkOpenBtn');
+  if(btnMark) btnMark.style.display = isHoliday ? 'none' : 'block';
+  if(btnUnmark) btnUnmark.style.display = isHoliday ? 'block' : 'none';
+  if(isEmpty || isHoliday){
     document.getElementById('v17ShtSale').textContent = '-';
     document.getElementById('v17ShtExp').innerHTML = '-';
     document.getElementById('v17ShtProfit').innerHTML = '-';
-    document.getElementById('v17ShtCats').innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--gray-400);font-size:13px;">🏖 휴무</div>`;
+    const label = isHoliday ? '🏖 휴무' : '데이터 없음';
+    document.getElementById('v17ShtCats').innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--gray-400);font-size:13px;">${label}</div>`;
   } else {
     const expPct = data.sale>0 ? (data.exp/data.sale*100).toFixed(0) : 0;
     const profitPct = data.sale>0 ? (data.profit/data.sale*100).toFixed(0) : 0;
@@ -10490,6 +10515,32 @@ function v17OpenDailySheet(d){
   document.getElementById('v17ShtDate').textContent = `${ctx.TARGET_MONTH}/${d}`;
   document.getElementById('v17ShtDay').textContent = `(${dayName})`;
   openSheet('v17DailySheet');
+}
+
+// ─── v17 휴무 표시/해제 (2026-05-22 복원) ───
+async function v17MarkClosed(){
+  if(!_v17SheetSelectedDate) return;
+  closeSheet('v17DailySheet');
+  await markDateAsClosed(_v17SheetSelectedDate);
+}
+async function v17MarkOpen(){
+  if(!_v17SheetSelectedDate) return;
+  if(!currentStore){toast('매장 없음','error');return;}
+  if(!confirm(`${_v17SheetSelectedDate} 휴무 해제할까요?`))return;
+  setLoad(true,'해제 중...');
+  try{
+    const{error}=await sb.from('sales_daily').delete()
+      .eq('store_id',currentStore.id).eq('date',_v17SheetSelectedDate).eq('source','closed');
+    if(error)throw error;
+    closeSheet('v17DailySheet');
+    toast('휴무 해제됐어요','success');
+    await loadDashboard(true);
+  }catch(e){
+    console.error('휴무 해제:',e);
+    toast('해제 실패: '+e.message,'error');
+  }finally{
+    setLoad(false);
+  }
 }
 
 // ─── 필터 시트 ───

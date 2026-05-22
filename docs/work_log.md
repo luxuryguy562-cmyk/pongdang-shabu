@@ -4,6 +4,47 @@
 
 ---
 
+## [2026-05-22] v17 휴무 버그 fix + 휴무 버튼 복원 (Phase 1+2) — 진행 중
+
+### 사장님 호소
+1. "오늘 후무가 찍혀있고 다음달 뭐 다 휴무가찍혀잇네 확인해고 지워"
+2. "휴무를 설정하는기능사라짐" (정확한 위치: 정산현황 캘린더 셀)
+3. "홈화면 수식에 식자재인건비공과금비품로열티만있음" → Phase 3 대기
+4. "지출카테고리 또 fk무너짐" → Phase 4 대기
+
+### Root cause (헌법 1-7 코드 사실 기반)
+- index.html:10145 `if(!data || data.holiday)` = **데이터 없으면 휴무로 잘못 매핑**
+- 사장님이 6월(다음달) 캘린더로 이동 시 sales_daily 없는 6월 1~30일 전부 휴무 셀로 표시
+- v17DailySheet에 옛 calCellMarkClosed 버튼 미존재 (PR #194 갈아엎기 누락)
+
+### Phase 1: v17 캘린더 휴무 버그 fix
+- `if(!data || data.holiday)` → `if(data && data.holiday)` + 빈 셀 분기 신설
+- 데이터 없는 셀 = 회색 + 작은 `-` 표시 (휴무 X)
+- 영향: v17RenderCalendar (10145)
+- v17RenderWeekViewSingle (10413)은 이미 `if(data && data.holiday)` 정확 → fix 불필요
+
+### Phase 2: v17 시트에 휴무 표시/해제 버튼 복원
+- v17DailySheet HTML에 버튼 2개 추가 (라인 3951)
+  - [🏖 휴무로 표시] 영업일·빈 셀 시 노출
+  - [🔄 휴무 해제] 휴무 셀 시 노출
+- _v17SheetSelectedDate 변수 신설 (셀 클릭한 날짜 저장)
+- v17OpenDailySheet 안에서 isHoliday/isEmpty 판정 후 버튼 토글
+- v17MarkClosed (옛 markDateAsClosed 재사용) / v17MarkOpen (sales_daily DELETE source='closed') 신설
+
+### 검증
+- node --check 통과 (1/1 script, 711kb)
+- grep `!data || data.holiday` 잔재 0건
+- v17MarkClosed/Open 함수 + data-action 매칭 OK
+
+### 잔여 (다음 push)
+- **Phase 3**: V17_CAT_NAME 5개 하드코딩 → expense_categories 동적 매핑 (사장님 매장 활성 카테고리 전체 노출, 헌법 1-6 갈아엎기)
+- **Phase 4**: 카테고리 관리 화면에 threshold 입력 칸 추가 (store_settings.expense_thresholds JSONB 이미 있음)
+- **Phase 5 (DML 게이트)**: 사장님 "실행 승인" 4글자 받으면:
+  - 권채현 휴무 6행 DELETE (5/26~5/31 옛 PR #192 잔재)
+  - vendors 4개 (농협/다이소/쿠팡/탑마트) hard delete
+
+---
+
 ## [2026-05-22] 정산현황 탭 v17 전면 개편 — 완료 (PR #194/#195/#196)
 
 ### 최종 결과
