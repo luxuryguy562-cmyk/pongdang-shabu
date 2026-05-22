@@ -839,19 +839,28 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-top-pe-row .pe-val{font-weight:900;font-size:14px;color:var(--blue);}
 .dash-top-pe-row .pe-delta{font-size:11px;font-weight:700;margin-left:6px;color:var(--gray-400);}
 /* ─── 새 기능: 매출 빠른 입력 시트 (2026-05-15) ─── */
-.qsi-date-row{display:flex;align-items:center;gap:10px;padding:10px 0 14px;border-bottom:1px solid var(--gray-100);}
-.qsi-date-label{font-size:13px;font-weight:700;color:var(--gray-600);width:50px;}
-.qsi-date-input{flex:1;padding:9px 11px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;}
-.qsi-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--gray-100);}
-.qsi-row .qsi-ic{font-size:20px;width:28px;text-align:center;}
-.qsi-row .qsi-lb{font-size:13px;font-weight:700;color:var(--gray-700);flex:1;}
-.qsi-row .qsi-input{width:140px;padding:9px 11px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;font-weight:700;text-align:right;}
-.qsi-row .qsi-input:focus{border-color:var(--blue);outline:none;}
-.qsi-total-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-top:2px solid var(--gray-200);font-size:15px;font-weight:900;}
-.qsi-total-row .qsi-total-val{color:var(--blue);font-size:18px;}
-.qsi-memo-row{display:flex;align-items:center;gap:10px;padding:10px 0;}
-.qsi-memo-label{font-size:13px;font-weight:700;color:var(--gray-600);width:50px;}
-.qsi-memo-input{flex:1;padding:9px 11px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;}
+.qsi-date-row{display:flex;align-items:center;gap:10px;padding:12px 0 16px;border-bottom:1px solid var(--toss-line);}
+.qsi-date-label{font-size:13px;font-weight:700;color:var(--toss-text-3);width:50px;letter-spacing:-0.2px;}
+.qsi-date-input{flex:1;padding:11px 13px;border:0;background:var(--toss-line);border-radius:11px;font-size:14px;font-family:inherit;color:var(--toss-text-1);font-weight:600;outline:none;letter-spacing:-0.2px;}
+.qsi-row{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid var(--toss-line);}
+.qsi-row:last-of-type{border-bottom:0;}
+/* qsi-ic 이모지 → 컬러 dot */
+.qsi-row .qsi-ic{font-size:0;width:10px;height:10px;border-radius:50%;background:var(--toss-text-4);flex-shrink:0;display:inline-block;}
+.qsi-row.dot-blue .qsi-ic{background:var(--toss-blue);}
+.qsi-row.dot-green .qsi-ic{background:var(--toss-green);}
+.qsi-row.dot-orange .qsi-ic{background:var(--toss-orange);}
+.qsi-row.dot-purple .qsi-ic{background:#8B5CF6;}
+.qsi-row.dot-red .qsi-ic{background:var(--toss-red);}
+.qsi-row.dot-gray .qsi-ic{background:var(--toss-text-4);}
+.qsi-row .qsi-lb{font-size:14px;font-weight:600;color:var(--toss-text-2);flex:1;letter-spacing:-0.3px;}
+.qsi-row .qsi-input{width:150px;padding:9px 11px;border:0;background:transparent;font-size:16px;font-weight:800;text-align:right;font-family:inherit;color:var(--toss-text-1);font-variant-numeric:tabular-nums;letter-spacing:-0.3px;outline:none;}
+.qsi-row .qsi-input::placeholder{color:var(--toss-text-5);font-weight:500;}
+.qsi-row .qsi-input:focus{color:var(--toss-blue-strong);}
+.qsi-total-row{display:flex;justify-content:space-between;align-items:center;padding:16px 14px;margin:14px 0 4px;background:linear-gradient(135deg,var(--toss-blue-light) 0%,#F3F8FF 100%);border-radius:12px;font-size:14px;font-weight:800;color:var(--toss-blue-strong);letter-spacing:-0.3px;}
+.qsi-total-row .qsi-total-val{color:var(--toss-blue-strong);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.7px;}
+.qsi-memo-row{display:flex;align-items:center;gap:10px;padding:12px 0;}
+.qsi-memo-label{font-size:13px;font-weight:700;color:var(--toss-text-3);width:50px;letter-spacing:-0.2px;}
+.qsi-memo-input{flex:1;padding:11px 13px;border:0;background:var(--toss-line);border-radius:11px;font-size:14px;font-family:inherit;color:var(--toss-text-1);font-weight:500;outline:none;letter-spacing:-0.2px;}
 /* ─── 새 기능: 일별 매출 캘린더 그리드 (2026-05-15) ─── */
 .sales-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
 .sales-cal-wkh{font-size:11px;font-weight:800;text-align:center;padding:6px 0;color:var(--gray-500);}
@@ -11266,18 +11275,18 @@ function v17RenderAll(){
 // ─── 새 기능: 매출 빠른 입력 시트 (마감정산 형식, 2026-05-15) ─── //
 // paymentMethods 버그 우회: sales_daily 레거시 컬럼 직매핑
 const QUICK_SALES_METHODS=[
-  {key:'card',         name:'신용카드',   icon:'💳'},
-  {key:'cash',         name:'현금',       icon:'💵'},
-  {key:'cash_receipt', name:'현금영수증', icon:'🧾'},
-  {key:'qr',           name:'QR',         icon:'📱'},
-  {key:'etc',          name:'기타결제',   icon:'📲'}
+  {key:'card',         name:'신용카드',   icon:'💳', dot:'blue'},
+  {key:'cash',         name:'현금',       icon:'💵', dot:'green'},
+  {key:'cash_receipt', name:'현금영수증', icon:'🧾', dot:'orange'},
+  {key:'qr',           name:'QR',         icon:'📱', dot:'purple'},
+  {key:'etc',          name:'기타결제',   icon:'📲', dot:'gray'}
 ];
 function openQuickSalesInput(){
   if(!currentStore){toast('매장을 먼저 선택하세요','error');return;}
   document.getElementById('qsiDate').value=ymdLocal(new Date());
   const cont=document.getElementById('qsiRowsContainer');
   cont.innerHTML=QUICK_SALES_METHODS.map(m=>`
-    <div class="qsi-row">
+    <div class="qsi-row dot-${m.dot||'gray'}">
       <span class="qsi-ic">${m.icon}</span>
       <span class="qsi-lb">${m.name}</span>
       <input type="text" inputmode="numeric" class="qsi-input" placeholder="0" data-key="${m.key}" data-input="onQuickSalesInputChange|this">
