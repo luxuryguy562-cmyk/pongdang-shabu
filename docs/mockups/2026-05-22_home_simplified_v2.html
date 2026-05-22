@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>홈화면 단순화 v2 — 동적 카드 + 캘린더 진입로</title>
+<style>
+  :root{
+    --blue:#4A6CF7; --blue-light:#EEF1FF; --blue-dark:#3B57E0;
+    --gray-50:#FAFBFC; --gray-100:#F1F3F5; --gray-200:#E5E8EB;
+    --gray-300:#D1D6DB; --gray-400:#B0B8C1; --gray-500:#8B95A1;
+    --gray-600:#6B7684; --gray-700:#4E5968; --gray-800:#333D4B; --gray-900:#191F28;
+    --danger:#EF4444; --success:#10B981; --warn:#F59E0B; --white:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'SF Pro',Pretendard,sans-serif;-webkit-font-smoothing:antialiased;}
+  body{background:var(--gray-100);padding:24px 8px;min-height:100vh;}
+
+  .frame-title{max-width:780px;margin:0 auto 18px;padding:0 12px;}
+  .frame-title h1{font-size:18px;color:var(--gray-900);margin-bottom:6px;}
+  .frame-title p{font-size:12px;color:var(--gray-600);line-height:1.5;}
+
+  .row{max-width:780px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:740px){.row{grid-template-columns:1fr;}}
+
+  .phone{background:var(--white);border-radius:24px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.08);border:1px solid var(--gray-200);}
+  .phone-hdr{padding:10px 14px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center;}
+  .phone-hdr .pill{font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;color:var(--white);}
+  .pill-bef{background:var(--gray-500);}
+  .pill-aft{background:var(--blue);}
+  .pill-sim{background:var(--success);}
+  .phone-hdr .lbl{font-size:11px;color:var(--gray-700);font-weight:700;}
+  .screen{width:100%;max-width:360px;margin:0 auto;background:var(--gray-50);padding:14px 12px;min-height:560px;}
+
+  /* 카드 공통 */
+  .card{background:var(--white);border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+
+  /* ── BEFORE 스타일 (옛 디자인 재현) ── */
+  .bef-top-sales{padding:18px 16px;}
+  .bef-top-sales .ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .bef-top-sales .ttl-left{display:flex;align-items:center;gap:6px;}
+  .bef-top-sales .ttl{font-size:13px;font-weight:800;color:var(--gray-700);}
+  .bef-top-sales .mode-tag{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--blue-light);color:var(--blue);font-weight:700;}
+  .bef-top-sales .arrow{font-size:18px;color:var(--gray-300);}
+  .bef-top-sales .amt{font-size:30px;font-weight:900;color:var(--gray-900);line-height:1.15;}
+  .bef-top-sales .pe{margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100);}
+  .bef-top-sales .pe-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .bef-top-sales .pe-row:last-child{margin-bottom:0;}
+  .bef-top-sales .pe-label{font-size:12px;color:var(--gray-600);font-weight:600;}
+  .bef-top-sales .pe-val{font-size:14px;font-weight:800;color:var(--gray-900);}
+  .bef-top-sales .pe-val.red{color:var(--danger);}
+  .bef-top-sales .pe-delta{font-size:11px;color:var(--success);margin-left:6px;font-weight:700;}
+
+  .mode-tabs{display:flex;gap:6px;margin-bottom:10px;}
+  .mode-tab{flex:1;padding:9px;font-size:12px;font-weight:700;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;color:var(--gray-600);text-align:center;cursor:pointer;}
+  .mode-tab.active{background:var(--blue);color:var(--white);border-color:var(--blue);}
+  .month-nav{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--white);border-radius:12px;margin-bottom:10px;}
+  .month-nav .nav-btn{width:28px;height:28px;background:var(--gray-100);border-radius:8px;font-size:14px;color:var(--gray-700);border:none;cursor:pointer;}
+  .month-nav .month-lbl{font-size:14px;font-weight:800;color:var(--gray-900);}
+
+  .month-card-bef{padding:14px;}
+  .month-card-bef .row-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .month-card-bef .col-3{text-align:center;}
+  .month-card-bef .col-3 .lbl{font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:4px;}
+  .month-card-bef .col-3 .val{font-size:15px;font-weight:900;color:var(--gray-900);font-variant-numeric:tabular-nums;}
+  .month-card-bef .col-3 .val.blue{color:var(--blue);}
+  .month-card-bef .col-3 .val.red{color:var(--danger);}
+
+  .cal-card{padding:12px;}
+  .cal-head{margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+  .cal-chip{font-size:10px;padding:4px 8px;background:var(--gray-100);border-radius:8px;color:var(--gray-700);font-weight:700;cursor:pointer;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+  .cal-cell{aspect-ratio:1/1.05;background:var(--gray-50);border-radius:6px;padding:3px 4px;font-size:9px;line-height:1.1;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;}
+  .cal-cell.has-data{background:var(--blue-light);}
+  .cal-cell .d-num{color:var(--gray-700);font-weight:700;font-size:9px;}
+  .cal-cell .d-amt{color:var(--blue);font-weight:800;font-size:8px;}
+  .cal-cell.selected{background:var(--blue);box-shadow:0 0 0 2px var(--blue-dark);}
+  .cal-cell.selected .d-num,
+  .cal-cell.selected .d-amt{color:#fff !important;}
+  .cal-cell.today{outline:2px dashed var(--warn);outline-offset:-2px;}
+
+  /* 주차 보기용 (한 줄) */
+  .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+  .week-cell{aspect-ratio:1/1.2;background:var(--gray-50);border-radius:8px;padding:5px 4px;font-size:10px;line-height:1.15;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;}
+  .week-cell.has-data{background:var(--blue-light);}
+  .week-cell .d-num{color:var(--gray-700);font-weight:700;font-size:10px;}
+  .week-cell .d-amt{color:var(--blue);font-weight:800;font-size:10px;}
+  .week-cell.selected{background:var(--blue);box-shadow:0 0 0 2px var(--blue-dark);}
+  .week-cell.selected .d-num,
+  .week-cell.selected .d-amt{color:#fff !important;}
+
+  .enter-card{padding:11px 14px;display:flex;justify-content:space-between;align-items:center;background:var(--gray-50);border:1px dashed var(--gray-300);border-radius:12px;margin-bottom:10px;}
+  .enter-card .ttl{font-size:12px;font-weight:800;color:var(--gray-800);}
+  .enter-card .sub{font-size:10px;color:var(--gray-500);margin-top:2px;}
+  .enter-card .arrow-r{font-size:18px;color:var(--gray-400);}
+
+  .reserve-mini{padding:10px 14px;background:var(--blue-light);border-radius:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .reserve-mini .lt{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--blue);}
+  .reserve-mini .rt{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:900;color:var(--blue);}
+  .reserve-mini .rt .sub{font-size:11px;color:var(--gray-400);font-weight:600;}
+
+  .extra-card{padding:14px;}
+  .extra-card .ttl{font-size:13px;font-weight:800;color:var(--gray-800);margin-bottom:6px;}
+  .extra-card .sub{font-size:10px;color:var(--gray-500);margin-bottom:8px;}
+  .extra-card .item{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid var(--gray-100);}
+
+  /* ── AFTER v2 — 동적 카드 (절제 톤) ── */
+  .dyn-card{padding:14px 16px;}
+  .dyn-card .ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .dyn-card .ttl-left{display:flex;align-items:center;gap:6px;}
+  .dyn-card .ttl-icon{font-size:14px;}
+  .dyn-card .ttl{font-size:13px;font-weight:800;color:var(--gray-800);}
+  .dyn-card .today-tag{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--warn);color:#fff;font-weight:700;}
+  .dyn-card .live-tag{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--blue-light);color:var(--blue);font-weight:700;}
+  .dyn-card .arrow{font-size:18px;color:var(--gray-300);}
+
+  .dyn-card .summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px;}
+  .dyn-card .summary .col{text-align:center;}
+  .dyn-card .summary .col .lbl{font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:3px;}
+  .dyn-card .summary .col .val{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .dyn-card .summary .col .val.blue{color:var(--blue);}
+  .dyn-card .summary .col .val.red{color:var(--danger);}
+  .dyn-card .summary .col .val.green{color:var(--success);}
+
+  .dyn-card .detail-row{padding-top:10px;border-top:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center;}
+  .dyn-card .detail-row .lbl{font-size:11px;color:var(--gray-500);font-weight:600;}
+  .dyn-card .detail-row .val{font-size:14px;color:var(--gray-800);font-weight:800;font-variant-numeric:tabular-nums;}
+
+  /* 토스트 라벨 (시뮬 안내) */
+  .sim-arrow{position:relative;text-align:center;color:var(--success);font-size:11px;font-weight:700;padding:6px 0;}
+  .sim-arrow:before{content:"";display:block;width:1px;height:14px;background:var(--success);margin:0 auto 4px;}
+
+  /* 통계 */
+  .stats{max-width:780px;margin:18px auto 0;padding:14px;background:var(--white);border-radius:12px;border:1px solid var(--gray-200);}
+  .stats h3{font-size:13px;color:var(--gray-800);margin-bottom:8px;}
+  .stats table{width:100%;border-collapse:collapse;font-size:12px;}
+  .stats td,.stats th{padding:6px 8px;border-bottom:1px solid var(--gray-100);text-align:left;}
+  .stats th{color:var(--gray-600);font-weight:700;}
+  .stats td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
+  .stats td.bef{color:var(--gray-500);}
+  .stats td.aft{color:var(--blue);}
+
+  /* 노트 */
+  .note{max-width:780px;margin:18px auto 0;padding:14px;background:var(--blue-light);border-radius:12px;}
+  .note h3{font-size:13px;color:var(--blue);margin-bottom:6px;}
+  .note p{font-size:12px;color:var(--gray-700);line-height:1.6;}
+  .note ul{margin-top:8px;padding-left:20px;}
+  .note li{font-size:12px;color:var(--gray-700);line-height:1.7;}
+
+  /* 시뮬 섹션 헤더 */
+  .sim-header{max-width:780px;margin:30px auto 14px;padding:0 12px;}
+  .sim-header h2{font-size:16px;color:var(--gray-900);margin-bottom:4px;}
+  .sim-header p{font-size:12px;color:var(--gray-600);}
+</style>
+</head>
+<body>
+
+<div class="frame-title">
+  <h1>🏠 홈화면 단순화 v2 — 동적 카드 + 캘린더가 진입로</h1>
+  <p>
+    사장님 안: <b>오늘 매출 카드 1개 + 그 아래 캘린더</b>. 캘린더 셀 탭하면 카드 내용이 그 날로 변동.<br>
+    월/주 모드 토글로 카드·캘린더 동시 전환. 모든 카드(일·주·월)는 같은 양식. <b>"오늘 매출 과한감" 반영</b> — 30px → 17px 절제 톤.
+  </p>
+</div>
+
+<div class="row">
+  <!-- ════════════════ BEFORE ════════════════ -->
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-bef">BEFORE</span>
+      <span class="lbl">지금 — 8개 영역 평면 나열</span>
+    </div>
+    <div class="screen">
+
+      <div class="card bef-top-sales">
+        <div class="ttl-row">
+          <div class="ttl-left"><span>💰</span><span class="ttl">오늘 매출</span><span class="mode-tag">실시간</span></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="amt">1,247,300원</div>
+        <div class="pe">
+          <div class="pe-row"><span class="pe-label">💸 지출</span><span><span class="pe-val red">387,400원</span><span class="pe-delta" style="color:var(--gray-500);">-</span></span></div>
+          <div class="pe-row"><span class="pe-label">💵 순수익</span><span><span class="pe-val">859,900원</span><span class="pe-delta">+12%</span></span></div>
+        </div>
+      </div>
+
+      <div class="mode-tabs">
+        <button class="mode-tab active">📅 월 보기</button>
+        <button class="mode-tab">📆 주차 보기</button>
+      </div>
+
+      <div class="month-nav">
+        <button class="nav-btn">‹</button>
+        <span class="month-lbl">2026년 5월</span>
+        <button class="nav-btn">›</button>
+      </div>
+
+      <div class="card month-card-bef">
+        <div class="row-3">
+          <div class="col-3"><div class="lbl">매출</div><div class="val blue">28,470,000</div></div>
+          <div class="col-3"><div class="lbl">지출</div><div class="val red">11,820,000</div></div>
+          <div class="col-3"><div class="lbl">순익</div><div class="val">16,650,000</div></div>
+        </div>
+      </div>
+
+      <div class="card cal-card">
+        <div class="cal-head"><span class="cal-chip">📊 매출+순수익 ▾</span></div>
+        <div class="cal-grid">
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell has-data"><span class="d-num">1</span><span class="d-amt">125</span></div>
+          <div class="cal-cell has-data"><span class="d-num">2</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">3</span><span class="d-amt">98</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">4</span></div>
+          <div class="cal-cell has-data"><span class="d-num">5</span><span class="d-amt">112</span></div>
+          <div class="cal-cell has-data"><span class="d-num">6</span><span class="d-amt">134</span></div>
+          <div class="cal-cell has-data"><span class="d-num">7</span><span class="d-amt">155</span></div>
+          <div class="cal-cell has-data"><span class="d-num">8</span><span class="d-amt">168</span></div>
+          <div class="cal-cell has-data"><span class="d-num">9</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">10</span><span class="d-amt">189</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">11</span></div>
+          <div class="cal-cell has-data"><span class="d-num">12</span><span class="d-amt">124</span></div>
+          <div class="cal-cell has-data"><span class="d-num">13</span><span class="d-amt">137</span></div>
+          <div class="cal-cell has-data"><span class="d-num">14</span><span class="d-amt">156</span></div>
+          <div class="cal-cell has-data"><span class="d-num">15</span><span class="d-amt">148</span></div>
+          <div class="cal-cell has-data"><span class="d-num">16</span><span class="d-amt">172</span></div>
+          <div class="cal-cell has-data"><span class="d-num">17</span><span class="d-amt">183</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">18</span></div>
+          <div class="cal-cell has-data"><span class="d-num">19</span><span class="d-amt">119</span></div>
+          <div class="cal-cell has-data"><span class="d-num">20</span><span class="d-amt">128</span></div>
+          <div class="cal-cell has-data"><span class="d-num">21</span><span class="d-amt">141</span></div>
+          <div class="cal-cell has-data" style="background:var(--blue);"><span class="d-num" style="color:#fff;">22</span><span class="d-amt" style="color:#fff;">124</span></div>
+          <div class="cal-cell"><span class="d-num">23</span></div>
+          <div class="cal-cell"><span class="d-num">24</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">25</span></div>
+          <div class="cal-cell"><span class="d-num">26</span></div>
+          <div class="cal-cell"><span class="d-num">27</span></div>
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell"><span class="d-num">31</span></div>
+          <div class="cal-cell" style="opacity:.3;"><span class="d-num">1</span></div>
+        </div>
+      </div>
+
+      <div class="enter-card">
+        <div><div class="ttl">📊 주별 카테고리 비교</div><div class="sub">식자재·인건비 비율 한눈에</div></div>
+        <span class="arrow-r">›</span>
+      </div>
+
+      <div class="reserve-mini">
+        <div class="lt"><span>🏦</span><span>예비비 잔고</span></div>
+        <div class="rt"><span>3,420만</span><span class="sub">상세 ›</span></div>
+      </div>
+
+      <div class="card extra-card">
+        <div class="ttl">🪙 기타매출 누적</div>
+        <div class="sub">장부와 별도로 관리되는 매출</div>
+        <div class="item"><span>배달팁</span><span>284,000원</span></div>
+        <div class="item"><span>주류 별도</span><span>156,500원</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════ AFTER v2 — 디폴트(오늘) ════════════════ -->
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-aft">AFTER v2</span>
+      <span class="lbl">진입 직후 — 오늘 자동 선택</span>
+    </div>
+    <div class="screen">
+
+      <!-- 모드 + 네비 (카드 위) -->
+      <div class="mode-tabs">
+        <button class="mode-tab active">📅 월</button>
+        <button class="mode-tab">📆 주</button>
+      </div>
+      <div class="month-nav">
+        <button class="nav-btn">‹</button>
+        <span class="month-lbl">2026년 5월</span>
+        <button class="nav-btn">›</button>
+      </div>
+
+      <!-- 동적 카드 — 오늘 -->
+      <div class="card dyn-card">
+        <div class="ttl-row">
+          <div class="ttl-left">
+            <span class="ttl-icon">💰</span>
+            <span class="ttl">5월 22일</span>
+            <span class="today-tag">오늘</span>
+            <span class="live-tag">실시간</span>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="summary">
+          <div class="col"><div class="lbl">매출</div><div class="val blue">124만</div></div>
+          <div class="col"><div class="lbl">지출</div><div class="val red">38만</div></div>
+          <div class="col"><div class="lbl">순익</div><div class="val green">85만</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="lbl">정확 금액</span>
+          <span class="val">1,247,300원</span>
+        </div>
+      </div>
+
+      <!-- 캘린더 -->
+      <div class="card cal-card">
+        <div class="cal-head">
+          <span class="cal-chip">📊 매출+순수익 ▾</span>
+          <span style="font-size:10px;color:var(--gray-500);">📍 셀 탭하면 위 카드 변동</span>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell has-data"><span class="d-num">1</span><span class="d-amt">125</span></div>
+          <div class="cal-cell has-data"><span class="d-num">2</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">3</span><span class="d-amt">98</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">4</span></div>
+          <div class="cal-cell has-data"><span class="d-num">5</span><span class="d-amt">112</span></div>
+          <div class="cal-cell has-data"><span class="d-num">6</span><span class="d-amt">134</span></div>
+          <div class="cal-cell has-data"><span class="d-num">7</span><span class="d-amt">155</span></div>
+          <div class="cal-cell has-data"><span class="d-num">8</span><span class="d-amt">168</span></div>
+          <div class="cal-cell has-data"><span class="d-num">9</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">10</span><span class="d-amt">189</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">11</span></div>
+          <div class="cal-cell has-data"><span class="d-num">12</span><span class="d-amt">124</span></div>
+          <div class="cal-cell has-data"><span class="d-num">13</span><span class="d-amt">137</span></div>
+          <div class="cal-cell has-data"><span class="d-num">14</span><span class="d-amt">156</span></div>
+          <div class="cal-cell has-data"><span class="d-num">15</span><span class="d-amt">148</span></div>
+          <div class="cal-cell has-data"><span class="d-num">16</span><span class="d-amt">172</span></div>
+          <div class="cal-cell has-data"><span class="d-num">17</span><span class="d-amt">183</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">18</span></div>
+          <div class="cal-cell has-data"><span class="d-num">19</span><span class="d-amt">119</span></div>
+          <div class="cal-cell has-data"><span class="d-num">20</span><span class="d-amt">128</span></div>
+          <div class="cal-cell has-data"><span class="d-num">21</span><span class="d-amt">141</span></div>
+          <div class="cal-cell selected today"><span class="d-num">22</span><span class="d-amt">124</span></div>
+          <div class="cal-cell"><span class="d-num">23</span></div>
+          <div class="cal-cell"><span class="d-num">24</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">25</span></div>
+          <div class="cal-cell"><span class="d-num">26</span></div>
+          <div class="cal-cell"><span class="d-num">27</span></div>
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell"><span class="d-num">31</span></div>
+          <div class="cal-cell" style="opacity:.3;"><span class="d-num">1</span></div>
+        </div>
+      </div>
+
+      <!-- 예비비 -->
+      <div class="reserve-mini">
+        <div class="lt"><span>🏦</span><span>예비비 잔고</span></div>
+        <div class="rt"><span>3,420만</span><span class="sub">상세 ›</span></div>
+      </div>
+
+      <!-- 안내 -->
+      <div style="margin-top:14px;padding:10px;background:var(--gray-100);border-radius:10px;text-align:center;">
+        <div style="font-size:10px;color:var(--gray-600);line-height:1.5;">
+          <b>주별 카테고리 비교</b> = 모드=주에서만 노출<br>
+          <b>기타매출</b> = 사이드메뉴 정리
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ 시뮬 1: 캘린더 5/15 탭 ════════════════ -->
+<div class="sim-header">
+  <h2>📱 시뮬레이션 1 — 캘린더에서 5월 15일 탭</h2>
+  <p>위 카드 내용만 5/15로 변동. 캘린더는 그대로. 새 화면 이동 X.</p>
+</div>
+
+<div class="row" style="grid-template-columns:1fr;max-width:380px;">
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-sim">SIM</span>
+      <span class="lbl">캘린더 5/15 셀 탭 후</span>
+    </div>
+    <div class="screen">
+
+      <div class="mode-tabs">
+        <button class="mode-tab active">📅 월</button>
+        <button class="mode-tab">📆 주</button>
+      </div>
+      <div class="month-nav">
+        <button class="nav-btn">‹</button>
+        <span class="month-lbl">2026년 5월</span>
+        <button class="nav-btn">›</button>
+      </div>
+
+      <!-- 카드 변동 -->
+      <div class="card dyn-card">
+        <div class="ttl-row">
+          <div class="ttl-left">
+            <span class="ttl-icon">💰</span>
+            <span class="ttl">5월 15일</span>
+            <span style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--gray-200);color:var(--gray-600);font-weight:700;">목요일</span>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="summary">
+          <div class="col"><div class="lbl">매출</div><div class="val blue">148만</div></div>
+          <div class="col"><div class="lbl">지출</div><div class="val red">42만</div></div>
+          <div class="col"><div class="lbl">순익</div><div class="val green">105만</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="lbl">정확 금액</span>
+          <span class="val">1,485,200원</span>
+        </div>
+      </div>
+
+      <div class="card cal-card">
+        <div class="cal-head">
+          <span class="cal-chip">📊 매출+순수익 ▾</span>
+          <span style="font-size:10px;color:var(--gray-500);">📍 5/15 선택됨</span>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell has-data"><span class="d-num">1</span><span class="d-amt">125</span></div>
+          <div class="cal-cell has-data"><span class="d-num">2</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">3</span><span class="d-amt">98</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">4</span></div>
+          <div class="cal-cell has-data"><span class="d-num">5</span><span class="d-amt">112</span></div>
+          <div class="cal-cell has-data"><span class="d-num">6</span><span class="d-amt">134</span></div>
+          <div class="cal-cell has-data"><span class="d-num">7</span><span class="d-amt">155</span></div>
+          <div class="cal-cell has-data"><span class="d-num">8</span><span class="d-amt">168</span></div>
+          <div class="cal-cell has-data"><span class="d-num">9</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">10</span><span class="d-amt">189</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">11</span></div>
+          <div class="cal-cell has-data"><span class="d-num">12</span><span class="d-amt">124</span></div>
+          <div class="cal-cell has-data"><span class="d-num">13</span><span class="d-amt">137</span></div>
+          <div class="cal-cell has-data"><span class="d-num">14</span><span class="d-amt">156</span></div>
+          <div class="cal-cell selected"><span class="d-num">15</span><span class="d-amt">148</span></div>
+          <div class="cal-cell has-data"><span class="d-num">16</span><span class="d-amt">172</span></div>
+          <div class="cal-cell has-data"><span class="d-num">17</span><span class="d-amt">183</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">18</span></div>
+          <div class="cal-cell has-data"><span class="d-num">19</span><span class="d-amt">119</span></div>
+          <div class="cal-cell has-data"><span class="d-num">20</span><span class="d-amt">128</span></div>
+          <div class="cal-cell has-data"><span class="d-num">21</span><span class="d-amt">141</span></div>
+          <div class="cal-cell has-data today"><span class="d-num">22</span><span class="d-amt">124</span></div>
+          <div class="cal-cell"><span class="d-num">23</span></div>
+          <div class="cal-cell"><span class="d-num">24</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">25</span></div>
+          <div class="cal-cell"><span class="d-num">26</span></div>
+          <div class="cal-cell"><span class="d-num">27</span></div>
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell"><span class="d-num">31</span></div>
+          <div class="cal-cell" style="opacity:.3;"><span class="d-num">1</span></div>
+        </div>
+      </div>
+
+      <div class="reserve-mini">
+        <div class="lt"><span>🏦</span><span>예비비 잔고</span></div>
+        <div class="rt"><span>3,420만</span><span class="sub">상세 ›</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ 시뮬 2: 주 모드 ════════════════ -->
+<div class="sim-header">
+  <h2>📱 시뮬레이션 2 — 모드 [📆 주] 탭</h2>
+  <p>카드 = 이번 주 합계, 캘린더 = 7일 한 줄. 같은 카드 양식 유지 (통일감).</p>
+</div>
+
+<div class="row" style="grid-template-columns:1fr;max-width:380px;">
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-sim">SIM</span>
+      <span class="lbl">모드 = 주차 보기</span>
+    </div>
+    <div class="screen">
+
+      <div class="mode-tabs">
+        <button class="mode-tab">📅 월</button>
+        <button class="mode-tab active">📆 주</button>
+      </div>
+      <div class="month-nav">
+        <button class="nav-btn">‹</button>
+        <span class="month-lbl">5월 4주차 (19~25)</span>
+        <button class="nav-btn">›</button>
+      </div>
+
+      <!-- 카드: 이번 주 합계 (같은 양식) -->
+      <div class="card dyn-card">
+        <div class="ttl-row">
+          <div class="ttl-left">
+            <span class="ttl-icon">💰</span>
+            <span class="ttl">5월 4주차</span>
+            <span style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--blue-light);color:var(--blue);font-weight:700;">19~25일</span>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="summary">
+          <div class="col"><div class="lbl">매출</div><div class="val blue">512만</div></div>
+          <div class="col"><div class="lbl">지출</div><div class="val red">182만</div></div>
+          <div class="col"><div class="lbl">순익</div><div class="val green">330만</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="lbl">정확 금액</span>
+          <span class="val">5,124,300원</span>
+        </div>
+      </div>
+
+      <!-- 주 캘린더 (한 줄 7일) -->
+      <div class="card cal-card">
+        <div class="cal-head">
+          <span class="cal-chip">📊 매출+순수익 ▾</span>
+          <span style="font-size:10px;color:var(--gray-500);">📍 일별 탭하면 카드 변동</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:9px;color:var(--gray-500);font-weight:700;text-align:center;margin-bottom:4px;">
+          <div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div><div>일</div>
+        </div>
+        <div class="week-grid">
+          <div class="week-cell has-data"><span class="d-num">19</span><span class="d-amt">119</span></div>
+          <div class="week-cell has-data"><span class="d-num">20</span><span class="d-amt">128</span></div>
+          <div class="week-cell has-data"><span class="d-num">21</span><span class="d-amt">141</span></div>
+          <div class="week-cell has-data today"><span class="d-num">22</span><span class="d-amt">124</span></div>
+          <div class="week-cell"><span class="d-num">23</span></div>
+          <div class="week-cell"><span class="d-num">24</span></div>
+          <div class="week-cell"><span class="d-num" style="color:var(--danger);">25</span></div>
+        </div>
+      </div>
+
+      <!-- 주 모드일 때만 노출 -->
+      <div class="enter-card" style="border-color:var(--blue);background:var(--blue-light);">
+        <div>
+          <div class="ttl" style="color:var(--blue-dark);">📊 주별 카테고리 비교</div>
+          <div class="sub">식자재 32% · 인건비 25% · …</div>
+        </div>
+        <span class="arrow-r">›</span>
+      </div>
+
+      <div class="reserve-mini">
+        <div class="lt"><span>🏦</span><span>예비비 잔고</span></div>
+        <div class="rt"><span>3,420만</span><span class="sub">상세 ›</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ 시뮬 3: 월 모드 (캘린더 셀 선택 없이 = 월 합계) ════════════════ -->
+<div class="sim-header">
+  <h2>📱 시뮬레이션 3 — 캘린더 빈 영역 탭 / 헤더 탭 (월 합계로)</h2>
+  <p>특정 날짜가 아닌 "이번 달 전체"를 보고 싶을 때. 카드 = 5월 합계.</p>
+</div>
+
+<div class="row" style="grid-template-columns:1fr;max-width:380px;">
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-sim">SIM</span>
+      <span class="lbl">월 모드 — 월 전체 보기</span>
+    </div>
+    <div class="screen">
+
+      <div class="mode-tabs">
+        <button class="mode-tab active">📅 월</button>
+        <button class="mode-tab">📆 주</button>
+      </div>
+      <div class="month-nav">
+        <button class="nav-btn">‹</button>
+        <span class="month-lbl">2026년 5월</span>
+        <button class="nav-btn">›</button>
+      </div>
+
+      <!-- 카드: 5월 합계 (같은 양식) -->
+      <div class="card dyn-card">
+        <div class="ttl-row">
+          <div class="ttl-left">
+            <span class="ttl-icon">💰</span>
+            <span class="ttl">2026년 5월</span>
+            <span style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--gray-200);color:var(--gray-600);font-weight:700;">월 합계</span>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="summary">
+          <div class="col"><div class="lbl">매출</div><div class="val blue">2,847만</div></div>
+          <div class="col"><div class="lbl">지출</div><div class="val red">1,182만</div></div>
+          <div class="col"><div class="lbl">순익</div><div class="val green">1,665만</div></div>
+        </div>
+        <div class="detail-row">
+          <span class="lbl">정확 금액</span>
+          <span class="val">28,470,000원</span>
+        </div>
+      </div>
+
+      <div class="card cal-card">
+        <div class="cal-head">
+          <span class="cal-chip">📊 매출+순수익 ▾</span>
+          <span style="font-size:10px;color:var(--gray-500);">📍 셀 안 선택 = 월 전체</span>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell has-data"><span class="d-num">1</span><span class="d-amt">125</span></div>
+          <div class="cal-cell has-data"><span class="d-num">2</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">3</span><span class="d-amt">98</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">4</span></div>
+          <div class="cal-cell has-data"><span class="d-num">5</span><span class="d-amt">112</span></div>
+          <div class="cal-cell has-data"><span class="d-num">6</span><span class="d-amt">134</span></div>
+          <div class="cal-cell has-data"><span class="d-num">7</span><span class="d-amt">155</span></div>
+          <div class="cal-cell has-data"><span class="d-num">8</span><span class="d-amt">168</span></div>
+          <div class="cal-cell has-data"><span class="d-num">9</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">10</span><span class="d-amt">189</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">11</span></div>
+          <div class="cal-cell has-data"><span class="d-num">12</span><span class="d-amt">124</span></div>
+          <div class="cal-cell has-data"><span class="d-num">13</span><span class="d-amt">137</span></div>
+          <div class="cal-cell has-data"><span class="d-num">14</span><span class="d-amt">156</span></div>
+          <div class="cal-cell has-data"><span class="d-num">15</span><span class="d-amt">148</span></div>
+          <div class="cal-cell has-data"><span class="d-num">16</span><span class="d-amt">172</span></div>
+          <div class="cal-cell has-data"><span class="d-num">17</span><span class="d-amt">183</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">18</span></div>
+          <div class="cal-cell has-data"><span class="d-num">19</span><span class="d-amt">119</span></div>
+          <div class="cal-cell has-data"><span class="d-num">20</span><span class="d-amt">128</span></div>
+          <div class="cal-cell has-data"><span class="d-num">21</span><span class="d-amt">141</span></div>
+          <div class="cal-cell has-data today"><span class="d-num">22</span><span class="d-amt">124</span></div>
+          <div class="cal-cell"><span class="d-num">23</span></div>
+          <div class="cal-cell"><span class="d-num">24</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">25</span></div>
+          <div class="cal-cell"><span class="d-num">26</span></div>
+          <div class="cal-cell"><span class="d-num">27</span></div>
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell"><span class="d-num">31</span></div>
+          <div class="cal-cell" style="opacity:.3;"><span class="d-num">1</span></div>
+        </div>
+      </div>
+
+      <div class="reserve-mini">
+        <div class="lt"><span>🏦</span><span>예비비 잔고</span></div>
+        <div class="rt"><span>3,420만</span><span class="sub">상세 ›</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ 노트 ════════════════ -->
+<div class="note">
+  <h3>💡 핵심 결정 사항 (designer 자동 적용)</h3>
+  <ul>
+    <li><b>"오늘 매출 과한감" 반영</b> — 30px → 17px 절제 + 회색톤. 매출/지출/순익 3분할로 시각 부담 분산.</li>
+    <li><b>같은 카드 양식</b> — 일/주/월 모두 동일 (매출/지출/순익 3분할 + 정확 금액 한 줄). 통일감.</li>
+    <li><b>캘린더가 진입로</b> — 셀 탭하면 카드만 변동. 새 화면 X. dev_lessons #51 "데이터=진입로" 정확.</li>
+    <li><b>오늘 자동 선택</b> — 진입 시 캘린더에 오늘 강조 + 카드 = 오늘 정보. 사장님 디폴트 1순위 정보 즉시 노출.</li>
+    <li><b>주별 카테고리 비교</b> — 주 모드일 때만 노출. 월 모드에서는 사라짐 (시각 노이즈 ↓).</li>
+    <li><b>기타매출</b> — 사이드메뉴 정리. 매장별 조건부 + 매일 안 보는 정보.</li>
+  </ul>
+</div>
+
+<div class="stats">
+  <h3>📊 변화 통계</h3>
+  <table>
+    <thead><tr><th>항목</th><th>Before</th><th>After v2</th><th>효과</th></tr></thead>
+    <tbody>
+      <tr><td>첫 화면 영역 수</td><td class="num bef">8개</td><td class="num aft">5개</td><td>모드/네비/카드/캘린더/예비비</td></tr>
+      <tr><td>오늘 매출 폰트</td><td class="num bef">30px</td><td class="num aft">17px</td><td>과한감 해소</td></tr>
+      <tr><td>일/주/월 카드 양식</td><td class="num bef">3종 분리</td><td class="num aft">1종 통일</td><td>통일감</td></tr>
+      <tr><td>캘린더 → 상세 진입</td><td class="num bef">셀 탭 = 정보 없음</td><td class="num aft">셀 탭 = 카드 변동</td><td>드릴다운 UX</td></tr>
+      <tr><td>예비비 + 주별 + 기타매출</td><td class="num bef">홈 3장 카드</td><td class="num aft">1줄 + 조건부 + 사이드</td><td>홈 정리</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
