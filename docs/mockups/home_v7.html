@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>홈화면 v7 — 3안 비교 (드릴다운 흐름)</title>
+<style>
+  :root{
+    --blue:#0050FF;--blue-light:#E6EEFF;
+    --gray-50:#FAFBFC;--gray-100:#F2F4F6;--gray-200:#E5E8EB;--gray-300:#D1D6DB;
+    --gray-400:#B0B8C1;--gray-500:#8B95A1;--gray-600:#6B7684;--gray-700:#4E5968;
+    --text:#191F28;--white:#fff;--bg:#F9FAFB;
+    --danger:#F04452;--success:#10B981;--warn:#F59E0B;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;background:#E5E7EB;color:var(--text);font-size:14px;}
+  .page{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh;}
+
+  /* 상단 가이드 바 (목업 안내용) */
+  .guide-bar{position:sticky;top:0;z-index:50;background:#0F172A;color:#fff;padding:10px 14px;}
+  .guide-bar .gb-ttl{font-size:13px;font-weight:800;}
+  .guide-bar .gb-sub{font-size:11px;color:#CBD5E1;margin-top:3px;line-height:1.5;}
+
+  /* 안 선택 토글 */
+  .scheme-toggle{display:flex;gap:4px;background:var(--gray-100);padding:4px;margin:10px;border-radius:12px;position:sticky;top:54px;z-index:40;box-shadow:0 1px 6px rgba(0,0,0,0.05);}
+  .scheme-tab{flex:1;padding:11px 6px;font-size:12.5px;font-weight:800;border:0;background:transparent;border-radius:9px;cursor:pointer;color:var(--gray-500);line-height:1.3;}
+  .scheme-tab.active{background:var(--white);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+  .scheme-tab small{display:block;font-size:9.5px;font-weight:700;color:var(--gray-400);margin-top:2px;}
+  .scheme-tab.active small{color:var(--blue);}
+
+  /* 스테이지 안내 띠 */
+  .stage-bar{background:var(--blue-light);color:var(--blue);padding:8px 14px;font-size:11px;font-weight:800;display:flex;align-items:center;gap:6px;}
+  .stage-bar .ana{margin-left:auto;font-size:10px;color:var(--gray-600);font-weight:700;}
+
+  /* 본문 컨테이너 */
+  .body{padding:10px 12px 60px;}
+
+  /* 뒤로 가기 */
+  .back-bar{display:inline-flex;align-items:center;gap:4px;padding:8px 10px;margin:0 0 10px;background:var(--white);border:1px solid var(--gray-200);border-radius:8px;font-size:12px;font-weight:700;color:var(--gray-700);cursor:pointer;}
+
+  /* ─── 홈 큰 박스 (A안 핵심) ─── */
+  .home-box{background:var(--white);border-radius:14px;padding:18px 16px;margin-bottom:10px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04);transition:transform .15s;}
+  .home-box:active{transform:scale(.98);}
+  .home-box .hb-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .home-box .hb-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:var(--gray-700);}
+  .home-box .hb-label .ic{font-size:16px;}
+  .home-box .hb-arrow{font-size:20px;color:var(--gray-300);font-weight:300;}
+  .home-box .hb-amt{font-size:26px;font-weight:900;color:var(--text);letter-spacing:-0.5px;font-variant-numeric:tabular-nums;line-height:1.15;}
+  .home-box .hb-amt.blue{color:var(--blue);}
+  .home-box .hb-amt.fs-lg{font-size:30px;}
+  .home-box .hb-sub{font-size:11.5px;color:var(--gray-500);margin-top:5px;font-weight:600;}
+  .home-box .hb-sub b{color:var(--gray-700);}
+
+  /* B안 — 오늘 매출 풀카드 + 아래 진입 박스들 */
+  .today-card{background:var(--white);border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  .today-card .tc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .today-card .tc-lb{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--gray-700);}
+  .today-card .tc-mode{font-size:9.5px;padding:2px 7px;border-radius:8px;background:var(--blue-light);color:var(--blue);font-weight:800;}
+  .today-card .tc-amt{font-size:30px;font-weight:900;color:var(--text);letter-spacing:-0.5px;line-height:1.15;}
+  .today-card .tc-pe{margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100);display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .today-card .tc-pe-cell{font-size:11px;font-weight:800;}
+  .today-card .tc-pe-cell .pe-lb{color:var(--gray-500);margin-bottom:3px;font-size:10.5px;}
+  .today-card .tc-pe-cell .pe-vl{font-size:14px;font-weight:900;}
+  .today-card .tc-pe-cell .pe-vl.red{color:#EF4444;}
+  .today-card .tc-pe-cell .pe-vl.green{color:#10B981;}
+  .today-card .tc-act{margin-top:12px;display:flex;gap:8px;}
+  .today-card .tc-act .btn{flex:1;padding:11px;font-size:12px;font-weight:800;border:0;border-radius:8px;cursor:pointer;}
+  .today-card .tc-act .btn-pri{background:var(--blue);color:#fff;}
+  .today-card .tc-act .btn-sec{background:var(--gray-100);color:var(--gray-700);}
+
+  /* C안 — 미니멀 메뉴 그리드 */
+  .menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .menu-cell{background:var(--white);border-radius:14px;padding:16px 8px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04);transition:transform .15s;}
+  .menu-cell:active{transform:scale(.95);}
+  .menu-cell .mc-ic{font-size:24px;display:block;margin-bottom:6px;}
+  .menu-cell .mc-name{font-size:12px;font-weight:800;color:var(--gray-700);}
+  .menu-cell .mc-sub{font-size:10px;color:var(--gray-500);margin-top:3px;font-weight:700;font-variant-numeric:tabular-nums;}
+
+  /* v6 카드 (2단계 정산 화면용 — 실제 앱 그대로 복원) */
+  .v17-card-v6{background:var(--white);border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  .v17-card-v6 .v6-ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .v17-card-v6 .v6-ttl{font-size:12px;font-weight:800;color:var(--gray-700);}
+  .v17-card-v6 .v6-ttl b{color:var(--text);font-size:14px;font-weight:900;margin-right:4px;}
+  .v17-card-v6 .v6-progress-tag{font-size:10px;padding:3px 8px;border-radius:8px;background:#EEF1FF;color:var(--blue);font-weight:800;}
+  .v17-card-v6 .v6-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;margin-bottom:12px;}
+  .v17-card-v6 .v6-row2 .lb{font-size:10.5px;font-weight:700;color:var(--gray-500);margin-bottom:3px;}
+  .v17-card-v6 .v6-row2 .lb.est{color:var(--gray-400);}
+  .v17-card-v6 .v6-row2 .vl{font-size:16px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.5px;line-height:1.2;}
+  .v17-card-v6 .v6-row2 .vl.sale{color:var(--blue);}
+  .v17-card-v6 .v6-row2 .vl.est-val{color:var(--gray-400);font-weight:800;font-size:14px;}
+  .v17-card-v6 .v6-row2 .vl.profit{color:#10B981;}
+  .v17-card-v6 .v6-exp-row{padding:10px 12px;background:var(--gray-50);border-radius:10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .v17-card-v6 .v6-exp-row .lb{font-size:11px;font-weight:800;color:var(--gray-600);}
+  .v17-card-v6 .v6-exp-row .vl{font-size:15px;font-weight:900;color:#EF4444;}
+  .v17-card-v6 .v6-gantt{height:10px;border-radius:5px;background:var(--gray-100);overflow:hidden;display:flex;margin-bottom:6px;}
+  .v17-card-v6 .v6-gantt .seg{height:100%;}
+  .v17-card-v6 .v6-cats{display:flex;justify-content:space-around;gap:6px;padding:8px 10px;background:var(--gray-50);border-radius:10px;margin-top:6px;}
+  .v17-card-v6 .v6-cats .cat{text-align:center;}
+  .v17-card-v6 .v6-cats .cat .nm{font-size:10px;font-weight:800;color:var(--gray-700);}
+  .v17-card-v6 .v6-cats .cat .vl{font-size:11px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;margin-top:2px;}
+  .v17-card-v6 .v6-cats .cat.warn .vl{color:#F59E0B;}
+  .v17-card-v6 .v6-detail-btn{margin-top:10px;width:100%;padding:9px;background:transparent;border:1px solid var(--gray-200);border-radius:8px;font-size:11.5px;font-weight:700;color:var(--gray-600);cursor:pointer;}
+
+  /* 모드 토글 (월/주) */
+  .mode-tabs{display:flex;gap:4px;background:var(--gray-100);padding:3px;border-radius:12px;margin-bottom:12px;}
+  .mode-tab{flex:1;padding:9px;font-size:12.5px;font-weight:800;border:0;background:transparent;border-radius:9px;cursor:pointer;color:var(--gray-500);}
+  .mode-tab.active{background:var(--white);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+
+  /* 월 네비 */
+  .month-nav{display:flex;gap:8px;margin-bottom:10px;}
+  .month-nav .navbtn{flex:0 0 38px;padding:6px;background:var(--white);border-radius:8px;font-size:14px;font-weight:800;color:var(--gray-700);border:1px solid var(--gray-200);cursor:pointer;}
+  .month-label{flex:1;text-align:center;font-size:15px;font-weight:900;padding:6px;}
+
+  /* 캘린더 (압축 표시 — 풀버전은 실제 앱 그대로 박힌다는 안내만) */
+  .cal-placeholder{background:var(--white);border:1px dashed var(--gray-300);border-radius:14px;padding:24px 14px;text-align:center;color:var(--gray-500);font-size:12px;font-weight:700;line-height:1.6;margin-bottom:10px;}
+  .cal-placeholder b{color:var(--gray-700);}
+
+  /* 진입 카드 */
+  .enter-card{background:var(--white);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  .enter-card .ec-ttl{font-size:13px;font-weight:800;color:var(--text);}
+  .enter-card .ec-sub{font-size:11px;color:var(--gray-500);margin-top:3px;}
+  .enter-card .ec-arrow{font-size:18px;color:var(--gray-300);}
+
+  /* 비유 카드 */
+  .analogy{background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11.5px;color:#92400E;line-height:1.6;font-weight:600;}
+  .analogy b{color:#78350F;}
+
+  /* 화면 전환 — 기본 stage 숨김 (스크립트로 토글) */
+  .stage{display:none;}
+  .stage.active{display:block;}
+  .scheme-page{display:none;}
+  .scheme-page.active{display:block;}
+
+  /* footer */
+  .footer{padding:30px 14px;text-align:center;color:var(--gray-400);font-size:10.5px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 가이드 안내 -->
+  <div class="guide-bar">
+    <div class="gb-ttl">🏠 홈화면 v7 — 드릴다운 흐름 3안 비교</div>
+    <div class="gb-sub">하단 [A/B/C] 토글 → 큰 박스 탭 → 2단계 화면 → ‹ 뒤로</div>
+  </div>
+
+  <!-- 안 토글 -->
+  <div class="scheme-toggle">
+    <button class="scheme-tab active" data-scheme="A">A. 정통 토스<small>가장 간결</small></button>
+    <button class="scheme-tab" data-scheme="B">B. 절충<small>오늘 매출 1순위</small></button>
+    <button class="scheme-tab" data-scheme="C">C. 미니멀<small>아이콘 그리드</small></button>
+  </div>
+
+  <!-- ═══════════════ A안 — 정통 토스 ═══════════════ -->
+  <div class="scheme-page active" data-scheme="A">
+
+    <!-- A안 - 1단계 (홈) -->
+    <div class="stage active" data-stage="home">
+      <div class="stage-bar">A안 · 홈 (1단계) <span class="ana">큰 박스 4개만</span></div>
+      <div class="body">
+        <div class="analogy">🍳 <b>비유:</b> 메뉴판 첫 장 = "밥류 / 면류 / 술 / 안주" 카테고리만. 세부 메뉴는 들어가서 봄.</div>
+
+        <div class="home-box" data-go="A:today">
+          <div class="hb-row">
+            <div class="hb-label"><span class="ic">💰</span> 오늘 매출 <span style="font-size:9.5px;color:var(--blue);background:var(--blue-light);padding:2px 6px;border-radius:6px;">실시간</span></div>
+            <div class="hb-arrow">›</div>
+          </div>
+          <div class="hb-amt blue fs-lg">3,220,000<span style="font-size:18px;">원</span></div>
+          <div class="hb-sub">5/22 오후 4:30 기준</div>
+        </div>
+
+        <div class="home-box" data-go="A:settle">
+          <div class="hb-row">
+            <div class="hb-label"><span class="ic">📅</span> 이번 달 정산</div>
+            <div class="hb-arrow">›</div>
+          </div>
+          <div class="hb-amt">5,554,300<span style="font-size:18px;">원</span></div>
+          <div class="hb-sub">5월 매출 · 순수익 <b>+1,820,000원</b></div>
+        </div>
+
+        <div class="home-box" data-go="A:reserve">
+          <div class="hb-row">
+            <div class="hb-label"><span class="ic">🏦</span> 예비비 잔고</div>
+            <div class="hb-arrow">›</div>
+          </div>
+          <div class="hb-amt">1,200,000<span style="font-size:18px;">원</span></div>
+          <div class="hb-sub">월세·세금 대비 적립</div>
+        </div>
+
+        <div class="home-box" data-go="A:extra">
+          <div class="hb-row">
+            <div class="hb-label"><span class="ic">✨</span> 기타매출 누적</div>
+            <div class="hb-arrow">›</div>
+          </div>
+          <div class="hb-amt">80,000<span style="font-size:18px;">원</span></div>
+          <div class="hb-sub">5월 · 배달앱 적립금 등</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A안 - 2단계 (오늘 매출) -->
+    <div class="stage" data-stage="today">
+      <div class="stage-bar">A안 · 오늘 매출 상세 (2단계)</div>
+      <div class="body">
+        <div class="back-bar" data-go="A:home">‹ 홈으로</div>
+        <div class="today-card">
+          <div class="tc-top">
+            <div class="tc-lb">💰 오늘 매출</div>
+            <div class="tc-mode">실시간</div>
+          </div>
+          <div class="tc-amt" style="color:var(--blue);">3,220,000<span style="font-size:18px;">원</span></div>
+          <div class="tc-pe">
+            <div class="tc-pe-cell">
+              <div class="pe-lb">💸 지출</div>
+              <div class="pe-vl red">-1,200,000원</div>
+            </div>
+            <div class="tc-pe-cell">
+              <div class="pe-lb">💵 순수익</div>
+              <div class="pe-vl green">+1,820,000원</div>
+            </div>
+          </div>
+          <div class="tc-act">
+            <button class="btn btn-pri">📝 매출 입력</button>
+            <button class="btn btn-sec">🏖 휴무로 표시</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A안 - 2단계 (이번 달 정산) -->
+    <div class="stage" data-stage="settle">
+      <div class="stage-bar">A안 · 이번 달 정산 상세 (2단계)</div>
+      <div class="body">
+        <div class="back-bar" data-go="A:home">‹ 홈으로</div>
+        <div class="mode-tabs">
+          <button class="mode-tab active">📅 월 보기</button>
+          <button class="mode-tab">📆 주차 보기</button>
+        </div>
+        <div class="month-nav">
+          <button class="navbtn">‹</button>
+          <span class="month-label">2026년 5월</span>
+          <button class="navbtn" disabled style="opacity:.4;">›</button>
+        </div>
+
+        <!-- v6 카드 (현재 앱 그대로 — 살림) -->
+        <div class="v17-card-v6">
+          <div class="v6-ttl-row">
+            <div class="v6-ttl"><b>5월 진행</b> · 22일 / 31일</div>
+            <div class="v6-progress-tag">71%</div>
+          </div>
+          <div class="v6-row2">
+            <div>
+              <div class="lb">💰 매출</div>
+              <div class="vl sale">5,554,300원</div>
+            </div>
+            <div>
+              <div class="lb est">예상 마감</div>
+              <div class="vl est-val">7,820,000원</div>
+            </div>
+          </div>
+          <div class="v6-row2">
+            <div>
+              <div class="lb">💵 순수익</div>
+              <div class="vl profit">1,820,000원</div>
+            </div>
+            <div>
+              <div class="lb est">예상 마감</div>
+              <div class="vl est-val">2,560,000원</div>
+            </div>
+          </div>
+          <div class="v6-exp-row">
+            <div class="lb">💸 지출</div>
+            <div class="vl">3,734,300원</div>
+          </div>
+          <div class="v6-gantt">
+            <div class="seg" style="width:35%;background:#EF4444;"></div>
+            <div class="seg" style="width:25%;background:#F59E0B;"></div>
+            <div class="seg" style="width:15%;background:#3B82F6;"></div>
+            <div class="seg" style="width:25%;background:#10B981;"></div>
+          </div>
+          <div class="v6-cats">
+            <div class="cat warn"><div class="nm">🥩 식자재</div><div class="vl">35.2%</div></div>
+            <div class="cat"><div class="nm">👥 인건비</div><div class="vl">25.1%</div></div>
+            <div class="cat"><div class="nm">⚡ 공과금</div><div class="vl">15.4%</div></div>
+          </div>
+          <button class="v6-detail-btn">▾ 상세 보기 (전체 카테고리·전월 대비)</button>
+        </div>
+
+        <!-- 캘린더 자리표시 -->
+        <div class="cal-placeholder">
+          📅 <b>월 캘린더 (31칸)</b><br>
+          실제 앱에선 매출+순수익 셀이 표시됩니다<br>
+          <small>(필터 칩 · 셀 탭 → 일별 시트 — 그대로 살림)</small>
+        </div>
+
+        <div class="enter-card">
+          <div>
+            <div class="ec-ttl">📊 주별 카테고리 비교</div>
+            <div class="ec-sub">식자재·인건비 비율 한눈에</div>
+          </div>
+          <div class="ec-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A안 - 2단계 (예비비) -->
+    <div class="stage" data-stage="reserve">
+      <div class="stage-bar">A안 · 예비비 상세 (2단계)</div>
+      <div class="body">
+        <div class="back-bar" data-go="A:home">‹ 홈으로</div>
+        <div class="cal-placeholder" style="padding:40px 14px;">
+          🏦 <b>예비비 화면</b><br>
+          (이미 존재하는 사이드메뉴 예비비 탭으로 이동)<br>
+          <small>변경 없음 — 진입로만 추가</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- A안 - 2단계 (기타매출) -->
+    <div class="stage" data-stage="extra">
+      <div class="stage-bar">A안 · 기타매출 상세 (2단계)</div>
+      <div class="body">
+        <div class="back-bar" data-go="A:home">‹ 홈으로</div>
+        <div class="cal-placeholder" style="padding:40px 14px;">
+          ✨ <b>기타매출 누적</b><br>
+          (배달앱 적립금·외환 등 항목별 누적)<br>
+          <small>현재 dashExtraRevenueCard 분리 이동</small>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════ B안 — 절충 ═══════════════ -->
+  <div class="scheme-page" data-scheme="B">
+
+    <!-- B안 - 1단계 (홈) -->
+    <div class="stage active" data-stage="home">
+      <div class="stage-bar">B안 · 홈 (1단계) <span class="ana">오늘 매출만 풀카드</span></div>
+      <div class="body">
+        <div class="analogy">🍳 <b>비유:</b> 메뉴판 첫 장 위쪽 = "오늘의 추천 메뉴(큰 박스)" + 아래쪽 = 나머지 카테고리(작은 진입로).</div>
+
+        <!-- 오늘 매출 풀카드 (홈에 그대로) -->
+        <div class="today-card">
+          <div class="tc-top">
+            <div class="tc-lb">💰 오늘 매출</div>
+            <div class="tc-mode">실시간</div>
+          </div>
+          <div class="tc-amt" style="color:var(--blue);">3,220,000<span style="font-size:18px;">원</span></div>
+          <div class="tc-pe">
+            <div class="tc-pe-cell">
+              <div class="pe-lb">💸 지출</div>
+              <div class="pe-vl red">-1,200,000원</div>
+            </div>
+            <div class="tc-pe-cell">
+              <div class="pe-lb">💵 순수익</div>
+              <div class="pe-vl green">+1,820,000원</div>
+            </div>
+          </div>
+          <div class="tc-act">
+            <button class="btn btn-pri">📝 매출 입력</button>
+            <button class="btn btn-sec">🏖 휴무</button>
+          </div>
+        </div>
+
+        <div class="home-box" data-go="B:settle">
+          <div class="hb-row">
+            <div class="hb-label"><span class="ic">📅</span> 이번 달 정산</div>
+            <div class="hb-arrow">›</div>
+          </div>
+          <div class="hb-amt">5,554,300<span style="font-size:18px;">원</span></div>
+          <div class="hb-sub">순수익 <b>+1,820,000원</b> · 진행 71%</div>
+        </div>
+
+        <div class="home-box" data-go="B:reserve">
+          <div class="hb-row">
+            <div class="hb-label"><span class="ic">🏦</span> 예비비 잔고</div>
+            <div class="hb-arrow">›</div>
+          </div>
+          <div class="hb-amt">1,200,000<span style="font-size:18px;">원</span></div>
+          <div class="hb-sub">월세·세금 대비 적립</div>
+        </div>
+
+        <div class="home-box" data-go="B:extra">
+          <div class="hb-row">
+            <div class="hb-label"><span class="ic">✨</span> 기타매출 누적</div>
+            <div class="hb-arrow">›</div>
+          </div>
+          <div class="hb-amt">80,000<span style="font-size:18px;">원</span></div>
+          <div class="hb-sub">5월 · 배달앱 적립금 등</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B안 - 2단계 (정산) — A안과 동일 -->
+    <div class="stage" data-stage="settle">
+      <div class="stage-bar">B안 · 이번 달 정산 상세 (2단계)</div>
+      <div class="body">
+        <div class="back-bar" data-go="B:home">‹ 홈으로</div>
+        <div class="mode-tabs">
+          <button class="mode-tab active">📅 월 보기</button>
+          <button class="mode-tab">📆 주차 보기</button>
+        </div>
+        <div class="month-nav">
+          <button class="navbtn">‹</button>
+          <span class="month-label">2026년 5월</span>
+          <button class="navbtn" disabled style="opacity:.4;">›</button>
+        </div>
+        <div class="v17-card-v6">
+          <div class="v6-ttl-row">
+            <div class="v6-ttl"><b>5월 진행</b> · 22일 / 31일</div>
+            <div class="v6-progress-tag">71%</div>
+          </div>
+          <div class="v6-row2">
+            <div><div class="lb">💰 매출</div><div class="vl sale">5,554,300원</div></div>
+            <div><div class="lb est">예상 마감</div><div class="vl est-val">7,820,000원</div></div>
+          </div>
+          <div class="v6-row2">
+            <div><div class="lb">💵 순수익</div><div class="vl profit">1,820,000원</div></div>
+            <div><div class="lb est">예상 마감</div><div class="vl est-val">2,560,000원</div></div>
+          </div>
+          <div class="v6-exp-row">
+            <div class="lb">💸 지출</div>
+            <div class="vl">3,734,300원</div>
+          </div>
+          <div class="v6-gantt">
+            <div class="seg" style="width:35%;background:#EF4444;"></div>
+            <div class="seg" style="width:25%;background:#F59E0B;"></div>
+            <div class="seg" style="width:15%;background:#3B82F6;"></div>
+            <div class="seg" style="width:25%;background:#10B981;"></div>
+          </div>
+          <div class="v6-cats">
+            <div class="cat warn"><div class="nm">🥩 식자재</div><div class="vl">35.2%</div></div>
+            <div class="cat"><div class="nm">👥 인건비</div><div class="vl">25.1%</div></div>
+            <div class="cat"><div class="nm">⚡ 공과금</div><div class="vl">15.4%</div></div>
+          </div>
+          <button class="v6-detail-btn">▾ 상세 보기 (전체 카테고리·전월 대비)</button>
+        </div>
+        <div class="cal-placeholder">
+          📅 <b>월 캘린더 (31칸)</b><br>
+          실제 앱에선 매출+순수익 셀이 표시됩니다
+        </div>
+        <div class="enter-card">
+          <div>
+            <div class="ec-ttl">📊 주별 카테고리 비교</div>
+            <div class="ec-sub">식자재·인건비 비율 한눈에</div>
+          </div>
+          <div class="ec-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" data-stage="reserve">
+      <div class="stage-bar">B안 · 예비비 상세 (2단계)</div>
+      <div class="body">
+        <div class="back-bar" data-go="B:home">‹ 홈으로</div>
+        <div class="cal-placeholder" style="padding:40px 14px;">🏦 <b>예비비 화면</b><br>(기존 예비비 탭 이동)</div>
+      </div>
+    </div>
+
+    <div class="stage" data-stage="extra">
+      <div class="stage-bar">B안 · 기타매출 상세 (2단계)</div>
+      <div class="body">
+        <div class="back-bar" data-go="B:home">‹ 홈으로</div>
+        <div class="cal-placeholder" style="padding:40px 14px;">✨ <b>기타매출 누적</b><br>(항목별 누적)</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════ C안 — 미니멀 ═══════════════ -->
+  <div class="scheme-page" data-scheme="C">
+
+    <!-- C안 - 1단계 (홈) -->
+    <div class="stage active" data-stage="home">
+      <div class="stage-bar">C안 · 홈 (1단계) <span class="ana">오늘 매출 + 아이콘 그리드</span></div>
+      <div class="body">
+        <div class="analogy">🍳 <b>비유:</b> 식당 카운터 = "오늘 매출판(큰 보드)" + 아래 메뉴별 작은 단추 6개. 스마트폰 홈처럼.</div>
+
+        <!-- 오늘 매출 (작게) -->
+        <div class="today-card" style="padding:14px 16px;">
+          <div class="tc-top">
+            <div class="tc-lb">💰 오늘 매출</div>
+            <div class="tc-mode">실시간</div>
+          </div>
+          <div class="tc-amt" style="color:var(--blue);font-size:26px;">3,220,000<span style="font-size:16px;">원</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11.5px;font-weight:700;">
+            <span style="color:var(--gray-500);">지출 <b style="color:#EF4444;">-120만</b></span>
+            <span style="color:var(--gray-500);">순수익 <b style="color:#10B981;">+182만</b></span>
+          </div>
+        </div>
+
+        <!-- 6개 아이콘 그리드 -->
+        <div class="menu-grid">
+          <div class="menu-cell" data-go="C:settle">
+            <span class="mc-ic">📅</span>
+            <div class="mc-name">이번 달 정산</div>
+            <div class="mc-sub">555만</div>
+          </div>
+          <div class="menu-cell" data-go="C:reserve">
+            <span class="mc-ic">🏦</span>
+            <div class="mc-name">예비비</div>
+            <div class="mc-sub">120만</div>
+          </div>
+          <div class="menu-cell" data-go="C:sales">
+            <span class="mc-ic">💰</span>
+            <div class="mc-name">매출 기록</div>
+            <div class="mc-sub">22건</div>
+          </div>
+          <div class="menu-cell" data-go="C:expense">
+            <span class="mc-ic">💸</span>
+            <div class="mc-name">지출 관리</div>
+            <div class="mc-sub">373만</div>
+          </div>
+          <div class="menu-cell" data-go="C:staff">
+            <span class="mc-ic">👥</span>
+            <div class="mc-name">직원</div>
+            <div class="mc-sub">5명</div>
+          </div>
+          <div class="menu-cell" data-go="C:receipt">
+            <span class="mc-ic">🧾</span>
+            <div class="mc-name">영수증</div>
+            <div class="mc-sub">14건</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;font-size:11px;color:var(--gray-500);text-align:center;line-height:1.6;">
+          ✨ 기타매출 누적 <b style="color:var(--gray-700);">80,000원</b> · 매장 활성 카테고리만 노출 (가변)
+        </div>
+      </div>
+    </div>
+
+    <!-- C안 - 2단계 (정산) -->
+    <div class="stage" data-stage="settle">
+      <div class="stage-bar">C안 · 이번 달 정산 상세 (2단계)</div>
+      <div class="body">
+        <div class="back-bar" data-go="C:home">‹ 홈으로</div>
+        <div class="mode-tabs">
+          <button class="mode-tab active">📅 월 보기</button>
+          <button class="mode-tab">📆 주차 보기</button>
+        </div>
+        <div class="month-nav">
+          <button class="navbtn">‹</button>
+          <span class="month-label">2026년 5월</span>
+          <button class="navbtn" disabled style="opacity:.4;">›</button>
+        </div>
+        <div class="v17-card-v6">
+          <div class="v6-ttl-row">
+            <div class="v6-ttl"><b>5월 진행</b> · 22일 / 31일</div>
+            <div class="v6-progress-tag">71%</div>
+          </div>
+          <div class="v6-row2">
+            <div><div class="lb">💰 매출</div><div class="vl sale">5,554,300원</div></div>
+            <div><div class="lb est">예상 마감</div><div class="vl est-val">7,820,000원</div></div>
+          </div>
+          <div class="v6-row2">
+            <div><div class="lb">💵 순수익</div><div class="vl profit">1,820,000원</div></div>
+            <div><div class="lb est">예상 마감</div><div class="vl est-val">2,560,000원</div></div>
+          </div>
+          <div class="v6-exp-row">
+            <div class="lb">💸 지출</div>
+            <div class="vl">3,734,300원</div>
+          </div>
+          <div class="v6-gantt">
+            <div class="seg" style="width:35%;background:#EF4444;"></div>
+            <div class="seg" style="width:25%;background:#F59E0B;"></div>
+            <div class="seg" style="width:15%;background:#3B82F6;"></div>
+            <div class="seg" style="width:25%;background:#10B981;"></div>
+          </div>
+          <div class="v6-cats">
+            <div class="cat warn"><div class="nm">🥩 식자재</div><div class="vl">35.2%</div></div>
+            <div class="cat"><div class="nm">👥 인건비</div><div class="vl">25.1%</div></div>
+            <div class="cat"><div class="nm">⚡ 공과금</div><div class="vl">15.4%</div></div>
+          </div>
+          <button class="v6-detail-btn">▾ 상세 보기</button>
+        </div>
+        <div class="cal-placeholder">📅 <b>월 캘린더 (31칸)</b><br>매출+순수익 셀</div>
+      </div>
+    </div>
+
+    <div class="stage" data-stage="reserve"><div class="stage-bar">C안 · 예비비 (2단계)</div><div class="body"><div class="back-bar" data-go="C:home">‹ 홈으로</div><div class="cal-placeholder" style="padding:40px 14px;">🏦 <b>예비비 화면</b></div></div></div>
+    <div class="stage" data-stage="sales"><div class="stage-bar">C안 · 매출 기록 (2단계)</div><div class="body"><div class="back-bar" data-go="C:home">‹ 홈으로</div><div class="cal-placeholder" style="padding:40px 14px;">💰 <b>매출 기록 화면</b><br>(기존 매출 탭)</div></div></div>
+    <div class="stage" data-stage="expense"><div class="stage-bar">C안 · 지출 관리 (2단계)</div><div class="body"><div class="back-bar" data-go="C:home">‹ 홈으로</div><div class="cal-placeholder" style="padding:40px 14px;">💸 <b>지출 관리 화면</b><br>(기존 지출관리 탭)</div></div></div>
+    <div class="stage" data-stage="staff"><div class="stage-bar">C안 · 직원 (2단계)</div><div class="body"><div class="back-bar" data-go="C:home">‹ 홈으로</div><div class="cal-placeholder" style="padding:40px 14px;">👥 <b>직원 화면</b></div></div></div>
+    <div class="stage" data-stage="receipt"><div class="stage-bar">C안 · 영수증 (2단계)</div><div class="body"><div class="back-bar" data-go="C:home">‹ 홈으로</div><div class="cal-placeholder" style="padding:40px 14px;">🧾 <b>영수증 화면</b></div></div></div>
+
+  </div>
+
+  <div class="footer">
+    🏠 홈화면 v7 목업 · 2026-05-22<br>
+    실제 코드는 사장님 선택 후 작업합니다.
+  </div>
+
+</div>
+
+<script>
+  // 안 토글
+  document.querySelectorAll('.scheme-tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const s = t.dataset.scheme;
+      document.querySelectorAll('.scheme-tab').forEach(x=>x.classList.toggle('active', x===t));
+      document.querySelectorAll('.scheme-page').forEach(p=>{
+        p.classList.toggle('active', p.dataset.scheme===s);
+      });
+      // 홈으로 리셋
+      goStage(s,'home');
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+  });
+
+  // 단계 이동 (data-go="SCHEME:STAGE")
+  function goStage(scheme, stage){
+    const page = document.querySelector(`.scheme-page[data-scheme="${scheme}"]`);
+    if(!page) return;
+    page.querySelectorAll('.stage').forEach(s=>{
+      s.classList.toggle('active', s.dataset.stage===stage);
+    });
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  document.addEventListener('click', (e)=>{
+    const el = e.target.closest('[data-go]');
+    if(!el) return;
+    const [scheme, stage] = el.dataset.go.split(':');
+    goStage(scheme, stage);
+  });
+</script>
+
+</body>
+</html>
