@@ -77,7 +77,7 @@ body.viewas-on{padding-top:34px;}
 .container{padding:14px;max-width:640px;margin:0 auto;display:none;overflow-x:hidden;overflow-x:clip;}
 .container.active{display:block;}
 .card{background:var(--white);border-radius:var(--card-radius);padding:20px;margin-bottom:12px;box-shadow:var(--card-shadow);}
-.card-title{font-size:18px;font-weight:700;margin-bottom:16px;}
+.card-title{font-size:16px;font-weight:800;margin-bottom:14px;color:var(--toss-text-1);letter-spacing:-0.4px;}
 .card-title svg.icon-inline{width:18px;height:18px;vertical-align:-4px;margin-right:8px;}
 .card-sub{font-size:12px;font-weight:500;color:var(--gray-500);margin:-12px 0 12px;line-height:1.5;}
 .card-sub-title{font-size:13px;font-weight:800;color:var(--toss-text-2);margin:16px 0 10px;letter-spacing:-0.3px;}
@@ -366,12 +366,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .sales-edit-total-val{color:var(--blue);font-variant-numeric:tabular-nums;}
 
 /* ─ 거래처 */
-.vendor-item{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:9px;}
+.vendor-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--toss-line);border-radius:14px;margin-bottom:10px;letter-spacing:-0.2px;}
 .vendor-info .v-name{font-size:14px;font-weight:700;}
 .vendor-info .v-sub{font-size:12px;color:var(--gray-600);margin-top:2px;}
 .vendor-item.inactive{opacity:.45;}
-.vendor-card{display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border:1px solid var(--gray-200);border-radius:12px;margin-bottom:9px;cursor:pointer;transition:background .15s;}
-.vendor-card:active{background:var(--gray-100);}
+.vendor-card{display:flex;align-items:center;gap:10px;padding:16px 18px;background:var(--white);border:0;border-radius:16px;margin-bottom:10px;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);box-shadow:var(--card-shadow);}
+.vendor-card:active{transform:scale(.985);}
 .vendor-card.inactive{opacity:.5;}
 .vendor-drag-handle{display:inline-block;width:24px;text-align:center;font-size:16px;color:var(--gray-400);cursor:grab;flex-shrink:0;user-select:none;line-height:1;padding:6px 0;touch-action:none;}
 .vendor-drag-handle:active{cursor:grabbing;color:var(--gray-600);}
@@ -539,16 +539,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 /* ─ 대시보드 월요약 테이블 (단일 표 — 매출/지출/카테고리/순수익/예비비/실수익 통합) */
 .summ-tbl{width:100%;border-collapse:collapse;table-layout:fixed;}
-.summ-tbl td{padding:12px 0;border-bottom:1px solid var(--gray-100);vertical-align:baseline;}
+.summ-tbl td{padding:12px 0;border-bottom:1px solid var(--toss-line);vertical-align:baseline;}
 .summ-tbl tr:last-child td{border-bottom:none;}
-.summ-tbl .ds-lb{font-size:14px;font-weight:600;color:var(--gray-600);text-align:left;white-space:nowrap;}
+.summ-tbl .ds-lb{font-size:14px;font-weight:600;color:var(--toss-text-2);text-align:left;white-space:nowrap;letter-spacing:-0.3px;}
 .summ-tbl .ds-amt{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;padding-left:6px;letter-spacing:-0.5px;}
 .summ-tbl .ds-pc{font-size:11px;font-weight:700;color:var(--gray-400);text-align:right;white-space:nowrap;padding-left:3px;font-variant-numeric:tabular-nums;}
 .summ-tbl .ds-est{font-size:11px;font-weight:600;color:var(--gray-400);text-align:right;white-space:nowrap;padding-left:4px;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
-.summ-tbl tr.summ-total td{border-top:2px solid var(--text);border-bottom:none;padding-top:14px;}
+.summ-tbl tr.summ-total td{border-top:2px solid var(--toss-text-1);border-bottom:none;padding-top:14px;}
 .summ-tbl tr.summ-link{cursor:pointer;}
-.summ-tbl tr.summ-link:active td{background:var(--gray-100);}
-.summ-tbl tr.summ-total .ds-lb{font-size:15px;font-weight:800;color:var(--text);}
+.summ-tbl tr.summ-link:active td{background:var(--toss-line);}
+.summ-tbl tr.summ-total .ds-lb{font-size:15px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;}
 .summ-tbl tr.summ-total .ds-amt{font-size:28px;font-weight:900;letter-spacing:-1px;}
 .summ-tbl tr.summ-total .ds-est{font-size:13px;font-weight:700;color:var(--gray-500);}
 /* 헤더 (지금/월말 예상) */
