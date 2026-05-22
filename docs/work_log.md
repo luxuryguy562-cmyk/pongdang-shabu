@@ -4,6 +4,46 @@
 
 ---
 
+## [2026-05-22 더 후속] 홈화면 v7 — 토스 드릴다운 갈아엎기 (대형, 코드 작업)
+
+### 사장님 호소 (시작)
+"전 세션에 화면만 좀 고치고 토스식 드릴다운 흐름은 안 됐다. 한 번 더 검토해보자"
+→ 사장님 호소 work_log 라인 10 동일 카테고리 2회째 = 빙산 카테고리 (정보 구조 단계화) 확정
+
+### 진행 단계
+| 단계 | 내용 | 결과 |
+|---|---|---|
+| critic | 메타 진단 + CTO 실패 자가 인정 (v1~v6는 카드 양식만, 구조 미반영) | OK |
+| mock v7 (A/B/C) | 3안 와이어프레임 (홈+2단계 동선 시뮬레이션) | PR #215 |
+| 사장님 피드백 | "B 좋다 / 오늘매출 들어갈 화면 없음 / 이번달정산 짜침·매출이라 써 / 허접" | OK |
+| mock v7 B 풀퀄 | Pretendard·SVG·multi-layer shadow·결제수단별·시간대별 placeholder | PR #216 |
+| 사장님 OK + 디테일 4건 | (준비중) 표시·휴무 버튼 제거·진행률 명시·빈상태 | OK |
+| 휴무 회계 검토 | 사장님 반박 "휴무도 평균에 넣어야" = 외식업 RevPAR 표준. 시스템 자체는 캘린더 시각화용으로 유지 | OK |
+| 코드 작업 | 본 작업 (대형, 변경 ~600줄) | ✅ 머지 후 사장님 테스트 |
+
+### 변경 내역
+- **HTML**: `dashboardCont` 갈아엎기 (홈 stage + today-detail/settle/extra 3개 2단계 stage). 기존 DOM ID 전부 보존
+- **CSS**: 신설 클래스 (`.dash-stage`, `.dash-today-v7`, `.dash-enter-v7`, `.dash-today-detail-head`, `.dash-pm-card`, `.dash-hr-placeholder`, `.dash-input-cta`, `.dash-back-row`, `.dash-hello`)
+- **JS 신설**: `dashGoStage(stage)`, `renderTodayPaymentMethods(row, total)` (legacy 7컬럼 + amounts JSONB 폴백)
+- **JS 통합**: `loadDashboard` 안에 today-detail 채우기 + 인사 헤더 + 이번 달 매출 박스 + 결제수단별 (settle 배열에서 lastSaleRow 추출)
+- **JS 통합**: `renderExtraRevenueDashboard` 안에 홈 박스 dashHomeExtraEnter 채움/숨김
+- **JS 통합**: `nav('dashboard')` 진입 시 `dashGoStage('home')` 자동 리셋
+- **이벤트 교체**: 오늘 매출 카드 탭 → `dashGoStage('today-detail')`. 예비비 박스 → `nav('reserve')`. 매출 입력 CTA → `openQuickSalesInput`. data-dash-go 이벤트 위임
+- **삭제**: 휴무 버튼 (dashTopEmptyClosedBtn) — 캘린더 셀에서만 가능 (사장님 1차 의견)
+
+### 검증
+- node --check JS 구문 통과 ✅
+- DOM ID 35개 보존 확인 (기존 핸들러 다 작동) ✅
+- v17 정산 함수 호출 위치 settle stage 안 그대로 (헌법 1-5)
+- DB 변경 없음 (조회만)
+
+### 다음 세션 후보 (사장님 매장 사용 후)
+- 시간대별 매출 실데이터 (POS 시간 수집 또는 receipts.created_at 집계) — placeholder 활성화
+- 평균 계산 표준화 (캘린더일 기준 통일 — 사장님 회계 반박 반영)
+- 사장님 골든패스 결과 hotfix
+
+---
+
 ## [2026-05-22 후속] v17 월/주 카드 v6 갈아엎기 + FK 점검 — 완료 (PR #212/#213)
 
 ### 사장님 호소 (시작)
