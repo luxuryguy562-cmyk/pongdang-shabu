@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>v17 카드 v6 — 원 단위 / 가로 카테고리 / 지출 위로</title>
+<style>
+  :root{
+    --indigo:#4A6CF7; --indigo-light:#EEF1FF;
+    --green:#10B981; --green-dark:#059669; --green-50:#ECFDF5;
+    --red:#EF4444; --red-light:#FEE2E2; --red-50:#FEF2F2;
+    --amber:#F59E0B; --amber-light:#FEF3C7;
+    --pink-bg:#FEE2E2; --pink-border:#FCA5A5;
+    --gray-50:#FAFBFC; --gray-100:#F1F3F5; --gray-200:#E5E8EB;
+    --gray-300:#D1D6DB; --gray-400:#B0B8C1; --gray-500:#8B95A1;
+    --gray-600:#6B7684; --gray-700:#4E5968; --gray-800:#333D4B; --gray-900:#191F28;
+    --white:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'SF Pro',Pretendard,sans-serif;-webkit-font-smoothing:antialiased;}
+  body{background:var(--gray-100);padding:24px 8px;min-height:100vh;}
+
+  .frame-title{max-width:1180px;margin:0 auto 18px;padding:0 12px;}
+  .frame-title h1{font-size:18px;color:var(--gray-900);margin-bottom:6px;}
+  .frame-title p{font-size:12px;color:var(--gray-600);line-height:1.5;}
+
+  .row3{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media(max-width:1080px){.row3{grid-template-columns:1fr;}}
+
+  .phone{background:var(--white);border-radius:24px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.08);border:1px solid var(--gray-200);}
+  .phone-hdr{padding:10px 14px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center;}
+  .phone-hdr .pill{font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;color:var(--white);}
+  .pill-month{background:var(--indigo);}
+  .pill-week{background:#8B5CF6;}
+  .pill-expand{background:var(--green);}
+  .phone-hdr .lbl{font-size:11px;color:var(--gray-700);font-weight:700;}
+  .screen{width:100%;max-width:360px;margin:0 auto;background:var(--gray-50);padding:14px 12px;min-height:560px;}
+
+  /* ────── v17 카드 v6 본체 ────── */
+  .v17-card{
+    background:var(--white);border-radius:20px;padding:18px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:10px;
+  }
+  .v17-card .ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .v17-card .ttl{font-size:13px;font-weight:800;color:var(--gray-800);}
+  .v17-card .ttl b{color:var(--gray-900);font-size:15px;font-weight:900;margin-right:4px;}
+  .v17-card .progress-tag{
+    font-size:10px;padding:3px 8px;border-radius:8px;
+    background:var(--indigo-light);color:var(--indigo);font-weight:800;
+  }
+
+  /* 1줄: 매출 / 예상마감매출 (좌·우, 우측 옅게) */
+  .v17-row2{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+    align-items:start;margin-bottom:12px;
+  }
+  .v17-row2 .lbl{
+    font-size:11px;font-weight:700;color:var(--gray-500);
+    margin-bottom:3px;display:flex;align-items:center;gap:4px;
+  }
+  .v17-row2 .lbl.est{color:var(--gray-400);}
+  .v17-row2 .est-tag{
+    font-size:9px;font-weight:800;padding:1px 5px;border-radius:5px;
+    background:var(--gray-100);color:var(--gray-500);letter-spacing:-0.2px;
+  }
+  .v17-row2 .val{
+    font-size:16px;font-weight:900;color:var(--gray-900);
+    font-variant-numeric:tabular-nums;letter-spacing:-0.5px;line-height:1.2;
+    white-space:nowrap;
+  }
+  .v17-row2 .val.sale{color:var(--indigo);}
+  /* 예상마감 = 회색 + 작게 (사장님 명시: 옅게) */
+  .v17-row2 .val.est-val{
+    color:var(--gray-400);font-weight:800;font-size:14px;
+  }
+  .v17-row2 .delta{
+    font-size:11px;font-weight:800;margin-left:3px;
+    font-variant-numeric:tabular-nums;
+  }
+  .v17-row2 .delta.up{color:var(--green);}
+  .v17-row2 .delta.dn{color:var(--red);}
+
+  /* 2줄: 순수익 / 예상마감순수익 (강조 + 우측 옅게) */
+  .v17-row2.profit-row{
+    margin-bottom:12px;padding:12px 0;
+    border-top:1px solid var(--gray-100);border-bottom:1px solid var(--gray-100);
+  }
+  .v17-row2.profit-row .val{
+    font-size:18px;font-weight:900;color:var(--green);
+    letter-spacing:-0.6px;white-space:nowrap;
+  }
+  /* 예상 순수익 = 옅은 초록·회색 톤 (사장님: 차별점 줘야 — 옅게) */
+  .v17-row2.profit-row .val.est-val{
+    color:var(--gray-400);font-weight:800;font-size:15px;
+  }
+
+  /* 3줄: 지출 한 줄 (간트 위로 — 사장님 명시) */
+  .v17-exp-row{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:0 0 10px;margin-bottom:6px;
+  }
+  .v17-exp-row .lbl{font-size:12px;font-weight:700;color:var(--gray-600);}
+  .v17-exp-row .val{
+    font-size:14px;font-weight:800;color:var(--red);
+    font-variant-numeric:tabular-nums;letter-spacing:-0.3px;
+  }
+  .v17-exp-row .ratio{font-size:11px;font-weight:700;color:var(--gray-500);margin-left:4px;}
+
+  /* 4줄: 간트 두 줄 (지출 아래) */
+  .v17-gantt{margin-bottom:12px;}
+  .v17-gantt .gantt-lbl{
+    font-size:10px;font-weight:700;color:var(--gray-500);
+    margin-bottom:5px;display:flex;justify-content:space-between;
+  }
+  .v17-gantt .gantt-bar{
+    display:flex;height:14px;border-radius:5px;overflow:hidden;
+    background:var(--gray-100);margin-bottom:6px;
+  }
+  .v17-gantt .gantt-bar span{
+    display:flex;align-items:center;justify-content:center;
+    font-size:9px;font-weight:800;color:#fff;letter-spacing:-0.3px;
+  }
+  .v17-gantt .gantt-bar.profit-bar{background:var(--gray-50);}
+
+  /* 5줄: 상위 카테고리 3개 — 가로 한 줄 (사진 양식) */
+  .v17-cats-row{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;
+    margin-bottom:10px;
+  }
+  .v17-cat-chip{
+    padding:8px 6px;border-radius:10px;background:var(--gray-50);
+    display:flex;flex-direction:column;gap:2px;align-items:flex-start;
+    min-width:0;
+  }
+  /* 임계점 초과 — 분홍 강조 (사진의 식자재 처리) */
+  .v17-cat-chip.over{background:var(--pink-bg);border:1px solid var(--pink-border);}
+  .v17-cat-chip .top{display:flex;align-items:center;gap:4px;width:100%;min-width:0;}
+  .v17-cat-chip .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .v17-cat-chip .nm{
+    font-size:11px;font-weight:700;color:var(--gray-700);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .v17-cat-chip.over .nm{color:var(--gray-900);}
+  .v17-cat-chip .warn{font-size:11px;color:var(--red);}
+  .v17-cat-chip .bot{display:flex;align-items:baseline;gap:4px;width:100%;}
+  .v17-cat-chip .pct{
+    font-size:13px;font-weight:900;color:var(--gray-900);
+    font-variant-numeric:tabular-nums;letter-spacing:-0.3px;
+  }
+  .v17-cat-chip.over .pct{color:var(--red);}
+  .v17-cat-chip .mom{
+    font-size:10px;font-weight:800;font-variant-numeric:tabular-nums;
+  }
+  .v17-cat-chip .mom.up{color:var(--red);}
+  .v17-cat-chip .mom.dn{color:var(--green);}
+  .v17-cat-chip .mom.same{color:var(--gray-400);}
+
+  /* 6줄: 상세 보기 버튼 */
+  .v17-detail-btn{
+    width:100%;padding:10px;background:var(--white);
+    border:1px solid var(--gray-200);border-radius:10px;
+    font-size:12px;font-weight:800;color:var(--gray-700);
+    cursor:pointer;margin-bottom:10px;
+    display:flex;align-items:center;justify-content:center;gap:5px;
+  }
+  .v17-detail-btn .arr{transition:transform .2s;}
+  .v17-detail-btn.open .arr{transform:rotate(180deg);}
+
+  /* 상세 보기 펼침 */
+  .v17-detail-panel{
+    background:var(--white);border:1px solid var(--gray-200);
+    border-radius:12px;padding:10px;margin-bottom:10px;
+  }
+  .v17-detail-panel .pan-ttl{
+    font-size:11px;font-weight:800;color:var(--gray-700);
+    padding:0 6px 8px;border-bottom:1px solid var(--gray-100);margin-bottom:4px;
+  }
+  .v17-detail-row{
+    display:grid;grid-template-columns:1fr auto auto auto;gap:8px;
+    align-items:center;padding:7px 6px;font-size:12px;
+  }
+  .v17-detail-row + .v17-detail-row{border-top:1px solid var(--gray-50);}
+  .v17-detail-row .nm-side{display:flex;align-items:center;gap:6px;}
+  .v17-detail-row .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .v17-detail-row .nm{font-weight:700;color:var(--gray-800);}
+  .v17-detail-row .amt{
+    font-weight:800;color:var(--gray-900);font-variant-numeric:tabular-nums;
+    letter-spacing:-0.2px;text-align:right;min-width:88px;
+  }
+  .v17-detail-row .pct{
+    font-weight:800;color:var(--gray-600);font-variant-numeric:tabular-nums;
+    text-align:right;min-width:42px;
+  }
+  .v17-detail-row .mom{font-size:10px;font-weight:700;min-width:30px;text-align:right;}
+  .v17-detail-row .mom.up{color:var(--red);}
+  .v17-detail-row .mom.dn{color:var(--green);}
+  .v17-detail-row .mom.same{color:var(--gray-400);}
+  .v17-detail-sum{
+    margin-top:6px;padding:8px 6px;border-top:2px solid var(--gray-200);
+    display:grid;grid-template-columns:1fr auto auto;gap:8px;
+    font-size:12px;font-weight:900;color:var(--gray-900);
+  }
+  .v17-detail-sum .lb{color:var(--gray-700);}
+  .v17-detail-sum .amt{text-align:right;font-variant-numeric:tabular-nums;}
+  .v17-detail-sum .pct{text-align:right;font-variant-numeric:tabular-nums;color:var(--red);}
+
+  /* 7줄: 전월 동일 대비 + 코멘트 */
+  .v17-mom{
+    margin-top:4px;padding:10px 12px;background:var(--amber-light);
+    border-radius:10px;border-left:3px solid var(--amber);
+  }
+  .v17-mom .mom-lb{font-size:10px;color:var(--gray-700);font-weight:700;margin-bottom:3px;}
+  .v17-mom .mom-line{font-size:12px;font-weight:800;color:var(--gray-800);}
+  .v17-mom .mom-line .up{color:var(--green);}
+  .v17-mom .mom-line .dn{color:var(--red);}
+  .v17-mom .mom-comment{font-size:11px;color:var(--gray-700);margin-top:3px;font-style:italic;}
+
+  .legend{max-width:1180px;margin:18px auto 0;padding:14px;background:var(--white);border-radius:12px;border:1px solid var(--gray-200);}
+  .legend h3{font-size:13px;color:var(--gray-800);margin-bottom:8px;}
+  .legend ul{margin-top:6px;padding-left:18px;}
+  .legend li{font-size:11px;color:var(--gray-700);line-height:1.7;}
+  .legend b{color:var(--gray-900);}
+</style>
+</head>
+<body>
+
+<div class="frame-title">
+  <h1>📊 v17 카드 v6 — 4가지 정정 반영</h1>
+  <p>
+    ① 만원 단위 → <b>원 단위 풀</b> (헌법 7조) ② 지출 → <b>간트 위로</b> 이동 ③ 상위 카테고리 <b>가로 한 줄</b> (사진 양식) ④ 예상마감 <b>회색·작게</b>
+  </p>
+</div>
+
+<div class="row3">
+
+  <!-- ════════════════ 월 카드 ════════════════ -->
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-month">월 카드</span>
+      <span class="lbl">5월 22일 진행 (71%)</span>
+    </div>
+    <div class="screen">
+
+      <div class="v17-card">
+
+        <div class="ttl-row">
+          <div class="ttl"><b>5월</b>22일 진행</div>
+          <span class="progress-tag">71%</span>
+        </div>
+
+        <!-- 1줄: 매출 / 예상마감매출 -->
+        <div class="v17-row2">
+          <div>
+            <div class="lbl">매출</div>
+            <div class="val sale">28,470,000원<span class="delta up">▲12%</span></div>
+          </div>
+          <div>
+            <div class="lbl est">예상마감 매출 <span class="est-tag">예상</span></div>
+            <div class="val est-val">40,110,000원</div>
+          </div>
+        </div>
+
+        <!-- 2줄: 순수익 / 예상마감순수익 -->
+        <div class="v17-row2 profit-row">
+          <div>
+            <div class="lbl">순수익</div>
+            <div class="val">+16,650,000원</div>
+          </div>
+          <div>
+            <div class="lbl est">예상마감 순수익 <span class="est-tag">예상</span></div>
+            <div class="val est-val">+23,470,000원</div>
+          </div>
+        </div>
+
+        <!-- 3줄: 지출 (간트 위로) -->
+        <div class="v17-exp-row">
+          <span class="lbl">💸 지출</span>
+          <span><span class="val">11,820,000원</span><span class="ratio">(41%)</span></span>
+        </div>
+
+        <!-- 4줄: 간트 두 줄 -->
+        <div class="v17-gantt">
+          <div class="gantt-lbl">
+            <span>지출 분포</span>
+            <span style="color:var(--red);">41%</span>
+          </div>
+          <div class="gantt-bar">
+            <span style="background:#F59E0B;width:34.1%;">식자재 34%</span>
+            <span style="background:#3B82F6;width:15.8%;">인건 16%</span>
+            <span style="background:#10B981;width:4.8%;"></span>
+            <span style="background:#8B5CF6;width:45.3%;">그 외 45%</span>
+          </div>
+          <div class="gantt-lbl">
+            <span>순수익 vs 지출</span>
+            <span style="color:var(--green);">+59%</span>
+          </div>
+          <div class="gantt-bar profit-bar">
+            <span style="background:var(--green);width:59%;">+59%</span>
+            <span style="background:var(--gray-200);width:41%;color:var(--gray-500);">지출 41%</span>
+          </div>
+        </div>
+
+        <!-- 5줄: 상위 카테고리 3개 (가로 한 줄, 사진 양식) -->
+        <div class="v17-cats-row">
+          <div class="v17-cat-chip over">
+            <div class="top">
+              <span class="dot" style="background:#F59E0B;"></span>
+              <span class="nm">식자재</span>
+              <span class="warn">⚠️</span>
+            </div>
+            <div class="bot">
+              <span class="pct">34.1%</span>
+            </div>
+          </div>
+          <div class="v17-cat-chip">
+            <div class="top">
+              <span class="dot" style="background:#3B82F6;"></span>
+              <span class="nm">인건비</span>
+            </div>
+            <div class="bot">
+              <span class="pct">15.8%</span>
+              <span class="mom up">▲104%</span>
+            </div>
+          </div>
+          <div class="v17-cat-chip">
+            <div class="top">
+              <span class="dot" style="background:#10B981;"></span>
+              <span class="nm">고정비</span>
+            </div>
+            <div class="bot">
+              <span class="pct">4.8%</span>
+              <span class="mom dn">▼43%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6줄: 상세 보기 -->
+        <button class="v17-detail-btn">상세 보기 <span class="arr">▾</span></button>
+
+        <!-- 7줄: 전월 대비 -->
+        <div class="v17-mom">
+          <div class="mom-lb">전월 동일(4/22) 대비</div>
+          <div class="mom-line">매출 <span class="up">▲12%</span> · 지출 <span class="dn">▼3%</span></div>
+          <div class="mom-comment">지난달보다 활기차요 💪</div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════ 주 카드 ════════════════ -->
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-week">주 카드</span>
+      <span class="lbl">5월 2주차 (5/4~10)</span>
+    </div>
+    <div class="screen">
+
+      <div class="v17-card">
+        <div class="ttl-row">
+          <div class="ttl"><b>2주</b>5/4 ~ 10</div>
+          <span class="progress-tag" style="background:var(--gray-100);color:var(--gray-600);">지난주</span>
+        </div>
+
+        <div class="v17-row2">
+          <div>
+            <div class="lbl">매출</div>
+            <div class="val sale">8,389,256원<span class="delta dn">▼24%</span></div>
+          </div>
+          <div>
+            <div class="lbl est">예상마감 매출 <span class="est-tag">예상</span></div>
+            <div class="val est-val">—</div>
+          </div>
+        </div>
+
+        <div class="v17-row2 profit-row">
+          <div>
+            <div class="lbl">순수익</div>
+            <div class="val">+2,622,112원</div>
+          </div>
+          <div>
+            <div class="lbl est">예상마감 순수익 <span class="est-tag">예상</span></div>
+            <div class="val est-val">—</div>
+          </div>
+        </div>
+
+        <div class="v17-exp-row">
+          <span class="lbl">💸 지출</span>
+          <span><span class="val">5,767,144원</span><span class="ratio">(69%)</span></span>
+        </div>
+
+        <div class="v17-gantt">
+          <div class="gantt-lbl">
+            <span>지출 분포</span>
+            <span style="color:var(--red);">69%</span>
+          </div>
+          <div class="gantt-bar">
+            <span style="background:#F59E0B;width:32.3%;">식자재 32%</span>
+            <span style="background:#3B82F6;width:24.1%;">인건 24%</span>
+            <span style="background:#10B981;width:9.1%;">공과</span>
+            <span style="background:#8B5CF6;width:34.5%;">그 외 35%</span>
+          </div>
+          <div class="gantt-lbl">
+            <span>순수익 vs 지출</span>
+            <span style="color:var(--green);">+31%</span>
+          </div>
+          <div class="gantt-bar profit-bar">
+            <span style="background:var(--green);width:31%;">+31%</span>
+            <span style="background:var(--gray-200);width:69%;color:var(--gray-500);">지출 69%</span>
+          </div>
+        </div>
+
+        <div class="v17-cats-row">
+          <div class="v17-cat-chip">
+            <div class="top">
+              <span class="dot" style="background:#F59E0B;"></span>
+              <span class="nm">식자재</span>
+            </div>
+            <div class="bot">
+              <span class="pct">32.3%</span>
+              <span class="mom up">▲8%</span>
+            </div>
+          </div>
+          <div class="v17-cat-chip">
+            <div class="top">
+              <span class="dot" style="background:#3B82F6;"></span>
+              <span class="nm">인건비</span>
+            </div>
+            <div class="bot">
+              <span class="pct">24.1%</span>
+              <span class="mom up">▲5%</span>
+            </div>
+          </div>
+          <div class="v17-cat-chip">
+            <div class="top">
+              <span class="dot" style="background:#10B981;"></span>
+              <span class="nm">공과금</span>
+            </div>
+            <div class="bot">
+              <span class="pct">9.1%</span>
+              <span class="mom same">━</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="v17-detail-btn">상세 보기 <span class="arr">▾</span></button>
+
+        <div class="v17-mom">
+          <div class="mom-lb">전주(4주차) 대비</div>
+          <div class="mom-line">매출 <span class="dn">▼24%</span> · 지출 <span class="up">▲8%</span></div>
+          <div class="mom-comment">지난주보다 쉬어가는 한 주였어요 🌧</div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════ 상세 보기 펼친 ════════════════ -->
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-expand">상세 ▾</span>
+      <span class="lbl">상세 보기 펼침</span>
+    </div>
+    <div class="screen">
+
+      <div class="v17-card">
+        <div class="ttl-row">
+          <div class="ttl"><b>5월</b>22일 진행</div>
+          <span class="progress-tag">71%</span>
+        </div>
+
+        <div class="v17-row2">
+          <div>
+            <div class="lbl">매출</div>
+            <div class="val sale">28,470,000원<span class="delta up">▲12%</span></div>
+          </div>
+          <div>
+            <div class="lbl est">예상마감 매출 <span class="est-tag">예상</span></div>
+            <div class="val est-val">40,110,000원</div>
+          </div>
+        </div>
+
+        <div class="v17-row2 profit-row">
+          <div>
+            <div class="lbl">순수익</div>
+            <div class="val">+16,650,000원</div>
+          </div>
+          <div>
+            <div class="lbl est">예상마감 순수익 <span class="est-tag">예상</span></div>
+            <div class="val est-val">+23,470,000원</div>
+          </div>
+        </div>
+
+        <div class="v17-exp-row">
+          <span class="lbl">💸 지출</span>
+          <span><span class="val">11,820,000원</span><span class="ratio">(41%)</span></span>
+        </div>
+
+        <div class="v17-gantt">
+          <div class="gantt-lbl">
+            <span>지출 분포</span>
+            <span style="color:var(--red);">41%</span>
+          </div>
+          <div class="gantt-bar">
+            <span style="background:#F59E0B;width:34.1%;">식자재 34%</span>
+            <span style="background:#3B82F6;width:15.8%;">인건 16%</span>
+            <span style="background:#10B981;width:4.8%;"></span>
+            <span style="background:#8B5CF6;width:45.3%;">그 외 45%</span>
+          </div>
+          <div class="gantt-lbl">
+            <span>순수익 vs 지출</span>
+            <span style="color:var(--green);">+59%</span>
+          </div>
+          <div class="gantt-bar profit-bar">
+            <span style="background:var(--green);width:59%;">+59%</span>
+            <span style="background:var(--gray-200);width:41%;color:var(--gray-500);">지출 41%</span>
+          </div>
+        </div>
+
+        <div class="v17-cats-row">
+          <div class="v17-cat-chip over">
+            <div class="top">
+              <span class="dot" style="background:#F59E0B;"></span>
+              <span class="nm">식자재</span>
+              <span class="warn">⚠️</span>
+            </div>
+            <div class="bot"><span class="pct">34.1%</span></div>
+          </div>
+          <div class="v17-cat-chip">
+            <div class="top">
+              <span class="dot" style="background:#3B82F6;"></span>
+              <span class="nm">인건비</span>
+            </div>
+            <div class="bot"><span class="pct">15.8%</span><span class="mom up">▲104%</span></div>
+          </div>
+          <div class="v17-cat-chip">
+            <div class="top">
+              <span class="dot" style="background:#10B981;"></span>
+              <span class="nm">고정비</span>
+            </div>
+            <div class="bot"><span class="pct">4.8%</span><span class="mom dn">▼43%</span></div>
+          </div>
+        </div>
+
+        <button class="v17-detail-btn open">상세 닫기 <span class="arr">▾</span></button>
+
+        <div class="v17-detail-panel">
+          <div class="pan-ttl">카테고리별 지출 (전체)</div>
+          <div class="v17-detail-row">
+            <div class="nm-side"><span class="dot" style="background:#F59E0B;"></span><span class="nm">식자재 ⚠️</span></div>
+            <span class="amt">9,704,270원</span>
+            <span class="pct">34.1%</span>
+            <span class="mom up">▲6%</span>
+          </div>
+          <div class="v17-detail-row">
+            <div class="nm-side"><span class="dot" style="background:#3B82F6;"></span><span class="nm">인건비</span></div>
+            <span class="amt">4,498,260원</span>
+            <span class="pct">15.8%</span>
+            <span class="mom up">▲104%</span>
+          </div>
+          <div class="v17-detail-row">
+            <div class="nm-side"><span class="dot" style="background:#10B981;"></span><span class="nm">고정비</span></div>
+            <span class="amt">1,366,560원</span>
+            <span class="pct">4.8%</span>
+            <span class="mom dn">▼43%</span>
+          </div>
+          <div class="v17-detail-row">
+            <div class="nm-side"><span class="dot" style="background:#8B5CF6;"></span><span class="nm">재료</span></div>
+            <span class="amt">1,195,740원</span>
+            <span class="pct">4.2%</span>
+            <span class="mom same">-</span>
+          </div>
+          <div class="v17-detail-row">
+            <div class="nm-side"><span class="dot" style="background:#A78BFA;"></span><span class="nm">임대료</span></div>
+            <span class="amt">569,400원</span>
+            <span class="pct">2.0%</span>
+            <span class="mom same">-</span>
+          </div>
+          <div class="v17-detail-row">
+            <div class="nm-side"><span class="dot" style="background:#94A3B8;"></span><span class="nm">기타</span></div>
+            <span class="amt">370,110원</span>
+            <span class="pct">1.3%</span>
+            <span class="mom same">-</span>
+          </div>
+          <div class="v17-detail-sum">
+            <span class="lb">합계</span>
+            <span class="amt">11,820,000원</span>
+            <span class="pct">41%</span>
+          </div>
+        </div>
+
+        <div class="v17-mom">
+          <div class="mom-lb">전월 동일(4/22) 대비</div>
+          <div class="mom-line">매출 <span class="up">▲12%</span> · 지출 <span class="dn">▼3%</span></div>
+          <div class="mom-comment">지난달보다 활기차요 💪</div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <h3>🔧 v5 → v6 변경 4가지</h3>
+  <ul>
+    <li><b>① 만원 단위 → 원 단위 풀</b> — 헌법 7조 정산현황(v17)은 원 단위 정확 표기. "2,847만" → "28,470,000원"</li>
+    <li><b>② 지출 → 간트 위로 이동</b> — 흐름: 매출/예상 → 순수익/예상 → <b>지출</b> → 간트 → 상위3 → 상세 → 전월대비</li>
+    <li><b>③ 상위 카테고리 가로 한 줄</b> — 사진 양식 그대로. 색깔점 + 이름(임계점 ⚠️) + % + 전월대비. 식자재 임계 = 분홍 배경</li>
+    <li><b>④ 예상마감 = 회색 + 작게</b> — 매출 옆 = 14px gray-400. 순수익 옆 = 15px gray-400. 시각적 차별점 (실제 vs 미래)</li>
+  </ul>
+</div>
+
+</body>
+</html>
