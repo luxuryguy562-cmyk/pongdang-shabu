@@ -283,15 +283,16 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .card-nav-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--gray-100);font-size:18px;cursor:pointer;}
 .card-nav-date{font-size:16px;font-weight:700;}
 
-/* ─ 직원 카드 */
-.emp-card{background:var(--gray-100);border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;}
+/* ─ 직원 카드 (토스 통일 2026-05-22) */
+.emp-card{background:var(--white);border-radius:20px;padding:18px;margin-bottom:12px;cursor:pointer;box-shadow:var(--card-shadow);transition:transform .2s cubic-bezier(.2,.8,.4,1);}
+.emp-card:active{transform:scale(.99);}
 .emp-card-top{display:flex;align-items:center;gap:12px;}
-.emp-avatar{width:42px;height:42px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0;}
-.emp-avatar.inactive{background:var(--gray-400);}
+.emp-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#EDF4FF 0%,#DBEAFE 100%);color:var(--toss-blue-strong);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;letter-spacing:-0.3px;}
+.emp-avatar.inactive{background:var(--toss-line);color:var(--toss-text-4);}
 .emp-card-info{flex:1;min-width:0;}
-.emp-card-name{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.emp-card-sub{font-size:12px;color:var(--gray-600);margin-top:2px;}
-.emp-card-actions{display:flex;gap:6px;margin-top:11px;padding-top:11px;border-top:1px solid var(--gray-200);}
+.emp-card-name{font-size:15px;font-weight:800;color:var(--toss-text-1);display:flex;align-items:center;gap:6px;flex-wrap:wrap;letter-spacing:-0.3px;}
+.emp-card-sub{font-size:12px;color:var(--toss-text-4);margin-top:2px;font-weight:500;letter-spacing:-0.2px;}
+.emp-card-actions{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--toss-line);}
 
 /* ─ 직원 상세 */
 .detail-section{margin-bottom:16px;}
