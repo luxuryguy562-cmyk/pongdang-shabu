@@ -10229,11 +10229,10 @@ function v17RenderCalendar(){
       </div>`;
       continue;
     }
-    // 데이터 없음 = 빈 셀 (휴무 X, 영업했지만 마감 안 한 날 또는 미래)
+    // 데이터 없음 = 깨끗한 빈 셀 (휴무 X). future 셀과 동일 디자인 + 클릭 가능 (휴무 표시 위해)
     if(!data){
-      html += `<div class="v17-cal-cell${todayCls} ${wkCls}" data-day="${d}" style="background:var(--gray-50);">
-        <span class="cc-day">${d}</span>
-        <span style="font-size:9px;text-align:center;color:var(--gray-300);">-</span>
+      html += `<div class="v17-cal-cell${todayCls} ${wkCls}" data-day="${d}" style="background:transparent;border:1px dashed var(--gray-200);">
+        <span class="cc-day" style="color:var(--gray-400);">${d}</span>
       </div>`;
       continue;
     }
