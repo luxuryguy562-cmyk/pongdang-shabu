@@ -7,7 +7,7 @@
 
 <!-- ═══ PWA / 앱스토어 패키징 대비 메타 ═══ -->
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0050FF">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="description" content="매장 운영을 한 화면에서 — 매출·지출·인건비 자동 정리">
 <!-- iOS PWA + 표준 PWA capable -->
 <meta name="mobile-web-app-capable" content="yes">
@@ -63,7 +63,9 @@ body.viewas-on{padding-top:34px;}
 /* VIEWAS-END */
 
 /* ─ 네비 */
-.bottom-nav{position:fixed;bottom:0;width:100%;height:calc(72px + env(safe-area-inset-bottom,0));padding-bottom:env(safe-area-inset-bottom,0);background:var(--white);display:flex;border-top:1px solid var(--toss-line);z-index:1000;overflow-x:auto;scrollbar-width:none;box-sizing:border-box;}
+.bottom-nav{position:fixed;bottom:0;width:100%;height:calc(72px + env(safe-area-inset-bottom,0));padding-bottom:env(safe-area-inset-bottom,0);background:var(--white);display:flex;border-top:1px solid var(--toss-line-2);z-index:1000;overflow-x:auto;scrollbar-width:none;box-sizing:border-box;}
+/* bottom-nav 위 본문 끝 자연스러운 마스크 — 카드 그림자가 하단에 쌓이는 시각 효과 제거 */
+.bottom-nav::before{content:"";position:absolute;left:0;right:0;top:-20px;height:20px;background:linear-gradient(180deg,rgba(244,245,247,0) 0%,var(--bg) 100%);pointer-events:none;}
 .bottom-nav::-webkit-scrollbar{display:none;}
 .nav-item{flex:1 1 0;min-width:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--toss-text-4);cursor:pointer;transition:color .2s;padding:0 2px;white-space:nowrap;letter-spacing:-0.2px;}
 .nav-item .ni{font-size:19px;margin-bottom:2px;line-height:1;display:inline-flex;align-items:center;justify-content:center;}
@@ -224,14 +226,14 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .tx-tooltip{position:absolute;left:0;bottom:100%;background:var(--text);color:#fff;font-size:12px;padding:5px 10px;border-radius:8px;white-space:nowrap;z-index:50;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.2);}
 .tx-tooltip::after{content:'';position:absolute;top:100%;left:12px;border:5px solid transparent;border-top-color:var(--text);}
 
-/* ─ 마감정산 (토스 스타일) */
-.settle-item{display:flex;align-items:center;padding:0 10px 0 0;border-bottom:1px solid var(--gray-100);margin:0;}
+/* ─ 마감정산 (토스 통일 2026-05-22) */
+.settle-item{display:flex;align-items:center;padding:0 4px;border-bottom:1px solid var(--toss-line);margin:0;gap:8px;}
 .settle-item:last-child{border-bottom:none;}
-.settle-item .si-icon{font-size:18px;width:36px;text-align:center;flex-shrink:0;}
-.settle-item .si-label{flex:1;font-size:14px;font-weight:500;color:var(--text);padding:16px 0;}
-.settle-item .s-input{border:none;background:transparent;font-size:18px;font-weight:700;text-align:right;outline:none;color:var(--text);width:130px;padding:16px 0;}
-.settle-item .s-input::placeholder{color:var(--gray-400);font-weight:500;}
-.settle-item .s-input:focus{color:var(--blue);}
+.settle-item .si-icon{font-size:16px;width:32px;text-align:center;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.settle-item .si-label{flex:1;font-size:14px;font-weight:600;color:var(--toss-text-2);padding:14px 0;letter-spacing:-0.3px;}
+.settle-item .s-input{border:none;background:transparent;font-size:18px;font-weight:800;text-align:right;outline:none;color:var(--toss-text-1);width:140px;padding:14px 0;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;font-family:inherit;}
+.settle-item .s-input::placeholder{color:var(--toss-text-5);font-weight:500;}
+.settle-item .s-input:focus{color:var(--toss-blue-strong);}
 /* ─── 차액 0원 저장 버튼 강조 ─── */
 .settle-ready{background:linear-gradient(135deg,#10B981,#059669) !important;box-shadow:0 6px 20px rgba(16,185,129,0.45) !important;transform:translateY(-1px);transition:all 0.2s;}
 /* 금고 계수 카드 — 위 계산기 풀폭 + 아래 화폐 2x4 grid */
@@ -247,12 +249,12 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .vault-section .vault-calc .vc-row:last-child .vc-val{font-size:24px;font-weight:900;letter-spacing:-0.5px;}
 .vault-section .vault-calc.diff-ok .vc-row:last-child .vc-val{color:var(--success);}
 .vault-section .vault-calc.diff-bad .vc-row:last-child .vc-val{color:var(--danger);}
-.settle-card-group{background:var(--white);border-radius:18px;padding:4px 16px;margin-bottom:12px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
-.settle-card-group .card-title{font-size:16px;font-weight:800;padding:16px 0 4px;margin:0;}
-.settle-card-group .card-sub{font-size:12px;color:var(--gray-400);margin:0 0 8px;padding:0;}
-.settle-summary{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-top:1px solid var(--gray-200);margin-top:4px;}
-.settle-summary .ss-label{font-size:14px;font-weight:700;color:var(--blue);}
-.settle-summary .ss-val{font-size:20px;font-weight:800;color:var(--blue);}
+.settle-card-group{background:var(--white);border-radius:20px;padding:6px 20px;margin-bottom:14px;box-shadow:var(--card-shadow);}
+.settle-card-group .card-title{font-size:16px;font-weight:800;color:var(--toss-text-1);padding:16px 0 4px;margin:0;letter-spacing:-0.4px;}
+.settle-card-group .card-sub{font-size:12px;color:var(--toss-text-4);margin:0 0 8px;padding:0;font-weight:500;letter-spacing:-0.2px;}
+.settle-summary{display:flex;justify-content:space-between;align-items:center;padding:16px 14px;margin:8px -4px 4px;background:linear-gradient(135deg,var(--toss-blue-light) 0%,#F3F8FF 100%);border-radius:12px;}
+.settle-summary .ss-label{font-size:14px;font-weight:800;color:var(--toss-blue-strong);letter-spacing:-0.3px;}
+.settle-summary .ss-val{font-size:22px;font-weight:800;color:var(--toss-blue-strong);font-variant-numeric:tabular-nums;letter-spacing:-0.7px;}
 .settle-result{background:var(--white);border-radius:18px;padding:20px;margin-top:0;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
 .sr-row{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--gray-100);}
 .sr-row:last-child{border-bottom:none;padding-top:14px;border-top:2px solid var(--text);margin-top:4px;}
