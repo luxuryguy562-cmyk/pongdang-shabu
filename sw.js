@@ -1,7 +1,7 @@
 // 캐쉬플로우 Service Worker
 // 전략: 네트워크 우선 + 폴백 캐시 (앱은 매번 최신, 인터넷 끊겨도 마지막 화면 보임)
 
-const CACHE_VERSION = 'cashflow-v1-2026-05-06';
+const CACHE_VERSION = 'cashflow-v2-2026-05-22-toss-unified';
 const APP_SHELL = [
   './',
   './index.html',
