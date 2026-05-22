@@ -451,29 +451,29 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .gantt-day-label .day-count{font-size:10px;color:var(--gray-400);}
 
 /* ─ 근태 통합 기록 탭 (F안: 내 기록 + 전체 조회 합침) */
-.att-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--gray-200);border-radius:10px;overflow:hidden;margin-bottom:10px;}
-.att-kpi-cell{background:#fff;padding:10px 6px;text-align:center;}
-.att-kpi-lbl{font-size:10px;color:var(--gray-400);font-weight:600;margin-bottom:3px;}
-.att-kpi-val{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px;}
-.att-kpi-cell.wage .att-kpi-val{color:var(--blue);}
+.att-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.att-kpi-cell{background:var(--white);padding:14px 6px;text-align:center;border-radius:14px;box-shadow:var(--card-shadow);}
+.att-kpi-lbl{font-size:11px;color:var(--toss-text-4);font-weight:600;margin-bottom:4px;letter-spacing:-0.2px;}
+.att-kpi-val{font-size:18px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;}
+.att-kpi-cell.wage .att-kpi-val{color:var(--toss-blue-strong);}
 
 /* ─ 출퇴근 상태 변환 카드 (G안: 출근 전/근무 중/퇴근 후 3색) */
-.att-status-card{border-radius:18px;padding:24px 18px;text-align:center;transition:background 0.25s ease;margin-top:8px;}
-.att-status-card.before{background:var(--gray-100);}
-.att-status-card.during{background:var(--blue-light);}
-.att-status-card.after{background:var(--success-light);}
-.att-status-date{font-size:13px;font-weight:600;color:var(--gray-600);margin-bottom:6px;}
-.att-status-time{font-size:48px;font-weight:900;color:var(--text);letter-spacing:-2px;line-height:1;margin-bottom:14px;}
-.att-status-card.after .att-status-time{font-size:22px;font-weight:800;color:var(--gray-600);}
-.att-status-badge{display:inline-block;padding:7px 14px;border-radius:99px;font-size:13px;font-weight:700;margin-bottom:18px;}
-.att-status-card.before .att-status-badge{background:#fff;color:var(--gray-600);border:1px solid var(--gray-200);}
-.att-status-card.during .att-status-badge{background:var(--blue);color:#fff;}
-.att-status-card.after .att-status-badge{background:var(--success);color:#fff;}
+.att-status-card{border-radius:20px;padding:28px 20px;text-align:center;transition:background 0.25s ease;margin-top:8px;box-shadow:var(--card-shadow);}
+.att-status-card.before{background:var(--white);}
+.att-status-card.during{background:linear-gradient(150deg,var(--toss-blue-light) 0%,#F3F8FF 100%);}
+.att-status-card.after{background:linear-gradient(150deg,#E4F7EE 0%,#F0FBF5 100%);}
+.att-status-date{font-size:13px;font-weight:600;color:var(--toss-text-3);margin-bottom:8px;letter-spacing:-0.2px;}
+.att-status-time{font-size:52px;font-weight:800;color:var(--toss-text-1);letter-spacing:-2.5px;line-height:1;margin-bottom:16px;font-variant-numeric:tabular-nums;}
+.att-status-card.after .att-status-time{font-size:24px;font-weight:800;color:var(--toss-text-3);}
+.att-status-badge{display:inline-block;padding:8px 16px;border-radius:99px;font-size:13px;font-weight:800;margin-bottom:20px;letter-spacing:-0.2px;}
+.att-status-card.before .att-status-badge{background:var(--toss-line);color:var(--toss-text-3);}
+.att-status-card.during .att-status-badge{background:var(--toss-blue);color:#fff;}
+.att-status-card.after .att-status-badge{background:var(--toss-green);color:#fff;}
 .att-status-action{margin-bottom:12px;}
 .att-big-btn{width:100%;padding:18px;font-size:16px;font-weight:800;border-radius:13px;}
 .att-status-card.after .att-status-action{display:none;}
-.att-status-meta{font-size:12px;color:var(--gray-600);font-weight:600;line-height:1.5;}
-.att-status-meta .wage{color:var(--blue);font-weight:800;font-size:14px;}
+.att-status-meta{font-size:12px;color:var(--toss-text-3);font-weight:600;line-height:1.5;letter-spacing:-0.2px;}
+.att-status-meta .wage{color:var(--toss-blue-strong);font-weight:800;font-size:14px;}
 
 /* ─ 캘린더 빈 셀에 + 아이콘 (관리자만) */
 .att-cal-empty-add{font-size:14px;color:var(--gray-400);font-weight:700;line-height:1;}
