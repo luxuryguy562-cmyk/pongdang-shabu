@@ -63,9 +63,18 @@
 - V17_THRESH/COLOR/NAME 잔재 0건 ✅
 - ctx.cats 14회, byCat 32회, expense_thresholds 9회 등장 ✅
 
-### Phase 5 (DML 게이트 — 사장님 "실행 승인" 4글자 대기)
-- 권채현 휴무 6행 DELETE (5/26~5/31 옛 PR #192 잔재)
-- vendors 4개 (농협/다이소/쿠팡/탑마트) hard delete
+### Phase 5: DML 2건 완료 (사장님 "실행승인" 명시, 헌법 8-A-4)
+- ✅ 권채현 휴무 6행 DELETE (5/26~5/31, work_schedules) — RETURNING으로 6행 확인
+- ✅ vendors 4개 hard delete (쿠팡/농협/탑마트/다이소) — RETURNING으로 4행 확인
+- 사후 검증: 권채현 휴무 잔재 0건, vendors NULL FK 잔재 0건 ✅
+
+### 사장님 매장 최종 상태
+- work_schedules.is_off=true 잔재: 0건 (PR #192 잔재 청소 완료)
+- vendors.category_id IS NULL: 0건 (좀비 FK 청소 완료)
+- v17 정산현황 카테고리: 활성 expense 카테고리 전부 노출 (식자재/주류/음료/인건비/비품/마케팅/고정비/공과금/세금/기타 + 로열티 가상)
+- v17 캘린더 휴무 표시: sales_daily.source='closed'만 (데이터 없는 셀은 빈 회색)
+- 월 네비: 미래 월 차단 (현재 월까지만)
+- 카테고리 관리 시트: 매출 대비 경고 기준(%) 입력 가능
 
 ---
 
