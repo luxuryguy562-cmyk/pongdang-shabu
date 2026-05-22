@@ -4,7 +4,61 @@
 
 ---
 
-## [2026-05-22] v17 휴무 버그 fix + 휴무 버튼 복원 (Phase 1+2) — 진행 중
+## [2026-05-22] v17 휴무·카테고리·% 갈아엎기 — 완료 (PR #201/#202/#203)
+
+### 최종 결과
+- PR #201 main 머지 (sha 8566b2a): Phase 1~5 메인 (휴무 버그 + 버튼 + 동적 카테고리 + 월네비 + threshold + DML)
+- PR #202 main 머지 (sha 569de9e): hotfix1 — 빈 셀 `-` 표시 제거 (future 셀과 통일)
+- PR #203 main 머지 (sha d9b8578): hotfix2 — 매출대비 % 소수점 1자리 (월/주 범례 + 그 외)
+
+### 사장님 호소 4건 + 추가 2건 모두 처리
+1. ✅ "오늘·다음달 휴무 박혀있음" — v17 캘린더 휴무 판정 fix (10145)
+2. ✅ "휴무 설정 기능 사라짐" — v17 시트에 🏖/🔄 버튼 복원
+3. ✅ "홈화면 수식에 5개만 있음" — V17_CAT 5개 하드코딩 갈아엎기 → 동적 (헌법 1-6)
+4. ✅ "지출카테고리 FK 무너짐" — vendors 좀비 4개 hard delete
+5. ✅ 추가: 월 네비 미래 차단
+6. ✅ 추가: 카테고리 관리 threshold 입력 칸 (store_settings.expense_thresholds JSONB)
+7. ✅ Hotfix1: 빈 셀 `-` 제거 (future 셀과 통일)
+8. ✅ Hotfix2: 매출대비 % 소수점 1자리 (범례 + 그 외)
+
+### Phase별 결과
+| Phase | 내용 | 결과 |
+|---|---|---|
+| 1 | v17 캘린더 휴무 판정 버그 fix (10145) | ✅ PR #201 |
+| 2 | v17 시트 휴무 표시/해제 버튼 복원 | ✅ PR #201 |
+| 3-A | 월 네비 미래 차단 (moveDashMonth) | ✅ PR #201 |
+| 3-B/C | 카테고리 5개 → 동적 (V17_CATS, byCat, 6곳 갈아엎기) | ✅ PR #201 |
+| 4 | 카테고리 관리 threshold 입력 칸 | ✅ PR #201 |
+| 5 | DML 2건 (work_schedules 6행 + vendors 4행) | ✅ "실행승인" 후 |
+| Hotfix1 | 빈 셀 `-` 제거 | ✅ PR #202 |
+| Hotfix2 | 매출대비 % 소수점 1자리 | ✅ PR #203 |
+
+### Root cause 진단 (사장님 호소 4건)
+1. **v17RenderCalendar 라인 10145** `if(!data || data.holiday)` = 데이터 없음을 휴무로 잘못 매핑
+2. **v17DailySheet 갈아엎기 시 calCellMarkClosed 누락** (PR #194 잔재)
+3. **loadDashboard 라인 9305** `_dailySrcs=['vendor_orders','receipts','attendance']` 첫 매치만 → 사장님 매장 다중 vendor_orders 카테고리(주류/음료) 누락
+4. **vendors 좀비 4개** category_id NULL 옛 todo 잔재
+
+### 핵심 교훈 (dev_lessons #119~#123 신설)
+- #119 데이터 없음 ≠ 휴무
+- #120 vendor_orders 카테고리 매핑은 vendor.category_id로 분리
+- #121 빈 셀 시각 일관성
+- #122 push 후 PR/머지까지 = 한 묶음 (헌법 1-2 위배 사고)
+- #123 매출대비 % 소수점 자릿수 일관성
+
+### DML 2건 검증
+- 권채현 휴무 6행 (work_schedules.is_off=true, wish_start IS NULL) — RETURNING 6 OK
+- vendors 4개 (농협/다이소/쿠팡/탑마트, category_id NULL, vendor_orders 0건) — RETURNING 4 OK
+- 사후: 권채현 휴무 잔재 0, vendors NULL FK 잔재 0 ✅
+
+### 백업·롤백
+- 백업 sha: `d5fbb0a` (PR #200 머지 직전)
+- 문제 시: `git revert <PR 머지 sha>` → push → 재머지 = 1분 안 복구
+- DML 롤백: work_schedules row는 UI에서 다시 입력 가능 (사장님), vendors는 사장님이 거래처 추가에서 재등록
+
+---
+
+## [2026-05-22] v17 휴무 버그 fix + 휴무 버튼 복원 (Phase 1+2) — 완료 (위 종합 항목 참조)
 
 ### 사장님 호소
 1. "오늘 후무가 찍혀있고 다음달 뭐 다 휴무가찍혀잇네 확인해고 지워"
