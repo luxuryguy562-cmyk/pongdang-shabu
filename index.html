@@ -10108,7 +10108,7 @@ function v17RenderMonthCard(){
     }
     legendHtml += `<span class="lg${overCls}">
       <span class="nm-side"><span class="dot" style="background:${c.color};"></span><span class="nm">${c.name}${icon}</span></span>
-      <span class="pct-side"><span class="pct">${pct.toFixed(0)}%</span>${momMini}</span>
+      <span class="pct-side"><span class="pct">${pct.toFixed(1)}%</span>${momMini}</span>
     </span>`;
   });
   // 그 외 (나머지 카테고리)
@@ -10127,7 +10127,7 @@ function v17RenderMonthCard(){
   });
   const restNames = restCats.map(c=>c.name).join('·');
   let restHtml = restPct>0 ? `
-    <div class="gantt-rest" data-rest-toggle="mth">+ 그 외 ${restPct.toFixed(0)}% (${restNames}) ▾</div>
+    <div class="gantt-rest" data-rest-toggle="mth">+ 그 외 ${restPct.toFixed(1)}% (${restNames}) ▾</div>
     <div class="gantt-rest-detail" data-rest-detail="mth" style="display:none;">${restDetailHtml}</div>` : '';
 
   // 전월 동일 대비 + 문어체
@@ -10387,7 +10387,7 @@ function v17RenderWeekCards(){
       }
       legendHtml += `<span class="lg${overCls}">
         <span class="nm-side"><span class="dot" style="background:${c.color};"></span><span class="nm">${c.name}${icon}</span></span>
-        <span class="pct-side"><span class="pct">${pct.toFixed(0)}%</span>${momMini}</span>
+        <span class="pct-side"><span class="pct">${pct.toFixed(1)}%</span>${momMini}</span>
       </span>`;
     });
     let restPct = 0;
@@ -10405,7 +10405,7 @@ function v17RenderWeekCards(){
     });
     const restNamesWk = restCats.map(c=>c.name).join('·');
     let restHtml = restPct>0 ? `
-      <div class="gantt-rest" data-rest-toggle="w${w.wi}">+ 그 외 ${restPct.toFixed(0)}% (${restNamesWk}) ▾</div>
+      <div class="gantt-rest" data-rest-toggle="w${w.wi}">+ 그 외 ${restPct.toFixed(1)}% (${restNamesWk}) ▾</div>
       <div class="gantt-rest-detail" data-rest-detail="w${w.wi}" style="display:none;">${restDetailHtml}</div>` : '';
 
     // 저번주 대비 + 문어체
