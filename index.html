@@ -1169,11 +1169,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-enter-v7 .ic-wrap svg{width:22px;height:22px;}
 .dash-enter-v7 .body-col{flex:1;min-width:0;}
 .dash-enter-v7 .body-col .lb{font-size:13px;font-weight:600;color:#6B7684;margin-bottom:3px;letter-spacing:-0.3px;}
+.dash-enter-v7 .body-col .lb-row{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:3px;}
+.dash-enter-v7 .body-col .lb-row .lb{margin-bottom:0;}
+.dash-enter-v7 .body-col .progress-tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;background:#EDF4FF;color:#0064FF;letter-spacing:-0.2px;flex-shrink:0;}
 .dash-enter-v7 .body-col .vl{font-size:22px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;letter-spacing:-0.7px;line-height:1.15;}
 .dash-enter-v7 .body-col .vl .won{font-size:14px;font-weight:700;color:#6B7684;margin-left:1px;}
 .dash-enter-v7 .body-col .sub{font-size:12px;color:#8B95A1;margin-top:3px;font-weight:500;letter-spacing:-0.2px;}
 .dash-enter-v7 .body-col .sub b{color:#0CAB6C;font-weight:700;}
 .dash-enter-v7 .body-col .sub b.red{color:#F04452;}
+.dash-enter-v7 .body-col .sub-row{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:3px;}
+.dash-enter-v7 .body-col .sub-row .sub{margin-top:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dash-enter-v7 .body-col .profit-rate{font-size:11.5px;font-weight:700;color:#0CAB6C;letter-spacing:-0.2px;flex-shrink:0;font-variant-numeric:tabular-nums;}
+.dash-enter-v7 .body-col .profit-rate.red{color:#F04452;}
+.dash-enter-v7 .body-col .profit-rate.good{color:#0CAB6C;font-weight:800;}
+.dash-enter-v7 .body-col .profit-rate.gray{color:#B0B8C1;}
 .dash-enter-v7 .arrow{font-size:24px;color:#B0B8C1;font-weight:300;line-height:1;flex-shrink:0;}
 /* 뒤로 가기 */
 .dash-back-row{display:flex;align-items:center;padding:8px 4px 16px;cursor:pointer;}
@@ -2439,9 +2448,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         <svg viewBox="0 0 24 24" fill="none" stroke="#3182F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       </div>
       <div class="body-col">
-        <div class="lb" id="dashHomeMonthLb">이번 달 매출</div>
+        <div class="lb-row">
+          <div class="lb" id="dashHomeMonthLb">이번 달 매출</div>
+          <div class="progress-tag" id="dashHomeMonthProgress" style="display:none;">진행 -</div>
+        </div>
         <div class="vl"><span id="dashHomeMonthSale">0</span><span class="won">원</span></div>
-        <div class="sub" id="dashHomeMonthSub">-</div>
+        <div class="sub-row">
+          <span class="sub" id="dashHomeMonthSub">-</span>
+          <span class="profit-rate" id="dashHomeMonthProfitRate" style="display:none;">-</span>
+        </div>
       </div>
       <div class="arrow">›</div>
     </div>
@@ -10202,15 +10217,38 @@ async function loadDashboard(force){
       const _mLb=document.getElementById('dashHomeMonthLb');
       const _mSale=document.getElementById('dashHomeMonthSale');
       const _mSub=document.getElementById('dashHomeMonthSub');
+      const _mProg=document.getElementById('dashHomeMonthProgress');
+      const _mProfitRate=document.getElementById('dashHomeMonthProfitRate');
       if(_mSale){
         if(_mLb) _mLb.innerText=isCurMonth?'이번 달 매출':`${mo}월 매출`;
         _mSale.innerText=fmt(totalRevenue||0);
+        const _profitV=(totalRevenue||0)-(totalCost||0);
         if(_mSub){
-          const _profitV=(totalRevenue||0)-(totalCost||0);
           const _sign=_profitV>=0?'+':'-';
-          const _profitHtml=`순수익 <b${_profitV<0?' class="red"':''}>${_sign}${fmt(Math.abs(_profitV))}원</b>`;
-          const _prog=isCurMonth?` · 진행 ${Math.round(passedDays/lastDay*100)}%`:'';
-          _mSub.innerHTML=_profitHtml+_prog;
+          _mSub.innerHTML=`순수익 <b${_profitV<0?' class="red"':''}>${_sign}${fmt(Math.abs(_profitV))}원</b>`;
+        }
+        // 진행률 → 라벨 우측 배지 (현재월일 때만)
+        if(_mProg){
+          if(isCurMonth){
+            _mProg.style.display='';
+            _mProg.innerText=`진행 ${Math.round(passedDays/lastDay*100)}%`;
+          } else {
+            _mProg.style.display='none';
+          }
+        }
+        // 수익률 (매출 대비) → 순수익 우측
+        if(_mProfitRate){
+          if((totalRevenue||0)>0){
+            const _rate=(_profitV/totalRevenue*100);
+            const _rsign=_rate>=0?'+':'';
+            _mProfitRate.innerText=`수익률 ${_rsign}${_rate.toFixed(1)}%`;
+            _mProfitRate.classList.remove('red','good','gray');
+            if(_rate<0) _mProfitRate.classList.add('red');
+            else if(_rate>=15) _mProfitRate.classList.add('good');
+            _mProfitRate.style.display='';
+          } else {
+            _mProfitRate.style.display='none';
+          }
         }
       }
     } catch(e){ console.warn('[dashHomeMonth]', e.message); }
