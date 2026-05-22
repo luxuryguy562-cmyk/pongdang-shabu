@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>홈화면 v7 B안 — 풀 퀄리티</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<style>
+  :root{
+    --blue:#3182F6;
+    --blue-strong:#0064FF;
+    --blue-light:#EDF4FF;
+    --green:#0CAB6C;
+    --red:#F04452;
+    --orange:#F5A11E;
+    --bg:#F4F5F7;
+    --card:#FFFFFF;
+    --text-1:#191F28;   /* 메인 숫자 */
+    --text-2:#333D4B;   /* 부제·라벨 강조 */
+    --text-3:#6B7684;   /* 본문 */
+    --text-4:#8B95A1;   /* 부제 */
+    --text-5:#B0B8C1;   /* 흐림 */
+    --line:#F2F4F6;
+    --line-2:#E5E8EB;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;}
+  html,body{margin:0;padding:0;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;background:#DDE1E6;color:var(--text-1);font-size:15px;letter-spacing:-0.2px;}
+  .page{max-width:430px;margin:0 auto;background:var(--bg);min-height:100vh;position:relative;}
+
+  /* 상단 미니 가이드 (다음 작업 위해 — 실제 앱엔 없음) */
+  .preview-hint{position:fixed;top:0;left:50%;transform:translateX(-50%);background:#191F28;color:#fff;font-size:11px;font-weight:600;padding:6px 14px;border-radius:0 0 12px 12px;z-index:99;letter-spacing:-0.2px;}
+
+  /* 헤더 */
+  .topbar{padding:18px 20px 8px;display:flex;justify-content:space-between;align-items:center;background:var(--bg);}
+  .topbar .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px;color:var(--text-1);letter-spacing:-0.6px;}
+  .topbar .brand .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-strong) 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900;box-shadow:0 4px 10px rgba(49,130,246,0.25);}
+  .topbar .store{font-size:12px;font-weight:700;color:var(--text-3);background:var(--card);padding:7px 12px;border-radius:10px;display:flex;align-items:center;gap:4px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+
+  /* 본문 */
+  .body{padding:14px 20px 100px;}
+
+  /* 인사 헤더 */
+  .hello{margin:8px 0 18px;}
+  .hello h1{font-size:22px;font-weight:800;color:var(--text-1);margin:0 0 4px;letter-spacing:-0.7px;line-height:1.25;}
+  .hello p{font-size:13px;color:var(--text-4);margin:0;font-weight:500;letter-spacing:-0.3px;}
+
+  /* 오늘 매출 풀카드 — 최상단 1순위 */
+  .today-card{
+    background:linear-gradient(150deg, #FFFFFF 0%, #FBFCFE 100%);
+    border-radius:20px;
+    padding:22px 22px 18px;
+    margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(20,40,80,0.06), 0 1px 3px rgba(20,40,80,0.04);
+    cursor:pointer;
+    transition:transform .2s cubic-bezier(.2,.8,.4,1);
+    position:relative;
+  }
+  .today-card:active{transform:scale(.985);}
+  .today-card .tc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .today-card .tc-label{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700;color:var(--text-2);letter-spacing:-0.3px;}
+  .today-card .tc-label .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);position:relative;}
+  .today-card .tc-label .live-dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;background:var(--green);opacity:.25;animation:pulse 2s infinite;}
+  @keyframes pulse{0%{transform:scale(1);opacity:.3;}70%{transform:scale(2);opacity:0;}100%{opacity:0;}}
+  .today-card .tc-arrow{font-size:22px;color:var(--text-5);font-weight:300;line-height:1;}
+  .today-card .tc-amt{font-size:36px;font-weight:800;color:var(--text-1);letter-spacing:-1.4px;font-variant-numeric:tabular-nums;line-height:1.1;}
+  .today-card .tc-amt .won{font-size:22px;font-weight:700;color:var(--text-3);margin-left:2px;letter-spacing:-0.5px;}
+  .today-card .tc-time{font-size:12px;color:var(--text-4);margin-top:6px;font-weight:500;letter-spacing:-0.2px;}
+  .today-card .tc-pe{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .today-card .tc-pe-cell{display:flex;flex-direction:column;gap:4px;}
+  .today-card .tc-pe-cell .pe-lb{font-size:12px;color:var(--text-4);font-weight:600;letter-spacing:-0.2px;display:flex;align-items:center;gap:5px;}
+  .today-card .tc-pe-cell .pe-lb .dot{width:6px;height:6px;border-radius:50%;}
+  .today-card .tc-pe-cell .pe-lb .dot.red{background:var(--red);}
+  .today-card .tc-pe-cell .pe-lb .dot.green{background:var(--green);}
+  .today-card .tc-pe-cell .pe-vl{font-size:17px;font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
+  .today-card .tc-pe-cell .pe-vl.red{color:var(--red);}
+  .today-card .tc-pe-cell .pe-vl.green{color:var(--green);}
+  .today-card .tc-act{margin-top:16px;display:flex;gap:8px;}
+  .today-card .tc-act .btn{flex:1;padding:13px;font-size:14px;font-weight:700;border:0;border-radius:12px;cursor:pointer;letter-spacing:-0.3px;transition:transform .15s;}
+  .today-card .tc-act .btn:active{transform:scale(.97);}
+  .today-card .tc-act .btn-pri{background:var(--blue);color:#fff;}
+  .today-card .tc-act .btn-sec{background:var(--line);color:var(--text-2);}
+
+  /* 진입 박스 (이번 달 매출 / 예비비 / 기타매출) */
+  .enter{
+    background:var(--card);
+    border-radius:18px;
+    padding:18px 20px;
+    margin-bottom:10px;
+    box-shadow:0 2px 8px rgba(20,40,80,0.04), 0 1px 2px rgba(20,40,80,0.03);
+    display:flex;
+    align-items:center;
+    gap:14px;
+    cursor:pointer;
+    transition:transform .2s cubic-bezier(.2,.8,.4,1);
+  }
+  .enter:active{transform:scale(.985);}
+  .enter .ic-wrap{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;}
+  .enter .ic-wrap.blue{background:var(--blue-light);}
+  .enter .ic-wrap.green{background:#E4F7EE;}
+  .enter .ic-wrap.amber{background:#FFF6E0;}
+  .enter .ic-wrap svg{width:22px;height:22px;}
+  .enter .body-col{flex:1;min-width:0;}
+  .enter .body-col .lb{font-size:13px;font-weight:600;color:var(--text-3);margin-bottom:3px;letter-spacing:-0.3px;}
+  .enter .body-col .vl{font-size:22px;font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;letter-spacing:-0.7px;line-height:1.15;}
+  .enter .body-col .vl .won{font-size:14px;font-weight:700;color:var(--text-3);margin-left:1px;}
+  .enter .body-col .sub{font-size:12px;color:var(--text-4);margin-top:3px;font-weight:500;letter-spacing:-0.2px;}
+  .enter .body-col .sub b{color:var(--green);font-weight:700;}
+  .enter .body-col .sub b.red{color:var(--red);}
+  .enter .arrow{font-size:24px;color:var(--text-5);font-weight:300;line-height:1;flex-shrink:0;}
+
+  /* 뒤로 가기 */
+  .back-row{display:flex;align-items:center;padding:8px 4px 16px;cursor:pointer;}
+  .back-row .back-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text-2);font-weight:600;background:transparent;}
+  .back-row .back-ttl{font-size:17px;font-weight:800;color:var(--text-1);letter-spacing:-0.5px;margin-left:4px;}
+
+  /* 모드 토글 */
+  .mode-tabs{display:flex;gap:6px;background:#EBEDF0;padding:4px;border-radius:14px;margin-bottom:16px;}
+  .mode-tab{flex:1;padding:11px;font-size:13.5px;font-weight:700;border:0;background:transparent;border-radius:11px;cursor:pointer;color:var(--text-4);letter-spacing:-0.3px;transition:all .15s;}
+  .mode-tab.active{background:var(--card);color:var(--text-1);box-shadow:0 2px 6px rgba(0,0,0,0.08);}
+
+  /* 월 네비 */
+  .month-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+  .month-nav .navbtn{width:36px;height:36px;border-radius:10px;background:var(--card);border:1px solid var(--line-2);font-size:16px;font-weight:600;color:var(--text-3);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .month-nav .navbtn[disabled]{opacity:.35;cursor:default;}
+  .month-nav .month-label{flex:1;text-align:center;font-size:17px;font-weight:800;letter-spacing:-0.5px;color:var(--text-1);}
+
+  /* v6 카드 — 토스급으로 다듬음 */
+  .settle-card{
+    background:var(--card);
+    border-radius:20px;
+    padding:22px;
+    margin-bottom:12px;
+    box-shadow:0 4px 16px rgba(20,40,80,0.06), 0 1px 3px rgba(20,40,80,0.04);
+  }
+  .settle-card .sc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .settle-card .sc-ttl{font-size:14px;font-weight:700;color:var(--text-2);letter-spacing:-0.3px;}
+  .settle-card .sc-ttl b{color:var(--text-1);font-weight:800;}
+  .settle-card .sc-progress{font-size:11px;font-weight:800;padding:4px 9px;border-radius:8px;background:var(--blue-light);color:var(--blue-strong);letter-spacing:-0.2px;}
+  .settle-card .sc-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .settle-card .sc-cell .lb{font-size:12.5px;color:var(--text-4);font-weight:600;margin-bottom:5px;letter-spacing:-0.2px;display:flex;align-items:center;gap:5px;}
+  .settle-card .sc-cell .lb .dot{width:6px;height:6px;border-radius:50%;}
+  .settle-card .sc-cell .lb .dot.blue{background:var(--blue);}
+  .settle-card .sc-cell .lb .dot.green{background:var(--green);}
+  .settle-card .sc-cell .lb.est{color:var(--text-5);}
+  .settle-card .sc-cell .vl{font-size:22px;font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;letter-spacing:-0.7px;line-height:1.15;}
+  .settle-card .sc-cell .vl .won{font-size:14px;font-weight:700;color:var(--text-3);margin-left:1px;}
+  .settle-card .sc-cell .vl.est-vl{color:var(--text-4);font-weight:700;font-size:18px;}
+  .settle-card .sc-exp{padding:14px 16px;background:#FAFBFC;border-radius:14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .settle-card .sc-exp .lb{font-size:13px;color:var(--text-3);font-weight:700;display:flex;align-items:center;gap:6px;letter-spacing:-0.3px;}
+  .settle-card .sc-exp .lb .dot{width:6px;height:6px;border-radius:50%;background:var(--red);}
+  .settle-card .sc-exp .vl{font-size:18px;font-weight:800;color:var(--red);font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
+  .settle-card .sc-exp .vl .won{font-size:13px;font-weight:700;color:var(--text-3);}
+  .settle-card .sc-gantt{height:12px;border-radius:6px;background:var(--line);overflow:hidden;display:flex;margin-bottom:10px;}
+  .settle-card .sc-gantt .seg{height:100%;}
+  .settle-card .sc-cats{display:flex;justify-content:space-between;gap:8px;padding:14px 14px;background:#FAFBFC;border-radius:14px;}
+  .settle-card .sc-cats .cat{flex:1;text-align:center;}
+  .settle-card .sc-cats .cat .nm{font-size:11.5px;font-weight:600;color:var(--text-3);letter-spacing:-0.2px;margin-bottom:4px;}
+  .settle-card .sc-cats .cat .vl{font-size:14px;font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;letter-spacing:-0.4px;}
+  .settle-card .sc-cats .cat.warn .vl{color:var(--orange);}
+  .settle-card .sc-detail{margin-top:14px;width:100%;padding:13px;background:transparent;border:1px solid var(--line-2);border-radius:12px;font-size:13px;font-weight:700;color:var(--text-3);cursor:pointer;letter-spacing:-0.3px;}
+
+  /* 캘린더 placeholder */
+  .cal-ph{
+    background:var(--card);
+    border:1px dashed var(--line-2);
+    border-radius:18px;
+    padding:32px 18px;
+    text-align:center;
+    color:var(--text-4);
+    font-size:13px;
+    font-weight:600;
+    line-height:1.65;
+    margin-bottom:10px;
+    letter-spacing:-0.3px;
+  }
+  .cal-ph b{color:var(--text-2);font-weight:800;font-size:15px;display:block;margin-bottom:4px;}
+  .cal-ph small{font-size:11px;color:var(--text-5);display:block;margin-top:5px;font-weight:500;}
+
+  /* 진입 카드 (주별 카테고리 비교) */
+  .small-enter{
+    background:var(--card);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    cursor:pointer;
+    box-shadow:0 1px 3px rgba(20,40,80,0.04);
+  }
+  .small-enter .lcol{display:flex;align-items:center;gap:10px;}
+  .small-enter .ic{width:32px;height:32px;border-radius:10px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .small-enter .txt .ttl{font-size:14px;font-weight:700;color:var(--text-1);letter-spacing:-0.3px;}
+  .small-enter .txt .sub{font-size:11.5px;color:var(--text-4);margin-top:2px;font-weight:500;}
+  .small-enter .arrow{font-size:20px;color:var(--text-5);font-weight:300;}
+
+  /* ── 오늘 매출 상세 화면 ── */
+  .today-detail-head{
+    background:linear-gradient(150deg,#3182F6 0%, #0064FF 100%);
+    border-radius:24px;
+    padding:24px 22px 28px;
+    color:#fff;
+    margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(49,130,246,0.25);
+  }
+  .today-detail-head .lb{font-size:13px;font-weight:600;opacity:.88;display:flex;align-items:center;gap:6px;letter-spacing:-0.3px;margin-bottom:8px;}
+  .today-detail-head .lb .live-dot{width:7px;height:7px;border-radius:50%;background:#fff;}
+  .today-detail-head .amt{font-size:38px;font-weight:800;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.1;}
+  .today-detail-head .amt .won{font-size:22px;font-weight:700;opacity:.85;margin-left:2px;}
+  .today-detail-head .sub{font-size:12.5px;opacity:.78;margin-top:8px;font-weight:500;letter-spacing:-0.2px;}
+  .today-detail-head .pe-row{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.18);display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .today-detail-head .pe-row .cell .lb{font-size:11.5px;opacity:.85;font-weight:600;margin-bottom:3px;letter-spacing:-0.2px;}
+  .today-detail-head .pe-row .cell .vl{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.4px;color:#fff;}
+
+  /* 결제수단별 분해 */
+  .pm-card{
+    background:var(--card);
+    border-radius:18px;
+    padding:18px 20px;
+    margin-bottom:12px;
+    box-shadow:0 2px 8px rgba(20,40,80,0.04);
+  }
+  .pm-card .pm-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .pm-card .pm-ttl{font-size:14px;font-weight:800;color:var(--text-1);letter-spacing:-0.3px;}
+  .pm-card .pm-sub{font-size:11.5px;color:var(--text-4);font-weight:500;}
+  .pm-card .pm-bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;display:flex;margin-bottom:14px;}
+  .pm-card .pm-bar .seg{height:100%;}
+  .pm-card .pm-list{display:flex;flex-direction:column;gap:11px;}
+  .pm-card .pm-row{display:flex;justify-content:space-between;align-items:center;}
+  .pm-card .pm-row .lcol{display:flex;align-items:center;gap:9px;}
+  .pm-card .pm-row .dot{width:9px;height:9px;border-radius:50%;}
+  .pm-card .pm-row .nm{font-size:13.5px;color:var(--text-2);font-weight:600;letter-spacing:-0.3px;}
+  .pm-card .pm-row .cnt{font-size:11.5px;color:var(--text-4);margin-left:6px;font-weight:500;}
+  .pm-card .pm-row .vl{font-size:14px;font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+
+  /* 시간대별 매출 */
+  .hr-card{background:var(--card);border-radius:18px;padding:18px 20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(20,40,80,0.04);}
+  .hr-card .hr-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .hr-card .hr-ttl{font-size:14px;font-weight:800;color:var(--text-1);letter-spacing:-0.3px;}
+  .hr-card .hr-sub{font-size:11.5px;color:var(--text-4);font-weight:500;}
+  .hr-card .hr-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;align-items:end;height:96px;}
+  .hr-card .hr-bar{display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .hr-card .hr-bar .b{width:100%;background:linear-gradient(180deg,var(--blue) 0%,#7BB1FB 100%);border-radius:6px 6px 2px 2px;min-height:6px;}
+  .hr-card .hr-bar .t{font-size:9.5px;color:var(--text-4);font-weight:600;}
+  .hr-card .hr-bar.now .b{background:linear-gradient(180deg,#0064FF 0%,var(--blue) 100%);}
+  .hr-card .hr-bar.now .t{color:var(--blue-strong);font-weight:800;}
+
+  /* 입력 화면 (placeholder) */
+  .input-cta{
+    background:var(--card);
+    border-radius:18px;
+    padding:18px 20px;
+    margin-bottom:12px;
+    box-shadow:0 2px 8px rgba(20,40,80,0.04);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    cursor:pointer;
+  }
+  .input-cta .lcol{display:flex;align-items:center;gap:12px;}
+  .input-cta .ic{width:40px;height:40px;border-radius:12px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .input-cta .txt .ttl{font-size:14.5px;font-weight:800;color:var(--text-1);letter-spacing:-0.3px;}
+  .input-cta .txt .sub{font-size:12px;color:var(--text-4);margin-top:3px;font-weight:500;}
+  .input-cta .arrow{font-size:22px;color:var(--text-5);font-weight:300;}
+
+  /* 스테이지 */
+  .stage{display:none;}
+  .stage.active{display:block;}
+
+  /* 푸터 */
+  .footer{padding:30px 14px;text-align:center;color:var(--text-5);font-size:11px;line-height:1.6;font-weight:500;}
+
+  /* 미니 메뉴명 안내 (어디 화면인지) */
+  .floating-pill{position:sticky;top:8px;z-index:30;display:inline-flex;align-items:center;gap:5px;background:rgba(25,31,40,0.85);color:#fff;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:99px;backdrop-filter:blur(6px);letter-spacing:-0.2px;margin:0 auto 8px;}
+</style>
+</head>
+<body>
+
+<div class="preview-hint">📱 B안 풀 퀄리티 · 박스 탭 → 상세 · ‹ 뒤로</div>
+
+<div class="page">
+
+  <!-- ═════════ 1단계: 홈 ═════════ -->
+  <div class="stage active" data-stage="home">
+
+    <div class="topbar">
+      <div class="brand"><div class="logo">₩</div>캐쉬플로우</div>
+      <div class="store">퐁당샤브 가맹점 ›</div>
+    </div>
+
+    <div class="body">
+
+      <div class="hello">
+        <h1>안녕하세요, 사장님</h1>
+        <p>5월 22일 금요일 · 오후 4:30</p>
+      </div>
+
+      <!-- 오늘 매출 (탭하면 상세 화면) -->
+      <div class="today-card" data-go="today-detail">
+        <div class="tc-head">
+          <div class="tc-label"><span class="live-dot"></span> 오늘 매출 · 실시간</div>
+          <div class="tc-arrow">›</div>
+        </div>
+        <div class="tc-amt">3,220,000<span class="won">원</span></div>
+        <div class="tc-time">방금 갱신됨</div>
+        <div class="tc-pe">
+          <div class="tc-pe-cell">
+            <div class="pe-lb"><span class="dot red"></span> 오늘 지출</div>
+            <div class="pe-vl red">-1,200,000원</div>
+          </div>
+          <div class="tc-pe-cell">
+            <div class="pe-lb"><span class="dot green"></span> 오늘 순수익</div>
+            <div class="pe-vl green">+1,820,000원</div>
+          </div>
+        </div>
+        <div class="tc-act" onclick="event.stopPropagation();">
+          <button class="btn btn-pri">📝 매출 입력</button>
+          <button class="btn btn-sec">🏖 휴무로</button>
+        </div>
+      </div>
+
+      <!-- 이번 달 매출 -->
+      <div class="enter" data-go="settle">
+        <div class="ic-wrap blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#3182F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="body-col">
+          <div class="lb">이번 달 매출</div>
+          <div class="vl">5,554,300<span class="won">원</span></div>
+          <div class="sub">순수익 <b>+1,820,000원</b> · 진행 71%</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+
+      <!-- 예비비 -->
+      <div class="enter" data-go="reserve">
+        <div class="ic-wrap green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0CAB6C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M2 11h20"/><path d="M6 16h2"/></svg>
+        </div>
+        <div class="body-col">
+          <div class="lb">예비비 잔고</div>
+          <div class="vl">1,200,000<span class="won">원</span></div>
+          <div class="sub">월세·세금 대비 적립</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+
+      <!-- 기타매출 -->
+      <div class="enter" data-go="extra">
+        <div class="ic-wrap amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#F5A11E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.6 2.4 7.4L12 16.8 5.8 21.4l2.4-7.4L2 9.4h7.6z"/></svg>
+        </div>
+        <div class="body-col">
+          <div class="lb">기타매출 누적</div>
+          <div class="vl">80,000<span class="won">원</span></div>
+          <div class="sub">배달앱 적립금 등</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═════════ 2단계: 오늘 매출 상세 ═════════ -->
+  <div class="stage" data-stage="today-detail">
+    <div class="body" style="padding-top:14px;">
+
+      <div class="back-row" data-go="home">
+        <div class="back-btn">‹</div>
+        <div class="back-ttl">오늘 매출</div>
+      </div>
+
+      <!-- 상단 컬러 카드 -->
+      <div class="today-detail-head">
+        <div class="lb"><span class="live-dot"></span> 5월 22일 · 실시간</div>
+        <div class="amt">3,220,000<span class="won">원</span></div>
+        <div class="sub">방금 갱신됨 · 22건 결제</div>
+        <div class="pe-row">
+          <div class="cell">
+            <div class="lb">지출</div>
+            <div class="vl">-1,200,000원</div>
+          </div>
+          <div class="cell">
+            <div class="lb">순수익</div>
+            <div class="vl">+1,820,000원</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 결제수단별 -->
+      <div class="pm-card">
+        <div class="pm-head">
+          <div class="pm-ttl">결제수단별</div>
+          <div class="pm-sub">22건 · 합 3,220,000원</div>
+        </div>
+        <div class="pm-bar">
+          <div class="seg" style="width:55%;background:var(--blue);"></div>
+          <div class="seg" style="width:25%;background:var(--green);"></div>
+          <div class="seg" style="width:12%;background:var(--orange);"></div>
+          <div class="seg" style="width:8%;background:var(--text-4);"></div>
+        </div>
+        <div class="pm-list">
+          <div class="pm-row">
+            <div class="lcol"><span class="dot" style="background:var(--blue);"></span><span class="nm">카드 결제</span><span class="cnt">12건</span></div>
+            <div class="vl">1,771,000원</div>
+          </div>
+          <div class="pm-row">
+            <div class="lcol"><span class="dot" style="background:var(--green);"></span><span class="nm">현금</span><span class="cnt">5건</span></div>
+            <div class="vl">805,000원</div>
+          </div>
+          <div class="pm-row">
+            <div class="lcol"><span class="dot" style="background:var(--orange);"></span><span class="nm">배달앱 (배민·쿠팡이츠)</span><span class="cnt">4건</span></div>
+            <div class="vl">386,400원</div>
+          </div>
+          <div class="pm-row">
+            <div class="lcol"><span class="dot" style="background:var(--text-4);"></span><span class="nm">기타 (포인트·상품권)</span><span class="cnt">1건</span></div>
+            <div class="vl">257,600원</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 시간대별 -->
+      <div class="hr-card">
+        <div class="hr-head">
+          <div class="hr-ttl">시간대별 매출</div>
+          <div class="hr-sub">11~17시 누적</div>
+        </div>
+        <div class="hr-grid">
+          <div class="hr-bar"><div class="b" style="height:30%;"></div><div class="t">11시</div></div>
+          <div class="hr-bar"><div class="b" style="height:75%;"></div><div class="t">12시</div></div>
+          <div class="hr-bar"><div class="b" style="height:90%;"></div><div class="t">13시</div></div>
+          <div class="hr-bar"><div class="b" style="height:40%;"></div><div class="t">14시</div></div>
+          <div class="hr-bar"><div class="b" style="height:25%;"></div><div class="t">15시</div></div>
+          <div class="hr-bar"><div class="b" style="height:35%;"></div><div class="t">16시</div></div>
+          <div class="hr-bar now"><div class="b" style="height:18%;"></div><div class="t">17시</div></div>
+        </div>
+      </div>
+
+      <!-- 매출 입력 CTA -->
+      <div class="input-cta">
+        <div class="lcol">
+          <div class="ic">📝</div>
+          <div class="txt">
+            <div class="ttl">매출 입력 / 수정</div>
+            <div class="sub">POS 안 잡힌 매출 직접 입력</div>
+          </div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═════════ 2단계: 이번 달 매출 ═════════ -->
+  <div class="stage" data-stage="settle">
+    <div class="body" style="padding-top:14px;">
+
+      <div class="back-row" data-go="home">
+        <div class="back-btn">‹</div>
+        <div class="back-ttl">이번 달 매출</div>
+      </div>
+
+      <div class="mode-tabs">
+        <button class="mode-tab active">월 보기</button>
+        <button class="mode-tab">주차 보기</button>
+      </div>
+
+      <div class="month-nav">
+        <button class="navbtn">‹</button>
+        <span class="month-label">2026년 5월</span>
+        <button class="navbtn" disabled>›</button>
+      </div>
+
+      <!-- 정산 카드 (v6 → 토스급으로 다듬음) -->
+      <div class="settle-card">
+        <div class="sc-head">
+          <div class="sc-ttl"><b>5월 진행</b> · 22일 / 31일</div>
+          <div class="sc-progress">71%</div>
+        </div>
+        <div class="sc-row">
+          <div class="sc-cell">
+            <div class="lb"><span class="dot blue"></span> 매출</div>
+            <div class="vl">5,554,300<span class="won">원</span></div>
+          </div>
+          <div class="sc-cell">
+            <div class="lb est">예상 마감</div>
+            <div class="vl est-vl">7,820,000<span class="won">원</span></div>
+          </div>
+        </div>
+        <div class="sc-row">
+          <div class="sc-cell">
+            <div class="lb"><span class="dot green"></span> 순수익</div>
+            <div class="vl">1,820,000<span class="won">원</span></div>
+          </div>
+          <div class="sc-cell">
+            <div class="lb est">예상 마감</div>
+            <div class="vl est-vl">2,560,000<span class="won">원</span></div>
+          </div>
+        </div>
+        <div class="sc-exp">
+          <div class="lb"><span class="dot"></span> 지출 누적</div>
+          <div class="vl">3,734,300<span class="won">원</span></div>
+        </div>
+        <div class="sc-gantt">
+          <div class="seg" style="width:35%;background:#EF4444;"></div>
+          <div class="seg" style="width:25%;background:#F59E0B;"></div>
+          <div class="seg" style="width:15%;background:#3B82F6;"></div>
+          <div class="seg" style="width:25%;background:#10B981;"></div>
+        </div>
+        <div class="sc-cats">
+          <div class="cat warn">
+            <div class="nm">🥩 식자재</div>
+            <div class="vl">35.2%</div>
+          </div>
+          <div class="cat">
+            <div class="nm">👥 인건비</div>
+            <div class="vl">25.1%</div>
+          </div>
+          <div class="cat">
+            <div class="nm">⚡ 공과금</div>
+            <div class="vl">15.4%</div>
+          </div>
+        </div>
+        <button class="sc-detail">상세 보기 (전체 카테고리 · 전월 대비)</button>
+      </div>
+
+      <!-- 캘린더 placeholder -->
+      <div class="cal-ph">
+        <b>월 캘린더 31칸</b>
+        실제 앱에선 매출+순수익 셀이 표시됩니다
+        <small>필터 칩 · 셀 탭 → 일별 시트 — 그대로 살림</small>
+      </div>
+
+      <!-- 주별 카테고리 비교 진입 -->
+      <div class="small-enter">
+        <div class="lcol">
+          <div class="ic">📊</div>
+          <div class="txt">
+            <div class="ttl">주별 카테고리 비교</div>
+            <div class="sub">식자재·인건비 비율 한눈에</div>
+          </div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═════════ 2단계: 예비비 ═════════ -->
+  <div class="stage" data-stage="reserve">
+    <div class="body" style="padding-top:14px;">
+      <div class="back-row" data-go="home">
+        <div class="back-btn">‹</div>
+        <div class="back-ttl">예비비</div>
+      </div>
+      <div class="cal-ph" style="padding:50px 18px;">
+        <b>예비비 화면</b>
+        기존 예비비 탭으로 이동
+        <small>변경 없음 — 진입로만 추가</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ 2단계: 기타매출 ═════════ -->
+  <div class="stage" data-stage="extra">
+    <div class="body" style="padding-top:14px;">
+      <div class="back-row" data-go="home">
+        <div class="back-btn">‹</div>
+        <div class="back-ttl">기타매출 누적</div>
+      </div>
+      <div class="cal-ph" style="padding:50px 18px;">
+        <b>기타매출 누적</b>
+        배달앱 적립금 · 외환 등 항목별 누적
+        <small>현재 dashExtraRevenueCard 분리 이동</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    홈화면 v7 B안 풀 퀄리티 · 2026-05-22<br>
+    실제 코드는 사장님 OK 후 작업
+  </div>
+
+</div>
+
+<script>
+  function goStage(stage){
+    document.querySelectorAll('.stage').forEach(s=>{
+      s.classList.toggle('active', s.dataset.stage===stage);
+    });
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+  document.addEventListener('click', (e)=>{
+    const el = e.target.closest('[data-go]');
+    if(!el) return;
+    goStage(el.dataset.go);
+  });
+</script>
+
+</body>
+</html>
