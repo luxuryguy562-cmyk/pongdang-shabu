@@ -1050,10 +1050,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 4줄: 간트 두 줄 */
 .v17-card-v6 .v6-gantt{margin-bottom:12px;}
 .v17-card-v6 .v6-gantt .gantt-lb{font-size:10px;font-weight:700;color:var(--gray-500);margin-bottom:5px;display:flex;justify-content:space-between;}
-.v17-card-v6 .v6-gantt .gantt-bar{display:flex;height:14px;border-radius:5px;overflow:hidden;background:var(--gray-100);margin-bottom:6px;}
-.v17-card-v6 .v6-gantt .gantt-bar > span{display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;letter-spacing:-0.3px;}
-.v17-card-v6 .v6-gantt .gantt-bar.profit-bar{background:var(--gray-50);}
-.v17-card-v6 .v6-gantt .gantt-bar > span.over{background-image:repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0, rgba(0,0,0,0.18) 3px, transparent 3px, transparent 7px);}
+.v17-card-v6 .v6-gantt .v6-bar{position:static;display:flex;height:14px;border-radius:5px;overflow:hidden;background:var(--gray-100);margin-bottom:6px;width:100%;}
+.v17-card-v6 .v6-gantt .v6-bar > span{display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;letter-spacing:-0.3px;height:100%;position:static;}
+.v17-card-v6 .v6-gantt .v6-bar.profit-bar{background:var(--gray-50);}
+.v17-card-v6 .v6-gantt .v6-bar > span.over{background-image:repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0, rgba(0,0,0,0.18) 3px, transparent 3px, transparent 7px);}
 /* 5줄: 상위 카테고리 3개 가로 한 줄 */
 .v17-card-v6 .v6-cats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px;}
 .v17-card-v6 .v6-cat-chip{padding:8px 6px;border-radius:10px;background:var(--gray-50);display:flex;flex-direction:column;gap:2px;min-width:0;}
@@ -10312,9 +10312,9 @@ function v17RenderMonthCard(){
       </div>
       <div class="v6-gantt">
         <div class="gantt-lb"><span>지출 분포</span><span style="color:#EF4444;">${expPctNum}%</span></div>
-        <div class="gantt-bar">${expStackHtml || '<span style="width:100%;color:var(--gray-400);background:transparent;">지출 데이터 없음</span>'}</div>
+        <div class="v6-bar">${expStackHtml || '<span style="width:100%;color:var(--gray-400);background:transparent;">지출 데이터 없음</span>'}</div>
         <div class="gantt-lb"><span>매출 대비 순수익</span><span style="color:${profit>=0?'#10B981':'#EF4444'};">${profit>=0?'+':''}${profitPctSale.toFixed(0)}%</span></div>
-        <div class="gantt-bar profit-bar">${profitBarHtml}</div>
+        <div class="v6-bar profit-bar">${profitBarHtml}</div>
       </div>
       <div class="v6-cats-row">${catsRowHtml || '<div style="grid-column:1/-1;text-align:center;font-size:11px;color:var(--gray-400);padding:6px;">지출 카테고리 없음</div>'}</div>
       ${sortedCats.length>0 ? `<button class="v17-detail-btn" data-rest-toggle="mth">상세 보기 <span class="arr">▾</span></button>` : ''}
@@ -10646,9 +10646,9 @@ function v17RenderWeekCards(){
         </div>
         <div class="v6-gantt">
           <div class="gantt-lb"><span>지출 분포</span><span style="color:#EF4444;">${expPctNum}%</span></div>
-          <div class="gantt-bar">${expStackHtmlWk || '<span style="width:100%;color:var(--gray-400);background:transparent;">지출 데이터 없음</span>'}</div>
+          <div class="v6-bar">${expStackHtmlWk || '<span style="width:100%;color:var(--gray-400);background:transparent;">지출 데이터 없음</span>'}</div>
           <div class="gantt-lb"><span>매출 대비 순수익</span><span style="color:${profit>=0?'#10B981':'#EF4444'};">${profit>=0?'+':''}${profitPctSaleWk.toFixed(0)}%</span></div>
-          <div class="gantt-bar profit-bar">${profitBarHtmlWk}</div>
+          <div class="v6-bar profit-bar">${profitBarHtmlWk}</div>
         </div>
         <div class="v6-cats-row">${catsRowHtmlWk || '<div style="grid-column:1/-1;text-align:center;font-size:11px;color:var(--gray-400);padding:6px;">지출 카테고리 없음</div>'}</div>
         ${wkSorted.length>0 ? `<button class="v17-detail-btn" data-rest-toggle="w${w.wi}">상세 보기 <span class="arr">▾</span></button>` : ''}
