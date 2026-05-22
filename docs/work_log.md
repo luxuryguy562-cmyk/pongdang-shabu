@@ -36,12 +36,36 @@
 - grep `!data || data.holiday` 잔재 0건
 - v17MarkClosed/Open 함수 + data-action 매칭 OK
 
-### 잔여 (다음 push)
-- **Phase 3**: V17_CAT_NAME 5개 하드코딩 → expense_categories 동적 매핑 (사장님 매장 활성 카테고리 전체 노출, 헌법 1-6 갈아엎기)
-- **Phase 4**: 카테고리 관리 화면에 threshold 입력 칸 추가 (store_settings.expense_thresholds JSONB 이미 있음)
-- **Phase 5 (DML 게이트)**: 사장님 "실행 승인" 4글자 받으면:
-  - 권채현 휴무 6행 DELETE (5/26~5/31 옛 PR #192 잔재)
-  - vendors 4개 (농협/다이소/쿠팡/탑마트) hard delete
+### Phase 3-A: 월 네비 미래 차단
+- moveDashMonth (라인 8933) → 미래 월 이동 시 토스트 + return
+- 사장님 호소: "네비가 5월인데 아직 오지않은 6월 7월로 네비가 가는것도 이상"
+
+### Phase 3-B/C: v17 5개 카테고리 하드코딩 → 동적 매핑 (헌법 1-6 갈아엎기)
+- **옛 root cause**: 라인 9305 `_dailySrcs=['vendor_orders','receipts','attendance']` 첫 매치만 잡음 → 사장님 매장 주류/음료(vendor_orders) + 마케팅/세금/기타(manual) 누락
+- **갈아엎기 6곳**:
+  1. catNames/catColors 빌더 (9305) → 활성 expense 부모 카테고리 전체 등록
+  2. vendor_orders 처리 (9329) → vendor.category_id로 정확 분리 (주류/음료/식자재)
+  3. receipts 처리 (9334) → receipts.category_id로 정확 분리
+  4. setV17Context (9960) → ctx.cats 동적 배열 + ctx.DAYS[key].byCat 박기
+  5. v17SumMonth (9844) → byCat 합계 추가
+  6. v17RenderMonthCard, v17RenderCalendar, v17RenderWeekCards, v17OpenDailySheet, v17OpenFilterSheet → 모두 ctx.cats 순회로 갈아엎기
+- 옛 V17_THRESH/V17_CAT_COLOR/V17_CAT_NAME 상수 제거. 색상은 expense_categories.color → V17_COLOR_PALETTE 12색 fallback
+- 색상 12색 팔레트 (V17_COLOR_PALETTE) + business_rules 기본 threshold (V17_DEFAULT_THRESH)
+
+### Phase 4: 카테고리 관리 threshold 입력 칸
+- expCatSheet HTML에 매출 대비 경고 기준(%) 입력란 추가 (지출 부모만 표시)
+- _loadCatThreshold 함수 + saveExpCat에서 store_settings.expense_thresholds JSONB upsert
+- 사장님이 매장별 카테고리별로 직접 수정 가능
+- 기본값: 식자재 30 / 인건비 25 / 공과금·고정비 15 / 비품 5 / 그 외 10
+
+### 검증
+- node --check 통과 (1 script, 717kb)
+- V17_THRESH/COLOR/NAME 잔재 0건 ✅
+- ctx.cats 14회, byCat 32회, expense_thresholds 9회 등장 ✅
+
+### Phase 5 (DML 게이트 — 사장님 "실행 승인" 4글자 대기)
+- 권채현 휴무 6행 DELETE (5/26~5/31 옛 PR #192 잔재)
+- vendors 4개 (농협/다이소/쿠팡/탑마트) hard delete
 
 ---
 

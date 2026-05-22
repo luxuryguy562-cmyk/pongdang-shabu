@@ -3808,6 +3808,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
   <!-- 매출/제외 타입일 때 표시되는 안내 -->
   <div id="expCatTypeHint" style="display:none;padding:10px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:14px;font-size:12px;color:var(--gray-600);line-height:1.6;"></div>
+  <!-- 매출 대비 경고 기준 (지출 타입만) — 2026-05-22 신설 -->
+  <div id="expCatThresholdWrap" style="display:none;margin-bottom:14px;">
+    <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 6px;">⚠️ 매출 대비 경고 기준 (%)</p>
+    <input id="expCatThresholdInput" type="number" min="0" max="100" step="0.5" class="input-field" placeholder="예: 30" style="width:100%;">
+    <p style="font-size:11px;color:var(--gray-500);margin:4px 2px 0;line-height:1.4;">이 비율 초과하면 정산현황 탭에서 ⚠️ 빨강 표시. 0이면 경고 없음. 비워두면 기본값(식자재 30 / 인건비 25 / 공과금·고정비 15 / 비품 5).</p>
+  </div>
   <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">차트 색상</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;" id="colorPicker">
     <div data-action="selectExpCatColor|#0050FF|this" style="width:32px;height:32px;border-radius:50%;background:#0050FF;cursor:pointer;border:3px solid transparent;" data-color="#0050FF"></div>
@@ -8932,6 +8938,13 @@ async function onCardDateChange(el){const v=el.value;if(v) await loadSettleCard(
 // ══════════════════════════════════════════
 function moveDashMonth(dir){
   const d=new Date(dashMonthStr+'-01');d.setMonth(d.getMonth()+dir);
+  // 미래 월 차단 (오늘이 속한 월까지만 이동 가능)
+  if(dir>0){
+    const now=new Date();
+    const curYm=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const newYm=d.toISOString().slice(0,7);
+    if(newYm>curYm){ toast('아직 오지 않은 달이에요','info'); return; }
+  }
   dashMonthStr=d.toISOString().slice(0,7);
   loadDashboard();
 }
@@ -9293,41 +9306,64 @@ async function loadDashboard(force){
     const dailyCatMap={}; // { '15': { '식자재': 520000, '인건비': 380000, ... } }
     const dailyExpTotal={}; // { '15': 1200000 }
 
-    // ── 일별정산 카테고리 (DB 동적 생성) ──
-    // 2026-05-14: fixed_costs는 카테고리별(고정비/공과금) 분리 처리로 _dailySrcs에서 제외
-    const _dailySrcs=['vendor_orders','receipts','attendance'];
+    // ── 일별정산 카테고리 (DB 동적 생성) — 2026-05-22 갈아엎기 ──
+    // 옛: 옛 _dailySrcs 3개 첫 매치만 잡음 → 주류/음료/마케팅/세금/기타 누락
+    // 새: 활성 expense 부모 카테고리 전부 등록 (헌법 1-6 정당한 갈아엎기)
+    const _COLOR_PALETTE=['#F59E0B','#8B5CF6','#6B7684','#10B981','#EC4899','#3B82F6','#EF4444','#84CC16','#F97316','#06B6D4','#A855F7','#14B8A6'];
+    const _activeExpCats=(expCategories||[])
+      .filter(c=>c.is_active&&c.category_type==='expense'&&!c.parent_id)
+      .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
     const catNames=[],catColors={},shortNames={},srcToCat={};
-    _dailySrcs.forEach(src=>{
-      const cat=expCategories.find(c=>c.data_source===src&&!c.parent_id)||expCategories.find(c=>c.data_source===src);
-      const nm=cat?cat.name:src;
-      catNames.push(nm);catColors[nm]=cat?.color||'#4E5968';srcToCat[src]=nm;
-      if(nm.includes('/'))shortNames[nm]=nm.split('/')[0];
-      else if(nm.includes('('))shortNames[nm]=nm.split('(')[0];
-      else shortNames[nm]=nm.length>4?nm.slice(0,3):nm;
-    });
-    // fixed_costs 카테고리 (고정비/공과금 분리)
-    const fixedCats=expCategories.filter(c=>c.data_source==='fixed_costs'&&!c.parent_id).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-    fixedCats.forEach(cat=>{
+    _activeExpCats.forEach((cat,i)=>{
       catNames.push(cat.name);
-      catColors[cat.name]=cat.color||'#FF9500';
-      shortNames[cat.name]=cat.name.length>4?cat.name.slice(0,3):cat.name;
+      catColors[cat.name]=cat.color||_COLOR_PALETTE[i%_COLOR_PALETTE.length];
+      if(cat.name.includes('/'))shortNames[cat.name]=cat.name.split('/')[0];
+      else if(cat.name.includes('('))shortNames[cat.name]=cat.name.split('(')[0];
+      else shortNames[cat.name]=cat.name.length>4?cat.name.slice(0,3):cat.name;
+      // 첫 매치만 srcToCat에 박음 (옛 호환용 — vendor_orders는 vendor.category_id로 정확 분리하므로 fallback)
+      if(cat.data_source && !srcToCat[cat.data_source]) srcToCat[cat.data_source]=cat.name;
     });
-    srcToCat['fixed_costs']=fixedCats[0]?.name||'고정비'; // 호환용 (단일 키 참조 코드 대비)
-    catNames.push('로열티/수수료');catColors['로열티/수수료']='#EF4444';shortNames['로열티/수수료']='로열티';
+    // fixed_costs source 카테고리 목록 (옛 호환: 고정비 + 공과금 둘 다)
+    const fixedCats=_activeExpCats.filter(c=>c.data_source==='fixed_costs');
+    // 로열티/수수료 가상 카테고리 (expense_categories에 없음)
+    catNames.push('로열티/수수료');
+    catColors['로열티/수수료']='#EF4444';
+    shortNames['로열티/수수료']='로열티';
+    // vendor_id → 카테고리명 매핑 (vendors.category_id 기반 — 주류/음료 정확 분리)
+    const _vendorIdToCatName={};
+    (vendors||[]).forEach(v=>{
+      if(!v.category_id) return;
+      const cat=(expCategories||[]).find(c=>c.id===v.category_id);
+      if(!cat) return;
+      // 자식이면 부모 카테고리명 (식자재>육류 → '식자재')
+      const parent=cat.parent_id ? (expCategories||[]).find(c=>c.id===cat.parent_id) : cat;
+      _vendorIdToCatName[v.id]=parent?.name||cat.name;
+    });
+    // category_id → 카테고리명 매핑 (receipts.category_id 기반)
+    const _catIdToName={};
+    (expCategories||[]).forEach(c=>{
+      const parent=c.parent_id?(expCategories||[]).find(p=>p.id===c.parent_id):c;
+      _catIdToName[c.id]=parent?.name||c.name;
+    });
 
     // 일별 카테고리 데이터는 위 통합 Promise.all에서 이미 받음 (voRes2/rcRes2/attRes2/prevVoRes/prevRcRes/prevAttRes 재사용)
     const voDaily=voRes2.data,rcDaily=rcRes2.data,attDaily=attRes2.data;
     // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
     const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+    // 2026-05-22: vendor.category_id 기반 정확 분리 (주류/음료/식자재 따로)
     (voDaily||[]).forEach(v=>{
       const d=v.order_date?.slice(8);if(!d)return;
+      const k = (v.vendors?.category_id && _catIdToName[v.vendors.category_id])
+        || srcToCat['vendor_orders'] || '식자재';
       if(!dailyCatMap[d])dailyCatMap[d]={};
-      const k=srcToCat['vendor_orders'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(v.amount||0);
+      dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(v.amount||0);
     });
     (rcDaily||[]).forEach(r=>{
       const d=r.receipt_date?.slice(8);if(!d)return;
+      const k = (r.category_id && _catIdToName[r.category_id])
+        || srcToCat['receipts'] || '비품';
       if(!dailyCatMap[d])dailyCatMap[d]={};
-      const k=srcToCat['receipts'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
+      dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
     });
     (attDaily||[]).forEach(a=>{
       if(monthlyEmpIds.has(a.employee_id)) return; // 월급제는 별도 분배
@@ -9638,7 +9674,16 @@ async function loadDashboard(force){
         const royalty = Math.round(sale * royaltyRate);
         const exp = vendor + att + receipt + fixed + royalty;
         if(sale > 0 || exp > 0){
-          prevDailyMap[k] = {sale, vendor, att, fixed, receipt, royalty, exp, profit: sale-exp};
+          // 2026-05-22 byCat 추가 (동적 카테고리 비교용)
+          const byCat = {
+            '식자재': vendor,
+            '인건비': att,
+            '비품': receipt,
+            '고정비': fixed,
+            '공과금': 0,
+            '로열티/수수료': royalty,
+          };
+          prevDailyMap[k] = {sale, vendor, att, fixed, receipt, royalty, exp, profit: sale-exp, byCat};
         }
       }
       // 휴무 일자 set (sales_daily.source='closed')
@@ -9652,6 +9697,10 @@ async function loadDashboard(force){
         year: y, monthIdx: mo-1, lastDay, passedDays, today, isCurrent,
         dailySalesMap, dailyExpTotal, dailyCatMap, srcToCat, fixedCatNames,
         prevDailyMap, holidayDays,
+        // 2026-05-22 동적 카테고리
+        catNames, catColors,
+        expCatThresholds: settings.expense_thresholds || {},
+        royaltyRate,
       });
       v17RenderAll();
     } catch(e){ console.error('v17 렌더 오류:', e); }
@@ -9764,15 +9813,13 @@ async function loadDashboard(force){
 // 9. + 그 외 event delegation / 10. 예비비 진마감 + 사이드메뉴 진입
 // ═════════════════════════════════════════════════════════════════
 
-// 카테고리 기준값 (매출 대비 %, 회계 표준)
-const V17_THRESH = {vendor:30, att:25, fixed:15, receipt:5};
-// 카테고리 색상 (사장님 매장 catColors와 별개, 5개 고정)
-const V17_CAT_COLOR = {vendor:'#F59E0B', att:'#8B5CF6', fixed:'#6B7684', receipt:'#10B981', royalty:'#EC4899'};
-const V17_CAT_NAME = {vendor:'식자재', att:'인건비', fixed:'공과금', receipt:'비품', royalty:'로열티'};
+// 카테고리 기준값 기본값 (business_rules.md, 매출 대비 %)
+// 사장님이 카테고리 관리에서 store_settings.expense_thresholds로 수정 가능
+const V17_DEFAULT_THRESH = {'식자재':30, '주류':10, '음료':10, '인건비':25, '비품':5, '마케팅':10, '고정비':15, '공과금':15, '세금':10, '기타':10, '로열티/수수료':0};
+const V17_COLOR_PALETTE = ['#F59E0B','#8B5CF6','#6B7684','#10B981','#EC4899','#3B82F6','#EF4444','#84CC16','#F97316','#06B6D4','#A855F7','#14B8A6'];
 
-// 옛 srcToCat 매핑 활용 — 옛 한글 카테고리명 ↔ v17 키
+// 옛 srcToCat 매핑 활용 — 옛 한글 카테고리명 ↔ 옛 5키 (호환용, v17SumMonth 옛 키 유지)
 function v17MapCatKey(srcToCat){
-  // srcToCat = {vendor_orders:'식자재', attendance:'인건비', fixed_costs:'공과금/고정비', receipts:'비품'}
   return {
     vendor:   srcToCat?.['vendor_orders'] || '식자재',
     att:      srcToCat?.['attendance']    || '인건비',
@@ -9846,9 +9893,12 @@ function v17BuildAccountingWeeks(year, monthIdx){
 }
 
 // 그 달 데이터 합산 (휴무 포함, maxDay까지)
+// 2026-05-22: byCat 동적 카테고리 합계 추가
 function v17SumMonth(ctx, targetM, maxDay){
   const DAYS = ctx.DAYS;
   let s=0,e=0,vendor=0,att=0,fixed=0,receipt=0,royalty=0,lastDay=0;
+  const byCat = {};
+  (ctx.cats||[]).forEach(c=>{ byCat[c.key]=0; });
   Object.entries(DAYS).forEach(([key,d])=>{
     const [m,day] = key.split('-').map(Number);
     if(m !== targetM) return;
@@ -9857,10 +9907,11 @@ function v17SumMonth(ctx, targetM, maxDay){
       s+=d.sale||0; e+=d.exp||0;
       vendor+=d.vendor||0; att+=d.att||0;
       fixed+=d.fixed||0; receipt+=d.receipt||0; royalty+=d.royalty||0;
+      (ctx.cats||[]).forEach(c=>{ byCat[c.key] += (d.byCat?.[c.key])||0; });
       if(day>lastDay) lastDay=day;
     }
   });
-  return {s,e,vendor,att,fixed,receipt,royalty,lastDay};
+  return {s,e,vendor,att,fixed,receipt,royalty,lastDay,byCat};
 }
 
 // 전월 마지막 회계주 합산 (1주 vs 비교용)
@@ -9933,17 +9984,25 @@ function v17MomComment(dS, dE){
 }
 
 // loadDashboard 끝에서 호출 — 옛 데이터를 v17 컨텍스트로 변환
+// 2026-05-22 갈아엎기: 사장님 매장 활성 카테고리 동적 등록 (헌법 1-6)
 function setV17Context(args){
-  // args = {year, monthIdx, lastDay, passedDays, dailySalesMap, dailyExpTotal, dailyCatMap, srcToCat, fixedCatNames, isCurrent}
   const ctx = {
     YEAR: args.year, MONTH_IDX: args.monthIdx, TARGET_MONTH: args.monthIdx+1,
     LAST_DAY: args.lastDay, TODAY: args.passedDays, IS_CURRENT: args.isCurrent,
     DAYS: {}, WEEKS: [], srcToCat: args.srcToCat||{},
     catMap: v17MapCatKey(args.srcToCat),
+    royaltyRate: args.royaltyRate || 0,
   };
+  // 동적 카테고리 빌드 (사장님 매장 catNames + 로열티 가상)
+  const userTh = args.expCatThresholds || {};
+  ctx.cats = (args.catNames || []).map((nm,i)=>({
+    key: nm,
+    name: (nm === '로열티/수수료') ? '로열티' : nm,
+    color: args.catColors?.[nm] || V17_COLOR_PALETTE[i % V17_COLOR_PALETTE.length],
+    threshold: userTh[nm] ?? V17_DEFAULT_THRESH[nm] ?? 0,
+  }));
   // fixed_costs source 카테고리 이름 목록 (사장님 매장: '고정비' + '공과금' 둘 다)
   const fixedCatNames = (args.fixedCatNames && args.fixedCatNames.length) ? args.fixedCatNames : [ctx.catMap.fixed];
-  // DAYS 변환 (이번달)
   const mapKey = ctx.catMap;
   function _sumFixed(cat){
     let f = 0;
@@ -9958,8 +10017,11 @@ function setV17Context(args){
     const cat = args.dailyCatMap[dd] || args.dailyCatMap[d] || {};
     const isHoliday = args.holidayDays?.has?.(dd) || args.holidayDays?.has?.(d) || false;
     const fxd = _sumFixed(cat);
+    // byCat = 동적 카테고리별 일별 금액
+    const byCat = {};
+    ctx.cats.forEach(c=>{ byCat[c.key] = cat[c.key] || 0; });
     if(isHoliday && sale===0){
-      ctx.DAYS[key] = {holiday:true, sale:0, vendor:0, att:0, fixed:fxd, receipt:0, royalty:0, exp:fxd, profit:-fxd};
+      ctx.DAYS[key] = {holiday:true, sale:0, vendor:0, att:0, fixed:fxd, receipt:0, royalty:0, exp:fxd, profit:-fxd, byCat};
     } else if(sale > 0 || exp > 0) {
       ctx.DAYS[key] = {
         sale,
@@ -9970,12 +10032,15 @@ function setV17Context(args){
         royalty: cat[mapKey.royalty] || 0,
         exp,
         profit: sale - exp,
+        byCat,
       };
     }
   }
   // 전월 데이터 (DAYS에 추가, 동일 기준일 비교용)
   if(args.prevDailyMap){
     Object.entries(args.prevDailyMap).forEach(([k,v])=>{
+      // byCat 누락 시 빈 객체 (옛 코드 호환)
+      if(!v.byCat) v.byCat = {};
       ctx.DAYS[k] = v;
     });
   }
@@ -10003,16 +10068,17 @@ function v17RenderMonthCard(){
   else if(maxLen >= 11) cls = 'fs-s';
   else if(maxLen >= 10) cls = 'fs-m';
 
-  // 간트 스택 + 범례 (상위 3개 + 전월동일대비 mini)
-  const cats = ['vendor','att','fixed','receipt','royalty'];
+  // 간트 스택 + 범례 — 2026-05-22 동적 카테고리 (ctx.cats)
+  const cats = _v17Ctx.cats || [];
   let stackHtml = '';
   cats.forEach(c=>{
-    const v = cur[c]||0;
+    const v = cur.byCat[c.key]||0;
+    if(v<=0) return;
     const pct = cur.s>0 ? (v/cur.s*100) : 0;
-    const th = V17_THRESH[c]||0;
-    const overCls = (th && pct>th) ? ' over' : '';
+    if(pct < 0.5) return;
+    const overCls = (c.threshold && pct>c.threshold) ? ' over' : '';
     const showText = pct >= 7;
-    stackHtml += `<span class="${overCls.trim()}" style="background:${V17_CAT_COLOR[c]};width:${pct}%;">${showText?pct.toFixed(0)+'%':''}</span>`;
+    stackHtml += `<span class="${overCls.trim()}" style="background:${c.color};width:${pct}%;">${showText?pct.toFixed(0)+'%':''}</span>`;
   });
   const profitPctStack = cur.s>0 ? (profit/cur.s*100) : 0;
   if(profit>=0){
@@ -10022,15 +10088,17 @@ function v17RenderMonthCard(){
     stackHtml += `<span class="loss" style="width:${lossPct}%;">${lossPct>=7?'-'+lossPct.toFixed(0)+'%':''}</span>`;
   }
 
-  const topCats = ['vendor','att','fixed'];
+  // 범례: 매출 점유율 상위 3개
+  const sortedCats = [...cats].sort((a,b)=>(cur.byCat[b.key]||0)-(cur.byCat[a.key]||0)).filter(c=>(cur.byCat[c.key]||0)>0);
+  const topCats = sortedCats.slice(0,3);
+  const restCats = sortedCats.slice(3);
   let legendHtml = '';
   topCats.forEach(c=>{
-    const v = cur[c]||0;
-    const prevV = prev[c]||0;
+    const v = cur.byCat[c.key]||0;
+    const prevV = prev.byCat?.[c.key]||0;
     const pct = cur.s>0 ? (v/cur.s*100) : 0;
-    const th = V17_THRESH[c]||0;
-    const overCls = (th && pct>th) ? ' over' : '';
-    const icon = (th && pct>th) ? '⚠️' : '';
+    const overCls = (c.threshold && pct>c.threshold) ? ' over' : '';
+    const icon = (c.threshold && pct>c.threshold) ? '⚠️' : '';
     let momMini = '';
     if(prevV>0){
       const d = Math.round((v-prevV)/prevV*100);
@@ -10039,29 +10107,27 @@ function v17RenderMonthCard(){
       else momMini = `<span class="mom-mini good">▼${Math.abs(d)}%</span>`;
     }
     legendHtml += `<span class="lg${overCls}">
-      <span class="nm-side"><span class="dot" style="background:${V17_CAT_COLOR[c]};"></span><span class="nm">${V17_CAT_NAME[c]}${icon}</span></span>
+      <span class="nm-side"><span class="dot" style="background:${c.color};"></span><span class="nm">${c.name}${icon}</span></span>
       <span class="pct-side"><span class="pct">${pct.toFixed(0)}%</span>${momMini}</span>
     </span>`;
   });
+  // 그 외 (나머지 카테고리)
   let restPct = 0;
-  ['receipt','royalty'].forEach(c=>{
-    restPct += cur.s>0 ? ((cur[c]||0)/cur.s*100) : 0;
-  });
   let restDetailHtml = '';
-  if(restPct > 0){
-    ['receipt','royalty'].forEach(c=>{
-      const v = cur[c]||0;
-      const pct = cur.s>0 ? (v/cur.s*100) : 0;
-      restDetailHtml += `<div class="rest-line">
-        <span class="dot" style="background:${V17_CAT_COLOR[c]};"></span>
-        <span class="nm">${V17_CAT_NAME[c]}</span>
-        <span class="vl">${v17FmtNoWon(v)}</span>
-        <span class="pct">${pct.toFixed(1)}%</span>
-      </div>`;
-    });
-  }
+  restCats.forEach(c=>{
+    const v = cur.byCat[c.key]||0;
+    const pct = cur.s>0 ? (v/cur.s*100) : 0;
+    restPct += pct;
+    restDetailHtml += `<div class="rest-line">
+      <span class="dot" style="background:${c.color};"></span>
+      <span class="nm">${c.name}</span>
+      <span class="vl">${v17FmtNoWon(v)}</span>
+      <span class="pct">${pct.toFixed(1)}%</span>
+    </div>`;
+  });
+  const restNames = restCats.map(c=>c.name).join('·');
   let restHtml = restPct>0 ? `
-    <div class="gantt-rest" data-rest-toggle="mth">+ 그 외 ${restPct.toFixed(0)}% (비품·로열티) ▾</div>
+    <div class="gantt-rest" data-rest-toggle="mth">+ 그 외 ${restPct.toFixed(0)}% (${restNames}) ▾</div>
     <div class="gantt-rest-detail" data-rest-detail="mth" style="display:none;">${restDetailHtml}</div>` : '';
 
   // 전월 동일 대비 + 문어체
@@ -10124,7 +10190,12 @@ function v17RenderMonthCard(){
 function v17RenderCalendar(){
   const ctx = _v17Ctx; if(!ctx) return;
   const grid = document.getElementById('v17CalGrid'); if(!grid) return;
-  const chipText = _v17CurrentCat==='default'?'📊 매출+순수익 ▾':`📊 ${V17_CAT_NAME[_v17CurrentCat]} 비율 ▾`;
+  // 2026-05-22: chip 텍스트 동적 카테고리 (ctx.cats)
+  let chipText = '📊 매출+순수익 ▾';
+  if(_v17CurrentCat !== 'default'){
+    const c = (ctx.cats||[]).find(c=>c.key===_v17CurrentCat);
+    chipText = `📊 ${c?.name || _v17CurrentCat} 비율 ▾`;
+  }
   const chip = document.getElementById('v17CalModeChip');
   if(chip) chip.textContent = chipText;
   const FIRST_DOW = new Date(ctx.YEAR, ctx.MONTH_IDX, 1).getDay();
@@ -10167,14 +10238,19 @@ function v17RenderCalendar(){
       continue;
     }
     if(_v17CurrentCat!=='default'){
-      const catVal = data[_v17CurrentCat] || 0;
+      // 2026-05-22: byCat 동적 카테고리
+      const catVal = (data.byCat?.[_v17CurrentCat]) || 0;
       const pct = data.sale>0 ? (catVal/data.sale*100) : 0;
-      const th = V17_THRESH[_v17CurrentCat];
-      let heatCls = pct > th ? ' heat-bad' : (pct > th*0.85 ? ' heat-warn' : ' heat-good');
+      const catObj = (ctx.cats||[]).find(c=>c.key===_v17CurrentCat);
+      const th = catObj?.threshold || 0;
+      let heatCls = '';
+      if(th>0){
+        heatCls = pct > th ? ' heat-bad' : (pct > th*0.85 ? ' heat-warn' : ' heat-good');
+      }
       html += `<div class="v17-cal-cell${heatCls}${todayCls} ${wkCls}" data-day="${d}">
         <span class="cc-day">${d}</span>
         <span class="cc-cat${v17CellAutoFs(v17FmtCompact(catVal))}">${v17FmtCompact(catVal)}</span>
-        <span class="cc-profit ${pct>th?'neg':'pos'}">${pct.toFixed(0)}%</span>
+        <span class="cc-profit ${th && pct>th?'neg':'pos'}">${pct.toFixed(0)}%</span>
       </div>`;
     } else {
       html += `<div class="v17-cal-cell${todayCls} ${wkCls}" data-day="${d}">
@@ -10200,6 +10276,8 @@ function v17RenderWeekCards(){
     let firstDaysOutCount=0, lastDaysOutCount=0;
     let firstOutDays=[], lastOutDays=[];
     let outsideMonths = new Set();
+    const byCat = {};
+    (ctx.cats||[]).forEach(c=>{ byCat[c.key]=0; });
     wk.forEach((day,di)=>{
       const key = `${day.m}-${String(day.d).padStart(2,'0')}`;
       const data=ctx.DAYS[key];
@@ -10217,8 +10295,9 @@ function v17RenderWeekCards(){
       s += data.sale||0; e += data.exp||0;
       vendor += data.vendor||0; att += data.att||0;
       fixed += data.fixed||0; receipt += data.receipt||0; royalty += data.royalty||0;
+      (ctx.cats||[]).forEach(c=>{ byCat[c.key] += (data.byCat?.[c.key])||0; });
     });
-    weekData.push({wi:i, wk, hasData, isCurrent, s,e,vendor,att,fixed,receipt,royalty,
+    weekData.push({wi:i, wk, hasData, isCurrent, s,e,vendor,att,fixed,receipt,royalty,byCat,
       firstDaysOutCount, lastDaysOutCount, firstOutDays, lastOutDays, outsideMonths:[...outsideMonths]});
   });
   const prevMonthLast = v17CalcPrevMonthLastWeek(ctx);
@@ -10269,16 +10348,17 @@ function v17RenderWeekCards(){
     else if(maxLenWk >= 11) wkFs = 'fs-s';
     else if(maxLenWk >= 10) wkFs = 'fs-m';
 
-    // 간트
-    const cats = ['vendor','att','fixed','receipt','royalty'];
+    // 간트 — 2026-05-22 동적 카테고리 (ctx.cats)
+    const cats = ctx.cats || [];
     let stackHtml = '';
     cats.forEach(c=>{
-      const v = w[c]||0;
+      const v = w.byCat[c.key]||0;
+      if(v<=0) return;
       const pct = w.s>0 ? (v/w.s*100) : 0;
-      const th = V17_THRESH[c]||0;
-      const overCls = (th && pct>th) ? ' over' : '';
+      if(pct < 0.5) return;
+      const overCls = (c.threshold && pct>c.threshold) ? ' over' : '';
       const showText = pct >= 7;
-      stackHtml += `<span class="${overCls.trim()}" style="background:${V17_CAT_COLOR[c]};width:${pct}%;">${showText?pct.toFixed(0)+'%':''}</span>`;
+      stackHtml += `<span class="${overCls.trim()}" style="background:${c.color};width:${pct}%;">${showText?pct.toFixed(0)+'%':''}</span>`;
     });
     const profitPct = w.s>0 ? (profit/w.s*100) : 0;
     if(profit>=0){
@@ -10288,17 +10368,17 @@ function v17RenderWeekCards(){
       stackHtml += `<span class="loss" style="width:${lossPct}%;">${lossPct>=7?'-'+lossPct.toFixed(0)+'%':''}</span>`;
     }
 
-    // 범례 (상위 3개 + 전주 대비 mini)
-    const topCats = ['vendor','att','fixed'];
+    // 범례 — 매출 점유율 상위 3개
+    const wkSorted = [...cats].sort((a,b)=>(w.byCat[b.key]||0)-(w.byCat[a.key]||0)).filter(c=>(w.byCat[c.key]||0)>0);
+    const topCats = wkSorted.slice(0,3);
+    const restCats = wkSorted.slice(3);
     let legendHtml = '';
-    let restPct = 0;
     topCats.forEach(c=>{
-      const v = w[c]||0;
-      const prevV = prevWeekRef ? (prevWeekRef[c]||0) : 0;
+      const v = w.byCat[c.key]||0;
+      const prevV = prevWeekRef ? (prevWeekRef.byCat?.[c.key]||0) : 0;
       const pct = w.s>0 ? (v/w.s*100) : 0;
-      const th = V17_THRESH[c]||0;
-      const overCls = (th && pct>th) ? ' over' : '';
-      const icon = (th && pct>th) ? '⚠️' : '';
+      const overCls = (c.threshold && pct>c.threshold) ? ' over' : '';
+      const icon = (c.threshold && pct>c.threshold) ? '⚠️' : '';
       let momMini = '';
       if(prevV>0){
         const d = Math.round((v-prevV)/prevV*100);
@@ -10307,28 +10387,26 @@ function v17RenderWeekCards(){
         else momMini = `<span class="mom-mini good">▼${Math.abs(d)}%</span>`;
       }
       legendHtml += `<span class="lg${overCls}">
-        <span class="nm-side"><span class="dot" style="background:${V17_CAT_COLOR[c]};"></span><span class="nm">${V17_CAT_NAME[c]}${icon}</span></span>
+        <span class="nm-side"><span class="dot" style="background:${c.color};"></span><span class="nm">${c.name}${icon}</span></span>
         <span class="pct-side"><span class="pct">${pct.toFixed(0)}%</span>${momMini}</span>
       </span>`;
     });
-    ['receipt','royalty'].forEach(c=>{
-      restPct += w.s>0 ? ((w[c]||0)/w.s*100) : 0;
-    });
+    let restPct = 0;
     let restDetailHtml = '';
-    if(restPct > 0){
-      ['receipt','royalty'].forEach(c=>{
-        const v = w[c]||0;
-        const pct = w.s>0 ? (v/w.s*100) : 0;
-        restDetailHtml += `<div class="rest-line">
-          <span class="dot" style="background:${V17_CAT_COLOR[c]};"></span>
-          <span class="nm">${V17_CAT_NAME[c]}</span>
-          <span class="vl">${v17FmtNoWon(v)}</span>
-          <span class="pct">${pct.toFixed(1)}%</span>
-        </div>`;
-      });
-    }
+    restCats.forEach(c=>{
+      const v = w.byCat[c.key]||0;
+      const pct = w.s>0 ? (v/w.s*100) : 0;
+      restPct += pct;
+      restDetailHtml += `<div class="rest-line">
+        <span class="dot" style="background:${c.color};"></span>
+        <span class="nm">${c.name}</span>
+        <span class="vl">${v17FmtNoWon(v)}</span>
+        <span class="pct">${pct.toFixed(1)}%</span>
+      </div>`;
+    });
+    const restNamesWk = restCats.map(c=>c.name).join('·');
     let restHtml = restPct>0 ? `
-      <div class="gantt-rest" data-rest-toggle="w${w.wi}">+ 그 외 ${restPct.toFixed(0)}% (비품·로열티) ▾</div>
+      <div class="gantt-rest" data-rest-toggle="w${w.wi}">+ 그 외 ${restPct.toFixed(0)}% (${restNamesWk}) ▾</div>
       <div class="gantt-rest-detail" data-rest-detail="w${w.wi}" style="display:none;">${restDetailHtml}</div>` : '';
 
     // 저번주 대비 + 문어체
@@ -10490,24 +10568,26 @@ function v17OpenDailySheet(d){
     const pEl = document.getElementById('v17ShtProfit');
     pEl.innerHTML = `${v17FmtNoWonSigned(p)}원<span class="vp">${p>=0?'+':''}${profitPct}%</span>`;
     pEl.style.color = p>=0?'#10B981':'#EF4444';
-    const cats = ['vendor','att','fixed','receipt','royalty'];
+    // 2026-05-22: 사장님 매장 카테고리 전체 동적 표시
+    const cats = ctx.cats || [];
     let html = '';
     cats.forEach(c=>{
-      const v = data[c]||0;
+      const v = (data.byCat?.[c.key]) || 0;
+      if(v <= 0) return; // 0원 카테고리 표시 X
       const pct = data.sale>0 ? (v/data.sale*100) : 0;
-      const th = V17_THRESH[c];
       let pctCls = 'pct';
       let icon = '';
-      if(th){
-        if(pct>th){pctCls += ' over';icon=' ⚠️';}
-        else if(pct<th*0.85) pctCls += ' good';
+      if(c.threshold){
+        if(pct>c.threshold){pctCls += ' over';icon=' ⚠️';}
+        else if(pct<c.threshold*0.85) pctCls += ' good';
       }
       html += `<div class="v17-sht-cat-row">
-        <span class="cn"><span class="dot" style="background:${V17_CAT_COLOR[c]};"></span>${V17_CAT_NAME[c]}</span>
+        <span class="cn"><span class="dot" style="background:${c.color};"></span>${c.name}</span>
         <span class="vl">${v17FmtNoWon(v)}원</span>
         <span class="${pctCls}">${pct.toFixed(1)}%${icon}</span>
       </div>`;
     });
+    if(!html) html = `<div style="text-align:center;padding:20px 0;color:var(--gray-400);font-size:12px;">카테고리별 내역 없음</div>`;
     document.getElementById('v17ShtCats').innerHTML = html;
   }
   const dt = new Date(ctx.YEAR, ctx.MONTH_IDX, d);
@@ -10543,16 +10623,14 @@ async function v17MarkOpen(){
   }
 }
 
-// ─── 필터 시트 ───
+// ─── 필터 시트 ─── 2026-05-22 동적 카테고리
 function v17OpenFilterSheet(){
   // v17CloseAllSheets() 호출 X — setTimeout 경쟁 조건으로 시트 즉시 닫힘 버그
-  const opts = [
-    {key:'default', name:'매출 + 순수익', color:'#0050FF'},
-    {key:'vendor',  name:'식자재 비율',   color:'#F59E0B'},
-    {key:'att',     name:'인건비 비율',   color:'#8B5CF6'},
-    {key:'fixed',   name:'공과금 비율',   color:'#6B7684'},
-    {key:'receipt', name:'비품 비율',     color:'#10B981'},
-  ];
+  const ctx = _v17Ctx;
+  const opts = [{key:'default', name:'매출 + 순수익', color:'#0050FF'}];
+  (ctx?.cats || []).forEach(c=>{
+    opts.push({key:c.key, name:c.name+' 비율', color:c.color});
+  });
   let html = '';
   opts.forEach(o=>{
     const active = o.key===_v17CurrentCat ? 'active' : '';
@@ -13074,6 +13152,14 @@ async function reorderExpCats(box){
 }
 
 let editExpCatParentId=null; // 소분류 추가 시 부모 ID
+// 2026-05-22: 카테고리 기본 threshold (사장님이 store_settings.expense_thresholds로 수정 가능)
+const _CAT_DEFAULT_TH = {'식자재':30, '주류':10, '음료':10, '인건비':25, '비품':5, '마케팅':10, '고정비':15, '공과금':15, '세금':10, '기타':10};
+async function _loadCatThreshold(catName){
+  if(!currentStore) return _CAT_DEFAULT_TH[catName] ?? 0;
+  const {data} = await sb.from('store_settings').select('expense_thresholds').eq('store_id',currentStore.id).maybeSingle();
+  const u = data?.expense_thresholds || {};
+  return u[catName] ?? _CAT_DEFAULT_TH[catName] ?? 0;
+}
 function openAddExpCatSheet(){
   if(!guardStore())return;
   editExpCatParentId=null;
@@ -13082,6 +13168,7 @@ function openAddExpCatSheet(){
   document.getElementById('expCatSourceInput').value='vendor_orders';
   document.getElementById('expCatTypeInput').value=currentExpCatType||'expense'; // 현재 탭 타입 기본값
   document.getElementById('editExpCatId').value='';
+  document.getElementById('expCatThresholdInput').value=''; // 신규 = 빈 칸 (저장 시 입력 없으면 기본값 사용)
   selectExpCatColor('#0050FF');
   onExpCatTypeChange(); // 타입에 따라 데이터 소스 필드 표시/숨김
   openSheet('addExpCatSheet');
@@ -13103,7 +13190,7 @@ function openAddSubCatSheet(parentId,parentName){
   openSheet('addExpCatSheet');
 }
 
-function openEditExpCatSheet(id){
+async function openEditExpCatSheet(id){
   const cat=expCategories.find(x=>x.id===id);if(!cat)return;
   editExpCatParentId=cat.parent_id||null;
   document.getElementById('addExpCatTitle').innerText=(cat.parent_id?'소분류':'대분류')+' 편집';
@@ -13113,6 +13200,13 @@ function openEditExpCatSheet(id){
   document.getElementById('editExpCatId').value=cat.id;
   if(cat.vendor_category) document.getElementById('expCatVendorCat').value=cat.vendor_category;
   selectExpCatColor(cat.color||'#0050FF');
+  // 2026-05-22: threshold 로드 (지출 부모 카테고리만)
+  if((cat.category_type||'expense')==='expense' && !cat.parent_id){
+    const th = await _loadCatThreshold(cat.name);
+    document.getElementById('expCatThresholdInput').value = th>0 ? th : '';
+  } else {
+    document.getElementById('expCatThresholdInput').value = '';
+  }
   onExpCatTypeChange();
   openSheet('addExpCatSheet');
 }
@@ -13130,6 +13224,12 @@ function onExpCatTypeChange(){
   if(labelEl) labelEl.innerText=labelMap[type]||labelMap.expense;
   const srcWrap=document.getElementById('expCatSourceWrap');
   const hint=document.getElementById('expCatTypeHint');
+  // 2026-05-22: threshold 입력 칸 표시 토글 (지출 부모 카테고리만)
+  const thWrap=document.getElementById('expCatThresholdWrap');
+  if(thWrap){
+    const isParentExp = type==='expense' && !editExpCatParentId;
+    thWrap.style.display = isParentExp ? 'block' : 'none';
+  }
   if(type==='expense'){
     srcWrap.style.display='block';
     hint.style.display='none';
@@ -13175,7 +13275,19 @@ async function saveExpCat(){
     payload.sort_order=sameGroup.length?Math.max(...sameGroup.map(c=>c.sort_order||0))+1:0;
   }
   const{error}=eid?await sb.from('expense_categories').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('expense_categories').insert(payload);
-  setLoad(false);if(error)return errToast('저장', error);
+  if(error){setLoad(false);return errToast('저장', error);}
+  // 2026-05-22: threshold 저장 (지출 부모 카테고리만, store_settings.expense_thresholds JSONB)
+  if(type==='expense' && !editExpCatParentId){
+    const thInp=document.getElementById('expCatThresholdInput').value;
+    const thVal=thInp===''?null:Math.max(0, parseFloat(thInp)||0);
+    try{
+      const {data:sRow} = await sb.from('store_settings').select('expense_thresholds').eq('store_id',currentStore.id).maybeSingle();
+      const cur = (sRow?.expense_thresholds && typeof sRow.expense_thresholds==='object') ? {...sRow.expense_thresholds} : {};
+      if(thVal===null || thVal===0) delete cur[name]; else cur[name]=thVal;
+      await sb.from('store_settings').upsert({store_id:currentStore.id, expense_thresholds:cur},{onConflict:'store_id'});
+    }catch(e){ console.error('threshold 저장:',e); /* 저장 실패해도 카테고리 자체는 박힘 */ }
+  }
+  setLoad(false);
   closeAllSheets();await loadExpCategories(true);
 }
 
