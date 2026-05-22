@@ -2450,7 +2450,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="body-col">
         <div class="lb-row">
           <div class="lb" id="dashHomeMonthLb">이번 달 매출</div>
-          <div class="progress-tag" id="dashHomeMonthProgress" style="display:none;">- / -</div>
+          <div class="progress-tag" id="dashHomeMonthProgress" style="display:none;">- 월 -일 / -</div>
         </div>
         <div class="vl"><span id="dashHomeMonthSale">0</span><span class="won">원</span></div>
         <div class="sub-row">
@@ -10227,14 +10227,14 @@ async function loadDashboard(force){
           const _sign=_profitV>=0?'+':'-';
           _mSub.innerHTML=`순수익 <b${_profitV<0?' class="red"':''}>${_sign}${fmt(Math.abs(_profitV))}원</b>`;
         }
-        // 진행 일수 → 라벨 우측 배지 (현재월: 진행 중 / 다른 월: 마감)
+        // 진행 일자 → 라벨 우측 배지. 사장님 표현 그대로 "5월 22일 / 31일"
         if(_mProg){
           if(isCurMonth){
             _mProg.style.display='';
-            _mProg.innerText=`${passedDays} / ${lastDay}일`;
+            _mProg.innerText=`${mo}월 ${passedDays}일 / ${lastDay}일`;
           } else {
             _mProg.style.display='';
-            _mProg.innerText=`${lastDay} / ${lastDay}일`;
+            _mProg.innerText=`${mo}월 마감 (${lastDay}일)`;
           }
         }
         // 수익률 (매출 대비) → 순수익 우측
