@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>홈화면 단순화 1차 목업 (B안 위계형)</title>
+<style>
+  :root{
+    --blue:#4A6CF7; --blue-light:#EEF1FF;
+    --gray-50:#FAFBFC; --gray-100:#F1F3F5; --gray-200:#E5E8EB;
+    --gray-300:#D1D6DB; --gray-400:#B0B8C1; --gray-500:#8B95A1;
+    --gray-600:#6B7684; --gray-700:#4E5968; --gray-800:#333D4B; --gray-900:#191F28;
+    --danger:#EF4444; --success:#10B981; --warn:#F59E0B; --white:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'SF Pro',Pretendard,sans-serif;-webkit-font-smoothing:antialiased;}
+  body{background:var(--gray-100);padding:24px 8px;min-height:100vh;}
+  .frame-title{max-width:760px;margin:0 auto 18px;padding:0 12px;}
+  .frame-title h1{font-size:18px;color:var(--gray-900);margin-bottom:6px;}
+  .frame-title p{font-size:12px;color:var(--gray-600);line-height:1.5;}
+  .row{max-width:760px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:720px){.row{grid-template-columns:1fr;}}
+  .phone{background:var(--white);border-radius:24px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.08);border:1px solid var(--gray-200);}
+  .phone-hdr{padding:10px 14px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center;}
+  .phone-hdr .pill{font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;color:var(--white);}
+  .pill-bef{background:var(--gray-500);}
+  .pill-aft{background:var(--blue);}
+  .phone-hdr .lbl{font-size:11px;color:var(--gray-700);font-weight:700;}
+  .screen{width:100%;max-width:360px;margin:0 auto;background:var(--gray-50);padding:14px 12px;min-height:560px;}
+  .screen-title{font-size:12px;color:var(--gray-500);font-weight:700;margin-bottom:10px;text-align:center;}
+
+  /* 카드 공통 (실제 앱의 .card 변형) */
+  .card{background:var(--white);border-radius:22px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+
+  /* 1순위 매출 카드 */
+  .top-sales{padding:18px 16px;}
+  .top-sales .ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .top-sales .ttl-left{display:flex;align-items:center;gap:6px;}
+  .top-sales .ttl{font-size:13px;font-weight:800;color:var(--gray-700);}
+  .top-sales .mode-tag{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--blue-light);color:var(--blue);font-weight:700;}
+  .top-sales .arrow{font-size:18px;color:var(--gray-300);}
+  .top-sales .amt{font-size:30px;font-weight:900;color:var(--gray-900);line-height:1.15;}
+  .top-sales .pe{margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100);}
+  .top-sales .pe-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .top-sales .pe-row:last-child{margin-bottom:0;}
+  .top-sales .pe-label{font-size:12px;color:var(--gray-600);font-weight:600;}
+  .top-sales .pe-val{font-size:14px;font-weight:800;color:var(--gray-900);}
+  .top-sales .pe-val.red{color:var(--danger);}
+  .top-sales .pe-delta{font-size:11px;color:var(--success);margin-left:6px;font-weight:700;}
+
+  /* Before — 평면 나열 */
+  .mode-tabs{display:flex;gap:6px;margin-bottom:10px;}
+  .mode-tab{flex:1;padding:9px;font-size:12px;font-weight:700;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;color:var(--gray-600);text-align:center;}
+  .mode-tab.active{background:var(--blue);color:var(--white);border-color:var(--blue);}
+  .month-nav{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--white);border-radius:12px;margin-bottom:10px;}
+  .month-nav .nav-btn{width:28px;height:28px;background:var(--gray-100);border-radius:8px;font-size:14px;color:var(--gray-700);border:none;}
+  .month-nav .month-lbl{font-size:14px;font-weight:800;color:var(--gray-900);}
+
+  .month-card{padding:14px 14px;}
+  .month-card .row-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .month-card .col-3{text-align:center;}
+  .month-card .col-3 .lbl{font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:4px;}
+  .month-card .col-3 .val{font-size:15px;font-weight:900;color:var(--gray-900);font-variant-numeric:tabular-nums;}
+  .month-card .col-3 .val.blue{color:var(--blue);}
+  .month-card .col-3 .val.red{color:var(--danger);}
+
+  .cal-card{padding:12px;}
+  .cal-head{margin-bottom:6px;}
+  .cal-chip{font-size:10px;padding:4px 8px;background:var(--gray-100);border-radius:8px;color:var(--gray-700);font-weight:700;display:inline-block;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+  .cal-cell{aspect-ratio:1/1.05;background:var(--gray-50);border-radius:6px;padding:3px 4px;font-size:9px;line-height:1.1;display:flex;flex-direction:column;justify-content:space-between;}
+  .cal-cell.has-data{background:var(--blue-light);}
+  .cal-cell .d-num{color:var(--gray-700);font-weight:700;font-size:9px;}
+  .cal-cell .d-amt{color:var(--blue);font-weight:800;font-size:8px;}
+  .cal-cell .d-amt2{color:var(--gray-500);font-size:7px;}
+
+  .enter-card{padding:13px 14px;display:flex;justify-content:space-between;align-items:center;background:var(--gray-50);border:1px dashed var(--gray-300);}
+  .enter-card .ttl{font-size:13px;font-weight:800;color:var(--gray-800);}
+  .enter-card .sub{font-size:11px;color:var(--gray-500);margin-top:2px;}
+  .enter-card .arrow-r{font-size:18px;color:var(--gray-400);}
+
+  .reserve-mini{padding:10px 14px;background:var(--blue-light);border-radius:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .reserve-mini .lt{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--blue);}
+  .reserve-mini .rt{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:900;color:var(--blue);}
+  .reserve-mini .rt .sub{font-size:11px;color:var(--gray-400);font-weight:600;}
+
+  .extra-card{padding:14px;}
+  .extra-card .ttl{font-size:13px;font-weight:800;color:var(--gray-800);margin-bottom:8px;}
+  .extra-card .sub{font-size:10px;color:var(--gray-500);margin-bottom:8px;}
+  .extra-card .item{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-top:1px solid var(--gray-100);}
+
+  /* After — 위계형 압축 카드 */
+  .compact{padding:14px 16px;}
+  .compact .ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .compact .ttl-left{display:flex;align-items:center;gap:6px;}
+  .compact .ttl{font-size:13px;font-weight:800;color:var(--gray-700);}
+  .compact .month-tag{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--gray-100);color:var(--gray-600);font-weight:700;}
+  .compact .arrow{font-size:18px;color:var(--gray-300);transition:transform .2s;}
+  .compact.expanded .arrow{transform:rotate(90deg);}
+  .compact .summary-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .compact .summary-col{text-align:center;}
+  .compact .summary-col .lbl{font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:4px;}
+  .compact .summary-col .val{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;}
+  .compact .summary-col .val.blue{color:var(--blue);}
+  .compact .summary-col .val.red{color:var(--danger);}
+  .compact .summary-col .val.green{color:var(--success);}
+
+  .expanded-body{margin-top:14px;padding-top:14px;border-top:1px dashed var(--gray-200);}
+
+  /* 펼침 안내 표시 */
+  .hint{font-size:10px;color:var(--gray-400);text-align:center;margin-top:8px;font-style:italic;}
+
+  /* 토스 비유 박스 */
+  .toss-note{max-width:760px;margin:18px auto 0;padding:14px;background:var(--blue-light);border-radius:12px;}
+  .toss-note h3{font-size:13px;color:var(--blue);margin-bottom:6px;}
+  .toss-note p{font-size:12px;color:var(--gray-700);line-height:1.6;}
+
+  /* 통계 카드 */
+  .stats{max-width:760px;margin:18px auto 0;padding:14px;background:var(--white);border-radius:12px;border:1px solid var(--gray-200);}
+  .stats h3{font-size:13px;color:var(--gray-800);margin-bottom:8px;}
+  .stats table{width:100%;border-collapse:collapse;font-size:12px;}
+  .stats td,.stats th{padding:6px 8px;border-bottom:1px solid var(--gray-100);text-align:left;}
+  .stats th{color:var(--gray-600);font-weight:700;}
+  .stats td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
+  .stats td.bef{color:var(--gray-500);}
+  .stats td.aft{color:var(--blue);}
+</style>
+</head>
+<body>
+
+<div class="frame-title">
+  <h1>🏠 홈화면 단순화 — 1차 HTML 목업 (B안 위계형)</h1>
+  <p>
+    왼쪽 = <b>지금 (Before)</b>, 한 화면에 영역 7개가 다 펼쳐져 있어 사장님이 어디 봐야 할지 시선 분산.<br>
+    오른쪽 = <b>제안 (After, B안)</b>, 첫 화면 영역 3개로 압축. 오늘 매출은 그대로 크게, 이번달 정산·예비비는 한 줄 요약 카드로. 카드 탭하면 안에서 펼쳐짐.
+  </p>
+</div>
+
+<div class="row">
+  <!-- ════════════════ BEFORE ════════════════ -->
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-bef">BEFORE</span>
+      <span class="lbl">지금 — 7개 영역 평면 나열</span>
+    </div>
+    <div class="screen">
+
+      <!-- ① 오늘 매출 1순위 -->
+      <div class="card top-sales">
+        <div class="ttl-row">
+          <div class="ttl-left">
+            <span>💰</span>
+            <span class="ttl">오늘 매출</span>
+            <span class="mode-tag">실시간</span>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="amt">1,247,300원</div>
+        <div class="pe">
+          <div class="pe-row">
+            <span class="pe-label">💸 지출</span>
+            <span><span class="pe-val red">387,400원</span><span class="pe-delta" style="color:var(--gray-500);">-</span></span>
+          </div>
+          <div class="pe-row">
+            <span class="pe-label">💵 순수익</span>
+            <span><span class="pe-val">859,900원</span><span class="pe-delta">+12%</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② 모드 토글 -->
+      <div class="mode-tabs">
+        <button class="mode-tab active">📅 월 보기</button>
+        <button class="mode-tab">📆 주차 보기</button>
+      </div>
+
+      <!-- ③ 월 네비 -->
+      <div class="month-nav">
+        <button class="nav-btn">‹</button>
+        <span class="month-lbl">2026년 5월</span>
+        <button class="nav-btn">›</button>
+      </div>
+
+      <!-- ④ 월 카드 -->
+      <div class="card month-card">
+        <div class="row-3">
+          <div class="col-3">
+            <div class="lbl">매출</div>
+            <div class="val blue">28,470,000</div>
+          </div>
+          <div class="col-3">
+            <div class="lbl">지출</div>
+            <div class="val red">11,820,000</div>
+          </div>
+          <div class="col-3">
+            <div class="lbl">순익</div>
+            <div class="val">16,650,000</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ 큰 캘린더 -->
+      <div class="card cal-card">
+        <div class="cal-head">
+          <span class="cal-chip">📊 매출+순수익 ▾</span>
+        </div>
+        <div class="cal-grid">
+          <!-- 1주차 -->
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell has-data"><span class="d-num">1</span><span class="d-amt">125</span></div>
+          <div class="cal-cell has-data"><span class="d-num">2</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">3</span><span class="d-amt">98</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">4</span></div>
+          <!-- 2주차 -->
+          <div class="cal-cell has-data"><span class="d-num">5</span><span class="d-amt">112</span></div>
+          <div class="cal-cell has-data"><span class="d-num">6</span><span class="d-amt">134</span></div>
+          <div class="cal-cell has-data"><span class="d-num">7</span><span class="d-amt">155</span></div>
+          <div class="cal-cell has-data"><span class="d-num">8</span><span class="d-amt">168</span></div>
+          <div class="cal-cell has-data"><span class="d-num">9</span><span class="d-amt">142</span></div>
+          <div class="cal-cell has-data"><span class="d-num">10</span><span class="d-amt">189</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">11</span></div>
+          <!-- 3주차 -->
+          <div class="cal-cell has-data"><span class="d-num">12</span><span class="d-amt">124</span></div>
+          <div class="cal-cell has-data"><span class="d-num">13</span><span class="d-amt">137</span></div>
+          <div class="cal-cell has-data"><span class="d-num">14</span><span class="d-amt">156</span></div>
+          <div class="cal-cell has-data"><span class="d-num">15</span><span class="d-amt">148</span></div>
+          <div class="cal-cell has-data"><span class="d-num">16</span><span class="d-amt">172</span></div>
+          <div class="cal-cell has-data"><span class="d-num">17</span><span class="d-amt">183</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">18</span></div>
+          <!-- 4주차 -->
+          <div class="cal-cell has-data"><span class="d-num">19</span><span class="d-amt">119</span></div>
+          <div class="cal-cell has-data"><span class="d-num">20</span><span class="d-amt">128</span></div>
+          <div class="cal-cell has-data"><span class="d-num">21</span><span class="d-amt">141</span></div>
+          <div class="cal-cell has-data" style="background:var(--blue);"><span class="d-num" style="color:#fff;">22</span><span class="d-amt" style="color:#fff;">124</span></div>
+          <div class="cal-cell"><span class="d-num">23</span></div>
+          <div class="cal-cell"><span class="d-num">24</span></div>
+          <div class="cal-cell"><span class="d-num" style="color:var(--danger);">25</span></div>
+          <!-- 5주차 -->
+          <div class="cal-cell"><span class="d-num">26</span></div>
+          <div class="cal-cell"><span class="d-num">27</span></div>
+          <div class="cal-cell"><span class="d-num">28</span></div>
+          <div class="cal-cell"><span class="d-num">29</span></div>
+          <div class="cal-cell"><span class="d-num">30</span></div>
+          <div class="cal-cell"><span class="d-num">31</span></div>
+          <div class="cal-cell" style="opacity:.3;"><span class="d-num">1</span></div>
+        </div>
+      </div>
+
+      <!-- ⑥ 주별 카테고리 비교 진입 카드 -->
+      <div class="card enter-card">
+        <div>
+          <div class="ttl">📊 주별 카테고리 비교</div>
+          <div class="sub">식자재·인건비 비율 한눈에</div>
+        </div>
+        <span class="arrow-r">›</span>
+      </div>
+
+      <!-- ⑦ 예비비 잔고 미니 -->
+      <div class="reserve-mini">
+        <div class="lt"><span>🏦</span><span>예비비 잔고</span></div>
+        <div class="rt"><span>3,420만</span><span class="sub">상세 ›</span></div>
+      </div>
+
+      <!-- ⑧ 기타매출 -->
+      <div class="card extra-card">
+        <div class="ttl">🪙 기타매출 누적</div>
+        <div class="sub">장부와 별도로 관리되는 매출</div>
+        <div class="item"><span>배달팁</span><span>284,000원</span></div>
+        <div class="item"><span>주류 별도</span><span>156,500원</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════ AFTER ════════════════ -->
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-aft">AFTER</span>
+      <span class="lbl">제안 — 3개 영역 위계형</span>
+    </div>
+    <div class="screen">
+
+      <!-- ① 오늘 매출 1순위 (그대로 유지 — 매일 보는 핵심) -->
+      <div class="card top-sales">
+        <div class="ttl-row">
+          <div class="ttl-left">
+            <span>💰</span>
+            <span class="ttl">오늘 매출</span>
+            <span class="mode-tag">실시간</span>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="amt">1,247,300원</div>
+        <div class="pe">
+          <div class="pe-row">
+            <span class="pe-label">💸 지출</span>
+            <span><span class="pe-val red">387,400원</span><span class="pe-delta" style="color:var(--gray-500);">-</span></span>
+          </div>
+          <div class="pe-row">
+            <span class="pe-label">💵 순수익</span>
+            <span><span class="pe-val">859,900원</span><span class="pe-delta">+12%</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② 이번 달 정산 — 압축 카드 (탭하면 캘린더·비교 펼쳐짐) -->
+      <div class="card compact">
+        <div class="ttl-row">
+          <div class="ttl-left">
+            <span>📅</span>
+            <span class="ttl">이번 달 정산</span>
+            <span class="month-tag">5월</span>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="summary-row">
+          <div class="summary-col">
+            <div class="lbl">매출</div>
+            <div class="val blue">2,847만</div>
+          </div>
+          <div class="summary-col">
+            <div class="lbl">지출</div>
+            <div class="val red">1,182만</div>
+          </div>
+          <div class="summary-col">
+            <div class="lbl">순익</div>
+            <div class="val green">1,665만</div>
+          </div>
+        </div>
+        <div class="hint">탭하면 캘린더·주별 비교 펼쳐짐</div>
+      </div>
+
+      <!-- ③ 예비비 잔고 — 한 줄 (그대로) -->
+      <div class="reserve-mini">
+        <div class="lt"><span>🏦</span><span>예비비 잔고</span></div>
+        <div class="rt"><span>3,420만</span><span class="sub">상세 ›</span></div>
+      </div>
+
+      <!-- 안내 -->
+      <div style="margin-top:24px;padding:14px;background:var(--gray-100);border-radius:12px;text-align:center;">
+        <div style="font-size:11px;color:var(--gray-600);line-height:1.6;">
+          <b style="color:var(--gray-800);">기타매출·주별 비교는</b><br>
+          📅 이번 달 정산 카드 안으로 들어감
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ AFTER (펼친 상태) ════════════════ -->
+<div class="frame-title" style="margin-top:30px;">
+  <h1>📂 이번 달 정산 카드를 탭했을 때 (펼친 상태)</h1>
+  <p>한 화면 안에서 펼쳐짐 (별도 화면 이동 X). 다시 탭하면 접힘.</p>
+</div>
+
+<div class="row" style="grid-template-columns:1fr;max-width:380px;">
+  <div class="phone">
+    <div class="phone-hdr">
+      <span class="pill pill-aft">AFTER (펼친 상태)</span>
+      <span class="lbl">이번 달 정산 ▼</span>
+    </div>
+    <div class="screen">
+
+      <!-- 오늘 매출 카드 (위) -->
+      <div class="card top-sales">
+        <div class="ttl-row">
+          <div class="ttl-left">
+            <span>💰</span>
+            <span class="ttl">오늘 매출</span>
+            <span class="mode-tag">실시간</span>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="amt">1,247,300원</div>
+      </div>
+
+      <!-- 이번 달 정산 — 펼친 상태 -->
+      <div class="card compact expanded">
+        <div class="ttl-row">
+          <div class="ttl-left">
+            <span>📅</span>
+            <span class="ttl">이번 달 정산</span>
+            <span class="month-tag">5월</span>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="summary-row">
+          <div class="summary-col">
+            <div class="lbl">매출</div>
+            <div class="val blue">2,847만</div>
+          </div>
+          <div class="summary-col">
+            <div class="lbl">지출</div>
+            <div class="val red">1,182만</div>
+          </div>
+          <div class="summary-col">
+            <div class="lbl">순익</div>
+            <div class="val green">1,665만</div>
+          </div>
+        </div>
+
+        <div class="expanded-body">
+
+          <!-- 모드 토글 (간소화) -->
+          <div class="mode-tabs" style="margin-bottom:8px;">
+            <button class="mode-tab active">📅 월</button>
+            <button class="mode-tab">📆 주차</button>
+          </div>
+
+          <!-- 월 네비 -->
+          <div class="month-nav">
+            <button class="nav-btn">‹</button>
+            <span class="month-lbl">5월</span>
+            <button class="nav-btn">›</button>
+          </div>
+
+          <!-- 캘린더 -->
+          <div class="cal-card" style="padding:8px 0;">
+            <div class="cal-head">
+              <span class="cal-chip">📊 매출+순수익 ▾</span>
+            </div>
+            <div class="cal-grid">
+              <div class="cal-cell"><span class="d-num">28</span></div>
+              <div class="cal-cell"><span class="d-num">29</span></div>
+              <div class="cal-cell"><span class="d-num">30</span></div>
+              <div class="cal-cell has-data"><span class="d-num">1</span><span class="d-amt">125</span></div>
+              <div class="cal-cell has-data"><span class="d-num">2</span><span class="d-amt">142</span></div>
+              <div class="cal-cell has-data"><span class="d-num">3</span><span class="d-amt">98</span></div>
+              <div class="cal-cell"><span class="d-num" style="color:var(--danger);">4</span></div>
+              <div class="cal-cell has-data"><span class="d-num">5</span><span class="d-amt">112</span></div>
+              <div class="cal-cell has-data"><span class="d-num">6</span><span class="d-amt">134</span></div>
+              <div class="cal-cell has-data"><span class="d-num">7</span><span class="d-amt">155</span></div>
+              <div class="cal-cell has-data"><span class="d-num">8</span><span class="d-amt">168</span></div>
+              <div class="cal-cell has-data"><span class="d-num">9</span><span class="d-amt">142</span></div>
+              <div class="cal-cell has-data"><span class="d-num">10</span><span class="d-amt">189</span></div>
+              <div class="cal-cell"><span class="d-num" style="color:var(--danger);">11</span></div>
+              <div class="cal-cell has-data"><span class="d-num">12</span><span class="d-amt">124</span></div>
+              <div class="cal-cell has-data"><span class="d-num">13</span><span class="d-amt">137</span></div>
+              <div class="cal-cell has-data"><span class="d-num">14</span><span class="d-amt">156</span></div>
+              <div class="cal-cell has-data"><span class="d-num">15</span><span class="d-amt">148</span></div>
+              <div class="cal-cell has-data"><span class="d-num">16</span><span class="d-amt">172</span></div>
+              <div class="cal-cell has-data"><span class="d-num">17</span><span class="d-amt">183</span></div>
+              <div class="cal-cell"><span class="d-num" style="color:var(--danger);">18</span></div>
+              <div class="cal-cell has-data"><span class="d-num">19</span><span class="d-amt">119</span></div>
+              <div class="cal-cell has-data"><span class="d-num">20</span><span class="d-amt">128</span></div>
+              <div class="cal-cell has-data"><span class="d-num">21</span><span class="d-amt">141</span></div>
+              <div class="cal-cell has-data" style="background:var(--blue);"><span class="d-num" style="color:#fff;">22</span><span class="d-amt" style="color:#fff;">124</span></div>
+              <div class="cal-cell"><span class="d-num">23</span></div>
+              <div class="cal-cell"><span class="d-num">24</span></div>
+              <div class="cal-cell"><span class="d-num" style="color:var(--danger);">25</span></div>
+              <div class="cal-cell"><span class="d-num">26</span></div>
+              <div class="cal-cell"><span class="d-num">27</span></div>
+              <div class="cal-cell"><span class="d-num">28</span></div>
+              <div class="cal-cell"><span class="d-num">29</span></div>
+              <div class="cal-cell"><span class="d-num">30</span></div>
+              <div class="cal-cell"><span class="d-num">31</span></div>
+              <div class="cal-cell" style="opacity:.3;"><span class="d-num">1</span></div>
+            </div>
+          </div>
+
+          <!-- 주별 비교 진입 -->
+          <div class="enter-card" style="margin-top:10px;padding:11px 14px;border-radius:12px;">
+            <div>
+              <div class="ttl" style="font-size:12px;">📊 주별 카테고리 비교</div>
+              <div class="sub">식자재·인건비 비율</div>
+            </div>
+            <span class="arrow-r">›</span>
+          </div>
+
+          <!-- 기타매출 -->
+          <div style="margin-top:10px;padding:11px 14px;background:var(--gray-50);border-radius:12px;">
+            <div style="font-size:12px;font-weight:800;color:var(--gray-800);margin-bottom:6px;">🪙 기타매출 누적</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-700);padding:3px 0;">
+              <span>배달팁</span><span style="font-weight:700;">284,000원</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-700);padding:3px 0;">
+              <span>주류 별도</span><span style="font-weight:700;">156,500원</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 예비비 잔고 (펼침 영역 밖) -->
+      <div class="reserve-mini">
+        <div class="lt"><span>🏦</span><span>예비비 잔고</span></div>
+        <div class="rt"><span>3,420만</span><span class="sub">상세 ›</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ 토스 비유 ════════════════ -->
+<div class="toss-note">
+  <h3>💡 토스 정신 vs 우리 매장 운영 도구 차이</h3>
+  <p>
+    토스는 "통장잔액 / 나눠모으기 / 주식" 3개 카드만 보이고 모두 탭해 들어감 (조회 도구라 부담 작음).<br>
+    우리 앱은 사장님이 하루 5~10번 매출·지출·순익을 확인하는 <b>운영 도구</b> → 1순위 정보(오늘 매출 카드)는 그대로 첫 화면에 크게 두고, 나머지(달력·비교·기타매출)는 한 줄 요약으로 압축. <b>"단순함은 사장님이 매번 보는 것"의 정의 안에서.</b>
+  </p>
+</div>
+
+<!-- ════════════════ 변화 통계 ════════════════ -->
+<div class="stats">
+  <h3>📊 변화 요약</h3>
+  <table>
+    <thead>
+      <tr><th>항목</th><th>Before (현재)</th><th>After (B안)</th><th>효과</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>첫 화면 영역 수</td>
+        <td class="num bef">8개</td>
+        <td class="num aft">3개</td>
+        <td>시각 노이즈 ↓ 63%</td>
+      </tr>
+      <tr>
+        <td>1순위 정보(오늘 매출) 노출</td>
+        <td class="num bef">즉시</td>
+        <td class="num aft">즉시</td>
+        <td>그대로 (보호)</td>
+      </tr>
+      <tr>
+        <td>이번 달 매출/지출/순익 확인</td>
+        <td class="num bef">즉시 (스크롤)</td>
+        <td class="num aft">즉시 (요약 카드)</td>
+        <td>스크롤 ↓</td>
+      </tr>
+      <tr>
+        <td>이번 달 캘린더·비교 확인</td>
+        <td class="num bef">즉시 (스크롤)</td>
+        <td class="num aft">1탭 (펼침)</td>
+        <td>탭 +1 (의도 있을 때만)</td>
+      </tr>
+      <tr>
+        <td>전체 화면 세로 길이</td>
+        <td class="num bef">약 1,600px</td>
+        <td class="num aft">약 720px</td>
+        <td>스크롤 ↓ 55%</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
