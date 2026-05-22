@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>디자인 통일 mock — Before vs After</title>
+<link rel="stylesheet" as="style" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<style>
+  :root{
+    --blue:#3182F6;
+    --blue-strong:#0064FF;
+    --blue-light:#EDF4FF;
+    --green:#0CAB6C;
+    --red:#F04452;
+    --orange:#F5A11E;
+    --purple:#8B5CF6;
+    --bg:#F4F5F7;
+    --card:#FFFFFF;
+    --text-1:#191F28;
+    --text-2:#333D4B;
+    --text-3:#6B7684;
+    --text-4:#8B95A1;
+    --text-5:#B0B8C1;
+    --line:#F2F4F6;
+    --line-2:#E5E8EB;
+    /* 새 디자인 토큰 */
+    --card-radius: 18px;
+    --card-shadow: 0 2px 8px rgba(20,40,80,0.04), 0 1px 2px rgba(20,40,80,0.03);
+    --card-shadow-lg: 0 4px 16px rgba(20,40,80,0.06), 0 1px 3px rgba(20,40,80,0.04);
+    --card-padding: 18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;background:#DDE1E6;color:var(--text-1);font-size:15px;letter-spacing:-0.2px;-webkit-font-smoothing:antialiased;}
+  .page{max-width:430px;margin:0 auto;background:var(--bg);min-height:100vh;}
+
+  /* 가이드 */
+  .guide-bar{position:sticky;top:0;z-index:50;background:#0F172A;color:#fff;padding:10px 14px;}
+  .gb-ttl{font-size:13px;font-weight:800;}
+  .gb-sub{font-size:11px;color:#CBD5E1;margin-top:3px;line-height:1.5;}
+
+  /* 모드 토글: Before / After */
+  .mode-toggle{display:flex;gap:4px;background:#E5E8EB;padding:4px;margin:10px;border-radius:12px;position:sticky;top:54px;z-index:40;box-shadow:0 1px 6px rgba(0,0,0,0.05);}
+  .mode-tab{flex:1;padding:11px;font-size:13px;font-weight:800;border:0;background:transparent;border-radius:9px;cursor:pointer;color:var(--text-4);}
+  .mode-tab.active.before{background:#FEF3C7;color:#92400E;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+  .mode-tab.active.after{background:var(--card);color:var(--blue-strong);box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+
+  /* 본문 */
+  .body{padding:10px 16px 50px;}
+  .section-ttl{font-size:13px;font-weight:800;color:var(--text-2);margin:18px 4px 8px;letter-spacing:-0.3px;display:flex;align-items:center;gap:6px;}
+  .section-ttl .badge{font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:6px;background:var(--blue-light);color:var(--blue-strong);}
+
+  /* ═══════════════════════════════════════════ */
+  /*  BEFORE — 현재 옛 스타일 (영수증/근태 등) */
+  /* ═══════════════════════════════════════════ */
+  .old-card{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+  .old-card-title{font-size:14px;font-weight:800;margin-bottom:10px;color:#191F28;}
+  .old-card-sub{font-size:12px;color:#6B7684;margin-bottom:8px;}
+
+  .old-rcp-mode{display:flex;gap:10px;}
+  .old-rcp-btn{flex:1;padding:18px 10px;background:#F2F4F6;border-radius:10px;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .old-rcp-btn .ic{font-size:24px;line-height:1;}
+  .old-rcp-btn .nm{font-size:13px;font-weight:700;color:#191F28;}
+  .old-rcp-btn .sub{font-size:11px;color:#8B95A1;font-weight:500;}
+
+  .old-emp-card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+  .old-emp-row{display:flex;justify-content:space-between;align-items:center;}
+  .old-emp-name{font-size:14px;font-weight:800;}
+  .old-emp-state{font-size:11px;padding:3px 8px;border-radius:6px;background:#DCFCE7;color:#166534;font-weight:700;}
+  .old-emp-time{font-size:12px;color:#6B7684;margin-top:6px;}
+  .old-emp-actions{display:flex;gap:6px;margin-top:10px;}
+  .old-emp-actions button{flex:1;padding:8px;font-size:12px;border:0;border-radius:8px;background:#F2F4F6;color:#191F28;cursor:pointer;font-weight:700;}
+  .old-emp-actions .primary{background:#0050FF;color:#fff;}
+
+  .old-input-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #F2F4F6;}
+  .old-input-row .lb{font-size:13px;color:#4E5968;font-weight:600;}
+  .old-input-row input{border:1px solid #E5E8EB;border-radius:6px;padding:7px 10px;width:130px;text-align:right;font-size:13px;font-family:inherit;font-weight:700;}
+  .old-sum-row{display:flex;justify-content:space-between;padding:14px 0 4px;border-top:2px solid #E5E8EB;margin-top:6px;}
+  .old-sum-row .lb{font-size:14px;font-weight:900;}
+  .old-sum-row .vl{font-size:18px;font-weight:900;color:#0050FF;}
+
+  .old-hub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .old-hub-cell{background:#fff;border-radius:10px;padding:14px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.06);cursor:pointer;}
+  .old-hub-cell .ic{font-size:22px;display:block;margin-bottom:5px;}
+  .old-hub-cell .nm{font-size:12px;font-weight:700;}
+
+  /* ═══════════════════════════════════════════ */
+  /*  AFTER — 토스 통일 스타일                  */
+  /* ═══════════════════════════════════════════ */
+  .toss-card{background:var(--card);border-radius:var(--card-radius);padding:var(--card-padding);margin-bottom:12px;box-shadow:var(--card-shadow);}
+  .toss-card.lg{box-shadow:var(--card-shadow-lg);padding:22px;border-radius:20px;}
+  .toss-card-title{font-size:15px;font-weight:800;color:var(--text-1);margin-bottom:14px;letter-spacing:-0.4px;display:flex;align-items:center;gap:6px;justify-content:space-between;}
+  .toss-card-title .sub{font-size:11.5px;color:var(--text-4);font-weight:500;}
+
+  /* 영수증 모드 (큰 진입 박스 2개) */
+  .toss-rcp-mode{display:flex;flex-direction:column;gap:10px;}
+  .toss-rcp-btn{display:flex;align-items:center;gap:14px;padding:18px 20px;background:var(--card);border:0;border-radius:18px;cursor:pointer;box-shadow:var(--card-shadow);text-align:left;transition:transform .2s cubic-bezier(.2,.8,.4,1);width:100%;}
+  .toss-rcp-btn:active{transform:scale(.985);}
+  .toss-rcp-btn .ic-wrap{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .toss-rcp-btn .ic-wrap.blue{background:var(--blue-light);}
+  .toss-rcp-btn .ic-wrap.amber{background:#FFF6E0;}
+  .toss-rcp-btn .body-col{flex:1;min-width:0;}
+  .toss-rcp-btn .nm{font-size:15px;font-weight:800;color:var(--text-1);letter-spacing:-0.4px;}
+  .toss-rcp-btn .sub{font-size:12px;color:var(--text-4);margin-top:3px;font-weight:500;}
+  .toss-rcp-btn .arrow{font-size:22px;color:var(--text-5);font-weight:300;}
+
+  /* 직원 카드 (근태) */
+  .toss-emp-card{background:var(--card);border-radius:var(--card-radius);padding:16px 18px;margin-bottom:10px;box-shadow:var(--card-shadow);transition:transform .2s cubic-bezier(.2,.8,.4,1);}
+  .toss-emp-card:active{transform:scale(.99);}
+  .toss-emp-row{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .toss-emp-l{display:flex;align-items:center;gap:11px;min-width:0;}
+  .toss-emp-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#EDF4FF 0%,#DBEAFE 100%);display:flex;align-items:center;justify-content:center;color:var(--blue-strong);font-weight:800;font-size:14px;flex-shrink:0;letter-spacing:-0.3px;}
+  .toss-emp-info{min-width:0;}
+  .toss-emp-name{font-size:15px;font-weight:800;color:var(--text-1);letter-spacing:-0.3px;}
+  .toss-emp-meta{font-size:12px;color:var(--text-4);margin-top:2px;font-weight:500;display:flex;align-items:center;gap:5px;}
+  .toss-emp-meta .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+  .toss-emp-state{font-size:11px;padding:5px 10px;border-radius:10px;font-weight:800;letter-spacing:-0.2px;}
+  .toss-emp-state.in{background:#E4F7EE;color:var(--green);}
+  .toss-emp-state.off{background:var(--line);color:var(--text-3);}
+  .toss-emp-divider{height:1px;background:var(--line);margin:12px -2px 12px;}
+  .toss-emp-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .toss-emp-row2 .cell .lb{font-size:11px;color:var(--text-4);font-weight:600;margin-bottom:3px;}
+  .toss-emp-row2 .cell .vl{font-size:15px;font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+  .toss-emp-actions{display:flex;gap:8px;margin-top:12px;}
+  .toss-emp-actions .btn{flex:1;padding:11px;font-size:13px;font-weight:700;border:0;border-radius:11px;cursor:pointer;letter-spacing:-0.2px;}
+  .toss-emp-actions .pri{background:var(--blue);color:#fff;}
+  .toss-emp-actions .sec{background:var(--line);color:var(--text-2);}
+
+  /* 마감 입력 폼 */
+  .toss-input-card{background:var(--card);border-radius:var(--card-radius);padding:6px 20px 20px;margin-bottom:12px;box-shadow:var(--card-shadow);}
+  .toss-input-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);}
+  .toss-input-row:last-of-type{border-bottom:0;}
+  .toss-input-row .lcol{display:flex;align-items:center;gap:10px;}
+  .toss-input-row .dot{width:8px;height:8px;border-radius:50%;}
+  .toss-input-row .lb{font-size:14px;color:var(--text-2);font-weight:600;letter-spacing:-0.3px;}
+  .toss-input-row input{border:0;background:transparent;padding:6px 10px;width:160px;text-align:right;font-size:16px;font-family:inherit;font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+  .toss-input-row input::placeholder{color:var(--text-5);font-weight:500;}
+  .toss-input-sum{display:flex;justify-content:space-between;align-items:center;padding:16px 14px;background:linear-gradient(135deg,var(--blue-light) 0%,#F3F8FF 100%);border-radius:12px;margin-top:14px;}
+  .toss-input-sum .lb{font-size:14px;font-weight:800;color:var(--blue-strong);}
+  .toss-input-sum .vl{font-size:22px;font-weight:800;color:var(--blue-strong);font-variant-numeric:tabular-nums;letter-spacing:-0.7px;}
+  .toss-input-sum .vl .won{font-size:14px;font-weight:700;opacity:.7;}
+
+  /* 지출관리 진입 그리드 */
+  .toss-hub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .toss-hub-cell{background:var(--card);border-radius:16px;padding:18px 8px;text-align:center;box-shadow:var(--card-shadow);cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);}
+  .toss-hub-cell:active{transform:scale(.95);}
+  .toss-hub-cell .ic-wrap{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;}
+  .toss-hub-cell .ic-wrap.blue{background:var(--blue-light);}
+  .toss-hub-cell .ic-wrap.green{background:#E4F7EE;}
+  .toss-hub-cell .ic-wrap.amber{background:#FFF6E0;}
+  .toss-hub-cell .ic-wrap.purple{background:#F3E8FF;}
+  .toss-hub-cell .ic-wrap.red{background:#FEE2E2;}
+  .toss-hub-cell .ic-wrap.gray{background:var(--line);}
+  .toss-hub-cell .nm{font-size:13px;font-weight:800;color:var(--text-2);letter-spacing:-0.3px;}
+  .toss-hub-cell .cnt{font-size:11.5px;color:var(--text-4);margin-top:3px;font-weight:500;font-variant-numeric:tabular-nums;}
+
+  /* 토글 화면 전환 */
+  .scheme-page{display:none;}
+  .scheme-page.active{display:block;}
+
+  /* footer */
+  .footer{padding:30px 14px;text-align:center;color:var(--text-5);font-size:11px;line-height:1.6;font-weight:500;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 가이드 -->
+  <div class="guide-bar">
+    <div class="gb-ttl">🎨 디자인 통일 — Before vs After</div>
+    <div class="gb-sub">위 토글로 옛 ↔ 새 스타일 비교. 4개 화면 미리보기.</div>
+  </div>
+
+  <!-- 모드 토글 -->
+  <div class="mode-toggle">
+    <button class="mode-tab active before" data-scheme="before">⏮️ Before<br><small style="font-size:9.5px;font-weight:600;">현재 (옛 그림체)</small></button>
+    <button class="mode-tab after" data-scheme="after">▶️ After<br><small style="font-size:9.5px;font-weight:600;">토스 통일</small></button>
+  </div>
+
+  <!-- ═══════════════ BEFORE ═══════════════ -->
+  <div class="scheme-page active" data-scheme="before">
+    <div class="body">
+
+      <div class="section-ttl">① 영수증 등록 — 모드 선택 <span class="badge">짜침 ⚠</span></div>
+      <div class="old-card">
+        <div class="old-card-title">어떤 영수증인가요?</div>
+        <div class="old-card-sub">먼저 종류를 골라주세요</div>
+        <div class="old-rcp-mode">
+          <button class="old-rcp-btn">
+            <span class="ic">📦</span>
+            <span class="nm">거래처 영수증</span>
+            <span class="sub">정기 거래·외상</span>
+          </button>
+          <button class="old-rcp-btn">
+            <span class="ic">🛒</span>
+            <span class="nm">직구 영수증</span>
+            <span class="sub">마트·일반·배민</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="section-ttl">② 근태 — 직원 카드 <span class="badge">짜침 ⚠</span></div>
+      <div class="old-emp-card">
+        <div class="old-emp-row">
+          <span class="old-emp-name">권채현</span>
+          <span class="old-emp-state">출근중</span>
+        </div>
+        <div class="old-emp-time">출근 09:00 · 8시간 24분 근무</div>
+        <div class="old-emp-actions">
+          <button class="primary">퇴근 처리</button>
+          <button>휴게 +</button>
+          <button>수정</button>
+        </div>
+      </div>
+      <div class="old-emp-card">
+        <div class="old-emp-row">
+          <span class="old-emp-name">김서연</span>
+          <span class="old-emp-state" style="background:#F2F4F6;color:#6B7684;">미출근</span>
+        </div>
+        <div class="old-emp-time">근무 예정 11:00 ~ 19:00</div>
+      </div>
+
+      <div class="section-ttl">③ 마감 입력 폼 <span class="badge">짜침 ⚠</span></div>
+      <div class="old-card">
+        <div class="old-card-title">마감 정산 입력</div>
+        <div class="old-input-row"><span class="lb">💳 카드</span><input value="1,771,000"></div>
+        <div class="old-input-row"><span class="lb">💵 현금</span><input value="805,000"></div>
+        <div class="old-input-row"><span class="lb">🧾 현금영수증</span><input value="0"></div>
+        <div class="old-input-row"><span class="lb">📱 QR</span><input value="0"></div>
+        <div class="old-input-row"><span class="lb">📲 기타</span><input value="386,400"></div>
+        <div class="old-sum-row"><span class="lb">합계</span><span class="vl">2,962,400원</span></div>
+      </div>
+
+      <div class="section-ttl">④ 지출관리 허브 (6개 진입) <span class="badge">짜침 ⚠</span></div>
+      <div class="old-hub-grid">
+        <div class="old-hub-cell"><span class="ic">🧾</span><div class="nm">영수증</div></div>
+        <div class="old-hub-cell"><span class="ic">🏪</span><div class="nm">거래처</div></div>
+        <div class="old-hub-cell"><span class="ic">📋</span><div class="nm">고정비</div></div>
+        <div class="old-hub-cell"><span class="ic">👥</span><div class="nm">인건비</div></div>
+        <div class="old-hub-cell"><span class="ic">📂</span><div class="nm">카테고리</div></div>
+        <div class="old-hub-cell"><span class="ic">🔍</span><div class="nm">매출 대조</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════ AFTER ═══════════════ -->
+  <div class="scheme-page" data-scheme="after">
+    <div class="body">
+
+      <div class="section-ttl">① 영수증 등록 — 모드 선택 <span class="badge" style="background:#E4F7EE;color:var(--green);">통일 ✓</span></div>
+      <div class="toss-card">
+        <div class="toss-card-title">어떤 영수증인가요? <span class="sub">먼저 종류를 골라주세요</span></div>
+        <div class="toss-rcp-mode">
+          <button class="toss-rcp-btn">
+            <div class="ic-wrap blue">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#3182F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9 5-9-5"/><path d="M3 8v10a2 2 0 002 2h14a2 2 0 002-2V8"/><path d="M3 8l9-5 9 5"/></svg>
+            </div>
+            <div class="body-col">
+              <div class="nm">거래처 영수증</div>
+              <div class="sub">정기 거래 · 외상</div>
+            </div>
+            <div class="arrow">›</div>
+          </button>
+          <button class="toss-rcp-btn">
+            <div class="ic-wrap amber">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#F5A11E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+            </div>
+            <div class="body-col">
+              <div class="nm">직구 영수증</div>
+              <div class="sub">마트 · 일반 · 배민</div>
+            </div>
+            <div class="arrow">›</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="section-ttl">② 근태 — 직원 카드 <span class="badge" style="background:#E4F7EE;color:var(--green);">통일 ✓</span></div>
+      <div class="toss-emp-card">
+        <div class="toss-emp-row">
+          <div class="toss-emp-l">
+            <div class="toss-emp-avatar">권</div>
+            <div class="toss-emp-info">
+              <div class="toss-emp-name">권채현</div>
+              <div class="toss-emp-meta"><span class="live-dot"></span>09:00 출근 · 근무 중</div>
+            </div>
+          </div>
+          <div class="toss-emp-state in">출근</div>
+        </div>
+        <div class="toss-emp-divider"></div>
+        <div class="toss-emp-row2">
+          <div class="cell"><div class="lb">근무 시간</div><div class="vl">8시간 24분</div></div>
+          <div class="cell"><div class="lb">예상 수당</div><div class="vl">87,360원</div></div>
+        </div>
+        <div class="toss-emp-actions">
+          <button class="btn pri">퇴근 처리</button>
+          <button class="btn sec">휴게 +</button>
+        </div>
+      </div>
+      <div class="toss-emp-card">
+        <div class="toss-emp-row">
+          <div class="toss-emp-l">
+            <div class="toss-emp-avatar">김</div>
+            <div class="toss-emp-info">
+              <div class="toss-emp-name">김서연</div>
+              <div class="toss-emp-meta">11:00 ~ 19:00 근무 예정</div>
+            </div>
+          </div>
+          <div class="toss-emp-state off">미출근</div>
+        </div>
+      </div>
+
+      <div class="section-ttl">③ 마감 입력 폼 <span class="badge" style="background:#E4F7EE;color:var(--green);">통일 ✓</span></div>
+      <div class="toss-input-card">
+        <div class="toss-input-row">
+          <div class="lcol"><span class="dot" style="background:var(--blue);"></span><span class="lb">카드 결제</span></div>
+          <input value="1,771,000">
+        </div>
+        <div class="toss-input-row">
+          <div class="lcol"><span class="dot" style="background:var(--green);"></span><span class="lb">현금</span></div>
+          <input value="805,000">
+        </div>
+        <div class="toss-input-row">
+          <div class="lcol"><span class="dot" style="background:var(--orange);"></span><span class="lb">현금영수증</span></div>
+          <input placeholder="0">
+        </div>
+        <div class="toss-input-row">
+          <div class="lcol"><span class="dot" style="background:var(--purple);"></span><span class="lb">QR 결제</span></div>
+          <input placeholder="0">
+        </div>
+        <div class="toss-input-row">
+          <div class="lcol"><span class="dot" style="background:var(--text-4);"></span><span class="lb">기타 결제</span></div>
+          <input value="386,400">
+        </div>
+        <div class="toss-input-sum">
+          <div class="lb">합계</div>
+          <div class="vl">2,962,400<span class="won">원</span></div>
+        </div>
+      </div>
+
+      <div class="section-ttl">④ 지출관리 허브 (6개 진입) <span class="badge" style="background:#E4F7EE;color:var(--green);">통일 ✓</span></div>
+      <div class="toss-hub-grid">
+        <div class="toss-hub-cell">
+          <div class="ic-wrap blue"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#3182F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+          <div class="nm">영수증</div>
+          <div class="cnt">14건</div>
+        </div>
+        <div class="toss-hub-cell">
+          <div class="ic-wrap green"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#0CAB6C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg></div>
+          <div class="nm">거래처</div>
+          <div class="cnt">12곳</div>
+        </div>
+        <div class="toss-hub-cell">
+          <div class="ic-wrap amber"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F5A11E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="nm">고정비</div>
+          <div class="cnt">5개</div>
+        </div>
+        <div class="toss-hub-cell">
+          <div class="ic-wrap purple"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+          <div class="nm">인건비</div>
+          <div class="cnt">5명</div>
+        </div>
+        <div class="toss-hub-cell">
+          <div class="ic-wrap red"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F04452" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg></div>
+          <div class="nm">카테고리</div>
+          <div class="cnt">8개</div>
+        </div>
+        <div class="toss-hub-cell">
+          <div class="ic-wrap gray"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#6B7684" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          <div class="nm">매출 대조</div>
+          <div class="cnt">8건</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    디자인 통일 mock · 2026-05-22<br>
+    실제 코드 작업은 사장님 OK 후
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.mode-tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const s = t.dataset.scheme;
+      document.querySelectorAll('.mode-tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelectorAll('.scheme-page').forEach(p=>{
+        p.classList.toggle('active', p.dataset.scheme===s);
+      });
+      window.scrollTo({top:0, behavior:'instant'});
+    });
+  });
+</script>
+</body>
+</html>
