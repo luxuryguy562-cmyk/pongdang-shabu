@@ -1116,6 +1116,108 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .v17-filter-row .dot{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:8px;}
 .v17-filter-row .check{color:var(--blue);font-size:18px;display:none;}
 .v17-filter-row.active .check{display:inline;}
+
+/* ─── 홈 v7 — 토스 스타일 드릴다운 (2026-05-22 사장님 OK) ─── */
+/* stage 토글 */
+#dashboardCont .dash-stage{display:none;}
+#dashboardCont .dash-stage.active{display:block;}
+/* 인사 헤더 */
+.dash-hello{margin:4px 4px 18px;}
+.dash-hello h1{font-size:22px;font-weight:800;color:#191F28;margin:0 0 4px;letter-spacing:-0.7px;line-height:1.25;}
+.dash-hello p{font-size:13px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;}
+/* 오늘 매출 풀카드 v7 */
+.dash-today-v7{background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);border-radius:20px;padding:22px 22px 18px;margin-bottom:14px;box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);position:relative;}
+.dash-today-v7:active{transform:scale(.985);}
+.dash-today-v7 .t7-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.dash-today-v7 .t7-label{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700;color:#333D4B;letter-spacing:-0.3px;}
+.dash-today-v7 .t7-label .live-dot{width:8px;height:8px;border-radius:50%;background:#0CAB6C;position:relative;}
+.dash-today-v7 .t7-label .live-dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;background:#0CAB6C;opacity:.25;animation:dashPulse 2s infinite;}
+@keyframes dashPulse{0%{transform:scale(1);opacity:.3;}70%{transform:scale(2);opacity:0;}100%{opacity:0;}}
+.dash-today-v7 .t7-mode{font-size:10px;padding:2px 7px;border-radius:8px;background:#F2F4F6;color:#6B7684;font-weight:800;letter-spacing:-0.2px;}
+.dash-today-v7 .t7-mode.live{background:#EDF4FF;color:#0064FF;}
+.dash-today-v7 .t7-arrow{font-size:22px;color:#B0B8C1;font-weight:300;line-height:1;}
+.dash-today-v7 .t7-amt{font-size:36px;font-weight:800;color:#191F28;letter-spacing:-1.4px;font-variant-numeric:tabular-nums;line-height:1.1;}
+.dash-today-v7 .t7-amt .won{font-size:22px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
+.dash-today-v7 .t7-amt.empty{font-size:24px;color:#B0B8C1;font-weight:700;}
+.dash-today-v7 .t7-time{font-size:12px;color:#8B95A1;margin-top:6px;font-weight:500;letter-spacing:-0.2px;display:flex;align-items:center;gap:6px;}
+.dash-today-v7 .t7-time .refresh{color:#0064FF;cursor:pointer;font-weight:600;}
+.dash-today-v7 .t7-pe{margin-top:18px;padding-top:16px;border-top:1px solid #F2F4F6;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dash-today-v7 .t7-pe-cell{display:flex;flex-direction:column;gap:4px;}
+.dash-today-v7 .t7-pe-cell .pe-lb{font-size:12px;color:#8B95A1;font-weight:600;letter-spacing:-0.2px;display:flex;align-items:center;gap:5px;}
+.dash-today-v7 .t7-pe-cell .pe-lb .dot{width:6px;height:6px;border-radius:50%;}
+.dash-today-v7 .t7-pe-cell .pe-lb .dot.red{background:#F04452;}
+.dash-today-v7 .t7-pe-cell .pe-lb .dot.green{background:#0CAB6C;}
+.dash-today-v7 .t7-pe-cell .pe-vl{font-size:17px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
+.dash-today-v7 .t7-pe-cell .pe-vl.red{color:#F04452;}
+.dash-today-v7 .t7-pe-cell .pe-vl.green{color:#0CAB6C;}
+.dash-today-v7 .t7-pe-cell .pe-delta{font-size:10.5px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;color:#8B95A1;}
+.dash-today-v7 .t7-act{margin-top:16px;display:flex;gap:8px;}
+.dash-today-v7 .t7-act .btn{flex:1;padding:13px;font-size:14px;font-weight:700;border:0;border-radius:12px;cursor:pointer;letter-spacing:-0.3px;transition:transform .15s;}
+.dash-today-v7 .t7-act .btn:active{transform:scale(.97);}
+.dash-today-v7 .t7-act .btn-pri{background:#3182F6;color:#fff;}
+.dash-today-v7 .t7-act .btn-sec{background:#F2F4F6;color:#333D4B;}
+/* 빈 상태 */
+.dash-today-v7 .t7-empty{margin-top:14px;padding-top:14px;border-top:1px solid #F2F4F6;text-align:center;}
+.dash-today-v7 .t7-empty p{font-size:13px;color:#6B7684;margin:0 0 12px;font-weight:600;letter-spacing:-0.3px;}
+/* 진입 박스 */
+.dash-enter-v7{background:#FFFFFF;border-radius:18px;padding:18px 20px;margin-bottom:10px;box-shadow:0 2px 8px rgba(20,40,80,0.04),0 1px 2px rgba(20,40,80,0.03);display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);}
+.dash-enter-v7:active{transform:scale(.985);}
+.dash-enter-v7 .ic-wrap{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dash-enter-v7 .ic-wrap.blue{background:#EDF4FF;}
+.dash-enter-v7 .ic-wrap.green{background:#E4F7EE;}
+.dash-enter-v7 .ic-wrap.amber{background:#FFF6E0;}
+.dash-enter-v7 .ic-wrap svg{width:22px;height:22px;}
+.dash-enter-v7 .body-col{flex:1;min-width:0;}
+.dash-enter-v7 .body-col .lb{font-size:13px;font-weight:600;color:#6B7684;margin-bottom:3px;letter-spacing:-0.3px;}
+.dash-enter-v7 .body-col .vl{font-size:22px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;letter-spacing:-0.7px;line-height:1.15;}
+.dash-enter-v7 .body-col .vl .won{font-size:14px;font-weight:700;color:#6B7684;margin-left:1px;}
+.dash-enter-v7 .body-col .sub{font-size:12px;color:#8B95A1;margin-top:3px;font-weight:500;letter-spacing:-0.2px;}
+.dash-enter-v7 .body-col .sub b{color:#0CAB6C;font-weight:700;}
+.dash-enter-v7 .body-col .sub b.red{color:#F04452;}
+.dash-enter-v7 .arrow{font-size:24px;color:#B0B8C1;font-weight:300;line-height:1;flex-shrink:0;}
+/* 뒤로 가기 */
+.dash-back-row{display:flex;align-items:center;padding:8px 4px 16px;cursor:pointer;}
+.dash-back-row .back-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#333D4B;font-weight:600;background:transparent;}
+.dash-back-row .back-ttl{font-size:17px;font-weight:800;color:#191F28;letter-spacing:-0.5px;margin-left:4px;}
+/* 오늘 상세 헤더 (그라데이션) */
+.dash-today-detail-head{background:linear-gradient(150deg,#3182F6 0%,#0064FF 100%);border-radius:24px;padding:24px 22px 28px;color:#fff;margin-bottom:16px;box-shadow:0 8px 24px rgba(49,130,246,0.25);}
+.dash-today-detail-head .lb{font-size:13px;font-weight:600;opacity:.88;display:flex;align-items:center;gap:6px;letter-spacing:-0.3px;margin-bottom:8px;}
+.dash-today-detail-head .lb .live-dot{width:7px;height:7px;border-radius:50%;background:#fff;position:relative;}
+.dash-today-detail-head .lb .live-dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;background:#fff;opacity:.35;animation:dashPulse 2s infinite;}
+.dash-today-detail-head .amt{font-size:38px;font-weight:800;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.1;}
+.dash-today-detail-head .amt .won{font-size:22px;font-weight:700;opacity:.85;margin-left:2px;}
+.dash-today-detail-head .amt.empty{font-size:24px;opacity:.7;font-weight:700;}
+.dash-today-detail-head .sub{font-size:12.5px;opacity:.82;margin-top:8px;font-weight:500;letter-spacing:-0.2px;}
+.dash-today-detail-head .pe-row{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.18);display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dash-today-detail-head .pe-row .cell .lb{font-size:11.5px;opacity:.85;font-weight:600;margin-bottom:3px;letter-spacing:-0.2px;display:block;}
+.dash-today-detail-head .pe-row .cell .vl{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.4px;color:#fff;}
+/* 결제수단별 카드 */
+.dash-pm-card{background:#FFFFFF;border-radius:18px;padding:18px 20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(20,40,80,0.04);}
+.dash-pm-card .pm-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.dash-pm-card .pm-ttl{font-size:14px;font-weight:800;color:#191F28;letter-spacing:-0.3px;}
+.dash-pm-card .pm-sub{font-size:11.5px;color:#8B95A1;font-weight:500;}
+.dash-pm-card .pm-bar{height:10px;border-radius:5px;background:#F2F4F6;overflow:hidden;display:flex;margin-bottom:14px;}
+.dash-pm-card .pm-bar .seg{height:100%;}
+.dash-pm-card .pm-list{display:flex;flex-direction:column;gap:11px;}
+.dash-pm-card .pm-row{display:flex;justify-content:space-between;align-items:center;}
+.dash-pm-card .pm-row .lcol{display:flex;align-items:center;gap:9px;}
+.dash-pm-card .pm-row .dot{width:9px;height:9px;border-radius:50%;}
+.dash-pm-card .pm-row .nm{font-size:13.5px;color:#333D4B;font-weight:600;letter-spacing:-0.3px;}
+.dash-pm-card .pm-row .vl{font-size:14px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+/* 시간대별 placeholder */
+.dash-hr-placeholder{background:#FFFFFF;border:1px dashed #E5E8EB;border-radius:18px;padding:28px 18px;text-align:center;color:#8B95A1;font-size:13px;font-weight:600;line-height:1.65;margin-bottom:12px;letter-spacing:-0.3px;}
+.dash-hr-placeholder b{color:#333D4B;font-weight:800;font-size:14px;display:block;margin-bottom:4px;}
+.dash-hr-placeholder small{font-size:11px;color:#B0B8C1;display:block;margin-top:5px;font-weight:500;}
+/* 매출 입력 CTA */
+.dash-input-cta{background:#FFFFFF;border-radius:18px;padding:18px 20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(20,40,80,0.04);display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.dash-input-cta .lcol{display:flex;align-items:center;gap:12px;}
+.dash-input-cta .ic{width:40px;height:40px;border-radius:12px;background:#EDF4FF;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.dash-input-cta .txt .ttl{font-size:14.5px;font-weight:800;color:#191F28;letter-spacing:-0.3px;}
+.dash-input-cta .txt .sub{font-size:12px;color:#8B95A1;margin-top:3px;font-weight:500;}
+.dash-input-cta .arrow{font-size:22px;color:#B0B8C1;font-weight:300;}
+/* settle stage 안 진행률 게이지 (v6 카드 보강) */
+.v6-progress-gauge{height:4px;border-radius:2px;background:#F2F4F6;overflow:hidden;margin:-6px 0 12px;}
+.v6-progress-gauge .seg{height:100%;background:linear-gradient(90deg,#3182F6 0%,#0064FF 100%);border-radius:2px;}
 </style>
 </head>
 <body>
@@ -2286,113 +2388,216 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
-<!-- ══ [5] 대시보드 ══ -->
+<!-- ══ [5] 대시보드 (홈 v7 — 토스 스타일 드릴다운, 2026-05-22) ══ -->
 <div id="dashboardCont" class="container">
-  <!-- ─── 새 기능: 오늘 매출 1순위 카드 (2026-05-15) ─── -->
-  <div class="card" id="dashTopSalesCard" style="padding:18px 16px;margin-bottom:14px;cursor:pointer;display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span style="font-size:14px;">💰</span>
-        <span id="dashTopSalesLabel" style="font-size:13px;font-weight:800;color:var(--gray-700);">오늘 매출</span>
-        <span id="dashTopSalesMode" style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--blue-light);color:var(--blue);font-weight:700;">실시간</span>
-      </div>
-      <span style="font-size:18px;color:var(--gray-300);">›</span>
+
+  <!-- ═══ stage: home (1단계 — 큰 박스 4개) ═══ -->
+  <div class="dash-stage active" data-dash-stage="home">
+
+    <!-- 인사 헤더 -->
+    <div class="dash-hello">
+      <h1>안녕하세요, 사장님</h1>
+      <p id="dashHelloDate">-</p>
     </div>
-    <div id="dashTopSalesAmt" style="font-size:30px;font-weight:900;color:var(--gray-900);line-height:1.15;">0원</div>
-    <div id="dashTopSalesUpdated" style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right;display:none;cursor:pointer;" title="강제 갱신">업데이트 - <span style="color:var(--blue);">↻</span></div>
-    <div id="dashTopSalesProfitExpense" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100);">
-      <div class="dash-top-pe-row">
-        <span class="pe-label">💸 지출</span>
-        <span><span id="dashTopExpenseAmt" class="pe-val" style="color:#EF4444;">0원</span><span id="dashTopExpenseDelta" class="pe-delta">-</span></span>
+
+    <!-- 오늘 매출 풀카드 v7 (탭 → today-detail) -->
+    <div class="dash-today-v7" id="dashTopSalesCard" style="display:none;">
+      <div class="t7-head">
+        <div class="t7-label"><span class="live-dot"></span><span id="dashTopSalesLabel">오늘 매출</span><span id="dashTopSalesMode" class="t7-mode">(준비중)</span></div>
+        <div class="t7-arrow">›</div>
       </div>
-      <div class="dash-top-pe-row">
-        <span class="pe-label">💵 순수익</span>
-        <span><span id="dashTopProfitAmt" class="pe-val">0원</span><span id="dashTopProfitDelta" class="pe-delta">-</span></span>
+      <div id="dashTopSalesAmt" class="t7-amt">0<span class="won">원</span></div>
+      <div id="dashTopSalesUpdated" class="t7-time" style="display:none;" title="강제 갱신">방금 갱신됨 <span class="refresh">↻</span></div>
+      <div id="dashTopSalesProfitExpense" class="t7-pe" style="display:none;">
+        <div class="t7-pe-cell">
+          <div class="pe-lb"><span class="dot red"></span>오늘 지출</div>
+          <div><span id="dashTopExpenseAmt" class="t7-pe-vl pe-vl red">0원</span></div>
+          <div id="dashTopExpenseDelta" class="pe-delta">-</div>
+        </div>
+        <div class="t7-pe-cell">
+          <div class="pe-lb"><span class="dot green"></span>오늘 순수익</div>
+          <div><span id="dashTopProfitAmt" class="t7-pe-vl pe-vl green">0원</span></div>
+          <div id="dashTopProfitDelta" class="pe-delta">-</div>
+        </div>
+      </div>
+      <!-- 빈 상태 (오늘 첫 매출) -->
+      <div id="dashTopSalesEmptyCta" class="t7-empty" style="display:none;">
+        <p>오늘 첫 매출인가요?</p>
+        <div class="t7-act">
+          <button id="dashTopEmptyInputBtn" class="btn btn-pri">📝 매출 입력</button>
+        </div>
+      </div>
+      <!-- 데이터 있을 때 매출 입력 행 -->
+      <div id="dashTopSalesActionRow" class="t7-act" style="display:none;margin-top:16px;">
+        <button id="dashTopSalesInputBtn" class="btn btn-pri" style="flex:1;">📝 오늘 매출 입력</button>
       </div>
     </div>
-    <div id="dashTopSalesEmptyCta" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--gray-100);text-align:center;">
-      <p style="font-size:13px;color:var(--gray-600);margin:0 0 12px;font-weight:700;">오늘 첫 매출인가요?</p>
-      <div style="display:flex;gap:8px;">
-        <button id="dashTopEmptyInputBtn" class="btn btn-primary btn-sm" style="flex:1;font-size:12px;padding:11px;">📝 매출 입력</button>
-        <button id="dashTopEmptyClosedBtn" class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;padding:11px;">🏖 휴무</button>
+
+    <!-- 이번 달 매출 (탭 → settle) -->
+    <div class="dash-enter-v7" data-dash-go="settle">
+      <div class="ic-wrap blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#3182F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="body-col">
+        <div class="lb" id="dashHomeMonthLb">이번 달 매출</div>
+        <div class="vl"><span id="dashHomeMonthSale">0</span><span class="won">원</span></div>
+        <div class="sub" id="dashHomeMonthSub">-</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+
+    <!-- 예비비 (탭 → nav reserve) -->
+    <div class="dash-enter-v7" id="dashReserveBalanceMini">
+      <div class="ic-wrap green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0CAB6C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M2 11h20"/><path d="M6 16h2"/></svg>
+      </div>
+      <div class="body-col">
+        <div class="lb">예비비 잔고</div>
+        <div class="vl"><span id="dashReserveBalanceAmt">0</span><span class="won">원</span></div>
+        <div class="sub">월세·세금 대비 적립</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+
+    <!-- 기타매출 (탭 → extra) -->
+    <div class="dash-enter-v7" id="dashHomeExtraEnter" data-dash-go="extra" style="display:none;">
+      <div class="ic-wrap amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#F5A11E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.6 2.4 7.4L12 16.8 5.8 21.4l2.4-7.4L2 9.4h7.6z"/></svg>
+      </div>
+      <div class="body-col">
+        <div class="lb">기타매출 누적</div>
+        <div class="vl"><span id="dashHomeExtraAmt">0</span><span class="won">원</span></div>
+        <div class="sub">배달앱 적립금 등</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+
+  </div>
+
+  <!-- ═══ stage: today-detail (오늘 매출 상세) ═══ -->
+  <div class="dash-stage" data-dash-stage="today-detail">
+    <div class="dash-back-row" data-dash-go="home">
+      <div class="back-btn">‹</div>
+      <div class="back-ttl">오늘 매출</div>
+    </div>
+
+    <!-- 그라데이션 컬러 카드 -->
+    <div class="dash-today-detail-head">
+      <div class="lb"><span class="live-dot"></span><span id="dashTodayDetailDate">-</span></div>
+      <div id="dashTodayDetailAmt" class="amt">0<span class="won">원</span></div>
+      <div id="dashTodayDetailSub" class="sub">-</div>
+      <div class="pe-row" id="dashTodayDetailPeRow" style="display:none;">
+        <div class="cell">
+          <div class="lb">지출</div>
+          <div id="dashTodayDetailExp" class="vl">-0원</div>
+        </div>
+        <div class="cell">
+          <div class="lb">순수익</div>
+          <div id="dashTodayDetailProfit" class="vl">+0원</div>
+        </div>
       </div>
     </div>
-    <div id="dashTopSalesActionRow" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100);">
-      <button id="dashTopSalesInputBtn" class="btn btn-primary btn-sm" style="width:100%;font-size:12px;padding:10px;">📝 오늘 매출 입력 (30초)</button>
-      <p style="font-size:11px;color:var(--gray-500);margin:8px 0 0;text-align:center;">⏳ 자동 동기화 준비중...</p>
+
+    <!-- 결제수단별 -->
+    <div class="dash-pm-card" id="dashPmCardWrap" style="display:none;">
+      <div class="pm-head">
+        <div class="pm-ttl">결제수단별</div>
+        <div class="pm-sub" id="dashPmCount">-</div>
+      </div>
+      <div class="pm-bar" id="dashPmBar"></div>
+      <div class="pm-list" id="dashPmList"></div>
+    </div>
+
+    <!-- 시간대별 (placeholder, Phase 2) -->
+    <div class="dash-hr-placeholder">
+      <b>📊 시간대별 매출</b>
+      곧 추가됩니다
+      <small>POS 시간별 데이터 수집 후 활성화</small>
+    </div>
+
+    <!-- 매출 입력 CTA -->
+    <div class="dash-input-cta" id="dashTodayInputCta">
+      <div class="lcol">
+        <div class="ic">📝</div>
+        <div class="txt">
+          <div class="ttl">매출 입력 / 수정</div>
+          <div class="sub">POS 안 잡힌 매출 직접 입력</div>
+        </div>
+      </div>
+      <div class="arrow">›</div>
     </div>
   </div>
 
-  <!-- ═══ A. 정산현황 ═══ -->
-  <div id="dashSettleCont">
-    <!-- v17 정산현황 (2026-05-22 전면 개편). mockup: docs/mockups/weekly_settle_calendar_v17.html -->
-    <!-- 모드 토글 [월/주차] -->
-    <div class="mode-tabs">
-      <button class="mode-tab active" id="v17ModeMonth" data-mode="month">📅 월 보기</button>
-      <button class="mode-tab" id="v17ModeWeek" data-mode="week">📆 주차 보기</button>
+  <!-- ═══ stage: settle (이번 달 매출 — 기존 v17 정산) ═══ -->
+  <div class="dash-stage" data-dash-stage="settle">
+    <div class="dash-back-row" data-dash-go="home">
+      <div class="back-btn">‹</div>
+      <div class="back-ttl">이번 달 매출</div>
     </div>
 
-    <!-- 월 보기 컨테이너 -->
-    <div id="v17MonthView">
-      <!-- 월 네비 -->
-      <div class="v17-month-nav">
-        <button class="navbtn" id="dashPrevBtn">‹</button>
-        <span class="month-label" id="dashMonthLabel">-</span>
-        <button class="navbtn" id="dashNextBtn">›</button>
+    <div id="dashSettleCont">
+      <!-- v17 정산현황. mockup: docs/mockups/weekly_settle_calendar_v17.html -->
+      <!-- 모드 토글 [월/주차] -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="v17ModeMonth" data-mode="month">📅 월 보기</button>
+        <button class="mode-tab" id="v17ModeWeek" data-mode="week">📆 주차 보기</button>
       </div>
-      <!-- 월 카드 -->
-      <div id="v17MonthCard"></div>
-      <!-- 월 캘린더 -->
-      <div class="card">
-        <div class="v17-cal-head">
-          <button class="cal-chip" id="v17CalFilterBtn"><span id="v17CalModeChip">📊 매출+순수익 ▾</span></button>
+
+      <!-- 월 보기 컨테이너 -->
+      <div id="v17MonthView">
+        <!-- 월 네비 -->
+        <div class="v17-month-nav">
+          <button class="navbtn" id="dashPrevBtn">‹</button>
+          <span class="month-label" id="dashMonthLabel">-</span>
+          <button class="navbtn" id="dashNextBtn">›</button>
         </div>
-        <div class="v17-cal-grid" id="v17CalGrid"></div>
+        <!-- 월 카드 -->
+        <div id="v17MonthCard"></div>
+        <!-- 월 캘린더 -->
+        <div class="card">
+          <div class="v17-cal-head">
+            <button class="cal-chip" id="v17CalFilterBtn"><span id="v17CalModeChip">📊 매출+순수익 ▾</span></button>
+          </div>
+          <div class="v17-cal-grid" id="v17CalGrid"></div>
+        </div>
+        <!-- 주별 카테고리 비교 진입 카드 -->
+        <div class="enter-card" id="v17EnterModal">
+          <div>
+            <div class="ttl">📊 주별 카테고리 비교</div>
+            <div class="sub">식자재·인건비 비율 한눈에 보기</div>
+          </div>
+          <div class="arrow">›</div>
+        </div>
       </div>
-      <!-- 주별 카테고리 비교 진입 카드 -->
-      <div class="enter-card" id="v17EnterModal">
-        <div>
-          <div class="ttl">📊 주별 카테고리 비교</div>
-          <div class="sub">식자재·인건비 비율 한눈에 보기</div>
+
+      <!-- 주차 보기 컨테이너 -->
+      <div id="v17WeekView" style="display:none;">
+        <div class="week-nav">
+          <button class="navbtn" id="v17WeekPrevBtn">‹</button>
+          <span class="week-label" id="v17WeekNavLabel">-</span>
+          <button class="navbtn" id="v17WeekNextBtn">›</button>
         </div>
-        <div class="arrow">›</div>
-      </div>
-      <!-- 예비비 잔고 (사이드메뉴 진입) -->
-      <div id="dashReserveBalanceMini" style="padding:10px 14px;background:var(--blue-light);border-radius:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:10px;">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:14px;">🏦</span>
-          <span style="font-size:12px;font-weight:700;color:var(--blue);">예비비 잔고</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span id="dashReserveBalanceAmt" style="font-size:14px;font-weight:900;color:var(--blue);">0</span>
-          <span style="font-size:11px;color:var(--gray-400);">상세 ›</span>
+        <div id="v17SingleWeekCard"></div>
+        <div id="v17WeekCrossNote"></div>
+        <div class="card">
+          <div style="font-size:11px;color:var(--gray-500);font-weight:700;margin-bottom:8px;">📅 그 주 일별</div>
+          <div class="week-cal" id="v17WeekCalRow"></div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- 주차 보기 컨테이너 -->
-    <div id="v17WeekView" style="display:none;">
-      <div class="week-nav">
-        <button class="navbtn" id="v17WeekPrevBtn">‹</button>
-        <span class="week-label" id="v17WeekNavLabel">-</span>
-        <button class="navbtn" id="v17WeekNextBtn">›</button>
-      </div>
-      <div id="v17SingleWeekCard"></div>
-      <div id="v17WeekCrossNote"></div>
-      <div class="card">
-        <div style="font-size:11px;color:var(--gray-500);font-weight:700;margin-bottom:8px;">📅 그 주 일별</div>
-        <div class="week-cal" id="v17WeekCalRow"></div>
-      </div>
+  <!-- ═══ stage: extra (기타매출 누적) ═══ -->
+  <div class="dash-stage" data-dash-stage="extra">
+    <div class="dash-back-row" data-dash-go="home">
+      <div class="back-btn">‹</div>
+      <div class="back-ttl">기타매출 누적</div>
     </div>
-
-    <!-- 기타매출 (매장별 동적 항목, 맨 아래) -->
-    <div class="card" id="dashExtraRevenueCard" style="display:none;">
+    <div class="card" id="dashExtraRevenueCard">
       <div class="card-title"><svg class="icon-inline"><use href="#i-coins"/></svg>기타매출 누적</div>
       <p class="card-sub">장부와 별도로 관리되는 매출. 항목별 월/전체 누적.</p>
       <div id="dashExtraRevenueBody"></div>
     </div>
-  </div>
-
   </div>
 
 </div>
@@ -4592,6 +4797,8 @@ function nav(tab, el) {
     manualCat: loadManualCatView,
   };
   if (actions[tab]) actions[tab]();
+  // 홈 v7: dashboard 진입 시 home stage로 리셋 (2026-05-22)
+  if (tab === 'dashboard') { try { dashGoStage('home'); } catch(_){} }
   if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); renderExtraRevenueInputs(); recalcSettle2(); initSettleDate(); loadOpeningAmount(); }
   if (tab === 'opening') { initOpeningDate(); openingTab('input', null); }
   // 서브탭 초기화: 탭 진입 시 첫 번째 서브탭을 active로
@@ -9042,6 +9249,58 @@ function toggleTooltip(id){const el=document.getElementById(id);if(el)el.style.d
 // 만원 단위 포맷 헬퍼
 function fmtMan(v){return v>=0?fmt(Math.round(v/10000)):'-'+fmt(Math.round(Math.abs(v)/10000));}
 
+// ─── 홈 v7 드릴다운 — stage 토글 (2026-05-22) ───
+// 사장님 OK: 토스 스타일 1단계(큰 박스) ↔ 2단계(상세). nav('dashboard') 진입 시 자동 home 리셋.
+function dashGoStage(stage){
+  if(!stage) stage = 'home';
+  const stages = document.querySelectorAll('#dashboardCont .dash-stage');
+  stages.forEach(s=>s.classList.toggle('active', s.dataset.dashStage===stage));
+  window.scrollTo({top:0, behavior:'instant'});
+}
+
+// 결제수단별 분해 (sales_daily 레거시 7컬럼 + amounts JSONB 폴백)
+// paymentMethods 동적이라 레거시 0이면 amounts.<pm.id>에서 보충
+function renderTodayPaymentMethods(row, totalSale){
+  const wrap = document.getElementById('dashPmCardWrap');
+  const barEl = document.getElementById('dashPmBar');
+  const listEl = document.getElementById('dashPmList');
+  const cntEl = document.getElementById('dashPmCount');
+  if(!wrap||!barEl||!listEl||!cntEl) return;
+  if(!row || !totalSale || totalSale<=0){
+    wrap.style.display = 'none';
+    return;
+  }
+  const pmDefs = [
+    {key:'card',         name:'카드 결제',  color:'#3182F6'},
+    {key:'cash',         name:'현금',       color:'#0CAB6C'},
+    {key:'cash_receipt', name:'현금영수증', color:'#F5A11E'},
+    {key:'qr',           name:'QR',         color:'#8B5CF6'},
+    {key:'etc',          name:'기타결제',   color:'#8B95A1'},
+    {key:'extra_large',  name:'뽑기(대형)', color:'#EC4899'},
+    {key:'extra_small',  name:'뽑기(소형)', color:'#06B6D4'},
+  ];
+  const pmList = (typeof paymentMethods!=='undefined' && Array.isArray(paymentMethods)) ? paymentMethods : [];
+  const items = pmDefs.map(p=>{
+    let amt = Number(row[p.key]||0);
+    // amounts JSONB 폴백: 같은 legacy_key의 동적 결제수단 id로 amounts 조회
+    if(amt===0 && row.amounts && pmList.length){
+      const pm = pmList.find(m=>m.legacy_key===p.key);
+      if(pm) amt = Number(row.amounts[pm.id]||0);
+    }
+    return {...p, amt};
+  }).filter(p=>p.amt>0).sort((a,b)=>b.amt-a.amt);
+  if(items.length===0){ wrap.style.display='none'; return; }
+  wrap.style.display = '';
+  cntEl.innerText = items.length + '개 결제수단';
+  barEl.innerHTML = items.map(p=>`<div class="seg" style="width:${(p.amt/totalSale*100).toFixed(2)}%;background:${p.color};"></div>`).join('');
+  listEl.innerHTML = items.map(p=>`
+    <div class="pm-row">
+      <div class="lcol"><span class="dot" style="background:${p.color};"></span><span class="nm">${p.name}</span></div>
+      <div class="vl">${fmt(p.amt)}원</div>
+    </div>
+  `).join('');
+}
+
 
 async function loadDashboard(force){
   if(!currentStore){
@@ -9821,67 +10080,140 @@ async function loadDashboard(force){
       topCard.style.display='block';
 
       if(!lastSaleDay){
-        // ─── 빈 데이터 — "오늘 첫 매출/휴무" CTA ─── //
+        // ─── 빈 데이터 — "오늘 첫 매출" CTA (홈 v7) ─── //
         document.getElementById('dashTopSalesLabel').innerText='오늘 매출';
-        topModeEl.style.display='none';
-        topAmtEl.innerText='-';
-        topAmtEl.style.fontSize='22px';
-        topAmtEl.style.color='var(--gray-400)';
+        topModeEl.innerText='(준비중)';
+        topModeEl.className='t7-mode';
+        topModeEl.style.display='';
+        topAmtEl.classList.add('empty');
+        topAmtEl.innerText='아직 입력 안 됨';
         emptyCtaEl.style.display='block';
         peEl.style.display='none';
         topActionRow.style.display='none';
         topUpdEl.style.display='none';
       } else {
-        // ─── 데이터 있음 — 매출/지출/순수익 + 모드 표시 ─── //
+        // ─── 데이터 있음 — 매출/지출/순수익 + 모드 표시 (홈 v7) ─── //
         emptyCtaEl.style.display='none';
         topModeEl.style.display='';
-        topAmtEl.style.fontSize='30px';
-        topAmtEl.style.color='var(--gray-900)';
+        topAmtEl.classList.remove('empty');
 
         // 라벨
         const dayOfWeek=['일','월','화','수','목','금','토'][new Date(ym+'-'+lastSaleDay+'T00:00:00').getDay()];
         const moStr=String(mo).padStart(2,'0');
         const dateLabel=`${moStr}.${lastSaleDay}(${dayOfWeek})`;
         const titleLabel=isTodayShown?'오늘 매출':'어제 매출';
-        const modeLabel=isUpsMode?'실시간':'마감';
+        // 실시간 동기화 미작동 → 사장님 매장은 '(준비중)' 표시 (2026-05-22)
+        const modeLabel=isUpsMode?'실시간':(isTodayShown?'(준비중)':'마감');
         const showInputBtn=!isUpsMode && !dailySalesMap[todayDayStr];
 
         document.getElementById('dashTopSalesLabel').innerText=`${titleLabel} · ${dateLabel}`;
         topModeEl.innerText=modeLabel;
-        topModeEl.style.background=isUpsMode?'var(--blue-light)':'var(--gray-100)';
-        topModeEl.style.color=isUpsMode?'var(--blue)':'var(--gray-600)';
+        topModeEl.className='t7-mode'+(isUpsMode?' live':'');
         const saleAmt=dailySalesMap[lastSaleDay]||0;
-        topAmtEl.innerText=fmt(saleAmt)+'원';
-        topActionRow.style.display=showInputBtn?'block':'none';
+        topAmtEl.innerHTML=fmt(saleAmt)+'<span class="won">원</span>';
+        topActionRow.style.display=showInputBtn?'flex':'none';
         if(isUpsMode){
           const hh=String(today.getHours()).padStart(2,'0'),mi=String(today.getMinutes()).padStart(2,'0');
-          topUpdEl.innerHTML=`업데이트 ${hh}:${mi} <span style="color:var(--blue);">↻</span>`;
-          topUpdEl.style.display='block';
+          topUpdEl.innerHTML=`업데이트 ${hh}:${mi} <span class="refresh">↻</span>`;
+          topUpdEl.style.display='';
         }else{topUpdEl.style.display='none';}
 
-        // 순수익/지출 통합 (지출 → 순수익 순서, 사장님 피드백 2026-05-15)
+        // 순수익/지출 (홈 v7)
         const dayExp=dailyExpTotal[lastSaleDay]||0;
         const dayProfit=saleAmt-dayExp;
         const prevExp=prevDailyExpTotal[lastSaleDay]||0;
         const prevSale=prevDailySalesMap[lastSaleDay]||0;
         const prevProfit=prevSale-prevExp;
         const profitEl=document.getElementById('dashTopProfitAmt');
-        profitEl.innerText=(dayProfit>=0?'':'-')+fmt(Math.abs(dayProfit))+'원';
-        profitEl.style.color=dayProfit>=0?'var(--blue)':'#EF4444';
-        document.getElementById('dashTopExpenseAmt').innerText=fmt(dayExp)+'원';
+        profitEl.innerText=(dayProfit>=0?'+':'-')+fmt(Math.abs(dayProfit))+'원';
+        document.getElementById('dashTopExpenseAmt').innerText='-'+fmt(dayExp)+'원';
         const renderDelta=(el,m)=>{
+          if(!el)return;
           if(!m){el.innerText='';return;}
-          if(m.text==='비슷'){el.innerText='비슷';el.style.color='var(--gray-500)';return;}
+          if(m.text==='비슷'){el.innerText='비슷';el.style.color='#8B95A1';return;}
           el.innerText=`${m.arrow}${m.pct}%`;
-          el.style.color=m.cls==='mom-good'?'#10B981':(m.cls==='mom-bad'?'#EF4444':'var(--gray-400)');
+          el.style.color=m.cls==='mom-good'?'#0CAB6C':(m.cls==='mom-bad'?'#F04452':'#B0B8C1');
         };
         renderDelta(document.getElementById('dashTopProfitDelta'),momTxt(dayProfit,prevProfit,true));
         renderDelta(document.getElementById('dashTopExpenseDelta'),momTxt(dayExp,prevExp,false));
-        peEl.style.display='block';
+        peEl.style.display='grid';
       }
+
+      // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22) ───
+      try {
+        const _ddAmt=document.getElementById('dashTodayDetailAmt');
+        const _ddDate=document.getElementById('dashTodayDetailDate');
+        const _ddSub=document.getElementById('dashTodayDetailSub');
+        const _ddExp=document.getElementById('dashTodayDetailExp');
+        const _ddProfit=document.getElementById('dashTodayDetailProfit');
+        const _ddPeRow=document.getElementById('dashTodayDetailPeRow');
+        if(_ddAmt && _ddDate){
+          if(!lastSaleDay){
+            _ddDate.innerHTML='오늘 매출 · (준비중)';
+            _ddAmt.classList.add('empty');
+            _ddAmt.innerText='아직 입력 안 됨';
+            if(_ddSub) _ddSub.innerText='오늘 첫 매출인가요? 아래에서 입력하세요.';
+            if(_ddPeRow) _ddPeRow.style.display='none';
+          } else {
+            const _dow2=['일','월','화','수','목','금','토'][new Date(ym+'-'+lastSaleDay+'T00:00:00').getDay()];
+            _ddDate.innerHTML=`${mo}월 ${parseInt(lastSaleDay)}일 (${_dow2}) · ${isUpsMode?'실시간':(isTodayShown?'(준비중)':'마감')}`;
+            _ddAmt.classList.remove('empty');
+            const _amt=dailySalesMap[lastSaleDay]||0;
+            _ddAmt.innerHTML=`${fmt(_amt)}<span class="won">원</span>`;
+            if(_ddSub) _ddSub.innerText=isUpsMode?'방금 갱신됨':'마감 기준';
+            const _dexp=dailyExpTotal[lastSaleDay]||0;
+            const _dprofit=_amt-_dexp;
+            if(_ddExp) _ddExp.innerText='-'+fmt(_dexp)+'원';
+            if(_ddProfit) _ddProfit.innerText=(_dprofit>=0?'+':'-')+fmt(Math.abs(_dprofit))+'원';
+            if(_ddPeRow) _ddPeRow.style.display='grid';
+          }
+        }
+        const _lastRow=lastSaleDay?(settle||[]).find(s=>s.date?.slice(8)===lastSaleDay):null;
+        renderTodayPaymentMethods(_lastRow, dailySalesMap[lastSaleDay]||0);
+      } catch(e){ console.warn('[dashTodayDetail]', e.message); }
     } else {
       topCard.style.display='none';
+      // today-detail도 빈 상태 (다른 월 보기)
+      const _ddAmtX=document.getElementById('dashTodayDetailAmt');
+      if(_ddAmtX){
+        _ddAmtX.classList.add('empty');
+        _ddAmtX.innerText='다른 달은 오늘 매출 없음';
+        const _ddDateX=document.getElementById('dashTodayDetailDate');
+        const _ddSubX=document.getElementById('dashTodayDetailSub');
+        if(_ddDateX) _ddDateX.innerHTML='다른 달 보기 중';
+        if(_ddSubX) _ddSubX.innerText='‹ 홈으로 돌아가 이번 달 보기';
+      }
+      const _pmWrapX=document.getElementById('dashPmCardWrap');
+      if(_pmWrapX) _pmWrapX.style.display='none';
     }
+
+    // ─── 홈 v7: 인사 헤더 + 이번 달 매출 박스 (isCurMonth 무관, 2026-05-22) ───
+    try {
+      const _hd=document.getElementById('dashHelloDate');
+      if(_hd){
+        const _t=new Date();
+        const _dowN=['일','월','화','수','목','금','토'][_t.getDay()];
+        const _hour=_t.getHours();
+        const _ampm=_hour<12?'오전':'오후';
+        const _h12=_hour%12||12;
+        const _mm=String(_t.getMinutes()).padStart(2,'0');
+        _hd.innerText=`${_t.getMonth()+1}월 ${_t.getDate()}일 ${_dowN}요일 · ${_ampm} ${_h12}:${_mm}`;
+      }
+      const _mLb=document.getElementById('dashHomeMonthLb');
+      const _mSale=document.getElementById('dashHomeMonthSale');
+      const _mSub=document.getElementById('dashHomeMonthSub');
+      if(_mSale){
+        if(_mLb) _mLb.innerText=isCurMonth?'이번 달 매출':`${mo}월 매출`;
+        _mSale.innerText=fmt(totalRevenue||0);
+        if(_mSub){
+          const _profitV=(totalRevenue||0)-(totalCost||0);
+          const _sign=_profitV>=0?'+':'-';
+          const _profitHtml=`순수익 <b${_profitV<0?' class="red"':''}>${_sign}${fmt(Math.abs(_profitV))}원</b>`;
+          const _prog=isCurMonth?` · 진행 ${Math.round(passedDays/lastDay*100)}%`:'';
+          _mSub.innerHTML=_profitHtml+_prog;
+        }
+      }
+    } catch(e){ console.warn('[dashHomeMonth]', e.message); }
 
   }catch(e){console.error('대시보드 오류:',e);}finally{if(!force) setLoad(false);}
 }
@@ -17973,11 +18305,15 @@ async function deleteExtraItem(){
 async function renderExtraRevenueDashboard(){
   const card=document.getElementById('dashExtraRevenueCard');
   const body=document.getElementById('dashExtraRevenueBody');
-  if(!card||!body) return;
-  if(!currentStore){card.style.display='none';return;}
+  // 홈 v7 진입 박스 (홈 stage)
+  const homeEnter=document.getElementById('dashHomeExtraEnter');
+  const homeAmt=document.getElementById('dashHomeExtraAmt');
+  const hideHome=()=>{ if(homeEnter) homeEnter.style.display='none'; };
+  if(!card||!body){hideHome();return;}
+  if(!currentStore){card.style.display='none';hideHome();return;}
   // 항목 목록 + 로그 병렬 로드
   if(!extraItems.length) await loadExtraItems();
-  if(!extraItems.length){card.style.display='none';return;}
+  if(!extraItems.length){card.style.display='none';hideHome();return;}
   const ym=(typeof dashMonthStr!=='undefined' && dashMonthStr)||(new Date().toISOString().slice(0,7));
   const[y,mo]=ym.split('-').map(Number);
   const lastDay=new Date(y,mo,0).getDate();
@@ -18009,6 +18345,15 @@ async function renderExtraRevenueDashboard(){
   body.innerHTML=rows+`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--gray-200);padding-top:8px;margin-top:6px;font-size:13px;font-weight:800;">
     <span>합계</span><span>이번 달 <span style="color:#6B21A8;">${fmt(monthTot)}</span> · 누적 ${fmt(allTot)}원</span></div>`;
   card.style.display='';
+  // 홈 v7 진입 박스 채우기 (월합 0이면 숨김)
+  if(homeEnter && homeAmt){
+    if(monthTot>0){
+      homeAmt.innerText=fmt(monthTot);
+      homeEnter.style.display='';
+    } else {
+      homeEnter.style.display='none';
+    }
+  }
 }
 
 // Part E ⑭: 예비비 사용 이력 팝업
@@ -19071,20 +19416,29 @@ document.addEventListener('DOMContentLoaded', async()=>{
   if(_dmpEl) _dmpEl.addEventListener('click',()=>switchDashMode('provisional'));
   const _dmfEl = document.getElementById('dashModeFinal');
   if(_dmfEl) _dmfEl.addEventListener('click',()=>switchDashMode('final'));
-  document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>openReserveHistorySheet());
-  // ─── 새 기능: 1순위 매출 카드 + 캘린더 시트 이벤트 (2026-05-15) ─── //
+  // 홈 v7: 예비비 박스 탭 → 사이드메뉴 예비비 풀 페이지 (기존 시트 → nav 변경, 2026-05-22)
+  document.getElementById('dashReserveBalanceMini').addEventListener('click',()=>nav('reserve'));
+  // ─── 홈 v7: 오늘 매출 카드 탭 → today-detail stage 진입 (2026-05-22) ─── //
   document.getElementById('dashTopSalesCard').addEventListener('click',(e)=>{
-    // 입력 버튼 영역 클릭은 카드 클릭으로 전파시키지 않음
     if(e.target.closest('#dashTopSalesActionRow'))return;
-    openSalesCalendarSheet();
+    if(e.target.closest('#dashTopSalesEmptyCta'))return;
+    dashGoStage('today-detail');
   });
   document.getElementById('dashTopSalesInputBtn').addEventListener('click',(e)=>{
     e.stopPropagation();
     openQuickSalesInput();
   });
-  // 빈 데이터 CTA 버튼 + 휴무 (2026-05-15)
+  // 빈 데이터 CTA (홈 v7: 휴무 버튼 제거 — 캘린더 셀에서만, 2026-05-22)
   document.getElementById('dashTopEmptyInputBtn').addEventListener('click',(e)=>{e.stopPropagation();openQuickSalesInput();});
-  document.getElementById('dashTopEmptyClosedBtn').addEventListener('click',(e)=>{e.stopPropagation();markTodayAsClosed();});
+  // today-detail 매출 입력 CTA
+  const _ddInputCta=document.getElementById('dashTodayInputCta');
+  if(_ddInputCta) _ddInputCta.addEventListener('click',()=>openQuickSalesInput());
+  // data-dash-go 이벤트 위임 (홈 박스 → stage 진입, 뒤로 가기)
+  document.getElementById('dashboardCont').addEventListener('click',(e)=>{
+    const el=e.target.closest('[data-dash-go]');
+    if(!el)return;
+    dashGoStage(el.dataset.dashGo);
+  });
   // ↻ 강제 갱신 (영구 모드일 때만 표시되는 영역, manualCrawl 재사용)
   document.getElementById('dashTopSalesUpdated').addEventListener('click',(e)=>{
     e.stopPropagation();
