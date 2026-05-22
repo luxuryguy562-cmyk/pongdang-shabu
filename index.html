@@ -51,10 +51,10 @@ input,select,textarea,button{font-family:inherit;}
 .logo-row{display:inline-flex;align-items:center;gap:8px;}
 
 /* ─ 헤더 */
-.header{position:fixed;top:0;width:100%;height:calc(60px + env(safe-area-inset-top,0));padding:env(safe-area-inset-top,0) 16px 0;background:rgba(255,255,255,0.9);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;z-index:100;gap:8px;box-sizing:border-box;}
-.header-title{font-size:18px;font-weight:900;color:var(--blue);flex-shrink:0;}
-.header-store{font-size:12px;font-weight:600;color:var(--gray-600);background:var(--gray-100);padding:6px 12px;border-radius:20px;cursor:pointer;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.header-user{font-size:12px;font-weight:700;color:var(--gray-600);cursor:pointer;padding:6px 10px;background:var(--gray-100);border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.header{position:fixed;top:0;width:100%;height:calc(60px + env(safe-area-inset-top,0));padding:env(safe-area-inset-top,0) 16px 0;background:var(--white);border-bottom:1px solid var(--toss-line);display:flex;align-items:center;justify-content:space-between;z-index:100;gap:8px;box-sizing:border-box;}
+.header-title{font-size:18px;font-weight:800;color:var(--toss-blue-strong);flex-shrink:0;letter-spacing:-0.5px;}
+.header-store{font-size:12px;font-weight:700;color:var(--toss-text-2);background:var(--toss-line);padding:7px 13px;border-radius:99px;cursor:pointer;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.2px;}
+.header-user{font-size:12px;font-weight:700;color:var(--toss-text-3);cursor:pointer;padding:7px 11px;background:var(--toss-line);border-radius:99px;white-space:nowrap;flex-shrink:0;letter-spacing:-0.2px;}
 /* VIEWAS-START — 시점 토글 버튼 스타일 (제거 가이드: dev_lessons.md #46) */
 .viewas-toggle{font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;padding:6px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:4px;}
 .viewas-toggle:active{background:#FDE68A;}
