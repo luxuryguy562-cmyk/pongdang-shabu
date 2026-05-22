@@ -224,10 +224,17 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .tx-tooltip{position:absolute;left:0;bottom:100%;background:var(--text);color:#fff;font-size:12px;padding:5px 10px;border-radius:8px;white-space:nowrap;z-index:50;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.2);}
 .tx-tooltip::after{content:'';position:absolute;top:100%;left:12px;border:5px solid transparent;border-top-color:var(--text);}
 
-/* ─ 마감정산 (토스 통일 2026-05-22) */
-.settle-item{display:flex;align-items:center;padding:0 4px;border-bottom:1px solid var(--toss-line);margin:0;gap:8px;}
+/* ─ 마감정산 (토스 통일 — 이모지 → 컬러 dot, 2026-05-22) */
+.settle-item{display:flex;align-items:center;padding:0 4px;border-bottom:1px solid var(--toss-line);margin:0;gap:10px;}
 .settle-item:last-child{border-bottom:none;}
-.settle-item .si-icon{font-size:16px;width:32px;text-align:center;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+/* 옛 이모지 글자 숨기고 컬러 dot으로 대체 */
+.settle-item .si-icon{font-size:0;width:10px;height:10px;border-radius:50%;background:var(--toss-text-4);flex-shrink:0;display:inline-block;}
+.settle-item.dot-blue .si-icon{background:var(--toss-blue);}
+.settle-item.dot-green .si-icon{background:var(--toss-green);}
+.settle-item.dot-orange .si-icon{background:var(--toss-orange);}
+.settle-item.dot-purple .si-icon{background:#8B5CF6;}
+.settle-item.dot-red .si-icon{background:var(--toss-red);}
+.settle-item.dot-gray .si-icon{background:var(--toss-text-4);}
 .settle-item .si-label{flex:1;font-size:14px;font-weight:600;color:var(--toss-text-2);padding:14px 0;letter-spacing:-0.3px;}
 .settle-item .s-input{border:none;background:transparent;font-size:18px;font-weight:800;text-align:right;outline:none;color:var(--toss-text-1);width:140px;padding:14px 0;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;font-family:inherit;}
 .settle-item .s-input::placeholder{color:var(--toss-text-5);font-weight:500;}
@@ -2393,10 +2400,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
         </label>
       </div>
       <p class="card-sub">포스기 장표 기준으로 입력하세요</p>
-      <div class="settle-item"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-      <div class="settle-item"><span class="si-icon">🧾</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-      <div class="settle-item"><span class="si-icon">💳</span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-      <div class="settle-item"><span class="si-icon">📲</span><span class="si-label">기타결제</span><input type="text" class="s-input" id="siPosEtc" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item dot-green"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item dot-orange"><span class="si-icon">🧾</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item dot-blue"><span class="si-icon">💳</span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item dot-gray"><span class="si-icon">📲</span><span class="si-label">기타결제</span><input type="text" class="s-input" id="siPosEtc" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
       <div class="settle-summary">
         <span class="ss-label">매출 합계</span>
         <span class="ss-val" id="calcSalesTotal">0원</span>
@@ -2407,9 +2414,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     <div class="settle-card-group">
       <div class="card-title">현금 상세</div>
       <p class="card-sub">실제 받은 현금의 방식을 구분해주세요</p>
-      <div class="settle-item"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-      <div class="settle-item"><span class="si-icon">📱</span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-      <div class="settle-item"><span class="si-icon">🏦</span><span class="si-label">계좌이체</span><input type="text" class="s-input" id="siCashTransfer" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item dot-green"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item dot-purple"><span class="si-icon">📱</span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+      <div class="settle-item dot-blue"><span class="si-icon">🏦</span><span class="si-label">계좌이체</span><input type="text" class="s-input" id="siCashTransfer" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
       <div id="cashVerify" style="padding:12px 0;border-top:1px solid var(--gray-200);margin-top:4px;">
         <div style="display:flex;justify-content:space-between;font-size:12px;">
           <span style="color:var(--gray-600);">POS (현금+현금영수증)</span><span style="font-weight:700;" id="cvPosSum">0원</span>
