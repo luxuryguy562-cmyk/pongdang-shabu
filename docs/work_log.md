@@ -4,6 +4,49 @@
 
 ---
 
+## [2026-05-22 더 후속 #2] 예비비 시스템 폐기 (대형, 코드 청소)
+
+### 사장님 결정
+"세무 시스템 도입은 먼 미래 얘기, 폐기가 나은거같음"
+"순수익-예비비=실수익 지금 안 함 / 자동 공식이 살아있는지 확인 + 폐기"
+
+### 폐기 (사용자에게 보이는 + 코드 잔재)
+- 홈 v7 예비비 진입 박스 (dashReserveBalanceMini)
+- 사이드메뉴 "예비비" 항목
+- 예비비 탭 컨테이너 (`reserveCont` + 설정 폼 + 이력 리스트)
+- 시트 2개 (`reserveHistorySheet`, `reserveUsageSheet`)
+- 매장 설정 페이지의 "예비비 설정" 카드 (라벨 → "로열티 · 수수료"로 정정)
+- JS 함수 6개: `calcReserveBalance`, `loadReserveFund`, `saveReserveSettings`, `saveReserveUsage`, `openReserveHistorySheet`, `gotoReserveTab`
+- 옛 잔재 (헌법 1-6 정당한 갈아엎기): `reserveAmt`, `realProfit`, `estReserve`, `estRealProfit`, `reserveRate`, `reserveFixed`, `estResTxt`, `estRealTxt` 계산·표시 코드
+- summHtml 안 "예비비 / 실수익" 행 → "순수익"이 summ-total로 격상
+- 이벤트 핸들러 6개 (saveReserveSettingsBtn, addReserveUsageBtn, rvUsageSave/Cancel, dashReserveBalanceMini)
+- nav() 매핑 + parentTabMap 의 reserve 항목
+- saveSettings에서 reserve_rate/reserve_fixed payload 제거
+- CSS .reserve-balance-card
+
+### 보존 (미래 세무 시스템 도입 시 부활)
+- DB 테이블 `reserve_fund_logs` (안 손댐)
+- DB 컬럼 `store_settings.reserve_rate`, `reserve_fixed`, `reserve_initial_balance` (안 손댐)
+- 카테고리 시스템 상수 'reserve' (expense_categories.category_type='reserve')
+- mydata_transactions / 마감정산 deductions 의 'reserve' 카테고리 자동 동기화 코드 (DB 의존, 작동해도 무해)
+
+### 검증
+- node --check JS 구문 통과 ✅
+- 위험 잔재 grep 0건 (DOM 없는 ID 호출, 정의 안 된 함수 호출, 변수 참조 누락) ✅
+- 변경 라인: ~400 (대부분 삭제, +43 / -350+)
+
+### 사장님 골든패스
+1. 홈 진입 → 예비비 박스 없어진 거 확인 (오늘매출 + 이번달매출 + 기타매출만)
+2. 사이드메뉴 → "예비비" 항목 없음
+3. 매장 설정 → "예비비 설정" 카드 없음 (로열티/수수료만)
+4. 다른 기능(매출·근태·영수증·정산) 그대로 작동
+
+### 다음 세션 후보
+- 시간대별 매출 실데이터 (placeholder 활성화)
+- 평균 계산 캘린더일 기준 통일
+
+---
+
 ## [2026-05-22 더 후속] 홈화면 v7 — 토스 드릴다운 갈아엎기 (대형, 코드 작업)
 
 ### 사장님 호소 (시작)
