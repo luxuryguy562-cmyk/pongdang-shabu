@@ -4,6 +4,80 @@
 
 ---
 
+## [2026-05-22] v17 휴무 버그 fix + 휴무 버튼 복원 (Phase 1+2) — 진행 중
+
+### 사장님 호소
+1. "오늘 후무가 찍혀있고 다음달 뭐 다 휴무가찍혀잇네 확인해고 지워"
+2. "휴무를 설정하는기능사라짐" (정확한 위치: 정산현황 캘린더 셀)
+3. "홈화면 수식에 식자재인건비공과금비품로열티만있음" → Phase 3 대기
+4. "지출카테고리 또 fk무너짐" → Phase 4 대기
+
+### Root cause (헌법 1-7 코드 사실 기반)
+- index.html:10145 `if(!data || data.holiday)` = **데이터 없으면 휴무로 잘못 매핑**
+- 사장님이 6월(다음달) 캘린더로 이동 시 sales_daily 없는 6월 1~30일 전부 휴무 셀로 표시
+- v17DailySheet에 옛 calCellMarkClosed 버튼 미존재 (PR #194 갈아엎기 누락)
+
+### Phase 1: v17 캘린더 휴무 버그 fix
+- `if(!data || data.holiday)` → `if(data && data.holiday)` + 빈 셀 분기 신설
+- 데이터 없는 셀 = 회색 + 작은 `-` 표시 (휴무 X)
+- 영향: v17RenderCalendar (10145)
+- v17RenderWeekViewSingle (10413)은 이미 `if(data && data.holiday)` 정확 → fix 불필요
+
+### Phase 2: v17 시트에 휴무 표시/해제 버튼 복원
+- v17DailySheet HTML에 버튼 2개 추가 (라인 3951)
+  - [🏖 휴무로 표시] 영업일·빈 셀 시 노출
+  - [🔄 휴무 해제] 휴무 셀 시 노출
+- _v17SheetSelectedDate 변수 신설 (셀 클릭한 날짜 저장)
+- v17OpenDailySheet 안에서 isHoliday/isEmpty 판정 후 버튼 토글
+- v17MarkClosed (옛 markDateAsClosed 재사용) / v17MarkOpen (sales_daily DELETE source='closed') 신설
+
+### 검증
+- node --check 통과 (1/1 script, 711kb)
+- grep `!data || data.holiday` 잔재 0건
+- v17MarkClosed/Open 함수 + data-action 매칭 OK
+
+### Phase 3-A: 월 네비 미래 차단
+- moveDashMonth (라인 8933) → 미래 월 이동 시 토스트 + return
+- 사장님 호소: "네비가 5월인데 아직 오지않은 6월 7월로 네비가 가는것도 이상"
+
+### Phase 3-B/C: v17 5개 카테고리 하드코딩 → 동적 매핑 (헌법 1-6 갈아엎기)
+- **옛 root cause**: 라인 9305 `_dailySrcs=['vendor_orders','receipts','attendance']` 첫 매치만 잡음 → 사장님 매장 주류/음료(vendor_orders) + 마케팅/세금/기타(manual) 누락
+- **갈아엎기 6곳**:
+  1. catNames/catColors 빌더 (9305) → 활성 expense 부모 카테고리 전체 등록
+  2. vendor_orders 처리 (9329) → vendor.category_id로 정확 분리 (주류/음료/식자재)
+  3. receipts 처리 (9334) → receipts.category_id로 정확 분리
+  4. setV17Context (9960) → ctx.cats 동적 배열 + ctx.DAYS[key].byCat 박기
+  5. v17SumMonth (9844) → byCat 합계 추가
+  6. v17RenderMonthCard, v17RenderCalendar, v17RenderWeekCards, v17OpenDailySheet, v17OpenFilterSheet → 모두 ctx.cats 순회로 갈아엎기
+- 옛 V17_THRESH/V17_CAT_COLOR/V17_CAT_NAME 상수 제거. 색상은 expense_categories.color → V17_COLOR_PALETTE 12색 fallback
+- 색상 12색 팔레트 (V17_COLOR_PALETTE) + business_rules 기본 threshold (V17_DEFAULT_THRESH)
+
+### Phase 4: 카테고리 관리 threshold 입력 칸
+- expCatSheet HTML에 매출 대비 경고 기준(%) 입력란 추가 (지출 부모만 표시)
+- _loadCatThreshold 함수 + saveExpCat에서 store_settings.expense_thresholds JSONB upsert
+- 사장님이 매장별 카테고리별로 직접 수정 가능
+- 기본값: 식자재 30 / 인건비 25 / 공과금·고정비 15 / 비품 5 / 그 외 10
+
+### 검증
+- node --check 통과 (1 script, 717kb)
+- V17_THRESH/COLOR/NAME 잔재 0건 ✅
+- ctx.cats 14회, byCat 32회, expense_thresholds 9회 등장 ✅
+
+### Phase 5: DML 2건 완료 (사장님 "실행승인" 명시, 헌법 8-A-4)
+- ✅ 권채현 휴무 6행 DELETE (5/26~5/31, work_schedules) — RETURNING으로 6행 확인
+- ✅ vendors 4개 hard delete (쿠팡/농협/탑마트/다이소) — RETURNING으로 4행 확인
+- 사후 검증: 권채현 휴무 잔재 0건, vendors NULL FK 잔재 0건 ✅
+
+### 사장님 매장 최종 상태
+- work_schedules.is_off=true 잔재: 0건 (PR #192 잔재 청소 완료)
+- vendors.category_id IS NULL: 0건 (좀비 FK 청소 완료)
+- v17 정산현황 카테고리: 활성 expense 카테고리 전부 노출 (식자재/주류/음료/인건비/비품/마케팅/고정비/공과금/세금/기타 + 로열티 가상)
+- v17 캘린더 휴무 표시: sales_daily.source='closed'만 (데이터 없는 셀은 빈 회색)
+- 월 네비: 미래 월 차단 (현재 월까지만)
+- 카테고리 관리 시트: 매출 대비 경고 기준(%) 입력 가능
+
+---
+
 ## [2026-05-22] 정산현황 탭 v17 전면 개편 — 완료 (PR #194/#195/#196)
 
 ### 최종 결과
