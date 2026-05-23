@@ -21,33 +21,46 @@
 
 ### 🚨 사장님 결정 완료 (2026-05-23 동일 세션) — 3개 MCP 추가 합의
 
-#### 사장님이 외부 서비스에서 받아올 키 6개 (한 묶음)
+#### ✅ 사장님 키 5개 다 받음 (2026-05-23 메모장 저장 완료)
 
-**1️⃣ Sentry (오류 CCTV)** — https://sentry.io
-- ① **DSN 키** (`https://xxxxx@oXXXX.ingest.sentry.io/XXXX`)
-- ② **Auth Token** (Settings → Account → API → Auth Tokens)
+| 환경변수 이름 (좌측) | 사장님 메모장 값 (우측 — 사장님만 봄) | 비밀 여부 |
+|---|---|---|
+| `SENTRY_MCP_URL` | `https://mcp.sentry.dev/mcp` (공개 OK) | ⚪ |
+| `CLOUDFLARE_ACCOUNT_ID` | 사장님 Account ID (32자리) | ⚪ |
+| `CLOUDFLARE_API_TOKEN` | 사장님 API Token (12개 권한: Pages Read+Edit, Account Analytics/Settings Read, Workers Scripts/R2/KV/AI Read, Workers Tail/Logs/Images Read, User Details Read) | 🔒 비밀 |
+| `SLACK_BOT_TOKEN` | `xoxb-...` Cashflow Bot 재설치 후 받은 거 | 🔒 비밀 |
+| `SLACK_SIGNING_SECRET` | Basic Information의 Signing Secret | 🔒 비밀 |
 
-**2️⃣ Cloudflare (배포 출입문)** — https://dash.cloudflare.com → My Profile → API Tokens
-- ③ **API Token** (권한: Account / Pages / Workers Read)
-- ④ **Account ID** (대시보드 우측 표시)
+#### 🎯 사장님 다음 세션 첫 동작 (한 번에)
 
-**3️⃣ Slack 양방향** — https://api.slack.com/apps → Cashflow Bot
-- OAuth & Permissions → Scopes 추가: `chat:write`, `channels:read`, `channels:history`, `groups:history`, `im:history`
-- Install App 재실행
-- ⑤ **Bot User OAuth Token** (`xoxb-...`)
-- ⑥ **Signing Secret** (Basic Information)
+1. **새 채팅 시작** (Claude Code on the web)
+2. 환경변수 박는 곳 (Settings → Environment Variables 또는 비슷한 UI) 찾기
+3. 위 5개 키 박기 (좌측 이름 정확히, 우측 메모장 값 그대로 복붙, 따옴표 ❌)
+4. CTO에게 "환경변수 박았어. MCP 셋업 진행해" 한 마디
 
-#### 사장님 다음 세션 동작
-1. 위 6개 키 받아오기 (10~15분)
-2. 새 채팅 환경변수에 박기 (`SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`)
-3. CTO가 `.mcp.json`에 자동 추가 + 연결 테스트 + Slack 알림 전송
+#### 🤖 CTO 자동 처리 (사장님 한 마디 받으면)
 
-#### CTO가 자동 처리
-- `.mcp.json` 업데이트
-- 키 보안 처리 (.gitignore)
-- 각 MCP 연결 테스트
-- 신호등 알림 자동 동작 시작
-- 사장님 폰에 ✅ 알림
+1. `.mcp.json` 업데이트 — Sentry MCP + Cloudflare MCP + Slack MCP 추가
+2. `.gitignore` 검증 (환경변수 노출 방지)
+3. 각 MCP 연결 테스트:
+   - Sentry: OAuth 인증 1회 (사장님 브라우저 로그인)
+   - Cloudflare: API Token으로 Account ID + Pages 정보 확인
+   - Slack: Bot Token으로 채널 목록 확인
+4. **사장님 폰에 Slack 신호등 자동 발사**:
+   - 🟢 Sentry 연결됨
+   - 🟢 Cloudflare 연결됨
+   - 🟢 Slack 양방향 연결됨
+5. 신호등 알림 자동 동작 시작 (배포 완료 / Sentry 오류 / 빌드 실패 등)
+
+#### 🔑 이번 세션 검증 완료 사실 (다음 세션 안 의심)
+
+- ✅ Sentry Loader Script `index.html`에 박힘 (main commit `1ee553e`)
+- ✅ Sentry 작동 검증됨 (테스트 오류 도착 36s ago — Sentry Issues에 보임)
+- ✅ Sentry는 **오류 발생 시에만** 신호 전송 (Loader Script 동작 방식 — page view X)
+- ✅ Cloudflare API Token = 12개 권한 (Read 다 + Cloudflare Pages Edit)
+- ✅ Slack Bot 권한 5개 추가 (`chat:write`, `channels:read`, `channels:history`, `groups:history`, `im:history`)
+- ✅ Slack 재설치 완료 → 새 Bot Token 발급
+
 
 ### 📸 시각 검증 시스템 (이미 셋업 완료)
 - `node scripts/snap.js` = 사장님 앱 자동 캡처 → 사장님 폰 전송
