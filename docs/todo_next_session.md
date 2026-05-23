@@ -19,6 +19,36 @@
 - **B. Sentry MCP 추가** — 앱 오류 자동 수집 (사장님 토큰·DSN 정보 필요)
 - **C. Cloudflare MCP 추가** — 배포 상태/트래픽 (사장님 API 토큰 필요)
 
+### 🚨 사장님 결정 완료 (2026-05-23 동일 세션) — 3개 MCP 추가 합의
+
+#### 사장님이 외부 서비스에서 받아올 키 6개 (한 묶음)
+
+**1️⃣ Sentry (오류 CCTV)** — https://sentry.io
+- ① **DSN 키** (`https://xxxxx@oXXXX.ingest.sentry.io/XXXX`)
+- ② **Auth Token** (Settings → Account → API → Auth Tokens)
+
+**2️⃣ Cloudflare (배포 출입문)** — https://dash.cloudflare.com → My Profile → API Tokens
+- ③ **API Token** (권한: Account / Pages / Workers Read)
+- ④ **Account ID** (대시보드 우측 표시)
+
+**3️⃣ Slack 양방향** — https://api.slack.com/apps → Cashflow Bot
+- OAuth & Permissions → Scopes 추가: `chat:write`, `channels:read`, `channels:history`, `groups:history`, `im:history`
+- Install App 재실행
+- ⑤ **Bot User OAuth Token** (`xoxb-...`)
+- ⑥ **Signing Secret** (Basic Information)
+
+#### 사장님 다음 세션 동작
+1. 위 6개 키 받아오기 (10~15분)
+2. 새 채팅 환경변수에 박기 (`SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`)
+3. CTO가 `.mcp.json`에 자동 추가 + 연결 테스트 + Slack 알림 전송
+
+#### CTO가 자동 처리
+- `.mcp.json` 업데이트
+- 키 보안 처리 (.gitignore)
+- 각 MCP 연결 테스트
+- 신호등 알림 자동 동작 시작
+- 사장님 폰에 ✅ 알림
+
 ### 📸 시각 검증 시스템 (이미 셋업 완료)
 - `node scripts/snap.js` = 사장님 앱 자동 캡처 → 사장님 폰 전송
 - **CTO는 사진 안 봄** (토큰 절약). 사장님이 **"니가 직접 확인해봐"** 명시 시만 봄.
