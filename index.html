@@ -7,6 +7,17 @@
 
 <!-- ═══ Sentry 오류 자동 수집 (2026-05-23) ═══ -->
 <script src="https://js.sentry-cdn.com/68ab5e289a204f5e6c326bc5b6896d20.min.js" crossorigin="anonymous"></script>
+<!-- ⚠️ 임시 — Sentry 연결 검증용. 검증 후 제거 예정 (2026-05-23) -->
+<script>
+  setTimeout(function(){
+    if(typeof Sentry !== 'undefined' && Sentry.captureException){
+      Sentry.captureException(new Error('[테스트] Sentry 연결 검증 — 사장님 앱에서 자동 발사'));
+      console.log('[Sentry 테스트] captureException 호출됨');
+    } else {
+      console.warn('[Sentry 테스트] Sentry 객체 로드 안 됨 — Loader Script 확인 필요');
+    }
+  }, 3000);
+</script>
 
 <!-- ═══ PWA / 앱스토어 패키징 대비 메타 ═══ -->
 <link rel="manifest" href="manifest.json">
