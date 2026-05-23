@@ -2,17 +2,22 @@
 
 ---
 
-## 🚨 [2026-05-23 가장 최근] Slack 알림 검증 — 즉시 처리
+## ✅ [2026-05-23 통과] Slack 알림 1차 검증 완료
 
-### 사장님 셋업 완료 (이전 세션)
+### 사장님 셋업 완료
 - Slack 워크스페이스 `cashflow` + 채널 `#cashflow`
 - Cashflow Bot Webhook URL → 환경변수 `SLACK_WEBHOOK_URL` 저장
 - Allowlist 6개 (`hooks.slack.com`, `*.sentry.io`, `*.cloudflare.com` 추가)
 
-### 사장님 첫 마디 = "응 시작해"
-1. `echo $SLACK_WEBHOOK_URL` 보이는지 확인 (옛 세션엔 안 보였음 = 정상, 새 세션은 보임 예상)
-2. `curl -X POST` 테스트 전송 → 사장님 폰 알림 확인
-3. 결과 보고 + Sentry/Cloudflare 추가 정보 받기
+### 1차 검증 결과 (2026-05-23 15:47)
+1. ✅ `echo $SLACK_WEBHOOK_URL` 보임 (81자, hooks.slack.com 시작)
+2. ✅ 테스트 메시지 전송 → 사장님 폰 도착 스크린샷 확인
+3. ✅ 신호등 포맷 (🟢🟡🔴) 미리보기 같이 전송 성공
+
+### 남은 작업 (사장님 결정 대기)
+- **A. 신호등 알림 정식 세팅** — 어떤 이벤트에 🟢🟡🔴 보낼지 규칙 합의 (가벼움, 즉시)
+- **B. Sentry MCP 추가** — 앱 오류 자동 수집 (사장님 토큰·DSN 정보 필요)
+- **C. Cloudflare MCP 추가** — 배포 상태/트래픽 (사장님 API 토큰 필요)
 
 ### 체크리스트 운영 (이번 세션부터 적용 — work_log 2026-05-23 참조)
 - **매번 7개**: 6개 핵심 + 토큰비용 (예: 약 200원)
