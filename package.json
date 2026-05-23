@@ -1,0 +1,15 @@
+{
+  "name": "pongdang-shabu-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "퐁당샤브 — 시각 검증 등 개발 도구 (본 앱은 index.html 단일 SPA)",
+  "scripts": {
+    "snap": "node scripts/snap.js",
+    "snap:local": "node scripts/snap.js --local",
+    "snap:diff": "node scripts/snap.js --diff"
+  },
+  "devDependencies": {
+    "puppeteer": "^25.0.4",
+    "playwright": "^1.60.0"
+  }
+}
