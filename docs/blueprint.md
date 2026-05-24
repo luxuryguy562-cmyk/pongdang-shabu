@@ -341,53 +341,51 @@
 
 ---
 
-# 📥 화면 9. 사이드메뉴 — 거래내역 자동 입력
+# 📥 화면 9. 사이드메뉴 — 엑셀 업로드 (Phase 1) / 자동 입력 (Phase 2)
 
-## 보여주는 것
-> **사장님 손 0% — SMS·이메일·POS가 백그라운드로 카드·계좌·매출 자동 입력**
+## ⏳ Phase 1 (현재) — 엑셀 업로드 + POS API 강화
+> ⚠️ **2026-05-24 사장님 정정**: Capacitor·SMS는 Phase 1 끝 후. 지금은 PWA 그대로.
 
-> ⚠️ **2026-05-24 큰 방향 변경 (사장님 명시)**: 옛 "엑셀 업로드"는 백업 수단으로 남기되, 주 자동화는 **문자 + 이메일 + POS API**.
+### 현재 흐름 (수동 엑셀)
+```
+파일 선택 (xlsx, xls, csv)
+  ↓
+parseExcelFile (SheetJS)
+  ↓
+matchColumns (헤더 키워드 자동)
+  ↓
+classifyByKeyword (적요/내용 → category)
+  ↓
+classification_rules 적용 (매장별 학습)
+  ↓
+renderExcelPreview (사장님 검증)
+  ↓
+saveExcelBatch → mydata_transactions
+```
 
-## 1순위. 안드로이드 SMS 자동 읽기 🥇
-```
-카드·은행 SMS 도착 (사장님 폰)
-  ↓
-앱이 자동 읽음 (Capacitor SMS 권한, 1회 허용 = 영구)
-  ↓
-classifyByKeyword + classification_rules (매장별 학습 재활용)
-  ↓
-mydata_transactions 자동 INSERT (tx_hash 중복 방지)
-  ↓
-🔔 Slack 신호등 (큰 금액·미분류·이상 발견 시)
-```
-- **권한**: 안드 `READ_SMS` (Google Play 정책 = 식당 정산 어플 정당화)
-- **기술**: PWA → Capacitor 래핑 (단일 SPA 유지)
-- **iOS**: 불가 (Apple 정책) → 이메일·POS로 대체
+### Phase 1 안 추가 작업
+- POS API 매출 백그라운드 강화 (`upsolution-crawler.js`)
+- 자동 인사이트 (vision 7-4)
+- 수식 정확성 fix (다른 세션 진행 중)
 
-## 2순위. Gmail OAuth 백그라운드 🥈
-```
-사장님 Gmail OAuth 1회 (가입 온보딩 안)
-  ↓
-백그라운드: 카드사·은행 명세 이메일 자동 인식
-  ↓
-mydata_transactions INSERT (출처: 'gmail')
-```
-- iOS 보완 + 카드사 월별 명세서 자동
-- 사용자 동의 권한 (`gmail.readonly`만, 발신 X)
+## 🚀 Phase 1 끝 후 — 자동 입력 진입
 
-## 3순위. POS API 매출 백그라운드 🥉
+### 1순위. 안드로이드 SMS 자동 읽기 🥇 (Capacitor 1~2주 작업)
 ```
-업솔루션 POS API (store_settings.ups_*)
-  ↓
-매일 매출 자동 가져옴
-  ↓
-daily_sales + sales_daily 자동 갱신 (사장님 마감 입력 ↓)
+카드·은행 SMS 도착 → 앱 자동 읽음 (Capacitor SMS 권한)
+  → classifyByKeyword + classification_rules
+  → mydata_transactions 자동 INSERT
+  → 🔔 Slack 신호등 (큰 금액·미분류)
 ```
-- 기존 연동 (#36 #58) 자동화 강화
+- 권한: 안드 `READ_SMS` (Google Play 정책 정당화)
+- iOS 불가 (Apple 정책)
 
-## 백업. 수동 엑셀 업로드 (기존, 폴백)
-- 위 3개 안 되는 경우 (옛 사용자 / 권한 거부 / API 실패)
-- 기존 흐름 그대로 유지
+### 2순위. Gmail OAuth 백그라운드 🥈 (Phase 2)
+- iOS 보완 + 카드사 월별 명세
+- `gmail.readonly` Scope만 (발신 X)
+
+### 3순위. POS API 매출 백그라운드 (Phase 1 안 진행)
+- 업솔루션 자동 매일 매출 → daily_sales / sales_daily 갱신
 
 ## DB
 - `mydata_transactions` (tx_hash UNIQUE 중복 방지)
