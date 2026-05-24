@@ -341,33 +341,60 @@
 
 ---
 
-# 📥 화면 9. 사이드메뉴 — 엑셀 업로드
+# 📥 화면 9. 사이드메뉴 — 거래내역 자동 입력
 
 ## 보여주는 것
-> **계좌·카드 엑셀 → AI 분류 → mydata_transactions 저장**
+> **사장님 손 0% — SMS·이메일·POS가 백그라운드로 카드·계좌·매출 자동 입력**
 
-## 흐름
+> ⚠️ **2026-05-24 큰 방향 변경 (사장님 명시)**: 옛 "엑셀 업로드"는 백업 수단으로 남기되, 주 자동화는 **문자 + 이메일 + POS API**.
+
+## 1순위. 안드로이드 SMS 자동 읽기 🥇
 ```
-파일 선택 (xlsx, xls, csv)
+카드·은행 SMS 도착 (사장님 폰)
   ↓
-parseExcelFile (SheetJS)
+앱이 자동 읽음 (Capacitor SMS 권한, 1회 허용 = 영구)
   ↓
-matchColumns (헤더 키워드 자동)
+classifyByKeyword + classification_rules (매장별 학습 재활용)
   ↓
-classifyByKeyword (적요/내용 → category)
+mydata_transactions 자동 INSERT (tx_hash 중복 방지)
   ↓
-classification_rules 적용 (매장별 학습)
-  ↓
-renderExcelPreview (사장님 검증)
-  ↓
-saveExcelBatch → mydata_transactions
+🔔 Slack 신호등 (큰 금액·미분류·이상 발견 시)
 ```
+- **권한**: 안드 `READ_SMS` (Google Play 정책 = 식당 정산 어플 정당화)
+- **기술**: PWA → Capacitor 래핑 (단일 SPA 유지)
+- **iOS**: 불가 (Apple 정책) → 이메일·POS로 대체
+
+## 2순위. Gmail OAuth 백그라운드 🥈
+```
+사장님 Gmail OAuth 1회 (가입 온보딩 안)
+  ↓
+백그라운드: 카드사·은행 명세 이메일 자동 인식
+  ↓
+mydata_transactions INSERT (출처: 'gmail')
+```
+- iOS 보완 + 카드사 월별 명세서 자동
+- 사용자 동의 권한 (`gmail.readonly`만, 발신 X)
+
+## 3순위. POS API 매출 백그라운드 🥉
+```
+업솔루션 POS API (store_settings.ups_*)
+  ↓
+매일 매출 자동 가져옴
+  ↓
+daily_sales + sales_daily 자동 갱신 (사장님 마감 입력 ↓)
+```
+- 기존 연동 (#36 #58) 자동화 강화
+
+## 백업. 수동 엑셀 업로드 (기존, 폴백)
+- 위 3개 안 되는 경우 (옛 사용자 / 권한 거부 / API 실패)
+- 기존 흐름 그대로 유지
 
 ## DB
 - `mydata_transactions` (tx_hash UNIQUE 중복 방지)
-- `classification_rules` (매장별 키워드 → 카테고리 매핑, 학습됨)
+- `mydata_accounts` (계좌·카드 메타)
+- `classification_rules` (매장별 키워드 → 카테고리 매핑, **SMS 본문에도 동일 적용**)
 
-## 호환
+## 호환 (수동 폴백)
 - **은행 13개사** (신한/KB/NH/우리/하나/카카오/토스/IBK/SC/새마을/수협/신협/대구)
 - **카드 8개사** (신한/삼성/현대/KB/롯데/하나/BC/NH)
 

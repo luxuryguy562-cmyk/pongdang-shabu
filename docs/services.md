@@ -48,6 +48,20 @@
 | `<meta theme-color>` | `index.html` head | iOS 상태바·앱스토어 splash 색 |
 | `safe-area-inset` CSS | `.header`, `.bottom-nav` | iOS 노치/홈 인디케이터 자동 회피 |
 
+### Phase 1 안드로이드 네이티브 진입 (2026-05-24 사장님 명시 방향 확정)
+> vision.md 기술 스택: 옛 "Codef API" 폐기 → **SMS 자동 + Gmail OAuth + POS API**.
+
+| 자산 | 상태 | 시점 |
+|---|---|---|
+| **Capacitor 6.x 래핑** (npm install + android 폴더 생성) | ⏳ Phase 1 | 첫 작업 |
+| **Capacitor Community SMS Plugin** (`@capacitor-community/sms-receive`) | ⏳ Phase 1 | SMS 자동 읽기 권한 |
+| **Google Play 개발자 계정** ($25 1회) | 🔴 사장님 결정 필요 | 베타 배포 전 |
+| **SMS 권한 정당화 문서** (Google Play 정책 — 식당 정산 어플) | ⏳ | Play Store 등록 시 |
+| **Gmail API OAuth Client ID** | 🔴 사장님 결정 (Google Cloud Console) | Phase 1 후반 |
+| **Gmail Scope**: `https://www.googleapis.com/auth/gmail.readonly` | ⏳ | 읽기 전용, 발신 X |
+| **POS API 자동 동기화** (`upsolution-crawler.js` 강화) | ⏳ Phase 1 | 매출 백그라운드 |
+| **iOS 진입** | ⏸️ Phase 2+ | 이메일·POS만 (SMS Apple 정책 불가) |
+
 ## Supabase MCP (Claude 자동화, 2026-05-17)
 
 | 항목 | 값 |
