@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="900" viewBox="0 0 1100 900" font-family="'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif">
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#444"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#0050FF"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <!-- 제목 -->
+  <text x="550" y="40" text-anchor="middle" font-size="26" font-weight="800" fill="#111">
+    🏪 퐁당샤브 청사진 — 데이터가 어디서 와서 어디로 가는가
+  </text>
+  <text x="550" y="68" text-anchor="middle" font-size="13" fill="#666">
+    화살표 = 데이터 흐름 / 파란선 = 자동 동기화 / 빨간선 = 가장 위험한 연결
+  </text>
+
+  <!-- ============== 입력 측 (왼쪽 + 위) ============== -->
+
+  <!-- 1. 직원 / 출퇴근 -->
+  <g>
+    <rect x="40" y="110" width="200" height="100" rx="14" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+    <text x="140" y="140" text-anchor="middle" font-size="18" font-weight="700" fill="#92400E">👥 직원</text>
+    <text x="140" y="165" text-anchor="middle" font-size="13" fill="#78350F">출퇴근 노트</text>
+    <text x="140" y="185" text-anchor="middle" font-size="11" fill="#92400E">시급·월급·서류·PIN</text>
+  </g>
+
+  <!-- 2. 거래처 / 주문장부 -->
+  <g>
+    <rect x="290" y="110" width="220" height="100" rx="14" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+    <text x="400" y="140" text-anchor="middle" font-size="18" font-weight="700" fill="#1E3A8A">🏬 거래처</text>
+    <text x="400" y="165" text-anchor="middle" font-size="13" fill="#1E40AF">주문 장부 (단가·수량)</text>
+    <text x="400" y="185" text-anchor="middle" font-size="11" fill="#1E3A8A">정기 식자재 공급사</text>
+  </g>
+
+  <!-- 3. 영수증 -->
+  <g>
+    <rect x="560" y="110" width="220" height="100" rx="14" fill="#FCE7F3" stroke="#EC4899" stroke-width="2"/>
+    <text x="670" y="140" text-anchor="middle" font-size="18" font-weight="700" fill="#831843">🧾 영수증</text>
+    <text x="670" y="165" text-anchor="middle" font-size="13" fill="#9D174D">AI 사진 자동 인식</text>
+    <text x="670" y="185" text-anchor="middle" font-size="11" fill="#831843">거래처 명세 / 마트 영수증</text>
+  </g>
+
+  <!-- 4. 은행/카드 -->
+  <g>
+    <rect x="830" y="110" width="220" height="100" rx="14" fill="#E0E7FF" stroke="#6366F1" stroke-width="2"/>
+    <text x="940" y="140" text-anchor="middle" font-size="18" font-weight="700" fill="#312E81">🏦 은행·카드</text>
+    <text x="940" y="165" text-anchor="middle" font-size="13" fill="#3730A3">엑셀 / 미래 SMS</text>
+    <text x="940" y="185" text-anchor="middle" font-size="11" fill="#312E81">실제 출금 내역</text>
+  </g>
+
+  <!-- ============== 중간: 마감 / 매출 ============== -->
+
+  <!-- 5. 마감정산 -->
+  <g>
+    <rect x="290" y="290" width="220" height="100" rx="14" fill="#FEE2E2" stroke="#EF4444" stroke-width="2"/>
+    <text x="400" y="320" text-anchor="middle" font-size="18" font-weight="700" fill="#7F1D1D">💰 마감 정산</text>
+    <text x="400" y="345" text-anchor="middle" font-size="13" fill="#991B1B">현금·POS 입력</text>
+    <text x="400" y="365" text-anchor="middle" font-size="11" fill="#7F1D1D">차감·금고·기타매출</text>
+  </g>
+
+  <!-- 6. 매출 장부 -->
+  <g>
+    <rect x="40" y="290" width="200" height="100" rx="14" fill="#D1FAE5" stroke="#10B981" stroke-width="2"/>
+    <text x="140" y="320" text-anchor="middle" font-size="18" font-weight="700" fill="#064E3B">💵 매출 장부</text>
+    <text x="140" y="345" text-anchor="middle" font-size="13" fill="#065F46">하루 1줄</text>
+    <text x="140" y="365" text-anchor="middle" font-size="11" fill="#064E3B">단일 진실 원천</text>
+  </g>
+
+  <!-- 마감 → 매출 자동 동기화 (파란) -->
+  <line x1="290" y1="340" x2="245" y2="340" stroke="#0050FF" stroke-width="3" marker-end="url(#arrowBlue)"/>
+  <text x="265" y="332" text-anchor="middle" font-size="10" font-weight="700" fill="#0050FF">자동sync</text>
+
+  <!-- ============== 지출 분류 폴더 (가운데 큰 박스) ============== -->
+
+  <g>
+    <rect x="350" y="450" width="400" height="180" rx="20" fill="#FFFBEB" stroke="#D97706" stroke-width="3"/>
+    <text x="550" y="485" text-anchor="middle" font-size="20" font-weight="800" fill="#78350F">📁 지출 분류 폴더</text>
+    <text x="550" y="508" text-anchor="middle" font-size="12" fill="#92400E">대분류 + 소분류 (트리)</text>
+
+    <!-- 카테고리 항목들 -->
+    <g font-size="11" fill="#451A03">
+      <rect x="370" y="525" width="100" height="22" rx="6" fill="#FED7AA"/>
+      <text x="420" y="540" text-anchor="middle">🥬 식자재</text>
+
+      <rect x="480" y="525" width="100" height="22" rx="6" fill="#FED7AA"/>
+      <text x="530" y="540" text-anchor="middle">👷 인건비</text>
+
+      <rect x="590" y="525" width="120" height="22" rx="6" fill="#FED7AA"/>
+      <text x="650" y="540" text-anchor="middle">📋 고정비/공과금</text>
+
+      <rect x="370" y="555" width="100" height="22" rx="6" fill="#FED7AA"/>
+      <text x="420" y="570" text-anchor="middle">🍶 주류</text>
+
+      <rect x="480" y="555" width="100" height="22" rx="6" fill="#FED7AA"/>
+      <text x="530" y="570" text-anchor="middle">🛍️ 비품</text>
+
+      <rect x="590" y="555" width="120" height="22" rx="6" fill="#FED7AA"/>
+      <text x="650" y="570" text-anchor="middle">💸 마케팅·세금</text>
+    </g>
+
+    <text x="550" y="610" text-anchor="middle" font-size="12" font-weight="700" fill="#7F1D1D">⚠️ 모든 지출은 반드시 이 폴더 중 하나로 분류됨</text>
+  </g>
+
+  <!-- ============== 화살표: 입력 → 분류 폴더 ============== -->
+
+  <!-- 출퇴근 → 인건비 -->
+  <path d="M140,210 Q140,400 480,525" stroke="#444" stroke-width="2" fill="none" marker-end="url(#arrow)" stroke-dasharray="4,2"/>
+  <text x="200" y="395" font-size="10" fill="#444">인건비 자동 계산</text>
+
+  <!-- 거래처 주문 → 식자재 (빨간 = 위험 FK) -->
+  <path d="M400,210 Q400,400 420,525" stroke="#DC2626" stroke-width="2.5" fill="none" marker-end="url(#arrowRed)"/>
+  <text x="420" y="395" font-size="10" font-weight="700" fill="#DC2626">⚠️ FK 깨지면 매입 누락</text>
+
+  <!-- 영수증 → 분류 (빨간 = 위험 FK) -->
+  <path d="M670,210 Q670,400 530,525" stroke="#DC2626" stroke-width="2.5" fill="none" marker-end="url(#arrowRed)"/>
+  <text x="700" y="395" font-size="10" font-weight="700" fill="#DC2626">⚠️ 소분류 id 규칙</text>
+
+  <!-- 은행/카드 → 분류 (빨간 = 위험 FK) -->
+  <path d="M940,210 Q940,420 650,525" stroke="#DC2626" stroke-width="2.5" fill="none" marker-end="url(#arrowRed)"/>
+  <text x="950" y="395" font-size="10" font-weight="700" fill="#DC2626">⚠️ 대분류 id 규칙</text>
+
+  <!-- 마감 차감 → 분류 -->
+  <path d="M400,390 L530,525" stroke="#444" stroke-width="2" fill="none" marker-end="url(#arrow)" stroke-dasharray="4,2"/>
+  <text x="420" y="450" font-size="10" fill="#444">현금차감</text>
+
+  <!-- ============== 출력 측 (아래) ============== -->
+
+  <!-- 대시보드 -->
+  <g>
+    <rect x="350" y="700" width="400" height="120" rx="18" fill="#1E293B" stroke="#0F172A" stroke-width="3"/>
+    <text x="550" y="735" text-anchor="middle" font-size="22" font-weight="800" fill="#FFFFFF">📊 대시보드 (홈)</text>
+    <text x="550" y="762" text-anchor="middle" font-size="14" fill="#E2E8F0">매출 - 지출 = 순익</text>
+    <text x="550" y="785" text-anchor="middle" font-size="12" fill="#94A3B8">월/주/일별 + 자동 인사이트</text>
+    <text x="550" y="805" text-anchor="middle" font-size="12" fill="#FBBF24">→ 사장님이 "얼마 남았나" 한눈에</text>
+  </g>
+
+  <!-- 매출 → 대시보드 -->
+  <path d="M140,390 Q140,700 350,750" stroke="#10B981" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="160" y="600" font-size="11" font-weight="700" fill="#065F46">매출 +</text>
+
+  <!-- 분류 폴더 → 대시보드 -->
+  <line x1="550" y1="630" x2="550" y2="700" stroke="#D97706" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="570" y="670" font-size="11" font-weight="700" fill="#78350F">지출 -</text>
+
+  <!-- 예비비 -->
+  <g>
+    <rect x="830" y="500" width="220" height="80" rx="14" fill="#F3E8FF" stroke="#A855F7" stroke-width="2"/>
+    <text x="940" y="528" text-anchor="middle" font-size="16" font-weight="700" fill="#581C87">🏦 예비비 금고</text>
+    <text x="940" y="552" text-anchor="middle" font-size="11" fill="#6B21A8">자동 적립 + 사용 기록</text>
+    <text x="940" y="572" text-anchor="middle" font-size="10" fill="#581C87">사장님 비상금</text>
+  </g>
+
+  <!-- 은행카드 → 예비비 자동 -->
+  <path d="M940,210 Q1000,300 940,500" stroke="#0050FF" stroke-width="2" fill="none" marker-end="url(#arrowBlue)"/>
+  <text x="1010" y="350" font-size="10" font-weight="700" fill="#0050FF">예비비 사용 자동</text>
+
+  <!-- 예비비 → 대시보드 -->
+  <path d="M940,580 Q940,700 750,760" stroke="#A855F7" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- 범례 -->
+  <g transform="translate(40,830)">
+    <rect x="0" y="0" width="1020" height="50" rx="8" fill="#F9FAFB" stroke="#D1D5DB"/>
+    <text x="20" y="22" font-size="12" font-weight="700" fill="#374151">범례:</text>
+    <line x1="80" y1="18" x2="120" y2="18" stroke="#444" stroke-width="2" stroke-dasharray="4,2"/>
+    <text x="130" y="22" font-size="11" fill="#374151">일반 흐름</text>
+    <line x1="220" y1="18" x2="260" y2="18" stroke="#0050FF" stroke-width="3"/>
+    <text x="270" y="22" font-size="11" fill="#374151">자동 동기화 (사장님 손 X)</text>
+    <line x1="450" y1="18" x2="490" y2="18" stroke="#DC2626" stroke-width="2.5"/>
+    <text x="500" y="22" font-size="11" fill="#374151">⚠️ 위험 연결 (깨지면 사장님 호소 발동)</text>
+    <text x="20" y="42" font-size="11" fill="#6B7280">→ "FK"는 영어로 어렵게 표현됐지만, 결국 "어느 폴더에 속하는지 가리키는 화살표"입니다.</text>
+  </g>
+
+</svg>
