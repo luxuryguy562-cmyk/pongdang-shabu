@@ -187,13 +187,13 @@ Tier 3. docs/*.md            ← 무엇 (실제 데이터·규칙·로그)
 
 ---
 
-## 동반 문서 (작성 예정)
+## 동반 문서 (완성 2026-05-24)
 
-| 파일 | 무엇 |
-|---|---|
-| `docs/persona.md` | 우리 사용자 정확히 누구 (소규모 식당? 프랜차이즈?) |
-| `docs/pricing.md` | SaaS 구독료 정책 |
-| `docs/marketing.md` | 1,000명 모집 채널 |
-| `docs/roadmap.md` | Phase 1~4 구체 일정·KPI·실행 주체 |
-| `docs/team.md` | 누가 뭐 함 (사장님·Claude·외주·미래 채용) |
-| `docs/blueprint.md` | 화면별 기능 설계도 (FK·데이터 흐름) |
+| 파일 | 무엇 | 상태 |
+|---|---|---|
+| `docs/persona.md` | 우리 사용자 정확히 누구 (메인 + 서브 5개 + 안티) | ✅ |
+| `docs/pricing.md` | SaaS 구독료 정책 (4단계 + 5천만 시나리오) | ✅ |
+| `docs/marketing.md` | 1,000명 모집 채널·캠페인·타임라인 | ✅ |
+| `docs/roadmap.md` | Phase 1~4 구체 일정·KPI·실행 주체 | ✅ |
+| `docs/team.md` | 누가 뭐 함 (Phase별 채용 + RACI) | ✅ |
+| `docs/blueprint.md` | 화면 14개 기능 설계도 (FK·데이터 흐름) | ✅ |
