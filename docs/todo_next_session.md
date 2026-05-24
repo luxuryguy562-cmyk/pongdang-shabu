@@ -2,6 +2,43 @@
 
 ---
 
+## 🔥 [2026-05-24] vision-driven 구조 박음 — 다음 세션 우선 작업
+
+### 사장님 첫 행동 (필독 5분)
+1. `docs/vision.md` (Tier 0, 0순위 필독) 슥 확인 — 사장님 답 그대로인지
+2. `docs/blueprint_diagram.svg` 폰에서 확대 보기 (데이터 흐름 그림)
+3. `docs/persona.md` ⚠️ 검토 3개 답 (나이대 35~55 / 결제 9,900 / 김은성)
+
+### 다른 세션 (수식 작업) 합치기
+- 사장님 명시: "다른 세션에서 수식 수정 중"
+- 이 브랜치(claude/fervent-edison-Cqj8e)와 다른 수식 브랜치 합치기 필요
+- main 머지 시 충돌 점검
+
+### Phase 1 진짜 작업 (다음 세션)
+1. **수식 정확성 fix** (별도 세션 진행 중)
+2. **정산 100% 일치 검증** — 사장님 1개월 스프레드 받기
+3. **POS API 매출 백그라운드 강화** (PWA 가능, Capacitor 안 필요)
+4. **자동 인사이트** (vision 7-4) — 공과금 미납 / 인건비 비율 / 단가 변동
+
+### Phase 1 끝 후 (베타 직전)
+- Capacitor 안드 네이티브 래핑 (1~2주 작업)
+- SMS 자동 읽기 권한
+- Google Play 등록 ($25, 🔴 사장님 결정)
+
+### 자율 진행 OK (헌법 1-1 🟢) — 다음 세션 첫 작업 후보
+- agents critic.md (457줄) / designer.md (446줄) 비대 다이어트
+- plan.md ↔ roadmap.md 중복 정리
+- dev_lessons.md / work_log.md 비대 정리 (헌법 11조)
+- `services.md` agents 변경 반영
+
+### 다음 세션 자가 점검
+- [ ] vision-driven 구조가 다음 세션에서도 작동하나? (각 agent 자문 5개 적용)
+- [ ] 헌법 1-9 정정 적용? (비유 X, 영어 한국어 풀이)
+- [ ] designer trigger always 작동?
+- [ ] 사장님 영어 단어 마주칠 때 한국어 풀이 자동?
+
+---
+
 ## ✅ [2026-05-23 통과] Slack 알림 1차 검증 완료
 
 ### 사장님 셋업 완료
