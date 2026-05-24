@@ -790,13 +790,21 @@ pongdang-shabu/
 │   ├── tester.md
 │   └── deployer.md
 ├── docs/
-│   ├── vision.md          ← 🎯 Tier 0 — 비전·철학 (모든 결정의 기준, 2026-05-24 신설)
-│   ├── db_schema.md       ← Supabase 테이블 구조 (유일한 스키마 진실)
-│   ├── plan.md            ← 전체 시스템 설계 + 구현 현황 (유일한 계획 진실)
-│   ├── services.md        ← 외부 서비스 URL/키/배포 정보
-│   ├── work_log.md        ← 세션별 작업 요약
-│   ├── dev_lessons.md     ← 개발 교훈/반성 (같은 실수 방지)
-│   └── business_rules.md  ← 사장님 비즈니스 규칙/변수 (유일한 규칙 진실)
+│   ├── vision.md             ← 🎯 Tier 0 — 비전·철학 (모든 결정의 기준, 2026-05-24 신설)
+│   ├── persona.md            ← Tier 3 — 사용자 정의 (메인+서브 5+안티, 2026-05-24)
+│   ├── pricing.md            ← Tier 3 — 가격 정책 (4단계, 2026-05-24)
+│   ├── marketing.md          ← Tier 3 — 1,000명 모집 전략 (2026-05-24)
+│   ├── roadmap.md            ← Tier 3 — Phase 1~4 일정·KPI (2026-05-24)
+│   ├── team.md               ← Tier 3 — Phase별 채용 + RACI (2026-05-24)
+│   ├── blueprint.md          ← Tier 3 — 화면 14개 설계도 + 위험 FK 5개 (2026-05-24)
+│   ├── blueprint_diagram.svg ← Tier 3 — 데이터 흐름 시각화 (사장님 명시, 2026-05-24)
+│   ├── db_schema.md          ← Supabase 테이블 구조 (유일한 스키마 진실)
+│   ├── plan.md               ← 전체 시스템 설계 + 구현 현황 (유일한 계획 진실)
+│   ├── services.md           ← 외부 서비스 URL/키/배포 정보
+│   ├── work_log.md           ← 세션별 작업 요약
+│   ├── dev_lessons.md        ← 개발 교훈/반성 (같은 실수 방지)
+│   ├── business_rules.md     ← 사장님 비즈니스 규칙/변수 (유일한 규칙 진실)
+│   └── todo_next_session.md  ← 다음 세션 우선 작업
 ├── index.html             ← 앱 본체
 ├── manifest.json
 ├── icon-192.png

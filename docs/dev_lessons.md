@@ -3107,3 +3107,52 @@ ellipsis 단독은 **데이터 의미 손실** 가능 → designer 실격.
 - agents/*.md 10개 다이어트 (헌법 카피 -180줄, vision 자문 1줄로)
 - designer trigger always
 - vision.md (Tier 0) + persona·pricing·marketing·roadmap·team·blueprint 7개 docs 신설
+
+---
+
+## 99. business_rules #12 위반 자리 = index.html `COMMON_BANK_RULES` (2026-05-24 발견)
+
+### 사건
+사장님 통찰 ("카드 매출 계좌 입금은 수수료 차감된 순액") → business_rules #12 박은 직후 코드 검토. 발견:
+
+### 위반 자리 (`index.html` 16479~16500줄)
+```js
+const COMMON_BANK_RULES=[
+  // 매출 — 카드사 정산 입금 (한글 1글자 약자 포함, 뒤 숫자 3자리↑)
+  {p:/^(NH|KB|SHC|BC|농협|삼성|삼|하나|하|롯데|롯|현대|현|우리|우)\d{3,}/,cat:'매출',sub:'카드결제'},
+  // 매출 — 은행 이체 코드
+  {p:/(타행|OP이체|모바일|FB자금|BZ뱅크|전자금융)/,cat:'매출',sub:'송금결제'},
+  // 매출 — 현금
+  {p:/(CD입금|현금|현찰)/,cat:'매출',sub:'현금결제'},
+  // 매출 — 간편결제 정산
+  {p:/(카카오페이정산|토스_|네이버페이정산)/,cat:'매출',sub:'기타결제'},
+  // 인건비 — 급여 패턴
+  {p:/급여.*월/,cat:'인건비',sub:'급여'},
+  ...
+];
+```
+
+### 정확한 위반 영향
+1. **카드사 정산 입금(`NH/KB/...`)이 "매출" 카테고리로 자동 분류** = business_rules #12 직격 위반
+2. **인건비도 mydata에 분류** — `attendance_logs.calculated_wage`와 **이중 합산 위험**
+3. **세금도 마찬가지** — fixed_costs와 mydata 둘 다 박힘
+
+### 완화 자리 (확인됨)
+- `index.html` 13838줄 안내문: *"매출 카테고리는 분류용만, 실제 매출 집계는 마감정산(POS)에서"*
+- 대시보드 매출 합산 = `sales_daily` 단일 진실 (settlements 자동 sync)
+- mydata 매출 분류는 정산검수(`reconciliation`) 대조 용도
+
+### 그러나 (확실 X)
+- 사장님 1개월 스프레드 검증 시 자동 발견될 자리
+- 매출 카테고리 분류 행이 어디 합산되는지 100% 확인 안 됨
+- 정산검수 매출 대조에서 POS 매출 + mydata 매출 카테고리 이중 비교 시 = 사장님 헷갈림 발생
+
+### 교훈
+1. 사장님 도메인 규칙 (business_rules) 박을 때 **즉시 코드 위반 자리 grep 의무**
+2. "분류용 카테고리"와 "집계 카테고리" 명확히 분리 (UI에 안내문만으로 부족)
+3. 인건비·세금·매출 = 데이터 출처 단일 진실 원천 명확 박기 (헌법 + dev_lessons)
+
+### 다음 세션 작업 (todo_next_session 박음)
+- `COMMON_BANK_RULES` "매출" 카테고리 라벨 → "매출 (분류용)" 명확화 또는 별도 타입
+- `sales_recon_mapping` (정산검수) 매핑이 mydata 매출 분류와 일치하는지 검증
+- 사장님 1개월 스프레드로 매출·인건비·세금 합산 100% 일치 확인
