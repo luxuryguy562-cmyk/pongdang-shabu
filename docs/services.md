@@ -48,6 +48,19 @@
 | `<meta theme-color>` | `index.html` head | iOS 상태바·앱스토어 splash 색 |
 | `safe-area-inset` CSS | `.header`, `.bottom-nav` | iOS 노치/홈 인디케이터 자동 회피 |
 
+### Phase 1 끝 후 안드 네이티브 진입 자산 (2026-05-24 사장님 정정)
+> ⚠️ **2026-05-24 정정**: Capacitor 1~2주 작업은 Phase 1 PoC 완성 후로 미룸. 지금 수식 정확성 우선.
+
+| 자산 | 상태 | 시점 |
+|---|---|---|
+| **Capacitor 6.x 래핑** (npm install + android 폴더) | ⏸️ 미래 | **Phase 1 PoC 완성 직후** (베타 직전) |
+| **Capacitor Community SMS Plugin** (`@capacitor-community/sms-receive`) | ⏸️ 미래 | Capacitor 진입과 동시 |
+| **Google Play 개발자 계정** ($25 1회) | 🔴 미래 사장님 결정 | 베타 배포 전 |
+| **SMS 권한 정당화 문서** (Google Play 정책) | ⏸️ 미래 | Play Store 등록 시 |
+| **Gmail API OAuth Client ID** | ⏸️ Phase 2 | Phase 2 진입 시 |
+| **POS API 자동 동기화** (`upsolution-crawler.js` 강화) | ⏳ **Phase 1 안 가능** | PWA에서 가능 |
+| **iOS 진입** | ⏸️ Phase 2+ | 이메일·POS만 |
+
 ## Supabase MCP (Claude 자동화, 2026-05-17)
 
 | 항목 | 값 |
