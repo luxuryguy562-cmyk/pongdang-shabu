@@ -449,16 +449,38 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 결근 빗금 (텍스트 없음, 빗금만) */
 .gantt-bar.absent{background:repeating-linear-gradient(45deg,rgba(239,68,68,0.85),rgba(239,68,68,0.85) 4px,rgba(254,202,202,0.85) 4px,rgba(254,202,202,0.85) 8px);border:1px solid rgba(239,68,68,0.85);height:18px;top:2px;}
 .gantt-day-section{margin-bottom:10px;}
-.gantt-day-label{font-size:12px;font-weight:700;color:var(--text);padding:6px 4px 4px;display:flex;justify-content:space-between;align-items:center;}
+.gantt-day-label{font-size:12px;font-weight:700;color:var(--text);padding:6px 4px 4px;display:flex;flex-direction:column;gap:4px;}
+.gantt-day-label .row-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.gantt-day-label .row-top .ttl{font-weight:800;font-size:13px;letter-spacing:-0.3px;}
+.gantt-day-label .row-top .sum{display:flex;align-items:baseline;gap:8px;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.gantt-day-label .row-top .sum .h{font-size:11px;color:var(--gray-500);font-weight:600;}
+.gantt-day-label .row-top .sum .w{font-size:13px;color:var(--blue);font-weight:800;}
+.gantt-day-label .row-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
 .gantt-day-label .day-date{color:var(--gray-600);font-weight:600;}
 .gantt-day-label .day-count{font-size:10px;color:var(--gray-400);}
 
 /* ─ 근태 통합 기록 탭 (F안: 내 기록 + 전체 조회 합침) */
-.att-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
-.att-kpi-cell{background:var(--white);padding:14px 6px;text-align:center;border-radius:14px;box-shadow:var(--card-shadow);}
-.att-kpi-lbl{font-size:11px;color:var(--toss-text-4);font-weight:600;margin-bottom:4px;letter-spacing:-0.2px;}
+/* 2026-05-25 갈아엎기: 3분할 → 2분할 (보조 1 : 인건비 2) */
+/*  · 사장님 호소: 출근일+근무시간 합치고 인건비 넓게 + 보조 칸 세로 가운데 정렬 */
+.att-kpi-row{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:12px;align-items:stretch;}
+.att-kpi-cell{background:var(--white);padding:14px 12px;border-radius:14px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;justify-content:center;}
+.att-kpi-lbl{font-size:11px;color:var(--toss-text-4);font-weight:600;letter-spacing:-0.2px;}
 .att-kpi-val{font-size:18px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;}
-.att-kpi-cell.wage .att-kpi-val{color:var(--toss-blue-strong);}
+/* 보조 칸 — 출근일·근무 두 줄, 세로 가운데 */
+.att-kpi-cell.aux{padding:14px 12px;}
+.att-kpi-cell.aux .row{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:3px 0;}
+.att-kpi-cell.aux .row+.row{border-top:1px dashed var(--gray-100);margin-top:4px;padding-top:7px;}
+.att-kpi-cell.aux .row .l{font-size:10.5px;color:var(--gray-500);font-weight:600;white-space:nowrap;flex-shrink:0;}
+/* 2026-05-25 천 단위 자동 축소: clamp + nowrap (1,234.5h 같은 큰 값도 안 깨짐) */
+.att-kpi-cell.aux .row .v{font-size:clamp(12px,3.5vw,14px);color:var(--text);font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;min-width:0;overflow:hidden;}
+/* 인건비 칸 — 2026-05-25 사장님 호소: 흰색 배경 통일 (좌측 정렬 + 여유 패딩 유지) */
+.att-kpi-cell.wage{background:var(--white);padding:14px 18px;align-items:flex-start;}
+.att-kpi-cell.wage .att-kpi-lbl{color:var(--blue-strong,#1B64DA);font-weight:700;margin-bottom:4px;}
+.att-kpi-cell.wage .att-kpi-val{color:var(--toss-blue-strong);font-size:22px;letter-spacing:-0.6px;}
+.att-kpi-split{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(49,130,246,0.25);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;color:var(--gray-700);width:100%;display:flex;gap:10px;flex-wrap:wrap;}
+.att-kpi-split .h{color:var(--blue);}
+.att-kpi-split .m{color:#F5A11E;}
+.att-kpi-split .sep{color:var(--gray-400);}
 
 /* ─ 출퇴근 상태 변환 카드 (G안: 출근 전/근무 중/퇴근 후 3색) */
 .att-status-card{border-radius:20px;padding:28px 20px;text-align:center;transition:background 0.25s ease;margin-top:8px;box-shadow:var(--card-shadow);}
@@ -483,7 +505,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-cal-cell.add-mode{cursor:pointer;}
 .att-cal-cell.add-mode:hover .att-cal-empty-add{color:var(--blue);}
 /* 일별 상세 + 직원 추가 버튼 */
-.att-day-add-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:var(--blue-light);color:var(--blue);border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px;}
+.att-day-add-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:var(--blue-light);color:var(--blue);border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .att-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;}
 .att-cal-head{font-size:10px;font-weight:700;color:var(--gray-600);text-align:center;padding:4px 0;}
 .att-cal-head.sun{color:var(--danger);}
@@ -503,10 +525,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-day-empty{text-align:center;color:var(--gray-400);font-size:12px;padding:24px 0;}
 .att-row-label{display:flex;align-items:center;gap:4px;min-width:55px;font-size:10px;font-weight:700;color:var(--text);padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .att-row-label .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.att-row-meta{display:flex;justify-content:space-between;align-items:center;margin:-2px 0 6px 59px;font-size:10px;color:var(--gray-600);}
-.att-row-meta .time{color:var(--gray-400);}
-.att-row-meta .hours{color:var(--text);font-weight:700;font-size:11px;margin-left:8px;}
-.att-row-meta .wage{color:var(--blue);font-weight:700;font-size:11px;}
+.att-row-meta{display:flex;justify-content:space-between;align-items:baseline;margin:-2px 0 6px 59px;font-size:10px;color:var(--gray-600);font-variant-numeric:tabular-nums;}
+.att-row-meta>span:first-child{display:inline-flex;align-items:baseline;gap:8px;}
+.att-row-meta .time{color:var(--gray-400);font-variant-numeric:tabular-nums;}
+.att-row-meta .hours{color:var(--text);font-weight:700;font-size:11px;min-width:40px;text-align:right;font-variant-numeric:tabular-nums;}
+.att-row-meta .wage{color:var(--blue);font-weight:700;font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums;}
 
 /* ─ 대시보드 */
 .kpi-section{padding:14px 0;border-bottom:1px solid var(--gray-100);}
@@ -7218,9 +7241,50 @@ function empColor(empId){
 }
 function fmtHourDecimal(min){
   if(min==null||min<=0) return '0h';
-  // 2026-05-25 사장님 호소: 0.5h 단위 반올림이 부정확 → 소수점 한 자리 정확 표시
+  // 2026-05-25 사장님 호소: 0.5h 단위 반올림 부정확 → 소수점 한 자리 정확 표시
+  //             + 천 단위 콤마 (1234.5h → 1,234.5h, 큰 매장 대응)
   const h = min/60;
-  return (Number.isInteger(h)?h.toFixed(0):h.toFixed(1))+'h';
+  const v = Number.isInteger(h) ? h.toFixed(0) : h.toFixed(1);
+  const [intP, decP] = v.split('.');
+  const intFormatted = Number(intP).toLocaleString('ko-KR');
+  return (decP ? intFormatted + '.' + decP : intFormatted) + 'h';
+}
+// ─── 월급제 직원 일할 계산 헬퍼 (2026-05-25 신설) ─────────────────────
+//  · 3개 화면 공통 사용: 근태기록 KPI / 지출관리 인건비 카드 / 급여 집계
+//  · 사장님 호소: 월급제(탁성현) 인건비 누락 → 시급+월급 합산 통일
+//  · 이번달 = 진행일까지, 지난달 = lastDay까지 누적 (hire/resign 고려)
+//  · 반환: [{empId, name, monthly_wage(만원), daily(원), daysCovered, total(원)}]
+function calcMonthlyProratedWages(ym){
+  if(!ym) return [];
+  const [y,m] = ym.split('-').map(Number);
+  const lastDay = new Date(y,m,0).getDate();
+  const today = new Date();
+  const isCurMonth = today.toISOString().slice(0,7) === ym;
+  const passedDays = isCurMonth ? today.getDate() : lastDay;
+  const result = [];
+  const monthlyEmps = (employees||[]).filter(e=>e.is_active && e.wage_type==='monthly' && e.monthly_wage>0);
+  monthlyEmps.forEach(emp=>{
+    const dailyWage = Math.round((emp.monthly_wage*10000)/lastDay);
+    const hire = emp.hire_date ? new Date(emp.hire_date+'T00:00:00') : null;
+    const resign = emp.resign_date ? new Date(emp.resign_date+'T00:00:00') : null;
+    let daysCovered = 0;
+    for(let day=1; day<=passedDays; day++){
+      const date = new Date(ym+'-'+String(day).padStart(2,'0')+'T00:00:00');
+      if(hire && date < hire) continue;
+      if(resign && date > resign) continue;
+      daysCovered++;
+    }
+    result.push({
+      empId: emp.id,
+      name: emp.name,
+      monthly_wage: emp.monthly_wage, // 만원
+      daily: dailyWage, // 원
+      daysCovered,
+      total: dailyWage * daysCovered,
+      lastDay, passedDays
+    });
+  });
+  return result;
 }
 // 인건비 컴팩트 표기: 10만 이상이면 만 단위 반올림 "385만", 미만이면 "9,500원"
 function fmtMan(won){
@@ -7313,12 +7377,30 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
     if(data && data.length){
       const totalDays = Object.keys(attAllDayMap).length;
       const totalMin  = data.reduce((a,r)=>a+(r.total_work_min||0),0);
-      const totalWage = data.reduce((a,r)=>a+(r.calculated_wage||0),0);
+      // 2026-05-25 인건비 통일: 시급제 calculated_wage + 월급제 일할 누적 (사장님 호소: 월급 누락)
+      //  · 직원 필터 모드(empF)면 그 직원 1명만 계산. 전체 모드면 모든 직원.
+      const monthlyEmpIds = new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+      const hourlyWage = data.filter(r=>!monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+      const monthlyList = calcMonthlyProratedWages(monthStr).filter(m=>!empF || m.empId===empF);
+      const monthlyWage = monthlyList.reduce((a,m)=>a+m.total,0);
+      const totalWage = hourlyWage + monthlyWage;
       kpiEl.style.display='grid';
+      // 2026-05-25 갈아엎기: 3분할 → 2분할 (사장님 호소: 출근일+근무 합치고 인건비 넓게)
+      //  · 보조 칸: 📅 출근일 + ⏱ 근무 두 줄 (세로 가운데 정렬 — CSS justify-content:center)
+      //  · 인건비 칸: 좌측 정렬 + 큰 숫자 + 시급·월급 분기
+      const splitHtml = (monthlyWage>0)
+        ? `<div class="att-kpi-split"><span class="h">⏰ 시급 ${fmtMan(hourlyWage)}만</span><span class="sep">·</span><span class="m">💼 월급 ${fmtMan(monthlyWage)}만</span></div>`
+        : '';
       kpiEl.innerHTML = `
-        <div class="att-kpi-cell"><div class="att-kpi-lbl">출근일</div><div class="att-kpi-val">${totalDays}</div></div>
-        <div class="att-kpi-cell"><div class="att-kpi-lbl">근무시간</div><div class="att-kpi-val">${fmtHourDecimal(totalMin)}</div></div>
-        <div class="att-kpi-cell wage"><div class="att-kpi-lbl">인건비</div><div class="att-kpi-val">${fmtMan(totalWage)}만원</div></div>`;
+        <div class="att-kpi-cell aux">
+          <div class="row"><span class="l">📅 출근일</span><span class="v">${totalDays}일</span></div>
+          <div class="row"><span class="l">⏱ 근무</span><span class="v">${fmtHourDecimal(totalMin)}</span></div>
+        </div>
+        <div class="att-kpi-cell wage">
+          <div class="att-kpi-lbl">인건비</div>
+          <div class="att-kpi-val">${fmtMan(totalWage)}만원</div>
+          ${splitHtml}
+        </div>`;
     } else {
       kpiEl.style.display='none';
     }
@@ -7423,14 +7505,23 @@ function renderAttDayDetail(date, logs, isSingleView){
   const planRowsCheck = (window._attSchedDayMap && window._attSchedDayMap[date]) || [];
   const hasPlanOnly = !((logs||[]).length) && planRowsCheck.some(p=>p.employee_id && !p.is_off);
   if((!logs || !logs.length) && !hasPlanOnly){
-    const headerBtns = `
+    // 2026-05-25 헤더 갈아엎기 (사장님 호소: 한 줄 안 들어가고 엉망)
+    //  · 1행: 날짜(좌) · "기록 없음"(우)
+    //  · 2행: [주 일정] [+ 실제 입력] 칩 (한 줄 wrap)
+    const chipBtns = `
       <span class="att-day-add-btn" data-action="openWeeklyPlanSheet|${date}">📅 주 일정</span>
-      ${isManager ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 실제 입력</span>` : ''}
+      ${isManager ? `<span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 실제 입력</span>` : ''}
     `;
     const note = isManager
       ? ''
       : `<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--gray-400);">출퇴근 누락 시 관리자에게 등록을 요청하세요</div>`;
-    target.innerHTML = `<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${headerBtns}</span><span style="font-size:10px;color:var(--gray-400);">기록 없음</span></div>${note}`;
+    target.innerHTML = `<div class="gantt-day-label">
+      <div class="row-top">
+        <span class="ttl">📅 ${date.slice(5)} (${dow})</span>
+        <span style="font-size:10px;color:var(--gray-400);">기록 없음</span>
+      </div>
+      <div class="row-chips">${chipBtns}</div>
+    </div>${note}`;
     return;
   }
   const safeLogs = logs || [];
@@ -7438,14 +7529,23 @@ function renderAttDayDetail(date, logs, isSingleView){
   const totalWage = safeLogs.reduce((a,r)=>a+(r.calculated_wage||0),0);
   const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const allData = window._attListData || [];
-  const headerBtns = `
+  // 2026-05-25 헤더 갈아엎기 (사장님 호소: 한 줄 안 들어가고 엉망)
+  //  · 1행: 날짜(좌) · 41.4h · 496,600원 (우, nowrap)
+  //  · 2행: [주 일정] [+ 실제 입력] 칩 그룹
+  const chipBtns = `
     <span class="att-day-add-btn" data-action="openWeeklyPlanSheet|${date}">📅 주 일정</span>
-    ${isManager ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 실제 입력</span>` : ''}
+    ${isManager ? `<span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 실제 입력</span>` : ''}
   `;
 
   let html = `<div class="gantt-day-label">
-    <span>📅 ${date.slice(5)} (${dow})${headerBtns}</span>
-    <span><span style="font-size:11px;color:var(--gray-500);font-weight:600;margin-right:10px;">${fmtHourDecimal(totalMin)}</span><span style="font-size:12px;color:var(--blue);font-weight:800;">${fmt(totalWage)}원</span></span>
+    <div class="row-top">
+      <span class="ttl">📅 ${date.slice(5)} (${dow})</span>
+      <span class="sum">
+        <span class="h">${fmtHourDecimal(totalMin)}</span>
+        <span class="w">${fmt(totalWage)}원</span>
+      </span>
+    </div>
+    <div class="row-chips">${chipBtns}</div>
   </div>`;
   html += `<div class="gantt-header"><div class="att-row-label" style="visibility:hidden;">x</div>${renderGanttHourCells()}</div>`;
 
@@ -13752,44 +13852,111 @@ async function renderWageSummary(){
   const el=document.getElementById('wageMonthLabel');if(el)el.innerText=wageMonthStr;
   const [y,m]=wageMonthStr.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
   const{data}=await sb.from('attendance_logs').select('employee_id,total_work_min,calculated_wage,work_date,employees(name)').eq('store_id',currentStore.id).gte('work_date',wageMonthStr+'-01').lte('work_date',wageMonthStr+'-'+lastDay);
-  const emp_map={};
-  (data||[]).forEach(r=>{const eid=r.employee_id;if(!emp_map[eid])emp_map[eid]={name:r.employees?.name||'-',days:0,totalMin:0,totalWage:0};emp_map[eid].days++;emp_map[eid].totalMin+=r.total_work_min||0;emp_map[eid].totalWage+=r.calculated_wage||0;});
-  const rows=Object.values(emp_map).sort((a,b)=>b.totalWage-a.totalWage);
-  const totalWage=rows.reduce((a,r)=>a+r.totalWage,0);
-  const target=document.getElementById('wageSummaryData');if(!target)return;
-  if(!rows.length){target.innerHTML='<div class="empty-state"><div class="empty-icon">💰</div><p>이 달의 근태 기록이 없습니다</p></div>';return;}
-  // 직원별 시급 매핑
+  // 2026-05-25 갈아엎기 (사장님 호소: 월급제 직원 누락 → 시급+월급 통일):
+  //  · 시급제 직원: attendance_logs.calculated_wage 합산
+  //  · 월급제 직원: calcMonthlyProratedWages로 일할 누적 (출근 무관)
+  //  · 별도 그룹 표 + 총 박스에 시급/월급 분기 표시
+  const monthlyEmpIds = new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+  const hourly_map = {};
+  (data||[]).forEach(r=>{
+    if(monthlyEmpIds.has(r.employee_id)) return; // 월급제는 별도 처리
+    const eid=r.employee_id;
+    if(!hourly_map[eid]) hourly_map[eid]={empId:eid, name:r.employees?.name||'-', days:0, totalMin:0, totalWage:0};
+    hourly_map[eid].days++;
+    hourly_map[eid].totalMin+=r.total_work_min||0;
+    hourly_map[eid].totalWage+=r.calculated_wage||0;
+  });
+  const hourlyRows=Object.values(hourly_map).sort((a,b)=>b.totalWage-a.totalWage);
+  const monthlyRows=calcMonthlyProratedWages(wageMonthStr);
+  // 월급제 출근일 보조 정보 (attendance_logs에 있으면 표시용)
+  const monthlyAttDays={};
+  (data||[]).forEach(r=>{
+    if(monthlyEmpIds.has(r.employee_id)){
+      if(!monthlyAttDays[r.employee_id]) monthlyAttDays[r.employee_id]=new Set();
+      monthlyAttDays[r.employee_id].add(r.work_date);
+    }
+  });
+  const hourlyTotal=hourlyRows.reduce((a,r)=>a+r.totalWage,0);
+  const monthlyTotal=monthlyRows.reduce((a,r)=>a+r.total,0);
+  const grandTotal=hourlyTotal+monthlyTotal;
+  const totalCnt=hourlyRows.length+monthlyRows.length;
   const empWageMap={};employees.forEach(e=>empWageMap[e.id]={wage:e.base_wage,name:e.name});
-  // 0원 기록 감지
-  const zeroCount=(data||[]).filter(r=>!r.calculated_wage&&r.total_work_min>0).length;
-  target.innerHTML=`
-    <div style="background:var(--blue-light);border-radius:12px;padding:14px;margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div><div style="font-size:11px;color:var(--blue);font-weight:600;">이달 총 인건비</div><div style="font-size:22px;font-weight:800;">${fmt(totalWage)}원</div></div>
-        <div style="font-size:12px;color:var(--blue);">${rows.length}명</div>
+  const zeroCount=(data||[]).filter(r=>!monthlyEmpIds.has(r.employee_id)&&!r.calculated_wage&&r.total_work_min>0).length;
+  const target=document.getElementById('wageSummaryData');if(!target)return;
+  if(!hourlyRows.length && !monthlyRows.length){
+    target.innerHTML='<div class="empty-state"><div class="empty-icon">💰</div><p>이 달의 근태 기록이 없습니다</p></div>';
+    return;
+  }
+  // ─── 총 박스 (시급+월급 분기) ───
+  const totalBoxHtml = `
+    <div style="background:linear-gradient(135deg,#EBF3FF 0%,#DCE9FF 100%);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <div style="font-size:12px;color:var(--blue-strong,#1B64DA);font-weight:700;">이달 총 인건비</div>
+        <div style="font-size:11px;color:var(--blue);font-weight:700;background:#fff;padding:3px 10px;border-radius:99px;">${totalCnt}명</div>
       </div>
+      <div style="font-size:26px;font-weight:800;letter-spacing:-0.6px;color:var(--text);font-variant-numeric:tabular-nums;">${fmt(grandTotal)}원</div>
+      ${(hourlyRows.length>0 && monthlyRows.length>0) ? `
+      <div style="display:flex;gap:12px;margin-top:12px;padding-top:12px;border-top:1px dashed rgba(49,130,246,0.25);font-variant-numeric:tabular-nums;">
+        <div style="flex:1;"><div style="font-size:11px;color:var(--gray-600);font-weight:600;margin-bottom:2px;">⏰ 시급제 ${hourlyRows.length}명</div><div style="font-size:14px;color:var(--text);font-weight:800;">${fmt(hourlyTotal)}원</div></div>
+        <div style="flex:1;"><div style="font-size:11px;color:var(--gray-600);font-weight:600;margin-bottom:2px;">💼 월급제 ${monthlyRows.length}명 · 일할</div><div style="font-size:14px;color:var(--text);font-weight:800;">${fmt(monthlyTotal)}원</div></div>
+      </div>` : ''}
       ${zeroCount>0?`<div style="margin-top:8px;font-size:11px;color:var(--danger);">⚠️ 급여 미산출 ${zeroCount}건 발견</div>`:''}
     </div>
     ${zeroCount>0?`<button class="btn btn-warn btn-full" style="margin-bottom:12px;padding:12px;font-size:13px;" data-action="recalcMonthWages">🔄 이달 급여 재계산 (현재 시급 기준)</button>`:''}
-    <div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead><tr style="background:var(--gray-100);">
-        <th style="padding:8px 6px;text-align:left;">직원</th>
-        <th style="padding:8px 6px;text-align:center;">시급</th>
-        <th style="padding:8px 6px;text-align:center;">근무</th>
-        <th style="padding:8px 6px;text-align:right;">급여</th>
-      </tr></thead>
-      <tbody>${rows.map(r=>{
-        const empInfo=Object.entries(empWageMap).find(([,v])=>v.name===r.name);
-        const baseWage=empInfo?empInfo[1].wage:10030;
-        return `<tr style="border-bottom:1px solid var(--gray-100);">
-        <td style="padding:9px 6px;font-weight:700;">${r.name}</td>
-        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);font-size:11px;">${fmt(baseWage)}</td>
-        <td style="padding:9px 6px;text-align:center;color:var(--gray-600);">${r.days}일 / ${Math.round(r.totalMin/60*10)/10}h</td>
-        <td style="padding:9px 6px;text-align:right;font-weight:800;color:var(--blue);">${fmt(r.totalWage)}</td>
-      </tr>`}).join('')}</tbody>
-    </table>
-    </div>`;
+  `;
+  // ─── 월급제 그룹 표 ───
+  const monthlyTblHtml = monthlyRows.length>0 ? `
+    <div style="font-size:12px;font-weight:800;color:var(--gray-700);margin:16px 4px 6px;display:flex;align-items:center;gap:6px;">
+      <span>💼 월급제</span>
+      <span style="font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;background:#FEF6E7;color:#F5A11E;">일할 누적</span>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:2px 8px;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;">
+        <thead><tr>
+          <th style="padding:9px 4px;text-align:left;font-size:10.5px;color:var(--gray-500);font-weight:700;border-bottom:1px solid var(--gray-100);">직원</th>
+          <th style="padding:9px 4px;text-align:center;font-size:10.5px;color:var(--gray-500);font-weight:700;border-bottom:1px solid var(--gray-100);">월급</th>
+          <th style="padding:9px 4px;text-align:center;font-size:10.5px;color:var(--gray-500);font-weight:700;border-bottom:1px solid var(--gray-100);">진행</th>
+          <th style="padding:9px 4px;text-align:right;font-size:10.5px;color:var(--gray-500);font-weight:700;border-bottom:1px solid var(--gray-100);">일할 누적</th>
+        </tr></thead>
+        <tbody>${monthlyRows.map(r=>{
+          const attDayCnt = monthlyAttDays[r.empId] ? monthlyAttDays[r.empId].size : 0;
+          const remain = (r.monthly_wage*10000) - r.total;
+          return `<tr>
+          <td style="padding:10px 4px;font-weight:800;font-size:13px;">${esc(r.name)}</td>
+          <td style="padding:10px 4px;text-align:center;color:var(--gray-700);font-size:11.5px;">월 ${r.monthly_wage}만</td>
+          <td style="padding:10px 4px;text-align:center;color:var(--gray-600);font-size:11.5px;line-height:1.25;">${r.daysCovered}/${r.lastDay}${attDayCnt?`<div style="font-size:10px;color:var(--gray-400);font-weight:600;">출근 ${attDayCnt}일</div>`:''}</td>
+          <td style="padding:10px 4px;text-align:right;font-weight:800;color:var(--blue);font-size:13px;line-height:1.25;">${fmt(r.total)}${remain>0?`<div style="font-size:10px;color:var(--gray-400);font-weight:600;">남은 ${fmt(remain)}</div>`:''}</td>
+        </tr>`}).join('')}</tbody>
+      </table>
+    </div>
+  ` : '';
+  // ─── 시급제 그룹 표 ───
+  const hourlyTblHtml = hourlyRows.length>0 ? `
+    <div style="font-size:12px;font-weight:800;color:var(--gray-700);margin:16px 4px 6px;display:flex;align-items:center;gap:6px;">
+      <span>⏰ 시급제</span>
+      <span style="font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--blue-light);color:var(--blue);">실근무 정산</span>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:2px 8px;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;">
+        <thead><tr>
+          <th style="padding:9px 4px;text-align:left;font-size:10.5px;color:var(--gray-500);font-weight:700;border-bottom:1px solid var(--gray-100);">직원</th>
+          <th style="padding:9px 4px;text-align:center;font-size:10.5px;color:var(--gray-500);font-weight:700;border-bottom:1px solid var(--gray-100);">시급</th>
+          <th style="padding:9px 4px;text-align:center;font-size:10.5px;color:var(--gray-500);font-weight:700;border-bottom:1px solid var(--gray-100);">근무</th>
+          <th style="padding:9px 4px;text-align:right;font-size:10.5px;color:var(--gray-500);font-weight:700;border-bottom:1px solid var(--gray-100);">급여</th>
+        </tr></thead>
+        <tbody>${hourlyRows.map(r=>{
+          const baseWage = empWageMap[r.empId]?.wage || 10030;
+          const hrs = Math.round(r.totalMin/60*10)/10;
+          return `<tr>
+          <td style="padding:10px 4px;font-weight:800;font-size:13px;">${esc(r.name)}</td>
+          <td style="padding:10px 4px;text-align:center;color:var(--gray-700);font-size:11.5px;">${fmt(baseWage)}</td>
+          <td style="padding:10px 4px;text-align:center;color:var(--gray-600);font-size:11.5px;line-height:1.25;">${r.days}일<div style="font-size:10px;color:var(--gray-400);font-weight:600;">${hrs}h</div></td>
+          <td style="padding:10px 4px;text-align:right;font-weight:800;color:var(--blue);font-size:13px;">${fmt(r.totalWage)}</td>
+        </tr>`}).join('')}</tbody>
+      </table>
+    </div>
+  ` : '';
+  target.innerHTML = totalBoxHtml + monthlyTblHtml + hourlyTblHtml;
 }
 
 // ─── 급여 재계산: 현재 시급 기준으로 이달 전체 재계산 ───
@@ -16328,14 +16495,22 @@ async function loadExpHubData(force){
       });
     }
     // 인건비 (attendance + 마감 차감 인건비)
+    //  · 2026-05-25 갈아엎기: 시급제(calculated_wage) + 월급제 일할 합산 (사장님 호소: 통일)
+    //  · 옛: calculated_wage만 → 월급제 누락 (탁성현 700만 빠짐)
     else if(ds==='attendance'){
-      amt = (alRes.data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);
+      // 시급제 — calculated_wage 합 (월급제는 calculated_wage=0 또는 따로 박힘 → 둘 다 안전하게 wage_type 필터)
+      const monthlyEmpIds = new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+      amt = (alRes.data||[]).filter(r=>!monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+      // 월급제 일할 누적
+      calcMonthlyProratedWages(ym).forEach(m=>{ amt += m.total; });
       (setRes.data||[]).forEach(s=>{
         (s.items_json?.deductions||[]).forEach(d=>{
           if(d.category_id && ids.has(d.category_id) && d.amount){ amt+=Number(d.amount); }
         });
       });
-      cnt = new Set((alRes.data||[]).map(r=>r.employee_id).filter(Boolean)).size;
+      // 인원수 = 시급제 출근 직원 + 월급제 활성 직원
+      const monthlyActiveCnt = (employees||[]).filter(e=>e.is_active && e.wage_type==='monthly' && e.monthly_wage>0).length;
+      cnt = new Set((alRes.data||[]).filter(r=>!monthlyEmpIds.has(r.employee_id)).map(r=>r.employee_id).filter(Boolean)).size + monthlyActiveCnt;
     }
     // 고정비 (fixed_costs.category 텍스트 매칭)
     else if(ds==='fixed_costs'){
