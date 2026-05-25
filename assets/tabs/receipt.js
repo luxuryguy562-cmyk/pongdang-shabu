@@ -1268,14 +1268,15 @@ function rcpTab(tab,el){
   }
 }
 
-// ─── 🛒 쿠팡 간편 분배 (Phase 1A — 2026-05-25 사장님 결정) ───
-// 카드결제 합계(mydata_transactions) 자동 집계 + expense_categories 대분류 로드
+// ─── 🛒 쿠팡 간편 분배 (Phase 1A — 2026-05-25 사장님 결정, 행 추가 방식) ───
+// 카드결제 합계(mydata_transactions) 자동 집계 + 사장님이 행 추가로 카테고리·금액 입력
 // 저장 = "{대분류} > 쿠팡일반" 소분류 자동 생성/재사용 (db_schema 규칙 준수: receipts.category_id = 소분류 id)
 let cpgListMonth=(new Date()).toISOString().slice(0,7); // YYYY-MM
-let cpgParents=[];        // [{id,name,color,sort_order}, ...] 대분류만 (시스템·매출 제외)
+let cpgParents=[];        // [{id,name,color,sort_order}, ...] 대분류 (시스템·매출 제외) — select 옵션용
 let cpgCardTotal=0;       // 이번달 쿠팡 카드결제 합계
 let cpgCardCount=0;       // 결제 건수
-let cpgSplits={};         // {parent_category_id: amount}
+let cpgRows=[];           // [{cat_id: null|number, amount: 0}, ...] 사장님 입력 행
+let _cpgRowSeq=0;         // 고유 key (DOM 식별용)
 const CPG_VENDOR='쿠팡';
 const CPG_INPUT_METHOD='coupang_split';
 const CPG_SUBCAT_NAME='쿠팡일반'; // 자동 생성 소분류명
@@ -1291,7 +1292,7 @@ async function loadCoupangSplit(){
   const lastDay=new Date(y,m,0).getDate();
   const start=cpgListMonth+'-01', end=cpgListMonth+'-'+String(lastDay).padStart(2,'0');
 
-  // 1) 대분류 로드 (parent_id IS NULL, 시스템/매출 제외)
+  // 1) 대분류 로드 (parent_id IS NULL, 시스템/매출 제외) — select 옵션용
   const catRes=await sb.from('expense_categories').select('id,name,color,parent_id,sort_order')
     .eq('store_id',currentStore.id).is('parent_id',null).order('sort_order');
   cpgParents=(catRes.data||[]).filter(c=>!['매출','시스템'].includes(c.name));
@@ -1304,30 +1305,35 @@ async function loadCoupangSplit(){
     .or('description.ilike.%쿠팡%,merchant_name.ilike.%쿠팡%');
   const txs=(cardRes.data||[]).filter(t=>{
     const d=(t.description||'')+(t.merchant_name||'');
-    return d.includes('쿠팡') && !d.includes('쿠팡와우'); // 멤버십 제외
+    return d.includes('쿠팡') && !d.includes('쿠팡와우');
   });
   cpgCardTotal=txs.reduce((s,t)=>s+Math.abs(Number(t.amount)||0),0);
   cpgCardCount=txs.length;
 
-  // 3) 기존 분배(receipts) 로드 — vendor='쿠팡' + input_method='coupang_split' + 해당 월
-  //    저장된 소분류 → 부모(대분류) id로 역집계
+  // 3) 기존 분배(receipts) 로드 → 행 배열로 변환 (같은 카테고리 합산해서 행 1개)
   const rcpRes=await sb.from('receipts')
     .select('id,category_id,total_price')
     .eq('store_id',currentStore.id).eq('vendor',CPG_VENDOR).eq('input_method',CPG_INPUT_METHOD)
     .gte('receipt_date',start).lte('receipt_date',end);
-  cpgSplits={};
+  cpgRows=[];
   if(rcpRes.data && rcpRes.data.length){
     const subIds=[...new Set(rcpRes.data.map(r=>r.category_id).filter(Boolean))];
     if(subIds.length){
       const subRes=await sb.from('expense_categories').select('id,parent_id').in('id',subIds);
       const subToParent={};
       (subRes.data||[]).forEach(s=>{subToParent[s.id]=s.parent_id;});
+      const byParent={};
       rcpRes.data.forEach(r=>{
-        const parentId=subToParent[r.category_id];
-        if(parentId) cpgSplits[parentId]=(cpgSplits[parentId]||0)+Number(r.total_price||0);
+        const p=subToParent[r.category_id];
+        if(p) byParent[p]=(byParent[p]||0)+Number(r.total_price||0);
+      });
+      Object.entries(byParent).forEach(([pid,amt])=>{
+        cpgRows.push({key: ++_cpgRowSeq, cat_id: Number(pid), amount: amt});
       });
     }
   }
+  // 빈 상태면 빈 행 1개 자동 추가
+  if(!cpgRows.length) cpgRows.push({key: ++_cpgRowSeq, cat_id: null, amount: 0});
 
   renderCoupangSplit();
 }
@@ -1343,33 +1349,52 @@ function renderCoupangSplit(){
     wrap.innerHTML='<div class="empty-state" style="padding:18px;"><p style="font-size:12px;color:var(--gray-500);">먼저 지출 카테고리를 등록해주세요</p></div>';
     return;
   }
-  wrap.innerHTML=cpgParents.map(c=>{
-    // color = 헥스 컬러 코드 (예: '#0050FF'). 동그라미로 표시.
-    const isHex=/^#[0-9A-Fa-f]{3,8}$/.test(c.color||'');
-    const dot=isHex
-      ? `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${c.color};flex-shrink:0;"></span>`
-      : `<span style="font-size:16px;width:18px;text-align:center;flex-shrink:0;">${esc(c.color||'📂')}</span>`;
-    const val=cpgSplits[c.id]||0;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--gray-100);">
-      ${dot}
-      <span style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.name)}</span>
-      <input type="text" inputmode="numeric" data-cpg-cat="${c.id}" data-input="cpgInput|this" value="${val?fmt(val):''}" placeholder="0" style="width:110px;text-align:right;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;outline:none;flex-shrink:0;">
+
+  wrap.innerHTML=cpgRows.map((r,idx)=>{
+    const opts=['<option value="">카테고리 선택...</option>']
+      .concat(cpgParents.map(c=>`<option value="${c.id}" ${String(c.id)===String(r.cat_id)?'selected':''}>${esc(c.name)}</option>`))
+      .join('');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+      <input type="text" inputmode="numeric" data-cpg-row="${r.key}" data-input="cpgRowAmount|this" value="${r.amount?fmt(r.amount):''}" placeholder="0" style="width:108px;text-align:right;padding:9px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;outline:none;flex-shrink:0;">
       <span style="font-size:11px;color:var(--gray-500);flex-shrink:0;">원</span>
+      <select data-cpg-row="${r.key}" data-change="cpgRowCat|this" style="flex:1;min-width:0;padding:9px 8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-weight:600;color:var(--gray-900);background:#fff;outline:none;">${opts}</select>
+      <button class="btn btn-secondary" style="padding:7px 10px;font-size:13px;flex-shrink:0;background:#FEE2E2;color:#991B1B;" data-action="cpgRemoveRow|${r.key}" title="행 삭제">🗑</button>
     </div>`;
   }).join('');
   refreshCpgSum();
 }
 
-function cpgInput(el){
-  const id=el.dataset.cpgCat;
+function cpgRowAmount(el){
+  const key=Number(el.dataset.cpgRow);
+  const row=cpgRows.find(r=>r.key===key);
+  if(!row) return;
   const raw=Number(unFmt(el.value))||0;
-  cpgSplits[id]=raw;
+  row.amount=raw;
   el.value=raw?fmt(raw):'';
   refreshCpgSum();
 }
 
+function cpgRowCat(el){
+  const key=Number(el.dataset.cpgRow);
+  const row=cpgRows.find(r=>r.key===key);
+  if(!row) return;
+  row.cat_id=el.value?Number(el.value):null;
+}
+
+function cpgAddRow(){
+  cpgRows.push({key: ++_cpgRowSeq, cat_id: null, amount: 0});
+  renderCoupangSplit();
+}
+
+function cpgRemoveRow(keyStr){
+  const key=Number(keyStr);
+  cpgRows=cpgRows.filter(r=>r.key!==key);
+  if(!cpgRows.length) cpgRows.push({key: ++_cpgRowSeq, cat_id: null, amount: 0});
+  renderCoupangSplit();
+}
+
 function refreshCpgSum(){
-  const sum=Object.values(cpgSplits).reduce((s,v)=>s+(Number(v)||0),0);
+  const sum=cpgRows.reduce((s,r)=>s+(Number(r.amount)||0),0);
   const line=document.getElementById('cpgSumLine');
   const status=document.getElementById('cpgSumStatus');
   if(line) line.innerText=`${fmt(sum)}원 / ${fmt(cpgCardTotal)}원`;
@@ -1390,20 +1415,15 @@ function refreshCpgSum(){
 }
 
 function cpgPreset(type){
-  if(!cpgParents.length) return;
   if(type==='clear'){
-    cpgSplits={};
-  } else if(type==='allFirst'){
-    cpgSplits={};
-    cpgSplits[cpgParents[0].id]=cpgCardTotal;
+    cpgRows=[{key: ++_cpgRowSeq, cat_id: null, amount: 0}];
+    renderCoupangSplit();
   } else if(type==='prevMonth'){
-    cpgApplyPrevMonthRatio();
-    return;
+    cpgApplyPrevMonth();
   }
-  renderCoupangSplit();
 }
 
-async function cpgApplyPrevMonthRatio(){
+async function cpgApplyPrevMonth(){
   const [y,m]=cpgListMonth.split('-').map(Number);
   const prevDate=new Date(y,m-2,1);
   const prevYm=prevDate.toISOString().slice(0,7);
@@ -1414,22 +1434,19 @@ async function cpgApplyPrevMonthRatio(){
     .eq('store_id',currentStore.id).eq('vendor',CPG_VENDOR).eq('input_method',CPG_INPUT_METHOD)
     .gte('receipt_date',start).lte('receipt_date',end);
   if(!data||!data.length){alert('지난달 분배 기록이 없어요');return;}
-  // 소분류 → 부모 id로 역집계
   const subIds=[...new Set(data.map(r=>r.category_id).filter(Boolean))];
   const subRes=await sb.from('expense_categories').select('id,parent_id').in('id',subIds);
   const subToParent={};
   (subRes.data||[]).forEach(s=>{subToParent[s.id]=s.parent_id;});
-  const prevByParent={};
+  const byParent={};
   data.forEach(r=>{
     const p=subToParent[r.category_id];
-    if(p) prevByParent[p]=(prevByParent[p]||0)+Number(r.total_price||0);
+    if(p) byParent[p]=(byParent[p]||0)+Number(r.total_price||0);
   });
-  const prevSum=Object.values(prevByParent).reduce((s,v)=>s+v,0);
-  if(!prevSum||!cpgCardTotal){alert('지난달 또는 이번달 금액이 0원이라 비율 적용 불가');return;}
-  cpgSplits={};
-  Object.entries(prevByParent).forEach(([pid,amt])=>{
-    cpgSplits[pid]=Math.round(cpgCardTotal*amt/prevSum);
-  });
+  cpgRows=Object.entries(byParent).map(([pid,amt])=>({
+    key: ++_cpgRowSeq, cat_id: Number(pid), amount: amt
+  }));
+  if(!cpgRows.length) cpgRows.push({key: ++_cpgRowSeq, cat_id: null, amount: 0});
   renderCoupangSplit();
 }
 
@@ -1452,7 +1469,19 @@ async function _getOrCreateCpgSubcat(parentCat){
 
 async function saveCoupangSplit(){
   if(!guardStore()) return;
-  const sum=Object.values(cpgSplits).reduce((s,v)=>s+(Number(v)||0),0);
+
+  // 행 → 카테고리별 합산 (같은 카테고리 여러 행 OK)
+  const byParent={};
+  cpgRows.forEach(r=>{
+    if(!r.cat_id || !Number(r.amount) || Number(r.amount)<=0) return;
+    byParent[r.cat_id]=(byParent[r.cat_id]||0)+Number(r.amount);
+  });
+
+  const sum=Object.values(byParent).reduce((s,v)=>s+v,0);
+
+  if(!Object.keys(byParent).length){
+    alert('금액 + 카테고리가 선택된 행이 없습니다');return;
+  }
 
   // 🅒 합계 불일치 시 확인 팝업
   if(cpgCardTotal>0 && sum!==cpgCardTotal){
@@ -1474,10 +1503,8 @@ async function saveCoupangSplit(){
       .gte('receipt_date',start).lte('receipt_date',end);
     if(del.error) throw del.error;
 
-    // 각 대분류 → "쿠팡일반" 소분류 id 확보 → receipts 삽입
     const rows=[];
-    for(const [parentId,amt] of Object.entries(cpgSplits)){
-      if(!Number(amt) || Number(amt)<=0) continue;
+    for(const [parentId,amt] of Object.entries(byParent)){
       const parent=cpgParents.find(c=>String(c.id)===String(parentId));
       if(!parent) continue;
       const subId=await _getOrCreateCpgSubcat(parent);
@@ -1488,8 +1515,8 @@ async function saveCoupangSplit(){
         unit_price: Number(amt),
         qty: 1,
         total_price: Number(amt),
-        category: parent.name, // 표시용 (대분류명)
-        category_id: subId,    // FK: 소분류 id (db_schema 규칙 준수)
+        category: parent.name,
+        category_id: subId,
         receipt_date: dateForSave,
         input_method: CPG_INPUT_METHOD,
         note: '쿠팡 카드결제 간편 분배 (사장님 입력)'
