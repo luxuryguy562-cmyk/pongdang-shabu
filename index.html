@@ -460,15 +460,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .gantt-day-label .day-count{font-size:10px;color:var(--gray-400);}
 
 /* ─ 근태 통합 기록 탭 (F안: 내 기록 + 전체 조회 합침) */
-.att-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
-.att-kpi-cell{background:var(--white);padding:14px 6px;text-align:center;border-radius:14px;box-shadow:var(--card-shadow);}
-.att-kpi-lbl{font-size:11px;color:var(--toss-text-4);font-weight:600;margin-bottom:4px;letter-spacing:-0.2px;}
+/* 2026-05-25 갈아엎기: 3분할 → 2분할 (보조 1 : 인건비 2) */
+/*  · 사장님 호소: 출근일+근무시간 합치고 인건비 넓게 + 보조 칸 세로 가운데 정렬 */
+.att-kpi-row{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:12px;align-items:stretch;}
+.att-kpi-cell{background:var(--white);padding:14px 12px;border-radius:14px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;justify-content:center;}
+.att-kpi-lbl{font-size:11px;color:var(--toss-text-4);font-weight:600;letter-spacing:-0.2px;}
 .att-kpi-val{font-size:18px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;}
-.att-kpi-cell.wage .att-kpi-val{color:var(--toss-blue-strong);}
-.att-kpi-split{margin-top:6px;padding-top:6px;border-top:1px dashed rgba(49,130,246,0.3);font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;color:var(--gray-700);}
+/* 보조 칸 — 출근일·근무 두 줄, 세로 가운데 */
+.att-kpi-cell.aux{padding:14px 12px;}
+.att-kpi-cell.aux .row{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:3px 0;}
+.att-kpi-cell.aux .row+.row{border-top:1px dashed var(--gray-100);margin-top:4px;padding-top:7px;}
+.att-kpi-cell.aux .row .l{font-size:10.5px;color:var(--gray-500);font-weight:600;white-space:nowrap;}
+.att-kpi-cell.aux .row .v{font-size:14px;color:var(--text);font-weight:800;font-variant-numeric:tabular-nums;}
+/* 인건비 칸 — 그라데이션 + 좌측 정렬 + 여유 패딩 */
+.att-kpi-cell.wage{background:linear-gradient(135deg,#EBF3FF 0%,#DCE9FF 100%);padding:14px 18px;align-items:flex-start;}
+.att-kpi-cell.wage .att-kpi-lbl{color:var(--blue-strong,#1B64DA);font-weight:700;margin-bottom:4px;}
+.att-kpi-cell.wage .att-kpi-val{color:var(--toss-blue-strong);font-size:22px;letter-spacing:-0.6px;}
+.att-kpi-split{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(49,130,246,0.3);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;color:var(--gray-700);width:100%;display:flex;gap:10px;flex-wrap:wrap;}
 .att-kpi-split .h{color:var(--blue);}
 .att-kpi-split .m{color:#F5A11E;}
-.att-kpi-split .sep{color:var(--gray-400);margin:0 3px;}
+.att-kpi-split .sep{color:var(--gray-400);}
 
 /* ─ 출퇴근 상태 변환 카드 (G안: 출근 전/근무 중/퇴근 후 3색) */
 .att-status-card{border-radius:20px;padding:28px 20px;text-align:center;transition:background 0.25s ease;margin-top:8px;box-shadow:var(--card-shadow);}
@@ -7369,13 +7380,22 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
       const monthlyWage = monthlyList.reduce((a,m)=>a+m.total,0);
       const totalWage = hourlyWage + monthlyWage;
       kpiEl.style.display='grid';
+      // 2026-05-25 갈아엎기: 3분할 → 2분할 (사장님 호소: 출근일+근무 합치고 인건비 넓게)
+      //  · 보조 칸: 📅 출근일 + ⏱ 근무 두 줄 (세로 가운데 정렬 — CSS justify-content:center)
+      //  · 인건비 칸: 좌측 정렬 + 큰 숫자 + 시급·월급 분기
       const splitHtml = (monthlyWage>0)
-        ? `<div class="att-kpi-split"><span class="h">시급 ${fmtMan(hourlyWage)}</span><span class="sep">·</span><span class="m">월 ${fmtMan(monthlyWage)}</span></div>`
+        ? `<div class="att-kpi-split"><span class="h">⏰ 시급 ${fmtMan(hourlyWage)}만</span><span class="sep">·</span><span class="m">💼 월급 ${fmtMan(monthlyWage)}만</span></div>`
         : '';
       kpiEl.innerHTML = `
-        <div class="att-kpi-cell"><div class="att-kpi-lbl">출근일</div><div class="att-kpi-val">${totalDays}</div></div>
-        <div class="att-kpi-cell"><div class="att-kpi-lbl">근무시간</div><div class="att-kpi-val">${fmtHourDecimal(totalMin)}</div></div>
-        <div class="att-kpi-cell wage"><div class="att-kpi-lbl">인건비</div><div class="att-kpi-val">${fmtMan(totalWage)}만원</div>${splitHtml}</div>`;
+        <div class="att-kpi-cell aux">
+          <div class="row"><span class="l">📅 출근일</span><span class="v">${totalDays}일</span></div>
+          <div class="row"><span class="l">⏱ 근무</span><span class="v">${fmtHourDecimal(totalMin)}</span></div>
+        </div>
+        <div class="att-kpi-cell wage">
+          <div class="att-kpi-lbl">인건비</div>
+          <div class="att-kpi-val">${fmtMan(totalWage)}만원</div>
+          ${splitHtml}
+        </div>`;
     } else {
       kpiEl.style.display='none';
     }
