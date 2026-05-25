@@ -1802,6 +1802,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
     <!-- 📸 새 영수증 (기본 탭) -->
     <div id="rcpNew">
+      <!-- ─── AI 영수증 강점 카드 (사장님 호소 2026-05-25: 강점 가시화) ─── -->
+      <div style="background:linear-gradient(135deg,#3182F6 0%,#1B64DA 100%);border-radius:14px;padding:14px 16px;margin:6px 0 14px;color:#fff;box-shadow:0 4px 12px rgba(49,130,246,0.25);">
+        <div style="font-size:16px;font-weight:800;letter-spacing:-0.3px;">✨ AI 영수증 1초 분석</div>
+        <div style="font-size:12px;font-weight:600;opacity:0.92;margin-top:4px;">이제 한 번만 찍으세요</div>
+      </div>
       <div class="card-title" style="margin-top:4px;">영수증 등록</div>
 
       <!-- ─── 영수증 진입 분기 (토스 통일 2026-05-22) ─── -->
@@ -2620,6 +2625,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="back-ttl">오늘 매출</div>
     </div>
 
+    <!-- 일자 네비 (좌·우·데이트피커) — 2026-05-25 신설 (사장님 호소: 다른 날짜도 볼 수 있게) -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:6px 8px;background:#fff;border:1px solid var(--gray-200);border-radius:14px;position:relative;">
+      <button type="button" id="tdDayPrev" data-action="tdDayMove|-1" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--gray-50);font-size:18px;color:var(--text);cursor:pointer;flex-shrink:0;line-height:36px;padding:0;">‹</button>
+      <label style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:6px 0;position:relative;">
+        <span style="font-size:11px;color:var(--gray-500);font-weight:600;">📅 날짜 선택</span>
+        <span id="tdDayLabelText" style="font-size:15px;font-weight:800;letter-spacing:-0.3px;color:var(--text);">-</span>
+        <input type="date" id="tdDayPicker" data-change="tdDayPickerChange|this" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;background:transparent;">
+      </label>
+      <button type="button" id="tdDayNext" data-action="tdDayMove|1" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--gray-50);font-size:18px;color:var(--text);cursor:pointer;flex-shrink:0;line-height:36px;padding:0;">›</button>
+    </div>
+
     <!-- 그라데이션 컬러 카드 -->
     <div class="dash-today-detail-head">
       <div class="lb"><span class="live-dot"></span><span id="dashTodayDetailDate">-</span></div>
@@ -3212,7 +3228,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div class="qsi-date-row">
       <span class="qsi-date-label">날짜</span>
-      <input type="date" id="qsiDate" class="qsi-date-input">
+      <input type="date" id="qsiDate" class="qsi-date-input" data-change="onQsiDateChange|this">
     </div>
     <div id="qsiRowsContainer"></div>
     <div class="qsi-total-row">
@@ -5384,12 +5400,31 @@ async function loadCatReceiptData(){
       .gte('order_date', start).lte('order_date', end)
       .order('order_date', {ascending:false});
   }
-  const [rRes, oRes] = await Promise.all([rq, oq || Promise.resolve({data:[], error:null})]);
+  // 2026-05-25 신설: mydata_transactions 통합 조회 (사장님 호소 "전 카테고리 통일" → 통장·카드 자동 분류도 같은 화면에)
+  //  · 카테고리 모드만 (직구 모드는 vendor_id NULL 영수증만이므로 mydata 안 끼움)
+  //  · category_id IN ids (대분류 + 자식들)
+  //  · exclude_from_settlement=true는 환급금 등이므로 제외 (manualCat 패턴 일관)
+  let mq = null;
+  if(catIdSet){
+    mq = sb.from('mydata_transactions')
+      .select('id,tx_date,tx_type,description,merchant_name,amount,category_id,sub_category')
+      .eq('store_id', currentStore.id)
+      .eq('exclude_from_settlement', false)
+      .in('category_id', Array.from(catIdSet))
+      .gte('tx_date', start).lte('tx_date', end)
+      .order('tx_date', {ascending:false});
+  }
+  const [rRes, oRes, mRes] = await Promise.all([
+    rq,
+    oq || Promise.resolve({data:[], error:null}),
+    mq || Promise.resolve({data:[], error:null})
+  ]);
   if(rRes.error){
     body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;">불러오기 실패: ${esc(rRes.error.message||'')}</div>`;
     return;
   }
   if(oRes.error){ console.error('vendor_orders 조회 실패', oRes.error); }
+  if(mRes.error){ console.error('mydata_transactions 조회 실패', mRes.error); }
   // rcpRecords 글로벌은 receipts 원본만 (openReceiptEdit / openReceiptGroupEdit 호환)
   rcpRecords = rRes.data || [];
   // 정규화 + vendor_orders는 vendors.category_id IN catIdSet 메모리 필터 (좀비 거래처 자동 제외)
@@ -5397,7 +5432,8 @@ async function loadCatReceiptData(){
   const normOrders = catIdSet
     ? (oRes.data||[]).filter(r=>r.vendors && catIdSet.has(r.vendors.category_id)).map(r=>_normalizeExpenseRow(r,'order'))
     : [];
-  catReceiptRowsCache = normReceipts.concat(normOrders);
+  const normMydata = (mRes.data||[]).map(r=>_normalizeExpenseRow(r,'mydata'));
+  catReceiptRowsCache = normReceipts.concat(normOrders).concat(normMydata);
   renderCatReceiptList(catReceiptRowsCache);
 }
 
@@ -5524,17 +5560,30 @@ function renderCatReceiptList(rows){
     let firstGroup = true;
     byDate[d].forEach(g=>{
       const isOrder = g.source === 'order';
-      // 헤더 이모지: 거래처 주문 = 🏪 / 영수증 = 입력 방식별 📸 또는 ✏️
-      const headerIcon = isOrder
-        ? '🏪 🧾'
-        : (g.inputMethod==='photo' ? '📸 🧾' : (g.inputMethod==='manual' ? '✏️ 🧾' : '🧾'));
+      const isMydata = g.source === 'mydata';
+      // 헤더 이모지: 통장 = 🏦 / 카드 = 💳 / 거래처 주문 = 🏪 / 영수증 = 📸·✏️
+      let headerIcon;
+      if(isMydata){
+        const tx = g.rows[0]?.txType || 'bank';
+        headerIcon = (tx==='card' ? '💳' : '🏦');
+      } else if(isOrder){
+        headerIcon = '🏪 🧾';
+      } else {
+        headerIcon = (g.inputMethod==='photo' ? '📸 🧾' : (g.inputMethod==='manual' ? '✏️ 🧾' : '🧾'));
+      }
       const errBadge = g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
-      // 헤더 액션: 영수증 / 거래처 주문 모두 [✏편집][🗑삭제] 노출 (통일감 — 사장님 2026-05-21)
-      //  · 영수증: openReceiptGroupEdit (그룹 통째 편집 시트) / deleteReceiptGroup (그룹 통째 삭제)
-      //  · 거래처 주문: openEditOrderSheet (행 id 1개 줘도 시트가 group_id로 그룹 전체 자동 로드)
-      //                 / deleteOrderGroupFromCard (group_id 기반 일괄 DELETE, fallback=단행)
+      // 헤더 액션: 영수증·주문·mydata 모두 [✏편집] (삭제는 편집 시트 안에서)
+      //  · 영수증: openReceiptGroupEdit / deleteReceiptGroup
+      //  · 거래처 주문: openEditOrderSheet / deleteOrderGroupFromCard
+      //  · mydata(통장·카드): openTxEditSheet (행 1건 = 1그룹, 삭제는 시트 내부)
       let actionsHtml = '';
-      if(isOrder){
+      if(isMydata){
+        const txId = g.rows[0]?.id || g.recId;
+        const txType = g.rows[0]?.txType || 'bank';
+        actionsHtml = `<div class="grp-hdr-actions">
+            <button type="button" class="btn btn-secondary" data-action="openTxEditSheet|${txId}|${txType}">✏</button>
+          </div>`;
+      } else if(isOrder){
         const editId = g.rows[0]?.id || g.recId; // 시트는 어떤 행 id든 받으면 group_id로 그룹 전체 로드
         const delKey = g.groupId ? ('g:'+g.groupId) : ('s:'+g.recId);
         actionsHtml = `<div class="grp-hdr-actions">
@@ -5570,8 +5619,12 @@ function renderCatReceiptList(rows){
         const itemRaw = r.item || '(품목 없음)';
         const itemTxt = esc(itemRaw) + memoFlag;
         const itemTitle = (r._source==='order' && r.memo) ? esc(itemRaw + ' · 메모: ' + r.memo) : esc(itemRaw);
-        // 행 클릭: source별 분기
-        const clickAction = r._source === 'order' ? `openEditOrderSheet|${r.id}` : `openReceiptEdit|${r.id}`;
+        // 행 클릭: source별 분기 (order / mydata / receipt)
+        const clickAction = r._source === 'order'
+          ? `openEditOrderSheet|${r.id}`
+          : (r._source === 'mydata'
+              ? `openTxEditSheet|${r.id}|${r.txType||'bank'}`
+              : `openReceiptEdit|${r.id}`);
         html += `<tr class="${cls.join(' ')}" data-action="${clickAction}">`
           + `<td title="${itemTitle}">${itemTxt}</td>`
           + `<td class="gb-unit">${unitTxt}</td>`
@@ -6342,6 +6395,31 @@ function _normalizeExpenseRow(row, source){
       input_method:'manual',
       note:'정상',
       memo:row.memo||''
+    };
+  }
+  if(source==='mydata'){
+    // 2026-05-25 신설: mydata_transactions(통장·카드 자동 분류) 정규화
+    //  · 카테고리 화면 통합 표시용 (사장님 호소: "기타 들어가면 영수증이 안 보임" → 전 카테고리 통일)
+    //  · 1행 = 1그룹 (group 개념 없음, recId=tx.id)
+    //  · 헤더 라벨 = merchant_name 우선, 없으면 description
+    //  · 편집: openTxEditSheet(id, tx_type) / 삭제: 시트 안에서
+    const label = (row.merchant_name||'').trim() || (row.description||'').trim() || '(내역 없음)';
+    return {
+      _source:'mydata',
+      _origin:row,
+      id:row.id,
+      date:row.tx_date||'',
+      vendor:label,
+      vendor_id:null,
+      item:(row.sub_category||'').trim() || '-',
+      unit:null,
+      qty:null,
+      amount:Math.abs(row.amount||0),
+      group_id:null,
+      input_method:'auto',
+      note:'정상',
+      memo:'',
+      txType:row.tx_type||'bank' // 'bank' | 'card'
     };
   }
   // receipt
@@ -7117,9 +7195,12 @@ async function calcWageData(empId, appIn, appOut, date, restMinOverride){
     const ns=settings.night_extra_start,ne=settings.night_extra_end;
     nightMin=ns&&ne?calcNightMin(appIn,appOut,date,ns,ne):0;
     const wE=isWeekend?(settings.weekend_extra||0):0;
-    const nE=nightMin>0?(settings.night_extra_amount||0):0;
+    const nE=settings.night_extra_amount||0; // 시간당 야간 추가시급
     const spE=sw?.extra_amount||0;
-    wage=Math.round((totalMin/60)*((emp?.base_wage||10030)+wE+nE+spE));
+    // 2026-05-25 버그 수정: 야간수당은 nightMin 부분만 적용 (옛 식은 totalMin 전체에 곱해 과지급)
+    //  · 정상식: (총근무h) × (시급 + 주말추가 + 특별가산) + (야간h) × 야간추가
+    const baseRate=(emp?.base_wage||10030)+wE+spE;
+    wage=Math.round((totalMin/60)*baseRate + (nightMin/60)*nE);
   }
   return{restMin,isWeekend,totalMin,nightMin,wage};
 }
@@ -7137,8 +7218,9 @@ function empColor(empId){
 }
 function fmtHourDecimal(min){
   if(min==null||min<=0) return '0h';
-  const h2 = Math.round(min/30)/2;
-  return (Number.isInteger(h2)?h2.toFixed(0):h2.toFixed(1))+'h';
+  // 2026-05-25 사장님 호소: 0.5h 단위 반올림이 부정확 → 소수점 한 자리 정확 표시
+  const h = min/60;
+  return (Number.isInteger(h)?h.toFixed(0):h.toFixed(1))+'h';
 }
 // 인건비 컴팩트 표기: 10만 이상이면 만 단위 반올림 "385만", 미만이면 "9,500원"
 function fmtMan(won){
@@ -9298,6 +9380,116 @@ function dashGoStage(stage){
   window.scrollTo({top:0, behavior:'instant'});
 }
 
+// ─── today-detail 일자 네비 (2026-05-25 신설 — 사장님 호소: 다른 날짜도 보고 싶음) ───
+//  · _tdContext = loadDashboard 끝에서 박는 컨텍스트 (월 데이터 + 헬퍼)
+//  · _tdDay = 현재 표시 중인 'YYYY-MM-DD'
+//  · 같은 월 안 = 메모리만 사용. 다른 월 = 1차 미지원 (토스트 안내)
+let _tdContext = null;
+let _tdDay = null;
+function renderTodayDetailForDay(dayStr){
+  if(!_tdContext) return;
+  const ctx = _tdContext;
+  const sameMonth = dayStr.slice(0,7) === ctx.ym;
+  if(!sameMonth){
+    toast(`${ctx.ym} 외 다른 달은 곧 추가됩니다. 대시보드에서 월을 먼저 바꿔주세요.`, 'warn');
+    // picker 값은 원래대로 되돌림
+    const _p = document.getElementById('tdDayPicker');
+    if(_p && _tdDay) _p.value = _tdDay;
+    return;
+  }
+  _tdDay = dayStr;
+  const d = dayStr.slice(8);
+  const dayInt = parseInt(d, 10);
+  const dow = ['일','월','화','수','목','금','토'][new Date(dayStr+'T00:00:00').getDay()];
+  const hasSale = ctx.dailySalesMap.hasOwnProperty(d);
+  const _amt = ctx.dailySalesMap[d] || 0;
+  const _dexp = ctx.dailyExpTotal[d] || 0;
+  const _dprofit = _amt - _dexp;
+  const _todayStr = new Date().toISOString().slice(0,10);
+  const isFuture = dayStr > _todayStr;
+  const isToday = dayStr === _todayStr;
+
+  const _ddAmt=document.getElementById('dashTodayDetailAmt');
+  const _ddDate=document.getElementById('dashTodayDetailDate');
+  const _ddSub=document.getElementById('dashTodayDetailSub');
+  const _ddExp=document.getElementById('dashTodayDetailExp');
+  const _ddProfit=document.getElementById('dashTodayDetailProfit');
+  const _ddPeRow=document.getElementById('dashTodayDetailPeRow');
+
+  let stateLabel;
+  if(hasSale) stateLabel = (ctx.isUpsMode && isToday) ? '실시간' : '마감';
+  else if(isFuture) stateLabel = '미래';
+  else if(isToday) stateLabel = ctx.isUpsMode ? '실시간' : '아직 마감 전';
+  else stateLabel = '마감 안 됨';
+
+  if(_ddDate) _ddDate.innerHTML = `${ctx.mo}월 ${dayInt}일 (${dow}) · ${stateLabel}`;
+  if(_ddAmt){
+    if(hasSale){
+      _ddAmt.classList.remove('empty');
+      _ddAmt.innerHTML = `${fmt(_amt)}<span class="won">원</span>`;
+    } else {
+      _ddAmt.classList.add('empty');
+      _ddAmt.innerText = isFuture ? '아직 안 온 날' : (isToday ? '아직 입력 안 됨' : '마감 안 됨');
+    }
+  }
+  if(_ddSub){
+    if(hasSale) _ddSub.innerText = (ctx.isUpsMode && isToday) ? '방금 갱신됨' : '마감 기준';
+    else if(isToday) _ddSub.innerText = '오늘 첫 매출인가요? 아래에서 입력하세요.';
+    else if(isFuture) _ddSub.innerText = '미래 날짜는 데이터가 없어요';
+    else _ddSub.innerText = '이 날은 마감이 안 됐어요';
+  }
+  if(_ddPeRow){
+    if(hasSale){
+      _ddPeRow.style.display = 'grid';
+      if(_ddExp) _ddExp.innerText = '-'+fmt(_dexp)+'원';
+      if(_ddProfit) _ddProfit.innerText = (_dprofit>=0?'+':'-')+fmt(Math.abs(_dprofit))+'원';
+    } else {
+      _ddPeRow.style.display = 'none';
+    }
+  }
+  // 결제수단별 — 해당일 settle 행
+  const _row = (ctx.settle||[]).find(s=>s.date?.slice(8)===d);
+  renderTodayPaymentMethods(_row, _amt);
+
+  // 일자 네비 라벨·picker·화살표 활성 상태
+  const lblText = document.getElementById('tdDayLabelText');
+  const prevBtn = document.getElementById('tdDayPrev');
+  const nextBtn = document.getElementById('tdDayNext');
+  const picker = document.getElementById('tdDayPicker');
+  const _yesterdayStr = (()=>{ const y=new Date(); y.setDate(y.getDate()-1); return y.toISOString().slice(0,10); })();
+  let relativeLabel = '';
+  if(isToday) relativeLabel = ' · 오늘';
+  else if(dayStr === _yesterdayStr) relativeLabel = ' · 어제';
+  if(lblText) lblText.innerText = `${ctx.mo}월 ${dayInt}일 (${dow})${relativeLabel}`;
+  if(picker){
+    picker.value = dayStr;
+    picker.min = ctx.ym + '-01';
+    picker.max = ctx.ym + '-' + String(ctx.lastDay).padStart(2,'0');
+  }
+  if(prevBtn){ prevBtn.disabled = (dayInt <= 1); prevBtn.style.opacity = (dayInt<=1?'0.3':'1'); }
+  if(nextBtn){ nextBtn.disabled = (dayInt >= ctx.lastDay); nextBtn.style.opacity = (dayInt>=ctx.lastDay?'0.3':'1'); }
+}
+function tdDayMove(dir){
+  if(!_tdContext || !_tdDay) return;
+  const ctx = _tdContext;
+  const d = parseInt(_tdDay.slice(8), 10) + Number(dir);
+  if(d < 1 || d > ctx.lastDay) return;
+  renderTodayDetailForDay(ctx.ym + '-' + String(d).padStart(2,'0'));
+}
+function tdOpenDayPicker(){
+  const picker = document.getElementById('tdDayPicker');
+  if(!picker) return;
+  if(typeof picker.showPicker === 'function'){
+    try { picker.showPicker(); return; } catch(e){ /* fallback below */ }
+  }
+  picker.click();
+  picker.focus();
+}
+function tdDayPickerChange(el){
+  if(!el || !el.value) return;
+  renderTodayDetailForDay(el.value);
+}
+
 // 결제수단별 분해 (sales_daily 레거시 7컬럼 + amounts JSONB 폴백)
 // paymentMethods 동적이라 레거시 0이면 amounts.<pm.id>에서 보충
 function renderTodayPaymentMethods(row, totalSale){
@@ -10168,37 +10360,19 @@ async function loadDashboard(force){
         peEl.style.display='grid';
       }
 
-      // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22) ───
+      // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22, 2026-05-25 일자 네비 지원) ───
+      //  · _tdContext에 데이터 박아두고 _tdDay 기준으로 렌더링 (좌·우·데이트피커가 _tdDay 변경)
+      //  · 첫 진입 = lastSaleDay (없으면 오늘)
       try {
-        const _ddAmt=document.getElementById('dashTodayDetailAmt');
-        const _ddDate=document.getElementById('dashTodayDetailDate');
-        const _ddSub=document.getElementById('dashTodayDetailSub');
-        const _ddExp=document.getElementById('dashTodayDetailExp');
-        const _ddProfit=document.getElementById('dashTodayDetailProfit');
-        const _ddPeRow=document.getElementById('dashTodayDetailPeRow');
-        if(_ddAmt && _ddDate){
-          if(!lastSaleDay){
-            _ddDate.innerHTML='오늘 매출 · (준비중)';
-            _ddAmt.classList.add('empty');
-            _ddAmt.innerText='아직 입력 안 됨';
-            if(_ddSub) _ddSub.innerText='오늘 첫 매출인가요? 아래에서 입력하세요.';
-            if(_ddPeRow) _ddPeRow.style.display='none';
-          } else {
-            const _dow2=['일','월','화','수','목','금','토'][new Date(ym+'-'+lastSaleDay+'T00:00:00').getDay()];
-            _ddDate.innerHTML=`${mo}월 ${parseInt(lastSaleDay)}일 (${_dow2}) · ${isUpsMode?'실시간':(isTodayShown?'(준비중)':'마감')}`;
-            _ddAmt.classList.remove('empty');
-            const _amt=dailySalesMap[lastSaleDay]||0;
-            _ddAmt.innerHTML=`${fmt(_amt)}<span class="won">원</span>`;
-            if(_ddSub) _ddSub.innerText=isUpsMode?'방금 갱신됨':'마감 기준';
-            const _dexp=dailyExpTotal[lastSaleDay]||0;
-            const _dprofit=_amt-_dexp;
-            if(_ddExp) _ddExp.innerText='-'+fmt(_dexp)+'원';
-            if(_ddProfit) _ddProfit.innerText=(_dprofit>=0?'+':'-')+fmt(Math.abs(_dprofit))+'원';
-            if(_ddPeRow) _ddPeRow.style.display='grid';
-          }
-        }
-        const _lastRow=lastSaleDay?(settle||[]).find(s=>s.date?.slice(8)===lastSaleDay):null;
-        renderTodayPaymentMethods(_lastRow, dailySalesMap[lastSaleDay]||0);
+        _tdContext = {
+          ym, mo, lastDay,
+          dailySalesMap, dailyExpTotal, settle,
+          lastSaleDay, isUpsMode, isTodayShown, isCurMonth
+        };
+        const _initDay = lastSaleDay
+          ? ym+'-'+String(lastSaleDay).padStart(2,'0')
+          : (isCurMonth ? new Date().toISOString().slice(0,10) : ym+'-01');
+        renderTodayDetailForDay(_initDay);
       } catch(e){ console.warn('[dashTodayDetail]', e.message); }
     } else {
       topCard.style.display='none';
@@ -11284,9 +11458,15 @@ const QUICK_SALES_METHODS=[
   {key:'qr',           name:'QR',         icon:'📱', dot:'purple'},
   {key:'etc',          name:'기타결제',   icon:'📲', dot:'gray'}
 ];
-function openQuickSalesInput(){
+function openQuickSalesInput(initialDate){
   if(!currentStore){toast('매장을 먼저 선택하세요','error');return;}
-  document.getElementById('qsiDate').value=ymdLocal(new Date());
+  // 2026-05-25 사장님 호소: today-detail에서 보던 일자 인계 + 기존 데이터 자동 로드
+  //  · initialDate 우선 (today-detail/캘린더 셀 → 그 날짜)
+  //  · 없으면 _tdDay (오늘 매출 화면이 보고 있던 날) 폴백
+  //  · 그것도 없으면 오늘
+  const fallbackDay = (typeof _tdDay !== 'undefined' && _tdDay) ? _tdDay : ymdLocal(new Date());
+  const day = initialDate || fallbackDay;
+  document.getElementById('qsiDate').value = day;
   const cont=document.getElementById('qsiRowsContainer');
   cont.innerHTML=QUICK_SALES_METHODS.map(m=>`
     <div class="qsi-row dot-${m.dot||'gray'}">
@@ -11298,6 +11478,43 @@ function openQuickSalesInput(){
   document.getElementById('qsiMemo').value='';
   document.getElementById('qsiTotal').innerText='0원';
   openSheet('quickSalesInputSheet');
+  // 시트 연 직후 기존 데이터 자동 로드 (사장님: "기존데이터가 있어야되지 않을까")
+  _loadQsiDataForDate(day);
+}
+// 2026-05-25 신설: 선택 일자의 sales_daily 행 조회 → 결제수단 input + 메모 채우기
+//  · 데이터 없으면 input 비움 (덮어쓰기 안전) + 합계 0원
+//  · 호출처: 시트 첫 진입 / 날짜 input change
+async function _loadQsiDataForDate(date){
+  if(!currentStore || !date) return;
+  // 우선 input들을 비워서 옛 날짜 잔재 제거 (다른 날 → 데이터 없는 날 점프 시 옛 값 남는 거 방지)
+  document.querySelectorAll('#qsiRowsContainer .qsi-input').forEach(el=>{ el.value=''; });
+  const memoEl = document.getElementById('qsiMemo');
+  if(memoEl) memoEl.value = '';
+  const totalEl = document.getElementById('qsiTotal');
+  if(totalEl) totalEl.innerText = '0원';
+  // sales_daily 조회
+  const {data, error} = await sb.from('sales_daily')
+    .select('*')
+    .eq('store_id', currentStore.id)
+    .eq('date', date)
+    .maybeSingle();
+  if(error){ console.warn('[qsi load]', error.message); return; }
+  if(!data){
+    // 데이터 없음 — input 비운 상태 그대로 (이미 위에서 처리)
+    return;
+  }
+  // 결제수단 input 채우기
+  document.querySelectorAll('#qsiRowsContainer .qsi-input').forEach(el=>{
+    const k = el.dataset.key;
+    const v = Number(data[k]||0);
+    el.value = v ? fmt(v) : '';
+  });
+  if(memoEl && data.memo) memoEl.value = data.memo;
+  _recalcQsiTotal();
+}
+function onQsiDateChange(el){
+  if(!el || !el.value) return;
+  _loadQsiDataForDate(el.value);
 }
 function onQuickSalesInputChange(el){
   const raw=unFmt(el.value);
@@ -11357,8 +11574,8 @@ function handleCalCellClick(date){
 function calCellInputSales(){
   closeSheet('calCellActionSheet');
   setTimeout(()=>{
-    openQuickSalesInput();
-    if(_calCellSelectedDate)setTimeout(()=>{document.getElementById('qsiDate').value=_calCellSelectedDate;},80);
+    // 2026-05-25: 캘린더 셀 클릭 = 해당 날짜로 직접 진입 (기존 데이터 자동 로드 통일)
+    openQuickSalesInput(_calCellSelectedDate || null);
   },100);
 }
 function calCellMarkClosed(){
@@ -12124,67 +12341,76 @@ async function loadVendorOrders(){
   const monthStr=(ms==='-'||!ms)?new Date().toISOString().slice(0,7):ms;
   if(document.getElementById('vOrderMonth'))document.getElementById('vOrderMonth').innerText=monthStr;
   const vendorId=document.getElementById('orderVendorFilter')?.value||'';
-  // 옛 데이터 깜빡임 방지 (2026-05-15)
   const listEl=document.getElementById('orderListData');
   if(listEl) listEl.innerHTML='<div class="empty-state"><p style="color:var(--gray-400);">조회 중...</p></div>';
-  let query=sb.from('vendor_orders').select('*,vendors(name)').eq('store_id',currentStore.id).gte('order_date',monthStr+'-01').lte('order_date',monthStr+'-31').order('order_date',{ascending:false});
-  if(vendorId)query=query.eq('vendor_id',vendorId);
-  const{data}=await query;
-  if(!data?.length){
-    document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>주문내역이 없습니다</p></div>';
+  // 2026-05-25 갈아엎기 (D안): 영수증분도 같이 표시 (사장님 호소 — 거래처 화면에 영수증이 안 보여서 또 입력하게 됨)
+  //  · vendor_orders + receipts(vendor_id NOT NULL, 정상) 통합 (catReceipt 패턴과 통일)
+  //  · 정규화 헬퍼: _normalizeExpenseRow / _groupExpenseRows
+  //  · 헤더 아이콘: 거래처 주문 = 🏪 / 영수증 = 📸 또는 ✏️
+  //  · 행 액션: order → openEditOrderSheet / receipt → openReceiptEdit (헤더 [✏][🗑]도 분기)
+  const [y,m]=monthStr.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const start=monthStr+'-01', end=monthStr+'-'+String(lastDay).padStart(2,'0');
+  let oq=sb.from('vendor_orders').select('id,order_date,vendor_id,item,amount,unit_price,quantity,memo,order_group_id,vendors(name)')
+    .eq('store_id',currentStore.id).gte('order_date',start).lte('order_date',end).order('order_date',{ascending:false});
+  let rq=sb.from('receipts')
+    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty')
+    .eq('store_id',currentStore.id).eq('note','정상').not('vendor_id','is',null)
+    .gte('receipt_date',start).lte('receipt_date',end).order('receipt_date',{ascending:false});
+  if(vendorId){ oq=oq.eq('vendor_id',vendorId); rq=rq.eq('vendor_id',vendorId); }
+  const [oRes,rRes]=await Promise.all([oq,rq]);
+  if(oRes.error||rRes.error){
+    const err=(oRes.error||rRes.error);
+    document.getElementById('orderListData').innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><p>불러오기 실패: ${esc(err?.message||'')}</p></div>`;
     return;
   }
-  // 2026-05-20 갈아엎기: 평탄 7컬럼 표 → 그룹 카드(order_group_id 우선, fallback=(vendor_id+order_date)) + 내부 5컬럼 미니 표
-  //  · 영수증 기록과 같은 패턴 (그룹 카드 헤더 + .order-tbl 미니 표)
-  //  · 같은 영수증/주문건이 시각적으로 한 묶음 (사장님 호소 2026-05-20)
-  //  · order_group_id 있는 행 = 정확한 그룹 (수동 멀티 입력)
-  //  · order_group_id=NULL 옛 행 = (vendor_id+order_date) fallback 그룹 (옛 데이터 호환)
-  //  · 메모 컬럼 제거 + 행 탭→편집 시트. 메모 있는 행은 품목명 옆 💬
-  //  · 컬럼: 품목(가변) / 단가(54) / 수량(38) / 금액(64) / ›(22)
+  // openReceiptEdit / openReceiptGroupEdit 호환 — receipts 원본을 글로벌 rcpRecords에 박음 (catReceipt 패턴과 일관)
+  rcpRecords = rRes.data || [];
+  const normOrders=(oRes.data||[]).map(r=>_normalizeExpenseRow(r,'order'));
+  const normReceipts=(rRes.data||[]).map(r=>_normalizeExpenseRow(r,'receipt'));
+  const all=normOrders.concat(normReceipts);
+  if(!all.length){
+    document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>이번달 주문·영수증이 없습니다</p></div>';
+    return;
+  }
+  const groups=_groupExpenseRows(all);
+  groups.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const showVendor = !vendorId;
-  const groups=[];
-  const byKey={};
-  data.forEach(r=>{
-    const key=r.order_group_id
-      ? 'g:'+r.order_group_id
-      : 'f:'+(r.vendor_id||'-')+'|'+(r.order_date||'-');
-    if(!byKey[key]){
-      const g={key, vendorName:r.vendors?.name||'(거래처 없음)', date:r.order_date||'', rows:[], total:0};
-      byKey[key]=g;
-      groups.push(g);
-    }
-    const g=byKey[key];
-    g.rows.push(r);
-    g.total+=(r.amount||0);
-  });
-  // 2026-05-20 D안 갈아엎기: 한 표 안 그룹 헤더 행 + 본문 행 (ERP 패턴, 사장님 호소 "따로 노는 느낌" 해소)
   let html=`<div class="grp-tbl-wrap"><table class="grp-tbl">
     <colgroup><col/><col style="width:64px"/><col style="width:44px"/><col style="width:76px"/><col style="width:22px"/></colgroup>
     <thead><tr><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
     <tbody>`;
   let firstGroup=true;
   groups.forEach(g=>{
+    const isOrder = g.source === 'order';
     const dateShort=(g.date||'').slice(5).replace('-','/');
-    // 2026-05-21 통일감: 헤더에 [✏편집][🗑삭제] 노출 (catReceipt/영수증과 동일 패턴)
-    //  · g.key 형식: 'g:<orderGroupId>' (정확한 그룹) 또는 'f:<vendor_id>|<order_date>' (옛 fallback)
-    //  · [✏] = openEditOrderSheet (시트가 group_id 또는 vendor+date fallback로 그룹 전체 자동 로드)
-    //  · [🗑] = deleteOrderGroupFromCard (g:/f: 모두 지원)
-    const vendorEmoji = showVendor ? '🧾' : '📅';
-    const vendorName = showVendor ? esc(g.vendorName) : (dateShort||'-');
-    const vendorSub = showVendor && dateShort ? ` · ${dateShort}` : '';
-    const editId = g.rows[0]?.id;
-    // g.key는 'g:<orderGroupId>' 또는 'f:<vendor_id>|<order_date>' — 그대로 deleteOrderGroupFromCard에 전달
+    const headerIcon = isOrder
+      ? '🏪 🧾'
+      : (g.inputMethod==='photo' ? '📸 🧾' : (g.inputMethod==='manual' ? '✏️ 🧾' : '🧾'));
+    const labelName = showVendor ? esc(g.vendor||'(거래처 없음)') : (dateShort||'-');
+    const labelSub = showVendor && dateShort ? ` · ${dateShort}` : '';
+    let actionsHtml='';
+    if(isOrder){
+      const editId = g.rows[0]?.id || g.recId;
+      const delKey = g.groupId ? ('g:'+g.groupId) : ('s:'+g.recId);
+      actionsHtml = `<div class="grp-hdr-actions">
+          <button type="button" class="btn btn-secondary" data-action="openEditOrderSheet|${editId}">✏</button>
+          <button type="button" class="btn btn-danger" data-action="deleteOrderGroupFromCard|${delKey}">🗑</button>
+        </div>`;
+    } else {
+      const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
+      actionsHtml = `<div class="grp-hdr-actions">
+          <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
+          <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
+        </div>`;
+    }
     html+=`<tr class="grp-hdr${firstGroup?' first':''}">
       <td colspan="5"><div class="grp-hdr-row">
         <div class="grp-hdr-info">
-          <span class="emoji">${vendorEmoji}</span>
-          <span class="name">${vendorName}${vendorSub}</span>
+          <span class="emoji">${headerIcon}</span>
+          <span class="name">${labelName}${labelSub}</span>
           <span class="sum">· ${fmt(g.total)}원</span>
-        </div>
-        <div class="grp-hdr-actions">
-          <button type="button" class="btn btn-secondary" data-action="openEditOrderSheet|${editId}">✏</button>
-          <button type="button" class="btn btn-danger" data-action="deleteOrderGroupFromCard|${g.key}">🗑</button>
-        </div>
+        </div>${actionsHtml}
       </div></td>
     </tr>`;
     firstGroup=false;
@@ -12193,9 +12419,10 @@ async function loadVendorOrders(){
       const memoFlag=r.memo?' 💬':'';
       const itemTxt=esc(itemRaw)+memoFlag;
       const itemTitle=esc(r.memo?`${itemRaw} · 메모: ${r.memo}`:itemRaw);
-      const unitTxt=r.unit_price?fmt(r.unit_price):'-';
-      const qtyTxt=(r.quantity!=null&&r.quantity!=='')?String(r.quantity):'-';
-      html+=`<tr class="grp-body" data-action="openEditOrderSheet|${r.id}">`
+      const unitTxt=r.unit?fmt(r.unit):'-';
+      const qtyTxt=(r.qty!=null&&r.qty!=='')?String(r.qty):'-';
+      const action = r._source==='order' ? `openEditOrderSheet|${r.id}` : `openReceiptEdit|${r.id}`;
+      html+=`<tr class="grp-body" data-action="${action}">`
         +`<td title="${itemTitle}">${itemTxt}</td>`
         +`<td class="gb-unit">${unitTxt}</td>`
         +`<td class="gb-qty">${qtyTxt}</td>`
@@ -12532,6 +12759,27 @@ async function saveOrder(){
   }
   if(!_orderDraftRows.length) return toast('품목을 1개 이상 입력하세요','warn');
   const isEdit=!!(_orderEditingGroupId || _orderEditingFallbackIds.length>0);
+  // 2026-05-25 D안 중복 가드: 신규 저장 시 같은 거래처+같은 날+같은 금액 영수증/주문 있으면 경고
+  //  · 사장님이 영수증 사진과 거래처 수동을 양쪽 박는 패턴 차단 (사장님 호소 — 합산 2배 잡힘)
+  //  · 강제 차단 X — confirm으로 사장님 결정권 유지
+  //  · 편집 모드 스킵 (이미 같은 그룹 내 변경)
+  if(!isEdit){
+    const draftAmts=_orderDraftRows.map(r=>r.amount||0).filter(a=>a>0);
+    if(draftAmts.length){
+      const [voRes,rcRes]=await Promise.all([
+        sb.from('vendor_orders').select('amount').eq('store_id',currentStore.id).eq('vendor_id',vendorId).eq('order_date',date).in('amount',draftAmts),
+        sb.from('receipts').select('total_price').eq('store_id',currentStore.id).eq('vendor_id',vendorId).eq('receipt_date',date).eq('note','정상').in('total_price',draftAmts)
+      ]);
+      const existAmts=new Set();
+      (voRes.data||[]).forEach(r=>existAmts.add(r.amount));
+      (rcRes.data||[]).forEach(r=>existAmts.add(r.total_price));
+      const dups=draftAmts.filter(a=>existAmts.has(a));
+      if(dups.length){
+        const dupTxt=dups.map(a=>fmt(a)+'원').join(', ');
+        if(!confirm(`이미 ${date}에 같은 금액(${dupTxt})이 들어와 있어요.\n같은 거래를 두 번 적으면 합계가 두 배로 잡혀요.\n\n그래도 저장할까요?`)) return;
+      }
+    }
+  }
   setLoad(true,isEdit?'수정 중...':'저장 중...');
   // 편집 모드: 옛 그룹 행 통째 DELETE + 새 그룹 INSERT (DELETE+INSERT 패턴이 가장 안전 — 행 수 변동 대응)
   if(isEdit){
@@ -13549,7 +13797,7 @@ async function recalcMonthWages(){
   if(!currentStore||!confirm('이달 근태 기록의 급여를 현재 시급 기준으로 재계산합니다.\n계속하시겠습니까?')) return;
   setLoad(true,'급여 재계산 중...');
   const [y,m]=wageMonthStr.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
-  const{data}=await sb.from('attendance_logs').select('id,employee_id,work_date,app_in,app_out,total_work_min,rest_min').eq('store_id',currentStore.id).gte('work_date',wageMonthStr+'-01').lte('work_date',wageMonthStr+'-'+String(lastDay).padStart(2,'0'));
+  const{data}=await sb.from('attendance_logs').select('id,employee_id,work_date,app_in,app_out,total_work_min,rest_min,night_min').eq('store_id',currentStore.id).gte('work_date',wageMonthStr+'-01').lte('work_date',wageMonthStr+'-'+String(lastDay).padStart(2,'0'));
   let updated=0;
   for(const r of (data||[])){
     if(!r.total_work_min) continue;
@@ -13559,9 +13807,10 @@ async function recalcMonthWages(){
     const wE=isWeekend?(settings.weekend_extra||0):0;
     const{data:sw}=await sb.from('special_wages').select('extra_amount').eq('store_id',currentStore.id).eq('target_date',r.work_date).maybeSingle();
     const spE=sw?.extra_amount||0;
-    // 야간 계산 간소화: total_work_min 기반
-    const nE=0; // 야간수당은 기존 기록 유지 (재계산 시 정확도 이슈)
-    const wage=Math.round((r.total_work_min/60)*(emp.base_wage+wE+nE+spE));
+    // 2026-05-25 버그 수정: 야간수당은 night_min 부분만 (calcWageData와 통일)
+    const nE=settings.night_extra_amount||0;
+    const nightMin=r.night_min||0;
+    const wage=Math.round((r.total_work_min/60)*(emp.base_wage+wE+spE) + (nightMin/60)*nE);
     await sb.from('attendance_logs').update({calculated_wage:wage}).eq('id',r.id).eq('store_id',currentStore.id);
     updated++;
   }
@@ -15868,16 +16117,18 @@ const _expCatIconMap = {
 function _expCatIcon(name){ return _expCatIconMap[name] || 'i-folder'; }
 
 // 카테고리 카드 클릭 시 어디로? (data_source 기반)
-//   - receipts/composite/vendor_orders → openCatReceipt|cat:<id> (표 + 필터)
 //   - attendance → nav|wage
 //   - fixed_costs → openFcCategory|<카테고리명> (카테고리별 분리 진입)
-//   - manual → openManualCatView|<카테고리명> (세금·마케팅·기타 mydata 거래내역, 2026-05-20)
+//   - 그 외(receipts/composite/vendor_orders/manual) → openCatReceipt|cat:<id> (영수증·거래처주문·mydata 통합)
+//
+// 2026-05-25 갈아엎기 (사장님 호소: "기타 들어가면 영수증 안 보임 — 싹다 한 화면에"):
+//   옛: manual data_source → openManualCatView (mydata only) 분기 → 영수증 무시 → 사장님 폭발
+//   신: 모든 카테고리 → openCatReceipt 통일 (영수증·손입력·통장·카드 다 한 표)
+//   openManualCatView 함수는 코드만 남기고 진입 경로 끊음 (안전망)
 function _expCatAction(cat){
   const ds = cat.data_source || 'manual';
   if(ds==='attendance') return 'nav|wage';
   if(ds==='fixed_costs') return 'openFcCategory|'+cat.name;
-  if(ds==='manual') return 'openManualCatView|'+cat.name;
-  // receipts / composite / vendor_orders
   return 'openCatReceipt|cat:'+cat.id;
 }
 // 고정비 카테고리별 진입 (공과금 카드면 공과금 항목만, 고정비 카드면 고정비만 — 사장님 호소 2026-05-20)
@@ -19272,9 +19523,9 @@ document.addEventListener('DOMContentLoaded', async()=>{
   });
   // 빈 데이터 CTA (홈 v7: 휴무 버튼 제거 — 캘린더 셀에서만, 2026-05-22)
   document.getElementById('dashTopEmptyInputBtn').addEventListener('click',(e)=>{e.stopPropagation();openQuickSalesInput();});
-  // today-detail 매출 입력 CTA
+  // today-detail 매출 입력 CTA — 보고 있던 일자(_tdDay)로 시트 진입 (2026-05-25 사장님 호소)
   const _ddInputCta=document.getElementById('dashTodayInputCta');
-  if(_ddInputCta) _ddInputCta.addEventListener('click',()=>openQuickSalesInput());
+  if(_ddInputCta) _ddInputCta.addEventListener('click',()=>openQuickSalesInput(_tdDay||null));
   // data-dash-go 이벤트 위임 (홈 박스 → stage 진입, 뒤로 가기)
   document.getElementById('dashboardCont').addEventListener('click',(e)=>{
     const el=e.target.closest('[data-dash-go]');
