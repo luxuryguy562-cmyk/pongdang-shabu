@@ -920,6 +920,11 @@
            ※ 관리자가 다른 직원 출퇴근을 찍거나 누락된 출퇴근을 등록하려면
               📋 근무 기록 캘린더의 빈 셀 '+' 또는 일별 헤더 '+ 직원' 버튼 사용 -->
       <div id="attStatusCard" class="att-status-card before">
+        <div class="att-status-avatar-wrap">
+          <div id="attStatusAvatar" class="att-status-avatar">-</div>
+          <div class="att-status-pulse"></div>
+        </div>
+        <div class="att-status-name" id="attStatusName">-</div>
         <div class="att-status-date" id="attTodayDate">-</div>
         <div class="att-status-time" id="attNowTime">--:--</div>
         <div class="att-status-badge" id="attStatusBadge">⚪ 아직 출근 안 했어요</div>
@@ -5650,13 +5655,22 @@ async function loadTodayRecord(){
 }
 function updateCheckInOutUI(record){
   // G안: 상태 변환 카드 (before / during / after)
+  // 2026-05-25 mockup ② 적용: 아바타 + 펄스 점 + 정보 그리드
   const card  = document.getElementById('attStatusCard');
   const badge = document.getElementById('attStatusBadge');
   const meta  = document.getElementById('attStatusMeta');
+  const avatar= document.getElementById('attStatusAvatar');
+  const nameEl= document.getElementById('attStatusName');
   const inBtn = document.getElementById('btnCheckIn');
   const outBtn= document.getElementById('btnCheckOut');
   if(!card) return;
+  // 아바타 글자 + 이름 (selectedEmp가 있으면 우선, 없으면 currentEmp)
+  const empObj = (selectedEmpId && (employees||[]).find(e=>e.id===selectedEmpId)) || currentEmp || null;
+  const empName = empObj?.name || '사장님';
+  if(avatar) avatar.innerText = (empName || '?').slice(0,1);
+  if(nameEl) nameEl.innerText = empName;
   card.classList.remove('before','during','after');
+  meta.classList.remove('grid');
   const fmtT = d => d.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
   if(!record || !record.app_in){
     card.classList.add('before');
@@ -5670,7 +5684,12 @@ function updateCheckInOutUI(record){
     const elapsedMin = Math.max(0, Math.round((new Date()-inT)/60000));
     const eh = Math.floor(elapsedMin/60), em = elapsedMin%60;
     if(badge) badge.innerText = `🔵 근무 중  ${eh>0?eh+'시간 ':''}${em}분 째`;
-    if(meta)  meta.innerHTML  = `출근 ${fmtT(inT)}`;
+    if(meta){
+      meta.classList.add('grid');
+      meta.innerHTML = `
+        <div class="cell"><div class="lbl">출근</div><div class="vl">${fmtT(inT)}</div></div>
+        <div class="cell"><div class="lbl">경과</div><div class="vl">${eh>0?eh+'h ':''}${em}m</div></div>`;
+    }
     if(inBtn){ inBtn.style.display='none'; }
     if(outBtn){ outBtn.style.display=''; outBtn.disabled=false; }
   } else {
@@ -5681,7 +5700,12 @@ function updateCheckInOutUI(record){
     const wh = Math.floor(work/60), wm = work%60;
     const wageStr = record.calculated_wage!=null ? fmt(record.calculated_wage)+'원' : '-';
     if(badge) badge.innerText = `🟢 오늘 수고하셨어요  ${wh}시간 ${wm}분`;
-    if(meta)  meta.innerHTML  = `${fmtT(inT)} ~ ${fmtT(outT)} · 휴게 ${record.rest_min||0}분<br><span class="wage">오늘 ${wageStr}</span>`;
+    if(meta){
+      meta.classList.add('grid');
+      meta.innerHTML = `
+        <div class="cell"><div class="lbl">근무</div><div class="vl">${fmtT(inT)}~${fmtT(outT)}</div></div>
+        <div class="cell wage"><div class="lbl">오늘 일당</div><div class="vl">${wageStr}</div></div>`;
+    }
     if(inBtn){ inBtn.style.display='none'; }
     if(outBtn){ outBtn.style.display='none'; }
   }
