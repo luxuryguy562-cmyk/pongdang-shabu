@@ -1344,13 +1344,17 @@ function renderCoupangSplit(){
     return;
   }
   wrap.innerHTML=cpgParents.map(c=>{
-    const emoji=c.color||'📂';
+    // color = 헥스 컬러 코드 (예: '#0050FF'). 동그라미로 표시.
+    const isHex=/^#[0-9A-Fa-f]{3,8}$/.test(c.color||'');
+    const dot=isHex
+      ? `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${c.color};flex-shrink:0;"></span>`
+      : `<span style="font-size:16px;width:18px;text-align:center;flex-shrink:0;">${esc(c.color||'📂')}</span>`;
     const val=cpgSplits[c.id]||0;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--gray-100);">
-      <span style="font-size:18px;width:30px;text-align:center;">${emoji}</span>
-      <span style="flex:1;font-size:13px;font-weight:700;color:var(--gray-900);">${esc(c.name)}</span>
-      <input type="text" inputmode="numeric" data-cpg-cat="${c.id}" data-input="cpgInput|this" value="${val?fmt(val):''}" placeholder="0" style="width:120px;text-align:right;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;outline:none;">
-      <span style="font-size:11px;color:var(--gray-500);">원</span>
+    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--gray-100);">
+      ${dot}
+      <span style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.name)}</span>
+      <input type="text" inputmode="numeric" data-cpg-cat="${c.id}" data-input="cpgInput|this" value="${val?fmt(val):''}" placeholder="0" style="width:110px;text-align:right;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;outline:none;flex-shrink:0;">
+      <span style="font-size:11px;color:var(--gray-500);flex-shrink:0;">원</span>
     </div>`;
   }).join('');
   refreshCpgSum();
