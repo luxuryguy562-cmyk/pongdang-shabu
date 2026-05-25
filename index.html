@@ -1237,10 +1237,21 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-enter-v7 .body-col .profit-rate.good{color:#0CAB6C;font-weight:800;}
 .dash-enter-v7 .body-col .profit-rate.gray{color:#B0B8C1;}
 .dash-enter-v7 .arrow{font-size:24px;color:#B0B8C1;font-weight:300;line-height:1;flex-shrink:0;}
-/* 뒤로 가기 */
-.dash-back-row{display:flex;align-items:center;padding:8px 4px 16px;cursor:pointer;}
-.dash-back-row .back-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#333D4B;font-weight:600;background:transparent;}
-.dash-back-row .back-ttl{font-size:17px;font-weight:800;color:#191F28;letter-spacing:-0.5px;margin-left:4px;}
+/* 뒤로 가기 — 2026-05-25 통합: 대시보드 stage + 모든 진입 화면 공통 (사장님 호소: 있는 곳·없는 곳 짜증) */
+.dash-back-row, .app-back{display:flex;align-items:center;padding:8px 4px 16px;cursor:pointer;gap:4px;}
+.dash-back-row .back-btn, .app-back .back-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#333D4B;font-weight:600;background:transparent;flex-shrink:0;}
+.dash-back-row .back-ttl, .app-back .back-ttl{font-size:17px;font-weight:800;color:#191F28;letter-spacing:-0.5px;}
+.app-back .back-sub{font-size:11px;color:var(--gray-500);font-weight:600;margin-left:auto;font-variant-numeric:tabular-nums;}
+/* 지출관리 카테고리 카드 색상 — 2026-05-25 통일 (mockup unified_v2) */
+.cat-color-food .hub-mini-icon{background:#E4F7EE;color:#0CAB6C;}
+.cat-color-liquor .hub-mini-icon{background:#F3E8FF;color:#8B5CF6;}
+.cat-color-drink .hub-mini-icon{background:#CFFAFE;color:#06B6D4;}
+.cat-color-labor .hub-mini-icon{background:#EBF3FF;color:#3182F6;}
+.cat-color-supply .hub-mini-icon{background:#FEF3C7;color:#D97706;}
+.cat-color-marketing .hub-mini-icon{background:#FFE4D2;color:#EA580C;}
+.cat-color-fixed .hub-mini-icon{background:#E0E7FF;color:#4F46E5;}
+.cat-color-tax .hub-mini-icon{background:#FEE2E2;color:#EF4444;}
+.cat-color-etc .hub-mini-icon{background:#F2F4F6;color:#6B7684;}
 /* 오늘 상세 헤더 (그라데이션) */
 .dash-today-detail-head{background:linear-gradient(150deg,#3182F6 0%,#0064FF 100%);border-radius:24px;padding:24px 22px 28px;color:#fff;margin-bottom:16px;box-shadow:0 8px 24px rgba(49,130,246,0.25);}
 .dash-today-detail-head .lb{font-size:13px;font-weight:600;opacity:.88;display:flex;align-items:center;gap:6px;letter-spacing:-0.3px;margin-bottom:8px;}
@@ -2194,7 +2205,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ 카테고리별 영수증 목록 (직구·식자재·비품·기타 진입 공통) ══ -->
 <div id="catReceiptCont" class="container">
-  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출관리</span></div>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
     <span id="catReceiptIcon" style="font-size:28px;">🛒</span>
     <div style="flex:1;min-width:0;">
@@ -2845,6 +2856,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [6] 거래처 관리 ══ -->
 <div id="vendorsCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">거래처 관리</span></div>
   <div class="sub-tabs">
     <button class="sub-tab active" data-sub="list" data-action="vendorTab|list|this">거래처</button>
     <button class="sub-tab" data-sub="upload" data-action="vendorTab|upload|this">파일 업로드</button>
@@ -2932,6 +2944,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [7] 고정비 ══ -->
 <div id="fixedcostCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">고정비 관리</span></div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
     <div style="flex:1;min-width:0;">
       <div id="fcHeaderTitle" style="font-size:16px;font-weight:700;color:var(--gray-900);">📅 고정비</div>
@@ -2946,7 +2959,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 <!-- ══ [7-A] manual 카테고리 진입 화면 (세금·마케팅·기타) ══ -->
 <!-- 2026-05-20 신설 — mydata_transactions 자동 분류 거래내역 + sub_category 누적 합계 -->
 <div id="manualCatCont" class="container">
-  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출관리</span></div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;">
     <div style="flex:1;min-width:0;">
       <div id="manualCatHeaderTitle" style="font-size:18px;font-weight:700;color:var(--gray-900);">⚖️ 세금</div>
@@ -2961,6 +2974,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [8] 직원관리 ══ -->
 <div id="staffCont" class="container">
+  <div class="app-back" data-action="nav|dashboard"><span class="back-btn">‹</span><span class="back-ttl">직원 관리</span></div>
   <div style="display:flex;gap:8px;margin-bottom:12px;">
     <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderEmpList"><option value="">전체 직급</option></select>
     <select id="empFilterStatus" class="input-field" style="margin-bottom:0;width:85px;padding:10px 12px;font-size:13px;" data-change="renderEmpList">
@@ -2973,6 +2987,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [9] 급여 집계 ══ -->
 <div id="wageCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">급여 집계</span></div>
   <div class="card">
     <div class="card-title">급여 집계</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
@@ -2986,6 +3001,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [11] 지출리스트 ══ -->
 <div id="explistCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출 리스트</span></div>
   <div class="sub-tabs">
     <button class="sub-tab active" data-action="explistTab|bank|this">🏦 계좌내역</button>
     <button class="sub-tab" data-action="explistTab|card|this">💳 카드내역</button>
@@ -3176,6 +3192,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [12] 정산/검수 ══ -->
 <div id="reconCont" class="container">
+  <div class="app-back" data-action="nav|dashboard"><span class="back-btn">‹</span><span class="back-ttl">정산 검증</span></div>
   <div class="sub-tabs">
     <button class="sub-tab active" data-action="reconTab|summary|this">총괄표</button>
     <button class="sub-tab" data-action="reconTab|detail|this">항목별 상세</button>
@@ -3541,7 +3558,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [10c] 로열티 (신규 — 매출 비례 자동 계산) ══ -->
 <div id="royaltyCont" class="container">
-  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출관리</span></div>
   <div class="card">
     <div class="card-title">💼 로열티</div>
     <div style="font-size:12px;color:var(--gray-600);margin-bottom:12px;">설정의 로열티율 기준으로 매출의 일정 비율을 자동 계산합니다.</div>
@@ -3591,6 +3608,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 <!-- ══ [10a] 지출 카테고리 ══ -->
 <div id="expcatCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">카테고리 관리</span></div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <div class="card-title" style="margin-bottom:0;" id="expCatTitle">💸 지출 카테고리</div>
@@ -16313,8 +16331,20 @@ function _expHubCatParents(){
     !c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense'
   ).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
 }
+// 2026-05-25 카테고리별 색상 통일 (사장님 호소: 다 파란색 → 의미별 색)
+function _expCatColorClass(name){
+  const map = {
+    '식자재':'cat-color-food', '주류':'cat-color-liquor', '음료':'cat-color-drink',
+    '인건비':'cat-color-labor', '비품':'cat-color-supply', '마케팅':'cat-color-marketing',
+    '고정비':'cat-color-fixed', '공과금':'cat-color-fixed', '공과금/고정비':'cat-color-fixed',
+    '세금':'cat-color-tax', '로열티':'cat-color-tax', '로열티/수수료':'cat-color-tax',
+    '기타':'cat-color-etc'
+  };
+  return map[name] || '';
+}
 function _expHubMkCard(cardId, action, iconId, title, amtText){
-  return `<button type="button" class="hub-mini" data-card-id="${cardId}" data-action="${action}">
+  const colorCls = _expCatColorClass(title);
+  return `<button type="button" class="hub-mini ${colorCls}" data-card-id="${cardId}" data-action="${action}">
     <div class="hub-mini-top">
       <span class="hub-mini-icon"><svg><use href="#${iconId}"/></svg></span>
       <span class="hub-mini-title">${esc(title)}</span>
