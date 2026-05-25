@@ -853,7 +853,7 @@
 
 <!-- ══ 카테고리별 영수증 목록 (직구·식자재·비품·기타 진입 공통) ══ -->
 <div id="catReceiptCont" class="container">
-  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출관리</span></div>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
     <span id="catReceiptIcon" style="font-size:28px;">🛒</span>
     <div style="flex:1;min-width:0;">
@@ -1504,6 +1504,7 @@
 
 <!-- ══ [6] 거래처 관리 ══ -->
 <div id="vendorsCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">거래처 관리</span></div>
   <div class="sub-tabs">
     <button class="sub-tab active" data-sub="list" data-action="vendorTab|list|this">거래처</button>
     <button class="sub-tab" data-sub="upload" data-action="vendorTab|upload|this">파일 업로드</button>
@@ -1591,6 +1592,7 @@
 
 <!-- ══ [7] 고정비 ══ -->
 <div id="fixedcostCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">고정비 관리</span></div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
     <div style="flex:1;min-width:0;">
       <div id="fcHeaderTitle" style="font-size:16px;font-weight:700;color:var(--gray-900);">📅 고정비</div>
@@ -1605,7 +1607,7 @@
 <!-- ══ [7-A] manual 카테고리 진입 화면 (세금·마케팅·기타) ══ -->
 <!-- 2026-05-20 신설 — mydata_transactions 자동 분류 거래내역 + sub_category 누적 합계 -->
 <div id="manualCatCont" class="container">
-  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출관리</span></div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;">
     <div style="flex:1;min-width:0;">
       <div id="manualCatHeaderTitle" style="font-size:18px;font-weight:700;color:var(--gray-900);">⚖️ 세금</div>
@@ -1620,6 +1622,7 @@
 
 <!-- ══ [8] 직원관리 ══ -->
 <div id="staffCont" class="container">
+  <div class="app-back" data-action="nav|dashboard"><span class="back-btn">‹</span><span class="back-ttl">직원 관리</span></div>
   <div style="display:flex;gap:8px;margin-bottom:12px;">
     <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderEmpList"><option value="">전체 직급</option></select>
     <select id="empFilterStatus" class="input-field" style="margin-bottom:0;width:85px;padding:10px 12px;font-size:13px;" data-change="renderEmpList">
@@ -1632,6 +1635,7 @@
 
 <!-- ══ [9] 급여 집계 ══ -->
 <div id="wageCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">급여 집계</span></div>
   <div class="card">
     <div class="card-title">급여 집계</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
@@ -1645,6 +1649,7 @@
 
 <!-- ══ [11] 지출리스트 ══ -->
 <div id="explistCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출 리스트</span></div>
   <div class="sub-tabs">
     <button class="sub-tab active" data-action="explistTab|bank|this">🏦 계좌내역</button>
     <button class="sub-tab" data-action="explistTab|card|this">💳 카드내역</button>
@@ -1835,6 +1840,7 @@
 
 <!-- ══ [12] 정산/검수 ══ -->
 <div id="reconCont" class="container">
+  <div class="app-back" data-action="nav|dashboard"><span class="back-btn">‹</span><span class="back-ttl">정산 검증</span></div>
   <div class="sub-tabs">
     <button class="sub-tab active" data-action="reconTab|summary|this">총괄표</button>
     <button class="sub-tab" data-action="reconTab|detail|this">항목별 상세</button>
@@ -2200,7 +2206,7 @@
 
 <!-- ══ [10c] 로열티 (신규 — 매출 비례 자동 계산) ══ -->
 <div id="royaltyCont" class="container">
-  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|expHub">‹ 지출관리</button>
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출관리</span></div>
   <div class="card">
     <div class="card-title">💼 로열티</div>
     <div style="font-size:12px;color:var(--gray-600);margin-bottom:12px;">설정의 로열티율 기준으로 매출의 일정 비율을 자동 계산합니다.</div>
@@ -2250,6 +2256,7 @@
 
 <!-- ══ [10a] 지출 카테고리 ══ -->
 <div id="expcatCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">카테고리 관리</span></div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <div class="card-title" style="margin-bottom:0;" id="expCatTitle">💸 지출 카테고리</div>
@@ -14972,10 +14979,26 @@ function _expHubCatParents(){
     !c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense'
   ).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
 }
-function _expHubMkCard(cardId, action, iconId, title, amtText){
+// 2026-05-25 카테고리별 색상 통일 — expense_categories.color (DB) 직접 사용 (사장님 호소: 하드코딩 X, 헌법 10조-2 관리편의성 + 10조-9 확장성 준수)
+//  · 하드코딩 매핑 폐기. 사장님이 카테고리 관리에서 색 박은 거 그대로 적용
+//  · #RRGGBB → rgba(_,_,_, 0.13) 흐릿한 배경 + color 진한 stroke (svg는 currentColor 상속)
+function _hexToRgba(hex, alpha){
+  if(!hex || typeof hex !== 'string' || !hex.startsWith('#')) return null;
+  const c = hex.slice(1);
+  const h = c.length===3 ? c[0]+c[0]+c[1]+c[1]+c[2]+c[2] : c;
+  if(h.length!==6 || !/^[0-9a-fA-F]{6}$/.test(h)) return null;
+  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function _expHubMkCard(cardId, action, iconId, title, amtText, color){
+  let iconStyle = '';
+  if(color){
+    const tint = _hexToRgba(color, 0.13);
+    if(tint) iconStyle = `style="background:${tint};color:${color};"`;
+  }
   return `<button type="button" class="hub-mini" data-card-id="${cardId}" data-action="${action}">
     <div class="hub-mini-top">
-      <span class="hub-mini-icon"><svg><use href="#${iconId}"/></svg></span>
+      <span class="hub-mini-icon" ${iconStyle}><svg><use href="#${iconId}"/></svg></span>
       <span class="hub-mini-title">${esc(title)}</span>
     </div>
     <div class="hub-mini-amt" data-amt-cell="${cardId}">${amtText}</div>
@@ -14988,9 +15011,9 @@ function renderExpHubCatSkeleton(){
   if(!parents.length) return; // 캐시 비면 기존 "불러오는 중..." 유지
   let html = '';
   parents.forEach(cat=>{
-    html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, '-');
+    html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, '-', cat.color);
   });
-  html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', '-');
+  html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', '-', '#F04452');
   grid.innerHTML = html;
   applyExpHubCardOrder();
   grid._sortableInited = false;
@@ -15006,10 +15029,10 @@ function updateExpHubCatAmounts(catSums){
     let html = '';
     parents.forEach(cat=>{
       const amt = catSums?.[cat.id]?.amount || 0;
-      html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, amt?fmt(amt):'0');
+      html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, amt?fmt(amt):'0', cat.color);
     });
     const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
-    html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt?fmt(royaltyAmt):'0');
+    html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt?fmt(royaltyAmt):'0', '#F04452');
     grid.innerHTML = html;
     applyExpHubCardOrder();
     grid._sortableInited = false;

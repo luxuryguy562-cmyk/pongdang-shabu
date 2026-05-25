@@ -163,8 +163,9 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-mini:active{background:var(--gray-100);}
 .hub-mini-dot{width:8px;height:8px;border-radius:50%;margin-bottom:4px;}
 /* 아이콘 배경 통일 — 모든 카드 같은 톤 (사장님 의견 2026-05-12) */
-.hub-mini-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:8px;flex-shrink:0;background:#EBF3FF;}
-.hub-mini-icon svg{width:17px;height:17px;color:var(--blue);stroke:var(--blue);fill:none;}
+.hub-mini-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:8px;flex-shrink:0;background:#EBF3FF;color:var(--blue);}
+/* 2026-05-25: svg stroke를 currentColor 상속 — 카테고리 cat.color를 inline style로 박으면 자동 적용 */
+.hub-mini-icon svg{width:17px;height:17px;stroke:currentColor;fill:none;}
 .hub-mini-icon .hub-mini-text{color:#fff;font-size:12px;font-weight:900;letter-spacing:0;font-family:system-ui,-apple-system,sans-serif;line-height:1;}
 .hub-mini-icon.bg-open{background:#F59E0B;}
 .hub-mini-icon.bg-close{background:#6366F1;}
@@ -1207,10 +1208,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-enter-v7 .body-col .profit-rate.good{color:#0CAB6C;font-weight:800;}
 .dash-enter-v7 .body-col .profit-rate.gray{color:#B0B8C1;}
 .dash-enter-v7 .arrow{font-size:24px;color:#B0B8C1;font-weight:300;line-height:1;flex-shrink:0;}
-/* 뒤로 가기 */
-.dash-back-row{display:flex;align-items:center;padding:8px 4px 16px;cursor:pointer;}
-.dash-back-row .back-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#333D4B;font-weight:600;background:transparent;}
-.dash-back-row .back-ttl{font-size:17px;font-weight:800;color:#191F28;letter-spacing:-0.5px;margin-left:4px;}
+/* 뒤로 가기 — 2026-05-25 통합: 대시보드 stage + 모든 진입 화면 공통 (사장님 호소: 있는 곳·없는 곳 짜증) */
+.dash-back-row, .app-back{display:flex;align-items:center;padding:8px 4px 16px;cursor:pointer;gap:4px;}
+.dash-back-row .back-btn, .app-back .back-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#333D4B;font-weight:600;background:transparent;flex-shrink:0;}
+.dash-back-row .back-ttl, .app-back .back-ttl{font-size:17px;font-weight:800;color:#191F28;letter-spacing:-0.5px;}
+.app-back .back-sub{font-size:11px;color:var(--gray-500);font-weight:600;margin-left:auto;font-variant-numeric:tabular-nums;}
 /* 오늘 상세 헤더 (그라데이션) */
 .dash-today-detail-head{background:linear-gradient(150deg,#3182F6 0%,#0064FF 100%);border-radius:24px;padding:24px 22px 28px;color:#fff;margin-bottom:16px;box-shadow:0 8px 24px rgba(49,130,246,0.25);}
 .dash-today-detail-head .lb{font-size:13px;font-weight:600;opacity:.88;display:flex;align-items:center;gap:6px;letter-spacing:-0.3px;margin-bottom:8px;}
@@ -1338,3 +1340,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .exp-channel-card .ec-nm{font-size:13px;font-weight:700;color:var(--toss-text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;letter-spacing:-0.3px;}
 .exp-channel-card .ec-vl{font-size:18px;font-weight:800;color:var(--toss-text-1);text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;letter-spacing:-0.5px;}
 .exp-channel-card .ec-sub{font-size:11px;color:var(--toss-text-4);font-weight:500;margin-top:3px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;letter-spacing:-0.2px;}
+</style>
+</head>
+<body>
+
