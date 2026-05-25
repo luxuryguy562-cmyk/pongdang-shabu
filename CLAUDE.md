@@ -541,62 +541,50 @@ to: [다음 에이전트]
 
 ---
 
-## 제8조-A. Supabase MCP 도구 안전 규칙 (2026-05-17 신설, 2026-05-20 실측 정정)
+## 제8조-A. Supabase MCP 도구 안전 규칙
 
-> 사장님이 claude.ai에서 Supabase OAuth 커넥터를 승인하여 Judypapa 조직에 광범위 권한(프로젝트 삭제 포함)을 부여한 상태.
-> `.mcp.json`이 `--read-only`로 잠겨 있다.
->
-> ⚠️ **2026-05-20 실측 발견 (헌법 1-7 추측 금지 위반 사례 — dev_lessons #107)**:
-> 옛 본 조항은 "`--read-only`가 변경 도구를 거부할 가능성 큼"이라 추측 박았으나, **실제로 `UPDATE` SQL이 통과됨** (프레시원 category_id fix 시 확인).
-> → `--read-only`는 **DDL만 차단**하는 것으로 추정 (DDL 거부 여부 다음 세션 정확 검증).
-> → **DML(INSERT/UPDATE/DELETE)의 유일한 안전망 = 사장님 "실행 승인" 4글자 게이트** (8-A-4).
+> `.mcp.json`이 `--read-only` 잠금. 다만 **DML(INSERT/UPDATE/DELETE)는 통과**됨 (2026-05-20 실측). 유일한 안전망 = 사장님 "실행 승인" 4글자.
 
-### 8-A-1. 1차 방어선 — `.mcp.json --read-only` 절대 유지
-- `.mcp.json`의 `--read-only` 플래그는 **절대 임의로 제거하지 않는다.**
-- 제거 필요 시: 사장님께 사유 보고 → 명시적 승인 → 변경 → 작업 끝나면 **즉시 원복**.
-- 매 세션 시작 시(또는 의심 상황) `cat .mcp.json | grep read-only`로 안전망 유지 확인.
+### 8-A-1. `.mcp.json --read-only` 절대 유지
+- 플래그 임의 제거 금지. 제거 필요 시 사장님 명시 승인 → 작업 끝 즉시 원복.
+- 매 세션 `cat .mcp.json | grep read-only` 확인.
 
-### 8-A-2. 도구 3색 신호등 분류
+### 8-A-2. 도구 3색 신호등
 
-**🟢 초록불 — 자동 실행 OK (보기만 함)**
-- `list_*` 계열: `list_projects`, `list_tables`, `list_extensions`, `list_migrations`, `list_branches`, `list_edge_functions`
-- `get_*` 계열: `get_project_url`, `get_anon_key`/`get_publishable_api_key`, `get_logs`, `get_advisors`
-- `execute_sql` (단, **SELECT 구문만**)
+**🟢 자동 실행 OK (보기만)**
+- `list_*` (`list_projects`, `list_tables`, `list_extensions` 등)
+- `get_*` (`get_project_url`, `get_logs`, `get_advisors` 등)
+- `execute_sql` (SELECT만)
 
-**🟡 노란불 — 사장님 "실행 승인" 4글자 필수 (변경 작업)**
-- `execute_sql` (INSERT / UPDATE / DELETE / WITH ... 변경 SQL) — **`--read-only`가 거부 안 함 (2026-05-20 실측)**
-- 변경 SQL 실행 전: SQL 본문 + 한글 설명 + 영향 행 수 추정 + 백업 SELECT → 사장님 **"실행 승인" 4글자** → 실행 → 검증 SELECT
-- 옛 "OK"만으로는 실행 금지 (애매 = 빨간불 취급, 8-A-4)
+**🟡 사장님 "실행 승인" 4글자 필수 (변경 SQL)**
+- `execute_sql` (INSERT/UPDATE/DELETE/WITH 변경)
+- 절차: SQL 본문 + 한글 설명 + 영향 행 수 + 백업 SELECT → 사장님 "실행 승인" → 실행 → 검증 SELECT
 
-**🔴 빨간불 — 절대 자동 호출 금지 (사장님이 "실행 승인" 명시한 1회만)**
-- `apply_migration` (DDL: 테이블/컬럼 생성·변경·삭제)
+**🔴 자동 호출 절대 금지 (사장님 "실행 승인" 명시한 1회만)**
+- `apply_migration` (DDL — 테이블·컬럼 생성·변경·삭제)
 - `deploy_edge_function` (서버 코드 배포)
-- `create_branch` / `delete_branch` / `merge_branch` / `reset_branch` / `rebase_branch`
-- `create_project` / `delete_project` / `pause_project` / `restore_project`
+- `create/delete/merge/reset/rebase_branch`
+- `create/delete/pause/restore_project`
 - `update_postgres_config`
-- 분류 미정 신규 도구는 빨간불로 간주
+- 분류 미정 신규 도구
 
-### 8-A-3. 호출 전 의무 절차
-1. 호출할 도구 이름을 사장님께 한 줄 보고 ("`list_tables` 호출합니다")
-2. 🟢이면 그대로 실행 후 결과 요약
-3. 🟡이면 SQL/인자 한글 설명 → "OK" 대기 → 실행 → 결과 + 영향 행 수 보고
-4. 🔴이면 호출 거부. 다음 절차 거친 경우에만 1회 실행:
-   - ① 무슨 도구·무슨 SQL을 쓸지 사장님께 보여줌 (백업·롤백 계획 동반)
-   - ② 사장님이 **"실행 승인"** 4글자 명시
-   - ③ 즉시 1회만 실행, 결과 보고
+### 8-A-3. 호출 전 절차
+1. 도구 이름 사장님께 한 줄 보고
+2. 🟢 = 실행 + 요약 / 🟡 = "실행 승인" 대기 + 실행 + 영향 행 수 / 🔴 = 백업·롤백 계획 동반 + "실행 승인" 1회
 
-### 8-A-4. 애매하면 빨간불 취급
-- 사장님이 "DB 정리해줘", "쓸데없는 거 지워", "니가 해", "OK" 같은 **애매한 지시**로는 빨간불 도구 호출 금지.
-- 사장님이 **"실행 승인"** 4글자를 정확히 말한 경우에만 실행.
-- "실행 승인 + 뒤에 무엇" 형태도 허용 (예: "실행 승인 잠가", "실행 승인 진행해").
+### 8-A-4. 애매하면 빨간불
+- "DB 정리해줘", "니가 해", "OK" 같은 애매한 지시 = 빨간불 도구 호출 금지
+- **"실행 승인" 4글자** 명시만 OK (또는 "실행 승인 + 뒷말")
 
 ### 8-A-5. 사고 대응
-- 🟡 도구 실행 후 결과가 예상과 다르면 → 즉시 추가 호출 중단 + 사장님 보고
-- 데이터 손실 의심 시 → Supabase Dashboard PITR(Point-in-time Recovery) 안내
-- 잘못된 SQL은 가능한 한 역방향 SQL 작성하여 함께 보고
+- 🟡 결과 예상 다름 → 즉시 중단 + 사장님 보고
+- 데이터 손실 의심 → Supabase Dashboard PITR(시점 복원) 안내
+- 잘못된 SQL → 역방향 SQL 함께 보고
 
-### 8-A-6. 신규 도구 발견 시 (헌법 1-7 연계)
-- 위 분류에 없는 도구가 MCP에 추가되면 → 호출 금지 + 사장님에게 도구명·설명 보고 → 분류 합의 후 본 조항 갱신.
+### 8-A-6. 신규 도구
+위 분류 없는 신규 MCP 도구 발견 시 → 호출 금지 + 사장님 보고 + 분류 합의 후 본 조항 갱신.
+
+> 도입 배경 (2026-05-20 실측 — dev_lessons #107 추측 금지 위반): `docs/dev_lessons.md` 참조
 
 ---
 
@@ -735,45 +723,39 @@ to: [다음 에이전트]
 - 동종 앱/시장 인사이트 (캐시노트는 OCR 보조 위치 등)
 - 새 비즈니스 규칙 (사장님 도메인 단어, 용어 의미)
 
-### 토큰 비용 절감 수칙
-- context_reader: 전체 코드를 읽지 말고, 요청 관련 키워드로 grep 발췌만
-- 소형 작업: reviewer/tester/designer 건너뛰기
-- DB 스키마 참조: index.html 파싱 대신 `docs/db_schema.md` 직접 참조
-- 계획서가 10줄 이하면 인수인계 블록 생략 가능
+### 토큰 비용 절감
+- context_reader: 전체 코드 X, grep 발췌만
+- DB 스키마 참조: `docs/db_schema.md` 직접 (index.html 파싱 X)
+- 계획서 10줄 이하면 인수인계 블록 생략 가능
+
+> **옛 "소형 작업 designer 생략" 폐기** (2026-05-25 사장님 명시 — 헌법 4-1).
 
 ### 파일 구조
 ```
 pongdang-shabu/
 ├── CLAUDE.md              ← 헌법 (이 파일)
-├── agents/                ← 에이전트 워크플로우 (자동 읽힘)
-│   ├── context_reader.md
-│   ├── critic.md
-│   ├── advisor.md
-│   ├── profit_advisor.md  ← 수익성·검증가능성 (2026-05-17 신설)
-│   ├── planner.md
-│   ├── designer.md
-│   ├── reviewer.md
-│   ├── coder.md
-│   ├── tester.md
-│   └── deployer.md
+├── .claude/
+│   ├── hooks/session-start.sh   ← 매 세션 환경 자가 점검 (1-7-B 자동화)
+│   ├── settings.json            ← hook 등록
+│   └── tools_guide.md           ← 도구 사용 표준 절차
+├── .mcp.json              ← MCP 도구 (supabase/sentry/cloudflare/slack)
+├── agents/                ← 에이전트 워크플로우
+│   └── (context_reader, critic, advisor, profit_advisor, planner, designer, reviewer, coder, tester, deployer).md
 ├── docs/
-│   ├── vision.md             ← 🎯 Tier 0 — 비전·철학 (모든 결정의 기준, 2026-05-24 신설)
-│   ├── persona.md            ← Tier 3 — 사용자 정의 (메인+서브 5+안티, 2026-05-24)
-│   ├── pricing.md            ← Tier 3 — 가격 정책 (4단계, 2026-05-24)
-│   ├── marketing.md          ← Tier 3 — 1,000명 모집 전략 (2026-05-24)
-│   ├── roadmap.md            ← Tier 3 — Phase 1~4 일정·KPI (2026-05-24)
-│   ├── team.md               ← Tier 3 — Phase별 채용 + RACI (2026-05-24)
-│   ├── blueprint.md          ← Tier 3 — 화면 14개 설계도 + 위험 FK 5개 (2026-05-24)
-│   ├── blueprint_diagram.svg ← Tier 3 — 데이터 흐름 시각화 (사장님 명시, 2026-05-24)
-│   ├── db_schema.md          ← Supabase 테이블 구조 (유일한 스키마 진실)
-│   ├── plan.md               ← 전체 시스템 설계 + 구현 현황 (유일한 계획 진실)
-│   ├── services.md           ← 외부 서비스 URL/키/배포 정보
-│   ├── work_log.md           ← 세션별 작업 요약
-│   ├── dev_lessons.md        ← 개발 교훈/반성 (같은 실수 방지)
-│   ├── business_rules.md     ← 사장님 비즈니스 규칙/변수 (유일한 규칙 진실)
-│   └── todo_next_session.md  ← 다음 세션 우선 작업
-├── index.html             ← 앱 본체
-├── manifest.json
-├── icon-192.png
-└── upsolution-crawler.js
+│   ├── vision.md          ← 🎯 Tier 0 — 비전·철학
+│   ├── persona.md / pricing.md / marketing.md / roadmap.md / team.md / blueprint.md / blueprint_diagram.svg  ← Tier 3
+│   ├── db_schema.md       ← Supabase 표 구조 (유일한 스키마 진실)
+│   ├── plan.md            ← 전체 설계 + 구현 현황
+│   ├── services.md        ← 외부 서비스 URL/키
+│   ├── work_log.md        ← 세션별 작업 요약
+│   ├── dev_lessons.md     ← 개발 교훈 (같은 실수 방지)
+│   ├── business_rules.md  ← 비즈니스 규칙/변수
+│   └── todo_next_session.md ← 다음 세션 우선 작업
+├── index.html             ← 화면 골격 (2026-05-25 분리 완료, 3,197줄)
+├── assets/
+│   ├── styles.css         ← 꾸미기 (1,346줄)
+│   ├── common.js          ← 공통 부품 (588줄)
+│   └── tabs/              ← 6개 탭 모듈
+│       └── (receipt, attendance, schedule, settlement, dashboard, sidemenu).js
+├── manifest.json / icon-192.png / upsolution-crawler.js
 ```
