@@ -4,6 +4,113 @@
 
 ---
 
+## [2026-05-25] #130 카테고리 색상 = DB 컬럼 사용 (하드코딩 금지)
+
+**사장님 직접 지적**: "혹시 하드코딩이니?"
+
+**잘못**: 카테고리 이름 → 색상 클래스 매핑 9개 (`식자재→cat-color-food` 등)를 JS에 박음.
+
+**원인**: `expense_categories.color` 컬럼이 **이미 있는데** 무시. 사장님이 카테고리 관리에서 박은 색을 안 씀.
+
+**헌법 위반 3건**:
+- 10조-2 관리편의성 (코드 수정 없이 데이터 변경 반영)
+- 10조-9 확장성 (여러 매장 기준)
+- vision 5-1 (다른 외식업 사장님에게 팔 수 있는가)
+
+**해결 (PR #271)**:
+- `_hexToRgba(hex, alpha)` 헬퍼 + inline style `background:tint;color:hex`
+- `.hub-mini-icon svg{stroke:currentColor}` color 상속
+- `cat.color` (DB) 그대로 전달
+- 하드코딩 매핑 + CSS 9개 잔재 다 제거
+
+**교훈**: 새 매장에서도 작동해야 = 데이터 기반. 코드 매핑 = 빨간불.
+
+---
+
+## [2026-05-25] #131 저장 후 캐시 무효화 + 활성 화면 즉시 갱신
+
+**사장님 호소**: "거래처 200만 등록해도 홈에서 매출 입력 전엔 반영 안 됨"
+
+**원인**: SWR 캐시 (`_pdCacheMem` + `sessionStorage`, 5분 TTL). 저장 함수가 캐시 무효화 안 하면 다음 진입 시 옛 데이터.
+
+**기존 동작**:
+- `saveQuickSalesInput` = `loadDashboard(true)` 호출 ✅
+- `_refreshAfterOrderChange` / `saveReceipt` 등 = 없음 ❌
+
+**해결 (PR #277)**:
+```js
+function _refreshAfterExpenseChange(){
+  if(typeof cacheInvalidate === 'function') cacheInvalidate('');
+  // 홈/지출관리 활성 화면 즉시 새로고침
+  const dashCont = document.getElementById('dashboardCont');
+  if(dashCont && dashCont.classList.contains('active')){
+    loadDashboard(true).catch(_=>{});
+  }
+  // ...
+}
+```
+
+**교훈**: 데이터 저장 함수 끝에 항상 `cacheInvalidate('') + 활성 화면 강제 새로고침`. 사용자가 다른 화면 가도 fresh 보장.
+
+---
+
+## [2026-05-25] #132 사용자 전환 시 옛 상태 잔재 — _resetUserState 헬퍼 의무
+
+**사장님 호소**: "문보영 로그인 후 이송은 재로그인했더니 직원 필터·KPI 문보영 그대로"
+
+**원인**: `completeLogin`이 `selectedEmpId`만 리셋. 전역 상태 18개 + DOM select 5개 + SWR 캐시 잔재.
+
+**해결 (PR #275)**:
+- `_resetUserState()` 신설 (`typeof X !== 'undefined'` 가드로 안전)
+- `completeLogin` + `doLogout` 양쪽에서 호출
+
+**리셋 대상**:
+- 전역: `selectedEmpId`, `schedEmpId`, `attAllSelectedDate`, `attAllDayMap`, `catReceiptMode/Filter/RowsCache`, `rcpRecords`, `rcpEntryReturn`, `_tdContext/_tdDay`, `_orderDraft*`, `vendorMonthTotals`, 월 상태 3개, `window._att*`
+- DOM: `attEmpFilter`, `orderVendorFilter`, `empFilterRole/Status`, `bankFilterBtn` → 첫 옵션
+- SWR: `cacheInvalidate('')`
+
+**교훈**: 멀티 유저 앱은 로그인/아웃 시 모든 사용자별 상태 명시 리셋. 메모리·DOM·캐시 3가지 동시.
+
+---
+
+## [2026-05-25] #133 데이터 화면 갈래 분리 = 사용자 호소 누적
+
+**사장님 호소 (3회)**:
+1. "거래처 영수증 2번 합산되는 거 같다" → 거래처 화면이 vendor_orders만 표시 (영수증 무시)
+2. "기타 들어가면 영수증 안 보임" → manualCat 화면이 mydata만 (영수증·거래처주문 무시)
+3. "월급제 직원 빠짐" → 3개 화면이 attendance_logs만 (월급 무시)
+
+**공통 원인**: 데이터 소스별로 표시 화면 분리됨. 사장님이 한 종류 데이터 박으면 다른 화면에서 안 보임.
+
+**해결 패턴 (헌법 1-6 갈아엎기)**:
+- 공통 정규화 함수 (`_normalizeExpenseRow`, `calcMonthlyProratedWages`)
+- 모든 소스 합산 화면 단일화
+- D안 패턴 (영수증 + 거래처 주문 + 통장·카드 통합 표)
+
+**교훈**: 데이터 소스별 화면 분리 = 빨간불. **사용자는 데이터 소스 모름**. 표시는 통합, 합산도 통합. 분기 필요하면 헤더 아이콘으로만 (🏪/📸/🏦/💳).
+
+---
+
+## [2026-05-25] #134 사장님 보고 단순화 (헌법 1-9 강화)
+
+**사장님 호소 2회**:
+- "쉽게 말하세요" (보고가 너무 기술적·길음)
+- "어렵다" (옵션 4개 + 표 = 사장님 결정 피로)
+
+**해결**:
+- 옵션은 2~3개 (4개 X)
+- 표보다 비유 1개 + 결과 한 줄
+- 함수명·CSS 클래스명 같은 영어 → 한국어 풀이 (괄호 안에 영어 원어)
+- 코드 한 줄 X (사장님에게 안 보임 dev_lessons #57)
+
+**위반 사례 (이번 세션)**:
+- ❌ "calcExpenseByCategories 패턴 일관" → ⭕ "대시보드 합산 함수와 같은 방식"
+- ❌ "_resetUserState 헬퍼 신설 + 전역 18개 리셋" → ⭕ "사람 바꿔 로그인하면 옛 흔적 사라짐"
+
+**교훈**: 사장님 호소 = 즉시 다음 답부터 단순화. "또" 들어가면 헌법 1-8 빙산 발동.
+
+---
+
 ## 129. 헌법 1-1 🔴 정의 자체 결함 — 사장님 부담 떠넘김 카테고리 (2026-05-25 사장님 "결국 중요한거 다 나한테 넘김" 호소)
 
 ### 사건
