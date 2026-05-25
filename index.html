@@ -7195,9 +7195,12 @@ async function calcWageData(empId, appIn, appOut, date, restMinOverride){
     const ns=settings.night_extra_start,ne=settings.night_extra_end;
     nightMin=ns&&ne?calcNightMin(appIn,appOut,date,ns,ne):0;
     const wE=isWeekend?(settings.weekend_extra||0):0;
-    const nE=nightMin>0?(settings.night_extra_amount||0):0;
+    const nE=settings.night_extra_amount||0; // 시간당 야간 추가시급
     const spE=sw?.extra_amount||0;
-    wage=Math.round((totalMin/60)*((emp?.base_wage||10030)+wE+nE+spE));
+    // 2026-05-25 버그 수정: 야간수당은 nightMin 부분만 적용 (옛 식은 totalMin 전체에 곱해 과지급)
+    //  · 정상식: (총근무h) × (시급 + 주말추가 + 특별가산) + (야간h) × 야간추가
+    const baseRate=(emp?.base_wage||10030)+wE+spE;
+    wage=Math.round((totalMin/60)*baseRate + (nightMin/60)*nE);
   }
   return{restMin,isWeekend,totalMin,nightMin,wage};
 }
@@ -7215,8 +7218,9 @@ function empColor(empId){
 }
 function fmtHourDecimal(min){
   if(min==null||min<=0) return '0h';
-  const h2 = Math.round(min/30)/2;
-  return (Number.isInteger(h2)?h2.toFixed(0):h2.toFixed(1))+'h';
+  // 2026-05-25 사장님 호소: 0.5h 단위 반올림이 부정확 → 소수점 한 자리 정확 표시
+  const h = min/60;
+  return (Number.isInteger(h)?h.toFixed(0):h.toFixed(1))+'h';
 }
 // 인건비 컴팩트 표기: 10만 이상이면 만 단위 반올림 "385만", 미만이면 "9,500원"
 function fmtMan(won){
@@ -13793,7 +13797,7 @@ async function recalcMonthWages(){
   if(!currentStore||!confirm('이달 근태 기록의 급여를 현재 시급 기준으로 재계산합니다.\n계속하시겠습니까?')) return;
   setLoad(true,'급여 재계산 중...');
   const [y,m]=wageMonthStr.split('-').map(Number);const lastDay=new Date(y,m,0).getDate();
-  const{data}=await sb.from('attendance_logs').select('id,employee_id,work_date,app_in,app_out,total_work_min,rest_min').eq('store_id',currentStore.id).gte('work_date',wageMonthStr+'-01').lte('work_date',wageMonthStr+'-'+String(lastDay).padStart(2,'0'));
+  const{data}=await sb.from('attendance_logs').select('id,employee_id,work_date,app_in,app_out,total_work_min,rest_min,night_min').eq('store_id',currentStore.id).gte('work_date',wageMonthStr+'-01').lte('work_date',wageMonthStr+'-'+String(lastDay).padStart(2,'0'));
   let updated=0;
   for(const r of (data||[])){
     if(!r.total_work_min) continue;
@@ -13803,9 +13807,10 @@ async function recalcMonthWages(){
     const wE=isWeekend?(settings.weekend_extra||0):0;
     const{data:sw}=await sb.from('special_wages').select('extra_amount').eq('store_id',currentStore.id).eq('target_date',r.work_date).maybeSingle();
     const spE=sw?.extra_amount||0;
-    // 야간 계산 간소화: total_work_min 기반
-    const nE=0; // 야간수당은 기존 기록 유지 (재계산 시 정확도 이슈)
-    const wage=Math.round((r.total_work_min/60)*(emp.base_wage+wE+nE+spE));
+    // 2026-05-25 버그 수정: 야간수당은 night_min 부분만 (calcWageData와 통일)
+    const nE=settings.night_extra_amount||0;
+    const nightMin=r.night_min||0;
+    const wage=Math.round((r.total_work_min/60)*(emp.base_wage+wE+spE) + (nightMin/60)*nE);
     await sb.from('attendance_logs').update({calculated_wage:wage}).eq('id',r.id).eq('store_id',currentStore.id);
     updated++;
   }
