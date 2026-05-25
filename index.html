@@ -1528,11 +1528,11 @@
   </div>
   <div id="vendorOrders" style="display:none;">
     <!-- 거래처 상세 헤더 (카드에서 진입 시 채워짐) -->
-    <div id="vendorDetailHeader" style="display:flex;align-items:center;gap:10px;padding:10px 0 14px;margin-bottom:8px;border-bottom:1px solid var(--gray-100);">
-      <button class="btn btn-secondary btn-sm" data-action="vendorTab|list|null" style="padding:6px 10px;font-size:13px;">‹ 목록</button>
+    <div id="vendorDetailHeader" style="display:flex;align-items:center;gap:6px;padding:10px 0 14px;margin-bottom:8px;border-bottom:1px solid var(--gray-100);">
+      <button type="button" data-action="vendorTab|list|null" style="width:36px;height:36px;border-radius:50%;border:none;background:transparent;font-size:20px;color:#333D4B;font-weight:600;cursor:pointer;flex-shrink:0;line-height:1;padding:0;">‹</button>
       <div style="flex:1;min-width:0;">
-        <div id="vdName" style="font-size:15px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">전체 거래처</div>
-        <div id="vdCategory" style="font-size:11px;color:var(--gray-500);"></div>
+        <div id="vdName" style="font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">전체 거래처</div>
+        <div id="vdCategory" style="font-size:11px;color:var(--gray-500);font-weight:600;"></div>
       </div>
       <button id="vdEditBtn" class="btn btn-secondary btn-sm" style="padding:6px 10px;font-size:12px;display:none;" data-action="editVendorFromDetail">편집</button>
       <!-- 거래종료 버튼은 편집 시트 안으로 이동 (사장님 요청 2026-05-15) -->
@@ -2289,7 +2289,7 @@
 
 <!-- ══ [10c] 매출 관리 (카드형) ══ -->
 <div id="salesCont" class="container">
-  <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;padding:6px 12px;font-size:13px;" data-action="nav|dashboard">‹ 홈</button>
+  <div class="app-back" data-action="nav|dashboard"><span class="back-btn">‹</span><span class="back-ttl">매출 관리</span></div>
   <div class="sales-month-sticky">
     <div>
       <div class="sms-label">월 매출 합계</div>
@@ -15319,8 +15319,8 @@ function completeLogin(emp){
   viewAsLevel=null;
   // ─── VIEWAS-END ───
   recalcPermissions();
-  // 전역 상태 초기화 (이전 세션 잔여 방지)
-  selectedEmpId=null;schedEmpId=null;
+  // 2026-05-25 사장님 호소: 직원 전환 시 옛 필터·일자·캐시 잔재 → 잘못된 직원 데이터 노출
+  _resetUserState();
   document.getElementById('headerUser').innerText=emp.name;
   document.getElementById('loginOverlay').style.display='none';
   document.body.style.overflow='';
@@ -15365,6 +15365,48 @@ function completeLogin(emp){
   // 기기 등록 상태 팝업 (staff만 — 관리자는 여러 기기 사용 가능하므로 스킵)
   if(!isManager) setTimeout(()=>showDeviceStatusPopup(emp),400);
 }
+// 2026-05-25 신설: 사용자 전환 시 옛 필터·일자·캐시 잔재 일괄 제거
+//  · 사장님 호소: 문보영으로 로그인 후 이송은으로 다시 로그인했더니 직원 필터·KPI가 문보영 그대로
+//  · completeLogin + doLogout 양쪽에서 호출
+function _resetUserState(){
+  try{
+    // 글로벌 상태 (var 선언 순서대로)
+    if(typeof selectedEmpId !== 'undefined') selectedEmpId = null;
+    if(typeof schedEmpId !== 'undefined') schedEmpId = null;
+    if(typeof selectedEmpCtx !== 'undefined') selectedEmpCtx = 'att';
+    if(typeof attAllSelectedDate !== 'undefined') attAllSelectedDate = null;
+    if(typeof attAllDayMap !== 'undefined') attAllDayMap = {};
+    if(typeof catReceiptMode !== 'undefined') catReceiptMode = null;
+    if(typeof catReceiptFilter !== 'undefined') catReceiptFilter = 'all';
+    if(typeof catReceiptRowsCache !== 'undefined') catReceiptRowsCache = [];
+    if(typeof rcpRecords !== 'undefined') rcpRecords = [];
+    if(typeof rcpEntryReturn !== 'undefined') rcpEntryReturn = null;
+    if(typeof _tdContext !== 'undefined') _tdContext = null;
+    if(typeof _tdDay !== 'undefined') _tdDay = null;
+    if(typeof _orderDraftRows !== 'undefined') _orderDraftRows = [];
+    if(typeof _orderEditingGroupId !== 'undefined') _orderEditingGroupId = null;
+    if(typeof _orderEditingFallbackIds !== 'undefined') _orderEditingFallbackIds = [];
+    if(typeof vendorMonthTotals !== 'undefined') vendorMonthTotals = {};
+    // 월 상태 = 이번달로 리셋 (옛 사용자가 옛 월 보고 있던 잔재 방지)
+    const _ym = new Date().toISOString().slice(0,7);
+    if(typeof attAllMonth !== 'undefined') attAllMonth = _ym;
+    if(typeof wageMonthStr !== 'undefined') wageMonthStr = _ym;
+    if(typeof dashMonthStr !== 'undefined') dashMonthStr = _ym;
+    if(window._attSchedDayMap) window._attSchedDayMap = {};
+    if(window._attListData) window._attListData = [];
+    if(window._attSchedListData) window._attSchedListData = [];
+    // DOM select 값 리셋 (옵션 첫 번째 = 보통 '전체')
+    ['attEmpFilter','orderVendorFilter','empFilterRole','empFilterStatus','bankFilterBtn'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el && el.tagName === 'SELECT'){
+        const first = el.querySelector('option');
+        if(first) el.value = first.value;
+      }
+    });
+    // 캐시 키별 클리어 (SWR cacheSet 사용처) — 사용자 권한 따라 결과 다를 수 있음
+    if(typeof cacheInvalidate === 'function') cacheInvalidate('');
+  }catch(e){ console.warn('[_resetUserState]', e.message); }
+}
 function doLogout(){
   if(!confirm('로그아웃?')) return;
   closeAllSheets();
@@ -15374,6 +15416,8 @@ function doLogout(){
   viewAsLevel=null;
   // ─── VIEWAS-END ───
   recalcPermissions();
+  // 2026-05-25 사장님 호소: 직원 전환 시 옛 필터·일자·캐시 잔재 방지
+  _resetUserState();
   localStorage.removeItem('pd_emp');
   // 모든 컨테이너 내용 초기화 (이전 세션 데이터 잔류 방지)
   document.querySelectorAll('.container').forEach(c=>{c.classList.remove('active');});
