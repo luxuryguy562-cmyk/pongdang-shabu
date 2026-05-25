@@ -4422,6 +4422,7 @@ async function saveReceipt(){
     // 기록 내역 서브탭 전환 + 최신 데이터 로드
     rcpTab('list');
     await loadReceiptList();
+    _refreshAfterExpenseChange(); // 홈·지출관리 캐시 무효화 + 즉시 갱신
   }
 }
 
@@ -4756,6 +4757,7 @@ async function saveReceiptEdit(){
   } else {
     await loadReceiptList();
   }
+  _refreshAfterExpenseChange();
 }
 
 async function deleteReceiptRow(){
@@ -4773,6 +4775,7 @@ async function deleteReceiptRow(){
   } else {
     await loadReceiptList();
   }
+  _refreshAfterExpenseChange();
 }
 
 // ─── 영수증 그룹 편집 (2026-05-19 신설) — 그룹 헤더 [✏ 편집] 진입 ───
@@ -4965,6 +4968,7 @@ async function saveReceiptGroupEdit(){
   } else {
     await loadReceiptList();
   }
+  _refreshAfterExpenseChange();
 }
 async function deleteReceiptGroup(editKey){
   if(!guardStore()) return;
@@ -5001,6 +5005,7 @@ async function deleteReceiptGroup(editKey){
   } else {
     await loadReceiptList();
   }
+  _refreshAfterExpenseChange();
 }
 async function deleteReceiptGroupFromSheet(){
   if(!rgeEditingKey) return;
@@ -9756,6 +9761,7 @@ async function saveQuickSalesInput(){
     }
     closeSheet('quickSalesInputSheet');
     toast('매출 저장됐어요','success');
+    if(typeof cacheInvalidate === 'function') cacheInvalidate('');
     await loadDashboard(true);
   }catch(e){
     console.error('매출 저장:',e);
@@ -10822,12 +10828,33 @@ function openAddOrderSheet(){
 //  · catReceipt 화면에서 거래처 주문 행 클릭으로 시트 진입한 케이스(사장님 호소) 대응
 //  · 둘 중 active한 화면만 fresh 로드 (백그라운드 호출 최소화)
 function _refreshAfterOrderChange(){
+  // 2026-05-25 사장님 호소: 거래처 저장 후 홈 화면에 식자재 즉시 반영 안 됨
+  //  · cacheInvalidate('') = 다음 홈/지출관리 진입 시 fresh fetch
+  //  · 현재 홈 화면이면 즉시 loadDashboard(true)로 강제 새로고침
+  if(typeof cacheInvalidate === 'function') cacheInvalidate('');
   loadVendors(); // 매장 캐시 갱신 (어디서 진입했든 OK)
   const catRcpCont = document.getElementById('catReceiptCont');
   if(catRcpCont && catRcpCont.classList.contains('active')){
     loadCatReceiptData();
   } else {
     loadVendorOrders();
+  }
+  // 홈에 있다면 즉시 새로고침 (백그라운드)
+  const dashCont = document.getElementById('dashboardCont');
+  if(dashCont && dashCont.classList.contains('active')){
+    loadDashboard(true).catch(_=>{});
+  }
+}
+// 2026-05-25 신설: 영수증/주문/매출 저장 후 홈·지출관리 캐시 무효화 + 현재 화면 자동 새로고침
+function _refreshAfterExpenseChange(){
+  if(typeof cacheInvalidate === 'function') cacheInvalidate('');
+  const dashCont = document.getElementById('dashboardCont');
+  if(dashCont && dashCont.classList.contains('active')){
+    loadDashboard(true).catch(_=>{});
+  }
+  const expHubCont = document.getElementById('expHubCont');
+  if(expHubCont && expHubCont.classList.contains('active')){
+    if(typeof loadExpHubData === 'function') loadExpHubData(true).catch(_=>{});
   }
 }
 async function openEditOrderSheet(id){
