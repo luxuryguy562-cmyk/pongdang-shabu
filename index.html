@@ -2625,6 +2625,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
       <div class="back-ttl">오늘 매출</div>
     </div>
 
+    <!-- 일자 네비 (좌·우·데이트피커) — 2026-05-25 신설 (사장님 호소: 다른 날짜도 볼 수 있게) -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:6px 8px;background:#fff;border:1px solid var(--gray-200);border-radius:14px;position:relative;">
+      <button type="button" id="tdDayPrev" data-action="tdDayMove|-1" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--gray-50);font-size:18px;color:var(--text);cursor:pointer;flex-shrink:0;line-height:36px;padding:0;">‹</button>
+      <label style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:6px 0;position:relative;">
+        <span style="font-size:11px;color:var(--gray-500);font-weight:600;">📅 날짜 선택</span>
+        <span id="tdDayLabelText" style="font-size:15px;font-weight:800;letter-spacing:-0.3px;color:var(--text);">-</span>
+        <input type="date" id="tdDayPicker" data-change="tdDayPickerChange|this" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;background:transparent;">
+      </label>
+      <button type="button" id="tdDayNext" data-action="tdDayMove|1" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--gray-50);font-size:18px;color:var(--text);cursor:pointer;flex-shrink:0;line-height:36px;padding:0;">›</button>
+    </div>
+
     <!-- 그라데이션 컬러 카드 -->
     <div class="dash-today-detail-head">
       <div class="lb"><span class="live-dot"></span><span id="dashTodayDetailDate">-</span></div>
@@ -9365,6 +9376,116 @@ function dashGoStage(stage){
   window.scrollTo({top:0, behavior:'instant'});
 }
 
+// ─── today-detail 일자 네비 (2026-05-25 신설 — 사장님 호소: 다른 날짜도 보고 싶음) ───
+//  · _tdContext = loadDashboard 끝에서 박는 컨텍스트 (월 데이터 + 헬퍼)
+//  · _tdDay = 현재 표시 중인 'YYYY-MM-DD'
+//  · 같은 월 안 = 메모리만 사용. 다른 월 = 1차 미지원 (토스트 안내)
+let _tdContext = null;
+let _tdDay = null;
+function renderTodayDetailForDay(dayStr){
+  if(!_tdContext) return;
+  const ctx = _tdContext;
+  const sameMonth = dayStr.slice(0,7) === ctx.ym;
+  if(!sameMonth){
+    toast(`${ctx.ym} 외 다른 달은 곧 추가됩니다. 대시보드에서 월을 먼저 바꿔주세요.`, 'warn');
+    // picker 값은 원래대로 되돌림
+    const _p = document.getElementById('tdDayPicker');
+    if(_p && _tdDay) _p.value = _tdDay;
+    return;
+  }
+  _tdDay = dayStr;
+  const d = dayStr.slice(8);
+  const dayInt = parseInt(d, 10);
+  const dow = ['일','월','화','수','목','금','토'][new Date(dayStr+'T00:00:00').getDay()];
+  const hasSale = ctx.dailySalesMap.hasOwnProperty(d);
+  const _amt = ctx.dailySalesMap[d] || 0;
+  const _dexp = ctx.dailyExpTotal[d] || 0;
+  const _dprofit = _amt - _dexp;
+  const _todayStr = new Date().toISOString().slice(0,10);
+  const isFuture = dayStr > _todayStr;
+  const isToday = dayStr === _todayStr;
+
+  const _ddAmt=document.getElementById('dashTodayDetailAmt');
+  const _ddDate=document.getElementById('dashTodayDetailDate');
+  const _ddSub=document.getElementById('dashTodayDetailSub');
+  const _ddExp=document.getElementById('dashTodayDetailExp');
+  const _ddProfit=document.getElementById('dashTodayDetailProfit');
+  const _ddPeRow=document.getElementById('dashTodayDetailPeRow');
+
+  let stateLabel;
+  if(hasSale) stateLabel = (ctx.isUpsMode && isToday) ? '실시간' : '마감';
+  else if(isFuture) stateLabel = '미래';
+  else if(isToday) stateLabel = ctx.isUpsMode ? '실시간' : '아직 마감 전';
+  else stateLabel = '마감 안 됨';
+
+  if(_ddDate) _ddDate.innerHTML = `${ctx.mo}월 ${dayInt}일 (${dow}) · ${stateLabel}`;
+  if(_ddAmt){
+    if(hasSale){
+      _ddAmt.classList.remove('empty');
+      _ddAmt.innerHTML = `${fmt(_amt)}<span class="won">원</span>`;
+    } else {
+      _ddAmt.classList.add('empty');
+      _ddAmt.innerText = isFuture ? '아직 안 온 날' : (isToday ? '아직 입력 안 됨' : '마감 안 됨');
+    }
+  }
+  if(_ddSub){
+    if(hasSale) _ddSub.innerText = (ctx.isUpsMode && isToday) ? '방금 갱신됨' : '마감 기준';
+    else if(isToday) _ddSub.innerText = '오늘 첫 매출인가요? 아래에서 입력하세요.';
+    else if(isFuture) _ddSub.innerText = '미래 날짜는 데이터가 없어요';
+    else _ddSub.innerText = '이 날은 마감이 안 됐어요';
+  }
+  if(_ddPeRow){
+    if(hasSale){
+      _ddPeRow.style.display = 'grid';
+      if(_ddExp) _ddExp.innerText = '-'+fmt(_dexp)+'원';
+      if(_ddProfit) _ddProfit.innerText = (_dprofit>=0?'+':'-')+fmt(Math.abs(_dprofit))+'원';
+    } else {
+      _ddPeRow.style.display = 'none';
+    }
+  }
+  // 결제수단별 — 해당일 settle 행
+  const _row = (ctx.settle||[]).find(s=>s.date?.slice(8)===d);
+  renderTodayPaymentMethods(_row, _amt);
+
+  // 일자 네비 라벨·picker·화살표 활성 상태
+  const lblText = document.getElementById('tdDayLabelText');
+  const prevBtn = document.getElementById('tdDayPrev');
+  const nextBtn = document.getElementById('tdDayNext');
+  const picker = document.getElementById('tdDayPicker');
+  const _yesterdayStr = (()=>{ const y=new Date(); y.setDate(y.getDate()-1); return y.toISOString().slice(0,10); })();
+  let relativeLabel = '';
+  if(isToday) relativeLabel = ' · 오늘';
+  else if(dayStr === _yesterdayStr) relativeLabel = ' · 어제';
+  if(lblText) lblText.innerText = `${ctx.mo}월 ${dayInt}일 (${dow})${relativeLabel}`;
+  if(picker){
+    picker.value = dayStr;
+    picker.min = ctx.ym + '-01';
+    picker.max = ctx.ym + '-' + String(ctx.lastDay).padStart(2,'0');
+  }
+  if(prevBtn){ prevBtn.disabled = (dayInt <= 1); prevBtn.style.opacity = (dayInt<=1?'0.3':'1'); }
+  if(nextBtn){ nextBtn.disabled = (dayInt >= ctx.lastDay); nextBtn.style.opacity = (dayInt>=ctx.lastDay?'0.3':'1'); }
+}
+function tdDayMove(dir){
+  if(!_tdContext || !_tdDay) return;
+  const ctx = _tdContext;
+  const d = parseInt(_tdDay.slice(8), 10) + Number(dir);
+  if(d < 1 || d > ctx.lastDay) return;
+  renderTodayDetailForDay(ctx.ym + '-' + String(d).padStart(2,'0'));
+}
+function tdOpenDayPicker(){
+  const picker = document.getElementById('tdDayPicker');
+  if(!picker) return;
+  if(typeof picker.showPicker === 'function'){
+    try { picker.showPicker(); return; } catch(e){ /* fallback below */ }
+  }
+  picker.click();
+  picker.focus();
+}
+function tdDayPickerChange(el){
+  if(!el || !el.value) return;
+  renderTodayDetailForDay(el.value);
+}
+
 // 결제수단별 분해 (sales_daily 레거시 7컬럼 + amounts JSONB 폴백)
 // paymentMethods 동적이라 레거시 0이면 amounts.<pm.id>에서 보충
 function renderTodayPaymentMethods(row, totalSale){
@@ -10235,37 +10356,19 @@ async function loadDashboard(force){
         peEl.style.display='grid';
       }
 
-      // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22) ───
+      // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22, 2026-05-25 일자 네비 지원) ───
+      //  · _tdContext에 데이터 박아두고 _tdDay 기준으로 렌더링 (좌·우·데이트피커가 _tdDay 변경)
+      //  · 첫 진입 = lastSaleDay (없으면 오늘)
       try {
-        const _ddAmt=document.getElementById('dashTodayDetailAmt');
-        const _ddDate=document.getElementById('dashTodayDetailDate');
-        const _ddSub=document.getElementById('dashTodayDetailSub');
-        const _ddExp=document.getElementById('dashTodayDetailExp');
-        const _ddProfit=document.getElementById('dashTodayDetailProfit');
-        const _ddPeRow=document.getElementById('dashTodayDetailPeRow');
-        if(_ddAmt && _ddDate){
-          if(!lastSaleDay){
-            _ddDate.innerHTML='오늘 매출 · (준비중)';
-            _ddAmt.classList.add('empty');
-            _ddAmt.innerText='아직 입력 안 됨';
-            if(_ddSub) _ddSub.innerText='오늘 첫 매출인가요? 아래에서 입력하세요.';
-            if(_ddPeRow) _ddPeRow.style.display='none';
-          } else {
-            const _dow2=['일','월','화','수','목','금','토'][new Date(ym+'-'+lastSaleDay+'T00:00:00').getDay()];
-            _ddDate.innerHTML=`${mo}월 ${parseInt(lastSaleDay)}일 (${_dow2}) · ${isUpsMode?'실시간':(isTodayShown?'(준비중)':'마감')}`;
-            _ddAmt.classList.remove('empty');
-            const _amt=dailySalesMap[lastSaleDay]||0;
-            _ddAmt.innerHTML=`${fmt(_amt)}<span class="won">원</span>`;
-            if(_ddSub) _ddSub.innerText=isUpsMode?'방금 갱신됨':'마감 기준';
-            const _dexp=dailyExpTotal[lastSaleDay]||0;
-            const _dprofit=_amt-_dexp;
-            if(_ddExp) _ddExp.innerText='-'+fmt(_dexp)+'원';
-            if(_ddProfit) _ddProfit.innerText=(_dprofit>=0?'+':'-')+fmt(Math.abs(_dprofit))+'원';
-            if(_ddPeRow) _ddPeRow.style.display='grid';
-          }
-        }
-        const _lastRow=lastSaleDay?(settle||[]).find(s=>s.date?.slice(8)===lastSaleDay):null;
-        renderTodayPaymentMethods(_lastRow, dailySalesMap[lastSaleDay]||0);
+        _tdContext = {
+          ym, mo, lastDay,
+          dailySalesMap, dailyExpTotal, settle,
+          lastSaleDay, isUpsMode, isTodayShown, isCurMonth
+        };
+        const _initDay = lastSaleDay
+          ? ym+'-'+String(lastSaleDay).padStart(2,'0')
+          : (isCurMonth ? new Date().toISOString().slice(0,10) : ym+'-01');
+        renderTodayDetailForDay(_initDay);
       } catch(e){ console.warn('[dashTodayDetail]', e.message); }
     } else {
       topCard.style.display='none';
