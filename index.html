@@ -645,18 +645,21 @@
         💡 한 영수증에 식자재·비품 섞여있어도 OK. 사장님이 대략 나눠주시면 카테고리 합계에 자동 반영돼요.
       </div>
 
-      <div style="font-size:12.5px;font-weight:700;color:var(--gray-900);margin-bottom:4px;">📂 카테고리별 금액</div>
-      <p style="font-size:11px;color:var(--gray-500);margin:0 0 12px;line-height:1.5;">사장님 지출카테고리(대분류)에서 자동 로드. 빈 칸은 0원 처리.</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:12.5px;font-weight:700;color:var(--gray-900);">📂 분배 내역</div>
+      </div>
+      <p style="font-size:11px;color:var(--gray-500);margin:0 0 10px;line-height:1.5;">금액 입력 + 카테고리 골라서 행 추가하세요. 같은 카테고리 여러 행 OK (저장 시 합산).</p>
 
       <div id="cpgCatRows">
-        <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">카테고리 불러오는 중...</div>
+        <div style="text-align:center;padding:18px;color:var(--gray-400);font-size:12.5px;">불러오는 중...</div>
       </div>
 
+      <button class="btn btn-secondary" style="width:100%;padding:11px;font-size:12.5px;font-weight:700;margin-top:8px;border:1.5px dashed var(--gray-300);background:transparent;color:var(--gray-700);" data-action="cpgAddRow">+ 카테고리 추가</button>
+
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0;padding:10px 0;border-top:1px dashed var(--gray-200);">
-        <div style="font-size:11px;color:var(--gray-600);width:100%;margin-bottom:2px;font-weight:600;">⚡ 빠른 분배</div>
-        <button class="btn btn-secondary" style="font-size:11px;padding:6px 10px;" data-action="cpgPreset|allFirst">전부 1순위</button>
-        <button class="btn btn-secondary" style="font-size:11px;padding:6px 10px;" data-action="cpgPreset|prevMonth">지난달 비율</button>
-        <button class="btn btn-secondary" style="font-size:11px;padding:6px 10px;" data-action="cpgPreset|clear">초기화</button>
+        <div style="font-size:11px;color:var(--gray-600);width:100%;margin-bottom:2px;font-weight:600;">⚡ 빠른 채우기</div>
+        <button class="btn btn-secondary" style="font-size:11px;padding:6px 10px;" data-action="cpgPreset|prevMonth">지난달 그대로</button>
+        <button class="btn btn-secondary" style="font-size:11px;padding:6px 10px;" data-action="cpgPreset|clear">모두 비우기</button>
       </div>
 
       <div style="background:#F0F9FF;border-radius:11px;padding:12px;margin-bottom:12px;">
