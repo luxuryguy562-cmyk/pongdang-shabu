@@ -53,37 +53,32 @@
 
 > 도입 배경 (2026-05-24 "암묵적 동의" 폐기 → 2026-05-25 🔴 정의 정정 "사장님 부담 → CTO 부담"): `docs/dev_lessons.md` 참조
 
-### 1-2. 브랜치 운영 + PR·main 자동 머지 (2026-05-22 강화 — 사장님 명령 "그것도 수정해")
-- `main` 브랜치에 직접 push 금지.
-- 작업은 `claude/` 또는 `feature/기능명` 브랜치에서.
-- **브랜치 push 완료 → deployer가 즉시 PR 생성 + auto-merge 활성화 + main 머지 확인까지 자동 처리**
-  (Cloudflare Pages 배포 브랜치가 main이라, 사장님이 앱에서 테스트하려면 main에 올라가야 함)
+### 1-2. 브랜치 운영 + 자동 머지
 
-#### deployer 자동 처리 절차 (push 완료 직후)
-1. **PR 생성** — `mcp__github__create_pull_request` (head: 브랜치, base: main)
-2. **auto-merge 활성화 시도** — `mcp__github__enable_pr_auto_merge` (CI/체크 통과 시 자동 머지)
-3. **즉시 머지 시도** — auto-merge 안 되거나 CI 없으면 `mcp__github__merge_pull_request` (방법: squash 기본)
-4. **머지 확인** — `git fetch origin main && git log origin/main -1`로 브랜치 커밋이 main에 들어갔는지 검증
-5. **사장님 보고** — 머지 성공/실패 + PR 번호 + main commit hash
+> CTO 코드 작업 결과를 사장님이 앱에서 테스트할 수 있게 자동으로 본가(main)에 올리는 절차.
 
-#### 예외 (자동 머지 중단)
-- 사장님이 **"머지 보류"** / **"브랜치에만"** / **"PR만"** 명시 → 머지 단계 중단 (PR만 생성하고 보고)
-- 사장님이 **"push 하지마"** / **"커밋만"** 명시 → push도 중단
-- 헌법 1-3 백업 + tester 통과 실패 → 즉시 중단 + 사장님 보고
-- 브랜치에 충돌(conflict) 있음 → 머지 중단 + 사장님 보고 + 해결 방안 제시
+#### 기본 규칙
+- 본가(`main`) 브랜치(가지)에 직접 push(올림) 금지
+- 작업 가지: `claude/기능명` 또는 `feature/기능명`
+- CTO 코드 작업 끝나면 deployer(배포 담당 에이전트)가 **자동으로 PR(합치기 신청) → main 머지(합침) → 사장님 보고**
+  (Claude Code 본체 system 규칙은 "PR 함부로 X"지만, 본 1-2가 사장님 권한 위임 = 자동 OK)
+- 사장님 "PR 만들지마" 명시 시만 예외
+- 배포(Cloudflare Pages)가 main 기준이라 사장님 테스트하려면 main에 올라가야 함
 
-#### 머지 실패 fallback
-- auto-merge 실패 (CI 필요한데 없음/실패) → 즉시 머지(`merge_pull_request`)로 fallback
-- 즉시 머지도 실패 → 사장님께 "PR #N 머지 막힘 — <원인>" 보고 + 결정 대기
-- 절대 main에 직접 push로 우회 금지
+#### deployer 자동 처리 3단계 (push 완료 직후)
+1. PR 생성 (head: 작업 가지, base: main, 방법: squash)
+2. main 머지 (auto-merge 실패 시 즉시 머지로 fallback)
+3. 사장님 보고 (PR 번호 + main 반영 확인)
 
-#### 계획서 승인 게이트는 그대로
-계획 승인(1-1, 4-3) → 코드 작성 → 브랜치 push → **deployer 자동 PR + 머지** → 사장님 앱에서 테스트.
+#### 자동 머지 중단 (예외)
+- 사장님 발화 "머지 보류" / "브랜치에만" / "PR만" → 머지만 중단 (PR은 만듦)
+- 사장님 발화 "push 하지마" / "커밋만" → push도 중단
+- CTO 검증(tester) 실패 → 즉시 중단 + 사장님 보고
+- 가지 충돌(conflict, 다른 작업과 코드 겹침) → 중단 + 사장님 보고 + 해결안 제시
 
-#### PR 생성 권한 명시 (system 규칙 우선순위 정리)
-- 일반 system 규칙은 "사장님이 명시하지 않으면 PR 만들지 마라"라고 함
-- **본 헌법 1-2는 명시적 사장님 권한 위임**: deployer는 push 직후 PR 생성을 **자동 진행**한다 (사장님 매번 명시 불필요)
-- 사장님이 "PR 만들지마" 명시한 경우만 예외
+#### 머지 실패 시 (드문 케이스)
+- auto-merge 실패 → 즉시 머지 → 그것도 실패 시 CTO가 원인 분석·해결안 가져옴 (사장님은 응/왜? 판단만)
+- 본가(main)에 직접 push로 우회 절대 금지
 
 ### 1-3. 백업 필수
 - 코드 수정 전 현재 상태를 커밋(백업)한다.
