@@ -3228,7 +3228,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
     </div>
     <div class="qsi-date-row">
       <span class="qsi-date-label">날짜</span>
-      <input type="date" id="qsiDate" class="qsi-date-input">
+      <input type="date" id="qsiDate" class="qsi-date-input" data-change="onQsiDateChange|this">
     </div>
     <div id="qsiRowsContainer"></div>
     <div class="qsi-total-row">
@@ -11454,9 +11454,15 @@ const QUICK_SALES_METHODS=[
   {key:'qr',           name:'QR',         icon:'📱', dot:'purple'},
   {key:'etc',          name:'기타결제',   icon:'📲', dot:'gray'}
 ];
-function openQuickSalesInput(){
+function openQuickSalesInput(initialDate){
   if(!currentStore){toast('매장을 먼저 선택하세요','error');return;}
-  document.getElementById('qsiDate').value=ymdLocal(new Date());
+  // 2026-05-25 사장님 호소: today-detail에서 보던 일자 인계 + 기존 데이터 자동 로드
+  //  · initialDate 우선 (today-detail/캘린더 셀 → 그 날짜)
+  //  · 없으면 _tdDay (오늘 매출 화면이 보고 있던 날) 폴백
+  //  · 그것도 없으면 오늘
+  const fallbackDay = (typeof _tdDay !== 'undefined' && _tdDay) ? _tdDay : ymdLocal(new Date());
+  const day = initialDate || fallbackDay;
+  document.getElementById('qsiDate').value = day;
   const cont=document.getElementById('qsiRowsContainer');
   cont.innerHTML=QUICK_SALES_METHODS.map(m=>`
     <div class="qsi-row dot-${m.dot||'gray'}">
@@ -11468,6 +11474,43 @@ function openQuickSalesInput(){
   document.getElementById('qsiMemo').value='';
   document.getElementById('qsiTotal').innerText='0원';
   openSheet('quickSalesInputSheet');
+  // 시트 연 직후 기존 데이터 자동 로드 (사장님: "기존데이터가 있어야되지 않을까")
+  _loadQsiDataForDate(day);
+}
+// 2026-05-25 신설: 선택 일자의 sales_daily 행 조회 → 결제수단 input + 메모 채우기
+//  · 데이터 없으면 input 비움 (덮어쓰기 안전) + 합계 0원
+//  · 호출처: 시트 첫 진입 / 날짜 input change
+async function _loadQsiDataForDate(date){
+  if(!currentStore || !date) return;
+  // 우선 input들을 비워서 옛 날짜 잔재 제거 (다른 날 → 데이터 없는 날 점프 시 옛 값 남는 거 방지)
+  document.querySelectorAll('#qsiRowsContainer .qsi-input').forEach(el=>{ el.value=''; });
+  const memoEl = document.getElementById('qsiMemo');
+  if(memoEl) memoEl.value = '';
+  const totalEl = document.getElementById('qsiTotal');
+  if(totalEl) totalEl.innerText = '0원';
+  // sales_daily 조회
+  const {data, error} = await sb.from('sales_daily')
+    .select('*')
+    .eq('store_id', currentStore.id)
+    .eq('date', date)
+    .maybeSingle();
+  if(error){ console.warn('[qsi load]', error.message); return; }
+  if(!data){
+    // 데이터 없음 — input 비운 상태 그대로 (이미 위에서 처리)
+    return;
+  }
+  // 결제수단 input 채우기
+  document.querySelectorAll('#qsiRowsContainer .qsi-input').forEach(el=>{
+    const k = el.dataset.key;
+    const v = Number(data[k]||0);
+    el.value = v ? fmt(v) : '';
+  });
+  if(memoEl && data.memo) memoEl.value = data.memo;
+  _recalcQsiTotal();
+}
+function onQsiDateChange(el){
+  if(!el || !el.value) return;
+  _loadQsiDataForDate(el.value);
 }
 function onQuickSalesInputChange(el){
   const raw=unFmt(el.value);
@@ -11527,8 +11570,8 @@ function handleCalCellClick(date){
 function calCellInputSales(){
   closeSheet('calCellActionSheet');
   setTimeout(()=>{
-    openQuickSalesInput();
-    if(_calCellSelectedDate)setTimeout(()=>{document.getElementById('qsiDate').value=_calCellSelectedDate;},80);
+    // 2026-05-25: 캘린더 셀 클릭 = 해당 날짜로 직접 진입 (기존 데이터 자동 로드 통일)
+    openQuickSalesInput(_calCellSelectedDate || null);
   },100);
 }
 function calCellMarkClosed(){
@@ -19475,9 +19518,9 @@ document.addEventListener('DOMContentLoaded', async()=>{
   });
   // 빈 데이터 CTA (홈 v7: 휴무 버튼 제거 — 캘린더 셀에서만, 2026-05-22)
   document.getElementById('dashTopEmptyInputBtn').addEventListener('click',(e)=>{e.stopPropagation();openQuickSalesInput();});
-  // today-detail 매출 입력 CTA
+  // today-detail 매출 입력 CTA — 보고 있던 일자(_tdDay)로 시트 진입 (2026-05-25 사장님 호소)
   const _ddInputCta=document.getElementById('dashTodayInputCta');
-  if(_ddInputCta) _ddInputCta.addEventListener('click',()=>openQuickSalesInput());
+  if(_ddInputCta) _ddInputCta.addEventListener('click',()=>openQuickSalesInput(_tdDay||null));
   // data-dash-go 이벤트 위임 (홈 박스 → stage 진입, 뒤로 가기)
   document.getElementById('dashboardCont').addEventListener('click',(e)=>{
     const el=e.target.closest('[data-dash-go]');
