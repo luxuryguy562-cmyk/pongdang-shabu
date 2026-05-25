@@ -454,10 +454,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-kpi-split .sep{color:var(--gray-400);}
 
 /* ─ 출퇴근 상태 변환 카드 (G안: 출근 전/근무 중/퇴근 후 3색) */
-.att-status-card{border-radius:20px;padding:28px 20px;text-align:center;transition:background 0.25s ease;margin-top:8px;box-shadow:var(--card-shadow);}
+.att-status-card{border-radius:20px;padding:28px 20px;text-align:center;transition:background 0.25s ease;margin-top:8px;box-shadow:var(--card-shadow);position:relative;}
 .att-status-card.before{background:var(--white);}
 .att-status-card.during{background:linear-gradient(150deg,var(--toss-blue-light) 0%,#F3F8FF 100%);}
 .att-status-card.after{background:linear-gradient(150deg,#E4F7EE 0%,#F0FBF5 100%);}
+/* 2026-05-25 mockup ② 적용: 아바타 + 펄스 점 + 정보 그리드 */
+.att-status-avatar-wrap{position:relative;width:56px;height:56px;margin:0 auto 8px;}
+.att-status-avatar{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;letter-spacing:-0.5px;background:var(--toss-blue-light);color:var(--toss-blue-strong);}
+.att-status-card.during .att-status-avatar{background:var(--toss-blue);color:#fff;}
+.att-status-card.after .att-status-avatar{background:#0CAB6C;color:#fff;}
+.att-status-pulse{position:absolute;bottom:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#0CAB6C;border:3px solid #fff;display:none;}
+.att-status-card.during .att-status-pulse{display:block;}
+.att-status-card.during .att-status-pulse::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:#0CAB6C;opacity:0.4;animation:attP 1.8s ease-out infinite;}
+@keyframes attP{0%{transform:scale(.7);opacity:.5}100%{transform:scale(1.8);opacity:0}}
+.att-status-name{font-size:13px;font-weight:700;color:var(--toss-text-2);margin-bottom:6px;letter-spacing:-0.3px;}
 .att-status-date{font-size:13px;font-weight:600;color:var(--toss-text-3);margin-bottom:8px;letter-spacing:-0.2px;}
 .att-status-time{font-size:52px;font-weight:800;color:var(--toss-text-1);letter-spacing:-2.5px;line-height:1;margin-bottom:16px;font-variant-numeric:tabular-nums;}
 .att-status-card.after .att-status-time{font-size:24px;font-weight:800;color:var(--toss-text-3);}
@@ -469,6 +479,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-big-btn{width:100%;padding:18px;font-size:16px;font-weight:800;border-radius:13px;}
 .att-status-card.after .att-status-action{display:none;}
 .att-status-meta{font-size:12px;color:var(--toss-text-3);font-weight:600;line-height:1.5;letter-spacing:-0.2px;}
+.att-status-meta.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;text-align:left;}
+.att-status-meta.grid .cell{background:rgba(255,255,255,0.55);border-radius:12px;padding:10px 12px;}
+.att-status-meta.grid .cell .lbl{font-size:10.5px;color:var(--toss-text-4);font-weight:600;margin-bottom:2px;}
+.att-status-meta.grid .cell .vl{font-size:14px;font-weight:800;color:var(--toss-text-1);font-variant-numeric:tabular-nums;}
+.att-status-meta.grid .cell.wage .vl{color:var(--toss-blue-strong);}
 .att-status-meta .wage{color:var(--toss-blue-strong);font-weight:800;font-size:14px;}
 
 /* ─ 캘린더 빈 셀에 + 아이콘 (관리자만) */
