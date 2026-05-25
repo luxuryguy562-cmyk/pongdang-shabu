@@ -1,0 +1,588 @@
+// ══════════════════════════════════════════
+// 설정
+// ══════════════════════════════════════════
+const SUPABASE_URL      = 'https://ruytgygjwnbtzmtofopg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe';
+const GEMINI_URL        = 'https://gemini-proxy.luxuryguy562.workers.dev';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ─── Gemini AI 호출 헬퍼 (타임아웃 + 과부하 자동 재시도 + 토큰·비용 로깅) ───
+// 2026-05-18: high demand 에러 자주 발생 → 지수 백오프 재시도 (1s/2s/4s, 최대 3회)
+// 2026-05-19: usageMetadata 추출 + ai_usage_logs DB 저장 + window.lastAIUsage 글로벌 박음
+//             → 토스트로 토큰·비용 즉시 표시 + 관리자 대시보드 데이터 누적
+let lastAIUsage = null; // 최근 AI 호출 토큰·비용 (토스트용)
+// Gemini 모델별 가격 (환율 1400원/$ 기준, 2026-05 공식 가격)
+// 2026-05-19 사장님 결정 B안: 동적 모델 — 거래처(복잡) = flash, 직구(단순) = flash-lite
+// 2026-05-19 (2): Multi-Provider 도입 — Clova+GPT-4o / GPT-mini / Gemini 3중 경로 (Worker가 분기)
+// 2026-05-19 (3): 거래명세서 정확도 = GPT-4o full + 이미지 Hybrid (사장님 핵심 무기)
+// 2026-05-19 (4): OCR 제거 — Clova+GPT 행 시프트 사고 (4차 6%, 6차 62.5%).
+//                 사장님 가설 채택 + 데이터 검증됨: AI 단독(1·2·3차) 80~95% > OCR+AI Hybrid 6~62.5%
+//                 Gemini Flash/Lite 단독 (3차 best ~95%+) + High demand 시 GPT-4o vision fallback
+const _DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const _GEMINI_PRICING = {
+  'gemini-2.5-flash':       { in:  420, out: 3500 },
+  'gemini-2.5-flash-lite':  { in:  140, out:  560 },
+  'gemini-2.0-flash':       { in:  140, out:  560 },
+  'gemini-2.0-flash-lite':  { in:  105, out:  420 },
+  'gemini-1.5-flash':       { in:  105, out:  420 },
+  'gemini-1.5-flash-8b':    { in:  52.5,out:  210 },
+  'gpt-4o-mini':            { in:  210, out:  840 },
+  'gpt-4o':                 { in: 3500, out:14000 },
+};
+function _calcGeminiCostWon(promptTokens, outputTokens, thinkingTokens, model){
+  const rates = _GEMINI_PRICING[model] || _GEMINI_PRICING[_DEFAULT_GEMINI_MODEL] || _GEMINI_PRICING['gemini-2.5-flash-lite'];
+  const input = (promptTokens||0) * rates.in / 1000000;
+  const output = ((outputTokens||0) + (thinkingTokens||0)) * rates.out / 1000000;
+  return Math.round((input + output) * 10000) / 10000;
+}
+// 모델 이름 짧게 (토스트용)
+function _shortModelName(model){
+  if(!model) return '?';
+  if(model.startsWith('clova+gpt-4o')) return 'Clova+GPT-4o';
+  if(model.startsWith('clova+gpt')) return 'Clova+GPT';
+  if(model === 'gpt-4o') return 'GPT-4o';
+  if(model.startsWith('gpt-')) return 'GPT-mini';
+  if(model.startsWith('gemini-2.5-flash-lite')) return 'Gemini-Lite';
+  if(model.startsWith('gemini-2.5-flash')) return 'Gemini-Flash';
+  return model.replace('gemini-','');
+}
+function _logAIUsage(feature, usage, durationMs, success, errorMsg, modelUsed, costWonOverride){
+  try{
+    if(!currentStore) return;
+    const model = modelUsed || _DEFAULT_GEMINI_MODEL;
+    // Worker가 _costWon 박아 보내면 그거 우선 (Clova+GPT는 고정 비용 포함이라 정확)
+    const cost = (typeof costWonOverride === 'number')
+      ? costWonOverride
+      : _calcGeminiCostWon(usage?.promptTokenCount, usage?.candidatesTokenCount, usage?.thoughtsTokenCount, model);
+    sb.from('ai_usage_logs').insert({
+      store_id: currentStore.id,
+      feature: feature || 'unknown',
+      model,
+      prompt_tokens: usage?.promptTokenCount || 0,
+      output_tokens: usage?.candidatesTokenCount || 0,
+      thinking_tokens: usage?.thoughtsTokenCount || 0,
+      total_tokens: usage?.totalTokenCount || 0,
+      estimated_cost_won: cost,
+      duration_ms: durationMs,
+      success: !!success,
+      error_msg: errorMsg || null
+    }).then(({error})=>{ if(error) console.warn('[ai_usage_logs] insert failed:', error.message); });
+  }catch(e){ console.warn('[ai_usage_logs] exception:', e); }
+}
+async function callGemini(parts, timeoutSec=30, feature='unknown', model, provider){
+  const MAX_RETRY = 3;
+  const BACKOFF_MS = [1000, 2000, 4000];
+  let lastErr = null;
+  const startedAt = Date.now();
+  const requestModel = model || _DEFAULT_GEMINI_MODEL;
+  const requestProvider = provider || 'gemini'; // 'clova+gpt' | 'gpt' | 'gemini'
+  // Clova+GPT는 응답 시간 길어서 타임아웃 ↑
+  const effectiveTimeout = (requestProvider === 'clova+gpt') ? Math.max(timeoutSec, 45) : timeoutSec;
+  for(let attempt=0; attempt<MAX_RETRY; attempt++){
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(), effectiveTimeout*1000);
+    try{
+      if(attempt>0) setLoad(true, `AI 다시 시도 중... (${attempt+1}/${MAX_RETRY})`);
+      const res=await fetch(GEMINI_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts}],generationConfig:{response_mime_type:'application/json'},_model:requestModel,_provider:requestProvider}),
+        signal:ctrl.signal
+      });
+      if(!res.ok){
+        const errText=await res.text().catch(()=>'');
+        // 모델 과부하 감지 (429/503 또는 high demand 텍스트)
+        const isOverload = (res.status===429 || res.status===503 || /high demand|overload|currently experiencing/i.test(errText));
+        if(isOverload && attempt < MAX_RETRY-1){
+          await new Promise(r=>setTimeout(r, BACKOFF_MS[attempt]));
+          continue;
+        }
+        throw new Error(`서버 오류 (${res.status}): ${errText.slice(0,500)||res.statusText}`);
+      }
+      const data=await res.json();
+      if(data.error){
+        const isOverload = /high demand|overload|currently experiencing/i.test(data.error.message||'');
+        if(isOverload && attempt < MAX_RETRY-1){
+          await new Promise(r=>setTimeout(r, BACKOFF_MS[attempt]));
+          continue;
+        }
+        throw new Error(data.error.message||'AI 응답 오류');
+      }
+      const txt=data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if(!txt) throw new Error('AI 응답이 비어있습니다');
+      // 토큰·비용 추출 + 글로벌 박음 + DB 저장 (성공 시)
+      // Worker가 _modelUsed, _provider, _costWon 박아 보냄 (Clova+GPT 포함 정확한 비용)
+      const usage = data?.usageMetadata || {};
+      const modelUsed = data?._modelUsed || requestModel;
+      const providerUsed = data?._provider || requestProvider;
+      const durationMs = Date.now() - startedAt;
+      const costWon = (typeof data?._costWon === 'number')
+        ? data._costWon
+        : _calcGeminiCostWon(usage.promptTokenCount, usage.candidatesTokenCount, usage.thoughtsTokenCount, modelUsed);
+      lastAIUsage = {
+        feature,
+        model: modelUsed,
+        provider: providerUsed,
+        promptTokens: usage.promptTokenCount || 0,
+        outputTokens: usage.candidatesTokenCount || 0,
+        thinkingTokens: usage.thoughtsTokenCount || 0,
+        totalTokens: usage.totalTokenCount || 0,
+        costWon,
+        durationMs
+      };
+      _logAIUsage(feature, usage, durationMs, true, null, modelUsed, costWon);
+      return JSON.parse(txt.replace(/```json|```/g,'').trim());
+    }catch(e){
+      lastErr = e;
+      if(e.name==='AbortError'){
+        _logAIUsage(feature, null, Date.now()-startedAt, false, 'timeout', requestModel);
+        throw new Error(`AI 응답 시간 초과 (${effectiveTimeout}초). 다시 시도해주세요.`);
+      }
+      // 네트워크 오류 등도 재시도 대상
+      if(attempt < MAX_RETRY-1){
+        await new Promise(r=>setTimeout(r, BACKOFF_MS[attempt]));
+        continue;
+      }
+      _logAIUsage(feature, null, Date.now()-startedAt, false, (e&&e.message)||'unknown', requestModel);
+      throw e;
+    }finally{clearTimeout(timer);}
+  }
+  throw lastErr || new Error('AI 호출 실패');
+}
+
+// ══════════════════════════════════════════
+// 전역 상태
+// ══════════════════════════════════════════
+let currentStore = null;
+let employees = [], roles = [], vendors = [], fixedCosts = [];
+// 고정비 화면 진입 시 카테고리 필터 (null=전체, '공과금'/'고정비'/'공과금/고정비'/'마케팅'/'세금')
+// '/'로 묶인 통합형은 split해서 매칭 → 옛 통합 카드 동작 보존
+let currentFcFilter = null;
+let vendorMonthTotals = {}; // {vendor_id: {total, count}} — 이번달 거래처별 주문 합계 (카드 표시용)
+let settings = {};
+let selectedEmpId = null, selectedEmpCtx = 'att';
+let currentTargetRowIdx = -1, currentMatchStagingIdx = -1;
+let datePickerCtx = '', timePickerCtx = '';
+let b64Pages = []; // 멀티페이지 영수증 (2026-05-19 (4)) — 각 항목 = canvas → toDataURL split[1]
+let rowCount = 0, stagingData = [];
+let cardDateStr = ymdLocal(new Date());
+let currentEmp = null, isManager = false, isOwner = false;
+// auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
+// ─── VIEWAS-START — 시점 미리보기 격리 (제거 가이드: dev_lessons.md #46) ───
+let realAuthLevel = 'staff';  // DB에서 받은 실제 권한 (변하지 않음)
+let viewAsLevel = null;       // 미리보기 권한 (null이면 실제 권한 사용)
+// ─── VIEWAS-END ────────────────────────────────────────────
+let authLevel = 'staff';       // 화면에 적용되는 권한 (viewAsLevel 반영)
+// 권한 단일 진입점: realAuthLevel + viewAsLevel → authLevel/isManager/isOwner 갱신
+function recalcPermissions(){
+  // VIEWAS 제거 시 → authLevel = realAuthLevel 한 줄로 단순화
+  authLevel = viewAsLevel || realAuthLevel;
+  isOwner = (authLevel === 'owner');
+  isManager = ['owner','franchise_admin','store_manager'].includes(authLevel);
+}
+let dashMonthStr = new Date().toISOString().slice(0,7);
+let schedEmpId = null;
+let chartInstances = {};
+
+// ══════════════════════════════════════════
+// 이벤트 위임 라우터 (CSP 인라인 핸들러 대체 — dev_lessons #1)
+// ══════════════════════════════════════════
+// 규칙: data-action="fnName|arg1|arg2" 형식. (파이프 '|' 구분)
+//   특수 토큰: 'this' → 해당 요소, 'true'/'false'/'null'/'undefined' → 그대로,
+//              숫자 → parseInt/parseFloat, 그 외 → 문자열.
+//   change/input 이벤트용 변형: data-change=, data-input=
+//   복합 동작(다중 호출·JS 표현식)은 아래 "인라인 대체용 래퍼"로 등록.
+function _parseActionArg(a, el){
+  if(a==='this') return el;
+  if(a==='true') return true;
+  if(a==='false') return false;
+  if(a==='null') return null;
+  if(a==='undefined') return undefined;
+  if(/^-?\d+$/.test(a)) return parseInt(a,10);
+  if(/^-?\d*\.\d+$/.test(a)) return parseFloat(a);
+  return a;
+}
+function _dispatchAction(attr, el){
+  const raw=el.getAttribute(attr);
+  if(!raw) return;
+  const parts=raw.split('|');
+  const fnName=parts[0];
+  const args=parts.slice(1).map(a=>_parseActionArg(a, el));
+  const fn=window[fnName];
+  if(typeof fn==='function'){ try{ return fn.apply(null, args); }catch(err){ console.error('[dispatch]',fnName,err); } }
+  else console.error('[dispatch]',attr,'→ unknown action:',fnName);
+}
+
+// ─── 인라인 핸들러 대체용 래퍼 ───
+function navFromSide(tab){ closeSideMenu(); nav(tab); }
+function navHome(){ nav(isManager?'dashboard':'attendance'); }
+function editEmpAfterClose(id){ closeAllSheets(); openEditEmpSheet(id); }
+function setGanttDay(date){ ganttSelectedDay=date; renderGanttFiltered(); }
+function setGanttAllDays(){ ganttSelectedDay='all'; renderGanttFiltered(); }
+function removeParent(el){ el.parentElement&&el.parentElement.remove(); }
+function openEditAttByIdx(i){ openEditAttSheet(window._attListData[i]); }
+function saveVendorUploadGlobal(){ saveVendorUpload(window._vendorUploadList, window._vendorUploadVendorId); }
+function setSpecialWageDate(i, el){ specialWageRows[i].date=el.value; }
+function setSpecialWageAmount(i, el){ specialWageRows[i].amount=parseInt(el.value)||0; }
+function toggleRolePermEvt(roleId, roleName, el){ toggleRolePerm(roleId, roleName, el.checked); }
+function toggleEmpPermEvt(empId, el){ toggleEmpPerm(empId, el.checked); }
+function resetCurrentEmpDevice(){ resetDeviceFingerprint(document.getElementById('editEmpId').value); }
+
+// 월 요약 카드 — 지출 카테고리 소분류 드릴다운 (2026-05-15)
+// 우측 끝 "+ 상세보기" ↔ "− 접기" 텍스트 토글 (사장님 안: ▾ 표시 모호함)
+function toggleExpCatChildren(catId){
+  if(!catId) return;
+  const root=document.getElementById('dashSummaryGrid'); if(!root) return;
+  const safe=String(catId).replace(/"/g,'\\"');
+  const children=root.querySelectorAll(`tr.cat-child[data-cat="${safe}"]`);
+  if(!children.length) return;
+  const parent=root.querySelector(`tr.cat-row[data-cat="${safe}"]`);
+  if(parent && parent.style.display==='none') return;
+  const willShow=children[0].style.display==='none';
+  children.forEach(c=>{c.style.display=willShow?'':'none';});
+  const btn=parent?.querySelector('.cat-detail-btn');
+  if(btn) btn.innerText=willShow?'− 접기':'+ 상세보기';
+}
+function toggleExpMoreCategories(){
+  const root=document.getElementById('dashSummaryGrid'); if(!root) return;
+  const moreParents=root.querySelectorAll('tr.cat-row[data-more="1"]');
+  const collapseRow=document.getElementById('expCollapseRow');
+  const moreToggleRow=document.getElementById('expMoreToggleRow');
+  if(!moreParents.length) return;
+  const willShow=moreParents[0].style.display==='none';
+  moreParents.forEach(r=>{
+    r.style.display=willShow?'':'none';
+    if(!willShow){
+      // 접힐 때 자식도 강제 접힘 + 상세보기 라벨 리셋
+      const cat=r.dataset.cat;
+      root.querySelectorAll(`tr.cat-child[data-cat="${String(cat).replace(/"/g,'\\"')}"]`).forEach(ch=>{ch.style.display='none';});
+      const btn=r.querySelector('.cat-detail-btn');
+      if(btn) btn.innerText='+ 상세보기';
+    }
+  });
+  // 더보기 행/접기 행 교대 (펼치면 더보기 자리 사라지고 맨 아래 접기 등장)
+  if(moreToggleRow) moreToggleRow.style.display=willShow?'none':'';
+  if(collapseRow) collapseRow.style.display=willShow?'':'none';
+}
+
+// ══════════════════════════════════════════
+// 공통 유틸
+// ══════════════════════════════════════════
+function toast(msg, type='info', duration=2500){
+  const c=document.getElementById('toastContainer');
+  const el=document.createElement('div');
+  el.className='toast '+type;el.textContent=msg;c.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),300);},duration);
+}
+// 에러 토스트 공용 — 사용자에겐 친근한 한국어, 원본 에러는 콘솔 백업 (dev_lessons #5)
+function errToast(action, err){
+  if(err) console.error(action+'하지 못함:', err);
+  // 진단용: Supabase 에러 코드와 짧은 메시지를 토스트에도 노출 (디버깅 추적용)
+  const code=err?.code||err?.status||'';
+  const msg=err?.message||err?.error_description||'';
+  const tag=code?` [${code}]`:'';
+  const detail=msg?` ${String(msg).slice(0,60)}`:'';
+  toast(action+'하지 못했어요'+tag+detail+(tag||detail?'':' 잠시 후 다시 시도해주세요'),'error',7000);
+}
+const setLoad = (on, t='처리 중...') => {
+  document.getElementById('loading').style.display = on ? 'flex' : 'none';
+  document.getElementById('loadText').innerText = t;
+};
+function nav(tab, el) {
+  // 서브탭 분리: staffRoles → staff 컨테이너 + roles 서브탭
+  let subTab = null;
+  const subTabMap = {
+    vendorUpload: { container: 'vendors', sub: 'upload' },
+    settingsBasic: { container: 'settings', sub: null },
+    settingsWage: { container: 'settings', sub: null },
+    settingsSettle: { container: 'settings', sub: null },
+  };
+  if (subTabMap[tab]) {
+    subTab = subTabMap[tab].sub;
+    tab = subTabMap[tab].container;
+  }
+  // 대시보드 벗어날 때 차트 메모리 해제
+  Object.keys(chartInstances).forEach(id=>destroyChart(id));
+  // 컨테이너 전환
+  document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
+  const target = document.getElementById(tab + 'Cont');
+  if (target) target.classList.add('active');
+  // 스크롤 최상단으로 초기화
+  window.scrollTo(0, 0);
+  // 하단 탭 active 표시 (허브 카드에서 진입한 경우 부모 탭이 active 유지)
+  const parentTabMap = {
+    opening:'busHub', settle:'busHub',
+    // sales는 홈 매출 행에서만 진입 (영업 탭 카드는 제거됨) → 홈 탭 active 유지
+    sales:'dashboard',
+    receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
+    explist:'expHub', recon:'expHub', expcat:'expHub',
+    royalty:'expHub', catReceipt:'expHub', manualCat:'expHub',
+  };
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el && el.classList) el.classList.add('active');
+  else {
+    // 1순위: 보이는 nav-item 직접 매칭
+    let navEl = document.querySelector(`.nav-item[data-tab="${tab}"]:not([style*="display:none"]):not([style*="display: none"])`);
+    // 2순위: 부모 탭 (허브 카드에서 진입한 경우 부모 탭 active 유지)
+    if (!navEl && parentTabMap[tab]) {
+      navEl = document.querySelector(`.nav-item[data-tab="${parentTabMap[tab]}"]:not([style*="display:none"]):not([style*="display: none"])`);
+    }
+    // 3순위: 숨겨진 nav-item 매칭 (fallback)
+    if (!navEl) navEl = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+    if (navEl) navEl.classList.add('active');
+  }
+  // 페이지별 초기 로딩
+  const actions = {
+    staff: loadEmployees,
+    settings: loadAllSettings,
+    dashboard: loadDashboard,
+    franchiseHome: loadFranchiseHome,
+    // reserve 탭 폐기 (2026-05-22)
+    vendors: loadVendors,
+    fixedcost: loadFixedCosts,
+    attendance: initAttDate,
+    // schedule: 2026-05-21 폐기 (근태 서브탭으로 통합). schedule 라우트 호출 시 attendance로 흡수.
+    schedule: initAttDate,
+    wage: loadWageSummary,
+    explist: initExplist,
+    expcat: loadExpCategories,
+    royalty: loadRoyaltyPage,
+    recon: initRecon,
+    sales: loadSalesDaily,
+    opening: loadOpeningPage,
+    myinfo: loadMyInfo,
+    busHub: loadBusHubData,
+    expHub: loadExpHubData,
+    catReceipt: loadCatReceiptData,
+    manualCat: loadManualCatView,
+  };
+  if (actions[tab]) actions[tab]();
+  // 홈 v7: dashboard 진입 시 home stage로 리셋 (2026-05-22)
+  if (tab === 'dashboard') { try { dashGoStage('home'); } catch(_){} }
+  if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); renderExtraRevenueInputs(); recalcSettle2(); initSettleDate(); loadOpeningAmount(); }
+  if (tab === 'opening') { initOpeningDate(); openingTab('input', null); }
+  // 서브탭 초기화: 탭 진입 시 첫 번째 서브탭을 active로
+  if (!subTab) {
+    const firstSub = document.querySelector(`#${tab}Cont .sub-tabs .sub-tab:first-child`);
+    if (firstSub && !firstSub.classList.contains('active')) firstSub.click();
+  }
+  // 서브탭 전환
+  if (subTab) {
+    setTimeout(() => {
+      const subBtn = document.querySelector(`#${tab}Cont .sub-tab[data-sub="${subTab}"]`);
+      if (subBtn) subBtn.click();
+    }, 50);
+  }
+}
+function openSheet(id) {
+  const el=document.getElementById(id);
+  if(el.classList.contains('sheet-overlay')){
+    // sheet-overlay는 자체 배경이 있으므로 #overlay 불필요
+    el.style.display='flex';
+    const inner=el.querySelector('.sheet');
+    if(inner) setTimeout(()=>inner.classList.add('show'),10);
+  } else {
+    document.getElementById('overlay').style.display='block';
+    el.classList.add('show');
+  }
+}
+function closeSheet(id) {
+  const el=document.getElementById(id);if(!el)return;
+  if(el.classList.contains('sheet-overlay')){
+    const inner=el.querySelector('.sheet');if(inner)inner.classList.remove('show');
+    setTimeout(()=>{el.style.display='none';},300);
+  } else {
+    el.classList.remove('show');
+    setTimeout(()=>{
+      if(!document.querySelector('.sheet.show')) document.getElementById('overlay').style.display='none';
+    },350);
+  }
+}
+function closeAllSheets() {
+  document.querySelectorAll('.sheet.show').forEach(s=>s.classList.remove('show'));
+  document.querySelectorAll('.sheet-overlay').forEach(s=>{s.style.display='none';const inner=s.querySelector('.sheet');if(inner)inner.classList.remove('show');});
+  setTimeout(()=>document.getElementById('overlay').style.display='none',300);
+}
+const fmt = n => (n||0).toLocaleString();
+const unFmt = s => parseInt((s||'0').replace(/,/g,''))||0;
+// ─── 데이터 캐시 (속도 개선 2026-05-21) ─── //
+// stale-while-revalidate 패턴 인프라: 메모리 + sessionStorage dual
+// 사용: cacheGet(key, ttlMs) / cacheSet(key, data) / cacheInvalidate(prefix)
+const _pdCacheMem = {};
+const PD_CACHE_VERSION = 1; // 코드 배포 시 버전 ↑ = 옛 캐시 자동 무효화
+function cacheGet(key, ttlMs=300000){
+  const m=_pdCacheMem[key];
+  if(m && Date.now()-m.t<ttlMs && m.v===PD_CACHE_VERSION) return m.d;
+  try{
+    const raw=sessionStorage.getItem('pd_cache_'+key);
+    if(raw){
+      const p=JSON.parse(raw);
+      if(p && p.v===PD_CACHE_VERSION && Date.now()-p.t<ttlMs){
+        _pdCacheMem[key]={t:p.t,d:p.d,v:p.v};
+        return p.d;
+      }
+    }
+  }catch(_){}
+  return null;
+}
+function cacheSet(key, data){
+  const obj={t:Date.now(),d:data,v:PD_CACHE_VERSION};
+  _pdCacheMem[key]=obj;
+  try{ sessionStorage.setItem('pd_cache_'+key, JSON.stringify(obj)); }catch(_){}
+}
+function cacheInvalidate(prefix){
+  Object.keys(_pdCacheMem).forEach(k=>{ if(k.startsWith(prefix)) delete _pdCacheMem[k]; });
+  try{
+    const rm=[];
+    for(let i=0;i<sessionStorage.length;i++){
+      const k=sessionStorage.key(i);
+      if(k && k.startsWith('pd_cache_'+prefix)) rm.push(k);
+    }
+    rm.forEach(k=>sessionStorage.removeItem(k));
+  }catch(_){}
+}
+// 로컬(한국) 시간 기준 YYYY-MM-DD 문자열 — toISOString().split('T')[0] 시간대 버그 회피용 (2026-05-15 #69)
+function ymdLocal(date){
+  const d=date instanceof Date?date:new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+// 금액 입력란 공용: 입력 중 세자리 콤마 자동 (dev_lessons #58)
+function formatNumberInput(el){const raw=(el.value||'').replace(/[^\d]/g,'');el.value=raw?parseInt(raw).toLocaleString():'';}
+const guardStore = () => { if(!currentStore){toast('매장을 먼저 선택하세요.','warn');openStoreSheet();return false;}return true; };
+function maskAccount(a) { const c=a.replace(/[^0-9]/g,''); return c.length>=4?'****-****-'+c.slice(-4):a; }
+function applyPermissionUI() {
+  // manager-only: store_manager 이상 (owner, franchise_admin, store_manager)
+  document.querySelectorAll('.manager-only').forEach(el => {
+    el.style.display = isManager ? '' : 'none';
+  });
+  // staff-only: staff만 (관리자는 안 보임)
+  document.querySelectorAll('.staff-only').forEach(el => {
+    el.style.display = (!isManager && currentEmp) ? '' : 'none';
+  });
+  // owner-only: owner만
+  document.querySelectorAll('.owner-only').forEach(el => {
+    el.style.display = isOwner ? '' : 'none';
+  });
+  // franchise-admin-only: franchise_admin만
+  document.querySelectorAll('.franchise-admin-only').forEach(el => {
+    el.style.display = (authLevel==='franchise_admin') ? '' : 'none';
+  });
+  // 네비바 탭: 권한별 표시 (manager-only / staff-only 분기)
+  document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
+    if(el.classList.contains('manager-only')) el.style.display = isManager ? '' : 'none';
+    else if(el.classList.contains('staff-only')) el.style.display = (!isManager && currentEmp) ? '' : 'none';
+    else el.style.display='';
+  });
+  // 내 정보 배지 업데이트
+  const badge=isOwner?'👑 사장':isManager?'🔑 관리자':'';
+  const badgeEl=document.getElementById('authBadge');
+  if(badgeEl) badgeEl.innerHTML=badge?`<span class="badge badge-warn">${badge}</span>`:'';
+}
+function daysInMonth(ym) { const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
+
+// ══════════════════════════════════════════
+// 내 정보
+// ══════════════════════════════════════════
+function openMyInfoSheet() {
+  const emp = currentEmp;
+  let html = '';
+  if (!emp) {
+    html = `<div style="font-size:18px;font-weight:800;margin-bottom:8px;">개발 모드</div>
+      <p style="font-size:13px;color:var(--gray-600);">로그인 없이 관리자 권한으로 진입 중입니다.</p>
+      <button class="btn btn-secondary btn-full" style="margin-top:20px;" data-action="closeAllSheets">닫기</button>`;
+  } else {
+    html = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+        <div class="emp-avatar">${emp.name?.charAt(0)||'?'}</div>
+        <div><div style="font-size:19px;font-weight:800;">${emp.name}</div>
+          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;" id="authBadge">
+            ${emp.role?`<span class="badge badge-blue">${emp.role}</span>`:''}
+            ${isOwner?'<span class="badge badge-warn">👑 사장</span>':isManager?'<span class="badge badge-warn">🔑 관리자</span>':''}
+          </div>
+        </div>
+      </div>
+      <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">전화번호</span><span style="font-size:13px;font-weight:700;">${emp.phone||'-'}</span></div>
+      <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">생년월일</span><span style="font-size:13px;font-weight:700;">${emp.birth_date||'-'}</span></div>
+      <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">은행/계좌</span><span style="font-size:13px;font-weight:700;">${emp.bank_name||'-'} ${emp.account_number?maskAccount(emp.account_number):''}</span></div>
+      <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">시급</span><span style="font-size:13px;font-weight:700;">${fmt(emp.base_wage)}원</span></div>
+      <div class="action-group" style="margin-top:16px;">
+        ${isManager?`<button class="btn btn-secondary" style="flex:1;padding:14px;" data-action="editEmpAfterClose|${emp.id}">✏️ 수정</button>`:''}
+        <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="doLogout">로그아웃</button>
+      </div>`;
+  }
+  document.getElementById('myInfoContent').innerHTML = html;
+  openSheet('myInfoSheet');
+}
+// doLogout는 PIN 로그인 섹션에서 정의됨
+
+// ══════════════════════════════════════════
+// 매장 선택 — 검색 + 브랜드 그룹 (2026-05-06: SaaS 확장 대비)
+// ══════════════════════════════════════════
+let _storeListCache = []; // 검색용 원본 캐시
+async function openStoreSheet() {
+  openSheet('storeSheet');
+  // 검색 입력창 비우고 시작
+  const searchEl = document.getElementById('storeSearchInput');
+  if(searchEl) searchEl.value = '';
+  const {data} = await sb.from('stores').select('*, franchises(name)').eq('is_active',true).order('name');
+  _storeListCache = data || [];
+  renderStoreList(_storeListCache);
+}
+function renderStoreList(stores){
+  const listEl = document.getElementById('storeList');
+  if(!stores.length){
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 매장이 없습니다</p></div>';
+    return;
+  }
+  // 브랜드별 그룹 (franchises.name 없으면 '기타')
+  const grouped = {};
+  stores.forEach(s => {
+    const brand = s.franchises?.name || '기타';
+    if(!grouped[brand]) grouped[brand] = [];
+    grouped[brand].push(s);
+  });
+  const brands = Object.keys(grouped).sort((a,b)=>a==='기타'?1:b==='기타'?-1:a.localeCompare(b,'ko'));
+  // 매장 1개고 브랜드도 1개면 단순 리스트 (그룹 헤더 생략)
+  const flatMode = stores.length<=3 && brands.length===1;
+  listEl.innerHTML = brands.map(brand=>{
+    const items = grouped[brand].map(s=>`
+      <div class="store-item" data-action="selectStore|${s.id}|${s.name}">
+        <div class="store-dot"></div>
+        <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;">${s.name}</div><div style="font-size:12px;color:var(--gray-600);">${s.address||''}</div></div>
+      </div>`).join('');
+    if(flatMode) return items;
+    return `<div style="margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:800;color:var(--gray-500);padding:6px 4px;letter-spacing:-0.3px;">${brand} <span style="color:var(--gray-400);font-weight:600;">${grouped[brand].length}</span></div>
+      ${items}
+    </div>`;
+  }).join('');
+}
+function filterStoreList(el){
+  const q = (el.value||'').trim().toLowerCase();
+  if(!q) return renderStoreList(_storeListCache);
+  const filtered = _storeListCache.filter(s => {
+    const name = (s.name||'').toLowerCase();
+    const brand = (s.franchises?.name||'').toLowerCase();
+    const addr = (s.address||'').toLowerCase();
+    return name.includes(q) || brand.includes(q) || addr.includes(q);
+  });
+  renderStoreList(filtered);
+}
+async function selectStore(id, name) {
+  currentStore = {id, name};
+  document.getElementById('headerStore').innerText = name;
+  localStorage.setItem('pd_store', JSON.stringify({id,name}));
+  closeAllSheets();
+  // 로그인 전이면 직원만 로드, 로그인 후면 전부 로드
+  if(document.getElementById('loginOverlay').style.display!=='none'){
+    await loadEmployees();
+    showLoginScreen();
+  } else {
+    await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories(), loadPaymentMethods(), loadExtraItems()]);
+    // 매출 캐시 클리어 (매장 바꾸면 새로 로드)
+    salesDaily = []; salesEditCtx = null;
+    recalcSettle2();
+  }
+}
+
