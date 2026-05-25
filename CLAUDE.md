@@ -80,8 +80,30 @@
 - auto-merge 실패 → 즉시 머지 → 그것도 실패 시 CTO가 원인 분석·해결안 가져옴 (사장님은 응/왜? 판단만)
 - 본가(main)에 직접 push로 우회 절대 금지
 
-### 1-4. 단일 파일 SPA 유지
-- `index.html` 하나에 HTML+CSS+JS 전부. 파일 분리하려면 별도 승인.
+### 1-4. 모듈 분리 구조 (2026-05-25 분리 작업 완료)
+
+`index.html` 한 파일 비대 (20,210줄) → 모듈별 분리 완료. 새 구조:
+
+```
+pongdang-shabu/
+├── index.html              ← 화면 골격 + script src 박음 (3,197줄)
+├── assets/
+│   ├── styles.css          ← 꾸미기 (1,346줄)
+│   ├── common.js           ← 공통 부품 (588줄, sb·fmt·guardStore 등)
+│   └── tabs/
+│       ├── receipt.js      ← 🧾 영수증 (1,827줄)
+│       ├── attendance.js   ← ⏰ 근태 (1,032줄)
+│       ├── schedule.js     ← 📅 근무계획 (337줄)
+│       ├── settlement.js   ← 💰 마감정산 (1,169줄)
+│       ├── dashboard.js    ← 📊 대시보드 (2,368줄)
+│       └── sidemenu.js     ← 🏪 사이드메뉴 (8,475줄, 거래처·고정비·직원·설정)
+```
+
+규칙:
+- 새 코드는 해당 탭 모듈에 박음 (잔재 분기 방지)
+- 공통 함수 추가 시 `common.js`에 박음
+- 더 작게 쪼개기 (예: sidemenu → vendor/employee/settings 분리)는 코딩 직원 들어왔을 때 결정 (헌법 1-6 갈아엎기 절차)
+- 빌드 시스템 도입 X (사장님 비전 "단순")
 
 ### 1-5. 기존 기능 보호
 - 작동 중인 기능을 깨뜨리면 즉시 롤백한다.
@@ -517,7 +539,11 @@ to: [다음 에이전트]
 ## 제6조. 프로젝트 현황
 
 ### 기술 스택
-- **프론트**: 단일 `index.html` (HTML + CSS + 바닐라 JS, 약 7,500줄 / CSS 434 · HTML 1,461 · JS 5,629)
+- **프론트**: 모듈 분리 구조 (2026-05-25 헌법 1-4 분리 완료)
+  - `index.html` (3,197줄, 화면 골격)
+  - `assets/styles.css` (1,346줄)
+  - `assets/common.js` (588줄, 공통 부품)
+  - `assets/tabs/*.js` (6개 탭 모듈: receipt 1,827 + attendance 1,032 + schedule 337 + settlement 1,169 + dashboard 2,368 + sidemenu 8,475)
 - **백엔드/DB**: Supabase (상세: `docs/db_schema.md` 참조)
 - **배포**: Cloudflare Pages → `pongdang-shabu.pages.dev`
 - **레포**: `luxuryguy562-cmyk/pongdang-shabu`
