@@ -5389,12 +5389,31 @@ async function loadCatReceiptData(){
       .gte('order_date', start).lte('order_date', end)
       .order('order_date', {ascending:false});
   }
-  const [rRes, oRes] = await Promise.all([rq, oq || Promise.resolve({data:[], error:null})]);
+  // 2026-05-25 신설: mydata_transactions 통합 조회 (사장님 호소 "전 카테고리 통일" → 통장·카드 자동 분류도 같은 화면에)
+  //  · 카테고리 모드만 (직구 모드는 vendor_id NULL 영수증만이므로 mydata 안 끼움)
+  //  · category_id IN ids (대분류 + 자식들)
+  //  · exclude_from_settlement=true는 환급금 등이므로 제외 (manualCat 패턴 일관)
+  let mq = null;
+  if(catIdSet){
+    mq = sb.from('mydata_transactions')
+      .select('id,tx_date,tx_type,description,merchant_name,amount,category_id,sub_category')
+      .eq('store_id', currentStore.id)
+      .eq('exclude_from_settlement', false)
+      .in('category_id', Array.from(catIdSet))
+      .gte('tx_date', start).lte('tx_date', end)
+      .order('tx_date', {ascending:false});
+  }
+  const [rRes, oRes, mRes] = await Promise.all([
+    rq,
+    oq || Promise.resolve({data:[], error:null}),
+    mq || Promise.resolve({data:[], error:null})
+  ]);
   if(rRes.error){
     body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--danger);font-size:13px;">불러오기 실패: ${esc(rRes.error.message||'')}</div>`;
     return;
   }
   if(oRes.error){ console.error('vendor_orders 조회 실패', oRes.error); }
+  if(mRes.error){ console.error('mydata_transactions 조회 실패', mRes.error); }
   // rcpRecords 글로벌은 receipts 원본만 (openReceiptEdit / openReceiptGroupEdit 호환)
   rcpRecords = rRes.data || [];
   // 정규화 + vendor_orders는 vendors.category_id IN catIdSet 메모리 필터 (좀비 거래처 자동 제외)
@@ -5402,7 +5421,8 @@ async function loadCatReceiptData(){
   const normOrders = catIdSet
     ? (oRes.data||[]).filter(r=>r.vendors && catIdSet.has(r.vendors.category_id)).map(r=>_normalizeExpenseRow(r,'order'))
     : [];
-  catReceiptRowsCache = normReceipts.concat(normOrders);
+  const normMydata = (mRes.data||[]).map(r=>_normalizeExpenseRow(r,'mydata'));
+  catReceiptRowsCache = normReceipts.concat(normOrders).concat(normMydata);
   renderCatReceiptList(catReceiptRowsCache);
 }
 
@@ -5529,17 +5549,30 @@ function renderCatReceiptList(rows){
     let firstGroup = true;
     byDate[d].forEach(g=>{
       const isOrder = g.source === 'order';
-      // 헤더 이모지: 거래처 주문 = 🏪 / 영수증 = 입력 방식별 📸 또는 ✏️
-      const headerIcon = isOrder
-        ? '🏪 🧾'
-        : (g.inputMethod==='photo' ? '📸 🧾' : (g.inputMethod==='manual' ? '✏️ 🧾' : '🧾'));
+      const isMydata = g.source === 'mydata';
+      // 헤더 이모지: 통장 = 🏦 / 카드 = 💳 / 거래처 주문 = 🏪 / 영수증 = 📸·✏️
+      let headerIcon;
+      if(isMydata){
+        const tx = g.rows[0]?.txType || 'bank';
+        headerIcon = (tx==='card' ? '💳' : '🏦');
+      } else if(isOrder){
+        headerIcon = '🏪 🧾';
+      } else {
+        headerIcon = (g.inputMethod==='photo' ? '📸 🧾' : (g.inputMethod==='manual' ? '✏️ 🧾' : '🧾'));
+      }
       const errBadge = g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
-      // 헤더 액션: 영수증 / 거래처 주문 모두 [✏편집][🗑삭제] 노출 (통일감 — 사장님 2026-05-21)
-      //  · 영수증: openReceiptGroupEdit (그룹 통째 편집 시트) / deleteReceiptGroup (그룹 통째 삭제)
-      //  · 거래처 주문: openEditOrderSheet (행 id 1개 줘도 시트가 group_id로 그룹 전체 자동 로드)
-      //                 / deleteOrderGroupFromCard (group_id 기반 일괄 DELETE, fallback=단행)
+      // 헤더 액션: 영수증·주문·mydata 모두 [✏편집] (삭제는 편집 시트 안에서)
+      //  · 영수증: openReceiptGroupEdit / deleteReceiptGroup
+      //  · 거래처 주문: openEditOrderSheet / deleteOrderGroupFromCard
+      //  · mydata(통장·카드): openTxEditSheet (행 1건 = 1그룹, 삭제는 시트 내부)
       let actionsHtml = '';
-      if(isOrder){
+      if(isMydata){
+        const txId = g.rows[0]?.id || g.recId;
+        const txType = g.rows[0]?.txType || 'bank';
+        actionsHtml = `<div class="grp-hdr-actions">
+            <button type="button" class="btn btn-secondary" data-action="openTxEditSheet|${txId}|${txType}">✏</button>
+          </div>`;
+      } else if(isOrder){
         const editId = g.rows[0]?.id || g.recId; // 시트는 어떤 행 id든 받으면 group_id로 그룹 전체 로드
         const delKey = g.groupId ? ('g:'+g.groupId) : ('s:'+g.recId);
         actionsHtml = `<div class="grp-hdr-actions">
@@ -5575,8 +5608,12 @@ function renderCatReceiptList(rows){
         const itemRaw = r.item || '(품목 없음)';
         const itemTxt = esc(itemRaw) + memoFlag;
         const itemTitle = (r._source==='order' && r.memo) ? esc(itemRaw + ' · 메모: ' + r.memo) : esc(itemRaw);
-        // 행 클릭: source별 분기
-        const clickAction = r._source === 'order' ? `openEditOrderSheet|${r.id}` : `openReceiptEdit|${r.id}`;
+        // 행 클릭: source별 분기 (order / mydata / receipt)
+        const clickAction = r._source === 'order'
+          ? `openEditOrderSheet|${r.id}`
+          : (r._source === 'mydata'
+              ? `openTxEditSheet|${r.id}|${r.txType||'bank'}`
+              : `openReceiptEdit|${r.id}`);
         html += `<tr class="${cls.join(' ')}" data-action="${clickAction}">`
           + `<td title="${itemTitle}">${itemTxt}</td>`
           + `<td class="gb-unit">${unitTxt}</td>`
@@ -6347,6 +6384,31 @@ function _normalizeExpenseRow(row, source){
       input_method:'manual',
       note:'정상',
       memo:row.memo||''
+    };
+  }
+  if(source==='mydata'){
+    // 2026-05-25 신설: mydata_transactions(통장·카드 자동 분류) 정규화
+    //  · 카테고리 화면 통합 표시용 (사장님 호소: "기타 들어가면 영수증이 안 보임" → 전 카테고리 통일)
+    //  · 1행 = 1그룹 (group 개념 없음, recId=tx.id)
+    //  · 헤더 라벨 = merchant_name 우선, 없으면 description
+    //  · 편집: openTxEditSheet(id, tx_type) / 삭제: 시트 안에서
+    const label = (row.merchant_name||'').trim() || (row.description||'').trim() || '(내역 없음)';
+    return {
+      _source:'mydata',
+      _origin:row,
+      id:row.id,
+      date:row.tx_date||'',
+      vendor:label,
+      vendor_id:null,
+      item:(row.sub_category||'').trim() || '-',
+      unit:null,
+      qty:null,
+      amount:Math.abs(row.amount||0),
+      group_id:null,
+      input_method:'auto',
+      note:'정상',
+      memo:'',
+      txType:row.tx_type||'bank' // 'bank' | 'card'
     };
   }
   // receipt
@@ -15904,16 +15966,18 @@ const _expCatIconMap = {
 function _expCatIcon(name){ return _expCatIconMap[name] || 'i-folder'; }
 
 // 카테고리 카드 클릭 시 어디로? (data_source 기반)
-//   - receipts/composite/vendor_orders → openCatReceipt|cat:<id> (표 + 필터)
 //   - attendance → nav|wage
 //   - fixed_costs → openFcCategory|<카테고리명> (카테고리별 분리 진입)
-//   - manual → openManualCatView|<카테고리명> (세금·마케팅·기타 mydata 거래내역, 2026-05-20)
+//   - 그 외(receipts/composite/vendor_orders/manual) → openCatReceipt|cat:<id> (영수증·거래처주문·mydata 통합)
+//
+// 2026-05-25 갈아엎기 (사장님 호소: "기타 들어가면 영수증 안 보임 — 싹다 한 화면에"):
+//   옛: manual data_source → openManualCatView (mydata only) 분기 → 영수증 무시 → 사장님 폭발
+//   신: 모든 카테고리 → openCatReceipt 통일 (영수증·손입력·통장·카드 다 한 표)
+//   openManualCatView 함수는 코드만 남기고 진입 경로 끊음 (안전망)
 function _expCatAction(cat){
   const ds = cat.data_source || 'manual';
   if(ds==='attendance') return 'nav|wage';
   if(ds==='fixed_costs') return 'openFcCategory|'+cat.name;
-  if(ds==='manual') return 'openManualCatView|'+cat.name;
-  // receipts / composite / vendor_orders
   return 'openCatReceipt|cat:'+cat.id;
 }
 // 고정비 카테고리별 진입 (공과금 카드면 공과금 항목만, 고정비 카드면 고정비만 — 사장님 호소 2026-05-20)
