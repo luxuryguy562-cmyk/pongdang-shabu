@@ -449,7 +449,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 결근 빗금 (텍스트 없음, 빗금만) */
 .gantt-bar.absent{background:repeating-linear-gradient(45deg,rgba(239,68,68,0.85),rgba(239,68,68,0.85) 4px,rgba(254,202,202,0.85) 4px,rgba(254,202,202,0.85) 8px);border:1px solid rgba(239,68,68,0.85);height:18px;top:2px;}
 .gantt-day-section{margin-bottom:10px;}
-.gantt-day-label{font-size:12px;font-weight:700;color:var(--text);padding:6px 4px 4px;display:flex;justify-content:space-between;align-items:center;}
+.gantt-day-label{font-size:12px;font-weight:700;color:var(--text);padding:6px 4px 4px;display:flex;flex-direction:column;gap:4px;}
+.gantt-day-label .row-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.gantt-day-label .row-top .ttl{font-weight:800;font-size:13px;letter-spacing:-0.3px;}
+.gantt-day-label .row-top .sum{display:flex;align-items:baseline;gap:8px;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.gantt-day-label .row-top .sum .h{font-size:11px;color:var(--gray-500);font-weight:600;}
+.gantt-day-label .row-top .sum .w{font-size:13px;color:var(--blue);font-weight:800;}
+.gantt-day-label .row-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
 .gantt-day-label .day-date{color:var(--gray-600);font-weight:600;}
 .gantt-day-label .day-count{font-size:10px;color:var(--gray-400);}
 
@@ -483,7 +489,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-cal-cell.add-mode{cursor:pointer;}
 .att-cal-cell.add-mode:hover .att-cal-empty-add{color:var(--blue);}
 /* 일별 상세 + 직원 추가 버튼 */
-.att-day-add-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:var(--blue-light);color:var(--blue);border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px;}
+.att-day-add-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:var(--blue-light);color:var(--blue);border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .att-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;}
 .att-cal-head{font-size:10px;font-weight:700;color:var(--gray-600);text-align:center;padding:4px 0;}
 .att-cal-head.sun{color:var(--danger);}
@@ -503,10 +509,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-day-empty{text-align:center;color:var(--gray-400);font-size:12px;padding:24px 0;}
 .att-row-label{display:flex;align-items:center;gap:4px;min-width:55px;font-size:10px;font-weight:700;color:var(--text);padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .att-row-label .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.att-row-meta{display:flex;justify-content:space-between;align-items:center;margin:-2px 0 6px 59px;font-size:10px;color:var(--gray-600);}
-.att-row-meta .time{color:var(--gray-400);}
-.att-row-meta .hours{color:var(--text);font-weight:700;font-size:11px;margin-left:8px;}
-.att-row-meta .wage{color:var(--blue);font-weight:700;font-size:11px;}
+.att-row-meta{display:flex;justify-content:space-between;align-items:baseline;margin:-2px 0 6px 59px;font-size:10px;color:var(--gray-600);font-variant-numeric:tabular-nums;}
+.att-row-meta>span:first-child{display:inline-flex;align-items:baseline;gap:8px;}
+.att-row-meta .time{color:var(--gray-400);font-variant-numeric:tabular-nums;}
+.att-row-meta .hours{color:var(--text);font-weight:700;font-size:11px;min-width:40px;text-align:right;font-variant-numeric:tabular-nums;}
+.att-row-meta .wage{color:var(--blue);font-weight:700;font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums;}
 
 /* ─ 대시보드 */
 .kpi-section{padding:14px 0;border-bottom:1px solid var(--gray-100);}
@@ -7423,14 +7430,23 @@ function renderAttDayDetail(date, logs, isSingleView){
   const planRowsCheck = (window._attSchedDayMap && window._attSchedDayMap[date]) || [];
   const hasPlanOnly = !((logs||[]).length) && planRowsCheck.some(p=>p.employee_id && !p.is_off);
   if((!logs || !logs.length) && !hasPlanOnly){
-    const headerBtns = `
+    // 2026-05-25 헤더 갈아엎기 (사장님 호소: 한 줄 안 들어가고 엉망)
+    //  · 1행: 날짜(좌) · "기록 없음"(우)
+    //  · 2행: [주 일정] [+ 실제 입력] 칩 (한 줄 wrap)
+    const chipBtns = `
       <span class="att-day-add-btn" data-action="openWeeklyPlanSheet|${date}">📅 주 일정</span>
-      ${isManager ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 실제 입력</span>` : ''}
+      ${isManager ? `<span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 실제 입력</span>` : ''}
     `;
     const note = isManager
       ? ''
       : `<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--gray-400);">출퇴근 누락 시 관리자에게 등록을 요청하세요</div>`;
-    target.innerHTML = `<div class="gantt-day-label"><span>📅 ${date.slice(5)} (${dow})${headerBtns}</span><span style="font-size:10px;color:var(--gray-400);">기록 없음</span></div>${note}`;
+    target.innerHTML = `<div class="gantt-day-label">
+      <div class="row-top">
+        <span class="ttl">📅 ${date.slice(5)} (${dow})</span>
+        <span style="font-size:10px;color:var(--gray-400);">기록 없음</span>
+      </div>
+      <div class="row-chips">${chipBtns}</div>
+    </div>${note}`;
     return;
   }
   const safeLogs = logs || [];
@@ -7438,14 +7454,23 @@ function renderAttDayDetail(date, logs, isSingleView){
   const totalWage = safeLogs.reduce((a,r)=>a+(r.calculated_wage||0),0);
   const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const allData = window._attListData || [];
-  const headerBtns = `
+  // 2026-05-25 헤더 갈아엎기 (사장님 호소: 한 줄 안 들어가고 엉망)
+  //  · 1행: 날짜(좌) · 41.4h · 496,600원 (우, nowrap)
+  //  · 2행: [주 일정] [+ 실제 입력] 칩 그룹
+  const chipBtns = `
     <span class="att-day-add-btn" data-action="openWeeklyPlanSheet|${date}">📅 주 일정</span>
-    ${isManager ? ` <span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 실제 입력</span>` : ''}
+    ${isManager ? `<span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 실제 입력</span>` : ''}
   `;
 
   let html = `<div class="gantt-day-label">
-    <span>📅 ${date.slice(5)} (${dow})${headerBtns}</span>
-    <span><span style="font-size:11px;color:var(--gray-500);font-weight:600;margin-right:10px;">${fmtHourDecimal(totalMin)}</span><span style="font-size:12px;color:var(--blue);font-weight:800;">${fmt(totalWage)}원</span></span>
+    <div class="row-top">
+      <span class="ttl">📅 ${date.slice(5)} (${dow})</span>
+      <span class="sum">
+        <span class="h">${fmtHourDecimal(totalMin)}</span>
+        <span class="w">${fmt(totalWage)}원</span>
+      </span>
+    </div>
+    <div class="row-chips">${chipBtns}</div>
   </div>`;
   html += `<div class="gantt-header"><div class="att-row-label" style="visibility:hidden;">x</div>${renderGanttHourCells()}</div>`;
 
