@@ -2389,7 +2389,8 @@ function openAddExpCatSheet(){
   editExpCatParentId=null;
   document.getElementById('addExpCatTitle').innerText='대분류 추가';
   document.getElementById('expCatNameInput').value='';
-  document.getElementById('expCatSourceInput').value='vendor_orders';
+  // 2026-05-25: 신규 대분류 기본값 = 'manual' (가장 무해, 사장님이 직접 영수증·수기 입력 가능). 옛 'vendor_orders' 기본 폐기.
+  document.getElementById('expCatSourceInput').value='manual';
   document.getElementById('expCatTypeInput').value=currentExpCatType||'expense'; // 현재 탭 타입 기본값
   document.getElementById('editExpCatId').value='';
   document.getElementById('expCatThresholdInput').value=''; // 신규 = 빈 칸 (저장 시 입력 없으면 기본값 사용)
@@ -2454,8 +2455,10 @@ function onExpCatTypeChange(){
     const isParentExp = type==='expense' && !editExpCatParentId;
     thWrap.style.display = isParentExp ? 'block' : 'none';
   }
+  // 2026-05-25: data_source UI = 사장님 모드 숨김. admin 모드(#admin)에서만 노출. (사장님 호소: "사용자가 만지면 안 되는 영역")
+  const isAdmin=(typeof location!=='undefined') && location.hash && location.hash.includes('admin');
   if(type==='expense'){
-    srcWrap.style.display='block';
+    srcWrap.style.display=isAdmin?'block':'none';
     hint.style.display='none';
     onExpCatSourceChange();
   } else {
