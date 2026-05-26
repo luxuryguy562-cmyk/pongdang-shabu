@@ -490,10 +490,35 @@ async function confirmCoupangInboxItem(id){
   if(e2) return alert('저장 실패: '+e2.message);
   // 4) coupang_inbox 상태 갱신
   await sb.from('coupang_inbox').update({status:'confirmed'}).eq('id', id).eq('store_id', currentStore.id);
-  // 5) UI 갱신
+  // 5) 학습 규칙 박기 (다음 동기화부터 자동 분류) — 2026-05-26 신설
+  const vendorItemId = r.raw_json?.vendor_item_id;
+  if(vendorItemId){
+    await sb.from('coupang_learning_rules').upsert({
+      store_id: currentStore.id,
+      vendor_item_id: String(vendorItemId),
+      category_id: catId,
+      source: 'auto',
+    }, {onConflict:'store_id,vendor_item_id'});
+  }
+  // 6) UI 갱신
   document.querySelector(`[data-inbox-id="${id}"]`)?.remove();
   await _checkCoupangInbox(vendors.find(v => v.id === currentVendorDetailId));
   if(typeof loadVendorOrders==='function') loadVendorOrders();
+}
+
+// 일괄 삭제 (전체 분류 대기 박멸 — 사장님 요청 2026-05-26)
+async function clearAllCoupangInbox(){
+  if(!guardStore()) return;
+  if(!confirm('분류 대기 항목을 전부 지우시겠습니까?\n(되돌릴 수 없습니다)')) return;
+  const {error, count} = await sb.from('coupang_inbox')
+    .delete({count:'exact'})
+    .eq('store_id', currentStore.id)
+    .eq('vendor_id', currentVendorDetailId)
+    .eq('status', 'pending');
+  if(error) return alert('실패: '+error.message);
+  alert((count||0)+'건 삭제됨');
+  closeAllSheets();
+  await _checkCoupangInbox(vendors.find(v => v.id === currentVendorDetailId));
 }
 
 async function skipCoupangInboxItem(id){
