@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<title>거래처 > 쿠팡 흐름 v1 — Phase 1+2 미리보기</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{--bg:#F5F6F8;--card:#fff;--gray-900:#1A1D24;--gray-700:#4A5160;--gray-600:#6B7280;--gray-500:#9AA0AB;--gray-400:#C7CBD3;--gray-200:#E4E6EB;--gray-100:#F0F2F5;--blue:#2563EB;--green:#10B981;--orange:#F59E0B;--red:#EF4444;--purple:#7C3AED;--coupang:#EF1F4D}
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Pretendard',sans-serif}
+  body{background:var(--bg);max-width:420px;margin:0 auto;padding:14px 12px 80px;color:var(--gray-900);font-size:14px}
+  .back{display:flex;align-items:center;gap:6px;color:var(--gray-700);font-size:14px;margin-bottom:12px;font-weight:600}
+  h1{font-size:19px;font-weight:800;margin-bottom:2px}
+  .sub{color:var(--gray-600);font-size:12px;margin-bottom:14px}
+
+  .vendor-head{display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .logo{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;background:linear-gradient(135deg,#F65275,#EF1F4D)}
+  .vh-name{font-size:16px;font-weight:800;color:var(--gray-900)}
+  .vh-meta{font-size:11px;color:var(--gray-500);margin-top:2px}
+  .vh-cat{font-size:10.5px;color:var(--blue);font-weight:700;background:#DBEAFE;padding:2px 7px;border-radius:6px;display:inline-block;margin-top:4px}
+
+  .month-pill{font-size:12px;color:var(--gray-700);background:#fff;padding:7px 12px;border-radius:8px;font-weight:700;border:1px solid var(--gray-200)}
+
+  .phase2-card{background:linear-gradient(135deg,#EEF2FF,#F5F3FF);border:1.5px dashed #6366F1;border-radius:13px;padding:14px;margin-bottom:12px}
+  .phase2-card .t{font-size:12.5px;color:#4338CA;font-weight:800;margin-bottom:4px}
+  .phase2-card .d{font-size:11.5px;color:#6366F1;line-height:1.5;margin-bottom:10px}
+  .btn-auto{width:100%;background:#6366F1;color:#fff;padding:12px;border-radius:10px;font-weight:800;font-size:13.5px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+
+  .compare-row{display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;align-items:center}
+  .cmp-col{text-align:center}
+  .cmp-col .l{font-size:10.5px;color:var(--gray-500);font-weight:700;margin-bottom:3px}
+  .cmp-col .v{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--gray-900)}
+  .cmp-diff{text-align:center;font-weight:800;font-size:13px;padding:5px 6px;border-radius:7px;background:#DCFCE7;color:#166534}
+
+  .order-card{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .order-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--gray-100)}
+  .order-date{font-size:12.5px;font-weight:800;color:var(--gray-900)}
+  .order-total{font-size:14px;font-weight:800;color:var(--coupang);font-variant-numeric:tabular-nums}
+  .order-meta{font-size:10.5px;color:var(--gray-500);margin-top:2px}
+
+  .item-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px}
+  .item-row .nm{flex:1;color:var(--gray-700);font-weight:600}
+  .item-row .cat{font-size:10px;background:#E0E7FF;color:#3730A3;padding:2px 6px;border-radius:5px;font-weight:700}
+  .item-row .amt{font-weight:700;font-variant-numeric:tabular-nums;color:var(--gray-900)}
+  .item-row .ai{font-size:9px;color:#15803D;background:#DCFCE7;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:3px}
+
+  .empty{text-align:center;background:#FFFBEB;border:1px dashed #F59E0B;border-radius:11px;padding:20px;color:#92400E;font-size:12px;line-height:1.6}
+  .empty b{color:#7C2D12}
+
+  .add-btn{width:100%;background:transparent;border:1.5px dashed var(--gray-300);color:var(--gray-700);padding:12px;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer;margin-bottom:14px}
+</style></head><body>
+
+<div class="back">‹ <span>거래처</span></div>
+<h1>📋 거래처 상세</h1>
+<p class="sub">사장님이 등록한 거래처 + 카드내역 자동 매칭</p>
+
+<!-- 거래처 헤더 -->
+<div class="vendor-head">
+  <div class="logo">C</div>
+  <div style="flex:1;min-width:0;">
+    <div class="vh-name">쿠팡</div>
+    <div class="vh-meta">사장님이 등록 · 2026-05-25</div>
+    <span class="vh-cat">🥬 식자재 (기본)</span>
+  </div>
+  <button class="month-pill">5월 ▾</button>
+</div>
+
+<!-- Phase 2 자동 가져오기 카드 (PC에서만 노출) -->
+<div class="phase2-card">
+  <div class="t">💻 PC에서 자동 가져오기 (Phase 2 예정)</div>
+  <div class="d">크롬 확장 1번 설치 후, 매월 버튼 1번이면 쿠팡 158품목 자동으로 채워집니다.</div>
+  <button class="btn-auto">🔄 이번달 가져오기 (1분 30초)</button>
+</div>
+
+<!-- 자동 대조 카드 (이미 있는 vendorCompare 기능) -->
+<div class="compare-row">
+  <div class="cmp-col">
+    <div class="l">📋 주문 명세</div>
+    <div class="v">1,580,200</div>
+  </div>
+  <div class="cmp-col">
+    <div class="l">💳 카드 결제</div>
+    <div class="v">1,580,200</div>
+  </div>
+  <div class="cmp-diff">✅ 일치</div>
+</div>
+
+<!-- ─── Phase 1: 사장님 수기 입력 모습 ─── -->
+<div style="font-size:12px;font-weight:800;color:var(--gray-700);margin:14px 0 8px;">📋 이번달 주문 명세 (3건)</div>
+
+<!-- 주문 1: AI 분류 (Phase 2 적용 후) -->
+<div class="order-card">
+  <div class="order-head">
+    <div>
+      <div class="order-date">5/24 · 주문 #2410</div>
+      <div class="order-meta">🤖 자동 가져옴 · 12품목</div>
+    </div>
+    <div class="order-total">425,300원</div>
+  </div>
+  <div class="item-row">
+    <span class="nm">대파 1단 × 5</span>
+    <span class="cat">🥬 식자재 ▸ 채소</span>
+    <span class="amt">16,450</span>
+    <span class="ai">AI</span>
+  </div>
+  <div class="item-row">
+    <span class="nm">곰표 밀가루 1kg × 4</span>
+    <span class="cat">🥬 식자재 ▸ 곡류</span>
+    <span class="amt">11,200</span>
+    <span class="ai">AI</span>
+  </div>
+  <div class="item-row">
+    <span class="nm">위생장갑 100매 × 5</span>
+    <span class="cat">🧻 소모품 ▸ 위생</span>
+    <span class="amt">22,500</span>
+    <span class="ai">AI</span>
+  </div>
+  <div style="font-size:11px;color:var(--gray-500);padding:4px 0;text-align:center;border-top:1px dashed var(--gray-100);margin-top:6px;padding-top:6px;">… 외 9품목 더보기</div>
+</div>
+
+<!-- 주문 2: 사장님 수기 입력 (Phase 1만 적용된 모습) -->
+<div class="order-card">
+  <div class="order-head">
+    <div>
+      <div class="order-date">5/18 · 주문 #2401</div>
+      <div class="order-meta">✏️ 사장님 수기 입력 · 2품목</div>
+    </div>
+    <div class="order-total">320,000원</div>
+  </div>
+  <div class="item-row">
+    <span class="nm">5/18 쿠팡 식자재</span>
+    <span class="cat">🥬 식자재</span>
+    <span class="amt">220,000</span>
+  </div>
+  <div class="item-row">
+    <span class="nm">5/18 쿠팡 비품</span>
+    <span class="cat">🧻 소모품</span>
+    <span class="amt">100,000</span>
+  </div>
+</div>
+
+<!-- 빈 상태: 사장님이 입력 안 한 결제 -->
+<div class="empty">
+  <b>💳 5/10 카드결제 834,900원</b><br>
+  주문 명세 미입력 — 사장님이 추가하시거나 자동 가져오기 누르세요
+</div>
+
+<button class="add-btn">+ 주문 명세 추가 (수기)</button>
+
+<div style="background:var(--gray-100);border-radius:10px;padding:10px 12px;font-size:10.5px;color:var(--gray-600);line-height:1.7;">
+  <b>💡 사장님 흐름 정리</b><br>
+  · <b>지금 (Phase 1):</b> 사장님이 주문 명세 수기 입력 → 카드결제와 자동 대조<br>
+  · <b>나중 (Phase 2):</b> PC에서 [🔄 가져오기] 1클릭 → 158품목 자동 채워짐 + AI 분류<br>
+  · 카드내역에서 "쿠팡"은 이미 자동 매칭 (지금도 됨)
+</div>
+
+</body></html>
