@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "퐁당샤브 쿠팡 동기화",
+  "version": "1.0.0",
+  "description": "쿠팡 주문내역을 퐁당샤브 거래처에 자동 박음 (사장님 로그인 세션 그대로 사용)",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "https://*.coupang.com/*",
+    "https://*.workers.dev/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mc.coupang.com/ssr/desktop/order/list*",
+        "https://www.coupang.com/np/mypage/orderlist*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "퐁당샤브 쿠팡 동기화"
+  },
+  "icons": {
+    "128": "icon-128.png"
+  }
+}
