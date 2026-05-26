@@ -343,18 +343,21 @@ function renderVendorList(){
     <span style="font-size:12px;color:var(--gray-600);">${ymStr} 주문 합계</span>
     <span style="font-size:14px;font-weight:800;color:var(--text);">${fmt(monthTotal)}원 · ${monthCount}건</span>
   </div>`:'';
+  // 2026-05-25 사장님 호소: 한 줄당 1개 → 2개 그리드로 화면 절약
   const cardsHtml=list.length?list.map(v=>{
     const t=vendorMonthTotals[v.id];
-    const monthLine=t&&t.count?`<div style="font-size:13px;color:var(--blue);font-weight:700;margin-top:4px;">이번달 ${fmt(t.total)}원 · ${t.count}건</div>`:`<div style="font-size:12px;color:var(--gray-400);margin-top:4px;">이번달 주문 없음</div>`;
+    const monthLine=t&&t.count
+      ? `<div class="vc-month has">이번달 ${fmt(t.total)}원 · ${t.count}건</div>`
+      : `<div class="vc-month empty">이번달 주문 없음</div>`;
+    const badge=!v.is_active?' <span class="badge badge-gray" style="font-size:9px;">거래종료</span>':'';
     return `<div class="vendor-card ${v.is_active?'':'inactive'}" data-vendor-id="${v.id}" data-action="openVendorDetail|${v.id}">
-      <span class="vendor-drag-handle" title="드래그로 순서 변경">☰</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:11px;color:var(--gray-500);font-weight:600;margin-bottom:2px;">${v.category||'기타'}</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);">${v.name} ${!v.is_active?'<span class="badge badge-gray">거래종료</span>':''}</div>
-        ${monthLine}
+      <div class="vc-head">
+        <span class="vendor-drag-handle" title="드래그로 순서 변경">☰</span>
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${v.category||'기타'}</span>
       </div>
-      <button class="btn btn-secondary btn-sm" style="padding:8px 10px;font-size:14px;flex-shrink:0;" title="이 거래처 영수증 등록" data-stop="1" data-action="openRcpReceiptFromVendor|${v.id}">📸</button>
-      <div style="font-size:20px;color:var(--gray-400);">›</div>
+      <div class="vc-name">${v.name}${badge}</div>
+      ${monthLine}
+      <button class="vc-rcp" title="이 거래처 영수증 등록" data-stop="1" data-action="openRcpReceiptFromVendor|${v.id}">📸</button>
     </div>`;
   }).join(''):'<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div>';
   // 카드들은 별도 wrap에 넣어 SortableJS 대상으로 (헤더/empty는 정렬 제외)
