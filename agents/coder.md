@@ -47,6 +47,19 @@ depends_on: planner (승인된 계획서)
 
 ## 수행 절차
 
+### 0단계: 사장님 가게 핵심 규칙 필독 (헌법 1-8 빙산 차단 — 2026-05-26 사장님 명시)
+
+> **수식·계산·DB·카테고리 변경 작업이면 반드시 박는다.** 작업 진입 전 의무.
+
+1. `docs/business_rules.md` **0번 섹션 (앱의 셈 — 매출·지출 정의)** 읽기 — 30초
+2. 영향 받는 작업이면 자가 점검:
+   - [ ] 0번 표에서 영향 자리 다 확인 (식자재 / 인건비 / 고정비 / 공과금 / 카드수수료 / 로열티 / 세금)
+   - [ ] FK 컬럼 일관 박았나? (vendors.category_id / receipts.category_id / fixed_costs.category_id)
+   - [ ] 옛 사고 재현 X (#36 FK 전수 / #2226 CAT_NAME_MAP 하드코딩 / #2603 item.category 텍스트)
+   - [ ] data_source 매칭 정확 (composite 대분류면 자식 ids 포함)
+3. **변경 후**: business_rules.md 0번 표 갱신 의무 (휘발 방지)
+4. 빠뜨림 시 → 사장님 마감·정산 데이터 손상 위험 = dev_lessons 빙산 박음
+
 ### 1단계: 작업 브랜치 생성
 ```bash
 git checkout -b feature/기능명
