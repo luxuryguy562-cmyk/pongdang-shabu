@@ -3201,10 +3201,11 @@
 <div class="sheet" id="coupangInboxSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title">🛒 쿠팡 자동 동기화 — 분류 대기</div>
-  <div id="coupangInboxList" style="max-height:60vh;overflow-y:auto;"></div>
-  <div style="display:flex;gap:8px;margin-top:12px;">
-    <button class="btn btn-primary" style="flex:1;" data-action="confirmAllCoupangInbox">AI 추천대로 전부 저장</button>
-    <button class="btn btn-secondary" style="flex:1;" data-action="closeAllSheets">닫기</button>
+  <div id="coupangInboxList" style="max-height:55vh;overflow-y:auto;"></div>
+  <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;">
+    <button class="btn btn-primary" style="flex:1;min-width:120px;" data-action="confirmAllCoupangInbox">AI 추천대로 저장</button>
+    <button class="btn btn-danger" style="flex:1;min-width:100px;" data-action="clearAllCoupangInbox">🗑 전부 지우기</button>
+    <button class="btn btn-secondary" style="flex:1;min-width:80px;" data-action="closeAllSheets">닫기</button>
   </div>
 </div>
 

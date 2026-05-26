@@ -327,8 +327,6 @@ franchises (프랜차이즈/브랜드)
 
 ### coupang_inbox (2026-05-26 추가)
 쿠팡 JSON API에서 가져온 주문을 사장님 분류 전 임시 보관. 분류 후 `vendor_orders`로 이동 (status='confirmed') 또는 건너뜀(status='skipped').
-
-| 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | UUID PK | |
 | store_id | UUID NOT NULL FK→stores | RLS 격리 |
@@ -350,10 +348,32 @@ franchises (프랜차이즈/브랜드)
 롤백: `DROP INDEX IF EXISTS idx_coupang_inbox_store_status; DROP TABLE IF EXISTS coupang_inbox;`
 
 **흐름**:
-1. 크롬 확장 → Workers `/coupang/orders` POST → `coupang_inbox` INSERT (UPSERT)
-2. 거래처 > 쿠팡 진입 시 `status='pending'` 행 표시
-3. 사장님 [✓ 저장] → `vendor_orders` INSERT + `coupang_inbox.status='confirmed'`
-4. 사장님 [건너뛰기] → `coupang_inbox.status='skipped'`
+1. 북마클릿 → Edge Function `coupang-receiver` POST → `coupang_learning_rules` 매칭 확인
+2. 매칭 있음 → `vendor_orders` 바로 INSERT (자동 분류, inbox 안 거침)
+3. 매칭 없음 → `coupang_inbox` INSERT (status='pending')
+4. 거래처 > 쿠팡 진입 시 pending 행 표시
+5. 사장님 [✓ 저장] → `vendor_orders` INSERT + `coupang_inbox.status='confirmed'` + **`coupang_learning_rules` 새 규칙 박힘**
+6. 사장님 [건너뛰기] → `coupang_inbox.status='skipped'`
+7. 사장님 [🗑 전부 지우기] → 해당 매장 pending 행 DELETE
+
+### coupang_learning_rules (2026-05-26 추가)
+쿠팡 상품 자동 분류 규칙. 사장님이 한 번 분류한 vendor_item_id = 다음 동기화부터 자동.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | UUID PK | |
+| store_id | UUID NOT NULL FK→stores ON DELETE CASCADE | |
+| vendor_item_id | TEXT | 쿠팡 상품 옵션 단위 ID (UNIQUE per store) |
+| keyword | TEXT | OR 키워드 매칭 (LIKE '%keyword%') — 사장님 수동 규칙용 |
+| category_id | UUID NOT NULL FK→expense_categories ON DELETE CASCADE | 대상 카테고리 |
+| source | TEXT NOT NULL DEFAULT 'auto' | 'auto'(사장님 분류로 자동 박힘) / 'manual'(직접 박음) |
+| match_count | INT DEFAULT 0 | 매칭된 횟수 |
+| created_at | TIMESTAMPTZ DEFAULT now() | |
+| last_used_at | TIMESTAMPTZ | 마지막 매칭 시각 |
+
+CHECK: vendor_item_id IS NOT NULL OR keyword IS NOT NULL
+UNIQUE: (store_id, vendor_item_id) WHERE vendor_item_id IS NOT NULL
+마이그레이션: `create_coupang_learning_rules_20260526`
 
 ### expense_categories / expense_category_amounts
 | expense_categories | expense_category_amounts |
