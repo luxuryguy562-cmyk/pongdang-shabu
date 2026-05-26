@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>퐁당샤브 쿠팡 동기화 설치</title>
+<style>
+body { font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; line-height: 1.6; color: #222; }
+h1 { font-size: 22px; margin-bottom: 8px; }
+.sub { color: #666; margin-bottom: 24px; }
+.step { background: #f7f7f9; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; }
+.step h2 { font-size: 16px; margin: 0 0 8px; color: #4338ca; }
+.step p { margin: 4px 0; font-size: 14px; }
+.drag-zone { background: linear-gradient(135deg, #6b46ff, #4f46e5); color: white; padding: 24px; border-radius: 12px; text-align: center; margin: 20px 0; }
+.drag-zone a { display: inline-block; background: white; color: #4338ca; padding: 14px 24px; border-radius: 8px; font-weight: 700; font-size: 16px; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: grab; }
+.drag-zone a:active { cursor: grabbing; }
+.drag-zone .hint { font-size: 13px; margin-top: 10px; opacity: 0.9; }
+.fallback { background: #fff8e1; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 6px; margin-top: 12px; }
+.fallback h3 { margin: 0 0 8px; font-size: 14px; color: #92400e; }
+textarea { width: 100%; height: 80px; font-family: monospace; font-size: 11px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; word-break: break-all; }
+button { margin-top: 8px; padding: 8px 16px; background: #4338ca; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.flow { background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 6px; margin-top: 24px; }
+code { background: #eee; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>🛒 퐁당샤브 쿠팡 동기화 설치</h1>
+<p class="sub">5초만에 끝나는 셋업. 한 번만 하면 됨.</p>
+
+<div class="step">
+  <h2>1단계 — 즐겨찾기 막대 보이기</h2>
+  <p>크롬 위쪽에 즐겨찾기 막대가 안 보이면:</p>
+  <p><b>Ctrl+Shift+B</b> 누르기 (맥은 ⌘+Shift+B)</p>
+</div>
+
+<div class="step">
+  <h2>2단계 — 아래 버튼을 즐겨찾기 막대로 끌어다 놓기</h2>
+
+  <div class="drag-zone">
+    <a id="bm" href="#" draggable="true">🛒 퐁당쿠팡 동기화</a>
+    <div class="hint">↑ 위 버튼을 마우스로 잡고 끌어서 즐겨찾기 막대에 놓기</div>
+  </div>
+
+  <div class="fallback">
+    <h3>드래그가 안 되면 (수동)</h3>
+    <p style="font-size: 12px; margin-bottom: 6px;">아래 [복사] → 즐겨찾기 막대 우클릭 → [페이지 추가] → 이름 "🛒 퐁당쿠팡 동기화" + URL 칸에 붙여넣기</p>
+    <textarea id="raw" readonly></textarea>
+    <button onclick="navigator.clipboard.writeText(document.getElementById('raw').value).then(()=>this.textContent='✅ 복사됨')">복사</button>
+  </div>
+</div>
+
+<div class="step">
+  <h2>3단계 — 쿠팡 주문내역 페이지에서 클릭</h2>
+  <p>① 크롬에서 <code>https://mc.coupang.com/ssr/desktop/order/list</code> 열기 (로그인 상태)</p>
+  <p>② 즐겨찾기 막대의 <b>🛒 퐁당쿠팡 동기화</b> 클릭</p>
+  <p>③ 화면에 "동기화 완료 — 새로 N건" 뜨면 성공</p>
+</div>
+
+<div class="flow">
+  <b>그 다음 흐름:</b><br>
+  앱 켜기 → 사이드메뉴 → 거래처 → 쿠팡 진입 → "🆕 N건 분류 대기" 노란 배너 → 탭 → 카테고리 확인 후 [✓ 저장]
+</div>
+
+<div class="step" style="margin-top: 24px; background: #fef2f2;">
+  <h2 style="color: #991b1b;">⚠️ 문제 생기면</h2>
+  <p>F12 → Console 탭에서 빨간 글씨 확인 후 CTO에게 캡처 전달</p>
+</div>
+
+<script>
+// 북마클릿 코드 — 사장님 store_id + Supabase 함수 URL 박혀있음
+const STORE_ID = '4ae03341-e5dc-4933-b746-29728cbc685f';
+const FN_URL = 'https://ruytgygjwnbtzmtofopg.supabase.co/functions/v1/coupang-receiver';
+
+const code = `(async()=>{const S='${STORE_ID}',U='${FN_URL}';try{if(!location.hostname.endsWith('coupang.com')){alert('쿠팡 주문내역 페이지에서 클릭하세요');return;}const r=await fetch('/ssr/api/myorders/model/page?requestYear=0&pageIndex=1&size=50',{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'include'});if(!r.ok){alert('쿠팡 API 실패: '+r.status);return;}const j=await r.json();const O=[];const L=j?.data?.orderList||j?.orderList||j?.orders||[];for(const o of L){const id=String(o.orderId||o.id||'');const d=(o.orderedAt||o.orderDate||'').slice(0,10);const its=o.vendorItems||o.items||o.products||[o];for(const it of its){const nm=(it.productName||it.itemName||it.name||it.title||'').trim();const am=Number(it.salePrice||it.price||it.totalPrice||it.amount||0);const qt=Number(it.quantity||it.count||1);if(!nm||!am)continue;O.push({external_order_id:id,order_date:d,item:nm,amount:am,quantity:qt,unit_price:qt>0?Math.round(am/qt):null,raw:{orderId:id,orig:it}});}}if(O.length===0){alert('주문 0건 — 쿠팡 페이지 한번 새로고침 후 다시 시도');return;}const p=await fetch(U,{method:'POST',headers:{'Content-Type':'application/json','X-Store-Id':S},body:JSON.stringify({orders:O})});const rs=await p.json();if(rs.error){alert('실패: '+rs.error);return;}alert('✅ 동기화 완료\\n새로 '+rs.inserted+'건\\n건너뜀 '+(rs.skipped+rs.errors)+'건\\n\\n앱 > 거래처 > 쿠팡 진입해서 분류');}catch(e){alert('오류: '+e.message);}})();`;
+
+const href = 'javascript:' + encodeURIComponent(code);
+document.getElementById('bm').href = href;
+document.getElementById('raw').value = href;
+</script>
+
+</body>
+</html>
