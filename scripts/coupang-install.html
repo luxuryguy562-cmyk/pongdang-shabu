@@ -42,9 +42,14 @@ code { background: #eee; padding: 2px 6px; border-radius: 3px; font-size: 12px; 
     <div class="hint">↑ 위 버튼을 마우스로 잡고 끌어서 즐겨찾기 막대에 놓기</div>
   </div>
 
+  <div class="drag-zone" style="background:linear-gradient(135deg,#dc2626,#991b1b);margin-top:12px;">
+    <a id="dbg" href="#" draggable="true">🔍 진단 (CTO 분석용)</a>
+    <div class="hint">동기화 안 될 때만 이거 한 번 클릭 → 쿠팡 응답이 CTO 서버로 자동 전달</div>
+  </div>
+
   <div class="fallback">
     <h3>드래그가 안 되면 (수동)</h3>
-    <p style="font-size: 12px; margin-bottom: 6px;">아래 [복사] → 즐겨찾기 막대 우클릭 → [페이지 추가] → 이름 "🛒 퐁당쿠팡 동기화" + URL 칸에 붙여넣기</p>
+    <p style="font-size: 12px; margin-bottom: 6px;">아래 [복사] → 즐겨찾기 막대 우클릭 → [페이지 추가] → 이름 박고 URL 칸에 붙여넣기</p>
     <textarea id="raw" readonly></textarea>
     <button onclick="navigator.clipboard.writeText(document.getElementById('raw').value).then(()=>this.textContent='✅ 복사됨')">복사</button>
   </div>
@@ -77,6 +82,10 @@ const code = `(async()=>{const S='${STORE_ID}',U='${FN_URL}';try{if(!location.ho
 const href = 'javascript:' + encodeURIComponent(code);
 document.getElementById('bm').href = href;
 document.getElementById('raw').value = href;
+
+// 진단 북마클릿 — 쿠팡 응답을 CTO 서버에 통째로 dump
+const dbgCode = `(async()=>{try{if(!location.hostname.endsWith('coupang.com')){alert('쿠팡 페이지에서');return;}const r=await fetch('/ssr/api/myorders/model/page?requestYear=0&pageIndex=1&size=3',{headers:{Accept:'application/json'},credentials:'include'});const j=await r.json();await fetch('${FN_URL}',{method:'POST',headers:{'Content-Type':'application/json','X-Store-Id':'${STORE_ID}'},body:JSON.stringify({dump:j})});alert('✅ 진단 데이터 CTO 서버에 전달됨\\n다시 채팅창으로 돌아가세요');}catch(e){alert('오류: '+e.message);}})();`;
+document.getElementById('dbg').href = 'javascript:' + encodeURIComponent(dbgCode);
 </script>
 
 </body>
