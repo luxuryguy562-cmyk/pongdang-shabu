@@ -2835,9 +2835,9 @@
   <!-- 카테고리 타입: 현재 탭 기준 자동 고정 (변경 불가, 탭 전환해서 다른 타입 편집) -->
   <div class="input-field" id="expCatTypeLabel" style="background:var(--gray-100);font-weight:700;color:var(--gray-700);display:flex;align-items:center;">💸 지출</div>
   <input type="hidden" id="expCatTypeInput" value="expense">
-  <!-- 지출 타입일 때만 표시: 데이터 소스 + 거래처 필터 -->
-  <div id="expCatSourceWrap">
-    <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">데이터 소스</p>
+  <!-- 데이터 소스: 사장님 모드 = 숨김 (자동 결정). 잔재 정정 시 #cpgSrcShow 해시로 노출 (헌법 1-7 사용자 신뢰 보호) -->
+  <div id="expCatSourceWrap" style="display:none;">
+    <p style="font-size:12px;font-weight:700;color:var(--gray-600);margin:0 0 8px;">데이터 소스 <small style="font-weight:500;color:var(--gray-500);">(자동 결정 — 사장님 신경 안 쓰셔도 OK)</small></p>
     <select id="expCatSourceInput" class="input-field" data-change="onExpCatSourceChange">
       <option value="vendor_orders">🏪 거래처 주문</option>
       <option value="receipts">🧾 영수증</option>
