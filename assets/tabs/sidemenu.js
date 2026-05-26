@@ -388,7 +388,140 @@ async function openVendorDetail(vendorId){
   }
   // vdToggleBtn은 편집 시트 안으로 이동됨 (사장님 요청 2026-05-15)
   // vendorTab('orders')에서 이미 loadVendorOrders 호출됨 — 중복 호출 제거 (2026-05-15)
+  // 쿠팡 거래처 진입 시 분류 대기함 배지 표시 (2026-05-26)
+  _checkCoupangInbox(v);
 }
+
+// ─── 쿠팡 분류 대기함 (2026-05-26 신설) ───
+async function _checkCoupangInbox(vendor){
+  const banner = document.getElementById('coupangInboxBanner');
+  if(!banner) return;
+  if(!vendor || vendor.name !== '쿠팡'){
+    banner.style.display = 'none';
+    return;
+  }
+  const {count} = await sb.from('coupang_inbox')
+    .select('id', {count:'exact', head:true})
+    .eq('store_id', currentStore.id)
+    .eq('vendor_id', vendor.id)
+    .eq('status', 'pending');
+  const n = count || 0;
+  if(n === 0){ banner.style.display = 'none'; return; }
+  document.getElementById('coupangInboxCount').textContent = n;
+  banner.style.display = '';
+}
+
+async function openCoupangInboxSheet(){
+  if(!guardStore()) return;
+  const vendorId = currentVendorDetailId;
+  if(!vendorId) return;
+  setLoad(true, '분류 대기 불러오는 중...');
+  const {data:rows, error} = await sb.from('coupang_inbox')
+    .select('*, expense_categories!ai_suggested_category_id(id,name,parent_id)')
+    .eq('store_id', currentStore.id)
+    .eq('vendor_id', vendorId)
+    .eq('status', 'pending')
+    .order('order_date', {ascending:false});
+  setLoad(false);
+  if(error){ alert('불러오기 실패: ' + error.message); return; }
+  const list = document.getElementById('coupangInboxList');
+  if(!rows || rows.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">분류 대기 항목 없음</div>';
+  } else {
+    list.innerHTML = rows.map(r => _renderCoupangInboxCard(r)).join('');
+  }
+  openSheet('coupangInboxSheet');
+}
+
+function _renderCoupangInboxCard(r){
+  const parents = (expCategories||[])
+    .filter(c => !c.parent_id && c.is_active!==false
+              && (c.category_type||'expense')==='expense'
+              && ['composite','vendor_orders'].includes(c.data_source))
+    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const aiName = r.expense_categories?.name || '미정';
+  const conf = r.ai_confidence ? Math.round(r.ai_confidence*100) : 0;
+  const confColor = conf >= 80 ? '#0a7d00' : conf >= 50 ? '#e80' : '#999';
+  return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px;" data-inbox-id="${r.id}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.item)}</div>
+        <div style="font-size:11px;color:#666;margin-top:2px;">${r.order_date} · ${fmt(r.amount)}원</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:${confColor};margin-bottom:6px;">
+      🤖 AI 추천: <b>${escapeHtml(aiName)}</b>${conf?` (${conf}%)`:''}
+    </div>
+    <select class="input-field" data-inbox-cat="${r.id}" style="font-size:12px;padding:6px;margin-bottom:8px;">
+      <option value="">대분류 선택...</option>
+      ${parents.map(p => `<option value="${p.id}"${p.id===r.ai_suggested_category_id?' selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;" data-action="confirmCoupangInboxItem|${r.id}">✓ 저장</button>
+      <button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;" data-action="skipCoupangInboxItem|${r.id}">건너뛰기</button>
+    </div>
+  </div>`;
+}
+
+async function confirmCoupangInboxItem(id){
+  if(!guardStore()) return;
+  const sel = document.querySelector(`[data-inbox-cat="${id}"]`);
+  const catId = sel?.value;
+  if(!catId){ alert('카테고리를 선택하세요'); return; }
+  // 1) coupang_inbox 행 가져오기
+  const {data:r, error:e1} = await sb.from('coupang_inbox').select('*').eq('id', id).eq('store_id', currentStore.id).maybeSingle();
+  if(e1||!r) return alert('실패: '+(e1?.message||'행 없음'));
+  // 2) 거래처 카테고리 동기화 (선택 카테고리 = vendors.category_id) — calcExpense 매칭용
+  if(r.vendor_id){
+    await sb.from('vendors').update({category_id: catId}).eq('id', r.vendor_id).eq('store_id', currentStore.id);
+  }
+  // 3) vendor_orders INSERT
+  const {error:e2} = await sb.from('vendor_orders').insert({
+    store_id: currentStore.id,
+    vendor_id: r.vendor_id,
+    order_date: r.order_date,
+    item: r.item,
+    amount: r.amount,
+    unit_price: r.unit_price,
+    quantity: r.quantity,
+    memo: '쿠팡 자동 동기화',
+    source: 'coupang_api',
+  });
+  if(e2) return alert('저장 실패: '+e2.message);
+  // 4) coupang_inbox 상태 갱신
+  await sb.from('coupang_inbox').update({status:'confirmed'}).eq('id', id).eq('store_id', currentStore.id);
+  // 5) UI 갱신
+  document.querySelector(`[data-inbox-id="${id}"]`)?.remove();
+  await _checkCoupangInbox(vendors.find(v => v.id === currentVendorDetailId));
+  if(typeof loadVendorOrders==='function') loadVendorOrders();
+}
+
+async function skipCoupangInboxItem(id){
+  if(!guardStore()) return;
+  if(!confirm('이 항목을 건너뛰겠습니까?\n(나중에 분류 대기에서 사라짐)')) return;
+  const {error} = await sb.from('coupang_inbox').update({status:'skipped'}).eq('id', id).eq('store_id', currentStore.id);
+  if(error) return alert('실패: '+error.message);
+  document.querySelector(`[data-inbox-id="${id}"]`)?.remove();
+  await _checkCoupangInbox(vendors.find(v => v.id === currentVendorDetailId));
+}
+
+async function confirmAllCoupangInbox(){
+  if(!guardStore()) return;
+  if(!confirm('AI 추천이 있는 항목 전부 저장하시겠습니까?\n(추천 없는 항목은 그대로 대기)')) return;
+  // AI 추천 있는 행들만 일괄 처리 (UI 카드 순회)
+  const cards = document.querySelectorAll('[data-inbox-id]');
+  let done = 0, skip = 0;
+  for(const c of cards){
+    const id = c.dataset.inboxId;
+    const sel = c.querySelector(`[data-inbox-cat="${id}"]`);
+    if(!sel?.value){ skip++; continue; }
+    await confirmCoupangInboxItem(id);
+    done++;
+  }
+  alert(`저장 ${done}건 / 건너뜀 ${skip}건`);
+}
+
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=String(s||''); return d.innerHTML; }
 function editVendorFromDetail(){
   const btn=document.getElementById('vdEditBtn');
   if(btn?.dataset.vid) openEditVendorSheet(btn.dataset.vid);

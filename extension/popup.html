@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>퐁당샤브 쿠팡 동기화</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; width: 320px; padding: 16px; margin: 0; }
+    h1 { font-size: 16px; margin: 0 0 12px; }
+    label { display: block; font-size: 12px; color: #666; margin-top: 10px; }
+    input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+    button { width: 100%; padding: 10px; margin-top: 12px; background: #6b46ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
+    button.secondary { background: #f0f0f0; color: #333; }
+    .status { margin-top: 12px; padding: 8px; background: #f7f7f7; border-radius: 4px; font-size: 12px; line-height: 1.5; }
+    .ok { color: #0a7d00; }
+    .err { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>🛒 퐁당샤브 쿠팡 동기화</h1>
+
+  <label>Workers URL</label>
+  <input id="workersUrl" placeholder="https://coupang-receiver.xxx.workers.dev" />
+
+  <label>인증 시크릿 (COUPANG_SECRET)</label>
+  <input id="secret" type="password" placeholder="Workers 환경변수와 동일" />
+
+  <label>매장 ID (store_id)</label>
+  <input id="storeId" placeholder="UUID 형식" />
+
+  <label>
+    <input type="checkbox" id="autoSync" checked /> 쿠팡 페이지 열릴 때마다 자동 동기화
+  </label>
+
+  <button id="save">설정 저장</button>
+  <button id="syncNow" class="secondary">지금 한 번 동기화</button>
+
+  <div class="status" id="status">설정 후 쿠팡 주문내역 페이지를 열어주세요.</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

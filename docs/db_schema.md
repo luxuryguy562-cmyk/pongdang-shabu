@@ -22,6 +22,7 @@ franchises (프랜차이즈/브랜드)
   ├── settlements (정산) ─ 1:N
   ├── vendors (거래처) ─ 1:N
   │     └── vendor_orders (주문) ─ 1:N
+  ├── coupang_inbox (쿠팡 분류 대기함, 2026-05-26 추가) ─ 1:N
   ├── expense_categories (지출 카테고리) ─ 1:N
   │     └── expense_category_amounts (카테고리 금액) ─ 1:N
   ├── fixed_costs (고정비 항목) ─ 1:N
@@ -323,6 +324,36 @@ franchises (프랜차이즈/브랜드)
 > - `vendor_orders` source 카테고리: `o.vendors?.category_id === cat.id` (FK 직접)
 > - `composite` 카테고리(식자재): `[cat.id, ...children.ids]` 매칭 (대분류면 자식 ids 포함)
 > - 옛 거래처 (`category_id=NULL`) 는 매칭 X → 사장님 재분류 필요
+
+### coupang_inbox (2026-05-26 추가)
+쿠팡 JSON API에서 가져온 주문을 사장님 분류 전 임시 보관. 분류 후 `vendor_orders`로 이동 (status='confirmed') 또는 건너뜀(status='skipped').
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | UUID PK | |
+| store_id | UUID NOT NULL FK→stores | RLS 격리 |
+| vendor_id | UUID FK→vendors (SET NULL) | 쿠팡 거래처 id (사장님이 박은 vendors row) |
+| external_order_id | TEXT NOT NULL | 쿠팡 주문번호 — `(store_id, external_order_id, item)` UNIQUE로 중복 방지 |
+| order_date | DATE NOT NULL | 주문일 |
+| item | TEXT NOT NULL | 상품명 |
+| amount | INT NOT NULL | 금액 (원) |
+| unit_price | INT | 단가 |
+| quantity | NUMERIC | 수량 |
+| raw_json | JSONB | 쿠팡 API 원본 (디버깅·재처리용) |
+| ai_suggested_category_id | UUID FK→expense_categories (SET NULL) | AI 추천 카테고리 (nullable) |
+| ai_confidence | NUMERIC | AI 신뢰도 0~1 |
+| fetched_at | TIMESTAMPTZ DEFAULT now() | 가져온 시각 |
+| status | TEXT NOT NULL DEFAULT 'pending' | CHECK: `pending`/`confirmed`/`skipped` |
+
+인덱스: `idx_coupang_inbox_store_status (store_id, status)`
+마이그레이션: `create_coupang_inbox_20260526`
+롤백: `DROP INDEX IF EXISTS idx_coupang_inbox_store_status; DROP TABLE IF EXISTS coupang_inbox;`
+
+**흐름**:
+1. 크롬 확장 → Workers `/coupang/orders` POST → `coupang_inbox` INSERT (UPSERT)
+2. 거래처 > 쿠팡 진입 시 `status='pending'` 행 표시
+3. 사장님 [✓ 저장] → `vendor_orders` INSERT + `coupang_inbox.status='confirmed'`
+4. 사장님 [건너뛰기] → `coupang_inbox.status='skipped'`
 
 ### expense_categories / expense_category_amounts
 | expense_categories | expense_category_amounts |
