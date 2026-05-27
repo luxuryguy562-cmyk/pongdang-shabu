@@ -1539,13 +1539,23 @@
       <!-- 거래종료 버튼은 편집 시트 안으로 이동 (사장님 요청 2026-05-15) -->
     </div>
     <!-- 쿠팡 분류 대기 배너 (쿠팡 진입 시만 보임, 2026-05-26 신설) -->
-    <div id="coupangInboxBanner" style="display:none;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:10px;padding:12px 14px;margin-bottom:14px;cursor:pointer;" data-action="openCoupangInboxSheet">
+    <div id="coupangInboxBanner" style="display:none;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;" data-action="openCoupangInboxSheet">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <div>
           <div style="font-size:13px;font-weight:800;color:#92400e;">🆕 쿠팡 자동 동기화 — <span id="coupangInboxCount">0</span>건 분류 대기</div>
           <div style="font-size:11px;color:#78350f;margin-top:2px;">탭해서 카테고리 확인 후 저장</div>
         </div>
         <div style="font-size:18px;color:#92400e;">›</div>
+      </div>
+    </div>
+    <!-- 쿠팡 학습 규칙 진입 배너 (쿠팡 진입 시만) -->
+    <div id="coupangRulesBanner" style="display:none;background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:10px;padding:10px 14px;margin-bottom:14px;cursor:pointer;" data-action="openCoupangRulesSheet">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div style="font-size:12px;font-weight:800;color:#1e40af;">🤖 자동 분류 규칙 — <span id="coupangRulesCount">0</span>건 학습됨</div>
+          <div style="font-size:10px;color:#1e3a8a;margin-top:2px;">한 번 분류한 상품 = 다음부터 자동 박힘</div>
+        </div>
+        <div style="font-size:18px;color:#1e40af;">›</div>
       </div>
     </div>
     <!-- 거래처 영수증 등록 진입 (Phase 3) -->
@@ -3195,6 +3205,18 @@
   <button class="btn btn-primary btn-full" data-action="saveLearningRule">저장</button>
   <button class="btn btn-danger btn-full" style="margin-top:6px;" data-action="deleteLearningRule">🗑 이 학습 노트 삭제</button>
   <button class="btn btn-secondary btn-full" style="margin-top:6px;" data-action="closeAllSheets">취소</button>
+</div>
+
+<!-- 쿠팡 학습 규칙 시트 (2026-05-26 신설) -->
+<div class="sheet" id="coupangRulesSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">🤖 쿠팡 자동 분류 규칙</div>
+  <div style="font-size:11px;color:#666;margin-bottom:8px;">사장님이 한 번 분류한 상품 = 다음 동기화부터 자동 박힘. 잘못 학습된 거는 [🗑] 눌러서 지우세요.</div>
+  <div id="coupangRulesList" style="max-height:55vh;overflow-y:auto;"></div>
+  <div style="display:flex;gap:6px;margin-top:12px;">
+    <button class="btn btn-danger" style="flex:1;" data-action="clearAllCoupangRules">전체 규칙 초기화</button>
+    <button class="btn btn-secondary" style="flex:1;" data-action="closeAllSheets">닫기</button>
+  </div>
 </div>
 
 <!-- 쿠팡 분류 대기 시트 (2026-05-26 신설) -->

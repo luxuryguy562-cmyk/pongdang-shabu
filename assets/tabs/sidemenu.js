@@ -390,6 +390,7 @@ async function openVendorDetail(vendorId){
   // vendorTab('orders')에서 이미 loadVendorOrders 호출됨 — 중복 호출 제거 (2026-05-15)
   // 쿠팡 거래처 진입 시 분류 대기함 배지 표시 (2026-05-26)
   _checkCoupangInbox(v);
+  _checkCoupangRules(v);
 }
 
 // ─── 쿠팡 분류 대기함 (2026-05-26 신설) ───
@@ -496,6 +497,7 @@ async function confirmCoupangInboxItem(id){
     await sb.from('coupang_learning_rules').upsert({
       store_id: currentStore.id,
       vendor_item_id: String(vendorItemId),
+      item: r.item,
       category_id: catId,
       source: 'auto',
     }, {onConflict:'store_id,vendor_item_id'});
@@ -504,6 +506,89 @@ async function confirmCoupangInboxItem(id){
   document.querySelector(`[data-inbox-id="${id}"]`)?.remove();
   await _checkCoupangInbox(vendors.find(v => v.id === currentVendorDetailId));
   if(typeof loadVendorOrders==='function') loadVendorOrders();
+}
+
+// ─── 쿠팡 학습 규칙 (2026-05-26 신설) ───
+async function _checkCoupangRules(vendor){
+  const banner = document.getElementById('coupangRulesBanner');
+  if(!banner) return;
+  if(!vendor || vendor.name !== '쿠팡'){ banner.style.display='none'; return; }
+  const {count} = await sb.from('coupang_learning_rules')
+    .select('id', {count:'exact', head:true})
+    .eq('store_id', currentStore.id);
+  const n = count || 0;
+  document.getElementById('coupangRulesCount').textContent = n;
+  banner.style.display = '';
+}
+
+async function openCoupangRulesSheet(){
+  if(!guardStore()) return;
+  setLoad(true, '학습 규칙 불러오는 중...');
+  const {data:rows, error} = await sb.from('coupang_learning_rules')
+    .select('*, expense_categories(id,name)')
+    .eq('store_id', currentStore.id)
+    .order('match_count', {ascending:false})
+    .order('created_at', {ascending:false});
+  setLoad(false);
+  if(error){ alert('실패: '+error.message); return; }
+  const list = document.getElementById('coupangRulesList');
+  if(!rows || rows.length===0){
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:#999;font-size:13px;">학습된 규칙 없음<br><span style="font-size:11px;">분류 대기에서 [✓ 저장] 박을 때마다 여기 자동 박힘</span></div>';
+  } else {
+    list.innerHTML = rows.map(r => _renderCoupangRuleCard(r)).join('');
+  }
+  openSheet('coupangRulesSheet');
+}
+
+function _renderCoupangRuleCard(r){
+  const parents = (expCategories||[])
+    .filter(c => !c.parent_id && c.is_active!==false
+              && (c.category_type||'expense')==='expense'
+              && ['composite','vendor_orders'].includes(c.data_source))
+    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const catName = r.expense_categories?.name || '(삭제됨)';
+  return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-bottom:8px;" data-rule-id="${r.id}">
+    <div style="font-size:12px;font-weight:700;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px;">${escapeHtml(r.item||'(이름 없음)')}</div>
+    <div style="font-size:10px;color:#666;margin-bottom:6px;">현재: <b>${escapeHtml(catName)}</b> · 매칭 ${r.match_count||0}회</div>
+    <div style="display:flex;gap:6px;">
+      <select class="input-field" data-rule-cat="${r.id}" style="flex:1;font-size:11px;padding:5px;">
+        ${parents.map(p=>`<option value="${p.id}"${p.id===r.category_id?' selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+      </select>
+      <button class="btn btn-primary" style="padding:5px 10px;font-size:11px;" data-action="updateCoupangRule|${r.id}">변경</button>
+      <button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" data-action="deleteCoupangRule|${r.id}">🗑</button>
+    </div>
+  </div>`;
+}
+
+async function updateCoupangRule(id){
+  const sel = document.querySelector(`[data-rule-cat="${id}"]`);
+  if(!sel?.value) return;
+  const {error} = await sb.from('coupang_learning_rules')
+    .update({category_id: sel.value})
+    .eq('id', id).eq('store_id', currentStore.id);
+  if(error) return alert('실패: '+error.message);
+  alert('변경됨');
+  openCoupangRulesSheet();
+}
+
+async function deleteCoupangRule(id){
+  if(!confirm('이 규칙 삭제? (다음 동기화부터 이 상품은 다시 분류 대기로 박힘)')) return;
+  const {error} = await sb.from('coupang_learning_rules').delete().eq('id', id).eq('store_id', currentStore.id);
+  if(error) return alert('실패: '+error.message);
+  document.querySelector(`[data-rule-id="${id}"]`)?.remove();
+  await _checkCoupangRules(vendors.find(v => v.id === currentVendorDetailId));
+}
+
+async function clearAllCoupangRules(){
+  if(!guardStore()) return;
+  if(!confirm('학습 규칙 전부 초기화?\n(다음 동기화부터 모든 상품이 다시 분류 대기로 박힘)')) return;
+  const {error, count} = await sb.from('coupang_learning_rules')
+    .delete({count:'exact'})
+    .eq('store_id', currentStore.id);
+  if(error) return alert('실패: '+error.message);
+  alert((count||0)+'건 초기화됨');
+  closeAllSheets();
+  await _checkCoupangRules(vendors.find(v => v.id === currentVendorDetailId));
 }
 
 // 일괄 삭제 (전체 분류 대기 박멸 — 사장님 요청 2026-05-26)
