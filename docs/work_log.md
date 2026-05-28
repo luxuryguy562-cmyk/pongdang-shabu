@@ -4,6 +4,40 @@
 
 ---
 
+## [2026-05-26] 쿠팡 자동 동기화 Phase 2 완성 (PR #308~#324)
+
+### 한 줄
+쿠팡 주문내역 자동 수집·AI분류·학습 전체 시스템 구축. 크롤링(개인용) + 스샷→AI분석(정식) 2갈래.
+
+### 진행 흐름
+1. 크롤링 가능성 검증 — 컨테이너는 쿠팡 차단, 사장님 PC 콘솔/북마클릿이 본 방식
+2. 쿠팡 API 구조 분석 (사장님+데스크탑 클로드 Chrome MCP 협업) — 시행착오 4회 후 진짜 구조 확정
+3. Edge Function + 북마클릿 + DB 3표 + 앱 UI 구축
+4. 노가다 줄이기: 학습 규칙(매장별) + 글로벌 누적 + 기간선택 + 일괄삭제
+5. 스샷→AI 분석 (Gemini→GPT fallback, FK 카테고리, 수정 학습)
+6. 문서 자동 갱신 에이전트 의무 신설
+7. 거래처 상세 뒤로가기·서브탭 유저플로우 정정
+
+### 쿠팡 API 확정 사실 (다음 세션 안 의심)
+- 엔드포인트: `GET /ssr/api/myorders/model/page?size=10&pageIndex=0&requestYear=YYYY`
+- size 최대 10, pageIndex 0부터, hasNext로 페이지네이션
+- 상품 = `orderList[i].deliveryGroupList[j].productList[k]`
+- 필드: vendorItemName(풀네임) / combinedUnitPrice(실결제) / quantity / vendorItemId(유니크)
+- orderedAt = 밀리초 타임스탬프
+- 취소/반품: allCanceled / returnReceipted / cancelReturnStatus='RETURN_COMPLETE' = 스킵
+- 교환 상품 = 같은 vendorItemId 여러 deliveryGroup 중복 → Set 제거
+
+### DB 변경 (db_schema.md 동기화 완료)
+- coupang_inbox (분류 대기 스테이징)
+- coupang_learning_rules (매장별 자동분류, item 컬럼 포함)
+- coupang_global_hints (전체 매장 누적, category_name 기반) + vote_global_hint RPC
+- coupang_debug (파서 검증용 임시, 안정 후 DROP 가능)
+
+### CTO 자가 반성 (헌법 1-7 위반 4회)
+- 쿠팡 응답 구조 추측으로 파서 4번 틀림 (vendorItems→items→deliveryGroupList)
+- 교훈: 새 외부 API = HAR/Network 캡처 또는 실제 dump 먼저, 추측 시작 금지
+- dev_lessons #130 (UX 뒤로가기) 박음
+
 ## [2026-05-25] 종합 세션: D안 통합 표시 + 인건비 통일 + 토스 디자인 통일 + 캐시 무효화
 
 **14개 PR 머지** (사장님 "한 번에 싹다" 패턴 다수 적용)
