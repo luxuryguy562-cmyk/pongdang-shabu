@@ -5007,7 +5007,8 @@ async function loadExpHubData(force){
   if(!currentStore) return;
   // 진입 즉시 스켈레톤 (캐시 기반 외곽·아이콘·제목 = 0~30ms)
   // 금액은 비동기로 채움 → "없어졌다 생기는 느낌" 해결 (2026-05-19)
-  renderExpHubCatSkeleton();
+  // force(백그라운드 SWR·저장 후 갱신)일 땐 스켈레톤 재생성 금지 — 금액 칸이 '-'로 리셋되며 깜빡임 (2026-05-28 사장님 호소)
+  if(!force) renderExpHubCatSkeleton();
   const sid=currentStore.id;
   const ym=new Date().toISOString().slice(0,7);
   const [y,m]=ym.split('-').map(Number);
