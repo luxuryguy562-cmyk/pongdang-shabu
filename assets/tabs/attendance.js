@@ -582,6 +582,28 @@ function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
   target.innerHTML = html;
 }
 
+// ─── 새 기능: 근태 일별 간트 눈금 시간축 (2026-05-28 사장님: 선이 숫자 정중앙, 짝수 실선/홀수 점선) ───
+// 시간축 숫자 — 짝수만, 선과 같은 위치(가운데 정렬). 끝점(GANTT_END)은 숫자 생략.
+function attAxisTicks(){
+  let out='';
+  for(let h=GANTT_START; h<GANTT_END; h+=2){
+    const label = h>=24 ? h-24 : h;
+    const left = (h-GANTT_START)/GANTT_SPAN*100;
+    out += `<span class="att-tk${h===24?' mid':''}" style="left:${left.toFixed(2)}%">${label}</span>`;
+  }
+  return out;
+}
+// 구분선 — 매 시간 시각 정위치. 짝수 실선 / 홀수 점선 / 자정 빨강.
+function attGridLines(){
+  let out='';
+  for(let h=GANTT_START; h<=GANTT_END; h++){
+    const cls = h===24 ? 'mid' : (h%2===0 ? 'major' : 'minor');
+    const left = (h-GANTT_START)/GANTT_SPAN*100;
+    out += `<span class="att-gl ${cls}" style="left:${left.toFixed(2)}%"></span>`;
+  }
+  return out;
+}
+
 // ─── 새 기능: 근태 전체조회 E안 — 일별 간트 상세 ───
 function renderAttDayDetail(date, logs, isSingleView){
   const target = document.getElementById('attDayDetail');
@@ -617,7 +639,6 @@ function renderAttDayDetail(date, logs, isSingleView){
   }
   const safeLogs = logs || [];
   const totalMin  = safeLogs.reduce((a,r)=>a+(r.total_work_min||0),0);
-  const totalWage = safeLogs.reduce((a,r)=>a+(r.calculated_wage||0),0);
   const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const allData = window._attListData || [];
   // 2026-05-25 헤더 갈아엎기 (사장님 호소: 한 줄 안 들어가고 엉망)
@@ -631,14 +652,11 @@ function renderAttDayDetail(date, logs, isSingleView){
   let html = `<div class="gantt-day-label">
     <div class="row-top">
       <span class="ttl">📅 ${date.slice(5)} (${dow})</span>
-      <span class="sum">
-        <span class="h">${fmtHourDecimal(totalMin)}</span>
-        <span class="w">${fmt(totalWage)}원</span>
-      </span>
+      <span class="sum"><span class="h">${fmtHourDecimal(totalMin)}</span></span>
     </div>
     <div class="row-chips">${chipBtns}</div>
   </div>`;
-  html += `<div class="gantt-header"><div class="att-row-label" style="visibility:hidden;">x</div>${renderGanttHourCells()}</div>`;
+  html += `<div class="att-axis"><div class="att-row-label" style="visibility:hidden;">x</div><div class="att-axis-ticks">${attAxisTicks()}</div></div>`;
 
   // ─── 새 기능: 계획(work_schedules) + 실제(attendance_logs) 통합 렌더 ───
   // 케이스: 계획O 실제O = 점선+보라 겹침 / 계획X 실제O = 보라만 / 계획O 실제X = 점선+빗금(결근)
@@ -674,7 +692,7 @@ function renderAttDayDetail(date, logs, isSingleView){
           const psLbl  = String(Math.floor(psH)).padStart(2,'0')+':'+(psH%1?'30':'00');
           const pe24   = peH>=24?peH-24:peH;
           const peLbl  = String(Math.floor(pe24)).padStart(2,'0')+':'+(pe24%1?'30':'00')+(peH>=24?'(익)':'');
-          planBar = `<div class="gantt-bar plan" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"><span class="plan-lbl">${psLbl}~${peLbl}</span></div>`;
+          planBar = `<div class="att-bar plan" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
           usedPlanEmpIds.add(r.employee_id);
         }
       }
@@ -689,30 +707,18 @@ function renderAttDayDetail(date, logs, isSingleView){
       if(eH>sH){
         const left  = Math.max(0,(sH-GANTT_START)/GANTT_SPAN*100);
         const width = Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
-        bar = `<div class="gantt-bar" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${color};opacity:.85;"></div>`;
+        bar = `<div class="att-bar" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${color};"></div>`;
       }
     }
     const timeLabel = inT ? `${fmtTime(r.app_in)}~${outT?fmtTime(r.app_out):'?'}` : '미출근';
-    const wageLabel = r.calculated_wage!=null
-      ? fmt(r.calculated_wage)+'원'
-      : (r.app_in&&r.app_out ? '⚠️' : '-');
-    // 1인 모드에서만 매칭 상태(⚪🟠) 표시
-    const STATUS_DOT = {'정상매칭':'#05C072','앱전용':'#0050FF','캡스전용':'#FF9500','시간오차':'#FF9500','출근누락':'#F04452','퇴근누락':'#F04452'};
-    const statusHtml = (isSingleView && r.caps_match_status)
-      ? `<span style="font-size:9px;color:var(--gray-600);margin-left:6px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${STATUS_DOT[r.caps_match_status]||'#B0B8C1'};margin-right:2px;vertical-align:middle;"></span>${r.caps_match_status}</span>`
-      : '';
     const clickable = isManager && idx>=0;
-    html += `<div class="gantt-row" ${clickable?`data-action="openEditAttByIdx|${idx}" style="cursor:pointer;"`:''}>
+    html += `<div class="att-grow" ${clickable?`data-action="openEditAttByIdx|${idx}" style="cursor:pointer;"`:''}>
       <div class="att-row-label"><span class="dot" style="background:${color}"></span>${(r.employees?.name||'?').slice(0,4)}</div>
-      <div class="gantt-bar-area">
-        ${renderGanttBgCols()}
-        ${planBar}
-        ${bar}
-      </div>
+      <div class="att-track">${attGridLines()}${planBar}${bar}</div>
     </div>
     <div class="att-row-meta">
-      <span><span class="time">${timeLabel}</span><span class="hours">${fmtHourDecimal(r.total_work_min||0)}</span>${statusHtml}</span>
-      <span class="wage">${wageLabel}</span>
+      <span class="time">${timeLabel}</span>
+      <span class="hours">${fmtHourDecimal(r.total_work_min||0)}</span>
     </div>`;
   });
 
@@ -736,25 +742,21 @@ function renderAttDayDetail(date, logs, isSingleView){
         const psLbl  = String(Math.floor(psH)).padStart(2,'0')+':'+(psH%1?'30':'00');
         const pe24   = peH>=24?peH-24:peH;
         const peLbl  = String(Math.floor(pe24)).padStart(2,'0')+':'+(pe24%1?'30':'00')+(peH>=24?'(익)':'');
-        planBar = `<div class="gantt-bar plan" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"><span class="plan-lbl">${psLbl}~${peLbl}</span></div>`;
+        planBar = `<div class="att-bar plan" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
         // 결근: 과거 날짜인 경우만 빗금
         if(isPast){
-          absentBar = `<div class="gantt-bar absent" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
+          absentBar = `<div class="att-bar absent" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
         }
       }
     }
     const planClick = isManager ? `data-action="openSchedSheet|${date}|${p.id}" style="cursor:pointer;"` : '';
-    html += `<div class="gantt-row" ${planClick}>
+    html += `<div class="att-grow" ${planClick}>
       <div class="att-row-label"><span class="dot" style="background:${color}"></span>${empName.slice(0,4)}</div>
-      <div class="gantt-bar-area">
-        ${renderGanttBgCols()}
-        ${planBar}
-        ${absentBar}
-      </div>
+      <div class="att-track">${attGridLines()}${planBar}${absentBar}</div>
     </div>
     <div class="att-row-meta">
-      <span><span class="time">${isPast?'결근':'예정'}</span><span class="hours" style="color:${isPast?'var(--danger)':'var(--gray-500)'};">${isPast?'미출근':''}</span></span>
-      <span class="wage" style="color:var(--gray-400);">-</span>
+      <span class="time">${isPast?'결근':'예정'}</span>
+      <span class="hours" style="color:${isPast?'var(--danger)':'var(--gray-500)'};">${isPast?'미출근':''}</span>
     </div>`;
   });
 
