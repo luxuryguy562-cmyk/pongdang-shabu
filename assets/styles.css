@@ -520,11 +520,24 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-day-empty{text-align:center;color:var(--gray-400);font-size:12px;padding:24px 0;}
 .att-row-label{display:flex;align-items:center;gap:4px;min-width:55px;font-size:10px;font-weight:700;color:var(--text);padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .att-row-label .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.att-row-meta{display:flex;justify-content:space-between;align-items:baseline;margin:-2px 0 6px 59px;font-size:10px;color:var(--gray-600);font-variant-numeric:tabular-nums;}
-.att-row-meta>span:first-child{display:inline-flex;align-items:baseline;gap:8px;}
+.att-row-meta{display:flex;justify-content:flex-start;gap:10px;align-items:baseline;margin:-2px 0 8px 59px;font-size:10px;color:var(--gray-600);font-variant-numeric:tabular-nums;}
 .att-row-meta .time{color:var(--gray-400);font-variant-numeric:tabular-nums;}
-.att-row-meta .hours{color:var(--text);font-weight:700;font-size:11px;min-width:40px;text-align:right;font-variant-numeric:tabular-nums;}
-.att-row-meta .wage{color:var(--blue);font-weight:700;font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.att-row-meta .hours{color:var(--text);font-weight:700;font-size:11px;font-variant-numeric:tabular-nums;}
+
+/* ─── 근태 일별 간트 — 눈금 시간축 (2026-05-28 사장님: 선=숫자 정중앙, 짝수 실선/홀수 점선, 금액 숨김) ─── */
+.att-axis{display:flex;align-items:flex-end;height:15px;margin-top:8px;}
+.att-axis-ticks{position:relative;flex:1;height:100%;}
+.att-tk{position:absolute;bottom:0;transform:translateX(-50%);font-size:9px;color:var(--gray-400);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.att-tk.mid{color:var(--danger);font-weight:700;}
+.att-grow{display:flex;align-items:center;min-height:26px;}
+.att-track{position:relative;flex:1;height:24px;border-top:1px solid var(--gray-100);}
+.att-gl{position:absolute;top:0;bottom:0;width:0;}
+.att-gl.major{border-left:1px solid var(--gray-200);}
+.att-gl.minor{border-left:1px dashed var(--gray-200);}
+.att-gl.mid{border-left:1.5px dashed rgba(240,68,82,0.55);}
+.att-bar{position:absolute;top:4px;height:16px;border-radius:8px;opacity:.92;z-index:1;min-width:6px;}
+.att-bar.plan{background:transparent;border:1.5px dashed rgba(100,116,139,0.7);top:2px;height:20px;opacity:1;z-index:0;}
+.att-bar.absent{top:2px;height:20px;border:1px solid rgba(239,68,68,0.85);background:repeating-linear-gradient(45deg,rgba(239,68,68,0.85),rgba(239,68,68,0.85) 4px,rgba(254,202,202,0.85) 4px,rgba(254,202,202,0.85) 8px);}
 
 /* ─ 대시보드 */
 .kpi-section{padding:14px 0;border-bottom:1px solid var(--gray-100);}
