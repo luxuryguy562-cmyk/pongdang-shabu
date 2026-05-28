@@ -2,6 +2,43 @@
 
 ---
 
+## 🔥🔥🔥 [2026-05-26 밤 종료 — 쿠팡 Phase 2 완성]
+
+### 이 세션 결론 (한눈에)
+쿠팡 자동 동기화 = **크롤링 가능 검증 → API 파서 완성 → 전체 시스템 구축** 완료.
+
+```
+[수집] 2갈래
+  ├ 북마클릿 (사장님 개인용, 상용화 시 숨김 — 불법 여지)
+  └ 스샷 → AI 분석 (정식, 합법, 공개 가능)
+[검수] coupang_inbox 분류 대기함 (AI 추천 미리 선택)
+[분류] 사장님 확인/수정 → vendor_orders
+[학습] 매장별 규칙(coupang_learning_rules) + 글로벌 누적(coupang_global_hints)
+```
+
+### 박힌 것 (PR #308~#324)
+- ✅ 쿠팡 API 구조 완전 분석 (`pageIndex=0`, `requestYear=YYYY`, `size≤10`, `deliveryGroupList.productList`, `combinedUnitPrice`, `vendorItemName`)
+- ✅ Supabase Edge Function `coupang-receiver` v5 (학습규칙+글로벌+dump)
+- ✅ 북마클릿 (`scripts/coupang-install.html`) — 기간선택 + 마지막동기화 기억 + 교환중복제거 + 취소/반품 스킵
+- ✅ DB 3표: `coupang_inbox` / `coupang_learning_rules` / `coupang_global_hints` + `vote_global_hint` RPC
+- ✅ 앱 UI: 분류 대기 시트 + 학습 규칙 대시보드 + 일괄삭제 + 📸 스샷→AI 분석
+- ✅ 스샷→AI: Gemini→GPT-4o fallback (영수증 패턴), FK 카테고리, 수정 시 학습
+- ✅ 문서 자동 갱신 의무: coder.md 4-B단계 + deployer.md 1단계 검증
+- ✅ 거래처 상세 뒤로가기·서브탭 유저플로우 정정 (dev_lessons #130)
+
+### 다음 세션 우선 (사장님 손 / 검증 대기)
+1. **사장님 스샷→AI 시연** — 쿠팡 주문 캡처 → 거래처>쿠팡 > [📸 스샷→AI 분석] → AI 추출 정확도 확인
+2. **상용화 시점 작업** (나중):
+   - 북마클릿 크롤링 숨김/삭제 (쿠팡 ToS 위반 여지)
+   - 스샷→AI 정식 공개
+   - 크롬 웹스토어 등록 (선택, $5 + 심사 1~3일)
+3. **정리 가능** (안정 확인 후): `coupang_debug` 표 DROP (파서 검증용 임시)
+
+### 미해결 (사장님 직접)
+- 5/21 마감 -27,800원 = 사장님 본인 정정 (POS 1,989,490 vs 앱 1,961,690)
+
+---
+
 ## 🔥🔥🔥 [2026-05-26 — 쿠팡 검증 도구 박힘, 사장님 손 1분 대기]
 
 ### 사장님 다음 행동 (1분)
