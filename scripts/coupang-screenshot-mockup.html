@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>쿠팡 스샷 → AI 분석 (목업)</title>
+<style>
+:root{--purple:#6b46ff;--purple-d:#4f46e5;--gray-100:#f3f4f6;--gray-500:#6b7280;--text:#111827;--green:#0a7d00;--amber:#f59e0b;}
+*{box-sizing:border-box;}
+body{font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;margin:0;background:#f7f7f9;color:var(--text);padding:0;}
+.phone{max-width:420px;margin:0 auto;background:#fff;min-height:100vh;}
+.header{padding:14px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px;}
+.header .back{font-size:20px;color:#333;cursor:pointer;}
+.header .title{font-size:16px;font-weight:800;}
+.header .sub{font-size:11px;color:var(--gray-500);}
+.body{padding:16px;}
+.btn{border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;}
+.btn-primary{background:var(--purple);color:#fff;}
+.btn-secondary{background:var(--gray-100);color:#333;}
+.btn-danger{background:#fee2e2;color:#b91c1c;}
+.btn-full{width:100%;}
+
+/* 업로드 영역 */
+.upload-zone{border:2px dashed #cbd5e1;border-radius:14px;padding:32px 16px;text-align:center;background:#fafbff;cursor:pointer;transition:.2s;}
+.upload-zone:hover{border-color:var(--purple);background:#f5f3ff;}
+.upload-zone .icon{font-size:40px;margin-bottom:8px;}
+.upload-zone .main{font-size:14px;font-weight:700;color:#374151;}
+.upload-zone .hint{font-size:11px;color:var(--gray-500);margin-top:6px;line-height:1.5;}
+
+/* 안내 */
+.guide{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#1e3a8a;line-height:1.6;}
+
+/* 분석중 */
+.analyzing{text-align:center;padding:40px 16px;}
+.spinner{width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:var(--purple);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.analyzing .txt{font-size:14px;font-weight:700;color:#374151;}
+.analyzing .sub{font-size:11px;color:var(--gray-500);margin-top:6px;}
+
+/* 결과 카드 */
+.result-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.result-head .cnt{font-size:14px;font-weight:800;}
+.result-head .cnt b{color:var(--purple);}
+.card{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px;}
+.card .item{font-size:13px;font-weight:700;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card .meta{font-size:11px;color:var(--gray-500);margin-top:2px;}
+.card .ai{font-size:11px;margin:6px 0;}
+.card .ai b{color:var(--green);}
+.card select{width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;margin-bottom:8px;}
+.card .actions{display:flex;gap:6px;}
+.card .actions .btn{flex:1;padding:8px;font-size:12px;}
+.bottom-bar{display:flex;gap:8px;margin-top:14px;}
+.thumb{width:100%;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:12px;}
+.preview-imgs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.preview-imgs .pi{width:60px;height:60px;border-radius:8px;background:#e5e7eb url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="%239ca3af" viewBox="0 0 24 24"%3E%3Cpath d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"/%3E%3C/svg%3E') center/24px no-repeat;}
+.hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="header">
+    <span class="back">‹</span>
+    <div>
+      <div class="title">🛒 쿠팡 주문 스샷 분석</div>
+      <div class="sub">사진 올리면 AI가 주문 자동 추출</div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- STEP 1: 업로드 -->
+    <div id="step1">
+      <div class="guide">
+        📸 <b>쿠팡 주문내역 화면을 캡처</b>해서 올려주세요<br>
+        · 폰: 쿠팡 앱 > 마이쿠팡 > 주문목록 캡처<br>
+        · PC: 주문내역 페이지 캡처<br>
+        · 여러 장 한 번에 가능 (스크롤하며 여러 번 캡처)
+      </div>
+      <div class="upload-zone" onclick="goAnalyze()">
+        <div class="icon">📤</div>
+        <div class="main">탭해서 스크린샷 올리기</div>
+        <div class="hint">사진 선택 또는 드래그<br>JPG · PNG · 여러 장 OK</div>
+      </div>
+    </div>
+
+    <!-- STEP 2: 분석중 -->
+    <div id="step2" class="hidden">
+      <div class="preview-imgs">
+        <div class="pi"></div><div class="pi"></div>
+      </div>
+      <div class="analyzing">
+        <div class="spinner"></div>
+        <div class="txt">AI가 주문 분석 중...</div>
+        <div class="sub">Gemini 분석 → 실패 시 GPT-4o 자동 재시도<br>(영수증 분석과 같은 방식)</div>
+      </div>
+    </div>
+
+    <!-- STEP 3: 결과 -->
+    <div id="step3" class="hidden">
+      <div class="result-head">
+        <div class="cnt">AI 추출 <b>4건</b></div>
+        <span style="font-size:11px;color:var(--gray-500);">사진 2장 분석</span>
+      </div>
+
+      <div class="card">
+        <div class="item">발센 픽업 초코 140g</div>
+        <div class="meta">2026-05-20 · 9,800원 · 3개</div>
+        <div class="ai">🤖 AI 추천: <b>비품 &gt; 간식</b> (88%)</div>
+        <select><option>비품 &gt; 간식 ✓</option><option>식자재 &gt; 가공식품</option><option>식자재 &gt; 미분류</option></select>
+        <div class="actions">
+          <button class="btn btn-primary">✓ 저장</button>
+          <button class="btn btn-secondary">건너뛰기</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="item">오뚜기 열라면 120g</div>
+        <div class="meta">2026-05-17 · 6,980원 · 1개</div>
+        <div class="ai">🤖 AI 추천: <b>식자재 &gt; 가공식품</b> (92%)</div>
+        <select><option>식자재 &gt; 가공식품 ✓</option><option>식자재 &gt; 미분류</option><option>비품 &gt; 간식</option></select>
+        <div class="actions">
+          <button class="btn btn-primary">✓ 저장</button>
+          <button class="btn btn-secondary">건너뛰기</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="item">선농원 실비김치 1.2kg</div>
+        <div class="meta">2026-05-01 · 13,900원 · 1개</div>
+        <div class="ai">🤖 AI 추천: <b>식자재 &gt; 김치</b> (95%)</div>
+        <select><option>식자재 &gt; 김치 ✓</option><option>식자재 &gt; 미분류</option></select>
+        <div class="actions">
+          <button class="btn btn-primary">✓ 저장</button>
+          <button class="btn btn-secondary">건너뛰기</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="item">가야산천년수 무라벨 2L 12개</div>
+        <div class="meta">2026-05-01 · 8,000원 · 1개</div>
+        <div class="ai">🤖 AI 추천: <b>식자재 &gt; 음료</b> (90%)</div>
+        <select><option>식자재 &gt; 음료 ✓</option><option>비품 &gt; 소모품</option></select>
+        <div class="actions">
+          <button class="btn btn-primary">✓ 저장</button>
+          <button class="btn btn-secondary">건너뛰기</button>
+        </div>
+      </div>
+
+      <div class="bottom-bar">
+        <button class="btn btn-primary" style="flex:2;">AI 추천대로 전부 저장</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="reset()">다시</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function goAnalyze(){
+  document.getElementById('step1').classList.add('hidden');
+  document.getElementById('step2').classList.remove('hidden');
+  setTimeout(()=>{
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step3').classList.remove('hidden');
+  }, 2200);
+}
+function reset(){
+  document.getElementById('step3').classList.add('hidden');
+  document.getElementById('step1').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
