@@ -502,6 +502,11 @@ async function confirmCoupangInboxItem(id){
       category_id: catId,
       source: 'auto',
     }, {onConflict:'store_id,vendor_item_id'});
+    // 글로벌 누적 투표 (전체 매장 추천용 — category_name 기반) — 2026-05-26
+    const catName = (expCategories||[]).find(c=>c.id===catId)?.name;
+    if(catName){
+      sb.rpc('vote_global_hint', {p_vendor_item_id: String(vendorItemId), p_category_name: catName}).then(()=>{}, ()=>{});
+    }
   }
   // 6) UI 갱신
   document.querySelector(`[data-inbox-id="${id}"]`)?.remove();

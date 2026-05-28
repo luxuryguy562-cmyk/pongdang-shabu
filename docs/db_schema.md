@@ -375,6 +375,26 @@ CHECK: vendor_item_id IS NOT NULL OR keyword IS NOT NULL
 UNIQUE: (store_id, vendor_item_id) WHERE vendor_item_id IS NOT NULL
 마이그레이션: `create_coupang_learning_rules_20260526`
 
+### coupang_global_hints (2026-05-26 추가)
+전체 매장 분류 누적 (신규 매장 추천용). `category_name` 기반 — 매장마다 category_id 다르므로 이름으로 매칭.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | UUID PK | |
+| vendor_item_id | TEXT NOT NULL | 쿠팡 상품 옵션 단위 ID |
+| category_name | TEXT NOT NULL | 분류된 카테고리 이름 |
+| vote_count | INT DEFAULT 1 | 이렇게 분류한 매장 수 (누적 투표) |
+| created_at / updated_at | TIMESTAMPTZ | |
+
+UNIQUE: (vendor_item_id, category_name)
+RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_count+1 (SECURITY DEFINER)
+마이그레이션: `create_coupang_global_hints_20260526`
+
+**흐름**:
+1. 사장님 분류 시 (confirmCoupangInboxItem) → `vote_global_hint` RPC 호출 (글로벌 누적)
+2. 신규 매장 동기화 시 (Edge Function v5) → 매장 규칙 없으면 글로벌 최다 투표 카테고리명 조회 → 그 매장 expense_categories 이름 매칭 → ai_suggested_category_id 박음
+3. 매장별 규칙(coupang_learning_rules)이 항상 우선, 글로벌은 폴백
+
 ### expense_categories / expense_category_amounts
 | expense_categories | expense_category_amounts |
 |-------------------|--------------------------|
