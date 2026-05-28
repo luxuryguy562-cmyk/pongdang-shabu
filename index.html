@@ -3070,7 +3070,9 @@
       <button class="admin-sub-btn" data-tab="ai" data-action="switchAdminTab|ai"
         style="flex:1;padding:10px;font-size:13px;font-weight:700;border:0;background:var(--white);border-radius:8px;cursor:pointer;">📊 AI 비용</button>
       <button class="admin-sub-btn" data-tab="rules" data-action="switchAdminTab|rules"
-        style="flex:1;padding:10px;font-size:13px;font-weight:700;border:0;background:transparent;border-radius:8px;cursor:pointer;color:var(--gray-500);">🧠 학습 규칙</button>
+        style="flex:1;padding:10px;font-size:13px;font-weight:700;border:0;background:transparent;border-radius:8px;cursor:pointer;color:var(--gray-500);">🧠 학습규칙</button>
+      <button class="admin-sub-btn" data-tab="accuracy" data-action="switchAdminTab|accuracy"
+        style="flex:1;padding:10px;font-size:13px;font-weight:700;border:0;background:transparent;border-radius:8px;cursor:pointer;color:var(--gray-500);">🔬 측정실</button>
     </div>
     <!-- AI 비용 패널 -->
     <div id="adminAiPanel">
@@ -3185,6 +3187,8 @@
       </div>
       <div id="adminRulesContent">로딩 중...</div>
     </div>
+    <!-- 측정실 패널 (2026-05-28) -->
+    <div id="adminAccuracyPanel" style="display:none;"></div>
   </div>
 </div>
 
@@ -3256,5 +3260,6 @@
 <script src="assets/tabs/settlement.js"></script>
 <script src="assets/tabs/dashboard.js"></script>
 <script src="assets/tabs/sidemenu.js"></script>
+<script src="assets/tabs/accuracy_lab.js"></script>
 </body>
 </html>

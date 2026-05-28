@@ -7632,7 +7632,9 @@ function switchAdminTab(tab){
   });
   document.getElementById('adminAiPanel').style.display = (tab==='ai') ? 'block' : 'none';
   document.getElementById('adminRulesPanel').style.display = (tab==='rules') ? 'block' : 'none';
+  const _accP=document.getElementById('adminAccuracyPanel'); if(_accP) _accP.style.display=(tab==='accuracy')?'block':'none';
   if(tab === 'rules' && !_adminAllRules.length) loadAdminLearningRules();
+  if(tab === 'accuracy' && typeof renderAccuracyLab==='function') renderAccuracyLab();
 }
 
 async function loadAdminDashboard(){
