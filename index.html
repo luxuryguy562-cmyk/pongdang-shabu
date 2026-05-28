@@ -1549,7 +1549,7 @@
       </div>
     </div>
     <!-- 쿠팡 학습 규칙 진입 배너 (쿠팡 진입 시만) -->
-    <div id="coupangRulesBanner" style="display:none;background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:10px;padding:10px 14px;margin-bottom:14px;cursor:pointer;" data-action="openCoupangRulesSheet">
+    <div id="coupangRulesBanner" style="display:none;background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:10px;padding:10px 14px;margin-bottom:8px;cursor:pointer;" data-action="openCoupangRulesSheet">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <div>
           <div style="font-size:12px;font-weight:800;color:#1e40af;">🤖 자동 분류 규칙 — <span id="coupangRulesCount">0</span>건 학습됨</div>
@@ -1557,6 +1557,10 @@
         </div>
         <div style="font-size:18px;color:#1e40af;">›</div>
       </div>
+    </div>
+    <!-- 쿠팡 스샷 → AI 분석 진입 (쿠팡 진입 시만) -->
+    <div id="coupangShotBanner" style="display:none;margin-bottom:14px;">
+      <button class="btn btn-primary btn-full" style="padding:12px;font-size:13px;font-weight:700;" data-action="openCoupangShotSheet">📸 쿠팡 주문 스샷 → AI 분석</button>
     </div>
     <!-- 거래처 영수증 등록 진입 (Phase 3) -->
     <div style="display:flex;gap:8px;margin-bottom:14px;">
@@ -3205,6 +3209,20 @@
   <button class="btn btn-primary btn-full" data-action="saveLearningRule">저장</button>
   <button class="btn btn-danger btn-full" style="margin-top:6px;" data-action="deleteLearningRule">🗑 이 학습 노트 삭제</button>
   <button class="btn btn-secondary btn-full" style="margin-top:6px;" data-action="closeAllSheets">취소</button>
+</div>
+
+<!-- 쿠팡 스샷 → AI 분석 시트 (2026-05-26 신설) -->
+<div class="sheet" id="coupangShotSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">📸 쿠팡 주문 스샷 → AI 분석</div>
+  <div style="font-size:11px;color:#666;margin-bottom:10px;line-height:1.6;">쿠팡 주문내역 화면을 캡처해서 올리면 AI가 상품·금액·날짜 자동 추출. 여러 장 가능.</div>
+  <input type="file" id="coupangShotInput" accept="image/*" multiple style="display:none;" onchange="handleCoupangShot(this)">
+  <button class="btn btn-secondary btn-full" style="padding:14px;font-size:13px;font-weight:700;border:2px dashed #cbd5e1;" onclick="document.getElementById('coupangShotInput').click()">📤 스크린샷 선택 (여러 장 OK)</button>
+  <div id="coupangShotPages" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"></div>
+  <div style="display:flex;gap:6px;margin-top:12px;">
+    <button class="btn btn-primary" style="flex:2;" data-action="analyzeCoupangShots">🤖 AI 분석 시작</button>
+    <button class="btn btn-secondary" style="flex:1;" data-action="closeAllSheets">닫기</button>
+  </div>
 </div>
 
 <!-- 쿠팡 학습 규칙 시트 (2026-05-26 신설) -->

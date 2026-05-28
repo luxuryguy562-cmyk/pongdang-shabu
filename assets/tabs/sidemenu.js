@@ -391,6 +391,7 @@ async function openVendorDetail(vendorId){
   // 쿠팡 거래처 진입 시 분류 대기함 배지 표시 (2026-05-26)
   _checkCoupangInbox(v);
   _checkCoupangRules(v);
+  _showCoupangShotBanner(v);
 }
 
 // ─── 쿠팡 분류 대기함 (2026-05-26 신설) ───
@@ -506,6 +507,137 @@ async function confirmCoupangInboxItem(id){
   document.querySelector(`[data-inbox-id="${id}"]`)?.remove();
   await _checkCoupangInbox(vendors.find(v => v.id === currentVendorDetailId));
   if(typeof loadVendorOrders==='function') loadVendorOrders();
+}
+
+// ─── 쿠팡 스샷 → AI 분석 (2026-05-26 신설) ───
+let _coupangShotPages = [];
+
+function _showCoupangShotBanner(vendor){
+  const b = document.getElementById('coupangShotBanner');
+  if(!b) return;
+  b.style.display = (vendor && vendor.name === '쿠팡') ? 'block' : 'none';
+}
+
+function openCoupangShotSheet(){
+  if(!guardStore()) return;
+  _coupangShotPages = [];
+  _renderCoupangShotPages();
+  openSheet('coupangShotSheet');
+}
+
+function handleCoupangShot(input){
+  const files = Array.from(input.files || []);
+  files.forEach(file => {
+    const fr = new FileReader();
+    fr.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const cvs = document.createElement('canvas');
+        let w=img.width, h=img.height; if(w>1280){h*=1280/w; w=1280;}
+        cvs.width=w; cvs.height=h; cvs.getContext('2d').drawImage(img,0,0,w,h);
+        _coupangShotPages.push(cvs.toDataURL('image/jpeg',0.85).split(',')[1]);
+        _renderCoupangShotPages();
+      };
+      img.src = e.target.result;
+    };
+    fr.readAsDataURL(file);
+  });
+  try{ input.value=''; }catch(e){}
+}
+
+function _renderCoupangShotPages(){
+  const el = document.getElementById('coupangShotPages');
+  if(!el) return;
+  el.innerHTML = _coupangShotPages.map((b64,i)=>`
+    <div style="position:relative;width:72px;">
+      <img src="data:image/jpeg;base64,${b64}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #ddd;">
+      <button type="button" style="position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:50%;border:2px solid #fff;background:#dc2626;color:#fff;font-size:11px;font-weight:800;cursor:pointer;padding:0;line-height:1;" data-action="removeCoupangShot|${i}">×</button>
+    </div>`).join('');
+}
+
+function removeCoupangShot(i){
+  _coupangShotPages.splice(i,1);
+  _renderCoupangShotPages();
+}
+
+async function analyzeCoupangShots(){
+  if(!guardStore()) return;
+  if(_coupangShotPages.length === 0){ alert('스크린샷을 먼저 올려주세요'); return; }
+  const vendor = vendors.find(v => v.id === currentVendorDetailId && v.name === '쿠팡');
+  if(!vendor){ alert('쿠팡 거래처에서만 가능'); return; }
+
+  // FK 카테고리 목록 (헌법 10조 2번) — 하드코딩 X, DB 동적
+  const cats = (expCategories||[])
+    .filter(c => !c.parent_id && c.is_active!==false
+              && (c.category_type||'expense')==='expense'
+              && ['composite','vendor_orders'].includes(c.data_source))
+    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const catNames = cats.map(c=>c.name).join(', ');
+
+  const prompt = `쿠팡 주문내역 스크린샷에서 주문 상품을 추출해줘.
+JSON만 출력: {"items":[{"d":"YYYY-MM-DD","i":"상품명","p":결제금액정수,"q":수량,"c":"카테고리"}]}
+
+[필드]
+- d: 주문일 (YYYY-MM-DD). 화면에 "2026.5.20" 형식이면 "2026-05-20"으로
+- i: 상품명 (옵션·용량 포함 전체)
+- p: 결제 금액 (정수, 쉼표·원 제거)
+- q: 수량 (없으면 1)
+- c: 아래 중 가장 맞는 카테고리 하나 [${catNames}]
+
+[규칙]
+- 취소·반품 상태 상품은 제외
+- 흐릿해도 근접 추정, 음수·빈값 X
+- 상품 카드 단위로 1행씩`;
+
+  setLoad(true, 'AI가 주문 분석 중...');
+  const parts = [{text:prompt}];
+  _coupangShotPages.forEach(b64 => parts.push({inline_data:{mime_type:'image/jpeg',data:b64}}));
+  const timeoutSec = 30 + (_coupangShotPages.length-1)*5;
+
+  let raw;
+  try {
+    raw = await callGemini(parts, timeoutSec, 'coupang_shot', 'gemini-2.5-flash', 'gemini');
+  } catch(geminiErr){
+    const m = String(geminiErr?.message||'').toLowerCase();
+    if(/high demand|overload|currently|503|429|시간 초과|비어있|json|응답 오류/i.test(m)){
+      setLoad(true, 'Gemini 과부하 → GPT-4o로 재시도 중...');
+      try { raw = await callGemini(parts, timeoutSec+15, 'coupang_shot', 'gpt-4o', 'gpt'); }
+      catch(e2){ setLoad(false); return alert('AI 분석 실패: '+e2.message); }
+    } else { setLoad(false); return alert('AI 분석 실패: '+geminiErr.message); }
+  }
+
+  const items = Array.isArray(raw) ? raw : (raw?.items || []);
+  if(items.length === 0){ setLoad(false); return alert('추출된 주문 0건 — 스샷 다시 확인'); }
+
+  // coupang_inbox INSERT (AI 추천 카테고리 = FK 매핑)
+  const rows = items.map(x => {
+    const item = (x.i || x.item || '').trim();
+    const amount = Math.round(Number(x.p || x.amount) || 0);
+    const date = (x.d || x.date || ymdLocal(new Date())).slice(0,10);
+    const qty = Number(x.q || x.qty || 1);
+    const aiCatName = x.c || x.category || '';
+    const matchCat = cats.find(c => c.name === aiCatName);
+    return {
+      store_id: currentStore.id,
+      vendor_id: vendor.id,
+      external_order_id: 'shot_' + date + '_' + amount,
+      order_date: date,
+      item, amount,
+      quantity: qty,
+      unit_price: qty>0 ? Math.round(amount/qty) : null,
+      ai_suggested_category_id: matchCat?.id || null,
+      ai_confidence: matchCat ? 0.85 : null,
+      status: 'pending',
+    };
+  }).filter(r => r.item && r.amount);
+
+  const {error} = await sb.from('coupang_inbox').upsert(rows, {onConflict:'store_id,external_order_id,item', ignoreDuplicates:true});
+  setLoad(false);
+  if(error) return alert('저장 실패: '+error.message);
+  alert(`✅ AI 추출 ${rows.length}건\n분류 대기에 박힘\n\n아래 분류 대기에서 확인 후 저장하세요`);
+  closeAllSheets();
+  await _checkCoupangInbox(vendor);
+  openCoupangInboxSheet();
 }
 
 // ─── 쿠팡 학습 규칙 (2026-05-26 신설) ───
