@@ -3381,3 +3381,24 @@ const COMMON_BANK_RULES=[
 - critic.md 한 줄 표현도 새 1-9와 일관 박음
 - 최종 검증: 잔재 0건 (헌법 11조 사후 검증 통과)
 - todo_next_session.md 빙산 13회 추가 박음
+
+---
+
+## #130 거래처 상세 진입 시 뒤로가기 2개·서브탭 고정 (2026-05-26)
+
+### 사장님 호소
+- "거래처/파일업로드/대조&단가 버튼이 어딜 들어가든 고정값으로 있음"
+- "거래처관리 < 행복한정육점 뒤로가기 2개. 거래처관리 누르면 또 지출그리드로 감. 유저플로우 안 맞음"
+
+### 원인
+- `.app-back`("‹ 거래처 관리" → expHub) + `.sub-tabs`가 `#vendorsCont` 최상단 고정
+- `vendorTab()`이 안쪽 패널(list/orders/upload/compare)만 토글, 최상단 뒤로가기·서브탭은 항상 노출
+- 상세(orders) 진입 시 = 뒤로가기 2개(지출그리드行 + 그리드行) + 서브탭 잔존
+
+### 교훈
+- 상세 화면(detail) = 부모 네비게이션(서브탭·상위 뒤로가기) 숨기고 단일 뒤로가기만
+- SPA 한 컨테이너 안 여러 뎁스(grid→detail) = 뎁스별 헤더/네비 노출 제어 필수
+
+### 조치
+- vendorTab: `inDetail=(tab==='orders' && currentVendorDetailId)` → topBack·subTabs `display:none`
+- 상세에선 상세 헤더 ‹ 만 남아 거래처 그리드로 복귀 (유저플로우 일치)
