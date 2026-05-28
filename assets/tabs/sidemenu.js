@@ -55,6 +55,13 @@ function vendorTab(tab,el){
   });
   const panel=document.getElementById('vendor'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(panel) panel.style.display='block';
+  // 거래처 상세(orders) 진입 시 = 최상단 뒤로가기·서브탭 숨김 (2026-05-26 사장님 호소: 뒤로가기 2개·서브탭 고정 = 유저플로우 안 맞음)
+  //   상세에선 상세 헤더의 ‹ 만 남아 거래처 그리드로 복귀
+  const topBack=document.querySelector('#vendorsCont .app-back');
+  const subTabs=document.querySelector('#vendorsCont .sub-tabs');
+  const inDetail=(tab==='orders' && currentVendorDetailId);
+  if(topBack) topBack.style.display=inDetail?'none':'';
+  if(subTabs) subTabs.style.display=inDetail?'none':'';
   // 목록으로 복귀 시 거래처 상세 헤더 초기화 (사장이 ‹ 목록 누른 경우)
   if(tab==='list'){
     const nm=document.getElementById('vdName');
