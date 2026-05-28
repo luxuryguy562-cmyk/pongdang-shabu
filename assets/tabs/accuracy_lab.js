@@ -201,14 +201,14 @@ function _accRenderResult(){
     <td>${i+1}</td>
     <td><input class="acc-tin" data-r="${i}" data-f="i" value="${(it.i||'').replace(/"/g,'&quot;')}"></td>
     <td><input class="acc-tin num" data-r="${i}" data-f="q" value="${it.q==null?'':it.q}" inputmode="numeric"></td>
-    <td><input class="acc-tin num" data-r="${i}" data-f="p" value="${it.p==null?'':it.p}" inputmode="numeric"></td>
+    <td><input class="acc-tin num" data-r="${i}" data-f="p" value="${it.p==null?'':Number(it.p).toLocaleString('ko-KR')}" inputmode="numeric"></td>
   </tr>`).join('');
   box.innerHTML=`<div class="card acc-sec" style="padding:14px;">
     <div class="acc-lbl">④ AI가 읽은 결과 — 틀린 칸을 고치세요 (고친 만큼 노란색)</div>
     <table class="acc-tbl"><tr><th>No</th><th>품목</th><th class="num" style="text-align:right">수량</th><th class="num" style="text-align:right">합계</th></tr>${rows}</table>
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
       <span class="acc-mini" style="min-width:64px;">영수증 합계</span>
-      <input class="acc-tin num" data-f="total" value="${_accCur.total_sum==null?'':_accCur.total_sum}" inputmode="numeric" style="flex:1;">
+      <input class="acc-tin num" data-f="total" value="${_accCur.total_sum==null?'':Number(_accCur.total_sum).toLocaleString('ko-KR')}" inputmode="numeric" style="flex:1;">
     </div>
     <div class="acc-hint">AI가 읽은 그대로입니다. 영수증 원본과 비교해 <b>틀린 칸만</b> 고치세요. 고친 개수 = AI가 틀린 개수 = 정확도.</div>
     <button class="acc-btn acc-btn2" id="accScoreBtn" style="margin-top:10px;">✅ 채점 &amp; 정답 저장</button>
@@ -216,6 +216,8 @@ function _accRenderResult(){
   </div>`;
   box.querySelectorAll('.acc-tin').forEach(inp=>inp.addEventListener('input',()=>{
     const f=inp.dataset.f;
+    // 금액(합계·영수증합계)은 세 자리 쉼표 자동 (헌법 7조 — fmt/formatNumberInput 재사용). 수량은 쉼표 X.
+    if((f==='p'||f==='total') && typeof formatNumberInput==='function') formatNumberInput(inp);
     if(f==='total'){ _accCur.total_sum = inp.value===''?null:Number(inp.value.replace(/[^0-9]/g,'')); }
     else { const r=+inp.dataset.r; _accCur.items[r][f] = (f==='i')?inp.value : (inp.value===''?null:Number(inp.value.replace(/[^0-9]/g,''))); }
     // 정정 표시
