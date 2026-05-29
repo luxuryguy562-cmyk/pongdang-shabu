@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>화면3 · 마감정산기록조회 (지금 vs 바뀜)</title>
+<title>화면3 v2 · 마감정산기록조회 (압축)</title>
 <style>
 :root{
   --blue:#3182F6;--blue-strong:#0064FF;--blue-light:#EDF4FF;
@@ -22,101 +22,80 @@ body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Not
 .subtab{display:flex;gap:6px;margin:12px 0;}
 .subtab .st{flex:1;text-align:center;padding:10px;border-radius:11px;font-size:13px;font-weight:800;background:var(--white);color:var(--g500);box-shadow:var(--shadow);}
 .subtab .st.on{background:var(--text);color:#fff;}
-.tag{display:inline-block;font-size:12px;font-weight:800;padding:5px 12px;border-radius:99px;margin:18px 0 10px;}
-.tag.now{background:var(--g200);color:var(--g600);}
-.tag.new{background:var(--blue-light);color:var(--blue-strong);}
-
-/* ===== 지금: 빈약한 카드 ===== */
-.nowitem{background:var(--white);border-radius:16px;box-shadow:var(--shadow);padding:15px 16px;margin-bottom:10px;}
-.nowitem .top{display:flex;justify-content:space-between;align-items:center;}
-.nowitem .dt{font-size:14px;font-weight:800;}
-.nowitem .dt .dow{font-size:11px;color:var(--g500);font-weight:400;margin-left:3px;}
-.nowitem .diff{font-size:13px;font-weight:800;}
-.nowitem .ded{margin-top:8px;padding-top:8px;border-top:1px dashed var(--g200);}
-.nowitem .ded .dr{display:flex;justify-content:space-between;font-size:12px;color:var(--g600);padding:2px 0;}
-
-/* ===== 바뀜: 정보 풍부 카드 ===== */
-.newitem{background:var(--white);border-radius:18px;box-shadow:var(--shadow);padding:16px;margin-bottom:10px;}
-.newitem .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
-.newitem .dt{font-size:16px;font-weight:900;}
-.newitem .dt .dow{font-size:12px;color:var(--g500);font-weight:600;margin-left:4px;}
-.newitem .chips{display:flex;gap:5px;margin-top:6px;}
-.chip{font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;}
-.chip.ok{background:var(--success-light);color:var(--success);}
-.chip.bad{background:var(--danger-light);color:var(--danger);}
-.diffbig{font-size:16px;font-weight:900;text-align:right;}
-.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
-.stat{background:var(--g100);border-radius:11px;padding:10px 12px;text-align:center;}
-.stat .sl{font-size:10px;color:var(--g500);font-weight:700;}
-.stat .sv{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;margin-top:2px;}
-.moverow{display:flex;justify-content:space-between;font-size:12px;color:var(--g600);padding:5px 0;}
-.moverow .mv{font-weight:700;color:var(--danger);font-variant-numeric:tabular-nums;}
-.divider{border-top:1px dashed var(--g200);margin:8px 0;}
-.editbtn{width:100%;margin-top:10px;padding:11px;border:none;border-radius:11px;background:var(--blue);color:#fff;font-size:13px;font-weight:800;cursor:pointer;}
+.note{font-size:12px;color:var(--g600);background:var(--blue-light);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5;}
+.note b{color:var(--blue-strong);}
+/* 압축 카드: 1~2줄 */
+.item{background:var(--white);border-radius:14px;box-shadow:var(--shadow);margin-bottom:8px;overflow:hidden;}
+.head{padding:13px 15px;cursor:pointer;}
+.line1{display:flex;align-items:center;justify-content:space-between;}
+.line1 .dt{font-size:15px;font-weight:900;}
+.line1 .dt .dow{font-size:11px;color:var(--g500);font-weight:500;margin-left:3px;}
+.line1 .right{display:flex;align-items:center;gap:8px;}
+.dchip{font-size:12px;font-weight:800;padding:3px 9px;border-radius:99px;}
+.dchip.ok{background:var(--success-light);color:var(--success);}
+.dchip.bad{background:var(--danger-light);color:var(--danger);}
+.chev{font-size:11px;color:var(--g400);}
+.line2{display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--g500);}
+.line2 b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;}
+/* 펼침 */
+.body{max-height:0;overflow:hidden;transition:max-height .28s;background:var(--g100);}
+.item.open .body{max-height:400px;}
+.bin{padding:12px 15px;}
+.mrow{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;color:var(--g600);}
+.mrow .mm{font-size:10px;color:var(--g400);}
+.mrow b{color:var(--danger);font-variant-numeric:tabular-nums;}
+.editbtn{width:100%;margin-top:8px;padding:10px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-size:12px;font-weight:800;cursor:pointer;}
 .blue{color:var(--blue);}.neg{color:var(--danger);}.pos{color:var(--success);}
-.callout{font-size:11px;font-weight:700;text-align:center;margin-top:6px;padding:8px;border-radius:9px;}
-.callout.bad{background:var(--danger-light);color:var(--danger);}
-.callout.good{background:var(--success-light);color:var(--success);}
+.callout{font-size:11px;font-weight:700;text-align:center;margin-top:8px;padding:8px;border-radius:9px;background:var(--success-light);color:var(--success);}
 </style>
 </head>
 <body>
 <div class="phone">
-  <div class="title">화면 3 · 마감정산기록조회<small>= 마감정산화면 위 '기록 조회' 눌렀을 때</small></div>
+  <div class="title">화면 3 v2 · 마감정산기록조회<small>= '기록 조회' 탭 — 카드 압축</small></div>
   <div class="subtab"><div class="st">마감 정산</div><div class="st on">기록 조회</div></div>
 
-  <!-- ============ 지금 모습 ============ -->
-  <div class="tag now">📍 지금 모습</div>
-  <div class="nowitem">
-    <div class="top"><div class="dt">2026-05-28 <span class="dow">(수)</span></div><div class="diff neg">🌙 -3,600원</div></div>
-    <div class="ded">
-      <div class="dr"><span>🏧 통장입금</span><span style="color:var(--danger);font-weight:700">−2,101,200원</span></div>
-      <div class="dr"><span>📤 기타사용 · 식자재 현금구매</span><span style="color:var(--danger);font-weight:700">−443,700원</span></div>
-    </div>
-  </div>
-  <div class="nowitem">
-    <div class="top"><div class="dt">2026-05-27 <span class="dow">(화)</span></div><div class="diff pos">✅ 일치</div></div>
-    <div class="ded"><div class="dr"><span>🏧 통장입금</span><span style="color:var(--danger);font-weight:700">−1,800,000원</span></div></div>
-  </div>
-  <div class="callout bad">⚠ 보세요: 그 날 <b>매출이 얼마였는지·금고가 얼마인지</b> 안 나옴. 날짜·차액·차감만 나열돼 정보가 빈약.</div>
+  <div class="note">🔧 고친 점: 평소엔 <b>한 카드 = 2줄</b>(날짜·차액 + 매출·금고)로 작게. 누르면 통장·지출 <b>메모까지 펼쳐짐</b>. 한 화면에 여러 날이 들어옵니다.</div>
 
-  <!-- ============ 바뀐 모습 ============ -->
-  <div class="tag new">✨ 바뀐 모습</div>
-  <div class="newitem">
-    <div class="top">
-      <div>
-        <div class="dt">5/28 <span class="dow">(수)</span></div>
-        <div class="chips"><span class="chip bad">차액 -3,600원</span></div>
-      </div>
-      <div class="diffbig neg">-3,600원</div>
-    </div>
-    <div class="statgrid">
-      <div class="stat"><div class="sl">💵 매출</div><div class="sv blue">1,750,000원</div></div>
-      <div class="stat"><div class="sl">💰 금고 현황</div><div class="sv">1,585,700원</div></div>
-    </div>
-    <div class="moverow"><span>🏧 통장에 넣은 돈</span><span class="mv">−2,101,200원</span></div>
-    <div class="moverow"><span>💵 현금으로 쓴 돈 · 식자재</span><span class="mv">−443,700원</span></div>
-    <div class="divider"></div>
-    <button class="editbtn">✏️ 이 날 수정하기</button>
-  </div>
-  <div class="newitem">
-    <div class="top">
-      <div>
-        <div class="dt">5/27 <span class="dow">(화)</span></div>
-        <div class="chips"><span class="chip ok">✅ 차액 일치</span></div>
-      </div>
-      <div class="diffbig pos">✅</div>
-    </div>
-    <div class="statgrid">
-      <div class="stat"><div class="sl">💵 매출</div><div class="sv blue">1,560,000원</div></div>
-      <div class="stat"><div class="sl">💰 금고 현황</div><div class="sv">1,450,000원</div></div>
-    </div>
-    <div class="moverow"><span>🏧 통장에 넣은 돈</span><span class="mv">−1,800,000원</span></div>
-    <div class="divider"></div>
-    <button class="editbtn">✏️ 이 날 수정하기</button>
-  </div>
-  <div class="callout good">✅ 매출·금고가 카드에 바로 보임. 차액은 색 칩으로 한눈에. [수정하기]로 바로 고침.</div>
-
+  <div id="list"></div>
+  <div class="callout">✅ 작게 여러 날 한눈에. 자세히 볼 날만 눌러서 펼치세요.</div>
   <div style="height:30px"></div>
 </div>
+
+<script>
+const fmt=n=>(n||0).toLocaleString('ko-KR');
+const DB={
+ '2026-05-28':{dow:'수',sales:1750000,vault:1585700,diff:-3600,
+   moves:[{ic:'🏧',l:'통장에 넣은 돈',memo:'일일 매출 입금',amt:2101200},{ic:'💵',l:'현금으로 쓴 돈',memo:'식자재 구매(코스트코)',amt:380000},{ic:'💵',l:'현금으로 쓴 돈',memo:'아르바이트 식대',amt:63700}]},
+ '2026-05-27':{dow:'화',sales:1560000,vault:1830000,diff:0,
+   moves:[{ic:'🏧',l:'통장에 넣은 돈',memo:'매출 입금',amt:1800000},{ic:'💵',l:'현금으로 쓴 돈',memo:'주류 현금 결제',amt:200000}]},
+ '2026-05-26':{dow:'월',sales:1470000,vault:1668000,diff:18000,
+   moves:[{ic:'🏧',l:'통장에 넣은 돈',memo:'매출 입금',amt:1500000},{ic:'💵',l:'현금으로 쓴 돈',memo:'잡비·소모품',amt:350000}]},
+};
+const list=document.getElementById('list');
+Object.entries(DB).forEach(([date,r])=>{
+  const d=date.slice(5).replace('-','/');
+  const ok=r.diff===0;
+  const dtxt=ok?'✅ 일치':(r.diff>0?'+':'')+fmt(r.diff)+'원';
+  const el=document.createElement('div');el.className='item';
+  el.innerHTML=`
+    <div class="head">
+      <div class="line1">
+        <div class="dt">${d}<span class="dow">(${r.dow})</span></div>
+        <div class="right"><span class="dchip ${ok?'ok':'bad'}">${dtxt}</span><span class="chev">▾</span></div>
+      </div>
+      <div class="line2"><span>💵 매출 <b>${fmt(r.sales)}</b></span><span>💰 금고 <b>${fmt(r.vault)}</b></span></div>
+    </div>
+    <div class="body"><div class="bin">
+      ${r.moves.map(m=>`<div class="mrow"><span>${m.ic} ${m.l}<br><span class="mm">↳ ${m.memo}</span></span><b>−${fmt(m.amt)}원</b></div>`).join('')}
+      <button class="editbtn" onclick="event.stopPropagation();alert('(시안) 이 날 입력칸이 채워진 채 수정 화면이 열립니다')">✏️ 이 날 수정하기</button>
+    </div></div>`;
+  el.querySelector('.head').onclick=()=>{
+    const open=el.classList.contains('open');
+    document.querySelectorAll('.item').forEach(i=>{i.classList.remove('open');i.querySelector('.chev').textContent='▾';});
+    if(!open){el.classList.add('open');el.querySelector('.chev').textContent='▴';}
+  };
+  list.appendChild(el);
+});
+</script>
 </body>
 </html>

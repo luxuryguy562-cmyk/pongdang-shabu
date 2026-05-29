@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>화면1 · 개시마감화면 (지금 vs 바뀜)</title>
+<title>화면1 v2 · 개시마감화면 (돈 흐름 + 메모)</title>
 <style>
 :root{
   --blue:#3182F6;--blue-strong:#0064FF;--blue-light:#EDF4FF;
   --bg:#F2F4F6;--white:#fff;
   --g100:#F9FAFB;--g200:#E5E8EB;--g300:#D1D6DB;--g400:#B0B8C1;--g500:#8B95A1;--g600:#6B7684;
   --text:#191F28;--danger:#F04452;--danger-light:#FFEBEE;
-  --success:#0CAB6C;--success-light:#E8FAF3;--warn:#F5A11E;
+  --success:#0CAB6C;--success-light:#E8FAF3;--warn:#F5A11E;--warn-light:#FFF3E0;
   --radius:20px;--shadow:0 4px 14px rgba(20,40,80,.07),0 1px 3px rgba(20,40,80,.05);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -19,116 +19,107 @@ body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Not
 .phone{width:100%;max-width:420px;}
 .title{font-size:18px;font-weight:900;text-align:center;margin-bottom:4px;}
 .title small{display:block;font-size:12px;color:var(--g500);font-weight:600;margin-top:3px;}
-.tag{display:inline-block;font-size:12px;font-weight:800;padding:5px 12px;border-radius:99px;margin:18px 0 10px;}
-.tag.now{background:var(--g200);color:var(--g600);}
-.tag.new{background:var(--blue-light);color:var(--blue-strong);}
-.note{font-size:12px;color:var(--g600);background:#FFF8E1;border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.5;}
+.note{font-size:12px;color:var(--g600);background:var(--blue-light);border-radius:10px;padding:10px 12px;margin:14px 0 12px;line-height:1.5;}
+.note b{color:var(--blue-strong);}
 .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:0;overflow:hidden;}
-.card-h{padding:14px 14px 12px;display:flex;align-items:center;justify-content:space-between;}
+.card-h{padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;}
 .card-h .t{font-size:15px;font-weight:800;}
 .chip{background:#F5F7FA;border-radius:99px;padding:2px;display:flex;gap:2px;align-items:center;}
 .chip button{width:26px;height:26px;border:none;background:transparent;font-size:15px;font-weight:700;color:var(--g600);cursor:pointer;border-radius:50%;}
 .chip .mc{font-size:12px;font-weight:800;min-width:52px;text-align:center;}
-/* 두 버튼(영업개시/마감정산) */
-.bigbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-.bigbtns .b{background:var(--white);border-radius:18px;box-shadow:var(--shadow);padding:18px 14px;text-align:center;}
-.bigbtns .b .ic{width:44px;height:44px;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:900;}
-.bigbtns .b.open .ic{background:var(--success);}
-.bigbtns .b.close .ic{background:var(--blue);}
-.bigbtns .b .nm{font-size:14px;font-weight:800;}
-.bigbtns .b .am{font-size:13px;font-weight:700;color:var(--g500);margin-top:4px;}
-
-/* ===== 지금: 4카드 (세로정렬 없음) ===== */
-.now4{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 14px 12px;}
-.now4 .c{padding:8px 10px;background:var(--g100);border-radius:8px;text-align:center;}
-.now4 .c .lb{font-size:10px;color:var(--g500);}
-.now4 .c .vl{font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;}
-.now4 .c .sub{font-size:9px;color:var(--g400);margin-top:1px;}
-
-/* ===== 바뀜: 4카드 (세로 가운데 + 키 통일) ===== */
-.new4{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 12px;}
-.new4 .c{min-height:74px;background:var(--g100);border-radius:12px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px;}
-.new4 .c .lb{font-size:11px;color:var(--g500);font-weight:700;margin-bottom:4px;}
-.new4 .c .vl{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;}
-.new4 .c .sub{font-size:9px;color:var(--g400);margin-top:3px;}
+/* 4카드 (세로 가운데 + 키통일) */
+.cards4{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 12px;}
+.c4{min-height:74px;background:var(--g100);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px;}
+.c4 .lb{font-size:11px;color:var(--g500);font-weight:700;margin-bottom:4px;}
+.c4 .vl{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;}
+.c4 .sub{font-size:9px;color:var(--g400);margin-top:3px;}
 .neg{color:var(--danger);}.pos{color:var(--success);}.blue{color:var(--blue);}
-
-/* 표 공통 */
-table{width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed;}
-th{padding:8px;font-size:10px;color:var(--g400);font-weight:700;text-align:center;}
-td{padding:8px 10px;border-top:1px solid var(--g100);font-variant-numeric:tabular-nums;}
-.tc{text-align:center;font-weight:600;}.tr{text-align:right;}
-.dim{color:var(--g300);}
-/* 바뀜 표: 매출 열 추가 + 강조 */
-.newtbl th.hl,.newtbl td.hl{background:var(--blue-light);}
+/* 표: 현금 흐름 */
+.thead{display:grid;grid-template-columns:13% 19% 19% 19% 16% 14%;padding:6px 12px;font-size:9.5px;color:var(--g400);font-weight:700;text-align:center;}
+.trow{display:grid;grid-template-columns:13% 19% 19% 19% 16% 14%;padding:10px 12px;border-top:1px solid var(--g100);font-size:11px;font-variant-numeric:tabular-nums;align-items:center;cursor:pointer;}
+.trow:hover{background:var(--g100);}
+.trow .dt{text-align:center;font-weight:700;}
+.trow .dt small{display:block;font-size:8px;color:var(--g400);font-weight:400;}
+.trow .cell{text-align:right;position:relative;}
+.trow .cell.memo::after{content:'💬';font-size:8px;position:absolute;top:-7px;right:-2px;}
+.trow .diff{text-align:right;font-weight:800;}
+/* 펼침 흐름 */
+.flow{display:none;background:var(--g100);padding:12px 16px;font-size:12px;border-top:1px solid var(--g200);}
+.flow.open{display:block;}
+.flow .fr{display:flex;justify-content:space-between;padding:5px 0;color:var(--g600);}
+.flow .fr.calc{border-top:1px dashed var(--g300);margin-top:4px;padding-top:8px;font-weight:800;color:var(--text);}
+.flow .fr .mm{font-size:10px;color:var(--g400);font-weight:400;}
+.flow .fr b{font-variant-numeric:tabular-nums;}
+.flow .res{border-radius:10px;padding:10px;text-align:center;margin-top:8px;font-weight:900;}
+.flow .res.ok{background:var(--success-light);color:var(--success);}
+.flow .res.bad{background:var(--danger-light);color:var(--danger);}
+.tip{font-size:11px;color:var(--g500);text-align:center;margin-top:10px;line-height:1.6;}
+.tip b{color:var(--blue-strong);}
 </style>
 </head>
 <body>
 <div class="phone">
-  <div class="title">화면 1 · 개시마감화면<small>= 개시마감 처음 들어간 화면 (영업 허브)</small></div>
+  <div class="title">화면 1 v2 · 개시마감화면<small>= 돈(현금·금고) 확인 — 매출 ❌ / 현금 흐름 ⭕</small></div>
 
-  <div class="note">📍 사장님이 보내주신 첫 사진(총차액/금고/통장/현금지출 4카드)이 바로 이 화면의 '차액 확인' 윗부분입니다.</div>
+  <div class="note">🔧 고친 점: <b>'매출' 대신 '현금 흐름'</b>(전일금고 → +현금 → −통장 −지출 → 실제금고)으로. 표의 통장·지출에 <b>💬 메모가 붙고, 눌러서 펼치면 흐름+메모</b>가 다 보여 기록조회로 안 넘어가도 됨.</div>
 
-  <!-- ============ 지금 모습 ============ -->
-  <div class="tag now">📍 지금 모습</div>
-  <div class="bigbtns">
-    <div class="b open"><div class="ic">OPEN</div><div class="nm">영업개시</div><div class="am">1,585,700원</div></div>
-    <div class="b close"><div class="ic">CLOSE</div><div class="nm">마감정산</div><div class="am">-3,600원</div></div>
-  </div>
   <div class="card">
-    <div class="card-h"><div class="t">차액 확인</div>
+    <div class="card-h"><div class="t">💰 차액 확인</div>
       <div class="chip"><button>‹</button><span class="mc">2026.05</span><button>›</button></div></div>
-    <!-- 세로정렬 없음 → 금고현황만 3줄이라 키 크고, 나머지는 위로 붙음 -->
-    <div class="now4">
-      <div class="c"><div class="lb">총 차액</div><div class="vl pos">+14,400원</div></div>
-      <div class="c"><div class="lb">💰 금고 현황</div><div class="vl blue">1,585,700원</div><div class="sub">05/28 기준</div></div>
-      <div class="c"><div class="lb">🏧 통장 입금</div><div class="vl">5,401,200원</div></div>
-      <div class="c"><div class="lb">💵 현금 지출</div><div class="vl">993,700원</div></div>
+    <div class="cards4">
+      <div class="c4"><div class="lb">📊 총 차액</div><div class="vl neg">+14,400원</div><div class="sub">이달 합계 · ⚠ 확인</div></div>
+      <div class="c4"><div class="lb">💰 금고 현황</div><div class="vl blue">1,585,700원</div><div class="sub">05/28 기준</div></div>
+      <div class="c4"><div class="lb">🏧 통장 입금</div><div class="vl">5,401,200원</div><div class="sub">이달 합계</div></div>
+      <div class="c4"><div class="lb">💵 현금 지출</div><div class="vl">993,700원</div><div class="sub">이달 합계</div></div>
     </div>
-    <table>
-      <colgroup><col style="width:16%"><col style="width:28%"><col style="width:28%"><col style="width:28%"></colgroup>
-      <thead><tr><th>날짜</th><th>통장 입금</th><th>현금 지출</th><th>차액</th></tr></thead>
-      <tbody>
-        <tr><td class="tc">05/26</td><td class="tr">1,500,000</td><td class="tr">350,000</td><td class="tr" style="color:var(--danger);font-weight:700">+18,000 ⚠</td></tr>
-        <tr><td class="tc">05/27</td><td class="tr">1,800,000</td><td class="tr">200,000</td><td class="tr dim">-</td></tr>
-        <tr><td class="tc">05/28</td><td class="tr">2,101,200</td><td class="tr">443,700</td><td class="tr" style="color:var(--danger);font-weight:700">-3,600</td></tr>
-      </tbody>
-    </table>
-    <div style="height:6px"></div>
-  </div>
-  <div style="font-size:11px;color:var(--danger);text-align:center;margin-top:8px;font-weight:700;">⚠ 보세요: '총 차액'이 위로 붙어있고 '금고 현황'만 키가 큼 → 안 맞아 보임</div>
-
-  <!-- ============ 바뀐 모습 ============ -->
-  <div class="tag new">✨ 바뀐 모습</div>
-  <div class="bigbtns">
-    <div class="b open"><div class="ic">OPEN</div><div class="nm">영업개시</div><div class="am">1,585,700원</div></div>
-    <div class="b close"><div class="ic">CLOSE</div><div class="nm">마감정산</div><div class="am">-3,600원</div></div>
-  </div>
-  <div class="card">
-    <div class="card-h"><div class="t">차액 확인</div>
-      <div class="chip"><button>‹</button><span class="mc">2026.05</span><button>›</button></div></div>
-    <!-- 세로 가운데 + 키 통일 → 4칸 가지런 -->
-    <div class="new4">
-      <div class="c"><div class="lb">📊 총 차액</div><div class="vl neg">+14,400원</div><div class="sub">이달 합계 · ⚠ 확인</div></div>
-      <div class="c"><div class="lb">💰 금고 현황</div><div class="vl blue">1,585,700원</div><div class="sub">05/28 기준</div></div>
-      <div class="c"><div class="lb">🏧 통장 입금</div><div class="vl">5,401,200원</div><div class="sub">이달 3일 합계</div></div>
-      <div class="c"><div class="lb">💵 현금 지출</div><div class="vl">993,700원</div><div class="sub">이달 3일 합계</div></div>
+    <div class="thead">
+      <div>날짜</div><div>💵 현금유입</div><div>🏧 통장입금</div><div>💵 현금지출</div><div>금고</div><div>차액</div>
     </div>
-    <table class="newtbl">
-      <colgroup><col style="width:15%"><col style="width:26%"><col style="width:23%"><col style="width:18%"><col style="width:18%"></colgroup>
-      <thead><tr><th>날짜</th><th class="hl">매출</th><th>통장입금</th><th>현금지출</th><th>차액</th></tr></thead>
-      <tbody>
-        <tr><td class="tc">05/26<br><span style="font-size:9px;color:var(--g400)">월</span></td><td class="tr hl" style="font-weight:700">1,470,000</td><td class="tr">1,500,000</td><td class="tr">350,000</td><td class="tr" style="color:var(--danger);font-weight:800">+18,000<br><span style="font-size:9px">⚠</span></td></tr>
-        <tr><td class="tc">05/27<br><span style="font-size:9px;color:var(--g400)">화</span></td><td class="tr hl" style="font-weight:700">1,560,000</td><td class="tr">1,800,000</td><td class="tr">200,000</td><td class="tr" style="color:var(--success);font-weight:800">✅</td></tr>
-        <tr><td class="tc">05/28<br><span style="font-size:9px;color:var(--g400)">수</span></td><td class="tr hl" style="font-weight:700">1,750,000</td><td class="tr">2,101,200</td><td class="tr">443,700</td><td class="tr" style="color:var(--danger);font-weight:800">-3,600</td></tr>
-      </tbody>
-    </table>
-    <div style="height:6px"></div>
+    <div id="rows"></div>
   </div>
-  <div style="font-size:11px;color:var(--success);text-align:center;margin-top:8px;font-weight:700;">✅ 4칸이 가지런. 표에 '매출' 열 추가 + 일치는 ✅ 로 한눈에</div>
-
+  <div class="tip">👉 표의 <b>아무 날짜 줄을 눌러보세요</b>. 그 날 돈이 어떻게 들어오고 나갔는지 + 메모가 펼쳐집니다.<br>💬 표시는 메모가 있다는 뜻입니다.</div>
   <div style="height:30px"></div>
 </div>
+
+<script>
+const fmt=n=>(n||0).toLocaleString('ko-KR');
+// 현금 흐름: 전일금고(prev) + 현금유입(cashIn) − 통장입금(bank) − 현금지출(etc) = 예상금고(book) vs 실제(vault)
+const DB={
+ '2026-05-28':{dow:'수',prev:3830000,cashIn:300000,bank:2101200,bankMemo:'일일 매출 통장 입금',etc:443700,etcMemo:'식자재 현금 구매(코스트코)',vault:1585700,book:1585100,diff:600},
+ '2026-05-27':{dow:'화',prev:3550000,cashIn:280000,bank:1800000,bankMemo:'매출 입금',etc:200000,etcMemo:'주류 현금 결제',vault:1830000,book:1830000,diff:0},
+ '2026-05-26':{dow:'월',prev:3200000,cashIn:300000,bank:1500000,bankMemo:'매출 입금',etc:350000,etcMemo:'아르바이트 식대·잡비',vault:1668000,book:1650000,diff:18000},
+};
+const rowsEl=document.getElementById('rows');
+Object.entries(DB).forEach(([date,r])=>{
+  const d=date.slice(5).replace('-','/');
+  const ok=r.diff===0;
+  const diffTxt=ok?'✅':(r.diff>0?'+':'')+fmt(r.diff);
+  const wrap=document.createElement('div');
+  wrap.innerHTML=`
+    <div class="trow">
+      <div class="dt">${d}<small>${r.dow}</small></div>
+      <div class="cell pos">${fmt(r.cashIn)}</div>
+      <div class="cell memo">${fmt(r.bank)}</div>
+      <div class="cell memo">${fmt(r.etc)}</div>
+      <div class="cell">${fmt(r.vault)}</div>
+      <div class="diff" style="color:${ok?'var(--success)':'var(--danger)'}">${diffTxt}</div>
+    </div>
+    <div class="flow">
+      <div class="fr"><span>🏦 전일 금고 (시작)</span><b>${fmt(r.prev)}원</b></div>
+      <div class="fr" style="color:var(--success)"><span>＋ 현금 유입 (순수 현금)</span><b>+${fmt(r.cashIn)}원</b></div>
+      <div class="fr" style="color:var(--danger)"><span>－ 🏧 통장 입금<br><span class="mm">↳ ${r.bankMemo}</span></span><b>−${fmt(r.bank)}원</b></div>
+      <div class="fr" style="color:var(--danger)"><span>－ 💵 현금 지출<br><span class="mm">↳ ${r.etcMemo}</span></span><b>−${fmt(r.etc)}원</b></div>
+      <div class="fr calc"><span>= 장부상 있어야 할 금고</span><b>${fmt(r.book)}원</b></div>
+      <div class="fr calc"><span>실제 센 금고</span><b>${fmt(r.vault)}원</b></div>
+      <div class="res ${ok?'ok':'bad'}">차액 ${ok?'✅ 일치':(r.diff>0?'+':'')+fmt(r.diff)+'원'}</div>
+    </div>`;
+  wrap.querySelector('.trow').onclick=()=>{
+    const f=wrap.querySelector('.flow');
+    document.querySelectorAll('.flow').forEach(x=>{if(x!==f)x.classList.remove('open');});
+    f.classList.toggle('open');
+  };
+  rowsEl.appendChild(wrap);
+});
+</script>
 </body>
 </html>
