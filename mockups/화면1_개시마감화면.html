@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>화면1 · 개시마감화면 (지금 vs 바뀜)</title>
+<style>
+:root{
+  --blue:#3182F6;--blue-strong:#0064FF;--blue-light:#EDF4FF;
+  --bg:#F2F4F6;--white:#fff;
+  --g100:#F9FAFB;--g200:#E5E8EB;--g300:#D1D6DB;--g400:#B0B8C1;--g500:#8B95A1;--g600:#6B7684;
+  --text:#191F28;--danger:#F04452;--danger-light:#FFEBEE;
+  --success:#0CAB6C;--success-light:#E8FAF3;--warn:#F5A11E;
+  --radius:20px;--shadow:0 4px 14px rgba(20,40,80,.07),0 1px 3px rgba(20,40,80,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;justify-content:center;padding:14px;letter-spacing:-.3px;}
+.phone{width:100%;max-width:420px;}
+.title{font-size:18px;font-weight:900;text-align:center;margin-bottom:4px;}
+.title small{display:block;font-size:12px;color:var(--g500);font-weight:600;margin-top:3px;}
+.tag{display:inline-block;font-size:12px;font-weight:800;padding:5px 12px;border-radius:99px;margin:18px 0 10px;}
+.tag.now{background:var(--g200);color:var(--g600);}
+.tag.new{background:var(--blue-light);color:var(--blue-strong);}
+.note{font-size:12px;color:var(--g600);background:#FFF8E1;border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.5;}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:0;overflow:hidden;}
+.card-h{padding:14px 14px 12px;display:flex;align-items:center;justify-content:space-between;}
+.card-h .t{font-size:15px;font-weight:800;}
+.chip{background:#F5F7FA;border-radius:99px;padding:2px;display:flex;gap:2px;align-items:center;}
+.chip button{width:26px;height:26px;border:none;background:transparent;font-size:15px;font-weight:700;color:var(--g600);cursor:pointer;border-radius:50%;}
+.chip .mc{font-size:12px;font-weight:800;min-width:52px;text-align:center;}
+/* 두 버튼(영업개시/마감정산) */
+.bigbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.bigbtns .b{background:var(--white);border-radius:18px;box-shadow:var(--shadow);padding:18px 14px;text-align:center;}
+.bigbtns .b .ic{width:44px;height:44px;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:900;}
+.bigbtns .b.open .ic{background:var(--success);}
+.bigbtns .b.close .ic{background:var(--blue);}
+.bigbtns .b .nm{font-size:14px;font-weight:800;}
+.bigbtns .b .am{font-size:13px;font-weight:700;color:var(--g500);margin-top:4px;}
+
+/* ===== 지금: 4카드 (세로정렬 없음) ===== */
+.now4{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 14px 12px;}
+.now4 .c{padding:8px 10px;background:var(--g100);border-radius:8px;text-align:center;}
+.now4 .c .lb{font-size:10px;color:var(--g500);}
+.now4 .c .vl{font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;}
+.now4 .c .sub{font-size:9px;color:var(--g400);margin-top:1px;}
+
+/* ===== 바뀜: 4카드 (세로 가운데 + 키 통일) ===== */
+.new4{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 12px;}
+.new4 .c{min-height:74px;background:var(--g100);border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px;}
+.new4 .c .lb{font-size:11px;color:var(--g500);font-weight:700;margin-bottom:4px;}
+.new4 .c .vl{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;}
+.new4 .c .sub{font-size:9px;color:var(--g400);margin-top:3px;}
+.neg{color:var(--danger);}.pos{color:var(--success);}.blue{color:var(--blue);}
+
+/* 표 공통 */
+table{width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed;}
+th{padding:8px;font-size:10px;color:var(--g400);font-weight:700;text-align:center;}
+td{padding:8px 10px;border-top:1px solid var(--g100);font-variant-numeric:tabular-nums;}
+.tc{text-align:center;font-weight:600;}.tr{text-align:right;}
+.dim{color:var(--g300);}
+/* 바뀜 표: 매출 열 추가 + 강조 */
+.newtbl th.hl,.newtbl td.hl{background:var(--blue-light);}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="title">화면 1 · 개시마감화면<small>= 개시마감 처음 들어간 화면 (영업 허브)</small></div>
+
+  <div class="note">📍 사장님이 보내주신 첫 사진(총차액/금고/통장/현금지출 4카드)이 바로 이 화면의 '차액 확인' 윗부분입니다.</div>
+
+  <!-- ============ 지금 모습 ============ -->
+  <div class="tag now">📍 지금 모습</div>
+  <div class="bigbtns">
+    <div class="b open"><div class="ic">OPEN</div><div class="nm">영업개시</div><div class="am">1,585,700원</div></div>
+    <div class="b close"><div class="ic">CLOSE</div><div class="nm">마감정산</div><div class="am">-3,600원</div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><div class="t">차액 확인</div>
+      <div class="chip"><button>‹</button><span class="mc">2026.05</span><button>›</button></div></div>
+    <!-- 세로정렬 없음 → 금고현황만 3줄이라 키 크고, 나머지는 위로 붙음 -->
+    <div class="now4">
+      <div class="c"><div class="lb">총 차액</div><div class="vl pos">+14,400원</div></div>
+      <div class="c"><div class="lb">💰 금고 현황</div><div class="vl blue">1,585,700원</div><div class="sub">05/28 기준</div></div>
+      <div class="c"><div class="lb">🏧 통장 입금</div><div class="vl">5,401,200원</div></div>
+      <div class="c"><div class="lb">💵 현금 지출</div><div class="vl">993,700원</div></div>
+    </div>
+    <table>
+      <colgroup><col style="width:16%"><col style="width:28%"><col style="width:28%"><col style="width:28%"></colgroup>
+      <thead><tr><th>날짜</th><th>통장 입금</th><th>현금 지출</th><th>차액</th></tr></thead>
+      <tbody>
+        <tr><td class="tc">05/26</td><td class="tr">1,500,000</td><td class="tr">350,000</td><td class="tr" style="color:var(--danger);font-weight:700">+18,000 ⚠</td></tr>
+        <tr><td class="tc">05/27</td><td class="tr">1,800,000</td><td class="tr">200,000</td><td class="tr dim">-</td></tr>
+        <tr><td class="tc">05/28</td><td class="tr">2,101,200</td><td class="tr">443,700</td><td class="tr" style="color:var(--danger);font-weight:700">-3,600</td></tr>
+      </tbody>
+    </table>
+    <div style="height:6px"></div>
+  </div>
+  <div style="font-size:11px;color:var(--danger);text-align:center;margin-top:8px;font-weight:700;">⚠ 보세요: '총 차액'이 위로 붙어있고 '금고 현황'만 키가 큼 → 안 맞아 보임</div>
+
+  <!-- ============ 바뀐 모습 ============ -->
+  <div class="tag new">✨ 바뀐 모습</div>
+  <div class="bigbtns">
+    <div class="b open"><div class="ic">OPEN</div><div class="nm">영업개시</div><div class="am">1,585,700원</div></div>
+    <div class="b close"><div class="ic">CLOSE</div><div class="nm">마감정산</div><div class="am">-3,600원</div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><div class="t">차액 확인</div>
+      <div class="chip"><button>‹</button><span class="mc">2026.05</span><button>›</button></div></div>
+    <!-- 세로 가운데 + 키 통일 → 4칸 가지런 -->
+    <div class="new4">
+      <div class="c"><div class="lb">📊 총 차액</div><div class="vl neg">+14,400원</div><div class="sub">이달 합계 · ⚠ 확인</div></div>
+      <div class="c"><div class="lb">💰 금고 현황</div><div class="vl blue">1,585,700원</div><div class="sub">05/28 기준</div></div>
+      <div class="c"><div class="lb">🏧 통장 입금</div><div class="vl">5,401,200원</div><div class="sub">이달 3일 합계</div></div>
+      <div class="c"><div class="lb">💵 현금 지출</div><div class="vl">993,700원</div><div class="sub">이달 3일 합계</div></div>
+    </div>
+    <table class="newtbl">
+      <colgroup><col style="width:15%"><col style="width:26%"><col style="width:23%"><col style="width:18%"><col style="width:18%"></colgroup>
+      <thead><tr><th>날짜</th><th class="hl">매출</th><th>통장입금</th><th>현금지출</th><th>차액</th></tr></thead>
+      <tbody>
+        <tr><td class="tc">05/26<br><span style="font-size:9px;color:var(--g400)">월</span></td><td class="tr hl" style="font-weight:700">1,470,000</td><td class="tr">1,500,000</td><td class="tr">350,000</td><td class="tr" style="color:var(--danger);font-weight:800">+18,000<br><span style="font-size:9px">⚠</span></td></tr>
+        <tr><td class="tc">05/27<br><span style="font-size:9px;color:var(--g400)">화</span></td><td class="tr hl" style="font-weight:700">1,560,000</td><td class="tr">1,800,000</td><td class="tr">200,000</td><td class="tr" style="color:var(--success);font-weight:800">✅</td></tr>
+        <tr><td class="tc">05/28<br><span style="font-size:9px;color:var(--g400)">수</span></td><td class="tr hl" style="font-weight:700">1,750,000</td><td class="tr">2,101,200</td><td class="tr">443,700</td><td class="tr" style="color:var(--danger);font-weight:800">-3,600</td></tr>
+      </tbody>
+    </table>
+    <div style="height:6px"></div>
+  </div>
+  <div style="font-size:11px;color:var(--success);text-align:center;margin-top:8px;font-weight:700;">✅ 4칸이 가지런. 표에 '매출' 열 추가 + 일치는 ✅ 로 한눈에</div>
+
+  <div style="height:30px"></div>
+</div>
+</body>
+</html>
