@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>화면1 v2 · 개시마감화면 (돈 흐름 + 메모)</title>
+<title>화면1 v3 · 개시마감화면 (table + 통일 명칭)</title>
 <style>
 :root{
   --blue:#3182F6;--blue-strong:#0064FF;--blue-light:#EDF4FF;
   --bg:#F2F4F6;--white:#fff;
   --g100:#F9FAFB;--g200:#E5E8EB;--g300:#D1D6DB;--g400:#B0B8C1;--g500:#8B95A1;--g600:#6B7684;
   --text:#191F28;--danger:#F04452;--danger-light:#FFEBEE;
-  --success:#0CAB6C;--success-light:#E8FAF3;--warn:#F5A11E;--warn-light:#FFF3E0;
+  --success:#0CAB6C;--success-light:#E8FAF3;--warn:#F5A11E;
   --radius:20px;--shadow:0 4px 14px rgba(20,40,80,.07),0 1px 3px rgba(20,40,80,.05);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -34,91 +34,96 @@ body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Not
 .c4 .vl{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;}
 .c4 .sub{font-size:9px;color:var(--g400);margin-top:3px;}
 .neg{color:var(--danger);}.pos{color:var(--success);}.blue{color:var(--blue);}
-/* 표: 현금 흐름 */
-.thead{display:grid;grid-template-columns:13% 19% 19% 19% 16% 14%;padding:6px 12px;font-size:9.5px;color:var(--g400);font-weight:700;text-align:center;}
-.trow{display:grid;grid-template-columns:13% 19% 19% 19% 16% 14%;padding:10px 12px;border-top:1px solid var(--g100);font-size:11px;font-variant-numeric:tabular-nums;align-items:center;cursor:pointer;}
-.trow:hover{background:var(--g100);}
-.trow .dt{text-align:center;font-weight:700;}
-.trow .dt small{display:block;font-size:8px;color:var(--g400);font-weight:400;}
-.trow .cell{text-align:right;position:relative;}
-.trow .cell.memo::after{content:'💬';font-size:8px;position:absolute;top:-7px;right:-2px;}
-.trow .diff{text-align:right;font-weight:800;}
-/* 펼침 흐름 */
-.flow{display:none;background:var(--g100);padding:12px 16px;font-size:12px;border-top:1px solid var(--g200);}
-.flow.open{display:block;}
-.flow .fr{display:flex;justify-content:space-between;padding:5px 0;color:var(--g600);}
-.flow .fr.calc{border-top:1px dashed var(--g300);margin-top:4px;padding-top:8px;font-weight:800;color:var(--text);}
-.flow .fr .mm{font-size:10px;color:var(--g400);font-weight:400;}
-.flow .fr b{font-variant-numeric:tabular-nums;}
-.flow .res{border-radius:10px;padding:10px;text-align:center;margin-top:8px;font-weight:900;}
-.flow .res.ok{background:var(--success-light);color:var(--success);}
-.flow .res.bad{background:var(--danger-light);color:var(--danger);}
+/* === 표: <table> 태그 (헌법 7조) — 정렬 자동 === */
+table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;}
+thead th{padding:9px 10px;font-size:10px;color:var(--g400);font-weight:700;border-bottom:1px solid var(--g200);}
+thead th.tnum{text-align:right;}
+thead th.tdate{text-align:center;}
+tbody td{padding:11px 10px;border-bottom:1px solid var(--g100);font-variant-numeric:tabular-nums;}
+tbody td.tnum{text-align:right;}
+tbody td.tdate{text-align:center;font-weight:700;}
+tbody td.tdate small{display:block;font-size:9px;color:var(--g400);font-weight:400;}
+tbody td.tdiff{text-align:right;font-weight:800;}
+tbody tr.main{cursor:pointer;}
+tbody tr.main:active{background:var(--g100);}
+/* 펼침 행 */
+tr.flow{display:none;}
+tr.flow.open{display:table-row;}
+tr.flow td{background:var(--g100);padding:0;border-bottom:1px solid var(--g200);}
+.flowbox{padding:12px 16px;}
+.fr{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:var(--g600);}
+.fr.calc{border-top:1px dashed var(--g300);margin-top:4px;padding-top:8px;font-weight:800;color:var(--text);}
+.fr .mm{font-size:10px;color:var(--g400);font-weight:400;}
+.fr b{font-variant-numeric:tabular-nums;}
+.res{border-radius:10px;padding:9px;text-align:center;margin-top:8px;font-weight:900;font-size:13px;}
+.res.ok{background:var(--success-light);color:var(--success);}
+.res.bad{background:var(--danger-light);color:var(--danger);}
 .tip{font-size:11px;color:var(--g500);text-align:center;margin-top:10px;line-height:1.6;}
 .tip b{color:var(--blue-strong);}
 </style>
 </head>
 <body>
 <div class="phone">
-  <div class="title">화면 1 v2 · 개시마감화면<small>= 돈(현금·금고) 확인 — 매출 ❌ / 현금 흐름 ⭕</small></div>
+  <div class="title">화면 1 v3 · 개시마감화면<small>= 돈(현금·금고) 확인 — 표 정렬 + 명칭 통일</small></div>
 
-  <div class="note">🔧 고친 점: <b>'매출' 대신 '현금 흐름'</b>(전일금고 → +현금 → −통장 −지출 → 실제금고)으로. 표의 통장·지출에 <b>💬 메모가 붙고, 눌러서 펼치면 흐름+메모</b>가 다 보여 기록조회로 안 넘어가도 됨.</div>
+  <div class="note">🔧 고친 점: ①표를 <b>&lt;table&gt; 태그</b>로 바꿔 <b>정렬 딱 맞음</b> ②💬 말풍선 제거(누르면 펼쳐지니 불필요) ③<b>'순수 현금 매출'</b>로 정정 ④세 화면 <b>명칭 통일</b>.</div>
 
   <div class="card">
     <div class="card-h"><div class="t">💰 차액 확인</div>
       <div class="chip"><button>‹</button><span class="mc">2026.05</span><button>›</button></div></div>
     <div class="cards4">
-      <div class="c4"><div class="lb">📊 총 차액</div><div class="vl neg">+14,400원</div><div class="sub">이달 합계 · ⚠ 확인</div></div>
+      <div class="c4"><div class="lb">📊 총 차액</div><div class="vl neg">+18,600원</div><div class="sub">이달 합계 · ⚠ 확인</div></div>
       <div class="c4"><div class="lb">💰 금고 현황</div><div class="vl blue">1,585,700원</div><div class="sub">05/28 기준</div></div>
       <div class="c4"><div class="lb">🏧 통장 입금</div><div class="vl">5,401,200원</div><div class="sub">이달 합계</div></div>
       <div class="c4"><div class="lb">💵 현금 지출</div><div class="vl">993,700원</div><div class="sub">이달 합계</div></div>
     </div>
-    <div class="thead">
-      <div>날짜</div><div>💵 현금유입</div><div>🏧 통장입금</div><div>💵 현금지출</div><div>금고</div><div>차액</div>
-    </div>
-    <div id="rows"></div>
+    <table>
+      <colgroup><col style="width:18%"><col style="width:29%"><col style="width:29%"><col style="width:24%"></colgroup>
+      <thead><tr>
+        <th class="tdate">날짜</th><th class="tnum">통장 입금</th><th class="tnum">현금 지출</th><th class="tnum">차액</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
   </div>
-  <div class="tip">👉 표의 <b>아무 날짜 줄을 눌러보세요</b>. 그 날 돈이 어떻게 들어오고 나갔는지 + 메모가 펼쳐집니다.<br>💬 표시는 메모가 있다는 뜻입니다.</div>
+  <div class="tip">👉 <b>아무 날짜 줄을 눌러보세요</b>. 그 날 돈 흐름(전일 이월금 → +순수 현금 매출 → −통장 입금 −현금 지출 → 금고)과 메모가 펼쳐집니다.</div>
   <div style="height:30px"></div>
 </div>
 
 <script>
 const fmt=n=>(n||0).toLocaleString('ko-KR');
-// 현금 흐름: 전일금고(prev) + 현금유입(cashIn) − 통장입금(bank) − 현금지출(etc) = 예상금고(book) vs 실제(vault)
+// 전일 이월금(prev) + 순수 현금 매출(cashSales) − 통장 입금(bank) − 현금 지출(etc) = 장부상 금고(book) vs 금고 현황(vault)
 const DB={
- '2026-05-28':{dow:'수',prev:3830000,cashIn:300000,bank:2101200,bankMemo:'일일 매출 통장 입금',etc:443700,etcMemo:'식자재 현금 구매(코스트코)',vault:1585700,book:1585100,diff:600},
- '2026-05-27':{dow:'화',prev:3550000,cashIn:280000,bank:1800000,bankMemo:'매출 입금',etc:200000,etcMemo:'주류 현금 결제',vault:1830000,book:1830000,diff:0},
- '2026-05-26':{dow:'월',prev:3200000,cashIn:300000,bank:1500000,bankMemo:'매출 입금',etc:350000,etcMemo:'아르바이트 식대·잡비',vault:1668000,book:1650000,diff:18000},
+ '2026-05-28':{dow:'수',prev:3830000,cashSales:300000,bank:2101200,bankMemo:'일일 매출 통장 입금',etc:443700,etcMemo:'식자재 현금 구매(코스트코)',vault:1585700,book:1585100,diff:600},
+ '2026-05-27':{dow:'화',prev:3550000,cashSales:280000,bank:1800000,bankMemo:'매출 입금',etc:200000,etcMemo:'주류 현금 결제',vault:1830000,book:1830000,diff:0},
+ '2026-05-26':{dow:'월',prev:3200000,cashSales:300000,bank:1500000,bankMemo:'매출 입금',etc:350000,etcMemo:'아르바이트 식대·잡비',vault:1668000,book:1650000,diff:18000},
 };
-const rowsEl=document.getElementById('rows');
+const tb=document.getElementById('tbody');
 Object.entries(DB).forEach(([date,r])=>{
   const d=date.slice(5).replace('-','/');
   const ok=r.diff===0;
   const diffTxt=ok?'✅':(r.diff>0?'+':'')+fmt(r.diff);
-  const wrap=document.createElement('div');
-  wrap.innerHTML=`
-    <div class="trow">
-      <div class="dt">${d}<small>${r.dow}</small></div>
-      <div class="cell pos">${fmt(r.cashIn)}</div>
-      <div class="cell memo">${fmt(r.bank)}</div>
-      <div class="cell memo">${fmt(r.etc)}</div>
-      <div class="cell">${fmt(r.vault)}</div>
-      <div class="diff" style="color:${ok?'var(--success)':'var(--danger)'}">${diffTxt}</div>
-    </div>
-    <div class="flow">
-      <div class="fr"><span>🏦 전일 금고 (시작)</span><b>${fmt(r.prev)}원</b></div>
-      <div class="fr" style="color:var(--success)"><span>＋ 현금 유입 (순수 현금)</span><b>+${fmt(r.cashIn)}원</b></div>
-      <div class="fr" style="color:var(--danger)"><span>－ 🏧 통장 입금<br><span class="mm">↳ ${r.bankMemo}</span></span><b>−${fmt(r.bank)}원</b></div>
-      <div class="fr" style="color:var(--danger)"><span>－ 💵 현금 지출<br><span class="mm">↳ ${r.etcMemo}</span></span><b>−${fmt(r.etc)}원</b></div>
-      <div class="fr calc"><span>= 장부상 있어야 할 금고</span><b>${fmt(r.book)}원</b></div>
-      <div class="fr calc"><span>실제 센 금고</span><b>${fmt(r.vault)}원</b></div>
-      <div class="res ${ok?'ok':'bad'}">차액 ${ok?'✅ 일치':(r.diff>0?'+':'')+fmt(r.diff)+'원'}</div>
-    </div>`;
-  wrap.querySelector('.trow').onclick=()=>{
-    const f=wrap.querySelector('.flow');
-    document.querySelectorAll('.flow').forEach(x=>{if(x!==f)x.classList.remove('open');});
-    f.classList.toggle('open');
+  const main=document.createElement('tr');main.className='main';
+  main.innerHTML=`
+    <td class="tdate">${d}<small>${r.dow}</small></td>
+    <td class="tnum">${fmt(r.bank)}</td>
+    <td class="tnum">${fmt(r.etc)}</td>
+    <td class="tdiff" style="color:${ok?'var(--success)':'var(--danger)'}">${diffTxt}</td>`;
+  const flow=document.createElement('tr');flow.className='flow';
+  flow.innerHTML=`<td colspan="4"><div class="flowbox">
+    <div class="fr"><span>🏦 전일 이월금 (시작)</span><b>${fmt(r.prev)}원</b></div>
+    <div class="fr" style="color:var(--success)"><span>＋ 순수 현금 매출</span><b>+${fmt(r.cashSales)}원</b></div>
+    <div class="fr" style="color:var(--danger)"><span>－ 🏧 통장 입금<br><span class="mm">↳ ${r.bankMemo}</span></span><b>−${fmt(r.bank)}원</b></div>
+    <div class="fr" style="color:var(--danger)"><span>－ 💵 현금 지출<br><span class="mm">↳ ${r.etcMemo}</span></span><b>−${fmt(r.etc)}원</b></div>
+    <div class="fr calc"><span>= 장부상 금고</span><b>${fmt(r.book)}원</b></div>
+    <div class="fr calc"><span>금고 현황 (실제)</span><b>${fmt(r.vault)}원</b></div>
+    <div class="res ${ok?'ok':'bad'}">차액 ${ok?'✅ 일치':(r.diff>0?'+':'')+fmt(r.diff)+'원'}</div>
+  </div></td>`;
+  main.onclick=()=>{
+    const isOpen=flow.classList.contains('open');
+    document.querySelectorAll('tr.flow').forEach(f=>f.classList.remove('open'));
+    if(!isOpen)flow.classList.add('open');
   };
-  rowsEl.appendChild(wrap);
+  tb.appendChild(main);tb.appendChild(flow);
 });
 </script>
 </body>

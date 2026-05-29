@@ -65,11 +65,11 @@ body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Not
 const fmt=n=>(n||0).toLocaleString('ko-KR');
 const DB={
  '2026-05-28':{dow:'수',sales:1750000,vault:1585700,diff:-3600,
-   moves:[{ic:'🏧',l:'통장에 넣은 돈',memo:'일일 매출 입금',amt:2101200},{ic:'💵',l:'현금으로 쓴 돈',memo:'식자재 구매(코스트코)',amt:380000},{ic:'💵',l:'현금으로 쓴 돈',memo:'아르바이트 식대',amt:63700}]},
+   moves:[{ic:'🏧',l:'통장 입금',memo:'일일 매출 입금',amt:2101200},{ic:'💵',l:'현금 지출',memo:'식자재 구매(코스트코)',amt:380000},{ic:'💵',l:'현금 지출',memo:'아르바이트 식대',amt:63700}]},
  '2026-05-27':{dow:'화',sales:1560000,vault:1830000,diff:0,
-   moves:[{ic:'🏧',l:'통장에 넣은 돈',memo:'매출 입금',amt:1800000},{ic:'💵',l:'현금으로 쓴 돈',memo:'주류 현금 결제',amt:200000}]},
+   moves:[{ic:'🏧',l:'통장 입금',memo:'매출 입금',amt:1800000},{ic:'💵',l:'현금 지출',memo:'주류 현금 결제',amt:200000}]},
  '2026-05-26':{dow:'월',sales:1470000,vault:1668000,diff:18000,
-   moves:[{ic:'🏧',l:'통장에 넣은 돈',memo:'매출 입금',amt:1500000},{ic:'💵',l:'현금으로 쓴 돈',memo:'잡비·소모품',amt:350000}]},
+   moves:[{ic:'🏧',l:'통장 입금',memo:'매출 입금',amt:1500000},{ic:'💵',l:'현금 지출',memo:'잡비·소모품',amt:350000}]},
 };
 const list=document.getElementById('list');
 Object.entries(DB).forEach(([date,r])=>{
