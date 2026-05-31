@@ -4736,24 +4736,26 @@ async function loadDiffTable(){
       if(o?.actual_total!=null && d>latestDate){ latestDate=d; latestVault=o.actual_total||0; }
     });
     const vaultSub = latestDate ? `${latestDate.slice(5,7)}/${latestDate.slice(8,10)} 기준` : '기록 없음';
+    // 2026-05-31: 4칸 세로 가운데정렬 + 키 통일 (사장님 짚음 — '총 차액'이 위로 붙던 문제)
+    const _c='padding:10px 8px;background:var(--gray-100);border-radius:10px;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;';
     summaryEl.innerHTML=`
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-        <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
-          <div style="font-size:10px;color:var(--gray-500);">총 차액</div>
-          <div style="font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;color:${sumColor};">${sumDiff>0?'+':''}${fmt(sumDiff)}원</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="${_c}">
+          <div style="font-size:10px;color:var(--gray-500);">📊 총 차액</div>
+          <div style="font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;color:${sumColor};margin-top:3px;">${sumDiff>0?'+':''}${fmt(sumDiff)}원</div>
         </div>
-        <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
+        <div style="${_c}">
           <div style="font-size:10px;color:var(--gray-500);">💰 금고 현황</div>
-          <div style="font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--blue);">${fmt(latestVault)}원</div>
-          <div style="font-size:9px;color:var(--gray-400);margin-top:1px;">${vaultSub}</div>
+          <div style="font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--blue);margin-top:3px;">${fmt(latestVault)}원</div>
+          <div style="font-size:9px;color:var(--gray-400);margin-top:2px;">${vaultSub}</div>
         </div>
-        <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
+        <div style="${_c}">
           <div style="font-size:10px;color:var(--gray-500);">🏧 통장 입금</div>
-          <div style="font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumBank)}원</div>
+          <div style="font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);margin-top:3px;">${fmt(sumBank)}원</div>
         </div>
-        <div style="padding:8px 10px;background:var(--gray-100);border-radius:8px;text-align:center;">
+        <div style="${_c}">
           <div style="font-size:10px;color:var(--gray-500);">💵 현금 지출</div>
-          <div style="font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumEtc)}원</div>
+          <div style="font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);margin-top:3px;">${fmt(sumEtc)}원</div>
         </div>
       </div>`;
   }

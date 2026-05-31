@@ -28,6 +28,18 @@ function moveSettleDate(dir){
 }
 async function loadOpeningForDate(dateStr){
   if(!currentStore) return;
+  // ── 2026-05-31: 날짜 이동 시 그 날 마감 전체 복원 ──
+  // 옛 버그: 기존 마감이 있어도 "기존 데이터 있음" 안내만 하고 입력칸은 공란이었음.
+  // → 그 날짜에 저장된 마감이 있으면 editSettlement로 매출·통장·현금지출·금고 전부 복원.
+  const{data:existing}=await sb.from('settlements').select('id').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
+  if(existing){
+    await editSettlement(dateStr, true); // silent: 화살표 이동이라 안내 토스트 생략
+    const st=document.getElementById('settleDateStatus');
+    if(st) st.innerText='저장된 마감 — 불러옴';
+    return;
+  }
+  // 기존 마감 없음 → 빈 폼 + 전일 마감 금고(이월금)만
+  resetSettleView();
   const d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()-1);
   const yd=ymdLocal(d);
   const{data}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
@@ -35,17 +47,14 @@ async function loadOpeningForDate(dateStr){
   const statusEl=document.getElementById('openingStatus');
   if(data?.actual_total!=null){
     el.value=parseInt(data.actual_total).toLocaleString();
-    statusEl.innerText='전일('+yd+') 마감금액';
+    statusEl.innerText='전일('+yd+') 마감 금고';
   } else {
     el.value='';
     statusEl.innerText='전일 마감 데이터 없음';
   }
   recalcSettle2();
-  // 해당 날짜에 기존 정산 있으면 안내
-  const{data:existing}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
   const statusEl2=document.getElementById('settleDateStatus');
-  if(existing) statusEl2.innerText='기존 데이터 있음 (덮어쓰기)';
-  else statusEl2.innerText='새 정산';
+  if(statusEl2) statusEl2.innerText='새 정산';
 }
 function getSettleDate(){
   const picker=document.getElementById('settleDatePicker');
@@ -1066,8 +1075,9 @@ async function renderSettleCardExtraSection(data){
 }
 
 // ─── 새 기능: 정산 수정 ───
-async function editSettlement(dateStr){
+async function editSettlement(dateStr, silent){
   // 기존 정산 데이터를 입력 폼에 로드하고 입력 탭으로 전환
+  // silent=true: 날짜 화살표 이동 시 재사용 (안내 토스트 생략)
   if(!currentStore){toast('매장이 선택되지 않았어요','warn');return;}
   if(!currentEmp){toast('로그인 정보가 없어요. 다시 로그인 해주세요','warn');return;}
   let data, error;
@@ -1152,7 +1162,7 @@ async function editSettlement(dateStr){
   const statusEl=document.getElementById('settleDateStatus');
   if(statusEl) statusEl.innerText='기존 데이터 수정 중';
   recalcSettle2();
-  toast('정산 데이터를 불러왔어요. 수정 후 저장하세요.','success');
+  if(!silent) toast('정산 데이터를 불러왔어요. 수정 후 저장하세요.','success');
 }
 async function deleteSettlement(dateStr){
   if(!confirm(dateStr+' 정산 기록을 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.')) return;
