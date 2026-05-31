@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>안 B · 요약 대시보드형</title>
+<style>
+:root{
+  --blue:#3182F6;--blue-strong:#0064FF;--blue-light:#EDF4FF;
+  --bg:#F2F4F6;--white:#fff;
+  --g100:#F9FAFB;--g200:#E5E8EB;--g400:#B0B8C1;--g500:#8B95A1;--g600:#6B7684;
+  --text:#191F28;--danger:#F04452;--danger-light:#FFEBEE;
+  --success:#0CAB6C;--success-light:#E8FAF3;--warn:#F5A11E;--warn-light:#FFF3E0;
+  --radius:20px;--shadow:0 4px 14px rgba(20,40,80,.07),0 1px 3px rgba(20,40,80,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;justify-content:center;padding:16px;letter-spacing:-.3px;}
+.phone{width:100%;max-width:420px;}
+.banner{background:var(--blue-strong);color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700;margin-bottom:12px;line-height:1.5;}
+.banner b{font-weight:900;}
+/* 월 네비 */
+.monthnav{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px;}
+.monthnav button{width:32px;height:32px;border:none;background:var(--white);border-radius:50%;font-size:18px;font-weight:800;color:var(--g600);cursor:pointer;box-shadow:var(--shadow);}
+.monthnav .mc{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;}
+/* 상단 요약 4카드 */
+.hero{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;}
+.hero-t{font-size:13px;font-weight:800;color:var(--g600);margin-bottom:12px;}
+.cards4{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.c4{background:var(--g100);border-radius:14px;padding:14px 10px;min-height:80px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.c4 .lb{font-size:11px;color:var(--g500);font-weight:700;margin-bottom:5px;}
+.c4 .vl{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;}
+.c4 .tag{font-size:10px;color:var(--g400);margin-top:3px;}
+.neg{color:var(--danger);}.pos{color:var(--success);}.blue{color:var(--blue);}
+/* 리스트 */
+.list-t{font-size:14px;font-weight:800;margin:4px 4px 10px;}
+.item{background:var(--white);border-radius:16px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;}
+.item-head{padding:15px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.item-head .dl{font-size:15px;font-weight:800;}
+.item-head .dl .dow{font-size:12px;color:var(--g500);font-weight:600;margin-left:4px;}
+.item-head .meta{font-size:12px;color:var(--g500);margin-top:3px;}
+.item-head .right{text-align:right;}
+.item-head .diff{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;}
+.item-head .chev{font-size:13px;color:var(--g400);margin-top:2px;}
+.item-body{max-height:0;overflow:hidden;transition:max-height .3s;background:var(--g100);}
+.item.open .item-body{max-height:600px;}
+.bd-inner{padding:14px 16px;}
+.brow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--g200);font-size:13px;}
+.brow:last-of-type{border-bottom:none;}
+.brow .bl{color:var(--g600);}
+.brow .bv{font-weight:700;font-variant-numeric:tabular-nums;}
+.sub-h{font-size:11px;font-weight:800;color:var(--g500);margin:12px 0 4px;}
+.editbtn{width:100%;margin-top:12px;padding:13px;border:none;border-radius:12px;background:var(--blue);color:#fff;font-size:14px;font-weight:800;cursor:pointer;}
+.statusbar{display:flex;gap:6px;font-size:11px;margin-top:8px;}
+.chip{padding:3px 9px;border-radius:99px;font-weight:800;}
+.chip.ok{background:var(--success-light);color:var(--success);}
+.chip.bad{background:var(--danger-light);color:var(--danger);}
+.chip.gray{background:var(--g100);color:var(--g600);}
+.tip{font-size:11px;color:var(--g400);text-align:center;margin-top:18px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="banner">📊 <b>안 B · 요약 대시보드형</b><br>이달 합계가 위에 크게. 아래 날짜를 <b>탭하면 펼쳐져서</b> 그 날 전체 + 바로 수정.</div>
+
+  <div class="monthnav"><button>‹</button><span class="mc">2026.05</span><button>›</button></div>
+
+  <!-- 상단 요약 -->
+  <div class="hero">
+    <div class="hero-t">이달 마감 요약</div>
+    <div class="cards4">
+      <div class="c4"><div class="lb">📊 총 차액</div><div class="vl neg">+14,400원</div><div class="tag">⚠ 확인 필요</div></div>
+      <div class="c4"><div class="lb">💰 금고 현황</div><div class="vl blue">1,585,700원</div><div class="tag">05/28 기준</div></div>
+      <div class="c4"><div class="lb">🏧 통장 입금</div><div class="vl">5,401,200원</div><div class="tag">3일 합계</div></div>
+      <div class="c4"><div class="lb">💵 현금 지출</div><div class="vl">993,700원</div><div class="tag">3일 합계</div></div>
+    </div>
+  </div>
+
+  <div class="list-t">📅 날짜별 마감 (탭하면 펼침)</div>
+  <div id="listArea"></div>
+
+  <div class="tip">각 날짜를 눌러 펼쳐 보세요. 그 날 매출·금고·통장·차액이 한 카드에 모두 나오고,<br>[✏️ 이 날 수정하기]로 바로 고칠 수 있습니다.</div>
+</div>
+
+<script>
+const fmt=n=>(n||0).toLocaleString('ko-KR');
+const DB={
+ '2026-05-28':{dow:'수',sales:1750000,posCash:320000,posCR:80000,posCard:1200000,posEtc:150000,bank:2101200,etc:443700,vault:1585700,diff:-3600},
+ '2026-05-27':{dow:'화',sales:1560000,posCash:280000,posCR:60000,posCard:1100000,posEtc:120000,bank:1800000,etc:200000,vault:1450000,diff:0},
+ '2026-05-26':{dow:'월',sales:1470000,posCash:300000,posCR:90000,posCard:980000,posEtc:100000,bank:1500000,etc:350000,vault:1338000,diff:18000},
+};
+const area=document.getElementById('listArea');
+Object.entries(DB).forEach(([date,r])=>{
+  const ok=r.diff===0;
+  const diffTxt=ok?'✅ 일치':(r.diff>0?'+':'')+fmt(r.diff)+'원';
+  const d=date.slice(5).replace('-','/');
+  const el=document.createElement('div');
+  el.className='item';
+  el.innerHTML=`
+    <div class="item-head">
+      <div>
+        <div class="dl">${d}<span class="dow">(${r.dow})</span></div>
+        <div class="meta">매출 ${fmt(r.sales)}원 · 금고 ${fmt(r.vault)}원</div>
+        <div class="statusbar">
+          <span class="chip ${ok?'ok':'bad'}">${ok?'차액 일치':'차액 '+diffTxt}</span>
+          <span class="chip gray">🏧 ${fmt(r.bank)}</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="diff" style="color:${ok?'var(--success)':'var(--danger)'}">${ok?'✅':diffTxt}</div>
+        <div class="chev">펼치기 ▾</div>
+      </div>
+    </div>
+    <div class="item-body"><div class="bd-inner">
+      <div class="sub-h">💵 매출 ${fmt(r.sales)}원</div>
+      <div class="brow"><span class="bl">현금</span><span class="bv">${fmt(r.posCash)}원</span></div>
+      <div class="brow"><span class="bl">현금영수증</span><span class="bv">${fmt(r.posCR)}원</span></div>
+      <div class="brow"><span class="bl">신용카드</span><span class="bv">${fmt(r.posCard)}원</span></div>
+      <div class="brow"><span class="bl">기타결제</span><span class="bv">${fmt(r.posEtc)}원</span></div>
+      <div class="sub-h">🏧 금고에서 나간 돈</div>
+      <div class="brow"><span class="bl">🏧 통장에 넣은 돈</span><span class="bv" style="color:var(--danger)">−${fmt(r.bank)}원</span></div>
+      <div class="brow"><span class="bl">💵 현금으로 쓴 돈</span><span class="bv" style="color:var(--danger)">−${fmt(r.etc)}원</span></div>
+      <div class="sub-h">💰 금고 맞춤</div>
+      <div class="brow"><span class="bl">실제 센 금고</span><span class="bv">${fmt(r.vault)}원</span></div>
+      <div class="brow"><span class="bl">차액</span><span class="bv" style="color:${ok?'var(--success)':'var(--danger)'}">${diffTxt}</span></div>
+      <button class="editbtn" onclick="alert('(시안) 이 날 입력칸이 채워진 채로 수정 화면이 열립니다')">✏️ 이 날 수정하기</button>
+    </div></div>`;
+  el.querySelector('.item-head').onclick=()=>{
+    const wasOpen=el.classList.contains('open');
+    document.querySelectorAll('.item').forEach(i=>{i.classList.remove('open');i.querySelector('.chev').textContent='펼치기 ▾';});
+    if(!wasOpen){el.classList.add('open');el.querySelector('.chev').textContent='접기 ▴';}
+  };
+  area.appendChild(el);
+});
+</script>
+</body>
+</html>
