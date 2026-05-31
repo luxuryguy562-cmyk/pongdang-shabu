@@ -34,16 +34,12 @@ body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Not
 .c4 .vl{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;}
 .c4 .sub{font-size:9px;color:var(--g400);margin-top:3px;}
 .neg{color:var(--danger);}.pos{color:var(--success);}.blue{color:var(--blue);}
-/* === 표: <table> 태그 (헌법 7조) — 정렬 자동 === */
+/* === 표: <table> 태그 (헌법 7조) — 헤더·셀 모두 가운데 정렬 === */
 table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;}
-thead th{padding:9px 10px;font-size:10px;color:var(--g400);font-weight:700;border-bottom:1px solid var(--g200);}
-thead th.tnum{text-align:right;}
-thead th.tdate{text-align:center;}
-tbody td{padding:11px 10px;border-bottom:1px solid var(--g100);font-variant-numeric:tabular-nums;}
-tbody td.tnum{text-align:right;}
-tbody td.tdate{text-align:center;font-weight:700;}
-tbody td.tdate small{display:block;font-size:9px;color:var(--g400);font-weight:400;}
-tbody td.tdiff{text-align:right;font-weight:800;}
+thead th{padding:9px 8px;font-size:10px;color:var(--g400);font-weight:700;border-bottom:1px solid var(--g200);text-align:center;}
+tbody td{padding:12px 8px;border-bottom:1px solid var(--g100);font-variant-numeric:tabular-nums;text-align:center;}
+tbody td.tdate{font-weight:700;}
+tbody td.tdiff{font-weight:800;}
 tbody tr.main{cursor:pointer;}
 tbody tr.main:active{background:var(--g100);}
 /* 펼침 행 */
@@ -78,9 +74,9 @@ tr.flow td{background:var(--g100);padding:0;border-bottom:1px solid var(--g200);
       <div class="c4"><div class="lb">💵 현금 지출</div><div class="vl">993,700원</div><div class="sub">이달 합계</div></div>
     </div>
     <table>
-      <colgroup><col style="width:18%"><col style="width:29%"><col style="width:29%"><col style="width:24%"></colgroup>
+      <colgroup><col style="width:22%"><col style="width:28%"><col style="width:28%"><col style="width:22%"></colgroup>
       <thead><tr>
-        <th class="tdate">날짜</th><th class="tnum">통장 입금</th><th class="tnum">현금 지출</th><th class="tnum">차액</th>
+        <th>날짜</th><th>통장 입금</th><th>현금 지출</th><th>차액</th>
       </tr></thead>
       <tbody id="tbody"></tbody>
     </table>
