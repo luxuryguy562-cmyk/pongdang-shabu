@@ -3431,3 +3431,23 @@ const COMMON_BANK_RULES=[
 ### 조치
 - vendorTab: `inDetail=(tab==='orders' && currentVendorDetailId)` → topBack·subTabs `display:none`
 - 상세에선 상세 헤더 ‹ 만 남아 거래처 그리드로 복귀 (유저플로우 일치)
+
+## #131 근태 중복 저장 — maybeSingle 함정 + 경쟁조건 (2026-06-01)
+
+### 증상
+한 직원(레늉) 06-01 출근이 3번 저장됨. 캘린더에 같은 사람 3줄 (12:00~? 0h).
+
+### 원인 (3중)
+1. **경쟁조건**: 출근 버튼 연타 → "이미 출근?" 확인하는 사이 두 번째 요청 진입 → 둘 다 "없음" 통과 → 2건 insert (created_at 0.0003초 차)
+2. **maybeSingle() 함정**: 일단 2건+ 되면 `.maybeSingle()`이 "multiple rows" 에러 → exist=null → 중복검사 무력화 → 3번째도 통과
+3. **수동 입력 무방비**: `saveAttendance()`(+ 실제 입력)는 중복 방지가 아예 없었음
+
+### 조치
+- checkIn: 연타 방지 플래그 `_checkInBusy` + 중복검사 `maybeSingle()`→`limit(1)` 배열
+- saveAttendance: 같은 직원+날짜 기존 기록 차단
+- **근본**: DB UNIQUE 인덱스 `uniq_attendance_store_emp_date (store_id, employee_id, work_date)` — 동시 요청도 DB가 원천 차단
+- 기존 중복 2건 DELETE 정리
+
+### 교훈
+- **앱 레벨 중복방지(SELECT 후 INSERT)는 경쟁조건에 항상 취약** → 유니크가 필요한 데이터는 DB UNIQUE 제약이 근본.
+- `.maybeSingle()`은 "0 또는 1개" 전제 — 이미 중복이 있으면 검사 자체가 깨진다. 중복 가능성 있는 곳엔 `.limit(1)` 배열로.
