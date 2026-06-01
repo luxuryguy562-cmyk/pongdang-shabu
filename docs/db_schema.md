@@ -104,7 +104,7 @@ franchises (프랜차이즈/브랜드)
 | 컬럼 | 용도 |
 |------|------|
 | id (uuid, PK) | 기록 ID |
-| store_id, employee_id, work_date | 매장/직원/날짜 (사실상 unique) |
+| store_id, employee_id, work_date | 매장/직원/날짜 (**UNIQUE 제약** `uniq_attendance_store_emp_date` — 2026-06-01 중복 출근 버그 차단) |
 | app_in, app_out (timestamptz) | 앱 출퇴근 |
 | caps_in, caps_out | CAPS 출퇴근 |
 | rest_min, total_work_min (int) | 휴게/총 근무시간(분) |
