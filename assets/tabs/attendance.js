@@ -139,10 +139,14 @@ function openAttManualSheet(date, empId){
   selectedEmpCtx='att'; // 직원 선택 시 vEmpName 갱신용
   openSheet('attManualSheet');
 }
+let _checkInBusy=false; // 출근 버튼 연타 방지 (경쟁조건 중복 저장 차단)
 async function checkIn(){
+  if(_checkInBusy){toast('출근 처리 중입니다...','warn');return;}
   if(!guardStore()) return;
   const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
   if(!empId) return toast('직원을 선택하거나 로그인하세요.','warn');
+  _checkInBusy=true;
+  try{
   // WiFi IP 검증
   setLoad(true,'위치 확인 중...');
   const ipCheck=await checkIPForAttendance();
@@ -167,7 +171,9 @@ async function checkIn(){
   }
   if(devCheck.firstReg) toast('이 기기가 출퇴근 기기로 등록됐습니다.','success');
   const now=new Date();const today=ymdLocal(now);
-  const{data:exist}=await sb.from('attendance_logs').select('id,app_in').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
+  // 2026-06-01: maybeSingle()은 이미 중복(2개+)이면 에러나 검사가 무력화됨 → limit(1) 배열로 강화
+  const{data:existRows}=await sb.from('attendance_logs').select('id,app_in').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).order('created_at').limit(1);
+  const exist=existRows&&existRows[0];
   if(exist?.app_in){toast('이미 출근 처리됐습니다. 출근: '+new Date(exist.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}),'warn');return;}
   setLoad(true,'출근 처리 중...');
   const{error}=await sb.from('attendance_logs').insert({store_id:currentStore.id,employee_id:empId,work_date:today,app_in:now.toISOString(),caps_match_status:'앱전용',check_in_ip:ipCheck.ip||null});
@@ -177,6 +183,7 @@ async function checkIn(){
   const _t=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
   toast(`🌅 출근 완료! ${_t} · 좋은 하루 보내세요`,'success',3500);
   await loadTodayRecord();
+  }finally{_checkInBusy=false;}
 }
 async function checkOut(){
   if(!guardStore()) return;
@@ -275,6 +282,9 @@ async function saveAttendance(){
   if(appOut&&(appOut-appIn)>24*60*60*1000) return toast('근무 시간이 24시간을 초과합니다. 시각 확인해주세요.','error');
   const restMin=parseInt(document.getElementById('vRest').value)||0;
   const w=await calcWageData(selectedEmpId, appIn, appOut, date, restMin);
+  // 2026-06-01: 같은 직원+날짜 기존 기록 있으면 중복 저장 차단 (사장님: 한 명 하루 한 번)
+  const{data:dup}=await sb.from('attendance_logs').select('id').eq('store_id',currentStore.id).eq('employee_id',selectedEmpId).eq('work_date',date).limit(1);
+  if(dup&&dup.length){return toast('이미 이 날짜 근태 기록이 있습니다. 기존 기록을 수정하세요.','warn');}
   setLoad(true,'근태 기록 중...');
   const {error}=await sb.from('attendance_logs').insert({
     store_id:currentStore.id,employee_id:selectedEmpId,work_date:date,
