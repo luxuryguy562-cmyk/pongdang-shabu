@@ -327,7 +327,7 @@ async function loadOpeningPage(dateStr){
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">날짜</span><span style="font-size:14px;font-weight:700;">${prev.settle_date}</span></div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">매출</span><span style="font-size:14px;font-weight:700;">${fmt(prev.sales_total||0)}원</span></div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">마감 차액</span><span style="font-size:14px;font-weight:700;color:${prev.diff_amount===0?'var(--success)':'var(--danger)'};">${prev.diff_amount===0?'✅ 일치':(prev.diff_amount>0?'+':'')+fmt(prev.diff_amount||0)+'원'}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:2px solid var(--text);margin-top:4px;"><span style="font-size:14px;font-weight:800;">마감 금고</span><span style="font-size:18px;font-weight:900;color:var(--blue);">${fmt(opPrevCloseTotal)}원</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:2px solid var(--text);margin-top:4px;"><span style="font-size:14px;font-weight:800;">전일 마감 금고</span><span style="font-size:18px;font-weight:900;color:var(--blue);">${fmt(opPrevCloseTotal)}원</span></div>
     </div>`;
   } else {
     sum.innerHTML = `<div class="empty-state" style="padding:14px;"><p style="margin:0;font-size:13px;">어제 마감 기록이 없어요. (오늘 시작 금고만 기록됩니다)</p></div>`;
@@ -518,7 +518,7 @@ async function saveOpening(){
   const diffStatus = diff===0 ? '일치' : `차액 ${diff>0?'+':''}${fmt(diff)}원`;
   const isEdit = (targetDate !== today);
   const headLabel = isEdit ? `[${targetDate} 영업개시 수정]` : '영업개시 보고';
-  if(!confirm(`${headLabel}\n어제 마감: ${fmt(opPrevCloseTotal)}원\n오늘 실제: ${fmt(actual)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
+  if(!confirm(`${headLabel}\n전일 마감 금고: ${fmt(opPrevCloseTotal)}원\n금고 현황: ${fmt(actual)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'영업개시 저장 중...');
   const {error} = await sb.from('daily_opening').upsert({
     store_id: currentStore.id,
@@ -579,10 +579,10 @@ async function loadOpeningList(){
         <div style="font-size:14px;font-weight:800;color:${diffColor};">${diffTxt}</div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-600);padding:3px 0;">
-        <span>어제 마감</span><span>${fmt(r.previous_close_total||0)}원</span>
+        <span>전일 마감 금고</span><span>${fmt(r.previous_close_total||0)}원</span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-600);padding:3px 0;">
-        <span>오늘 실제</span><span>${fmt(r.actual_total||0)}원</span>
+        <span>금고 현황</span><span>${fmt(r.actual_total||0)}원</span>
       </div>
       <div style="display:flex;gap:6px;margin-top:8px;">
         <button class="btn btn-secondary" style="flex:1;padding:8px;font-size:12px;" data-action="editOpening|${r.opening_date}">✏️ 수정</button>
@@ -744,7 +744,7 @@ async function finishSettlement2(){
   let vault=0;const vMap={};document.querySelectorAll('.v-input').forEach(i=>{const val=parseInt(i.value)||0;vMap[i.dataset.unit]=val;vault+=parseInt(i.dataset.unit)*val;});
   const diff=vault-book;const diffStatus=diff===0?'일치':`차액 ${diff>0?'+':''}${fmt(diff)}원`;
   const extraLine=extraTotal>0?`\n기타매출: ${fmt(extraTotal)}원 (별도 관리)`:'';
-  if(!confirm(`매출: ${fmt(salesTotal)}원${extraLine}\n장부: ${fmt(book)}원\n금고: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
+  if(!confirm(`매출: ${fmt(salesTotal)}원${extraLine}\n장부상 금고: ${fmt(book)}원\n금고 현황: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'마감 저장 중...');
   const settleDate=getSettleDate();
   const{data:savedRow,error}=await sb.from('settlements').upsert({
@@ -890,14 +890,14 @@ async function loadSettleList(){
         const amt = d.amount||0;
         if(amt<=0) return;
         const icon = d.type==='bank' ? '🏧' : '📤';
-        const label = d.type==='bank' ? '통장입금' : '기타사용';
+        const label = d.type==='bank' ? '통장 입금' : '현금 지출';
         dedRows.push({icon, label, amt, memo:d.memo||''});
       });
     } else {
       const dEtc = items.deduct_etc||0;
       const dBank = items.deduct_bank||0;
-      if(dBank>0) dedRows.push({icon:'🏧', label:'통장입금', amt:dBank, memo:items.deduct_bank_memo||''});
-      if(dEtc>0) dedRows.push({icon:'📤', label:'기타사용', amt:dEtc, memo:items.deduct_etc_memo||''});
+      if(dBank>0) dedRows.push({icon:'🏧', label:'통장 입금', amt:dBank, memo:items.deduct_bank_memo||''});
+      if(dEtc>0) dedRows.push({icon:'📤', label:'현금 지출', amt:dEtc, memo:items.deduct_etc_memo||''});
     }
     const dedHtml = dedRows.length ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--gray-200);">${dedRows.map(d=>`
       <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:var(--gray-600);">
@@ -968,7 +968,7 @@ async function loadSettleCard(d){
 
   // 1) 영업개시
   html += sectionHead('🏁','영업개시');
-  html += row('💰 전일 이월금', items.opening||0);
+  html += row('💰 전일 마감 금고', items.opening||0);
 
   // 2) 매출 (4칸)
   html += sectionHead('💵','매출','현금+현금영수증+신용카드+기타결제');
@@ -1003,8 +1003,8 @@ async function loadSettleCard(d){
   </div>`;
   if(deductEtc>0 || deductBank>0){
     html += sectionHead('📤','차감');
-    if(deductEtc>0) html += dedRow('📤 기타사용', deductEtc, deductEtcMemo);
-    if(deductBank>0) html += dedRow('🏧 통장입금', deductBank, deductBankMemo);
+    if(deductEtc>0) html += dedRow('📤 현금 지출', deductEtc, deductEtcMemo);
+    if(deductBank>0) html += dedRow('🏧 통장 입금', deductBank, deductBankMemo);
   }
 
   // 5) 기타매출 (기존 함수)
@@ -1024,7 +1024,7 @@ async function loadSettleCard(d){
 
   // 7) 최종 결과
   const diff=data.diff_amount||0;
-  html += `<div style="background:var(--${diff===0?'success':'danger'}-light);border-radius:12px;padding:14px;margin-top:14px;text-align:center;"><div style="font-size:12px;color:var(--gray-600);font-weight:600;">📊 마감 차액</div><div style="font-size:22px;font-weight:800;color:var(--${diff===0?'success':'danger'});margin-top:4px;">${diff===0?'✅ 일치':(diff>0?'+':'')+fmt(diff)+'원'}</div><div style="font-size:12px;color:var(--gray-600);margin-top:4px;">장부 ${fmt(data.expected_total)} · 금고 ${fmt(data.actual_total)}</div></div>`;
+  html += `<div style="background:var(--${diff===0?'success':'danger'}-light);border-radius:12px;padding:14px;margin-top:14px;text-align:center;"><div style="font-size:12px;color:var(--gray-600);font-weight:600;">📊 마감 차액</div><div style="font-size:22px;font-weight:800;color:var(--${diff===0?'success':'danger'});margin-top:4px;">${diff===0?'✅ 일치':(diff>0?'+':'')+fmt(diff)+'원'}</div><div style="font-size:12px;color:var(--gray-600);margin-top:4px;">장부상 금고 ${fmt(data.expected_total)} · 금고 현황 ${fmt(data.actual_total)}</div></div>`;
 
   // 관리자: 수정/삭제 버튼
   if(isManager){

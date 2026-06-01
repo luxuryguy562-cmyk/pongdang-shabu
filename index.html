@@ -1000,7 +1000,7 @@
 
     <!-- 어제 마감 결과 -->
     <div class="card">
-      <div class="card-title">📌 어제 마감 결과</div>
+      <div class="card-title">📌 전일 마감 요약</div>
       <div id="opPrevSummary">
         <div class="empty-state" style="padding:14px;"><p style="margin:0;font-size:13px;">불러오는 중...</p></div>
       </div>
@@ -1009,14 +1009,14 @@
     <!-- 오늘 출근 시 실제 금고 -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="card-title">💰 오늘 출근 시 실제 금고</div>
+        <div class="card-title">💰 금고 현황 (오늘 출근)</div>
         <span id="opVaultTotal" style="font-size:20px;font-weight:800;color:var(--blue);">0원</span>
       </div>
       <p class="card-sub">아침에 금고 열어서 화폐별로 세어 입력하세요</p>
       <div class="vault-section">
         <div class="vault-calc" id="opDiffRow">
-          <div class="vc-row"><span class="vc-label">어제 마감</span><span class="vc-val" id="opPrevClose">0원</span></div>
-          <div class="vc-row"><span class="vc-label">오늘 실제 금고</span><span class="vc-val" id="opActualTotal">0원</span></div>
+          <div class="vc-row"><span class="vc-label">전일 마감 금고</span><span class="vc-val" id="opPrevClose">0원</span></div>
+          <div class="vc-row"><span class="vc-label">금고 현황 (실제)</span><span class="vc-val" id="opActualTotal">0원</span></div>
           <div class="vc-row"><span class="vc-label">영업개시 차액</span><span class="vc-val" id="opDiff">-</span></div>
         </div>
         <div class="vault-grid">
@@ -1072,7 +1072,7 @@
         <span style="font-size:11px;color:var(--gray-400);" id="openingStatus">전일 마감금액</span>
       </div>
       <div class="settle-item">
-        <span class="si-icon">💰</span><span class="si-label">전일 이월금</span>
+        <span class="si-icon">💰</span><span class="si-label">전일 마감 금고</span>
         <input type="text" class="s-input" id="siOpening" placeholder="입력" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2">
       </div>
     </div>
@@ -1149,7 +1149,7 @@
         <div class="card-title">🏧 통장 입금</div>
         <span id="settleBankTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
       </div>
-      <p class="card-sub">금고 현금을 통장으로 옮긴 금액 (지출 아님, 이동)</p>
+      <p class="card-sub">금고 현금을 통장으로 옮긴 돈 (지출 아닌 이동)</p>
       <div id="settleDeductBankRows"></div>
       <button class="add-item-btn" data-action="addSettleDeductRow|bank|0|" style="margin-top:8px;">+ 통장 입금 추가</button>
     </div>
@@ -1157,12 +1157,12 @@
     <!-- 금고 변동 사유 (양방향 ±: 사장님 출금 -, 거래처 환불 등 +) -->
     <div class="settle-card-group">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="card-title">💵 금고 변동 사유</div>
+        <div class="card-title">💵 현금 지출</div>
         <span id="settleEtcTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
       </div>
-      <p class="card-sub">금고 돈이 안 맞는 사유 (- 빠짐 / + 들어옴 양방향). 행마다 부호 토글 가능.</p>
+      <p class="card-sub">금고에서 현금으로 나간 돈. 들어온 경우는 + 토글. 메모하세요.</p>
       <div id="settleDeductEtcRows"></div>
-      <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 사유 추가</button>
+      <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 현금 지출 추가</button>
     </div>
     <!-- 호환: 통합 총합 표시용 hidden -->
     <span id="settleDeductTotal" style="display:none;">0원</span>
@@ -1175,7 +1175,7 @@
       </div>
       <div class="vault-section">
         <div class="vault-calc" id="diffRow">
-          <div class="vc-row"><span class="vc-label">장부</span><span class="vc-val" id="calcBook">0원</span></div>
+          <div class="vc-row"><span class="vc-label">장부상 금고</span><span class="vc-val" id="calcBook">0원</span></div>
           <div class="vc-row"><span class="vc-label">금고</span><span class="vc-val" id="calcVault">0원</span></div>
           <div class="vc-row"><span class="vc-label">차액</span><span class="vc-val" id="calcDiff">-</span></div>
         </div>
