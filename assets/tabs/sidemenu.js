@@ -1277,11 +1277,11 @@ function openAddOrderSheet(){
   const sel=document.getElementById('orderVendorInput');
   if(currentVendorDetailId){
     const v=vendors.find(x=>x.id===currentVendorDetailId);
-    if(titleEl) titleEl.textContent=`주문 입력 — ${v?.name||'-'}${v?.category?' · '+v.category:''}`;
+    if(titleEl) titleEl.textContent=`수동 입력 — ${v?.name||'-'}${v?.category?' · '+v.category:''}`;
     sel.innerHTML=`<option value="${currentVendorDetailId}" selected>${v?.name||'-'}</option>`;
     sel.style.display='none';
   } else {
-    if(titleEl) titleEl.textContent='주문 입력';
+    if(titleEl) titleEl.textContent='수동 입력';
     sel.innerHTML=vendors.filter(v=>v.is_active).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
     sel.style.display='';
   }
