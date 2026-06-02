@@ -120,8 +120,6 @@ function renderTodayDetailForDay(dayStr){
   // 결제수단별 — 해당일 settle 행
   const _row = (ctx.settle||[]).find(s=>s.date?.slice(8)===d);
   renderTodayPaymentMethods(_row, _amt);
-  // 거래처별 오늘 지출 (홈 "오늘 어디서 썼나")
-  renderTodayVendorExp(ctx.dailyVendorExp?.[d], hasSale, _dexp);
 
   // 일자 네비 라벨·picker·화살표 활성 상태
   const lblText = document.getElementById('tdDayLabelText');
@@ -1044,6 +1042,8 @@ async function loadDashboard(force){
         renderDelta(document.getElementById('dashTopProfitDelta'),momTxt(dayProfit,prevProfit,true));
         renderDelta(document.getElementById('dashTopExpenseDelta'),momTxt(dayExp,prevExp,false));
         peEl.style.display='grid';
+        // 거래처별 오늘 지출 (홈 첫 화면 "어디서 썼나")
+        renderTodayVendorExp(dailyVendorExp[lastSaleDay], true, dayExp);
       }
 
       // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22, 2026-05-25 일자 네비 지원) ───
