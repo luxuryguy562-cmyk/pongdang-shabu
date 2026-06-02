@@ -1092,6 +1092,18 @@ async function loadDashboard(force){
             _mProfitRate.style.display='none';
           }
         }
+        // ─── 새 기능: 전월 동일 대비 (홈 이번달 카드) ───
+        const _mMom=document.getElementById('dashHomeMonthMom');
+        if(_mMom){
+          if(prevTotalRevenue>0 && totalRevenue>0){
+            const _dS=Math.round((totalRevenue-prevTotalRevenue)/prevTotalRevenue*100);
+            const _dE=prevTotalCostFull>0?Math.round((totalCostFull-prevTotalCostFull)/prevTotalCostFull*100):0;
+            const _sArr=_dS>=0?'▲':'▼', _eArr=_dE>=0?'▲':'▼';
+            const _sCol=_dS>=0?'#0CAB6C':'#F04452', _eCol=_dE>=0?'#F04452':'#0CAB6C';
+            _mMom.innerHTML=`전월대비 매출 <b style="color:${_sCol}">${_sArr}${Math.abs(_dS)}%</b> · 지출 <b style="color:${_eCol}">${_eArr}${Math.abs(_dE)}%</b>`;
+            _mMom.style.display='';
+          } else { _mMom.style.display='none'; }
+        }
       }
     } catch(e){ console.warn('[dashHomeMonth]', e.message); }
 
