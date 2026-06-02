@@ -4674,7 +4674,7 @@ async function loadDiffTable(){
 
   const[opRes,stRes]=await Promise.all([
     sb.from('daily_opening').select('opening_date,actual_total,previous_close_total').eq('store_id',sid).gte('opening_date',startDate).lte('opening_date',endDate),
-    sb.from('settlements').select('settle_date,actual_total,diff_amount,items_json').eq('store_id',sid).gte('settle_date',startDate).lte('settle_date',endDate)
+    sb.from('settlements').select('settle_date,actual_total,expected_total,diff_amount,items_json').eq('store_id',sid).gte('settle_date',startDate).lte('settle_date',endDate)
   ]);
   const opByDate={};(opRes.data||[]).forEach(o=>opByDate[o.opening_date]=o);
   const stByDate={};(stRes.data||[]).forEach(s=>stByDate[s.settle_date]=s);
@@ -4688,7 +4688,7 @@ async function loadDiffTable(){
     return;
   }
 
-  // 4컬럼 표 (날짜·통장·지출·차액) + 토스 스타일 요약
+  // 4컬럼 표 (날짜·통장·지출·차액) — 행 누르면 그날 금고 사슬 펼침 (2026-06-01 통합 기록조회)
   let html='';
   let sumBank=0, sumEtc=0, sumDiff=0;
   dates.forEach(d=>{
@@ -4716,12 +4716,40 @@ async function loadDiffTable(){
     const m=parseInt(d.slice(5,7),10), day=parseInt(d.slice(8,10),10);
     const dateText=`${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}`;
 
-    html+=`<tr style="border-top:1px solid var(--gray-100);">
-      <td style="padding:7px 10px;text-align:center;font-weight:600;color:var(--text);">${dateText}</td>
-      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text);">${bankCell}</td>
-      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text);">${etcCell}</td>
-      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:${diffColor};">${diffText}</td>
-    </tr>`;
+    // ── 펼침: 그날 금고 사슬 (전일 마감 → 영업개시 → +현금매출 −통장 −지출 → 마감) ──
+    const deds=Array.isArray(items.deductions)?items.deductions:[];
+    const bankMemo=deds.filter(x=>x.type==='bank'&&x.memo).map(x=>x.memo).join(', ')||items.deduct_bank_memo||'';
+    const etcMemo=deds.filter(x=>x.type==='etc'&&x.memo).map(x=>x.memo).join(', ')||items.deduct_etc_memo||'';
+    const cashSales=items.cash_detail_cash||0;
+    const book=st.expected_total||0;
+    const closeVault=st.actual_total||0;
+    const fr=(label,val,sub,color)=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:${color||'var(--gray-600)'};"><span>${label}${sub?`<br><span style="font-size:10px;color:var(--gray-400);">↳ ${sub}</span>`:''}</span><b style="font-variant-numeric:tabular-nums;white-space:nowrap;">${val}</b></div>`;
+    let flow='';
+    if(op){
+      flow+=`<div style="font-size:10px;font-weight:800;color:#4338CA;background:#EEF2FF;border-radius:99px;padding:2px 9px;display:inline-block;margin-bottom:3px;">🌙 밤사이 (영업개시)</div>`;
+      flow+=fr('전일 마감 금고', fmt(op.previous_close_total||0)+'원');
+      flow+=fr('오늘 개시 금고 (실제)', fmt(op.actual_total||0)+'원','','var(--text)');
+      flow+=fr('＝ 영업개시 차액', opDiff===0?'✅ 일치':(opDiff>0?'+':'')+fmt(opDiff)+'원','', opDiff===0?'var(--success)':'var(--danger)');
+    } else {
+      flow+=`<div style="font-size:11px;color:var(--gray-400);padding:4px 0;">영업개시 기록 없음 — 전일 마감 금고에서 바로 마감</div>`;
+    }
+    flow+=`<div style="font-size:10px;font-weight:800;color:#92400E;background:#FEF3C7;border-radius:99px;padding:2px 9px;display:inline-block;margin:8px 0 3px;">☀️ 영업중 (마감)</div>`;
+    flow+=fr('＋ 순수 현금 매출', '+'+fmt(cashSales)+'원','','var(--success)');
+    if(bankSum>0) flow+=fr('－ 🏧 통장 입금', '−'+fmt(bankSum)+'원', bankMemo, 'var(--danger)');
+    if(etcSum>0) flow+=fr('－ 💵 현금 지출', '−'+fmt(etcSum)+'원', etcMemo, 'var(--danger)');
+    flow+=`<div style="border-top:1px dashed var(--gray-300);margin-top:3px;"></div>`;
+    flow+=fr('＝ 장부상 금고', fmt(book)+'원','','var(--text)');
+    flow+=fr('금고 현황 (실제)', fmt(closeVault)+'원','','var(--text)');
+    flow+=`<div style="border-radius:10px;padding:9px;text-align:center;margin-top:8px;font-weight:900;font-size:13px;background:${stDiff===0?'var(--success-light)':'var(--danger-light)'};color:${stDiff===0?'var(--success)':'var(--danger)'};">마감 차액 ${stDiff===0?'✅ 일치':(stDiff>0?'+':'')+fmt(stDiff)+'원'}</div>`;
+    flow+=`<button data-action="gotoSettleEdit|${d}" style="width:100%;margin-top:8px;padding:10px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">✏️ 이 날 마감 수정</button>`;
+
+    html+=`<tr class="diff-main-row" data-action="toggleDiffRow|${d}" style="border-top:1px solid var(--gray-100);cursor:pointer;">
+      <td style="padding:9px 10px;text-align:center;font-weight:600;color:var(--text);">${dateText}</td>
+      <td style="padding:9px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text);">${bankCell}</td>
+      <td style="padding:9px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text);">${etcCell}</td>
+      <td style="padding:9px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:${diffColor};">${diffText} <span style="color:var(--gray-400);font-weight:400;">▾</span></td>
+    </tr>
+    <tr class="diff-flow-row" id="diffFlow_${d}" style="display:none;"><td colspan="4" style="background:var(--gray-100);padding:0;"><div style="padding:12px 16px;">${flow}</div></td></tr>`;
   });
   tbody.innerHTML=html;
 
@@ -4761,6 +4789,19 @@ async function loadDiffTable(){
   }
 }
 
+// ─── 차액 표 행 펼침 토글 (그날 금고 사슬) — 2026-06-01 통합 기록조회 ───
+function toggleDiffRow(d){
+  const el=document.getElementById('diffFlow_'+d);
+  if(!el) return;
+  const isOpen=el.style.display!=='none';
+  document.querySelectorAll('.diff-flow-row').forEach(f=>f.style.display='none');
+  if(!isOpen) el.style.display='table-row';
+}
+// ─── 차액 표 펼침 → 마감 수정 진입 (마감정산 탭으로 이동 후 그 날 복원) ───
+function gotoSettleEdit(d){
+  if(typeof nav==='function') nav('settle');
+  if(typeof editSettlement==='function') editSettlement(d);
+}
 
 // ─── 로열티 전용 화면 (매출 × 요율 자동 계산) ───
 async function loadRoyaltyPage(){

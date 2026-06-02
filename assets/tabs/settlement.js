@@ -38,23 +38,39 @@ async function loadOpeningForDate(dateStr){
     if(st) st.innerText='저장된 마감 — 불러옴';
     return;
   }
-  // 기존 마감 없음 → 빈 폼 + 전일 마감 금고(이월금)만
+  // 기존 마감 없음 → 빈 폼 + 시작 금고(영업개시 우선 → 전일 마감, 금고 사슬 규칙)
   resetSettleView();
-  const d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()-1);
-  const yd=ymdLocal(d);
-  const{data}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
-  const el=document.getElementById('siOpening');
-  const statusEl=document.getElementById('openingStatus');
-  if(data?.actual_total!=null){
-    el.value=parseInt(data.actual_total).toLocaleString();
-    statusEl.innerText='전일('+yd+') 마감 금고';
-  } else {
-    el.value='';
-    statusEl.innerText='전일 마감 데이터 없음';
-  }
+  await applySettleStartVault(dateStr);
   recalcSettle2();
   const statusEl2=document.getElementById('settleDateStatus');
   if(statusEl2) statusEl2.innerText='새 정산';
+}
+// ─── 마감 시작 금고 결정 (금고 사슬 규칙, 2026-06-01 사장님 정의) ───
+// 그 날 영업개시 했으면 영업개시 금고, 안 했으면 전일 마감 금고. (마감→영업개시→마감 사슬)
+async function applySettleStartVault(dateStr){
+  const el=document.getElementById('siOpening');
+  const statusEl=document.getElementById('openingStatus');
+  if(!el) return;
+  // 1) 그 날 영업개시 금고 우선
+  const{data:op}=await sb.from('daily_opening').select('actual_total').eq('store_id',currentStore.id).eq('opening_date',dateStr).maybeSingle();
+  if(op?.actual_total!=null){
+    el.value=parseInt(op.actual_total).toLocaleString();
+    if(statusEl) statusEl.innerText='오늘 영업개시 금고';
+    if(!isManager) el.readOnly=true;
+    return;
+  }
+  // 2) 영업개시 없음 → 전일 마감 금고
+  const d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()-1);
+  const yd=ymdLocal(d);
+  const{data}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
+  if(data?.actual_total!=null){
+    el.value=parseInt(data.actual_total).toLocaleString();
+    if(statusEl) statusEl.innerText='전일('+yd+') 마감 금고';
+    if(!isManager) el.readOnly=true;
+  } else {
+    el.value='';
+    if(statusEl) statusEl.innerText='전일('+yd+') 마감 데이터 없음';
+  }
 }
 function getSettleDate(){
   const picker=document.getElementById('settleDatePicker');
@@ -663,23 +679,10 @@ function moveOpeningDate(dir){
 // 영업개시보고서 자동 로드 (전일 마감금액)
 async function loadOpeningAmount(){
   if(!currentStore) return;
-  // 2026-05-14: picker.value(settle_date) 기준 전날 마감 로드.
-  // 옛 버그: 시스템 today-1 고정이라 사장님이 settle_date 변경해도 전일이월금이 항상 가장 최근 마감으로 갔음.
+  // 2026-06-01: 금고 사슬 규칙 — 그 날 영업개시 했으면 영업개시 금고, 안 했으면 전일 마감 금고
   const picker=document.getElementById('settleDatePicker');
   const settleDate=picker?.value||ymdLocal(new Date());
-  const d=new Date(settleDate+'T00:00:00');d.setDate(d.getDate()-1);
-  const yd=ymdLocal(d);
-  const{data} = await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
-  const el=document.getElementById('siOpening');
-  const statusEl=document.getElementById('openingStatus');
-  if(data?.actual_total!=null){
-    el.value=parseInt(data.actual_total).toLocaleString();
-    statusEl.innerText='전일('+yd+') 마감금액';
-    if(!isManager) el.readOnly=true;
-  } else {
-    el.value='';
-    statusEl.innerText='전일('+yd+') 마감 데이터 없음';
-  }
+  await applySettleStartVault(settleDate);
   recalcSettle2();
 }
 function settleTab(tab,el){

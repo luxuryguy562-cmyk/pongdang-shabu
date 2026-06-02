@@ -76,18 +76,18 @@ tr.flow td{background:var(--g100);padding:0;border-bottom:1px solid var(--g200);
     <div class="x3"><div class="b1 one">📋 통합 기록조회 (개시 차액 + 마감 차액 한 표, 눌러서 수정)</div></div>
   </div>
 
-  <div class="note">한 줄 = 하루. <b>개시 차액</b>(밤사이)·<b>마감 차액</b>(영업중)이 한눈에. 줄을 누르면 그날 <b>금고 사슬 + 메모</b>가 펼쳐지고, <b>개시·마감 각각 수정</b>까지 됩니다.</div>
+  <div class="note">한 줄 = 하루. 표는 <b>현금 흐름</b>(통장 입금·현금 지출·차액)만. 총매출 ❌. 줄을 누르면 <b>개시 차액(밤사이)·마감 차액(영업중) + 금고 사슬 + 메모</b>가 펼쳐지고 수정까지 됩니다.</div>
 
   <div class="card">
     <div class="card-h"><div class="t">📋 개시·마감 기록</div>
       <div class="chip"><button>‹</button><span class="mc">2026.05</span><button>›</button></div></div>
     <table>
-      <colgroup><col style="width:20%"><col style="width:22%"><col style="width:25%"><col style="width:23%"><col style="width:10%"></colgroup>
-      <thead><tr><th>날짜</th><th>매출</th><th>개시 차액</th><th>마감 차액</th><th></th></tr></thead>
+      <colgroup><col style="width:20%"><col style="width:27%"><col style="width:27%"><col style="width:26%"></colgroup>
+      <thead><tr><th>날짜</th><th>통장 입금</th><th>현금 지출</th><th>차액</th></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <div class="tip">👉 <b>날짜 줄을 눌러보세요</b>. 전일 마감 금고 → 오늘 개시 금고 → +매출 −통장 −지출 → 오늘 마감 금고까지 하루 사슬이 펼쳐집니다.</div>
+  <div class="tip">👉 <b>날짜 줄을 눌러보세요</b>. 전일 마감 금고 → 오늘 개시 금고 → +순수 현금 매출 −통장 −지출 → 오늘 마감 금고까지 하루 사슬이 펼쳐집니다.</div>
   <div style="height:30px"></div>
 </div>
 
@@ -104,14 +104,14 @@ const dcol=v=>v===0?'var(--g300)':'var(--danger)';
 Object.entries(DB).forEach(([date,r])=>{
   const d=date.slice(5).replace('-','/');
   const main=document.createElement('tr');main.className='main';
+  const totalDiff=r.openDiff+r.closeDiff;
   main.innerHTML=`
     <td class="dt">${d}<br><span style="font-size:9px;color:var(--g400);font-weight:400">${r.dow}</span></td>
-    <td>${fmt(r.sales)}</td>
-    <td style="color:${dcol(r.openDiff)};font-weight:700">${dz(r.openDiff)}</td>
-    <td style="color:${dcol(r.closeDiff)};font-weight:700">${dz(r.closeDiff)}</td>
-    <td style="color:var(--g400)">▾</td>`;
+    <td>${r.bank>0?fmt(r.bank):'<span class="dimv">-</span>'}</td>
+    <td>${r.etc>0?fmt(r.etc):'<span class="dimv">-</span>'}</td>
+    <td style="color:${dcol(totalDiff)};font-weight:700">${dz(totalDiff)} <span style="color:var(--g400);font-weight:400">▾</span></td>`;
   const flow=document.createElement('tr');flow.className='flow';
-  flow.innerHTML=`<td colspan="5"><div class="fb">
+  flow.innerHTML=`<td colspan="4"><div class="fb">
     <span class="badge night">🌙 밤사이 (영업개시)</span>
     <div class="chain">
       <div class="fr"><span>전일 마감 금고</span><b>${fmt(r.prevClose)}원</b></div>
