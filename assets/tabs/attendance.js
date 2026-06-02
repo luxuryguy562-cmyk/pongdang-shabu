@@ -491,7 +491,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
       //  · 인건비 칸: 좌측 정렬 + 큰 숫자 + 시급·월급 분기
       // 2026-06-02 사장님 호소: 만원 압축 → 원 단위 진짜 숫자 (인건비·시급·월급 통일)
       const splitHtml = (monthlyWage>0)
-        ? `<div class="att-kpi-split"><span class="h">⏰ 시급 ${hourlyWage.toLocaleString('ko-KR')}원</span><span class="sep">·</span><span class="m">💼 월급 ${monthlyWage.toLocaleString('ko-KR')}원</span></div>`
+        ? `<div class="att-kpi-split"><span class="h">⏰ 시급 ${hourlyWage.toLocaleString('ko-KR')}원</span><span class="m">💼 월급 ${monthlyWage.toLocaleString('ko-KR')}원</span></div>`
         : '';
       kpiEl.innerHTML = `
         <div class="att-kpi-cell aux">
