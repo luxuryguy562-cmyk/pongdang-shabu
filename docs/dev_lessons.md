@@ -3471,3 +3471,23 @@ const COMMON_BANK_RULES=[
 ### 교훈
 - **사용자가 확인·수정해야 할 값을 hidden으로 숨기면 안 된다.** 특히 AI 자동 추출값은 틀릴 수 있으니 반드시 보이게 + 검증.
 - "안 보임 = 저장 실패"로 오해하면 중복이 쌓인다. 저장 후 어디서 보이는지(날짜 필터) 명확해야.
+
+## #133 디자인 통일감 = 토큰·공통 클래스 강제 (2026-06-02)
+
+### 사고
+사장님 호소: "전체적으로 디자인이 구려졌다. 홈화면 때는 컨셉 잘 잡고 이쁘게 했는데 통일감이 또 사라진다."
+
+### 원인
+디자인 시스템이 `styles.css`에 토큰(`--toss-blue`, `--card-radius:20px`, `--card-shadow`, `--toss-line`, `--toss-text-1~5`)·공통 클래스(`.card`, `.input-field`, `.badge`, `.btn`)로 잡혀 있고 홈화면은 이걸 쓴다. 그런데 새 화면/시안을 **인라인으로 임의 색(#FFF5F6 등)·radius(14)·약한 그림자**로 만들어 시스템과 어긋남 → 따로 노는 느낌.
+
+### 조치 (designer/coder 의무)
+- **모든 시안·코드는 styles.css 토큰·공통 클래스 기준.** 임의 인라인 색/radius/shadow 금지.
+  - 카드 = `.card` (radius 20 + `--card-shadow`) / 입력 = `.input-field` 톤(`--toss-line` 배경, radius 14)
+  - 색 = `--toss-blue`·`--toss-text-*`·`--toss-line` (옛 `--blue` #0050FF 혼용 자제)
+  - 칩/배지 = `--toss-blue-light` + `--toss-blue`
+  - 여백 = 16px+ (designer 여백 원칙)
+- 새 mockup 만들 때도 :root에 styles.css 토큰 복사해서 같은 값 사용.
+
+### 교훈
+- "통일감"은 화면별 감각이 아니라 **토큰 시스템 준수** 문제. 토큰만 지키면 자동으로 한 가족이 된다.
+- dev_lessons #69·#781 연장: 통일감은 유사 패턴 모두 + **같은 토큰**.
