@@ -495,8 +495,8 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
         : '';
       kpiEl.innerHTML = `
         <div class="att-kpi-cell aux">
-          <div class="row"><span class="l">📅 출근일</span><span class="v">${totalDays}일</span></div>
-          <div class="row"><span class="l">⏱ 근무시간</span><span class="v">${fmtHourDecimal(totalMin)}</span></div>
+          <div class="item"><span class="l">📅 출근일</span><span class="v">${totalDays}일</span></div>
+          <div class="item"><span class="l">⏱ 근무시간</span><span class="v">${fmtHourDecimal(totalMin)}</span></div>
         </div>
         <div class="att-kpi-cell wage">
           <div class="att-kpi-lbl">인건비</div>
