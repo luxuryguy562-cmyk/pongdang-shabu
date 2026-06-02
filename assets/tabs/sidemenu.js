@@ -4968,6 +4968,14 @@ function _hexToRgba(hex, alpha){
   const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
+// 금액 자릿수 따라 폰트 축소 클래스 — 3열 좁은 칸 잘림 방지 (8자↓ 기본 / 9자 amt-l / 10자↑ amt-xl)
+//   예: '621,715'(7) 기본 · '3,150,000'(9) amt-l · '45,030,000'(10) amt-xl
+function _expAmtClass(text){
+  const len=(text||'').length;
+  if(len>=10) return ' amt-xl';
+  if(len>=9) return ' amt-l';
+  return '';
+}
 function _expHubMkCard(cardId, action, iconId, title, amtText, color){
   let iconStyle = '';
   if(color){
@@ -4979,7 +4987,7 @@ function _expHubMkCard(cardId, action, iconId, title, amtText, color){
       <span class="hub-mini-icon" ${iconStyle}><svg><use href="#${iconId}"/></svg></span>
       <span class="hub-mini-title">${esc(title)}</span>
     </div>
-    <div class="hub-mini-amt" data-amt-cell="${cardId}">${amtText}</div>
+    <div class="hub-mini-amt${_expAmtClass(amtText)}" data-amt-cell="${cardId}">${amtText}</div>
   </button>`;
 }
 function renderExpHubCatSkeleton(){
@@ -5023,12 +5031,16 @@ function updateExpHubCatAmounts(catSums){
     const cell = grid.querySelector(`[data-amt-cell="cat-${cat.id}"]`);
     if(!cell) return;
     const amt = catSums?.[cat.id]?.amount || 0;
-    cell.textContent = amt ? fmt(amt) : '0';
+    const t = amt ? fmt(amt) : '0';
+    cell.textContent = t;
+    cell.className = 'hub-mini-amt' + _expAmtClass(t);
   });
   const royaltyCell = grid.querySelector('[data-amt-cell="royalty"]');
   if(royaltyCell){
     const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
-    royaltyCell.textContent = royaltyAmt ? fmt(royaltyAmt) : '0';
+    const rt = royaltyAmt ? fmt(royaltyAmt) : '0';
+    royaltyCell.textContent = rt;
+    royaltyCell.className = 'hub-mini-amt' + _expAmtClass(rt);
   }
 }
 async function saveExpHubCardOrder(){
