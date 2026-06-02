@@ -1270,6 +1270,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-detail-head .pe-row .cell .lb{font-size:11.5px;opacity:.85;font-weight:600;margin-bottom:3px;letter-spacing:-0.2px;display:block;}
 .dash-today-detail-head .pe-row .cell .vl{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.4px;color:#fff;}
 /* 결제수단별 카드 */
+/* 지출 카테고리 비중 막대 (오늘 매출 카드) */
+.t7-expbar{display:flex;height:9px;border-radius:5px;overflow:hidden;margin-top:16px;gap:1px;}
+.t7-expbar span{display:block;}
 /* 오늘 어디서 썼나 (거래처별 지출) */
 .dash-ve-card{background:#FFFFFF;border-radius:18px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 8px rgba(20,40,80,0.04);}
 .dash-ve-card .ve-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}

@@ -1046,6 +1046,21 @@ async function loadDashboard(force){
         peEl.style.display='grid';
         // 거래처별 오늘 지출 (홈 첫 화면 "어디서 썼나")
         renderTodayVendorExp(dailyVendorExp[lastSaleDay], true, dayExp);
+        // 지출 카테고리 비중 막대 (오늘 매출 카드)
+        const _tCatMap=dailyCatMap[lastSaleDay]||{};
+        const _tCatEnt=Object.entries(_tCatMap).filter(([k,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+        const _tCatTot=_tCatEnt.reduce((s,[,v])=>s+v,0);
+        const _tBarEl=document.getElementById('dashTopExpBar');
+        if(_tBarEl){
+          if(_tCatTot>0){
+            _tBarEl.innerHTML=_tCatEnt.map(([k,v])=>{
+              const w=(v/_tCatTot*100);
+              const color=catColors[k]||'#CBD5E1';
+              return `<span style="width:${w.toFixed(1)}%;background:${color};" title="${esc(k)} ${w.toFixed(0)}%"></span>`;
+            }).join('');
+            _tBarEl.style.display='flex';
+          } else { _tBarEl.style.display='none'; }
+        }
       }
 
       // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22, 2026-05-25 일자 네비 지원) ───
