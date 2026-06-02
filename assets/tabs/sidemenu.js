@@ -4754,7 +4754,6 @@ async function loadDiffTable(){
   tbody.innerHTML=html;
 
   if(summaryEl){
-    const sumColor=sumDiff===0?'var(--text)':(sumDiff<0?'#DC2626':'#059669');
     // 가장 최근 측정 금고 (settlements/daily_opening 중 더 최신, 사장님 요청 2026-05-15)
     let latestDate='', latestVault=0;
     Object.entries(stByDate).forEach(([d,s])=>{
@@ -4764,26 +4763,33 @@ async function loadDiffTable(){
       if(o?.actual_total!=null && d>latestDate){ latestDate=d; latestVault=o.actual_total||0; }
     });
     const vaultSub = latestDate ? `${latestDate.slice(5,7)}/${latestDate.slice(8,10)} 기준` : '기록 없음';
-    // 2026-05-31: 4칸 세로 가운데정렬 + 키 통일 (사장님 짚음 — '총 차액'이 위로 붙던 문제)
-    const _c='padding:10px 8px;background:var(--gray-100);border-radius:10px;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;';
+    // 2026-06-01 B안 + 색 규칙: 금고(큰 파랑)+차액(색 배지) 한 줄 / 통장·지출 옅은 붉은
+    // 차액 색 (회계): 0=초록 딱맞음 / 음수=빨강 부족 / 양수=주황 남음(점검)
+    let dBg, dFg, dLb, dVal;
+    if(sumDiff===0){ dBg='var(--success-light)'; dFg='var(--success)'; dLb='✅ 딱 맞음'; dVal='0원'; }
+    else if(sumDiff<0){ dBg='var(--danger-light)'; dFg='var(--danger)'; dLb='⚠️ 부족'; dVal=fmt(sumDiff)+'원'; }
+    else { dBg='var(--warn-light)'; dFg='var(--warn)'; dLb='⚠️ 남음'; dVal='+'+fmt(sumDiff)+'원'; }
+    const _outC='background:#FFF5F6;border:1px solid #FBD5DA;border-radius:12px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;';
     summaryEl.innerHTML=`
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <div style="flex:1.3;background:linear-gradient(135deg,#0064FF,#3182F6);border-radius:14px;padding:14px;color:#fff;">
+          <div style="font-size:11px;opacity:.85;font-weight:700;">💰 지금 금고</div>
+          <div style="font-size:21px;font-weight:900;margin-top:3px;font-variant-numeric:tabular-nums;">${fmt(latestVault)}원</div>
+          <div style="font-size:9px;opacity:.7;margin-top:2px;">${vaultSub}</div>
+        </div>
+        <div style="flex:1;background:${dBg};border-radius:14px;padding:14px;display:flex;flex-direction:column;justify-content:center;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:${dFg};">${dLb}</div>
+          <div style="font-size:16px;font-weight:900;margin-top:3px;font-variant-numeric:tabular-nums;color:${dFg};">${dVal}</div>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div style="${_c}">
-          <div style="font-size:10px;color:var(--gray-500);">📊 총 차액</div>
-          <div style="font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;color:${sumColor};margin-top:3px;">${sumDiff>0?'+':''}${fmt(sumDiff)}원</div>
+        <div style="${_outC}">
+          <span style="font-size:12px;color:var(--gray-600);font-weight:600;">🏧 통장 입금</span>
+          <span style="font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumBank)}</span>
         </div>
-        <div style="${_c}">
-          <div style="font-size:10px;color:var(--gray-500);">💰 금고 현황</div>
-          <div style="font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--blue);margin-top:3px;">${fmt(latestVault)}원</div>
-          <div style="font-size:9px;color:var(--gray-400);margin-top:2px;">${vaultSub}</div>
-        </div>
-        <div style="${_c}">
-          <div style="font-size:10px;color:var(--gray-500);">🏧 통장 입금</div>
-          <div style="font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);margin-top:3px;">${fmt(sumBank)}원</div>
-        </div>
-        <div style="${_c}">
-          <div style="font-size:10px;color:var(--gray-500);">💵 현금 지출</div>
-          <div style="font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);margin-top:3px;">${fmt(sumEtc)}원</div>
+        <div style="${_outC}">
+          <span style="font-size:12px;color:var(--gray-600);font-weight:600;">💵 현금 지출</span>
+          <span style="font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);">${fmt(sumEtc)}</span>
         </div>
       </div>`;
   }
