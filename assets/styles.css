@@ -1295,6 +1295,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 /* ─── 토스 통일 패턴 클래스 (2026-05-22 디자인 통일) ─── */
 /* 큰 진입 박스 (홈 .dash-enter-v7 패턴을 전역 .toss-enter로 재사용) */
+/* 영수증 등록 행 타이틀 (영수증 종류 / 거래처 / 영수증 사진) — 2026-06-02 */
+.rcp-row-ttl{font-size:11px;font-weight:800;color:var(--toss-text-4);margin:0 2px 6px;letter-spacing:-0.2px;}
 .toss-enter{background:var(--white);border-radius:18px;padding:18px 20px;margin-bottom:10px;box-shadow:var(--card-shadow);display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);border:0;width:100%;text-align:left;font-family:inherit;}
 .toss-enter:active{transform:scale(.985);}
 .toss-enter .ic-wrap{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
