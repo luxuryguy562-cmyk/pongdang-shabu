@@ -40,6 +40,13 @@ function setRcpMode(mode){
     _setRcpUploadEnabled(true);
     showRcpUploadUI();
   }
+  const bt = document.getElementById('rcpBackTitle'); if(bt) bt.textContent = '종류 선택';
+}
+
+// 상단 뒤로가기 — 모드 선택됐으면 종류 선택으로 복귀, 아니면 지출관리로
+function rcpBack(){
+  if(rcpMode){ resetRcpMode(); }
+  else { nav('expHub'); }
 }
 
 // 거래처 선택 행 채우기 (미선택=파란 안내 / 선택=거래처명+자동분류)
@@ -92,6 +99,7 @@ function resetRcpMode(){
   _renderRcpPages();
   const pageBox = document.getElementById('rcpPageInfoBox');
   if(pageBox) pageBox.style.display='none';
+  const bt = document.getElementById('rcpBackTitle'); if(bt) bt.textContent = '지출관리';
 }
 
 function showRcpUploadUI(){
@@ -660,11 +668,6 @@ function openCatReceiptInput(method){
   }, 60);
 }
 
-// 거래처 선택 취소 = 직구 '↩ 다시 고르기'와 동일 (시트 닫고 모드 선택 처음으로)
-function cancelRcpVendorPick(){
-  closeSheet('rcpVendorPickSheet');
-  resetRcpMode();
-}
 async function openRcpVendorPicker(){
   if(!currentStore) return;
   openSheet('rcpVendorPickSheet');
