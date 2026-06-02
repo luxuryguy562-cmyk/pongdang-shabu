@@ -26,9 +26,15 @@
   - 카드 L2 `rcp-cat-cell` 클래스 제거(가로 한 줄) + `.ric-l2`로 ✨ 갱신 조회 변경.
   - 중복 정의된 `renderRcpVendorRow`·`_setRcpUploadEnabled` 제거.
 
+### 후속 (사장님 2차 테스트) — 분석 결과 잔류 버그
+- 호소: "영수증등록으로 분석하고 나갔다가 거래처 영수증등록 들어가니 분석한 게 살아있네."
+- 원인: `setRcpMode`·`openRcpReceiptFromVendor` 둘 다 이전 분석 데이터(b64Pages·resultArea·resTable·imgPreview·actionGroup)를 안 비움.
+- 조치: `_clearRcpData()` 헬퍼 신설 → 두 진입 함수 모두 시작 시 호출(빙산 — 모든 진입 경로 일괄).
+
 ### 검증 (Playwright Mock)
 - 실 styles.css·receipt.js로 결과 화면 렌더 → 깔끔 정렬·합계 일치(파랑)/의심(빨강 바+⚠️행) 모두 정상, JS 에러 0건.
-- `openRcpReceiptFromVendor('v-1','photo')` 재현 → 거래처 행 flex 표시·🏪·"㈜오케이미트"·"바꾸기 ›", 모드선택 숨김, 에러 토스트 0건, JS 에러 0건.
+- `openRcpReceiptFromVendor('v-1','photo')` 재현 → 거래처 행 flex 표시·🏪·"㈜오케이미트"·"바꾸기 ›", 모드선택 숨김, 에러 토스트 0건.
+- 잔류 재현: 옛 결과 심어둔 뒤 거래처 진입 → resultArea none·resTable 0·b64 0·actionGroup none·imgPreview none (정상 초기화).
 
 ## [2026-06-02] 거래처 상세 수동입력 통합 + 버그 수정
 
