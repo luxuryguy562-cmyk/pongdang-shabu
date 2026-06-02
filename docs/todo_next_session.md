@@ -49,9 +49,26 @@
 
 ### 진행 현황 (2026-06-02 세션)
 - ✅ **1단계** 홈 이번달 전월대비 한 줄 (PR #370)
-- ✅ **2단계** 오늘 거래처별 지출 '어디서 썼나' (PR #371, FK·6소스 누락없이)
-- ✅ **3단계** 홈 월 달력 버튼 (PR #372, dead였던 openSalesCalendarSheet 살림)
-- ⏳ **4단계** 월보기 소분류 펼침 — 위 안전 방법대로 구현 대기 (새 세션 권장: 긴 세션 끝 무리 시 월보기 위험)
+- ✅ **2단계** 오늘 거래처별 지출 '어디서 썼나' (PR #371·#374 홈 첫화면 이동, FK·6소스 누락없이)
+- ✅ **3단계** 홈 월 달력 버튼 (PR #372·#377 카드진입 겹침수정, openSalesCalendarSheet 살림)
+- ✅ **후속** 순수익 색 버그·합계 강조·이번달 지출·지출 카테고리 막대 (PR #375·#376)
+
+### ⏳ 다음 세션 남은 작업 (홈 마무리 — 사장님 합의 2026-06-02)
+**핵심: 오늘 매출 카드를 "날짜 바꿔보는 카드"로 (today-detail 수준 풍부 + 날짜 가변)**
+1. **날짜 네비** — 오늘 매출 카드(`dashTopSalesCard`)에 ‹ › 추가, 어제·그제 넘겨보기. 현재 lastSaleDay 고정 → `renderTopCardForDay(dayStr)` 함수화 필요. today-detail의 `renderTodayDetailForDay`(dashboard.js 42~) 패턴 재사용.
+2. **달력 날짜 클릭 동작 변경** — 지금 홈에서 연 달력(`openSalesCalendarSheet`/`renderSalesCalendar` 2312~)은 셀 클릭 시 "매출 입력 시트"(calCellInputSales/markClosed)가 뜸. 홈에서 열었을 땐 **"그날 매출 보기"(오늘 카드를 그날로)** 로 바꿔야. settle stage의 입력 동작과 분기 필요 (홈=보기 / settle=입력).
+3. **예상마감 매출·순수익** — 홈 오늘/이번달 카드에 없음. v6 월카드(1347~)엔 `fcSale`/`fcProfit` 있음 → 재사용.
+4. **월보기 식자재 소분류 펼침** (위 ✅ 4단계 안전 방법 — monthChildMap 별도 집계).
+5. **거래처별 상위 4곳 + 더보기** — `renderTodayVendorExp`(dashboard.js)에 slice(0,4) + 더보기 토글.
+
+**⚠️ 주의**: 1·2는 `dashTopSalesCard` 구조를 today-detail 수준으로 키우는 큰 작업 → 긴 세션 끝 무리 금지, 정신 맑을 때 단계별. 충돌 예방: 매 PR 머지 후 `git reset --hard origin/main` + force push.
+
+### 관련 코드 (홈)
+- 오늘 카드 렌더: dashboard.js 933~1046 (dashTopSalesCard, lastSaleDay 고정)
+- today-detail 날짜 네비 렌더: dashboard.js 42~124 (renderTodayDetailForDay — 네비 패턴 참고)
+- 거래처별: renderTodayVendorExp (dashboard.js ~55), DOM index.html dashTodayVendorCard(홈 1264 부근)
+- 달력: openSalesCalendarSheet/renderSalesCalendar dashboard.js 2312~, 시트 DOM index.html 1959~
+- 카드 클릭→today-detail: sidemenu.js 8415 (data-stop 미니버튼 제외 적용됨)
 
 ### 목업 (재현용)
 - `/tmp/vmock/home5.html`(홈 오늘 있음), `empty.html`(없음), `cal.html`(달력), `month.html`(월보기+소분류), `home.css`
