@@ -372,37 +372,72 @@ async function loadOpeningPage(dateStr){
 function _settleDeductContainerFor(type){
   return document.getElementById(type==='bank' ? 'settleDeductBankRows' : 'settleDeductEtcRows');
 }
-function addSettleDeductRow(type, amount, memo, catName, catId){
+function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
   type = (type==='bank') ? 'bank' : 'etc';
-  // ── 부호 정책 (2026-05-17 갈아엎기) ──
-  // 옛 의미 보존: amount 양수 = 금고에서 빠짐 (book 차감), 음수 = 들어옴 (book 증가, -(-)=+)
-  // UI 토글: '−' = 빠짐 (sign=1, default), '+' = 들어옴 (sign=-1)
+  // ── 부호 정책: amount 양수 = 빠짐, 음수 = 들어옴 (etc만 토글) ──
   amount = parseInt(amount)||0;
-  const sign = (amount<0) ? -1 : 1; // 음수 amount면 들어옴 (sign=-1, UI '+')
+  const sign = (amount<0) ? -1 : 1;
   const absAmt = Math.abs(amount);
   memo = memo || '';
   catName = catName || ''; catId = catId || '';
   const cont = _settleDeductContainerFor(type);
   if(!cont) return;
   const id = 'stDed_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-  const catLabel = catName ? `🏷️ ${catName}` : '🏷️ 분류 선택';
-  const catColor = catName ? 'var(--text)' : 'var(--gray-500)';
-  // etc 행만 ± 토글. bank은 항상 빠짐(통장 입금)
-  // sign=1(빠짐) → '−' 빨강 / sign=-1(들어옴) → '+' 초록
-  const signBtnHtml = type==='etc'
-    ? `<button class="st-ded-sign" data-action="toggleStDedSign|${id}" title="빠짐/들어옴 토글" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--gray-200);background:${sign>0?'var(--danger-light)':'#DCFCE7'};color:${sign>0?'var(--danger)':'#15803D'};font-size:16px;font-weight:900;cursor:pointer;padding:0;">${sign>0?'−':'+'}</button>`
-    : '';
-  const gridCols = type==='etc' ? '32px 1fr 28px' : '1fr 28px';
-  cont.insertAdjacentHTML('beforeend', `
-    <div class="st-deduct-row" data-id="${id}" data-type="${type}" data-sign="${sign}" data-cat-id="${catId}" data-cat-name="${catName.replace(/"/g,'&quot;')}" style="display:grid;grid-template-columns:${gridCols};gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
-      ${signBtnHtml}
-      <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;text-align:right;min-width:0;" data-input="onStDedAmountInput|this">
-      <button class="x-btn" data-action="removeSettleDeductRow|${id}" style="width:26px;height:26px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-size:14px;font-weight:800;cursor:pointer;padding:0;">×</button>
-      <button class="st-ded-cat" data-action="pickStDedCategory|${id}" style="grid-column:1 / -1;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;background:#fff;text-align:left;cursor:pointer;color:${catColor};">${catLabel}</button>
-      <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="grid-column:1 / -1;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
-    </div>
-  `);
+  // 공통 카드/입력 스타일 (B안 2줄 카드)
+  const cardStyle='background:var(--gray-100);border-radius:14px;padding:12px 13px;margin-bottom:8px;';
+  const amtStyle='flex:1;border:none;background:transparent;font-size:20px;font-weight:900;color:var(--text);min-width:0;';
+  const memoStyle='flex:1;border:none;background:#fff;border-radius:8px;padding:9px 10px;font-size:12px;min-width:0;';
+  if(type==='bank'){
+    // ── 통장 입금: 1줄 고정(삭제 X), 입금자 칩(직원 연결, 기본 현재 로그인) ──
+    empId = empId || (currentEmp?.id||'');
+    if(empId && !empName){ const e=(employees||[]).find(x=>x.id===empId); empName = e?e.name:''; }
+    empName = empName || (currentEmp?.name||'');
+    const empLabel = empName ? `👤 ${empName}` : '👤 입금자';
+    cont.insertAdjacentHTML('beforeend', `
+      <div class="st-deduct-row" data-id="${id}" data-type="bank" data-sign="1" data-emp-id="${empId}" data-emp-name="${empName.replace(/"/g,'&quot;')}" style="${cardStyle}">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+          <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="${memoStyle}">
+          <button class="st-ded-emp" data-action="pickDepositor|${id}" title="입금자 (탭하면 변경)" style="flex:0 0 auto;padding:9px 11px;border:1px solid var(--blue);border-radius:8px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue);cursor:pointer;white-space:nowrap;">${empLabel}</button>
+        </div>
+      </div>
+    `);
+  } else {
+    // ── 현금 지출: 2줄 카드, 부호 토글 + 지출 분류 칩 ──
+    const catLabel = catName ? catName : '🏷️ 지출 분류';
+    const catStyle = catName
+      ? 'border:1px solid var(--blue);background:var(--blue-light);color:var(--blue);'
+      : 'border:1px dashed var(--gray-300);background:#fff;color:var(--gray-500);';
+    cont.insertAdjacentHTML('beforeend', `
+      <div class="st-deduct-row" data-id="${id}" data-type="etc" data-sign="${sign}" data-cat-id="${catId}" data-cat-name="${catName.replace(/"/g,'&quot;')}" style="${cardStyle}">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="st-ded-sign" data-action="toggleStDedSign|${id}" title="빠짐/들어옴 토글" style="flex:0 0 26px;height:26px;border-radius:50%;border:none;background:${sign>0?'var(--danger-light)':'#DCFCE7'};color:${sign>0?'var(--danger)':'#15803D'};font-size:15px;font-weight:900;cursor:pointer;padding:0;">${sign>0?'−':'+'}</button>
+          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
+          <button class="x-btn" data-action="removeSettleDeductRow|${id}" style="flex:0 0 24px;height:24px;border-radius:50%;border:none;background:#fff;color:var(--gray-400);font-size:14px;cursor:pointer;padding:0;">×</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+          <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="${memoStyle}">
+          <button class="st-ded-cat" data-action="pickStDedCategory|${id}" style="flex:0 0 auto;padding:9px 11px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;${catStyle}">${catLabel}</button>
+        </div>
+      </div>
+    `);
+  }
   recalcSettle2();
+}
+// ─── 통장 입금 입금자 변경 (탭하면 직원 순환, 직원 연결) ───
+function pickDepositor(rowId){
+  const row=document.querySelector('.st-deduct-row[data-id="'+rowId+'"]');
+  if(!row) return;
+  if(!employees || !employees.length){ toast('등록된 직원이 없어요','warn'); return; }
+  const curId=row.dataset.empId;
+  const idx=employees.findIndex(e=>e.id===curId);
+  const next=employees[(idx+1)%employees.length];
+  row.dataset.empId=next.id;
+  row.dataset.empName=next.name;
+  const btn=row.querySelector('.st-ded-emp');
+  if(btn) btn.textContent='👤 '+next.name;
 }
 // ─── 부호 토글 (etc 행만, 양방향) ───
 // sign=1: 빠짐 (UI '−'), sign=-1: 들어옴 (UI '+')
@@ -442,8 +477,10 @@ function pickStDedCategory(rowId){
       row.dataset.catName=catName;
       const btn=row.querySelector('.st-ded-cat');
       if(btn){
-        btn.textContent=catName?`🏷️ ${catName}`:'🏷️ 분류 선택';
-        btn.style.color=catName?'var(--text)':'var(--gray-500)';
+        const isSet = catName && catName!=='미분류';
+        btn.textContent = isSet ? catName : '🏷️ 지출 분류';
+        if(isSet){ btn.style.border='1px solid var(--blue)'; btn.style.background='var(--blue-light)'; btn.style.color='var(--blue)'; }
+        else { btn.style.border='1px dashed var(--gray-300)'; btn.style.background='#fff'; btn.style.color='var(--gray-500)'; }
       }
     }
   });
@@ -484,7 +521,8 @@ function getSettleDeductRows(){
     const memo = row.querySelector('.st-ded-memo').value || '';
     const category_id = row.dataset.catId || null;
     const category_name = row.dataset.catName || '';
-    if(abs>0) out.push({type, amount, memo, category_id, category_name});
+    const employee_id = (type==='bank') ? (row.dataset.empId || null) : null; // 통장입금 입금자
+    if(abs>0) out.push({type, amount, memo, category_id, category_name, employee_id});
   });
   return out;
 }
@@ -1121,7 +1159,7 @@ async function editSettlement(dateStr, silent){
     if(bankCont) bankCont.innerHTML='';
     if(etcCont) etcCont.innerHTML='';
     if(Array.isArray(items.deductions) && items.deductions.length){
-      items.deductions.forEach(d=>addSettleDeductRow(d.type||'etc', d.amount||0, d.memo||'', d.category_name||'', d.category_id||''));
+      items.deductions.forEach(d=>addSettleDeductRow(d.type||'etc', d.amount||0, d.memo||'', d.category_name||'', d.category_id||'', d.employee_id||'', ''));
     } else {
       // 옛 데이터: 단일 값 → type별 1행씩
       addSettleDeductRow('etc', items.deduct_etc||0, items.deduct_etc_memo||'', '', '');
