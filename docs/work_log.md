@@ -57,8 +57,15 @@
 - **배지 위계 통일** — 직구 배지도 큰글자=종류(직구 영수증)/작은글자=부제(마트·일반). 거래처명은 거래처 행으로 분리.
 - **각 행 타이틀** — 영수증 종류 / 거래처 / 영수증 사진 (`.rcp-row-ttl`).
 - **테두리 제거** — 모드배지·거래처행·사진영역·rcpPagesArea 테두리 제거, 배경+그림자로만 구분(토스 스타일).
-- 신규 함수: `renderRcpVendorRow(selected)`, `_setRcpUploadEnabled(on)`, `rcpBack()`. 영수증 화면 상단 ‹ 뒤로가기로 종류 선택↔지출관리 이동. 다시 고르기 버튼 제거. 거래처 선택 시트 ✕는 단순 닫기. `cancelRcpVendorPick` 삭제.
+- 신규 함수: `renderRcpVendorRow(selected)`, `_setRcpUploadEnabled(on)`, `rcpBack()`. 영수증 화면 상단 ‹ 뒤로가기로 종류 선택↔지출관리 이동. 거래처 선택 시트 ✕는 단순 닫기. `cancelRcpVendorPick` 삭제.
 - 검증: node --check 통과, HTML/JS ID 8개 일치. 실제 클릭은 사장님 골든패스(환경 CDN 차단).
+
+### 추가: 뒤로가기 + 다시 고르기 둘 다 제공 (PR #353)
+- 사장님 피드백: 다시 고르기 없으니 불편. 뒤로가기만으로는 종류 재선택 클릭 수 증가.
+- 최종 형태: 상단 ‹ 뒤로가기 + 모드 배지 우측 **↩ 다시 고르기** 버튼 둘 다 제공.
+  - 뒤로가기(`rcpBack`): 종류 선택 화면 or 지출관리 이동
+  - 다시 고르기(배지 버튼): `resetRcpMode()` — 종류 선택 처음으로
+- 병합 충돌 2회(work_log.md, index.html origin/main vs HEAD) — 매번 HEAD 채택 후 해소.
 
 ### 후속 (별도)
 - 신규 카테고리 생성 시 안 쓰인 무지개색 자동 기본값 배정(saveExpCat) — 확장성.
