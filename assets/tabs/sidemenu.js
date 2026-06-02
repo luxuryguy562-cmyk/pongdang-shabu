@@ -354,8 +354,8 @@ function renderVendorList(){
   const cardsHtml=list.length?list.map(v=>{
     const t=vendorMonthTotals[v.id];
     const monthLine=t&&t.count
-      ? `<div class="vc-month has">이번달 ${fmt(t.total)}원 · ${t.count}건</div>`
-      : `<div class="vc-month empty">이번달 주문 없음</div>`;
+      ? `<div class="vc-month has">${fmt(t.total)}원 · ${t.count}건</div>`
+      : `<div class="vc-month empty">주문 없음</div>`;
     const badge=!v.is_active?' <span class="badge badge-gray" style="font-size:9px;">거래종료</span>':'';
     return `<div class="vendor-card ${v.is_active?'':'inactive'}" data-vendor-id="${v.id}" data-action="openVendorDetail|${v.id}">
       <div class="vc-head">
