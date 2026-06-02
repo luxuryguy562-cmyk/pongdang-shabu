@@ -126,4 +126,11 @@ POS, 수동, OCR 등 소스별 탭/뷰 분리 → 사장님이 한눈에 못 봄
 
 ---
 
+## #135 자릿수 자동조정 = 전역 규칙 (화면별 하드코딩 금지)
+
+KPI 카드 `font-size:22px` 고정 + overflow 처리 없음 → 평균 데이터는 멀쩡, 큰 매장(근무시간 천 시간·인건비 억 단위)에서 카드 밖 넘침.  
+**해결**: 공통 클래스(`.kpi-val`, `.num-cell`)에 `clamp()` + `min-width:0; overflow:hidden` + `tabular-nums` 박고 모든 화면 상속. 새 화면마다 박는 건 하드코딩. `agents/designer.md` 7-A 자릿수 표 + `tester.md` 큰 값 자동조정 검증 의무 참조.
+
+---
+
 > 표 정렬 규칙 (옛 #79·#85) → `agents/designer.md` 절대 규칙 1번으로 교체됨 (2026-06-02).
