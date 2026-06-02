@@ -972,6 +972,8 @@ ${modeHint}${multiPageHint}
     // 영수증 날짜 상단 입력칸에 AI 인식 날짜 표시 + 이상 경고 (2026-06-02: 날짜 hidden 문제 해결)
     const _rcpDateEl=document.getElementById('rcpReceiptDate');
     if(_rcpDateEl){ _rcpDateEl.value=(list[0]&&list[0].date)||ymdLocal(new Date()); _checkRcpDateWarn(_rcpDateEl.value); }
+    const _rcpVenEl=document.getElementById('rcpReceiptVendor');
+    if(_rcpVenEl){ _rcpVenEl.value=(list[0]&&list[0].vendor)||rcpVendorName||''; }
     // 📊 합계 + 📄 페이지 박스 (pageInfo + photoCount 함께 전달)
     _renderRcpSumCheck(receiptTotalSum, list, pageInfo, pageCount);
     // 거래처 모드 = vendor 컬럼 숨김 + 상단 배지 표시
@@ -1033,7 +1035,7 @@ function openReceiptCatPicker(idx){
       tr.dataset.catId=resolveReceiptCatId(cat)||'';
       const btn=tr.querySelector('.c-cBtn');
       if(btn){
-        btn.innerHTML=formatRcpCatLabel(cat);
+        btn.innerHTML=cat?formatRcpCatLabel(cat):'🏷️ 분류';
         btn.classList.toggle('empty',!cat);
       }
       // ✨ 뱃지 동적 갱신 + 페이드인 (사장님 호소: 학습 시그널 명확화)
@@ -1074,18 +1076,24 @@ function buildReceiptRow(i={}) {
   // ⚠️ 의심행 시각화 (2026-05-19 (4)+) — 행 배경 노란색 + X 옆 ⚠️ + 클릭시 차이 안내 툴팁
   // 토스트는 8초면 사라지지만 행 시각화는 영구. 사장님이 어느 행이 사고인지 즉시 인지.
   const suspect = i._suspect;
-  const rowStyle = suspect ? ' style="background:#FEF3C7;"' : '';
-  const suspectMark = suspect ? `<span title="단가×수량(${fmt(suspect.calc)}) ≠ 합계 — ${fmt(suspect.diff)}원 차이. 수량 확인 필요" style="display:inline-block;margin-left:3px;font-size:13px;cursor:help;vertical-align:middle;">⚠️</span>` : '';
-  return `<tr id="row-${idx}"${rowStyle} data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
-    <td><button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-weight:800;cursor:pointer;" class="x-btn" data-action="openReasonSheet|${idx}">X</button>${suspectMark}</td>
-    <td class="col-vendor"><input type="text" class="c-v" value="${esc(i.vendor||'')}"></td>
-    <td><input type="text" class="c-i" value="${esc(i.item||'')}"></td>
-    <td><input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></td>
-    <td><input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></td>
-    <td><input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this"></td>
-    <td class="col-cat"><span class="rcp-cat-cell">${learnBadge}<button type="button" class="c-cBtn${emptyCls}" data-action="openReceiptCatPicker|${idx}">${label}</button></span></td>
+  const suspectCls = suspect ? ' suspect' : '';
+  const suspectMark = suspect ? `<span title="단가×수량(${fmt(suspect.calc)}) ≠ 합계 — ${fmt(suspect.diff)}원 차이. 수량 확인 필요" style="font-size:13px;cursor:help;">⚠️</span>` : '';
+  return `<div class="rcp-item-card${suspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
+    <div class="ric-l1">
+      <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목">
+      <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
+      <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
+    </div>
+    <div class="ric-l2 rcp-cat-cell">
+      ${suspectMark}
+      <span class="ric-mini">단가 <input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></span>
+      <span class="ric-mini">수량 <input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></span>
+      ${learnBadge}
+      <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
+    </div>
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
-  </tr>`;
+    <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
+  </div>`;
 }
 // 단가/수량 입력 시 자동 금액 계산 (사용자 편의 — 2026-05-19)
 function onRcpUnitPriceInput(el, idx){
@@ -1132,6 +1140,10 @@ function onRcpDateChange(el){
   document.querySelectorAll('#resTable .c-d').forEach(c=>c.value=v);
   _checkRcpDateWarn(v);
 }
+// 영수증 거래처 변경 → 모든 행 c-v 동기화 (영수증 1장 = 1거래처, 2026-06-02)
+function onRcpVendorChange(el){
+  document.querySelectorAll('#resTable .c-v').forEach(c=>c.value=el.value);
+}
 function _checkRcpDateWarn(dateStr){
   const warn=document.getElementById('rcpDateWarn'); if(!warn) return;
   const today=ymdLocal(new Date());
@@ -1158,15 +1170,17 @@ function selectReason(r){
 }
 async function saveReceipt(){
   if(!guardStore()) return;
-  // 상단 영수증 날짜를 모든 행에 반영 (영수증 1장 = 1날짜, 2026-06-02)
+  // 상단 영수증 날짜·거래처를 모든 행에 반영 (영수증 1장 = 1날짜·1거래처, 2026-06-02)
   const _topDate=document.getElementById('rcpReceiptDate')?.value;
   if(_topDate) document.querySelectorAll('#resTable .c-d').forEach(c=>c.value=_topDate);
+  const _topVendor=document.getElementById('rcpReceiptVendor')?.value||'';
+  if(_topVendor) document.querySelectorAll('#resTable .c-v').forEach(c=>c.value=_topVendor);
   // ─── 새 기능: 거래처 모드면 vendor_id + 카테고리 자동 박힘, 직구 모드면 vendor_id NULL + AI 분류 그대로 ───
   const isVendorMode = rcpMode === 'vendor' && rcpVendorId;
   // 영수증 1장 = 그룹 UUID 1개 (2026-05-19 사장님 호소 "각각 산 것처럼 보임" 해결)
   // 모든 행에 동일 group_id 박음 → 기록내역 그룹 묶음 표시 + 그룹 편집·삭제 가능
   const groupId = (typeof crypto!=='undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
-  const rows=Array.from(document.querySelectorAll('#resTable tr')).map((tr,idx)=>{
+  const rows=Array.from(document.querySelectorAll('#resTable .rcp-item-card')).map((tr,idx)=>{
     // 거래처 모드: 사용자가 사전 선택한 카테고리 강제 사용 (AI 분류 무시)
     const cat = isVendorMode
       ? (rcpCatName || (tr.dataset.cat||'').trim())
