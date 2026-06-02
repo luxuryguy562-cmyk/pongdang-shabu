@@ -3493,3 +3493,25 @@ const COMMON_BANK_RULES=[
 ### 교훈
 - "통일감"은 화면별 감각이 아니라 **토큰 시스템 준수** 문제. 토큰만 지키면 자동으로 한 가족이 된다.
 - dev_lessons #69·#781 연장: 통일감은 유사 패턴 모두 + **같은 토큰**.
+
+---
+
+## #134 영수증 결과 — 잔재 클래스 우선순위 역전 + 진입 경로 우회로 UI 누락 (2026-06-02)
+
+### 증상
+- 사장님: 영수증 결과 카드가 "줄 칸 다 차지". 단가·수량이 **세로로 쌓임**.
+- 사장님: 거래처에서 직접 영수증 진입 시 **거래처 선택 행 안 뜸 + 에러 느낌**. (지출 화면 진입은 정상)
+
+### 원인 1 — 잔재 클래스가 CSS 우선순위 역전을 일으킴
+- 새 카드 L2 `<div class="ric-l2 rcp-cat-cell">`에 **옛 표(table)용** `.rcp-cat-cell{flex-direction:column;align-items:center}`가 그대로 붙어 있었음 → 카드인데 세로 정렬.
+- 더 구체적인 `.rcp-item-card .ric-l2.rcp-cat-cell{flex-direction:row}` 오버라이드를 넣어도 **계산값이 column으로 유지**되는 이상 현상(matches=true인데 속성 미적용). 우선순위로 싸우지 말고 **잔재 클래스 자체를 제거**하는 게 정답(헌법 1-6).
+- 조치: 카드 L2에서 `rcp-cat-cell` 제거 + JS `querySelector('.rcp-cat-cell')`→`.ric-l2` + 죽은 `.rcp-cat-cell` CSS 삭제.
+
+### 원인 2 — 진입 경로가 정상 셋업을 "우회"
+- `openRcpReceiptFromVendor`가 주석에 "setRcpMode 우회"라며 `rcpMode`만 직접 박고 **거래처 행 표시(`renderRcpVendorRow(true)`)·행 노출·업로드 활성화를 안 함** → 이미 고른 거래처가 화면에 안 보임.
+- 조치: 정상 경로(`setRcpMode`+`pickRcpVendor`)와 **동일한 UI 셋업**을 진입 함수에 명시.
+
+### 교훈
+- **"표 → 카드" 같은 갈아엎기 후엔 옛 클래스 잔재를 반드시 떼라.** 잔재 클래스는 새 레이아웃에 조용히 먹어든다(dev_lessons #133 토큰 통일의 연장).
+- **"우회"라고 주석 단 경로 = 빙산.** 정상 경로가 하는 셋업을 다 빼먹어 UI 누락·에러를 부른다. 우회 대신 정상 경로와 같은 셋업을 호출하라.
+- 검증은 Playwright Mock로 **실제 styles.css·receipt.js**를 띄워 계산 스타일·DOM 상태까지 확인(추측 금지, 헌법 1-7-A).
