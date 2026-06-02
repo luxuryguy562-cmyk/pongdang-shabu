@@ -1044,9 +1044,14 @@ async function loadDashboard(force){
         const prevSale=prevDailySalesMap[lastSaleDay]||0;
         const prevProfit=prevSale-prevExp;
         const profitEl=document.getElementById('dashTopProfitAmt');
-        profitEl.innerText=(dayProfit>=0?'+':'-')+fmt(Math.abs(dayProfit))+'원';
-        profitEl.classList.toggle('red', dayProfit<0);
-        profitEl.classList.toggle('green', dayProfit>=0);
+        const _isP=dayProfit>=0;  // 수익/손해 단어 전환 (2026-06-02)
+        profitEl.innerText=(_isP?'+':'')+fmt(Math.abs(dayProfit))+'원';
+        profitEl.classList.toggle('red', !_isP);
+        profitEl.classList.toggle('green', _isP);
+        const _pLb=document.getElementById('dashTopProfitLb');
+        if(_pLb) _pLb.innerText=_isP?'오늘 수익':'오늘 손해';
+        const _pDot=document.getElementById('dashTopProfitDot');
+        if(_pDot){ _pDot.classList.toggle('green',_isP); _pDot.classList.toggle('red',!_isP); }
         document.getElementById('dashTopExpenseAmt').innerText='-'+fmt(dayExp)+'원';
         const renderDelta=(el,m)=>{
           if(!el)return;
@@ -1129,8 +1134,10 @@ async function loadDashboard(force){
         _mSale.innerText=fmt(totalRevenue||0);
         const _profitV=(totalRevenue||0)-(totalCost||0);
         if(_mSub){
-          const _sign=_profitV>=0?'+':'-';
-          _mSub.innerHTML=`지출 <b>${fmt(totalCost)}원</b> · 순수익 <b${_profitV<0?' class="red"':''}>${_sign}${fmt(Math.abs(_profitV))}원</b>`;
+          // 수익/손해 단어 전환 (적자/흑자·순수익 표현 폐기 — 2026-06-02)
+          const _pWord=_profitV>=0?'수익':'손해';
+          const _pSign=_profitV>=0?'+':'';
+          _mSub.innerHTML=`지출 <b>${fmt(totalCost)}원</b> · ${_pWord} <b${_profitV<0?' class="red"':''}>${_pSign}${fmt(Math.abs(_profitV))}원</b>`;
         }
         // 진행 일자 → 라벨 우측 배지. 사장님 표현 그대로 "5월 22일 / 31일"
         if(_mProg){
@@ -1167,6 +1174,25 @@ async function loadDashboard(force){
             _mMom.innerHTML=`전월대비 매출 <b style="color:${_sCol}">${_sArr}${Math.abs(_dS)}%</b> · 지출 <b style="color:${_eCol}">${_eArr}${Math.abs(_dE)}%</b>`;
             _mMom.style.display='';
           } else { _mMom.style.display='none'; }
+        }
+        // ─── 새 기능: 예상마감 (이대로 가면 월말 예상) — 2026-06-02 ───
+        // estRevenue/estNetProfit = loadDashboard 399~406줄 기계산값 (변동비만 일할 추정)
+        const _fcBlock=document.getElementById('dashHomeFcBlock');
+        if(_fcBlock){
+          if(isCurMonth && passedDays>0 && passedDays<lastDay){
+            const _fcSaleEl=document.getElementById('dashHomeFcSale');
+            const _fcProfitEl=document.getElementById('dashHomeFcProfit');
+            const _fcProfitLb=document.getElementById('dashHomeFcProfitLb');
+            if(_fcSaleEl) _fcSaleEl.innerText=fmt(estRevenue)+'원';
+            const _isFcP=estNetProfit>=0;
+            if(_fcProfitLb) _fcProfitLb.innerText=_isFcP?'예상 수익':'예상 손해';
+            if(_fcProfitEl){
+              _fcProfitEl.innerText=(_isFcP?'+':'')+fmt(Math.abs(estNetProfit))+'원';
+              _fcProfitEl.classList.toggle('red',!_isFcP);
+              _fcProfitEl.classList.toggle('green',_isFcP);
+            }
+            _fcBlock.style.display='';
+          } else { _fcBlock.style.display='none'; }
         }
       }
     } catch(e){ console.warn('[dashHomeMonth]', e.message); }
