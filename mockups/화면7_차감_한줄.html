@@ -27,7 +27,7 @@ body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Not
 .row .sign{flex:0 0 30px;height:36px;border:none;border-radius:8px;background:var(--danger-light);color:var(--danger);font-size:16px;font-weight:900;cursor:pointer;}
 .row .amt{flex:0 0 96px;border:none;background:#fff;border-radius:8px;padding:9px 8px;font-size:14px;font-weight:800;text-align:right;min-width:0;}
 .row .memo{flex:1;border:none;background:#fff;border-radius:8px;padding:9px 10px;font-size:12px;min-width:0;}
-.row .cat{flex:0 0 34px;height:36px;border:1px dashed var(--g300);background:transparent;border-radius:8px;font-size:14px;cursor:pointer;color:var(--g400);}
+.row .cat{flex:0 0 auto;height:36px;padding:0 10px;border:1px dashed var(--g300);background:transparent;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;color:var(--g500);white-space:nowrap;}
 .row .cat.set{border-style:solid;border-color:var(--blue);color:var(--blue);background:var(--blue-light);}
 .row .x{flex:0 0 26px;height:26px;border:none;border-radius:50%;background:var(--danger-light);color:var(--danger);font-size:13px;font-weight:800;cursor:pointer;}
 .addbtn{width:100%;border:1px dashed var(--g300);background:transparent;border-radius:10px;padding:9px;font-size:12px;color:var(--g600);font-weight:700;cursor:pointer;margin-top:2px;}
@@ -62,20 +62,20 @@ body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Not
       <button class="sign">−</button>
       <input class="amt" placeholder="금액">
       <input class="memo" placeholder="메모 (예: 식자재)">
-      <button class="cat" title="분류">🏷️</button>
+      <button class="cat">🏷️ 분류</button>
       <button class="x">×</button>
     </div>
     <div class="row">
       <button class="sign">−</button>
       <input class="amt" value="380,000">
       <input class="memo" value="식자재 구매">
-      <button class="cat set" title="분류">🏷️</button>
+      <button class="cat set">식자재비</button>
       <button class="x">×</button>
     </div>
     <button class="addbtn">+ 현금 지출 추가</button>
   </div>
 
-  <div class="note">한 줄에 <b>금액 + 메모</b>. 현금 지출은 <b>🏷️</b> 눌러야 분류 선택(평소엔 회색, 달면 파랑).<br>통장 입금은 분류 없음 → 더 깔끔.</div>
+  <div class="note">한 줄에 <b>금액 + 메모</b>. 현금 지출은 <b>[🏷️ 분류]</b> 버튼(미선택 회색 → 선택 시 카테고리명·파랑).<br>통장 입금은 분류 없음 → 더 깔끔.</div>
   <div style="height:30px"></div>
 </div>
 </body>
