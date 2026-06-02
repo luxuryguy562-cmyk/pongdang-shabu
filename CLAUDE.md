@@ -98,7 +98,14 @@
 - 기존 함수 재사용(`fmt·unFmt·formatNumberInput·guardStore`). 같은 역할 새로 만들지 말 것.
 - 표 데이터 = `<table>` 태그(grid 금지). Supabase = `sb.from('표') + .eq('store_id', currentStore.id)` 필수.
 - 에러 기술노출 금지(`alert('저장 실패')` 수준). camelCase + 한글주석. 새 코드 = 해당 탭 모듈, 공통 = `common.js`.
-- **디자인 점검**(쉼표·정렬·표 줄맞춤·간격·폰트·하드코딩·360px·HTML목업·통일감) = `agents/designer.md` 단일 소스. designer가 매번 점검 — 헌법 중복 X.
+
+**디자인 절대 원칙 — coder·designer 모두 매 화면 확인 (통일감 훼손 = 즉시 되돌림)**
+- **카드**: `border-radius:14px` + `var(--card-shadow)` 재사용. 직접 값 박지 말 것.
+- **색상**: `var(--blue)` / `var(--success)` / `var(--danger)` / `var(--gray-*)` 재사용. hex(색상 코드) 직접 박지 말 것.
+- **숫자·금액 셀**: 공통 클래스(`.kpi-big` / `.att-kpi-val` / `.ds-amt` 등) 재사용. 새 클래스 만들면 `clamp()` + `min-width:0` + `overflow:hidden` 필수.
+- **표**: `table-layout:fixed`, 헤더 가운데, 숫자·금액 우측 정렬 + `tabular-nums`(등폭 숫자).
+- **모바일**: 360px 기준. UI(화면) 변경 시 HTML 목업(`docs/mockups/`) 먼저.
+- 세부 규칙·자릿수 추정·실측 계산 = `agents/designer.md`
 
 ---
 
