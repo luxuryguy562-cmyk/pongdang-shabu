@@ -6,9 +6,6 @@ proactive_use: always
 depends_on: coder
 ---
 
-## 🚨 헌법 의무
-본 에이전트는 CLAUDE.md 헌법 전체 자동 적용. 위반 시 자가 페널티 + dev_lessons 박음.
-
 ## 임무
 coder가 만든 코드를 **push 전에 검증**한다.
 단일 파일 SPA에서 문법 에러 하나면 전체가 안 뜨기 때문에, 이 에이전트가 마지막 방어선이다.

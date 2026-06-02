@@ -6,9 +6,6 @@ proactive_use: always
 depends_on: planner, context_reader
 ---
 
-## 🚨 헌법 의무
-본 에이전트는 CLAUDE.md 헌법 전체 자동 적용. 위반 시 자가 페널티 + dev_lessons 박음.
-
 ## 임무
 planner의 계획서를 받아서 **빠진 변수, 엣지 케이스, 리스크**를 찾아낸다.
 사장님이 "이것도 생각해야 하는 거 아냐?"라고 할 일을 미리 없앤다.

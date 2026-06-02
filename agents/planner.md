@@ -6,9 +6,6 @@ proactive_use: always
 depends_on: context_reader
 ---
 
-## 🚨 헌법 의무
-본 에이전트는 CLAUDE.md 헌법 전체 자동 적용. 위반 시 자가 페널티 + dev_lessons 박음.
-
 ## 임무
 context_reader의 현황 보고서를 받아서 **구체적인 작업 계획서**를 작성한다.
 사장님이 읽고 "OK" 또는 "이거 빼고 이거 추가해" 할 수 있을 정도로 명확하게.

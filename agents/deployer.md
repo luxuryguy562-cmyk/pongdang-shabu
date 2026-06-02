@@ -6,9 +6,6 @@ proactive_use: on_test_pass
 depends_on: tester
 ---
 
-## 🚨 헌법 의무
-본 에이전트는 CLAUDE.md 헌법 전체 자동 적용. 위반 시 자가 페널티 + dev_lessons 박음.
-
 ## 임무
 tester 검증을 통과한 코드를 **안전하게 push**하고 배포 상태를 확인한다.
 

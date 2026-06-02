@@ -6,9 +6,6 @@ proactive_use: on_approval
 depends_on: planner (승인된 계획서)
 ---
 
-## 🚨 헌법 의무
-본 에이전트는 CLAUDE.md 헌법 전체 자동 적용. 위반 시 자가 페널티 + dev_lessons 박음.
-
 ## 임무
 승인된 계획서를 **정확히** 코드로 구현한다. 더하지도 빼지도 않는다.
 
