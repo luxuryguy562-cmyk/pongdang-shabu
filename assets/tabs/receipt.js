@@ -876,7 +876,7 @@ ${modeHint}${multiPageHint}
 [응답]
 {${isVendorModeAI ? '' : `
   "vendor": "상호명",`}
-  "date": "영수증 발행일 YYYY-MM-DD",
+  "date": "영수증 발행일 YYYY-MM-DD (영수증에 연도가 명확히 안 보이면 ${new Date().getFullYear()}년으로)",
   "items": [ ${isVendorModeAI ? '{i,u,q,p}' : '{i,u,q,p,c}'} 행 배열 ],
   "total_sum": 영수증 박스값(정수,없으면 null) — 우선순위: 금일합계>합계액>결제금액. 전미수·총합계·잔액·누계·채권 무시,
   "page_info": {"current":현재페이지,"total":총페이지수} — 영수증에 "Page (N/M)" 인쇄 시. 없으면 {"current":1,"total":1}
@@ -969,6 +969,9 @@ ${modeHint}${multiPageHint}
     rowCount=0;
     document.getElementById('resTable').innerHTML=list.map(i=>buildReceiptRow(i)).join('');
     rowCount=list.length;
+    // 영수증 날짜 상단 입력칸에 AI 인식 날짜 표시 + 이상 경고 (2026-06-02: 날짜 hidden 문제 해결)
+    const _rcpDateEl=document.getElementById('rcpReceiptDate');
+    if(_rcpDateEl){ _rcpDateEl.value=(list[0]&&list[0].date)||ymdLocal(new Date()); _checkRcpDateWarn(_rcpDateEl.value); }
     // 📊 합계 + 📄 페이지 박스 (pageInfo + photoCount 함께 전달)
     _renderRcpSumCheck(receiptTotalSum, list, pageInfo, pageCount);
     // 거래처 모드 = vendor 컬럼 숨김 + 상단 배지 표시
@@ -1122,7 +1125,20 @@ function onReceiptAmountInput(inputEl){
   const diff=formatted.length-before.length;
   try{ inputEl.setSelectionRange(pos+diff, pos+diff); }catch(e){}
 }
-function addReceiptRow(){document.getElementById('resultArea').style.display='block';document.getElementById('resTable').insertAdjacentHTML('beforeend',buildReceiptRow({date:ymdLocal(new Date())}));}
+function addReceiptRow(){document.getElementById('resultArea').style.display='block';document.getElementById('resTable').insertAdjacentHTML('beforeend',buildReceiptRow({date:document.getElementById('rcpReceiptDate')?.value||ymdLocal(new Date())}));}
+// ─── 영수증 날짜 변경 → 모든 행 동기화 (영수증 1장 = 1날짜) + 이상 경고 (2026-06-02) ───
+function onRcpDateChange(el){
+  const v=el.value; if(!v) return;
+  document.querySelectorAll('#resTable .c-d').forEach(c=>c.value=v);
+  _checkRcpDateWarn(v);
+}
+function _checkRcpDateWarn(dateStr){
+  const warn=document.getElementById('rcpDateWarn'); if(!warn) return;
+  const today=ymdLocal(new Date());
+  const yearAgo=new Date(); yearAgo.setFullYear(yearAgo.getFullYear()-1);
+  const bad = !dateStr || dateStr>today || new Date(dateStr+'T00:00:00')<yearAgo;
+  warn.style.display=bad?'inline':'none';
+}
 // in-page 초기화 (2026-05-19 사장님 호소 "취소하면 PWA 재실행" 해결)
 // 옛 동작: location.reload() — saveReceipt rcpEntryReturn 분기에서 별도 처리
 function resetReceipt(){
@@ -1142,6 +1158,9 @@ function selectReason(r){
 }
 async function saveReceipt(){
   if(!guardStore()) return;
+  // 상단 영수증 날짜를 모든 행에 반영 (영수증 1장 = 1날짜, 2026-06-02)
+  const _topDate=document.getElementById('rcpReceiptDate')?.value;
+  if(_topDate) document.querySelectorAll('#resTable .c-d').forEach(c=>c.value=_topDate);
   // ─── 새 기능: 거래처 모드면 vendor_id + 카테고리 자동 박힘, 직구 모드면 vendor_id NULL + AI 분류 그대로 ───
   const isVendorMode = rcpMode === 'vendor' && rcpVendorId;
   // 영수증 1장 = 그룹 UUID 1개 (2026-05-19 사장님 호소 "각각 산 것처럼 보임" 해결)
@@ -1186,6 +1205,13 @@ async function saveReceipt(){
   if(missing.length){
     const detail=missing.map(r=>`${r._idx}행 "${r._cat}"`).join('\n• ');
     if(!confirm(`아래 분류는 카테고리 목록에 없어요:\n• ${detail}\n\n그래도 저장할까요?\n(분류명은 텍스트로 들어가지만 집계가 안 잡힐 수 있어요)`)) return;
+  }
+  // 날짜 이상 경고 (2023 등 AI 오인식 방지, 2026-06-02)
+  const _today=ymdLocal(new Date());
+  const _yearAgo=new Date(); _yearAgo.setFullYear(_yearAgo.getFullYear()-1);
+  const _badDates=[...new Set(rows.filter(r=>r.note==='정상'&&r.receipt_date&&(r.receipt_date>_today||new Date(r.receipt_date+'T00:00:00')<_yearAgo)).map(r=>r.receipt_date))];
+  if(_badDates.length){
+    if(!confirm(`⚠️ 영수증 날짜가 이상해요: ${_badDates.join(', ')}\n오늘은 ${_today}입니다.\nAI가 날짜를 잘못 읽었을 수 있어요 — 위 '📅 영수증 날짜'를 확인하세요.\n\n이대로 저장할까요?`)) return;
   }
   // 임시 진단 필드 제거 후 insert (_idx/_cat/_origItem은 DB 컬럼 X → 학습 전 분리)
   const learnMeta = rows.map(r => ({ item: r.item, origItem: r._origItem, category: r.category, note: r.note }));

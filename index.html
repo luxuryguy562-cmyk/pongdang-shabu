@@ -593,6 +593,12 @@
         </div>
         <!-- 📊 합계 확인 박스 (2026-05-19 사장님 결정: AI 행 합계 vs 영수증 원본) -->
         <div id="rcpSumCheck" style="background:#F3F4F6;border-radius:10px;padding:10px 12px;margin-bottom:14px;"></div>
+        <!-- 📅 영수증 날짜 (2026-06-02: 날짜 hidden이라 AI 오인식(2023 등) 확인 못 하던 문제 — 보이게) -->
+        <div style="background:#fff;border:1px solid var(--gray-200);border-radius:10px;padding:11px 13px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;">📅 영수증 날짜</span>
+          <input type="date" id="rcpReceiptDate" style="flex:1;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700;min-width:0;" data-change="onRcpDateChange|this">
+          <span id="rcpDateWarn" style="font-size:11px;color:var(--danger);font-weight:800;white-space:nowrap;display:none;">⚠️ 날짜 확인</span>
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr>
