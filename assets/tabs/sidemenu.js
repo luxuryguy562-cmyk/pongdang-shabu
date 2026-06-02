@@ -8415,6 +8415,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   document.getElementById('dashTopSalesCard').addEventListener('click',(e)=>{
     if(e.target.closest('#dashTopSalesActionRow'))return;
     if(e.target.closest('#dashTopSalesEmptyCta'))return;
+    if(e.target.closest('[data-stop]'))return; // 달력 버튼 등 미니 버튼은 카드 진입 X (2026-06-02)
     dashGoStage('today-detail');
   });
   document.getElementById('dashTopSalesInputBtn').addEventListener('click',(e)=>{
