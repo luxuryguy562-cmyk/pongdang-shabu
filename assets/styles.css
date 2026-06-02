@@ -178,13 +178,16 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .hub-mini.emphasized{text-align:center;align-items:center;}
 .hub-mini.emphasized .hub-mini-amt{font-size:15px;color:var(--success);}
 .hub-mini.emphasized .hub-mini-amt.miss{color:var(--danger);}
-/* 지출 카테고리 그리드 — 2컬럼 column 2줄 카드 (2026-05-19 사장님 호소: 글자 잘림 방지 + 거래채널과 통일감) */
-#expHubCatGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px;}
-#expHubCatGrid .hub-mini{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 14px;min-width:0;overflow:hidden;min-height:auto;}
-#expHubCatGrid .hub-mini-top{display:flex;align-items:center;gap:8px;width:100%;min-width:0;}
+/* 지출 카테고리 그리드 — 3컬럼(3x3) 세로 카드 (2026-06-02 사장님 요청: 3열 + 큰 금액 폰트 자동 축소로 잘림 방지) */
+#expHubCatGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px;}
+#expHubCatGrid .hub-mini{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 10px;min-width:0;overflow:hidden;min-height:auto;}
+#expHubCatGrid .hub-mini-top{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;min-width:0;}
 #expHubCatGrid .hub-mini-icon{margin-bottom:0;flex-shrink:0;}
-#expHubCatGrid .hub-mini-title{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
-#expHubCatGrid .hub-mini-amt{margin-top:0;font-size:15px;font-weight:800;color:var(--gray-400);font-variant-numeric:tabular-nums;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;}
+#expHubCatGrid .hub-mini-title{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+#expHubCatGrid .hub-mini-amt{margin-top:0;font-size:14px;font-weight:800;color:var(--gray-400);font-variant-numeric:tabular-nums;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;}
+/* 금액 자릿수 따라 폰트 자동 축소 — 좁은 3열 칸 잘림 방지 (JS _expAmtClass) */
+#expHubCatGrid .hub-mini-amt.amt-l{font-size:12px;}
+#expHubCatGrid .hub-mini-amt.amt-xl{font-size:10.5px;}
 .hub-full{width:100%;background:var(--white);border:0;border-radius:20px;padding:20px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;outline:none;box-shadow:var(--card-shadow);transition:transform .2s cubic-bezier(.2,.8,.4,1);font-family:inherit;}
 .hub-full:active{transform:scale(.985);}
 .hub-full-title{font-size:15px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;}
@@ -1292,6 +1295,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 /* ─── 토스 통일 패턴 클래스 (2026-05-22 디자인 통일) ─── */
 /* 큰 진입 박스 (홈 .dash-enter-v7 패턴을 전역 .toss-enter로 재사용) */
+/* 영수증 등록 행 타이틀 (영수증 종류 / 거래처 / 영수증 사진) — 2026-06-02 */
+.rcp-row-ttl{font-size:11px;font-weight:800;color:var(--toss-text-4);margin:0 2px 6px;letter-spacing:-0.2px;}
 .toss-enter{background:var(--white);border-radius:18px;padding:18px 20px;margin-bottom:10px;box-shadow:var(--card-shadow);display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);border:0;width:100%;text-align:left;font-family:inherit;}
 .toss-enter:active{transform:scale(.985);}
 .toss-enter .ic-wrap{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}

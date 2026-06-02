@@ -16,25 +16,97 @@ let rcpEntryReturn = null; // 영수증 저장 후 자동 복귀할 화면 ('cat
 function setRcpMode(mode){
   if(!guardStore()) return;
   rcpMode = mode;
-  // 이전 영수증 입력 방식 잔재 방지 (사용자가 photo/manual 선택 시 그때 박힘)
   rcpInputMethod = null;
-  if(mode === 'vendor'){
-    openRcpVendorPicker();
-    return;
-  }
-  // 직구·수동: vendor 정보 초기화
+  // 모드 바꿀 때 vendor 정보 초기화 (거래처는 행에서 다시 선택)
   rcpVendorId = null; rcpVendorName = ''; rcpCatId = null; rcpCatName = '';
+  document.getElementById('rcpModeSelect').style.display = 'none';
+  const modeTtl = document.getElementById('rcpModeTitle'); if(modeTtl) modeTtl.style.display = 'block';
+  document.getElementById('rcpModeBadge').style.display = 'flex';
   renderRcpModeBadge();
-  if(mode === 'manual'){
-    // 수동 입력: 사진 단계 건너뜀 → 모드 배지·가이드만 + 빈 행 1개
-    document.getElementById('rcpModeSelect').style.display = 'none';
-    document.getElementById('rcpModeBadge').style.display = 'flex';
-    document.getElementById('rcpGuideBox').style.display = 'block';
-    document.getElementById('uploadGroup').style.display = 'none';
-    manualReceipt();
+  const vTtl = document.getElementById('rcpVendorRowTitle');
+  const vRow = document.getElementById('rcpVendorRow');
+  if(mode === 'vendor'){
+    // 거래처 행 표시(미선택). 사진은 거래처 고른 뒤 활성화
+    if(vTtl) vTtl.style.display = 'block';
+    if(vRow) vRow.style.display = 'flex';
+    renderRcpVendorRow(false);
+    document.getElementById('rcpGuideBox').style.display = 'none';
+    _setRcpUploadEnabled(false);
   } else {
+    // 직구: 거래처 행 없이 바로 사진
+    if(vTtl) vTtl.style.display = 'none';
+    if(vRow) vRow.style.display = 'none';
+    document.getElementById('rcpGuideBox').style.display = 'block';
+    _setRcpUploadEnabled(true);
     showRcpUploadUI();
   }
+  const bt = document.getElementById('rcpBackTitle'); if(bt) bt.textContent = '종류 선택';
+}
+
+// 상단 뒤로가기 — 모드 선택됐으면 종류 선택으로 복귀, 아니면 지출관리로
+function rcpBack(){
+  if(rcpMode){ resetRcpMode(); }
+  else { nav('expHub'); }
+}
+
+// 거래처 선택 행 채우기 (미선택=파란 안내 / 선택=거래처명+자동분류)
+function renderRcpVendorRow(selected){
+  const icon = document.getElementById('rcpVendorRowIcon');
+  const val = document.getElementById('rcpVendorRowVal');
+  const sub = document.getElementById('rcpVendorRowSub');
+  const arrow = document.getElementById('rcpVendorRowArrow');
+  if(!val) return;
+  if(selected && rcpVendorName){
+    if(icon) icon.textContent = '🏪';
+    val.textContent = rcpVendorName;
+    val.style.color = 'var(--toss-text-1)';
+    if(sub){ sub.textContent = (rcpCatName || '미지정') + ' · 자동 분류'; sub.style.display = 'block'; }
+    if(arrow) arrow.textContent = '바꾸기 ›';
+  } else {
+    if(icon) icon.textContent = '🏠';
+    val.textContent = '거래처를 선택하세요';
+    val.style.color = 'var(--toss-blue)';
+    if(sub) sub.style.display = 'none';
+    if(arrow) arrow.textContent = '›';
+  }
+}
+
+// 사진 영역 활성/비활성 (거래처 미선택 시 흐리게 + 클릭 막음)
+function _setRcpUploadEnabled(on){
+  const ttl = document.getElementById('rcpUploadTitle');
+  const grp = document.getElementById('uploadGroup');
+  if(ttl){ ttl.style.display = 'block'; ttl.style.opacity = on ? '1' : '0.45'; }
+  if(grp){ grp.style.display = 'block'; grp.style.opacity = on ? '1' : '0.45'; grp.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+
+// 거래처 선택 행 채우기 (미선택=파란 안내 / 선택=거래처명+자동분류)
+function renderRcpVendorRow(selected){
+  const icon = document.getElementById('rcpVendorRowIcon');
+  const val = document.getElementById('rcpVendorRowVal');
+  const sub = document.getElementById('rcpVendorRowSub');
+  const arrow = document.getElementById('rcpVendorRowArrow');
+  if(!val) return;
+  if(selected && rcpVendorName){
+    if(icon) icon.textContent = '🏪';
+    val.textContent = rcpVendorName;
+    val.style.color = 'var(--toss-text-1)';
+    if(sub){ sub.textContent = (rcpCatName || '미지정') + ' · 자동 분류'; sub.style.display = 'block'; }
+    if(arrow) arrow.textContent = '바꾸기 ›';
+  } else {
+    if(icon) icon.textContent = '🏠';
+    val.textContent = '거래처를 선택하세요';
+    val.style.color = 'var(--toss-blue)';
+    if(sub) sub.style.display = 'none';
+    if(arrow) arrow.textContent = '›';
+  }
+}
+
+// 사진 영역 활성/비활성 (거래처 미선택 시 흐리게 + 클릭 막음)
+function _setRcpUploadEnabled(on){
+  const ttl = document.getElementById('rcpUploadTitle');
+  const grp = document.getElementById('uploadGroup');
+  if(ttl){ ttl.style.display = 'block'; ttl.style.opacity = on ? '1' : '0.45'; }
+  if(grp){ grp.style.display = 'block'; grp.style.opacity = on ? '1' : '0.45'; grp.style.pointerEvents = on ? 'auto' : 'none'; }
 }
 
 function resetRcpMode(){
@@ -42,7 +114,11 @@ function resetRcpMode(){
   rcpVendorId = null; rcpVendorName = ''; rcpCatId = null; rcpCatName = '';
   rcpInputMethod = null;
   document.getElementById('rcpModeSelect').style.display = 'block';
+  const modeTtl = document.getElementById('rcpModeTitle'); if(modeTtl) modeTtl.style.display = 'none';
   document.getElementById('rcpModeBadge').style.display = 'none';
+  const vTtl = document.getElementById('rcpVendorRowTitle'); if(vTtl) vTtl.style.display = 'none';
+  const vRow = document.getElementById('rcpVendorRow'); if(vRow) vRow.style.display = 'none';
+  const uTtl = document.getElementById('rcpUploadTitle'); if(uTtl) uTtl.style.display = 'none';
   document.getElementById('rcpGuideBox').style.display = 'none';
   document.getElementById('uploadGroup').style.display = 'none';
   document.getElementById('actionGroup').style.display = 'none';
@@ -53,12 +129,14 @@ function resetRcpMode(){
   _renderRcpPages();
   const pageBox = document.getElementById('rcpPageInfoBox');
   if(pageBox) pageBox.style.display='none';
+  const bt = document.getElementById('rcpBackTitle'); if(bt) bt.textContent = '지출관리';
 }
 
 function showRcpUploadUI(){
   document.getElementById('rcpModeSelect').style.display = 'none';
   document.getElementById('rcpModeBadge').style.display = 'flex';
   document.getElementById('rcpGuideBox').style.display = 'block';
+  const uTtl = document.getElementById('rcpUploadTitle'); if(uTtl) uTtl.style.display = 'block';
   // ⚠️ uploadGroup 은 block (안에 .action-group flex + 수동 입력 button 2단 레이아웃). flex 박으면 깨짐
   document.getElementById('uploadGroup').style.display = 'block';
 }
@@ -69,20 +147,23 @@ function renderRcpModeBadge(){
   const value = document.getElementById('rcpModeBadgeValue');
   const guide = document.getElementById('rcpGuideBox');
   if(!icon || !label || !value) return;
+  // 배지는 항상 '종류명'(큰글자) + 부제(작은글자). 거래처명은 거래처 행에 표시 (위계 통일)
   if(rcpMode === 'vendor'){
     icon.textContent = '📦';
-    label.textContent = '거래처 영수증';
-    value.textContent = rcpVendorName;
-    if(guide) guide.innerHTML = `🎯 카테고리는 <b>${esc(rcpCatName || '미지정')}</b>로 자동 분류돼요.`;
+    value.textContent = '거래처 영수증';
+    label.textContent = '정기 거래 · 외상';
+    if(guide) guide.innerHTML = rcpCatName
+      ? `🎯 카테고리는 <b>${esc(rcpCatName)}</b>로 자동 분류돼요.`
+      : `🏠 거래처를 먼저 골라주세요.`;
   } else if(rcpMode === 'direct'){
     icon.textContent = '🛒';
-    label.textContent = '직구 영수증';
-    value.textContent = '마트·일반';
+    value.textContent = '직구 영수증';
+    label.textContent = '마트 · 일반 · 배민 등';
     if(guide) guide.innerHTML = `🤖 AI가 품목별로 분류해드려요. 한 영수증에 식자재·비품이 섞여도 따로 잡아드려요.`;
   } else if(rcpMode === 'manual'){
     icon.textContent = '✏️';
-    label.textContent = '사진 없이 직접 입력';
     value.textContent = '수동 입력';
+    label.textContent = '사진 없이 직접';
     if(guide) guide.innerHTML = `💡 거래처·품목·금액·분류 모두 직접 입력해주세요. 다음에 같은 거 또 사면 학습돼서 빨라져요.`;
   }
 }
@@ -135,6 +216,9 @@ function openCatReceipt(mode){
   nav('catReceipt');
   const mEl = document.getElementById('catReceiptMonth');
   if(mEl && !mEl.value) mEl.value = catReceiptMonth;
+  // 직구 모드일 때만 영수증 등록 버튼 표시 (카테고리 모드는 조회 전용)
+  const addBtns = document.getElementById('catRcpAddBtns');
+  if(addBtns) addBtns.style.display = (mode === 'direct') ? 'flex' : 'none';
 }
 
 // ══════════════════════════════════════════
@@ -651,6 +735,8 @@ async function pickRcpVendor(vendorId){
   rcpCatName = data.category || '';
   closeSheet('rcpVendorPickSheet');
   renderRcpModeBadge();
+  renderRcpVendorRow(true);   // 거래처 행에 이름·자동분류 표시
+  _setRcpUploadEnabled(true); // 사진 영역 활성
   showRcpUploadUI();
 }
 
