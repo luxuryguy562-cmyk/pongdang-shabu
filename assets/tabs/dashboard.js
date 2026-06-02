@@ -50,11 +50,25 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   card.style.display='block';
   const rows=Object.entries(veMap).map(([name,o])=>({name,amt:o.amt,cat:o.cat})).sort((a,b)=>b.amt-a.amt);
   if(sumEl) sumEl.innerText=`${rows.length}곳 · ${fmt(dayExp||rows.reduce((s,r)=>s+r.amt,0))}원`;
-  list.innerHTML=rows.map((r,i)=>{
+  // ─── 새 기능: 상위 4곳만 노출 + 더보기 토글 (2026-06-02) ───
+  const TOP=4;
+  const rowsHtml=rows.map((r,i)=>{
     const color=_VE_COLORS[i%_VE_COLORS.length];
     const tag=r.cat?`<span class="ve-tag">${esc(r.cat)}</span>`:'';
-    return `<div class="ve-row"><span class="vdot" style="background:${color};"></span><span class="vname">${esc(r.name)}</span>${tag}<span class="vamt">${fmt(r.amt)}원</span></div>`;
+    const moreCls=i>=TOP?' ve-row-more':'';
+    const moreStyle=i>=TOP?' style="display:none;"':'';
+    return `<div class="ve-row${moreCls}"${moreStyle}><span class="vdot" style="background:${color};"></span><span class="vname">${esc(r.name)}</span>${tag}<span class="vamt">${fmt(r.amt)}원</span></div>`;
   }).join('');
+  const moreBtn=rows.length>TOP?`<button type="button" class="ve-more-btn" data-action="toggleVendorMore|this">${rows.length-TOP}곳 더보기 ▾</button>`:'';
+  list.innerHTML=rowsHtml+moreBtn;
+}
+// 거래처별 지출 더보기 토글 (상위 4곳 외 펼침/접힘, 2026-06-02)
+function toggleVendorMore(btn){
+  const list=document.getElementById('dashTodayVendorList'); if(!list) return;
+  const more=list.querySelectorAll('.ve-row-more'); if(!more.length) return;
+  const expanded=more[0].style.display!=='none';
+  more.forEach(el=>{ el.style.display=expanded?'none':'flex'; });
+  btn.innerHTML=expanded?`${more.length}곳 더보기 ▾`:'접기 ▴';
 }
 function renderTodayDetailForDay(dayStr){
   if(!_tdContext) return;
