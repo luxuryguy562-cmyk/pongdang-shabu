@@ -364,11 +364,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .vendor-card .vc-head{display:flex;align-items:center;gap:3px;font-size:10.5px;color:var(--gray-500);font-weight:700;}
 .vendor-card .vc-cat{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .vendor-card .vc-rcp{margin-left:auto;flex-shrink:0;width:26px;height:26px;border-radius:8px;background:var(--gray-100);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;padding:0;}
-/* 맨아래: 금액/건수 2줄 (전체폭) */
+/* 맨아래: 건수(위, 작게) / 금액(아래, 크게) 2줄 (전체폭) */
 .vendor-card .vc-month{margin-top:auto;line-height:1.25;}
-.vendor-card .vc-month .vc-amt{display:block;font-size:13px;font-weight:800;color:var(--blue);word-break:keep-all;}
-.vendor-card .vc-month .vc-cnt{display:block;font-size:10px;font-weight:600;color:var(--gray-500);margin-top:1px;}
+.vendor-card .vc-month .vc-cnt{display:block;font-size:10px;font-weight:600;color:var(--gray-500);}
+.vendor-card .vc-month .vc-amt{display:block;font-size:13px;font-weight:800;color:var(--blue);word-break:keep-all;margin-top:1px;}
 .vendor-card .vc-month.empty{font-size:11px;font-weight:500;color:var(--gray-400);}
+/* 거래처 목록 안내문 (합계 헤더 아래) */
+.vendor-hint{font-size:10.5px;color:var(--gray-400);text-align:center;margin-bottom:10px;}
 .vendor-card .vc-rcp:active{background:var(--gray-200);}
 .vendor-drag-handle{display:inline-block;width:18px;text-align:center;font-size:12px;color:var(--gray-400);cursor:grab;flex-shrink:0;user-select:none;line-height:1;touch-action:none;}
 .vendor-drag-handle:active{cursor:grabbing;color:var(--gray-600);}
