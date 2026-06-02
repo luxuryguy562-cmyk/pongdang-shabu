@@ -489,17 +489,18 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
       // 2026-05-25 갈아엎기: 3분할 → 2분할 (사장님 호소: 출근일+근무 합치고 인건비 넓게)
       //  · 보조 칸: 📅 출근일 + ⏱ 근무 두 줄 (세로 가운데 정렬 — CSS justify-content:center)
       //  · 인건비 칸: 좌측 정렬 + 큰 숫자 + 시급·월급 분기
+      // 2026-06-02 사장님 호소: 만원 압축 → 원 단위 진짜 숫자 (인건비·시급·월급 통일)
       const splitHtml = (monthlyWage>0)
-        ? `<div class="att-kpi-split"><span class="h">⏰ 시급 ${fmtMan(hourlyWage)}만</span><span class="sep">·</span><span class="m">💼 월급 ${fmtMan(monthlyWage)}만</span></div>`
+        ? `<div class="att-kpi-split"><span class="h">⏰ 시급 ${hourlyWage.toLocaleString('ko-KR')}원</span><span class="sep">·</span><span class="m">💼 월급 ${monthlyWage.toLocaleString('ko-KR')}원</span></div>`
         : '';
       kpiEl.innerHTML = `
         <div class="att-kpi-cell aux">
           <div class="row"><span class="l">📅 출근일</span><span class="v">${totalDays}일</span></div>
-          <div class="row"><span class="l">⏱ 근무</span><span class="v">${fmtHourDecimal(totalMin)}</span></div>
+          <div class="row"><span class="l">⏱ 근무시간</span><span class="v">${fmtHourDecimal(totalMin)}</span></div>
         </div>
         <div class="att-kpi-cell wage">
           <div class="att-kpi-lbl">인건비</div>
-          <div class="att-kpi-val">${fmtMan(totalWage)}만원</div>
+          <div class="att-kpi-val">${totalWage.toLocaleString('ko-KR')}원</div>
           ${splitHtml}
         </div>`;
     } else {
