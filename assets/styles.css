@@ -223,9 +223,9 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .vault-section .vault-calc .vc-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--gray-200);font-size:14px;}
 .vault-section .vault-calc .vc-row:last-child{border-bottom:none;padding-top:12px;margin-top:4px;border-top:2px solid var(--text);}
 .vault-section .vault-calc .vc-label{color:var(--gray-600);font-weight:600;}
-.vault-section .vault-calc .vc-val{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;}
+.vault-section .vault-calc .vc-val{font-size:clamp(13px,4.5vw,18px);font-weight:800;font-variant-numeric:tabular-nums;}
 .vault-section .vault-calc .vc-row:last-child .vc-label{font-size:15px;font-weight:800;color:var(--text);}
-.vault-section .vault-calc .vc-row:last-child .vc-val{font-size:24px;font-weight:900;letter-spacing:-0.5px;}
+.vault-section .vault-calc .vc-row:last-child .vc-val{font-size:clamp(16px,6vw,24px);font-weight:900;letter-spacing:-0.5px;min-width:0;overflow:hidden;}
 .vault-section .vault-calc.diff-ok .vc-row:last-child .vc-val{color:var(--success);}
 .vault-section .vault-calc.diff-bad .vc-row:last-child .vc-val{color:var(--danger);}
 .settle-card-group{background:var(--white);border-radius:20px;padding:6px 20px;margin-bottom:14px;box-shadow:var(--card-shadow);}
@@ -233,14 +233,14 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .settle-card-group .card-sub{font-size:12px;color:var(--toss-text-4);margin:0 0 8px;padding:0;font-weight:500;letter-spacing:-0.2px;}
 .settle-summary{display:flex;justify-content:space-between;align-items:center;padding:16px 14px;margin:8px -4px 4px;background:linear-gradient(135deg,var(--toss-blue-light) 0%,#F3F8FF 100%);border-radius:12px;}
 .settle-summary .ss-label{font-size:14px;font-weight:800;color:var(--toss-blue-strong);letter-spacing:-0.3px;}
-.settle-summary .ss-val{font-size:22px;font-weight:800;color:var(--toss-blue-strong);font-variant-numeric:tabular-nums;letter-spacing:-0.7px;}
+.settle-summary .ss-val{font-size:clamp(15px,5.5vw,22px);font-weight:800;color:var(--toss-blue-strong);font-variant-numeric:tabular-nums;letter-spacing:-0.7px;}
 .settle-result{background:var(--white);border-radius:18px;padding:20px;margin-top:0;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
 .sr-row{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--gray-100);}
 .sr-row:last-child{border-bottom:none;padding-top:14px;border-top:2px solid var(--text);margin-top:4px;}
 .sr-row .sr-label{font-size:14px;color:var(--gray-600);font-weight:600;}
 .sr-row:last-child .sr-label{font-size:15px;font-weight:800;color:var(--text);}
-.sr-row .sr-val{font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
-.sr-row:last-child .sr-val{font-size:28px;font-weight:900;letter-spacing:-1px;}
+.sr-row .sr-val{font-size:clamp(15px,5.5vw,22px);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
+.sr-row:last-child .sr-val{font-size:clamp(18px,7vw,28px);font-weight:900;letter-spacing:-1px;}
 .sr-row.diff-ok .sr-val{color:var(--success);}
 .sr-row.diff-bad .sr-val{color:var(--danger);}
 .sr-row.diff-ok{background:var(--success-light);border-radius:12px;padding-left:14px;padding-right:14px;}
@@ -318,7 +318,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* ─ 매출 관리 페이지 (카드형, 모바일 짤림 방지) */
 .sales-month-sticky{position:sticky;top:0;z-index:5;background:#fff;padding:12px 14px;border-radius:11px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04);border:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
 .sales-month-sticky .sms-label{font-size:11px;color:var(--gray-600);font-weight:600;}
-.sales-month-sticky .sms-total{font-size:18px;font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums;}
+.sales-month-sticky .sms-total{font-size:clamp(13px,4.5vw,18px);font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums;}
 .sales-card{background:#fff;border:1px solid var(--gray-200);border-radius:11px;padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:background .15s;}
 .sales-card:active{background:var(--gray-100);}
 .sales-card[data-src="closing"]{border-left:4px solid var(--gray-400);}
@@ -445,7 +445,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-kpi-row{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:12px;align-items:stretch;}
 .att-kpi-cell{background:var(--white);padding:14px 12px;border-radius:14px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;justify-content:center;}
 .att-kpi-lbl{font-size:11px;color:var(--toss-text-4);font-weight:600;letter-spacing:-0.2px;}
-.att-kpi-val{font-size:18px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;}
+.att-kpi-val{font-size:clamp(13px,4.5vw,18px);font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;min-width:0;overflow:hidden;white-space:nowrap;}
 /* 보조 칸 — 출근일·근무 두 줄, 세로 가운데 */
 .att-kpi-cell.aux{padding:14px 12px;}
 .att-kpi-cell.aux .row{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:3px 0;}
@@ -456,7 +456,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 인건비 칸 — 2026-05-25 사장님 호소: 흰색 배경 통일 (좌측 정렬 + 여유 패딩 유지) */
 .att-kpi-cell.wage{background:var(--white);padding:14px 18px;align-items:flex-start;}
 .att-kpi-cell.wage .att-kpi-lbl{color:var(--blue-strong,#1B64DA);font-weight:700;margin-bottom:4px;}
-.att-kpi-cell.wage .att-kpi-val{color:var(--toss-blue-strong);font-size:22px;letter-spacing:-0.6px;}
+.att-kpi-cell.wage .att-kpi-val{color:var(--toss-blue-strong);font-size:clamp(15px,5.5vw,22px);letter-spacing:-0.6px;min-width:0;overflow:hidden;white-space:nowrap;}
 .att-kpi-split{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(49,130,246,0.25);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;color:var(--gray-700);width:100%;display:flex;gap:10px;flex-wrap:wrap;}
 .att-kpi-split .h{color:var(--blue);}
 .att-kpi-split .m{color:#F5A11E;}
@@ -527,10 +527,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-row-meta .wage{color:var(--blue);font-weight:700;font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums;}
 
 /* ─ 대시보드 */
+/* === 숫자 자동조정 공통 (designer.md 7-A 전역 원칙 2026-06-02) === */
+/* 모든 KPI·금액 표시 셀 공통: 큰 값에도 카드 밖 안 넘치게 */
+.kpi-big,.kpi-mid,.att-kpi-val,
+.settle-summary .ss-val,.sr-row .sr-val,
+.vault-calc .vc-val,.sales-month-sticky .sms-total,
+.kpi-bottom3 .kb-val,.summ-tbl .ds-amt,
+.qsi-total-row .qsi-total-val,
+.dash-today-v7 .t7-amt,.dash-today-detail-head .amt{
+  min-width:0;overflow:hidden;font-variant-numeric:tabular-nums;
+}
 .kpi-section{padding:14px 0;border-bottom:1px solid var(--gray-100);}
 .kpi-section:last-child{border-bottom:none;}
 .kpi-section-label{font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px;}
-.kpi-big{font-size:22px;font-weight:900;letter-spacing:-0.5px;}
+.kpi-big{font-size:clamp(15px,5.5vw,22px);font-weight:900;letter-spacing:-0.5px;}
 .kpi-big.blue{color:var(--blue);}
 .kpi-big.red{color:var(--danger);}
 .kpi-big.green{color:var(--success);}
@@ -571,14 +581,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .summ-tbl td{padding:12px 0;border-bottom:1px solid var(--toss-line);vertical-align:baseline;}
 .summ-tbl tr:last-child td{border-bottom:none;}
 .summ-tbl .ds-lb{font-size:14px;font-weight:600;color:var(--toss-text-2);text-align:left;white-space:nowrap;letter-spacing:-0.3px;}
-.summ-tbl .ds-amt{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;padding-left:6px;letter-spacing:-0.5px;}
+.summ-tbl .ds-amt{font-size:clamp(15px,5.5vw,22px);font-weight:800;font-variant-numeric:tabular-nums;text-align:right;padding-left:6px;letter-spacing:-0.5px;min-width:0;overflow:hidden;}
 .summ-tbl .ds-pc{font-size:11px;font-weight:700;color:var(--gray-400);text-align:right;white-space:nowrap;padding-left:3px;font-variant-numeric:tabular-nums;}
 .summ-tbl .ds-est{font-size:11px;font-weight:600;color:var(--gray-400);text-align:right;white-space:nowrap;padding-left:4px;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
 .summ-tbl tr.summ-total td{border-top:2px solid var(--toss-text-1);border-bottom:none;padding-top:14px;}
 .summ-tbl tr.summ-link{cursor:pointer;}
 .summ-tbl tr.summ-link:active td{background:var(--toss-line);}
 .summ-tbl tr.summ-total .ds-lb{font-size:15px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;}
-.summ-tbl tr.summ-total .ds-amt{font-size:28px;font-weight:900;letter-spacing:-1px;}
+.summ-tbl tr.summ-total .ds-amt{font-size:clamp(18px,7vw,28px);font-weight:900;letter-spacing:-1px;}
 .summ-tbl tr.summ-total .ds-est{font-size:13px;font-weight:700;color:var(--gray-500);}
 /* 헤더 (지금/월말 예상) */
 .summ-tbl thead th{font-size:10px;font-weight:700;color:var(--gray-400);text-align:right;padding:2px 0 4px;border-bottom:1px solid var(--gray-100);text-transform:uppercase;letter-spacing:0.5px;}
@@ -878,7 +888,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .qsi-row .qsi-input::placeholder{color:var(--toss-text-5);font-weight:500;}
 .qsi-row .qsi-input:focus{color:var(--toss-blue-strong);}
 .qsi-total-row{display:flex;justify-content:space-between;align-items:center;padding:16px 14px;margin:14px 0 4px;background:linear-gradient(135deg,var(--toss-blue-light) 0%,#F3F8FF 100%);border-radius:12px;font-size:14px;font-weight:800;color:var(--toss-blue-strong);letter-spacing:-0.3px;}
-.qsi-total-row .qsi-total-val{color:var(--toss-blue-strong);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.7px;}
+.qsi-total-row .qsi-total-val{color:var(--toss-blue-strong);font-size:clamp(15px,5.5vw,22px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.7px;min-width:0;overflow:hidden;}
 .qsi-memo-row{display:flex;align-items:center;gap:10px;padding:12px 0;}
 .qsi-memo-label{font-size:13px;font-weight:700;color:var(--toss-text-3);width:50px;letter-spacing:-0.2px;}
 .qsi-memo-input{flex:1;padding:11px 13px;border:0;background:var(--toss-line);border-radius:11px;font-size:14px;font-family:inherit;color:var(--toss-text-1);font-weight:500;outline:none;letter-spacing:-0.2px;}
@@ -1184,7 +1194,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-mode{font-size:10px;padding:2px 7px;border-radius:8px;background:#F2F4F6;color:#6B7684;font-weight:800;letter-spacing:-0.2px;}
 .dash-today-v7 .t7-mode.live{background:#EDF4FF;color:#0064FF;}
 .dash-today-v7 .t7-arrow{font-size:22px;color:#B0B8C1;font-weight:300;line-height:1;}
-.dash-today-v7 .t7-amt{font-size:36px;font-weight:800;color:#191F28;letter-spacing:-1.4px;font-variant-numeric:tabular-nums;line-height:1.1;}
+.dash-today-v7 .t7-amt{font-size:clamp(22px,9vw,36px);font-weight:800;color:#191F28;letter-spacing:-1.4px;font-variant-numeric:tabular-nums;line-height:1.1;min-width:0;overflow:hidden;}
 .dash-today-v7 .t7-amt .won{font-size:22px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
 .dash-today-v7 .t7-amt.empty{font-size:24px;color:#B0B8C1;font-weight:700;}
 .dash-today-v7 .t7-time{font-size:12px;color:#8B95A1;margin-top:6px;font-weight:500;letter-spacing:-0.2px;display:flex;align-items:center;gap:6px;}
@@ -1242,7 +1252,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-detail-head .lb{font-size:13px;font-weight:600;opacity:.88;display:flex;align-items:center;gap:6px;letter-spacing:-0.3px;margin-bottom:8px;}
 .dash-today-detail-head .lb .live-dot{width:7px;height:7px;border-radius:50%;background:#fff;position:relative;}
 .dash-today-detail-head .lb .live-dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;background:#fff;opacity:.35;animation:dashPulse 2s infinite;}
-.dash-today-detail-head .amt{font-size:38px;font-weight:800;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.1;}
+.dash-today-detail-head .amt{font-size:clamp(24px,9.5vw,38px);font-weight:800;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.1;min-width:0;overflow:hidden;}
 .dash-today-detail-head .amt .won{font-size:22px;font-weight:700;opacity:.85;margin-left:2px;}
 .dash-today-detail-head .amt.empty{font-size:24px;opacity:.7;font-weight:700;}
 .dash-today-detail-head .sub{font-size:12.5px;opacity:.82;margin-top:8px;font-weight:500;letter-spacing:-0.2px;}
