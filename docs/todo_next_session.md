@@ -39,6 +39,20 @@
 - 단 `summ-tbl` 경로(`buildCatRow` 446~470)엔 `childExpByCat` 소분류 집계 + `toggleExpCatChildren` 토글 **이미 있음** → 재활용 가능성 검토.
 - ⚠️ 데이터 무결성(헌법 10-1): 소분류 분리 시 기존 금액 안 틀어지게 신중.
 
+### ✅ 4단계 안전 구현 방법 (2026-06-02 세션 확정 — 1·2·3단계 완료 후)
+**원칙: 기존 byCat(부모 집계) 절대 안 건드림. 별도 monthChildMap 추가 (2단계 거래처별 `_addVE`와 동일 안전 패턴 — 검증됨).**
+1. **매핑**: `_catIdToParentChild[id]={parent,child}` — expCategories에서 parent_id 있는 자식만.
+2. **집계**: `dailyCatMap` 집계 옆(`voDaily` 570줄 / `rcDaily` 577줄)에서 `_addChild(v.vendors?.category_id, v.amount)` / `_addChild(r.category_id, r.total_price)`. → `monthChildMap[부모명][자식명] += amt` (월 누적, 당월만).
+3. **전달**: `setV17Context`(945줄) 객체에 `monthChildMap` 추가.
+4. **UI**: `detailPanelHtml`(1457~1462 `detailRowsHtml`) sortedCats.forEach에서 `monthChildMap[c.name]` 있으면 부모 행 아래 자식 행(들여쓰기) + 접이식 토글(▼). CSS는 receipt/홈 `.sub-list` 패턴 참고.
+- ⚠️ **주의**: v17 context 다층(setV17Context→ctx→cur/prev/cats/DAYS). detailPanel에서 `monthChildMap` 접근 경로(ctx 또는 인자) 먼저 확인. 다른 달 네비 시 monthChildMap은 당월만이라 빈 처리 필요.
+
+### 진행 현황 (2026-06-02 세션)
+- ✅ **1단계** 홈 이번달 전월대비 한 줄 (PR #370)
+- ✅ **2단계** 오늘 거래처별 지출 '어디서 썼나' (PR #371, FK·6소스 누락없이)
+- ✅ **3단계** 홈 월 달력 버튼 (PR #372, dead였던 openSalesCalendarSheet 살림)
+- ⏳ **4단계** 월보기 소분류 펼침 — 위 안전 방법대로 구현 대기 (새 세션 권장: 긴 세션 끝 무리 시 월보기 위험)
+
 ### 목업 (재현용)
 - `/tmp/vmock/home5.html`(홈 오늘 있음), `empty.html`(없음), `cal.html`(달력), `month.html`(월보기+소분류), `home.css`
 - ⚠️ /tmp는 세션 종료 시 사라짐 → 필요 시 재생성 (위 설계 기준)
