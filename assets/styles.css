@@ -355,15 +355,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .vendor-item.inactive{opacity:.45;}
 /* 2026-05-25 사장님 호소: 거래처 한 줄당 2개 그리드로 화면 절약 */
 #vendorCardWrap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
-.vendor-card{display:flex;flex-direction:column;gap:5px;padding:11px 10px 10px;background:var(--white);border:0;border-radius:14px;margin-bottom:0;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);box-shadow:var(--card-shadow);min-height:96px;position:relative;min-width:0;overflow:hidden;}
+.vendor-card{display:flex;flex-direction:column;gap:4px;padding:11px 10px 10px;background:var(--white);border:0;border-radius:14px;margin-bottom:0;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);box-shadow:var(--card-shadow);min-height:104px;position:relative;min-width:0;overflow:hidden;}
 .vendor-card:active{transform:scale(.985);}
 .vendor-card.inactive{opacity:.5;}
-.vendor-card .vc-head{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--gray-500);font-weight:700;}
-.vendor-card .vc-name{font-size:13px;font-weight:800;color:var(--text);line-height:1.25;word-break:keep-all;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;padding-right:22px;}
-.vendor-card .vc-month{font-size:10.5px;font-weight:700;margin-top:auto;line-height:1.3;word-break:keep-all;}
-.vendor-card .vc-month.has{color:var(--blue);}
-.vendor-card .vc-month.empty{color:var(--gray-400);font-weight:500;}
-.vendor-card .vc-rcp{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:8px;background:var(--gray-100);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;padding:0;}
+/* 1줄: 거래처 이름 (주인공, 전체폭) */
+.vendor-card .vc-name{font-size:13.5px;font-weight:800;color:var(--text);line-height:1.2;word-break:keep-all;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+/* 2줄: ☰ 카테고리 … 📸 */
+.vendor-card .vc-head{display:flex;align-items:center;gap:3px;font-size:10.5px;color:var(--gray-500);font-weight:700;}
+.vendor-card .vc-cat{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vendor-card .vc-rcp{margin-left:auto;flex-shrink:0;width:26px;height:26px;border-radius:8px;background:var(--gray-100);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;padding:0;}
+/* 맨아래: 금액/건수 2줄 (전체폭) */
+.vendor-card .vc-month{margin-top:auto;line-height:1.25;}
+.vendor-card .vc-month .vc-amt{display:block;font-size:13px;font-weight:800;color:var(--blue);word-break:keep-all;}
+.vendor-card .vc-month .vc-cnt{display:block;font-size:10px;font-weight:600;color:var(--gray-500);margin-top:1px;}
+.vendor-card .vc-month.empty{font-size:11px;font-weight:500;color:var(--gray-400);}
 .vendor-card .vc-rcp:active{background:var(--gray-200);}
 .vendor-drag-handle{display:inline-block;width:18px;text-align:center;font-size:12px;color:var(--gray-400);cursor:grab;flex-shrink:0;user-select:none;line-height:1;touch-action:none;}
 .vendor-drag-handle:active{cursor:grabbing;color:var(--gray-600);}

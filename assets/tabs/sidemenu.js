@@ -354,17 +354,17 @@ function renderVendorList(){
   const cardsHtml=list.length?list.map(v=>{
     const t=vendorMonthTotals[v.id];
     const monthLine=t&&t.count
-      ? `<div class="vc-month has">${fmt(t.total)}원 · ${t.count}건</div>`
+      ? `<div class="vc-month has"><span class="vc-amt">${fmt(t.total)}원</span><span class="vc-cnt">${t.count}건</span></div>`
       : `<div class="vc-month empty">주문 없음</div>`;
     const badge=!v.is_active?' <span class="badge badge-gray" style="font-size:9px;">거래종료</span>':'';
     return `<div class="vendor-card ${v.is_active?'':'inactive'}" data-vendor-id="${v.id}" data-action="openVendorDetail|${v.id}">
+      <div class="vc-name">${v.name}${badge}</div>
       <div class="vc-head">
         <span class="vendor-drag-handle" title="드래그로 순서 변경">☰</span>
-        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${v.category||'기타'}</span>
+        <span class="vc-cat">${v.category||'기타'}</span>
+        <button class="vc-rcp" title="이 거래처 영수증 등록" data-stop="1" data-action="openRcpReceiptFromVendor|${v.id}">📸</button>
       </div>
-      <div class="vc-name">${v.name}${badge}</div>
       ${monthLine}
-      <button class="vc-rcp" title="이 거래처 영수증 등록" data-stop="1" data-action="openRcpReceiptFromVendor|${v.id}">📸</button>
     </div>`;
   }).join(''):'<div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div>';
   // 카드들은 별도 wrap에 넣어 SortableJS 대상으로 (헤더/empty는 정렬 제외)
