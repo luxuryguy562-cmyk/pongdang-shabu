@@ -39,6 +39,23 @@ function dashGoStage(stage){
 //  · 같은 월 안 = 메모리만 사용. 다른 월 = 1차 미지원 (토스트 안내)
 let _tdContext = null;
 let _tdDay = null;
+// ─── 거래처별 오늘 지출 렌더 (홈 "오늘 어디서 썼나", 2026-06-02) ───
+const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#94A3B8'];
+function renderTodayVendorExp(veMap, hasSale, dayExp){
+  const card=document.getElementById('dashTodayVendorCard');
+  const list=document.getElementById('dashTodayVendorList');
+  const sumEl=document.getElementById('dashTodayVendorSum');
+  if(!card||!list) return;
+  if(!hasSale || !veMap || !Object.keys(veMap).length){ card.style.display='none'; return; }
+  card.style.display='block';
+  const rows=Object.entries(veMap).map(([name,o])=>({name,amt:o.amt,cat:o.cat})).sort((a,b)=>b.amt-a.amt);
+  if(sumEl) sumEl.innerText=`${rows.length}곳 · ${fmt(dayExp||rows.reduce((s,r)=>s+r.amt,0))}원`;
+  list.innerHTML=rows.map((r,i)=>{
+    const color=_VE_COLORS[i%_VE_COLORS.length];
+    const tag=r.cat?`<span class="ve-tag">${esc(r.cat)}</span>`:'';
+    return `<div class="ve-row"><span class="vdot" style="background:${color};"></span><span class="vname">${esc(r.name)}</span>${tag}<span class="vamt">${fmt(r.amt)}원</span></div>`;
+  }).join('');
+}
 function renderTodayDetailForDay(dayStr){
   if(!_tdContext) return;
   const ctx = _tdContext;
@@ -103,6 +120,8 @@ function renderTodayDetailForDay(dayStr){
   // 결제수단별 — 해당일 settle 행
   const _row = (ctx.settle||[]).find(s=>s.date?.slice(8)===d);
   renderTodayPaymentMethods(_row, _amt);
+  // 거래처별 오늘 지출 (홈 "오늘 어디서 썼나")
+  renderTodayVendorExp(ctx.dailyVendorExp?.[d], hasSale, _dexp);
 
   // 일자 네비 라벨·picker·화살표 활성 상태
   const lblText = document.getElementById('tdDayLabelText');
@@ -239,7 +258,7 @@ async function loadDashboard(force){
     }catch(_){dashSaleSource='settle';}
 
     // 2026-05-21 Phase B: SWR 캐시 (5분 TTL). 캐시 hit이면 즉시 렌더 + 5초 후 백그라운드 fresh
-    const _dashKey=`dash_${sid}_${ym}_${dashSaleSource}_${dashMode||'auto'}`;
+    const _dashKey=`dashv2_${sid}_${ym}_${dashSaleSource}_${dashMode||'auto'}`;
     let _dashPack = !force ? cacheGet(_dashKey, 300000) : null;
     let settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2;
     if(_dashPack){
@@ -262,8 +281,8 @@ async function loadDashboard(force){
           ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
           :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
         // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
-        sb.from('vendor_orders').select('amount,order_date,vendors(category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-        sb.from('receipts').select('total_price,category_id,receipt_date').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+        sb.from('vendor_orders').select('amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+        sb.from('receipts').select('total_price,category_id,receipt_date,vendor_id,vendors(name)').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
         sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
         // ── 전월 일별 식자재/영수증/인건비 ──
         sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
@@ -564,6 +583,16 @@ async function loadDashboard(force){
 
     // 일별 카테고리 데이터는 위 통합 Promise.all에서 이미 받음 (voRes2/rcRes2/attRes2/prevVoRes/prevRcRes/prevAttRes 재사용)
     const voDaily=voRes2.data,rcDaily=rcRes2.data,attDaily=attRes2.data;
+    // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "오늘 어디서 썼나", 2026-06-02) ───
+    // FK: vendor_id→vendors(name). 직구(vendor_id NULL)·거래처 삭제(ON DELETE SET NULL)는 '직접 구매'
+    const dailyVendorExp={}; // { '02': { '행복한정육점': {amt, cat}, ... } }
+    const _addVE=(d,name,amt,catName)=>{
+      if(!amt||amt<=0||!d)return;
+      if(!dailyVendorExp[d])dailyVendorExp[d]={};
+      const key=name||'기타';
+      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={amt:0,cat:catName||''};
+      dailyVendorExp[d][key].amt+=amt;
+    };
     // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
     const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
     // 2026-05-22: vendor.category_id 기반 정확 분리 (주류/음료/식자재 따로)
@@ -573,6 +602,7 @@ async function loadDashboard(force){
         || srcToCat['vendor_orders'] || '식자재';
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(v.amount||0);
+      _addVE(d, v.vendors?.name||'거래처', v.amount, k);
     });
     (rcDaily||[]).forEach(r=>{
       const d=r.receipt_date?.slice(8);if(!d)return;
@@ -580,12 +610,14 @@ async function loadDashboard(force){
         || srcToCat['receipts'] || '비품';
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
+      _addVE(d, r.vendors?.name||'직접 구매', r.total_price, k);
     });
     (attDaily||[]).forEach(a=>{
       if(monthlyEmpIds.has(a.employee_id)) return; // 월급제는 별도 분배
       const d=a.work_date?.slice(8);if(!d)return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
       const k=srcToCat['attendance'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(a.calculated_wage||0);
+      _addVE(d, '직원 급여', a.calculated_wage, '인건비');
     });
     // ─── 마감 차감 일자별 분배 — 카테고리 매칭 → 해당 카테고리 키 (2026-05-18 통일) ───
     // 인건비 부모/자식 → 인건비 키, 식자재 부모/자식 → 식자재 키 등
@@ -629,6 +661,7 @@ async function loadDashboard(force){
           if(!dailyCatMap[d])dailyCatMap[d]={};
           const k=srcToCat['attendance'];
           dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+dailyWage;
+          _addVE(d, '직원 급여', dailyWage, '인건비');
         });
       });
     }
@@ -646,13 +679,13 @@ async function loadDashboard(force){
       if(!hasSale) return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
       fixedCats.forEach(cat=>{
-        if(dailyFixedShareByCat[cat.name]>0) dailyCatMap[d][cat.name]=dailyFixedShareByCat[cat.name];
+        if(dailyFixedShareByCat[cat.name]>0){ dailyCatMap[d][cat.name]=dailyFixedShareByCat[cat.name]; _addVE(d, cat.name, dailyFixedShareByCat[cat.name], '고정비'); }
       });
       // 로열티/수수료: 해당일 매출 기준
       const daySale=dailySalesMap[d]||0;
       const dayRoyalty=Math.round(daySale*royaltyRate);
       const dayCardFee=Math.round(daySale*cardFeeRate);
-      if(dayRoyalty+dayCardFee>0) dailyCatMap[d]['로열티/수수료']=dayRoyalty+dayCardFee;
+      if(dayRoyalty+dayCardFee>0){ dailyCatMap[d]['로열티/수수료']=dayRoyalty+dayCardFee; _addVE(d, '로열티·수수료', dayRoyalty+dayCardFee, '로열티/수수료'); }
       // 일별 지출 합계
       let dayExp=0;
       catNames.forEach(c=>{dayExp+=(dailyCatMap[d]?.[c]||0);});
@@ -1019,7 +1052,7 @@ async function loadDashboard(force){
       try {
         _tdContext = {
           ym, mo, lastDay,
-          dailySalesMap, dailyExpTotal, settle,
+          dailySalesMap, dailyExpTotal, settle, dailyVendorExp,
           lastSaleDay, isUpsMode, isTodayShown, isCurMonth
         };
         const _initDay = lastSaleDay
