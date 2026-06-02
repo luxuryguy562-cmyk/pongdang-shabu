@@ -734,7 +734,7 @@ to: [다음 에이전트]
 0. **`docs/vision.md`** — 🎯 비전 (Tier 0, 모든 결정의 기준 — 2026-05-24 추가)
 1. `CLAUDE.md` — 헌법 (이 파일)
 2. `docs/business_rules.md` — 비즈니스 변수 (놓치면 삽질)
-3. `docs/dev_lessons.md` — 개발 교훈 (같은 실수 방지)
+3. `docs/dev_lessons_core.md` — 개발 교훈 핵심 16개 (같은 실수 방지, 전체 아카이브는 dev_lessons.md)
 4. `docs/plan.md` — 구현 현황 (뭐가 됐고 안 됐는지)
 5. `docs/db_schema.md` — DB 구조 (쿼리 전 참조)
 6. `docs/work_log.md` — 이전 세션 작업 (이어서 할 거 확인)
