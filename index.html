@@ -476,6 +476,8 @@
 
 <!-- ══ [1] 영수증 ══ -->
 <div id="receiptCont" class="container active">
+  <!-- 상단 뒤로가기 — 모드 선택 후엔 종류 선택으로, 종류 선택 화면이면 지출관리로 (rcpBack) -->
+  <div class="app-back" data-action="rcpBack"><span class="back-btn">‹</span><span class="back-ttl" id="rcpBackTitle">지출관리</span></div>
   <div class="card" style="padding-top:10px;">
     <div class="sub-tabs">
       <button class="sub-tab active" data-action="rcpTab|new|this">📸 새 영수증</button>
@@ -519,7 +521,7 @@
 
       <!-- 행 타이틀: 영수증 종류 (모드 선택 후만) -->
       <div id="rcpModeTitle" class="rcp-row-ttl" style="display:none;">영수증 종류</div>
-      <!-- 모드 표시 + 다시 고르기 (모드 선택 후만 노출) -->
+      <!-- 모드 표시 (모드 선택 후만 노출. 뒤로가기는 상단 ‹) -->
       <div id="rcpModeBadge" style="display:none;background:var(--toss-blue-light);border-radius:14px;padding:13px 15px;margin-bottom:14px;font-size:13px;align-items:center;justify-content:space-between;gap:10px;">
         <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
           <span id="rcpModeBadgeIcon" style="font-size:22px;flex-shrink:0;">📦</span>
@@ -528,7 +530,6 @@
             <div style="font-size:11px;color:var(--gray-600);margin-top:2px;" id="rcpModeBadgeLabel">거래처 영수증</div>
           </div>
         </div>
-        <button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;flex-shrink:0;font-weight:600;background:rgba(255,255,255,0.75);color:var(--gray-600);" data-action="resetRcpMode">↩ 다시 고르기</button>
       </div>
 
       <!-- 행 타이틀: 거래처 (거래처 모드만) -->
@@ -735,7 +736,7 @@
   <div class="sheet sheet-content" style="max-height:80vh;padding-bottom:40px;">
     <div class="sheet-header">
       <div class="sheet-title">거래처 선택</div>
-      <button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;flex-shrink:0;font-weight:600;" data-action="cancelRcpVendorPick">↩ 다시 고르기</button>
+      <button class="sheet-close" data-action="closeSheet|rcpVendorPickSheet">✕</button>
     </div>
     <div style="padding:8px 0 12px;font-size:12px;color:var(--gray-600);line-height:1.5;">
       거래처 선택 시 카테고리는 거래처 설정대로 자동 박혀요.<br>

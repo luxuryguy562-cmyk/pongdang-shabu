@@ -40,6 +40,43 @@ function setRcpMode(mode){
     _setRcpUploadEnabled(true);
     showRcpUploadUI();
   }
+  const bt = document.getElementById('rcpBackTitle'); if(bt) bt.textContent = '종류 선택';
+}
+
+// 상단 뒤로가기 — 모드 선택됐으면 종류 선택으로 복귀, 아니면 지출관리로
+function rcpBack(){
+  if(rcpMode){ resetRcpMode(); }
+  else { nav('expHub'); }
+}
+
+// 거래처 선택 행 채우기 (미선택=파란 안내 / 선택=거래처명+자동분류)
+function renderRcpVendorRow(selected){
+  const icon = document.getElementById('rcpVendorRowIcon');
+  const val = document.getElementById('rcpVendorRowVal');
+  const sub = document.getElementById('rcpVendorRowSub');
+  const arrow = document.getElementById('rcpVendorRowArrow');
+  if(!val) return;
+  if(selected && rcpVendorName){
+    if(icon) icon.textContent = '🏪';
+    val.textContent = rcpVendorName;
+    val.style.color = 'var(--toss-text-1)';
+    if(sub){ sub.textContent = (rcpCatName || '미지정') + ' · 자동 분류'; sub.style.display = 'block'; }
+    if(arrow) arrow.textContent = '바꾸기 ›';
+  } else {
+    if(icon) icon.textContent = '🏠';
+    val.textContent = '거래처를 선택하세요';
+    val.style.color = 'var(--toss-blue)';
+    if(sub) sub.style.display = 'none';
+    if(arrow) arrow.textContent = '›';
+  }
+}
+
+// 사진 영역 활성/비활성 (거래처 미선택 시 흐리게 + 클릭 막음)
+function _setRcpUploadEnabled(on){
+  const ttl = document.getElementById('rcpUploadTitle');
+  const grp = document.getElementById('uploadGroup');
+  if(ttl){ ttl.style.display = 'block'; ttl.style.opacity = on ? '1' : '0.45'; }
+  if(grp){ grp.style.display = 'block'; grp.style.opacity = on ? '1' : '0.45'; grp.style.pointerEvents = on ? 'auto' : 'none'; }
 }
 
 // 거래처 선택 행 채우기 (미선택=파란 안내 / 선택=거래처명+자동분류)
@@ -92,6 +129,7 @@ function resetRcpMode(){
   _renderRcpPages();
   const pageBox = document.getElementById('rcpPageInfoBox');
   if(pageBox) pageBox.style.display='none';
+  const bt = document.getElementById('rcpBackTitle'); if(bt) bt.textContent = '지출관리';
 }
 
 function showRcpUploadUI(){
@@ -660,11 +698,6 @@ function openCatReceiptInput(method){
   }, 60);
 }
 
-// 거래처 선택 취소 = 직구 '↩ 다시 고르기'와 동일 (시트 닫고 모드 선택 처음으로)
-function cancelRcpVendorPick(){
-  closeSheet('rcpVendorPickSheet');
-  resetRcpMode();
-}
 async function openRcpVendorPicker(){
   if(!currentStore) return;
   openSheet('rcpVendorPickSheet');
