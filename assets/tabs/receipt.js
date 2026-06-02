@@ -17,6 +17,7 @@ function setRcpMode(mode){
   if(!guardStore()) return;
   rcpMode = mode;
   rcpInputMethod = null;
+  _clearRcpData(); // 새 진입 = 이전 분석(사진·결과·행) 비우기 (사장님 호소 2026-06-02)
   // 모드 바꿀 때 vendor 정보 초기화 (거래처는 행에서 다시 선택)
   rcpVendorId = null; rcpVendorName = ''; rcpCatId = null; rcpCatName = '';
   document.getElementById('rcpModeSelect').style.display = 'none';
@@ -77,6 +78,19 @@ function _setRcpUploadEnabled(on){
   const grp = document.getElementById('uploadGroup');
   if(ttl){ ttl.style.display = 'block'; ttl.style.opacity = on ? '1' : '0.45'; }
   if(grp){ grp.style.display = 'block'; grp.style.opacity = on ? '1' : '0.45'; grp.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+
+// 영수증 데이터(분석 결과·사진·행)만 초기화 — 모드는 유지. 새 진입 시 이전 분석 잔류 방지 (사장님 호소 2026-06-02)
+function _clearRcpData(){
+  b64Pages = [];
+  if(typeof _renderRcpPages === 'function') _renderRcpPages();
+  rowCount = 0;
+  const rt = document.getElementById('resTable'); if(rt) rt.innerHTML = '';
+  const ra = document.getElementById('resultArea'); if(ra) ra.style.display = 'none';
+  const ag = document.getElementById('actionGroup'); if(ag) ag.style.display = 'none';
+  const ip = document.getElementById('imgPreview'); if(ip){ ip.style.display = 'none'; ip.src = ''; }
+  const pb = document.getElementById('rcpPageInfoBox'); if(pb) pb.style.display = 'none';
+  const sc = document.getElementById('rcpSumCheck'); if(sc){ sc.innerHTML = ''; sc.className = 'rcp-sumbar'; }
 }
 
 function resetRcpMode(){
@@ -628,6 +642,7 @@ async function openRcpReceiptFromVendor(vendorId, method){
   rcpEntryReturn = 'vendors:' + vid; // 저장 후 거래처 상세로 복귀
   nav('receipt');
   setTimeout(()=>{
+    _clearRcpData(); // 새 진입 = 이전 분석(사진·결과·행) 비우기 (사장님 호소 2026-06-02)
     renderRcpModeBadge();
     // 종류 선택 화면 숨기고 모드 배지 + '선택된 거래처 행'을 노출 (정상 경로와 동일 — 사장님 호소 2026-06-02)
     const ms = document.getElementById('rcpModeSelect'); if(ms) ms.style.display='none';
