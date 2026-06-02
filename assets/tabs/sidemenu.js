@@ -315,7 +315,8 @@ function initVendorSortable(){
   wrap._sortableInited=true;
   new Sortable(wrap,{
     animation:150,
-    handle:'.vendor-drag-handle',  // 카테고리 패턴(dev_lessons #55)과 동일 — ☰ 핸들만 드래그 활성
+    delay:300,                     // 길게 눌러야 드래그 시작 (짧은 탭=상세진입과 구분, ☰ 핸들 제거 2026-06-02)
+    delayOnTouchOnly:true,         // 터치(모바일)에서만 delay — 마우스는 즉시
     ghostClass:'drag-ghost',
     // 모바일 터치 환경 자동 스크롤 (사장님 호소 2026-05-18 — 드래그 중 스크롤 안 됨)
     scroll:true,
@@ -346,21 +347,21 @@ function renderVendorList(){
   const monthTotal=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.total||0),0);
   const monthCount=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.count||0),0);
   const ymStr=new Date().toISOString().slice(0,7);
-  const headerHtml=list.length?`<div style="background:var(--gray-100);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+  const headerHtml=list.length?`<div style="background:var(--gray-100);border-radius:10px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
     <span style="font-size:12px;color:var(--gray-600);">${ymStr} 주문 합계</span>
     <span style="font-size:14px;font-weight:800;color:var(--text);">${fmt(monthTotal)}원 · ${monthCount}건</span>
-  </div>`:'';
+  </div>
+  <div class="vendor-hint">길게 누르면 순서를 바꿀 수 있어요</div>`:'';
   // 2026-05-25 사장님 호소: 한 줄당 1개 → 2개 그리드로 화면 절약
   const cardsHtml=list.length?list.map(v=>{
     const t=vendorMonthTotals[v.id];
     const monthLine=t&&t.count
-      ? `<div class="vc-month has"><span class="vc-amt">${fmt(t.total)}원</span><span class="vc-cnt">${t.count}건</span></div>`
+      ? `<div class="vc-month has"><span class="vc-cnt">${t.count}건</span><span class="vc-amt">${fmt(t.total)}원</span></div>`
       : `<div class="vc-month empty">주문 없음</div>`;
     const badge=!v.is_active?' <span class="badge badge-gray" style="font-size:9px;">거래종료</span>':'';
     return `<div class="vendor-card ${v.is_active?'':'inactive'}" data-vendor-id="${v.id}" data-action="openVendorDetail|${v.id}">
       <div class="vc-name">${v.name}${badge}</div>
       <div class="vc-head">
-        <span class="vendor-drag-handle" title="드래그로 순서 변경">☰</span>
         <span class="vc-cat">${v.category||'기타'}</span>
         <button class="vc-rcp" title="이 거래처 영수증 등록" data-stop="1" data-action="openRcpReceiptFromVendor|${v.id}">📸</button>
       </div>
