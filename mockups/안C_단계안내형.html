@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>안 C · 단계 안내형</title>
+<style>
+:root{
+  --blue:#3182F6;--blue-strong:#0064FF;--blue-light:#EDF4FF;
+  --bg:#F2F4F6;--white:#fff;
+  --g100:#F9FAFB;--g200:#E5E8EB;--g400:#B0B8C1;--g500:#8B95A1;--g600:#6B7684;
+  --text:#191F28;--danger:#F04452;--danger-light:#FFEBEE;
+  --success:#0CAB6C;--success-light:#E8FAF3;--warn:#F5A11E;
+  --radius:20px;--shadow:0 4px 14px rgba(20,40,80,.07),0 1px 3px rgba(20,40,80,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;justify-content:center;padding:16px;letter-spacing:-.3px;}
+.phone{width:100%;max-width:420px;}
+.banner{background:var(--blue-strong);color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700;margin-bottom:12px;line-height:1.5;}
+.banner b{font-weight:900;}
+/* 날짜 + 진행바 */
+.topcard{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px;}
+.dtline{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.dtline .arr{width:34px;height:34px;border:none;background:var(--g100);border-radius:50%;font-size:18px;font-weight:800;color:var(--g600);cursor:pointer;}
+.dtline .dt{font-size:17px;font-weight:900;}
+.dtline .dt small{display:block;font-size:11px;font-weight:700;color:var(--success);margin-top:2px;}
+.steps{display:flex;gap:6px;}
+.step{flex:1;text-align:center;cursor:pointer;}
+.step .dot{width:30px;height:30px;border-radius:50%;background:var(--g200);color:var(--g500);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 4px;}
+.step.on .dot{background:var(--blue);color:#fff;}
+.step.done .dot{background:var(--success);color:#fff;}
+.step .sl{font-size:10px;font-weight:700;color:var(--g500);}
+.step.on .sl{color:var(--blue);}
+/* 4 요약카드 */
+.cards4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.c4{background:var(--white);border-radius:14px;box-shadow:var(--shadow);padding:13px 10px;min-height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.c4 .lb{font-size:10px;color:var(--g500);font-weight:700;margin-bottom:4px;}
+.c4 .vl{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;}
+.c4 .tag{font-size:9px;color:var(--g400);margin-top:2px;}
+.neg{color:var(--danger);}.pos{color:var(--success);}.blue{color:var(--blue);}
+/* 단계 패널 */
+.panel{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 16px;margin-bottom:12px;min-height:230px;}
+.panel-t{font-size:17px;font-weight:900;margin-bottom:4px;}
+.panel-sub{font-size:12px;color:var(--g500);margin-bottom:16px;line-height:1.5;}
+.fld{margin-bottom:12px;}
+.fld label{display:block;font-size:13px;font-weight:700;color:var(--g600);margin-bottom:6px;}
+.fld input{width:100%;padding:14px;border:1.5px solid var(--g200);border-radius:12px;font-size:17px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
+.fld input:focus{outline:none;border-color:var(--blue);background:var(--blue-light);}
+.fld .hint{font-size:11px;color:var(--g400);margin-top:4px;}
+.bigsum{background:var(--blue-light);border-radius:14px;padding:14px;text-align:center;margin-top:8px;}
+.bigsum .l{font-size:12px;color:var(--blue-strong);font-weight:700;}
+.bigsum .v{font-size:24px;font-weight:900;color:var(--blue-strong);margin-top:3px;font-variant-numeric:tabular-nums;}
+.navbtns{display:flex;gap:8px;}
+.navbtns button{flex:1;padding:15px;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;}
+.navbtns .prev{background:var(--white);color:var(--g600);box-shadow:var(--shadow);}
+.navbtns .nextb{background:var(--blue);color:#fff;}
+.navbtns .done{background:var(--success);color:#fff;}
+.diffbox{border-radius:14px;padding:16px;text-align:center;margin-top:8px;}
+.diffbox.ok{background:var(--success-light);}.diffbox.bad{background:var(--danger-light);}
+.diffbox .l{font-size:12px;color:var(--g600);font-weight:700;}
+.diffbox .v{font-size:26px;font-weight:900;margin-top:3px;}
+.tip{font-size:11px;color:var(--g400);text-align:center;margin-top:18px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="banner">🪜 <b>안 C · 단계 안내형</b><br>마감을 4단계로 차근차근. 날짜를 넘기면 그 날 기록이 <b>각 단계에 채워집니다</b>.</div>
+
+  <div class="topcard">
+    <div class="dtline">
+      <button class="arr" id="prev">‹</button>
+      <div class="dt" id="dt">5월 28일 (수)<small id="dtSub">✅ 저장됨 — 불러옴</small></div>
+      <button class="arr" id="next">›</button>
+    </div>
+    <div class="steps" id="steps">
+      <div class="step on" data-s="0"><div class="dot">1</div><div class="sl">매출</div></div>
+      <div class="step" data-s="1"><div class="dot">2</div><div class="sl">통장·금고</div></div>
+      <div class="step" data-s="2"><div class="dot">3</div><div class="sl">금고 계수</div></div>
+      <div class="step" data-s="3"><div class="dot">4</div><div class="sl">확인</div></div>
+    </div>
+  </div>
+
+  <!-- 4 요약 카드 (항상 보임, 세로정렬) -->
+  <div class="cards4">
+    <div class="c4"><div class="lb">📊 총 차액</div><div class="vl neg" id="kDiff">-3,600원</div><div class="tag">⚠ 확인</div></div>
+    <div class="c4"><div class="lb">💰 금고</div><div class="vl blue">1,585,700원</div><div class="tag">05/28 기준</div></div>
+    <div class="c4"><div class="lb">🏧 통장 입금</div><div class="vl">2,101,200원</div><div class="tag">이 날</div></div>
+    <div class="c4"><div class="lb">💵 현금 지출</div><div class="vl">443,700원</div><div class="tag">이 날</div></div>
+  </div>
+
+  <div id="panel"></div>
+
+  <div class="navbtns" id="navbtns"></div>
+  <div class="tip">단계 동그라미(1·2·3·4)를 눌러 이동할 수도 있습니다.<br>날짜 ‹ › 를 넘기면 저장된 날은 각 단계에 자동으로 차고, 빈 날은 빈 칸으로 시작합니다.</div>
+</div>
+
+<script>
+const fmt=n=>(n||0).toLocaleString('ko-KR');
+const REC={posCash:320000,posCR:80000,posCard:1200000,posEtc:150000,bank:2101200,etc:443700,book:1589300,act:1585700,diff:-3600};
+let step=0;
+const panel=document.getElementById('panel');
+const navb=document.getElementById('navbtns');
+
+function panels(s){
+  if(s===0) return `
+    <div class="panel-t">1. 오늘 매출</div>
+    <div class="panel-sub">포스기 마감 장표 보고 4칸 입력하세요</div>
+    <div class="fld"><label>💵 현금</label><input value="${fmt(REC.posCash)}"></div>
+    <div class="fld"><label>🧾 현금영수증</label><input value="${fmt(REC.posCR)}"></div>
+    <div class="fld"><label>💳 신용카드</label><input value="${fmt(REC.posCard)}"></div>
+    <div class="fld"><label>📲 기타결제</label><input value="${fmt(REC.posEtc)}"></div>
+    <div class="bigsum"><div class="l">매출 합계</div><div class="v">${fmt(REC.posCash+REC.posCR+REC.posCard+REC.posEtc)}원</div></div>`;
+  if(s===1) return `
+    <div class="panel-t">2. 금고에서 나간 돈</div>
+    <div class="panel-sub">지출이 아니라 "돈이 어디로 갔는지" 사유입니다</div>
+    <div class="fld"><label>🏧 통장에 넣은 돈</label><input value="${fmt(REC.bank)}">
+      <div class="hint">금고 현금을 통장으로 옮긴 금액 (이동)</div></div>
+    <div class="fld"><label>💵 현금으로 쓴 돈</label><input value="${fmt(REC.etc)}">
+      <div class="hint">금고에서 바로 지출하거나 금고가 안 맞는 사유</div></div>`;
+  if(s===2) return `
+    <div class="panel-t">3. 금고 계수</div>
+    <div class="panel-sub">실제 금고 화폐를 세어 입력 (시안에선 합계만)</div>
+    <div class="fld"><label>실제 센 금고 합계</label><input value="${fmt(REC.act)}"></div>
+    <div class="bigsum"><div class="l">장부상 있어야 할 금고</div><div class="v">${fmt(REC.book)}원</div></div>`;
+  const ok=REC.diff===0;
+  return `
+    <div class="panel-t">4. 최종 확인</div>
+    <div class="panel-sub">장부와 실제 금고를 맞춰봅니다</div>
+    <div class="fld" style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--g600);"><span>장부상 금고</span><span>${fmt(REC.book)}원</span></div>
+    <div class="fld" style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--g600);"><span>실제 센 금고</span><span>${fmt(REC.act)}원</span></div>
+    <div class="diffbox ${ok?'ok':'bad'}"><div class="l">차액</div><div class="v" style="color:${ok?'var(--success)':'var(--danger)'}">${ok?'✅ 일치':(REC.diff>0?'+':'')+fmt(REC.diff)+'원'}</div></div>`;
+}
+function navButtons(s){
+  if(s===0) return `<button class="nextb" data-go="1">다음 ›</button>`;
+  if(s===3) return `<button class="prev" data-go="2">‹ 이전</button><button class="done" onclick="alert('(시안) 마감 저장 완료')">💾 마감 저장</button>`;
+  return `<button class="prev" data-go="${s-1}">‹ 이전</button><button class="nextb" data-go="${s+1}">다음 ›</button>`;
+}
+function render(){
+  panel.innerHTML=panels(step);
+  navb.innerHTML=navButtons(step);
+  document.querySelectorAll('.step').forEach(el=>{
+    const si=+el.dataset.s;
+    el.className='step'+(si===step?' on':si<step?' done':'');
+  });
+  navb.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{step=+b.dataset.go;render();});
+}
+document.querySelectorAll('.step').forEach(el=>el.onclick=()=>{step=+el.dataset.s;render();});
+document.getElementById('prev').onclick=()=>{alert('(시안) 5/27 기록을 불러와 각 단계에 채웁니다');};
+document.getElementById('next').onclick=()=>{alert('(시안) 5/29는 빈 날 — 빈 칸으로 시작합니다');};
+render();
+</script>
+</body>
+</html>

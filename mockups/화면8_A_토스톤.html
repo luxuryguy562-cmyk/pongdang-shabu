@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>영수증 결과 A안 — 토스 톤 통일</title>
+<style>
+/* styles.css 디자인 토큰 그대로 */
+:root{
+  --bg:#FFFFFF;--white:#FFFFFF;
+  --gray-100:#F9FAFB;--gray-200:#E5E8EB;--gray-400:#B0B8C1;--gray-500:#8B95A1;--gray-600:#4E5968;
+  --text:#191F28;--danger:#F04452;--danger-light:#FFEBEE;--success:#0CAB6C;
+  --toss-blue:#3182F6;--toss-blue-strong:#0064FF;--toss-blue-light:#EDF4FF;
+  --toss-text-1:#191F28;--toss-text-2:#333D4B;--toss-text-3:#6B7684;--toss-text-4:#8B95A1;
+  --toss-line:#F2F4F6;--toss-line-2:#E5E8EB;
+  --card-radius:20px;--card-shadow:0 4px 14px rgba(20,40,80,0.07), 0 1px 3px rgba(20,40,80,0.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:#F2F4F6;color:var(--text);display:flex;justify-content:center;padding:16px;letter-spacing:-.3px;}
+.phone{width:100%;max-width:420px;}
+.title{font-size:17px;font-weight:900;text-align:center;margin-bottom:4px;}
+.title small{display:block;font-size:12px;color:var(--gray-500);font-weight:600;margin-top:3px;}
+.note{font-size:12px;color:var(--toss-text-3);background:var(--toss-blue-light);border-radius:12px;padding:11px 13px;margin:14px 0 12px;line-height:1.5;}
+.note b{color:var(--toss-blue-strong);}
+/* 공통: .card (styles.css 그대로 radius 20 + shadow + padding) */
+.card{background:var(--white);border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:18px;margin-bottom:14px;}
+.card-title{font-size:16px;font-weight:800;color:var(--toss-text-1);letter-spacing:-.4px;margin-bottom:14px;}
+/* 상단 거래처·날짜 (input-field 톤) */
+.head2{display:flex;gap:10px;margin-bottom:14px;}
+.head2 .f{flex:1;}
+.head2 label{font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;}
+.head2 input{width:100%;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;}
+/* 품목 카드 */
+.item-card{background:var(--white);border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:16px;margin-bottom:12px;}
+.l1{display:flex;align-items:center;gap:10px;}
+.l1 .item{flex:1;border:none;background:transparent;font-size:16px;font-weight:700;color:var(--toss-text-1);min-width:0;outline:none;}
+.l1 .amt{flex:0 0 auto;border:none;background:transparent;font-size:19px;font-weight:900;text-align:right;width:110px;color:var(--toss-text-1);outline:none;}
+.l1 .x{flex:0 0 26px;height:26px;border:none;border-radius:50%;background:var(--toss-line);color:var(--toss-text-4);font-size:14px;cursor:pointer;}
+.l2{display:flex;align-items:center;gap:8px;margin-top:12px;}
+.mini{background:var(--toss-line);border-radius:10px;padding:9px 11px;font-size:12px;color:var(--toss-text-3);font-weight:600;display:flex;align-items:center;gap:5px;}
+.mini input{border:none;background:transparent;width:52px;font-size:13px;font-weight:700;text-align:right;color:var(--toss-text-1);outline:none;}
+.chip{margin-left:auto;font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;background:var(--toss-blue-light);color:var(--toss-blue);border:none;cursor:pointer;}
+.chip.empty{background:var(--toss-line);color:var(--toss-text-4);}
+.addbtn{width:100%;border:none;background:var(--toss-line);border-radius:14px;padding:13px;font-size:13px;color:var(--toss-text-3);font-weight:700;cursor:pointer;}
+.sumbar{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:var(--toss-blue-light);border-radius:var(--card-radius);margin-bottom:14px;}
+.sumbar .l{font-size:13px;font-weight:700;color:var(--toss-blue-strong);}
+.sumbar .v{font-size:20px;font-weight:900;color:var(--toss-blue-strong);}
+.savebtn{width:100%;border:none;background:var(--toss-blue);color:#fff;border-radius:14px;padding:16px;font-size:15px;font-weight:800;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="title">영수증 결과 A안 · 토스 톤<small>홈화면과 같은 토큰·카드·여백으로 통일</small></div>
+
+  <div class="note">🎨 홈화면과 <b>똑같은 디자인 시스템</b> 적용: 카드 radius 20 + 은은한 그림자, 회색(`--toss-line`) 입력칸, `--toss-blue` 포인트, 넉넉한 여백.</div>
+
+  <!-- 상단: 거래처·날짜 -->
+  <div class="card" style="padding:16px;">
+    <div class="head2" style="margin-bottom:0;">
+      <div class="f"><label>🏪 거래처</label><input value="광성탑마트"></div>
+      <div class="f"><label>📅 날짜</label><input value="2026-06-02"></div>
+    </div>
+  </div>
+
+  <!-- 합계 바 -->
+  <div class="sumbar"><span class="l">📋 합계 (2개 품목)</span><span class="v">4,970원</span></div>
+
+  <!-- 품목 카드들 -->
+  <div class="item-card">
+    <div class="l1"><input class="item" value="듀라셀)코인2025"><input class="amt" value="3,800"><button class="x">×</button></div>
+    <div class="l2">
+      <span class="mini">단가 <input value="3,800"></span>
+      <span class="mini">수량 <input value="1"></span>
+      <button class="chip">비품</button>
+    </div>
+  </div>
+  <div class="item-card">
+    <div class="l1"><input class="item" value="종량제봉투50L"><input class="amt" value="1,170"><button class="x">×</button></div>
+    <div class="l2">
+      <span class="mini">단가 <input value="1,170"></span>
+      <span class="mini">수량 <input value="1"></span>
+      <button class="chip empty">🏷️ 분류</button>
+    </div>
+  </div>
+
+  <button class="addbtn" style="margin-bottom:14px;">+ 품목 추가</button>
+  <button class="savebtn">저장하기</button>
+  <div style="height:30px"></div>
+</div>
+</body>
+</html>

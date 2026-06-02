@@ -28,24 +28,49 @@ function moveSettleDate(dir){
 }
 async function loadOpeningForDate(dateStr){
   if(!currentStore) return;
+  // ── 2026-05-31: 날짜 이동 시 그 날 마감 전체 복원 ──
+  // 옛 버그: 기존 마감이 있어도 "기존 데이터 있음" 안내만 하고 입력칸은 공란이었음.
+  // → 그 날짜에 저장된 마감이 있으면 editSettlement로 매출·통장·현금지출·금고 전부 복원.
+  const{data:existing}=await sb.from('settlements').select('id').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
+  if(existing){
+    await editSettlement(dateStr, true); // silent: 화살표 이동이라 안내 토스트 생략
+    const st=document.getElementById('settleDateStatus');
+    if(st) st.innerText='저장된 마감 — 불러옴';
+    return;
+  }
+  // 기존 마감 없음 → 빈 폼 + 시작 금고(영업개시 우선 → 전일 마감, 금고 사슬 규칙)
+  resetSettleView();
+  await applySettleStartVault(dateStr);
+  recalcSettle2();
+  const statusEl2=document.getElementById('settleDateStatus');
+  if(statusEl2) statusEl2.innerText='새 정산';
+}
+// ─── 마감 시작 금고 결정 (금고 사슬 규칙, 2026-06-01 사장님 정의) ───
+// 그 날 영업개시 했으면 영업개시 금고, 안 했으면 전일 마감 금고. (마감→영업개시→마감 사슬)
+async function applySettleStartVault(dateStr){
+  const el=document.getElementById('siOpening');
+  const statusEl=document.getElementById('openingStatus');
+  if(!el) return;
+  // 1) 그 날 영업개시 금고 우선
+  const{data:op}=await sb.from('daily_opening').select('actual_total').eq('store_id',currentStore.id).eq('opening_date',dateStr).maybeSingle();
+  if(op?.actual_total!=null){
+    el.value=parseInt(op.actual_total).toLocaleString();
+    if(statusEl) statusEl.innerText='오늘 영업개시 금고';
+    if(!isManager) el.readOnly=true;
+    return;
+  }
+  // 2) 영업개시 없음 → 전일 마감 금고
   const d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()-1);
   const yd=ymdLocal(d);
   const{data}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
-  const el=document.getElementById('siOpening');
-  const statusEl=document.getElementById('openingStatus');
   if(data?.actual_total!=null){
     el.value=parseInt(data.actual_total).toLocaleString();
-    statusEl.innerText='전일('+yd+') 마감금액';
+    if(statusEl) statusEl.innerText='전일('+yd+') 마감 금고';
+    if(!isManager) el.readOnly=true;
   } else {
     el.value='';
-    statusEl.innerText='전일 마감 데이터 없음';
+    if(statusEl) statusEl.innerText='전일('+yd+') 마감 데이터 없음';
   }
-  recalcSettle2();
-  // 해당 날짜에 기존 정산 있으면 안내
-  const{data:existing}=await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',dateStr).maybeSingle();
-  const statusEl2=document.getElementById('settleDateStatus');
-  if(existing) statusEl2.innerText='기존 데이터 있음 (덮어쓰기)';
-  else statusEl2.innerText='새 정산';
 }
 function getSettleDate(){
   const picker=document.getElementById('settleDatePicker');
@@ -318,7 +343,7 @@ async function loadOpeningPage(dateStr){
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">날짜</span><span style="font-size:14px;font-weight:700;">${prev.settle_date}</span></div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">매출</span><span style="font-size:14px;font-weight:700;">${fmt(prev.sales_total||0)}원</span></div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span style="font-size:13px;color:var(--gray-600);">마감 차액</span><span style="font-size:14px;font-weight:700;color:${prev.diff_amount===0?'var(--success)':'var(--danger)'};">${prev.diff_amount===0?'✅ 일치':(prev.diff_amount>0?'+':'')+fmt(prev.diff_amount||0)+'원'}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:2px solid var(--text);margin-top:4px;"><span style="font-size:14px;font-weight:800;">마감 금고</span><span style="font-size:18px;font-weight:900;color:var(--blue);">${fmt(opPrevCloseTotal)}원</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:2px solid var(--text);margin-top:4px;"><span style="font-size:14px;font-weight:800;">전일 마감 금고</span><span style="font-size:18px;font-weight:900;color:var(--blue);">${fmt(opPrevCloseTotal)}원</span></div>
     </div>`;
   } else {
     sum.innerHTML = `<div class="empty-state" style="padding:14px;"><p style="margin:0;font-size:13px;">어제 마감 기록이 없어요. (오늘 시작 금고만 기록됩니다)</p></div>`;
@@ -347,37 +372,72 @@ async function loadOpeningPage(dateStr){
 function _settleDeductContainerFor(type){
   return document.getElementById(type==='bank' ? 'settleDeductBankRows' : 'settleDeductEtcRows');
 }
-function addSettleDeductRow(type, amount, memo, catName, catId){
+function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
   type = (type==='bank') ? 'bank' : 'etc';
-  // ── 부호 정책 (2026-05-17 갈아엎기) ──
-  // 옛 의미 보존: amount 양수 = 금고에서 빠짐 (book 차감), 음수 = 들어옴 (book 증가, -(-)=+)
-  // UI 토글: '−' = 빠짐 (sign=1, default), '+' = 들어옴 (sign=-1)
+  // ── 부호 정책: amount 양수 = 빠짐, 음수 = 들어옴 (etc만 토글) ──
   amount = parseInt(amount)||0;
-  const sign = (amount<0) ? -1 : 1; // 음수 amount면 들어옴 (sign=-1, UI '+')
+  const sign = (amount<0) ? -1 : 1;
   const absAmt = Math.abs(amount);
   memo = memo || '';
   catName = catName || ''; catId = catId || '';
   const cont = _settleDeductContainerFor(type);
   if(!cont) return;
   const id = 'stDed_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-  const catLabel = catName ? `🏷️ ${catName}` : '🏷️ 분류 선택';
-  const catColor = catName ? 'var(--text)' : 'var(--gray-500)';
-  // etc 행만 ± 토글. bank은 항상 빠짐(통장 입금)
-  // sign=1(빠짐) → '−' 빨강 / sign=-1(들어옴) → '+' 초록
-  const signBtnHtml = type==='etc'
-    ? `<button class="st-ded-sign" data-action="toggleStDedSign|${id}" title="빠짐/들어옴 토글" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--gray-200);background:${sign>0?'var(--danger-light)':'#DCFCE7'};color:${sign>0?'var(--danger)':'#15803D'};font-size:16px;font-weight:900;cursor:pointer;padding:0;">${sign>0?'−':'+'}</button>`
-    : '';
-  const gridCols = type==='etc' ? '32px 1fr 28px' : '1fr 28px';
-  cont.insertAdjacentHTML('beforeend', `
-    <div class="st-deduct-row" data-id="${id}" data-type="${type}" data-sign="${sign}" data-cat-id="${catId}" data-cat-name="${catName.replace(/"/g,'&quot;')}" style="display:grid;grid-template-columns:${gridCols};gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
-      ${signBtnHtml}
-      <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;text-align:right;min-width:0;" data-input="onStDedAmountInput|this">
-      <button class="x-btn" data-action="removeSettleDeductRow|${id}" style="width:26px;height:26px;border-radius:50%;border:none;background:var(--danger-light);color:var(--danger);font-size:14px;font-weight:800;cursor:pointer;padding:0;">×</button>
-      <button class="st-ded-cat" data-action="pickStDedCategory|${id}" style="grid-column:1 / -1;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;background:#fff;text-align:left;cursor:pointer;color:${catColor};">${catLabel}</button>
-      <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="grid-column:1 / -1;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
-    </div>
-  `);
+  // 공통 카드/입력 스타일 (B안 2줄 카드)
+  const cardStyle='background:var(--gray-100);border-radius:14px;padding:12px 13px;margin-bottom:8px;';
+  const amtStyle='flex:1;border:none;background:transparent;font-size:20px;font-weight:900;color:var(--text);min-width:0;';
+  const memoStyle='flex:1;border:none;background:#fff;border-radius:8px;padding:9px 10px;font-size:12px;min-width:0;';
+  if(type==='bank'){
+    // ── 통장 입금: 1줄 고정(삭제 X), 입금자 칩(직원 연결, 기본 현재 로그인) ──
+    empId = empId || (currentEmp?.id||'');
+    if(empId && !empName){ const e=(employees||[]).find(x=>x.id===empId); empName = e?e.name:''; }
+    empName = empName || (currentEmp?.name||'');
+    const empLabel = empName ? `👤 ${empName}` : '👤 입금자';
+    cont.insertAdjacentHTML('beforeend', `
+      <div class="st-deduct-row" data-id="${id}" data-type="bank" data-sign="1" data-emp-id="${empId}" data-emp-name="${empName.replace(/"/g,'&quot;')}" style="${cardStyle}">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+          <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="${memoStyle}">
+          <button class="st-ded-emp" data-action="pickDepositor|${id}" title="입금자 (탭하면 변경)" style="flex:0 0 auto;padding:9px 11px;border:1px solid var(--blue);border-radius:8px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue);cursor:pointer;white-space:nowrap;">${empLabel}</button>
+        </div>
+      </div>
+    `);
+  } else {
+    // ── 현금 지출: 2줄 카드, 부호 토글 + 지출 분류 칩 ──
+    const catLabel = catName ? catName : '🏷️ 지출 분류';
+    const catStyle = catName
+      ? 'border:1px solid var(--blue);background:var(--blue-light);color:var(--blue);'
+      : 'border:1px dashed var(--gray-300);background:#fff;color:var(--gray-500);';
+    cont.insertAdjacentHTML('beforeend', `
+      <div class="st-deduct-row" data-id="${id}" data-type="etc" data-sign="${sign}" data-cat-id="${catId}" data-cat-name="${catName.replace(/"/g,'&quot;')}" style="${cardStyle}">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="st-ded-sign" data-action="toggleStDedSign|${id}" title="빠짐/들어옴 토글" style="flex:0 0 26px;height:26px;border-radius:50%;border:none;background:${sign>0?'var(--danger-light)':'#DCFCE7'};color:${sign>0?'var(--danger)':'#15803D'};font-size:15px;font-weight:900;cursor:pointer;padding:0;">${sign>0?'−':'+'}</button>
+          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
+          <button class="x-btn" data-action="removeSettleDeductRow|${id}" style="flex:0 0 24px;height:24px;border-radius:50%;border:none;background:#fff;color:var(--gray-400);font-size:14px;cursor:pointer;padding:0;">×</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+          <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="${memoStyle}">
+          <button class="st-ded-cat" data-action="pickStDedCategory|${id}" style="flex:0 0 auto;padding:9px 11px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;${catStyle}">${catLabel}</button>
+        </div>
+      </div>
+    `);
+  }
   recalcSettle2();
+}
+// ─── 통장 입금 입금자 변경 (탭하면 직원 순환, 직원 연결) ───
+function pickDepositor(rowId){
+  const row=document.querySelector('.st-deduct-row[data-id="'+rowId+'"]');
+  if(!row) return;
+  if(!employees || !employees.length){ toast('등록된 직원이 없어요','warn'); return; }
+  const curId=row.dataset.empId;
+  const idx=employees.findIndex(e=>e.id===curId);
+  const next=employees[(idx+1)%employees.length];
+  row.dataset.empId=next.id;
+  row.dataset.empName=next.name;
+  const btn=row.querySelector('.st-ded-emp');
+  if(btn) btn.textContent='👤 '+next.name;
 }
 // ─── 부호 토글 (etc 행만, 양방향) ───
 // sign=1: 빠짐 (UI '−'), sign=-1: 들어옴 (UI '+')
@@ -417,8 +477,10 @@ function pickStDedCategory(rowId){
       row.dataset.catName=catName;
       const btn=row.querySelector('.st-ded-cat');
       if(btn){
-        btn.textContent=catName?`🏷️ ${catName}`:'🏷️ 분류 선택';
-        btn.style.color=catName?'var(--text)':'var(--gray-500)';
+        const isSet = catName && catName!=='미분류';
+        btn.textContent = isSet ? catName : '🏷️ 지출 분류';
+        if(isSet){ btn.style.border='1px solid var(--blue)'; btn.style.background='var(--blue-light)'; btn.style.color='var(--blue)'; }
+        else { btn.style.border='1px dashed var(--gray-300)'; btn.style.background='#fff'; btn.style.color='var(--gray-500)'; }
       }
     }
   });
@@ -459,7 +521,8 @@ function getSettleDeductRows(){
     const memo = row.querySelector('.st-ded-memo').value || '';
     const category_id = row.dataset.catId || null;
     const category_name = row.dataset.catName || '';
-    if(abs>0) out.push({type, amount, memo, category_id, category_name});
+    const employee_id = (type==='bank') ? (row.dataset.empId || null) : null; // 통장입금 입금자
+    if(abs>0) out.push({type, amount, memo, category_id, category_name, employee_id});
   });
   return out;
 }
@@ -509,7 +572,7 @@ async function saveOpening(){
   const diffStatus = diff===0 ? '일치' : `차액 ${diff>0?'+':''}${fmt(diff)}원`;
   const isEdit = (targetDate !== today);
   const headLabel = isEdit ? `[${targetDate} 영업개시 수정]` : '영업개시 보고';
-  if(!confirm(`${headLabel}\n어제 마감: ${fmt(opPrevCloseTotal)}원\n오늘 실제: ${fmt(actual)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
+  if(!confirm(`${headLabel}\n전일 마감 금고: ${fmt(opPrevCloseTotal)}원\n금고 현황: ${fmt(actual)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'영업개시 저장 중...');
   const {error} = await sb.from('daily_opening').upsert({
     store_id: currentStore.id,
@@ -522,10 +585,8 @@ async function saveOpening(){
   setLoad(false);
   if(error) return errToast('영업개시 저장', error);
   toast(isEdit?'영업개시 수정 완료':'영업개시 보고 완료','success');
-  // 수정 모드면 리스트로 돌아감, 신규는 그대로
-  if(isEdit){
-    openingTab('list', null);
-  }
+  // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
+  if(typeof nav==='function') nav('busHub');
 }
 
 // 영업개시 서브탭 전환
@@ -570,10 +631,10 @@ async function loadOpeningList(){
         <div style="font-size:14px;font-weight:800;color:${diffColor};">${diffTxt}</div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-600);padding:3px 0;">
-        <span>어제 마감</span><span>${fmt(r.previous_close_total||0)}원</span>
+        <span>전일 마감 금고</span><span>${fmt(r.previous_close_total||0)}원</span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-600);padding:3px 0;">
-        <span>오늘 실제</span><span>${fmt(r.actual_total||0)}원</span>
+        <span>금고 현황</span><span>${fmt(r.actual_total||0)}원</span>
       </div>
       <div style="display:flex;gap:6px;margin-top:8px;">
         <button class="btn btn-secondary" style="flex:1;padding:8px;font-size:12px;" data-action="editOpening|${r.opening_date}">✏️ 수정</button>
@@ -611,8 +672,8 @@ async function deleteOpening(dateStr){
   setLoad(false);
   if(error) return errToast('영업개시 삭제', error);
   toast(`${target} 영업개시 삭제 완료`,'success');
-  // 리스트로 돌아감
-  openingTab('list', null);
+  // 2026-06-01: 기록조회 서브탭 제거 → 삭제 후 개시마감 첫화면으로
+  if(typeof nav==='function') nav('busHub');
 }
 
 // 영업개시 날짜 picker init (관리자만 표시)
@@ -654,23 +715,10 @@ function moveOpeningDate(dir){
 // 영업개시보고서 자동 로드 (전일 마감금액)
 async function loadOpeningAmount(){
   if(!currentStore) return;
-  // 2026-05-14: picker.value(settle_date) 기준 전날 마감 로드.
-  // 옛 버그: 시스템 today-1 고정이라 사장님이 settle_date 변경해도 전일이월금이 항상 가장 최근 마감으로 갔음.
+  // 2026-06-01: 금고 사슬 규칙 — 그 날 영업개시 했으면 영업개시 금고, 안 했으면 전일 마감 금고
   const picker=document.getElementById('settleDatePicker');
   const settleDate=picker?.value||ymdLocal(new Date());
-  const d=new Date(settleDate+'T00:00:00');d.setDate(d.getDate()-1);
-  const yd=ymdLocal(d);
-  const{data} = await sb.from('settlements').select('actual_total').eq('store_id',currentStore.id).eq('settle_date',yd).maybeSingle();
-  const el=document.getElementById('siOpening');
-  const statusEl=document.getElementById('openingStatus');
-  if(data?.actual_total!=null){
-    el.value=parseInt(data.actual_total).toLocaleString();
-    statusEl.innerText='전일('+yd+') 마감금액';
-    if(!isManager) el.readOnly=true;
-  } else {
-    el.value='';
-    statusEl.innerText='전일('+yd+') 마감 데이터 없음';
-  }
+  await applySettleStartVault(settleDate);
   recalcSettle2();
 }
 function settleTab(tab,el){
@@ -735,7 +783,7 @@ async function finishSettlement2(){
   let vault=0;const vMap={};document.querySelectorAll('.v-input').forEach(i=>{const val=parseInt(i.value)||0;vMap[i.dataset.unit]=val;vault+=parseInt(i.dataset.unit)*val;});
   const diff=vault-book;const diffStatus=diff===0?'일치':`차액 ${diff>0?'+':''}${fmt(diff)}원`;
   const extraLine=extraTotal>0?`\n기타매출: ${fmt(extraTotal)}원 (별도 관리)`:'';
-  if(!confirm(`매출: ${fmt(salesTotal)}원${extraLine}\n장부: ${fmt(book)}원\n금고: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
+  if(!confirm(`매출: ${fmt(salesTotal)}원${extraLine}\n장부상 금고: ${fmt(book)}원\n금고 현황: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'마감 저장 중...');
   const settleDate=getSettleDate();
   const{data:savedRow,error}=await sb.from('settlements').upsert({
@@ -776,11 +824,9 @@ async function finishSettlement2(){
   } else {
     toast('마감 저장됐어요','success');
   }
-  // 저장 후 기록 조회 탭으로 이동 (방금 저장한 마감 확인 가능). location.reload() 제거로
-  // 자동 로그인 → 대시보드 점프 현상 방지.
-  const listTab=document.querySelector('#settleCont .sub-tab[data-action*="settleTab|list"]');
-  if(listTab) listTab.click();
-  else resetSettleView();
+  // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
+  resetSettleView();
+  if(typeof nav==='function') nav('busHub');
 }
 
 // ─── 새 기능: 마감정산 → sales_daily 동기화 (하루 1행 upsert) ───
@@ -881,14 +927,14 @@ async function loadSettleList(){
         const amt = d.amount||0;
         if(amt<=0) return;
         const icon = d.type==='bank' ? '🏧' : '📤';
-        const label = d.type==='bank' ? '통장입금' : '기타사용';
+        const label = d.type==='bank' ? '통장 입금' : '현금 지출';
         dedRows.push({icon, label, amt, memo:d.memo||''});
       });
     } else {
       const dEtc = items.deduct_etc||0;
       const dBank = items.deduct_bank||0;
-      if(dBank>0) dedRows.push({icon:'🏧', label:'통장입금', amt:dBank, memo:items.deduct_bank_memo||''});
-      if(dEtc>0) dedRows.push({icon:'📤', label:'기타사용', amt:dEtc, memo:items.deduct_etc_memo||''});
+      if(dBank>0) dedRows.push({icon:'🏧', label:'통장 입금', amt:dBank, memo:items.deduct_bank_memo||''});
+      if(dEtc>0) dedRows.push({icon:'📤', label:'현금 지출', amt:dEtc, memo:items.deduct_etc_memo||''});
     }
     const dedHtml = dedRows.length ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--gray-200);">${dedRows.map(d=>`
       <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:var(--gray-600);">
@@ -959,7 +1005,7 @@ async function loadSettleCard(d){
 
   // 1) 영업개시
   html += sectionHead('🏁','영업개시');
-  html += row('💰 전일 이월금', items.opening||0);
+  html += row('💰 전일 마감 금고', items.opening||0);
 
   // 2) 매출 (4칸)
   html += sectionHead('💵','매출','현금+현금영수증+신용카드+기타결제');
@@ -994,8 +1040,8 @@ async function loadSettleCard(d){
   </div>`;
   if(deductEtc>0 || deductBank>0){
     html += sectionHead('📤','차감');
-    if(deductEtc>0) html += dedRow('📤 기타사용', deductEtc, deductEtcMemo);
-    if(deductBank>0) html += dedRow('🏧 통장입금', deductBank, deductBankMemo);
+    if(deductEtc>0) html += dedRow('📤 현금 지출', deductEtc, deductEtcMemo);
+    if(deductBank>0) html += dedRow('🏧 통장 입금', deductBank, deductBankMemo);
   }
 
   // 5) 기타매출 (기존 함수)
@@ -1015,7 +1061,7 @@ async function loadSettleCard(d){
 
   // 7) 최종 결과
   const diff=data.diff_amount||0;
-  html += `<div style="background:var(--${diff===0?'success':'danger'}-light);border-radius:12px;padding:14px;margin-top:14px;text-align:center;"><div style="font-size:12px;color:var(--gray-600);font-weight:600;">📊 마감 차액</div><div style="font-size:22px;font-weight:800;color:var(--${diff===0?'success':'danger'});margin-top:4px;">${diff===0?'✅ 일치':(diff>0?'+':'')+fmt(diff)+'원'}</div><div style="font-size:12px;color:var(--gray-600);margin-top:4px;">장부 ${fmt(data.expected_total)} · 금고 ${fmt(data.actual_total)}</div></div>`;
+  html += `<div style="background:var(--${diff===0?'success':'danger'}-light);border-radius:12px;padding:14px;margin-top:14px;text-align:center;"><div style="font-size:12px;color:var(--gray-600);font-weight:600;">📊 마감 차액</div><div style="font-size:22px;font-weight:800;color:var(--${diff===0?'success':'danger'});margin-top:4px;">${diff===0?'✅ 일치':(diff>0?'+':'')+fmt(diff)+'원'}</div><div style="font-size:12px;color:var(--gray-600);margin-top:4px;">장부상 금고 ${fmt(data.expected_total)} · 금고 현황 ${fmt(data.actual_total)}</div></div>`;
 
   // 관리자: 수정/삭제 버튼
   if(isManager){
@@ -1066,8 +1112,9 @@ async function renderSettleCardExtraSection(data){
 }
 
 // ─── 새 기능: 정산 수정 ───
-async function editSettlement(dateStr){
+async function editSettlement(dateStr, silent){
   // 기존 정산 데이터를 입력 폼에 로드하고 입력 탭으로 전환
+  // silent=true: 날짜 화살표 이동 시 재사용 (안내 토스트 생략)
   if(!currentStore){toast('매장이 선택되지 않았어요','warn');return;}
   if(!currentEmp){toast('로그인 정보가 없어요. 다시 로그인 해주세요','warn');return;}
   let data, error;
@@ -1112,7 +1159,7 @@ async function editSettlement(dateStr){
     if(bankCont) bankCont.innerHTML='';
     if(etcCont) etcCont.innerHTML='';
     if(Array.isArray(items.deductions) && items.deductions.length){
-      items.deductions.forEach(d=>addSettleDeductRow(d.type||'etc', d.amount||0, d.memo||'', d.category_name||'', d.category_id||''));
+      items.deductions.forEach(d=>addSettleDeductRow(d.type||'etc', d.amount||0, d.memo||'', d.category_name||'', d.category_id||'', d.employee_id||'', ''));
     } else {
       // 옛 데이터: 단일 값 → type별 1행씩
       addSettleDeductRow('etc', items.deduct_etc||0, items.deduct_etc_memo||'', '', '');
@@ -1152,7 +1199,7 @@ async function editSettlement(dateStr){
   const statusEl=document.getElementById('settleDateStatus');
   if(statusEl) statusEl.innerText='기존 데이터 수정 중';
   recalcSettle2();
-  toast('정산 데이터를 불러왔어요. 수정 후 저장하세요.','success');
+  if(!silent) toast('정산 데이터를 불러왔어요. 수정 후 저장하세요.','success');
 }
 async function deleteSettlement(dateStr){
   if(!confirm(dateStr+' 정산 기록을 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.')) return;
@@ -1162,7 +1209,8 @@ async function deleteSettlement(dateStr){
   if(error) return errToast('삭제', error);
   toast('정산 기록 삭제됐어요','success');
   closeSheet('settleDetailSheet');
-  loadSettleList();
+  // 2026-06-01: 기록조회 서브탭 제거 → 삭제 후 개시마감 첫화면(차액 표)로
+  if(typeof nav==='function') nav('busHub');
 }
 async function moveCardDate(dir){const d=new Date(cardDateStr);d.setDate(d.getDate()+dir);await loadSettleCard(ymdLocal(d));}
 async function onCardDateChange(el){const v=el.value;if(v) await loadSettleCard(v);}

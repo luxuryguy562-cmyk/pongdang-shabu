@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>영수증 분석 결과 — 3안</title>
+<style>
+:root{
+  --blue:#3182F6;--blue-strong:#0064FF;--blue-light:#EDF4FF;
+  --bg:#F2F4F6;--white:#fff;
+  --g100:#F9FAFB;--g200:#E5E8EB;--g300:#D1D6DB;--g400:#B0B8C1;--g500:#8B95A1;--g600:#6B7684;
+  --text:#191F28;--danger:#F04452;--danger-light:#FFEBEE;--success:#0CAB6C;
+  --radius:16px;--shadow:0 4px 14px rgba(20,40,80,.07),0 1px 3px rgba(20,40,80,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;justify-content:center;padding:14px;letter-spacing:-.3px;}
+.phone{width:100%;max-width:420px;}
+.title{font-size:17px;font-weight:900;text-align:center;margin-bottom:4px;}
+.title small{display:block;font-size:12px;color:var(--g500);font-weight:600;margin-top:3px;}
+.tag{display:inline-block;font-size:12px;font-weight:800;padding:5px 12px;border-radius:99px;margin:16px 0 8px;}
+.tag.now{background:var(--g200);color:var(--g600);}
+.tag.new{background:var(--blue-light);color:var(--blue-strong);}
+/* 공통 상단 (거래처·날짜) */
+.head2{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:13px 14px;margin-bottom:8px;display:flex;gap:8px;}
+.head2 .f{flex:1;}
+.head2 label{font-size:10px;color:var(--g500);font-weight:700;display:block;margin-bottom:3px;}
+.head2 input{width:100%;border:1px solid var(--g200);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;min-width:0;}
+.cap{font-size:11px;color:var(--g500);text-align:center;margin:6px 0 2px;line-height:1.5;}
+.cap b{color:var(--blue-strong);}
+.addbtn{width:100%;border:1px dashed var(--g300);background:transparent;border-radius:10px;padding:9px;font-size:12px;color:var(--g600);font-weight:700;cursor:pointer;margin-top:2px;}
+
+/* ===== 지금: 가로 스크롤 표 ===== */
+.now-wrap{overflow-x:auto;background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);}
+.now-tbl{border-collapse:collapse;font-size:11px;white-space:nowrap;}
+.now-tbl th{padding:8px 10px;color:var(--g400);font-size:10px;border-bottom:1px solid var(--g200);}
+.now-tbl td{padding:8px 10px;border-bottom:1px solid var(--g100);}
+.now-tbl input{border:1px solid var(--g200);border-radius:6px;padding:5px 7px;font-size:11px;width:70px;}
+
+/* ===== 안 A: 카드형 (품목 크게 / 단가·수량·분류 아래) ===== */
+.A .card{background:var(--white);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;margin-bottom:8px;}
+.A .l1{display:flex;align-items:center;gap:8px;}
+.A .item{flex:1;border:none;background:transparent;font-size:15px;font-weight:700;min-width:0;}
+.A .amt{flex:0 0 auto;border:none;background:transparent;font-size:18px;font-weight:900;text-align:right;width:100px;}
+.A .x{flex:0 0 22px;height:22px;border:none;border-radius:50%;background:var(--danger-light);color:var(--danger);font-size:13px;cursor:pointer;}
+.A .l2{display:flex;align-items:center;gap:6px;margin-top:9px;}
+.A .mini{background:var(--g100);border-radius:7px;padding:6px 8px;font-size:11px;color:var(--g600);display:flex;align-items:center;gap:3px;}
+.A .mini input{border:none;background:transparent;width:46px;font-size:11px;font-weight:700;text-align:right;color:var(--text);}
+.A .chip{margin-left:auto;font-size:11px;font-weight:700;padding:6px 10px;border-radius:7px;border:1px solid var(--blue);background:var(--blue-light);color:var(--blue);cursor:pointer;}
+.A .chip.empty{border:1px dashed var(--g300);background:#fff;color:var(--g500);}
+
+/* ===== 안 B: 2줄 컴팩트 (품목+금액 / 단가×수량·분류·X) ===== */
+.B .row{background:var(--white);border-radius:12px;box-shadow:var(--shadow);padding:11px 13px;margin-bottom:7px;}
+.B .l1{display:flex;align-items:center;gap:8px;}
+.B .item{flex:1;border:none;background:transparent;font-size:14px;font-weight:700;min-width:0;}
+.B .amt{flex:0 0 auto;border:none;background:transparent;font-size:16px;font-weight:900;text-align:right;width:95px;}
+.B .l2{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11px;color:var(--g500);}
+.B .l2 .uq{font-variant-numeric:tabular-nums;}
+.B .chip{font-size:10px;font-weight:700;padding:4px 9px;border-radius:99px;border:1px solid var(--blue);background:var(--blue-light);color:var(--blue);cursor:pointer;}
+.B .chip.empty{border:1px dashed var(--g300);background:#fff;color:var(--g500);}
+.B .x{margin-left:auto;border:none;background:transparent;color:var(--g400);font-size:14px;cursor:pointer;}
+
+/* ===== 안 C: 펼침형 (품목+금액 한 줄, 탭하면 단가/수량/분류) ===== */
+.C .item-c{background:var(--white);border-radius:12px;box-shadow:var(--shadow);margin-bottom:7px;overflow:hidden;}
+.C .head{display:flex;align-items:center;gap:8px;padding:13px 14px;cursor:pointer;}
+.C .nm{flex:1;font-size:14px;font-weight:700;}
+.C .nm .sub{font-size:10px;color:var(--g400);font-weight:500;margin-top:2px;}
+.C .amt{font-size:16px;font-weight:900;}
+.C .chev{color:var(--g400);font-size:12px;}
+.C .body{max-height:0;overflow:hidden;transition:max-height .25s;background:var(--g100);}
+.C .item-c.open .body{max-height:200px;}
+.C .bin{padding:12px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.C .bin .mini{background:#fff;border-radius:7px;padding:7px 9px;font-size:11px;color:var(--g600);}
+.C .bin .chip{font-size:11px;font-weight:700;padding:7px 11px;border-radius:7px;border:1px solid var(--blue);background:var(--blue-light);color:var(--blue);}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="title">영수증 분석 결과 — 3안<small>가로 스크롤 ❌ → 카드 2줄</small></div>
+
+  <!-- 지금 -->
+  <div class="tag now">📍 지금 (옆으로 밀어야 보임)</div>
+  <div class="now-wrap">
+    <table class="now-tbl">
+      <thead><tr><th>X</th><th>거래처</th><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th>분류</th></tr></thead>
+      <tbody>
+        <tr><td>×</td><td><input value="광성탑마트"></td><td><input value="듀라셀)코인2025"></td><td><input value="3,800"></td><td><input value="1"></td><td><input value="3,800"></td><td><input value="비품"></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="cap" style="color:var(--danger)">⚠ 7칸이라 화면 밖으로 넘쳐 옆으로 밀어야 함</div>
+
+  <!-- 안 A -->
+  <div class="tag new">🅰️ 카드형 (품목 크게 / 단가·수량·분류 아래)</div>
+  <div class="head2">
+    <div class="f"><label>🏪 거래처</label><input value="광성탑마트"></div>
+    <div class="f"><label>📅 날짜</label><input value="2026-06-02"></div>
+  </div>
+  <div class="A">
+    <div class="card">
+      <div class="l1"><input class="item" value="듀라셀)코인2025"><input class="amt" value="3,800"><button class="x">×</button></div>
+      <div class="l2">
+        <span class="mini">단가 <input value="3,800"></span>
+        <span class="mini">수량 <input value="1"></span>
+        <button class="chip">비품</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="l1"><input class="item" value="종량제봉투50L"><input class="amt" value="1,170"><button class="x">×</button></div>
+      <div class="l2">
+        <span class="mini">단가 <input value="1,170"></span>
+        <span class="mini">수량 <input value="1"></span>
+        <button class="chip empty">🏷️ 분류</button>
+      </div>
+    </div>
+    <button class="addbtn">+ 품목 추가</button>
+  </div>
+  <div class="cap">품목·금액이 크게 위, 단가·수량·분류는 아래. <b>가장 시원하고 보기 편함</b>.</div>
+
+  <!-- 안 B -->
+  <div class="tag new">🅱️ 2줄 컴팩트 (한 품목 = 2줄, 빽빽하지만 많이 보임)</div>
+  <div class="head2">
+    <div class="f"><label>🏪 거래처</label><input value="광성탑마트"></div>
+    <div class="f"><label>📅 날짜</label><input value="2026-06-02"></div>
+  </div>
+  <div class="B">
+    <div class="row">
+      <div class="l1"><input class="item" value="듀라셀)코인2025"><input class="amt" value="3,800"></div>
+      <div class="l2"><span class="uq">단가 3,800 × 1</span><button class="chip">비품</button><button class="x">×</button></div>
+    </div>
+    <div class="row">
+      <div class="l1"><input class="item" value="종량제봉투50L"><input class="amt" value="1,170"></div>
+      <div class="l2"><span class="uq">단가 1,170 × 1</span><button class="chip empty">🏷️ 분류</button><button class="x">×</button></div>
+    </div>
+    <button class="addbtn">+ 품목 추가</button>
+  </div>
+  <div class="cap">한 품목이 2줄로 짧음. 품목 많은 영수증을 <b>한 화면에 많이</b> 볼 때 좋음.</div>
+
+  <!-- 안 C -->
+  <div class="tag new">🅲️ 펼침형 (품목+금액만, 탭하면 상세)</div>
+  <div class="head2">
+    <div class="f"><label>🏪 거래처</label><input value="광성탑마트"></div>
+    <div class="f"><label>📅 날짜</label><input value="2026-06-02"></div>
+  </div>
+  <div class="C">
+    <div class="item-c open">
+      <div class="head"><div class="nm">듀라셀)코인2025<div class="sub">단가 3,800 × 1 · 비품</div></div><div class="amt">3,800</div><span class="chev">▴</span></div>
+      <div class="body"><div class="bin"><span class="mini">단가 3,800</span><span class="mini">수량 1</span><button class="chip">비품</button></div></div>
+    </div>
+    <div class="item-c">
+      <div class="head"><div class="nm">종량제봉투50L<div class="sub">단가 1,170 × 1 · 분류 없음</div></div><div class="amt">1,170</div><span class="chev">▾</span></div>
+    </div>
+    <button class="addbtn">+ 품목 추가</button>
+  </div>
+  <div class="cap">평소엔 품목·금액만 깔끔, 고칠 때만 탭해서 펼침. <b>품목 많을 때 제일 깔끔</b>하나 탭 한 번 더.</div>
+
+  <div style="height:30px"></div>
+</div>
+</body>
+</html>

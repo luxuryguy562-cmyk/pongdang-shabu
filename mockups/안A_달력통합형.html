@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>안 A · 달력 통합형</title>
+<style>
+:root{
+  --blue:#3182F6;--blue-strong:#0064FF;--blue-light:#EDF4FF;
+  --bg:#F2F4F6;--white:#fff;
+  --g100:#F9FAFB;--g200:#E5E8EB;--g400:#B0B8C1;--g500:#8B95A1;--g600:#6B7684;
+  --text:#191F28;--danger:#F04452;--danger-light:#FFEBEE;
+  --success:#0CAB6C;--success-light:#E8FAF3;--warn:#F5A11E;
+  --radius:20px;--shadow:0 4px 14px rgba(20,40,80,.07),0 1px 3px rgba(20,40,80,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Pretendard',-apple-system,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;justify-content:center;padding:16px;letter-spacing:-.3px;}
+.phone{width:100%;max-width:420px;background:var(--bg);min-height:90vh;}
+.banner{background:var(--blue-strong);color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700;margin-bottom:12px;line-height:1.5;}
+.banner b{font-weight:900;}
+/* 날짜 네비 */
+.datenav{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.datenav .arr{width:38px;height:38px;border:none;background:var(--g100);border-radius:50%;font-size:20px;font-weight:800;color:var(--g600);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.datenav .arr:disabled{opacity:.3;}
+.datenav .dt{text-align:center;}
+.datenav .dt .big{font-size:20px;font-weight:900;}
+.datenav .dt .sub{font-size:12px;font-weight:700;margin-top:2px;}
+.badge-saved{color:var(--success);}.badge-empty{color:var(--g400);}
+/* 차액 4카드 */
+.cards4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.c4{background:var(--white);border-radius:16px;box-shadow:var(--shadow);padding:14px 12px;min-height:78px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.c4 .lb{font-size:11px;color:var(--g500);font-weight:700;margin-bottom:5px;}
+.c4 .vl{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;}
+.c4 .tag{font-size:10px;color:var(--g400);margin-top:3px;}
+.neg{color:var(--danger);}.pos{color:var(--success);}.blue{color:var(--blue);}
+/* 섹션 카드 */
+.sec{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 16px;margin-bottom:12px;}
+.sec-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.sec-t{font-size:15px;font-weight:800;}
+.sec-sub{font-size:11px;color:var(--g500);margin-bottom:12px;}
+.row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--g100);}
+.row:last-child{border-bottom:none;}
+.row .rl{font-size:14px;color:var(--g600);display:flex;align-items:center;gap:7px;}
+.row .rv{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;border:none;width:130px;background:transparent;}
+.row .rv:read-only{color:var(--text);}
+input.rv:focus{outline:none;}
+.sumrow{display:flex;justify-content:space-between;padding:12px 0 2px;border-top:2px solid var(--blue);margin-top:4px;}
+.sumrow .rl{font-size:14px;font-weight:800;color:var(--blue);}
+.sumrow .rv{font-size:17px;font-weight:900;color:var(--blue);font-variant-numeric:tabular-nums;}
+/* 통장/금고 한줄형 */
+.mini{display:flex;align-items:center;justify-content:space-between;background:var(--g100);border-radius:12px;padding:13px 14px;margin-bottom:8px;}
+.mini .mt{font-size:14px;font-weight:700;}
+.mini .ms{font-size:11px;color:var(--g500);margin-top:2px;}
+.mini .mv{font-size:15px;font-weight:800;color:var(--danger);font-variant-numeric:tabular-nums;}
+/* 모드 버튼 */
+.modebar{display:flex;gap:8px;margin-bottom:12px;}
+.modebar button{flex:1;padding:13px;border:none;border-radius:13px;font-size:14px;font-weight:800;cursor:pointer;background:var(--white);color:var(--g600);box-shadow:var(--shadow);}
+.modebar button.on{background:var(--blue);color:#fff;}
+.btn-save{width:100%;padding:16px;border:none;border-radius:15px;font-size:16px;font-weight:900;cursor:pointer;margin-top:4px;}
+.btn-save.ok{background:var(--success);color:#fff;}
+.btn-save.edit{background:var(--blue);color:#fff;}
+.readonly-note{background:var(--blue-light);color:var(--blue-strong);font-size:12px;font-weight:700;padding:10px 12px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.diffbox{border-radius:14px;padding:14px;text-align:center;margin-top:6px;}
+.diffbox.ok{background:var(--success-light);}.diffbox.bad{background:var(--danger-light);}
+.diffbox .dl{font-size:12px;color:var(--g600);font-weight:700;}
+.diffbox .dv{font-size:24px;font-weight:900;margin-top:3px;}
+.tip{font-size:11px;color:var(--g400);text-align:center;margin-top:18px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="banner">📅 <b>안 A · 달력 통합형</b><br>날짜를 ‹ › 로 넘기면 그 날 기록이 <b>자동으로 채워집니다</b>. 입력·조회가 한 화면.</div>
+
+  <!-- 날짜 네비 -->
+  <div class="datenav">
+    <button class="arr" id="prev">‹</button>
+    <div class="dt">
+      <div class="big" id="dtBig">5월 28일 (수)</div>
+      <div class="sub" id="dtSub"></div>
+    </div>
+    <button class="arr" id="next">›</button>
+  </div>
+
+  <!-- 차액 4카드 (세로 가운데 정렬 + 키 통일) -->
+  <div class="cards4">
+    <div class="c4"><div class="lb">📊 총 차액</div><div class="vl" id="kDiff">-</div><div class="tag" id="kDiffTag">&nbsp;</div></div>
+    <div class="c4"><div class="lb">💰 금고 현황</div><div class="vl blue" id="kVault">-</div><div class="tag" id="kVaultTag">&nbsp;</div></div>
+    <div class="c4"><div class="lb">🏧 통장에 넣은 돈</div><div class="vl" id="kBank">-</div><div class="tag">&nbsp;</div></div>
+    <div class="c4"><div class="lb">💵 현금으로 쓴 돈</div><div class="vl" id="kEtc">-</div><div class="tag">&nbsp;</div></div>
+  </div>
+
+  <div class="readonly-note" id="roNote" style="display:none;">🔒 저장된 기록입니다. 고치려면 아래 [수정하기]를 누르세요.</div>
+
+  <!-- 매출 -->
+  <div class="sec">
+    <div class="sec-h"><div class="sec-t">💵 매출</div></div>
+    <div class="sec-sub">현금 + 현금영수증 + 카드 + 기타결제</div>
+    <div class="row"><span class="rl">💵 현금</span><input class="rv" id="iPosCash" readonly></div>
+    <div class="row"><span class="rl">🧾 현금영수증</span><input class="rv" id="iPosCR" readonly></div>
+    <div class="row"><span class="rl">💳 신용카드</span><input class="rv" id="iPosCard" readonly></div>
+    <div class="row"><span class="rl">📲 기타결제</span><input class="rv" id="iPosEtc" readonly></div>
+    <div class="sumrow"><span class="rl">매출 합계</span><span class="rv" id="salesSum">0원</span></div>
+  </div>
+
+  <!-- 통장/금고: 한 줄 직관형 -->
+  <div class="sec">
+    <div class="sec-h"><div class="sec-t">🏧 금고에서 나간 돈</div></div>
+    <div class="sec-sub">지출이 아니라 "돈의 이동/사유"입니다</div>
+    <div class="mini">
+      <div><div class="mt">🏧 통장에 넣은 돈</div><div class="ms">금고 현금 → 통장 (이동)</div></div>
+      <div class="mv" id="mBank">0원</div>
+    </div>
+    <div class="mini">
+      <div><div class="mt">💵 현금으로 쓴 돈</div><div class="ms">금고에서 바로 지출/조정한 사유</div></div>
+      <div class="mv" id="mEtc">0원</div>
+    </div>
+  </div>
+
+  <!-- 차액 -->
+  <div class="sec">
+    <div class="sec-t" style="margin-bottom:10px;">📊 금고 맞춤</div>
+    <div class="row"><span class="rl">장부상 있어야 할 금고</span><span class="rv" id="bookV">0원</span></div>
+    <div class="row"><span class="rl">실제 센 금고</span><span class="rv" id="actV">0원</span></div>
+    <div class="diffbox" id="diffBox"><div class="dl">차액</div><div class="dv" id="diffV">-</div></div>
+  </div>
+
+  <button class="btn-save edit" id="actionBtn">수정하기</button>
+  <div class="tip">날짜를 넘겨 5/26·5/27·5/28 (저장됨) 과 5/29 (빈 날) 차이를 확인해 보세요.<br>저장된 날은 자동으로 값이 차고, 빈 날은 바로 입력 모드입니다.</div>
+</div>
+
+<script>
+const fmt=n=>(n||0).toLocaleString('ko-KR');
+// 가짜 데이터: 며칠치 정산 기록
+const DB={
+ '2026-05-28':{posCash:320000,posCR:80000,posCard:1200000,posEtc:150000,bank:2101200,etc:443700,book:1589300,act:1585700,diff:-3600,vault:1585700},
+ '2026-05-27':{posCash:280000,posCR:60000,posCard:1100000,posEtc:120000,bank:1800000,etc:200000,book:1450000,act:1450000,diff:0,vault:1450000},
+ '2026-05-26':{posCash:300000,posCR:90000,posCard:980000,posEtc:100000,bank:1500000,etc:350000,book:1320000,act:1338000,diff:18000,vault:1338000},
+};
+const DOW=['일','월','화','수','목','금','토'];
+let cur=new Date('2026-05-28T00:00:00');
+let mode='view'; // view | edit
+const ymd=d=>d.toISOString().slice(0,10);
+
+function render(){
+  const key=ymd(cur);
+  const rec=DB[key];
+  const m=cur.getMonth()+1,day=cur.getDate();
+  document.getElementById('dtBig').textContent=`${m}월 ${day}일 (${DOW[cur.getDay()]})`;
+  const sub=document.getElementById('dtSub');
+  // 미래 차단
+  document.getElementById('next').disabled = key>='2026-05-29';
+
+  if(rec){
+    sub.textContent='✅ 마감 저장됨'; sub.className='sub badge-saved';
+    fill(rec); setReadonly(mode==='view');
+    document.getElementById('roNote').style.display = mode==='view'?'flex':'none';
+    document.getElementById('actionBtn').textContent = mode==='view'?'✏️ 수정하기':'💾 수정 저장';
+    document.getElementById('actionBtn').className='btn-save '+(mode==='view'?'edit':'ok');
+  }else{
+    sub.textContent='기록 없음 — 새 마감'; sub.className='sub badge-empty';
+    fill(null); setReadonly(false); mode='edit';
+    document.getElementById('roNote').style.display='none';
+    document.getElementById('actionBtn').textContent='💾 마감 저장하기';
+    document.getElementById('actionBtn').className='btn-save ok';
+  }
+  recalc();
+}
+function fill(r){
+  document.getElementById('iPosCash').value = r?fmt(r.posCash):'';
+  document.getElementById('iPosCR').value   = r?fmt(r.posCR):'';
+  document.getElementById('iPosCard').value = r?fmt(r.posCard):'';
+  document.getElementById('iPosEtc').value  = r?fmt(r.posEtc):'';
+  document.getElementById('mBank').textContent = r?fmt(r.bank)+'원':'0원';
+  document.getElementById('mEtc').textContent  = r?fmt(r.etc)+'원':'0원';
+  document.getElementById('bookV').textContent = r?fmt(r.book)+'원':'0원';
+  document.getElementById('actV').textContent  = r?fmt(r.act)+'원':'0원';
+  // 4카드
+  document.getElementById('kBank').textContent = r?fmt(r.bank)+'원':'-';
+  document.getElementById('kEtc').textContent  = r?fmt(r.etc)+'원':'-';
+  document.getElementById('kVault').textContent= r?fmt(r.vault)+'원':'-';
+  document.getElementById('kVaultTag').textContent = r?`${cur.getMonth()+1}/${cur.getDate()} 기준`:' ';
+  const dEl=document.getElementById('kDiff'),tEl=document.getElementById('kDiffTag');
+  if(r){
+    dEl.textContent=(r.diff>0?'+':'')+fmt(r.diff)+'원';
+    dEl.className='vl '+(r.diff===0?'pos':'neg');
+    tEl.textContent=r.diff===0?'✅ 일치':'⚠ 확인';
+  }else{dEl.textContent='-';dEl.className='vl';tEl.textContent=' ';}
+}
+function setReadonly(ro){
+  ['iPosCash','iPosCR','iPosCard','iPosEtc'].forEach(id=>{
+    const el=document.getElementById(id); el.readOnly=ro;
+    el.style.background= ro?'transparent':'var(--blue-light)';
+    el.style.borderRadius='8px';el.style.padding='4px 8px';
+  });
+}
+function recalc(){
+  const g=id=>parseInt((document.getElementById(id).value||'0').replace(/[^0-9]/g,''))||0;
+  const sum=g('iPosCash')+g('iPosCR')+g('iPosCard')+g('iPosEtc');
+  document.getElementById('salesSum').textContent=fmt(sum)+'원';
+  const key=ymd(cur),rec=DB[key];
+  const diff=rec?rec.diff:0;
+  const box=document.getElementById('diffBox'),dv=document.getElementById('diffV');
+  if(rec){box.className='diffbox '+(diff===0?'ok':'bad');dv.textContent=diff===0?'✅ 일치':(diff>0?'+':'')+fmt(diff)+'원';dv.style.color=diff===0?'var(--success)':'var(--danger)';}
+  else{box.className='diffbox';dv.textContent='입력 중…';dv.style.color='var(--g400)';}
+}
+document.getElementById('prev').onclick=()=>{cur.setDate(cur.getDate()-1);mode='view';render();};
+document.getElementById('next').onclick=()=>{if(ymd(cur)>='2026-05-29')return;cur.setDate(cur.getDate()+1);mode='view';render();};
+document.getElementById('actionBtn').onclick=()=>{
+  const key=ymd(cur),rec=DB[key];
+  if(rec&&mode==='view'){mode='edit';render();}
+  else{alert('(시안) 저장되었습니다');mode='view';render();}
+};
+['iPosCash','iPosCR','iPosCard','iPosEtc'].forEach(id=>document.getElementById(id).addEventListener('input',recalc));
+render();
+</script>
+</body>
+</html>
