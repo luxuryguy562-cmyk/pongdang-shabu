@@ -862,6 +862,11 @@
       <div id="catReceiptTotal" style="font-size:13px;color:var(--gray-600);font-weight:600;">이번달 0원 · 0건</div>
     </div>
   </div>
+  <!-- 직구 영수증 등록 진입 (📸 사진=AI 분석 / ✏️ 수동 입력). 직구 모드일 때만 표시 (openCatReceipt 토글) -->
+  <div id="catRcpAddBtns" style="display:none;gap:8px;margin-bottom:14px;">
+    <button class="btn btn-primary" style="flex:1;padding:12px;font-size:13px;font-weight:700;" data-action="openCatReceiptInput|photo">📸 영수증 사진</button>
+    <button class="btn btn-secondary" style="flex:1;padding:12px;font-size:13px;font-weight:700;" data-action="openCatReceiptInput|manual">✏️ 수동 입력</button>
+  </div>
   <!-- 필터 줄 -->
   <div style="display:flex;gap:8px;margin-bottom:14px;">
     <button class="btn btn-secondary" style="flex:1;padding:10px 12px;font-size:13px;text-align:left;display:flex;justify-content:space-between;align-items:center;" data-action="openCatReceiptFilterSheet">

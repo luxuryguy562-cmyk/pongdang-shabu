@@ -44,6 +44,7 @@
 - **진입 초기화 버그(빙산 #16)** — 거래처 상세(에이젯시스템) 본 뒤 하단네비→지출관리→거래처 재진입 시 이전 상세가 남던 버그. 원인: nav 서브탭 자동초기화가 'list 서브탭 이미 active'면 건너뛰는데 상세는 list active 유지. 해결: `nav()`에 `if(tab==='vendors') vendorTab('list',null)` 명시 초기화.
 - 전수 점검: 하단네비 재진입 탭 중 vendors만 해당. settle/dashboard/opening은 명시 초기화 이미 있음, attendance는 서브탭만(해당 X). (확인 범위 한정 — 추가 가능성 열어둠)
 - 전체 영수증 목록 = **안 함**(영수증 등록 화면에서 조회 가능, 사장님 확정).
+- **직구 화면 영수증 등록 버튼 추가** (CTO 누락 보완) — 거래처 상세엔 넣었는데 직구(catReceiptCont) 빠뜨림. 📸 영수증 사진(openCatReceiptInput|photo) / ✏️ 수동 입력(|manual) 2버튼 추가. `catRcpAddBtns`. `openCatReceipt(mode)`에서 direct 모드일 때만 표시(카테고리 모드는 조회 전용).
 
 ### 후속 (별도)
 - 신규 카테고리 생성 시 안 쓰인 무지개색 자동 기본값 배정(saveExpCat) — 확장성.

@@ -135,6 +135,9 @@ function openCatReceipt(mode){
   nav('catReceipt');
   const mEl = document.getElementById('catReceiptMonth');
   if(mEl && !mEl.value) mEl.value = catReceiptMonth;
+  // 직구 모드일 때만 영수증 등록 버튼 표시 (카테고리 모드는 조회 전용)
+  const addBtns = document.getElementById('catRcpAddBtns');
+  if(addBtns) addBtns.style.display = (mode === 'direct') ? 'flex' : 'none';
 }
 
 // ══════════════════════════════════════════
