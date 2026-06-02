@@ -597,26 +597,20 @@
         </div>
         <!-- 📊 합계 확인 박스 (2026-05-19 사장님 결정: AI 행 합계 vs 영수증 원본) -->
         <div id="rcpSumCheck" style="background:#F3F4F6;border-radius:10px;padding:10px 12px;margin-bottom:14px;"></div>
-        <!-- 📅 영수증 날짜 (2026-06-02: 날짜 hidden이라 AI 오인식(2023 등) 확인 못 하던 문제 — 보이게) -->
-        <div style="background:#fff;border:1px solid var(--gray-200);border-radius:10px;padding:11px 13px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-          <span style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;">📅 영수증 날짜</span>
-          <input type="date" id="rcpReceiptDate" style="flex:1;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700;min-width:0;" data-change="onRcpDateChange|this">
-          <span id="rcpDateWarn" style="font-size:11px;color:var(--danger);font-weight:800;white-space:nowrap;display:none;">⚠️ 날짜 확인</span>
+        <!-- 🏪 거래처 + 📅 날짜 (영수증 1장 = 1거래처·1날짜, 2026-06-02 상단 분리 + 날짜 보이게) -->
+        <div class="card" style="padding:14px 16px;margin-bottom:12px;">
+          <div style="display:flex;gap:10px;">
+            <div style="flex:1;min-width:0;">
+              <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">🏪 거래처</label>
+              <input type="text" id="rcpReceiptVendor" placeholder="거래처" style="width:100%;border:none;background:var(--toss-line);border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpVendorChange|this">
+            </div>
+            <div style="flex:1;min-width:0;">
+              <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">📅 날짜 <span id="rcpDateWarn" style="color:var(--danger);font-weight:800;display:none;">⚠️</span></label>
+              <input type="date" id="rcpReceiptDate" style="width:100%;border:none;background:var(--toss-line);border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpDateChange|this">
+            </div>
+          </div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th style="width:24px">X</th>
-              <th class="col-vendor" style="width:60px">거래처</th>
-              <th>품목</th>
-              <th style="width:54px">단가</th>
-              <th style="width:42px">수량</th>
-              <th style="width:72px">금액</th>
-              <th style="width:74px">분류</th>
-            </tr></thead>
-            <tbody id="resTable"></tbody>
-          </table>
-        </div>
+        <div id="resTable"></div>
         <div class="add-row-btn" data-action="addReceiptRow">＋ 행 추가</div>
         <div class="action-group">
           <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">초기화</button>
