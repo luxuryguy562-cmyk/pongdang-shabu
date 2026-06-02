@@ -584,34 +584,25 @@
         <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">취소</button>
       </div>
       <div id="resultArea" style="display:none;">
-        <!-- 거래처 모드 배지 (rcpMode==='vendor' 시 표시) -->
-        <div id="rcpResultVendorBadge" style="display:none;background:#FEF3C7;border-radius:10px;padding:10px 12px;margin-top:14px;margin-bottom:10px;font-size:12px;color:#92400E;line-height:1.55;font-weight:700;">
-          🏪 거래처: <span id="rcpResultVendorName">-</span> (이미 선택됨, AI 거래처 추출 스킵)
-        </div>
-        <!-- 📄 페이지 감지 안내 박스 (2026-05-19 (4)) — Page(N/M) 인쇄 감지 시 추가 사진 권유 -->
-        <div id="rcpPageInfoBox" style="display:none;background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:12px 14px;margin-top:14px;margin-bottom:10px;font-size:13px;color:#92400E;line-height:1.6;"></div>
-        <!-- 학습 안내 박스 (2026-05-19 사장님 호소: ✨ 의미 불명 + 위 버튼과 간격) -->
-        <div style="background:#EBF3FF;border-radius:10px;padding:12px 14px;margin-top:14px;margin-bottom:10px;font-size:12px;color:#1E40AF;line-height:1.6;">
-          💡 <b>✨ 표시된 행은 다음 영수증 분류에 AI가 자동 활용해요.</b><br>
-          분류·품목명을 바꾸면 그것도 학습됩니다.
-        </div>
-        <!-- 📊 합계 확인 박스 (2026-05-19 사장님 결정: AI 행 합계 vs 영수증 원본) -->
-        <div id="rcpSumCheck" style="background:#F3F4F6;border-radius:10px;padding:10px 12px;margin-bottom:14px;"></div>
-        <!-- 🏪 거래처 + 📅 날짜 (영수증 1장 = 1거래처·1날짜, 2026-06-02 상단 분리 + 날짜 보이게) -->
-        <div class="card" style="padding:14px 16px;margin-bottom:12px;">
+        <!-- 🏪 거래처 + 📅 날짜 (영수증 1장 = 1거래처·1날짜) — 목업 A안: 맨 위 -->
+        <div class="card" style="padding:16px;margin-bottom:14px;">
           <div style="display:flex;gap:10px;">
             <div style="flex:1;min-width:0;">
               <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">🏪 거래처</label>
-              <input type="text" id="rcpReceiptVendor" placeholder="거래처" style="width:100%;border:none;background:var(--toss-line);border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpVendorChange|this">
+              <input type="text" id="rcpReceiptVendor" placeholder="거래처" style="width:100%;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpVendorChange|this">
             </div>
             <div style="flex:1;min-width:0;">
               <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">📅 날짜 <span id="rcpDateWarn" style="color:var(--danger);font-weight:800;display:none;">⚠️</span></label>
-              <input type="date" id="rcpReceiptDate" style="width:100%;border:none;background:var(--toss-line);border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpDateChange|this">
+              <input type="date" id="rcpReceiptDate" style="width:100%;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpDateChange|this">
             </div>
           </div>
         </div>
+        <!-- 📄 페이지 감지 (멀티페이지 영수증 시만 노출) -->
+        <div id="rcpPageInfoBox" style="display:none;background:#FEF3C7;border:1px solid #F59E0B;border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#92400E;line-height:1.6;"></div>
+        <!-- 📋 합계 바 (목업 A안: 깔끔한 한 줄. 영수증 원본과 일치/차이는 색·부제로) -->
+        <div id="rcpSumCheck" class="rcp-sumbar"></div>
         <div id="resTable"></div>
-        <div class="add-row-btn" data-action="addReceiptRow">＋ 행 추가</div>
+        <div class="add-row-btn" data-action="addReceiptRow">＋ 품목 추가</div>
         <div class="action-group">
           <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">초기화</button>
           <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveReceipt">저장하기</button>

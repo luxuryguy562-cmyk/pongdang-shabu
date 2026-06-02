@@ -138,10 +138,8 @@ td{padding:10px 5px;font-size:12px;border-bottom:1px solid var(--gray-100);text-
 td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 tr.row-off{opacity:.35;filter:grayscale(1);}
 td input.c-v,td input.c-i,td input.c-p{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
-/* 영수증 분류 학습 시그널 (2026-05-19) — 사용자 변경 시 ✨ 페이드인 + 셀 가운데 정렬 (사장님 호소) */
-.rcp-cat-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+/* 영수증 분류 학습 시그널 (2026-05-19) — 사용자 변경 시 ✨ 페이드인 */
 .rcp-learn-badge{font-size:14px;color:var(--success);line-height:1;display:inline-block;}
-.rcp-cat-cell .c-cBtn{text-align:center;}
 .rcp-learn-badge-pulse{animation:rcpLearnPulse 0.6s ease-out;}
 @keyframes rcpLearnPulse{
   0%{opacity:0;transform:scale(0.5);}
@@ -1388,6 +1386,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 
 /* ─ 영수증 분석 결과 카드 (2026-06-02: 가로스크롤 표 → 토스톤 카드, dev_lessons #133 토큰 사용) */
+/* 📋 영수증 결과 합계 바 (목업 A안 — 토스 톤) */
+.rcp-sumbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 18px;background:var(--toss-blue-light);border-radius:var(--card-radius);margin-bottom:14px;}
+.rcp-sumbar .rsb-l{font-size:13px;font-weight:700;color:var(--toss-blue-strong);}
+.rcp-sumbar .rsb-cnt{font-weight:600;color:var(--toss-blue);font-size:12px;}
+.rcp-sumbar .rsb-r{text-align:right;min-width:0;}
+.rcp-sumbar .rsb-v{font-size:20px;font-weight:900;color:var(--toss-blue-strong);font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+.rcp-sumbar .rsb-sub{font-size:11px;font-weight:700;margin-top:2px;color:var(--toss-blue);}
+.rcp-sumbar.warn{background:var(--warn-light);}
+.rcp-sumbar.warn .rsb-l,.rcp-sumbar.warn .rsb-v,.rcp-sumbar.warn .rsb-sub{color:#92400E;}
+.rcp-sumbar.danger{background:var(--danger-light);}
+.rcp-sumbar.danger .rsb-l,.rcp-sumbar.danger .rsb-v,.rcp-sumbar.danger .rsb-sub{color:var(--danger);}
+
 .rcp-item-card{background:var(--white);border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:16px;margin-bottom:12px;}
 .rcp-item-card.suspect{background:#FEF7E6;}
 .ric-l1{display:flex;align-items:center;gap:10px;}
