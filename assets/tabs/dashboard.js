@@ -1031,6 +1031,8 @@ async function loadDashboard(force){
         const prevProfit=prevSale-prevExp;
         const profitEl=document.getElementById('dashTopProfitAmt');
         profitEl.innerText=(dayProfit>=0?'+':'-')+fmt(Math.abs(dayProfit))+'원';
+        profitEl.classList.toggle('red', dayProfit<0);
+        profitEl.classList.toggle('green', dayProfit>=0);
         document.getElementById('dashTopExpenseAmt').innerText='-'+fmt(dayExp)+'원';
         const renderDelta=(el,m)=>{
           if(!el)return;
@@ -1099,7 +1101,7 @@ async function loadDashboard(force){
         const _profitV=(totalRevenue||0)-(totalCost||0);
         if(_mSub){
           const _sign=_profitV>=0?'+':'-';
-          _mSub.innerHTML=`순수익 <b${_profitV<0?' class="red"':''}>${_sign}${fmt(Math.abs(_profitV))}원</b>`;
+          _mSub.innerHTML=`지출 <b>${fmt(totalCost)}원</b> · 순수익 <b${_profitV<0?' class="red"':''}>${_sign}${fmt(Math.abs(_profitV))}원</b>`;
         }
         // 진행 일자 → 라벨 우측 배지. 사장님 표현 그대로 "5월 22일 / 31일"
         if(_mProg){
