@@ -4985,7 +4985,7 @@ function _expAmtClass(text){
 function _expHubMkCard(cardId, action, iconId, title, amtText, color){
   let iconStyle = '';
   if(color){
-    const tint = _hexToRgba(color, 0.13);
+    const tint = _hexToRgba(color, 0.18);
     if(tint) iconStyle = `style="background:${tint};color:${color};"`;
   }
   return `<button type="button" class="hub-mini" data-card-id="${cardId}" data-action="${action}">
