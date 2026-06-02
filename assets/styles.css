@@ -1387,26 +1387,27 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 
 /* ─ 영수증 분석 결과 카드 (2026-06-02: 가로스크롤 표 → 토스톤 카드, dev_lessons #133 토큰 사용) */
 /* 📋 영수증 결과 합계 바 (목업 A안 — 토스 톤) */
-.rcp-sumbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 18px;background:var(--toss-blue-light);border-radius:var(--card-radius);margin-bottom:14px;}
+.rcp-sumbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 15px;background:var(--toss-blue-light);border-radius:14px;margin-bottom:10px;}
 .rcp-sumbar .rsb-l{font-size:13px;font-weight:700;color:var(--toss-blue-strong);}
 .rcp-sumbar .rsb-cnt{font-weight:600;color:var(--toss-blue);font-size:12px;}
 .rcp-sumbar .rsb-r{text-align:right;min-width:0;}
-.rcp-sumbar .rsb-v{font-size:20px;font-weight:900;color:var(--toss-blue-strong);font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+.rcp-sumbar .rsb-v{font-size:18px;font-weight:900;color:var(--toss-blue-strong);font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
 .rcp-sumbar .rsb-sub{font-size:11px;font-weight:700;margin-top:2px;color:var(--toss-blue);}
 .rcp-sumbar.warn{background:var(--warn-light);}
 .rcp-sumbar.warn .rsb-l,.rcp-sumbar.warn .rsb-v,.rcp-sumbar.warn .rsb-sub{color:#92400E;}
 .rcp-sumbar.danger{background:var(--danger-light);}
 .rcp-sumbar.danger .rsb-l,.rcp-sumbar.danger .rsb-v,.rcp-sumbar.danger .rsb-sub{color:var(--danger);}
 
-.rcp-item-card{background:var(--white);border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:16px;margin-bottom:12px;}
+/* 카드 컴팩트화 (사장님 "공간 너무 잡아먹잖아" 2026-06-02) — 패딩·여백·글자 축소 */
+.rcp-item-card{background:var(--white);border-radius:13px;box-shadow:var(--card-shadow);padding:9px 12px;margin-bottom:7px;}
 .rcp-item-card.suspect{background:#FEF7E6;}
-.ric-l1{display:flex;align-items:center;gap:10px;}
-.ric-l1 .c-i{flex:1;border:none;background:transparent;font-size:16px;font-weight:700;color:var(--toss-text-1);min-width:0;outline:none;font-family:inherit;}
-.ric-l1 .c-p{flex:0 0 auto;border:none;background:transparent;font-size:19px;font-weight:900;text-align:right;width:108px;color:var(--toss-text-1);outline:none;font-family:inherit;}
-.ric-x{flex:0 0 26px;height:26px;border:none;border-radius:50%;background:var(--toss-line);color:var(--toss-text-4);font-size:14px;font-weight:800;cursor:pointer;padding:0;}
-.ric-l2{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap;}
-.ric-mini{background:var(--toss-line);border-radius:10px;padding:8px 11px;font-size:12px;color:var(--toss-text-3);font-weight:600;display:flex;align-items:center;gap:5px;}
-.ric-mini input{border:none;background:transparent;width:50px;font-size:13px;font-weight:700;text-align:right;color:var(--toss-text-1);outline:none;font-family:inherit;}
-.ric-chip{margin-left:auto;font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;background:var(--toss-blue-light);color:var(--toss-blue);border:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.ric-l1{display:flex;align-items:center;gap:8px;}
+.ric-l1 .c-i{flex:1;border:none;background:transparent;font-size:14px;font-weight:700;color:var(--toss-text-1);min-width:0;outline:none;font-family:inherit;}
+.ric-l1 .c-p{flex:0 0 auto;border:none;background:transparent;font-size:16px;font-weight:800;text-align:right;width:92px;color:var(--toss-text-1);outline:none;font-family:inherit;}
+.ric-x{flex:0 0 22px;height:22px;border:none;border-radius:50%;background:var(--toss-line);color:var(--toss-text-4);font-size:13px;font-weight:800;cursor:pointer;padding:0;}
+.ric-l2{display:flex;align-items:center;gap:6px;margin-top:7px;flex-wrap:wrap;}
+.ric-mini{background:var(--toss-line);border-radius:8px;padding:5px 9px;font-size:11px;color:var(--toss-text-3);font-weight:600;display:flex;align-items:center;gap:4px;}
+.ric-mini input{border:none;background:transparent;width:46px;font-size:12px;font-weight:700;text-align:right;color:var(--toss-text-1);outline:none;font-family:inherit;}
+.ric-chip{margin-left:auto;font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;background:var(--toss-blue-light);color:var(--toss-blue);border:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
 .ric-chip.empty{background:var(--toss-line);color:var(--toss-text-4);}
 .rcp-learn-badge{font-size:13px;}
