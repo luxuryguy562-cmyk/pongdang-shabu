@@ -450,12 +450,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-kpi-lbl{font-size:11px;color:var(--toss-text-4);font-weight:600;letter-spacing:-0.2px;}
 .att-kpi-val{font-size:18px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;}
 /* 보조 칸 — 출근일·근무 두 줄, 세로 가운데 */
-.att-kpi-cell.aux{padding:14px 12px;}
-.att-kpi-cell.aux .row{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:3px 0;}
-.att-kpi-cell.aux .row+.row{border-top:1px dashed var(--gray-100);margin-top:4px;padding-top:7px;}
-.att-kpi-cell.aux .row .l{font-size:10.5px;color:var(--gray-500);font-weight:600;white-space:nowrap;flex-shrink:0;}
-/* 2026-05-25 천 단위 자동 축소: clamp + nowrap (1,234.5h 같은 큰 값도 안 깨짐) */
-.att-kpi-cell.aux .row .v{font-size:clamp(12px,3.5vw,14px);color:var(--text);font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;min-width:0;overflow:hidden;}
+/* 2026-06-02 사장님 호소: 보조칸 가로배치 → 세로 스택 (천 시간·수천만원 원 단위도 안 잘림) */
+.att-kpi-cell.aux{padding:12px 12px;gap:6px;}
+.att-kpi-cell.aux .item{display:flex;flex-direction:column;gap:1px;}
+.att-kpi-cell.aux .item+.item{border-top:1px dashed var(--gray-100);padding-top:7px;}
+.att-kpi-cell.aux .item .l{font-size:10.5px;color:var(--gray-500);font-weight:600;white-space:nowrap;}
+.att-kpi-cell.aux .item .v{font-size:15px;color:var(--text);font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-0.3px;}
 /* 인건비 칸 — 2026-05-25 사장님 호소: 흰색 배경 통일 (좌측 정렬 + 여유 패딩 유지) */
 .att-kpi-cell.wage{background:var(--white);padding:14px 18px;align-items:flex-start;}
 .att-kpi-cell.wage .att-kpi-lbl{color:var(--blue-strong,#1B64DA);font-weight:700;margin-bottom:4px;}
