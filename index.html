@@ -515,26 +515,12 @@
           </div>
           <div class="arrow">›</div>
         </button>
-        <!-- 구분선: 또는 빠르게 -->
-        <div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--toss-text-5);font-size:11px;font-weight:600;">
-          <div style="flex:1;height:1px;background:var(--toss-line-2);"></div>
-          <span>또는 빠르게</span>
-          <div style="flex:1;height:1px;background:var(--toss-line-2);"></div>
-        </div>
-        <button class="toss-enter" data-action="setRcpMode|manual">
-          <div class="ic-wrap gray">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#6B7684" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          </div>
-          <div class="body-col">
-            <div class="nm">수동 입력</div>
-            <div class="sub">사진 없이 직접 입력할게요</div>
-          </div>
-          <div class="arrow">›</div>
-        </button>
       </div>
 
+      <!-- 행 타이틀: 영수증 종류 (모드 선택 후만) -->
+      <div id="rcpModeTitle" class="rcp-row-ttl" style="display:none;">영수증 종류</div>
       <!-- 모드 표시 + 다시 고르기 (모드 선택 후만 노출) -->
-      <div id="rcpModeBadge" style="display:none;background:#F0F9FF;border:1px solid #BFDBFE;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;align-items:center;justify-content:space-between;gap:10px;">
+      <div id="rcpModeBadge" style="display:none;background:var(--toss-blue-light);border-radius:14px;padding:13px 15px;margin-bottom:14px;font-size:13px;align-items:center;justify-content:space-between;gap:10px;">
         <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
           <span id="rcpModeBadgeIcon" style="font-size:22px;flex-shrink:0;">📦</span>
           <div style="min-width:0;flex:1;">
@@ -542,18 +528,34 @@
             <div style="font-size:11px;color:var(--gray-600);margin-top:2px;" id="rcpModeBadgeLabel">거래처 영수증</div>
           </div>
         </div>
-        <button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;flex-shrink:0;font-weight:600;" data-action="resetRcpMode">↩ 다시 고르기</button>
+        <button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;flex-shrink:0;font-weight:600;background:rgba(255,255,255,0.75);color:var(--gray-600);" data-action="resetRcpMode">↩ 다시 고르기</button>
       </div>
+
+      <!-- 행 타이틀: 거래처 (거래처 모드만) -->
+      <div id="rcpVendorRowTitle" class="rcp-row-ttl" style="display:none;">거래처</div>
+      <!-- 거래처 선택 행 (거래처 모드만, 클릭 시 거래처 리스트). 내용은 renderRcpVendorRow로 채움 -->
+      <button type="button" id="rcpVendorRow" style="display:none;width:100%;background:var(--gray-100);border:0;border-radius:14px;padding:15px 16px;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;font-family:inherit;cursor:pointer;" data-action="openRcpVendorPicker">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <span id="rcpVendorRowIcon" style="width:38px;height:38px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏠</span>
+          <div style="min-width:0;text-align:left;">
+            <div id="rcpVendorRowVal" style="font-size:14px;font-weight:700;color:var(--toss-blue);">거래처를 선택하세요</div>
+            <div id="rcpVendorRowSub" style="font-size:11px;color:var(--gray-500);margin-top:1px;display:none;"></div>
+          </div>
+        </div>
+        <span id="rcpVendorRowArrow" style="color:var(--gray-400);font-size:14px;font-weight:700;flex-shrink:0;">›</span>
+      </button>
 
       <!-- 안내 박스 (모드 선택 후만 노출) -->
       <div id="rcpGuideBox" style="display:none;background:#EBF3FF;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:#1E40AF;line-height:1.6;">
         📷 사진을 찍으면 AI가 자동으로 분석해드려요.<br>
         ✏️ 사진이 안 되거나 한두 줄짜리는 수동 입력이 빠를 거예요.
       </div>
+      <!-- 행 타이틀: 영수증 사진 (모드 선택 후만) -->
+      <div id="rcpUploadTitle" class="rcp-row-ttl" style="display:none;">영수증 사진</div>
 
       <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:10px;max-height:240px;object-fit:contain;background:var(--gray-50);">
       <!-- 멀티페이지 썸네일 영역 (2026-05-19 (4)) — 2~3페이지 거래명세서 대응 -->
-      <div id="rcpPagesArea" style="display:none;margin-bottom:14px;background:#F0F9FF;border:1px solid #BFDBFE;border-radius:10px;padding:10px 12px;">
+      <div id="rcpPagesArea" style="display:none;margin-bottom:14px;background:#F0F9FF;border-radius:10px;padding:10px 12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
           <div style="font-size:13px;font-weight:800;color:#1E40AF;flex-shrink:0;">📸 사진 <span id="rcpPagesCountBadge">0</span>장</div>
           <div style="font-size:11px;color:#1E40AF;text-align:right;line-height:1.4;">2~3페이지 영수증이면<br>모든 페이지 추가하세요</div>
