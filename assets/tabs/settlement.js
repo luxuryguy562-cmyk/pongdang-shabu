@@ -547,10 +547,8 @@ async function saveOpening(){
   setLoad(false);
   if(error) return errToast('영업개시 저장', error);
   toast(isEdit?'영업개시 수정 완료':'영업개시 보고 완료','success');
-  // 수정 모드면 리스트로 돌아감, 신규는 그대로
-  if(isEdit){
-    openingTab('list', null);
-  }
+  // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
+  if(typeof nav==='function') nav('busHub');
 }
 
 // 영업개시 서브탭 전환
@@ -636,8 +634,8 @@ async function deleteOpening(dateStr){
   setLoad(false);
   if(error) return errToast('영업개시 삭제', error);
   toast(`${target} 영업개시 삭제 완료`,'success');
-  // 리스트로 돌아감
-  openingTab('list', null);
+  // 2026-06-01: 기록조회 서브탭 제거 → 삭제 후 개시마감 첫화면으로
+  if(typeof nav==='function') nav('busHub');
 }
 
 // 영업개시 날짜 picker init (관리자만 표시)
@@ -788,11 +786,9 @@ async function finishSettlement2(){
   } else {
     toast('마감 저장됐어요','success');
   }
-  // 저장 후 기록 조회 탭으로 이동 (방금 저장한 마감 확인 가능). location.reload() 제거로
-  // 자동 로그인 → 대시보드 점프 현상 방지.
-  const listTab=document.querySelector('#settleCont .sub-tab[data-action*="settleTab|list"]');
-  if(listTab) listTab.click();
-  else resetSettleView();
+  // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
+  resetSettleView();
+  if(typeof nav==='function') nav('busHub');
 }
 
 // ─── 새 기능: 마감정산 → sales_daily 동기화 (하루 1행 upsert) ───
@@ -1175,7 +1171,8 @@ async function deleteSettlement(dateStr){
   if(error) return errToast('삭제', error);
   toast('정산 기록 삭제됐어요','success');
   closeSheet('settleDetailSheet');
-  loadSettleList();
+  // 2026-06-01: 기록조회 서브탭 제거 → 삭제 후 개시마감 첫화면(차액 표)로
+  if(typeof nav==='function') nav('busHub');
 }
 async function moveCardDate(dir){const d=new Date(cardDateStr);d.setDate(d.getDate()+dir);await loadSettleCard(ymdLocal(d));}
 async function onCardDateChange(el){const v=el.value;if(v) await loadSettleCard(v);}
