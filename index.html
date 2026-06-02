@@ -1503,11 +1503,8 @@
 <!-- ══ [6] 거래처 관리 ══ -->
 <div id="vendorsCont" class="container">
   <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">거래처 관리</span></div>
-  <div class="sub-tabs">
-    <button class="sub-tab active" data-sub="list" data-action="vendorTab|list|this">거래처</button>
-    <button class="sub-tab" data-sub="upload" data-action="vendorTab|upload|this">파일 업로드</button>
-    <button class="sub-tab" data-sub="compare" data-action="vendorTab|compare|this">대조 & 단가</button>
-  </div>
+  <!-- 서브탭(파일 업로드·대조&단가) 제거 (2026-06-02 사장님 요청 — 단순화. 대조는 정산 대조에서 별도 관리) -->
+
   <div id="vendorList">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:6px;">
       <select id="vendorCatFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderVendorList">

@@ -362,6 +362,8 @@ function nav(tab, el) {
   if (tab === 'dashboard') { try { dashGoStage('home'); } catch(_){} }
   if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); renderExtraRevenueInputs(); recalcSettle2(); initSettleDate(); loadOpeningAmount(); }
   if (tab === 'opening') { initOpeningDate(); openingTab('input', null); }
+  // 거래처 진입 시 항상 목록으로 초기화 (상세→하단네비 재진입 시 이전 거래처 남는 버그 방지, dev_lessons #16)
+  if (tab === 'vendors' && typeof vendorTab === 'function') vendorTab('list', null);
   // 서브탭 초기화: 탭 진입 시 첫 번째 서브탭을 active로
   if (!subTab) {
     const firstSub = document.querySelector(`#${tab}Cont .sub-tabs .sub-tab:first-child`);
