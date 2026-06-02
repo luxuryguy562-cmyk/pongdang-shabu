@@ -1141,9 +1141,8 @@
         <div class="card-title">🏧 통장 입금</div>
         <span id="settleBankTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
       </div>
-      <p class="card-sub">금고 현금을 통장으로 옮긴 돈 (지출 아닌 이동)</p>
+      <p class="card-sub">금고 현금을 통장으로 옮긴 돈 (지출 아닌 이동).<br>👤 입금자는 로그인한 사람 자동 — 다르면 탭해서 바꿔요.</p>
       <div id="settleDeductBankRows"></div>
-      <button class="add-item-btn" data-action="addSettleDeductRow|bank|0|" style="margin-top:8px;">+ 통장 입금 추가</button>
     </div>
 
     <!-- 금고 변동 사유 (양방향 ±: 사장님 출금 -, 거래처 환불 등 +) -->
@@ -1152,7 +1151,7 @@
         <div class="card-title">💵 현금 지출</div>
         <span id="settleEtcTotal" style="font-size:16px;font-weight:800;color:var(--danger);">0원</span>
       </div>
-      <p class="card-sub">금고에서 현금으로 나간 돈. 들어온 경우는 + 토글. 메모하세요.</p>
+      <p class="card-sub">금고에서 현금으로 나간 돈. 들어온 경우는 + 토글.<br>🏷️ 지출 분류를 고르면 대시보드 지출 그래프에 자동 반영돼요.</p>
       <div id="settleDeductEtcRows"></div>
       <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 현금 지출 추가</button>
     </div>
