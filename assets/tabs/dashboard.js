@@ -595,6 +595,22 @@ async function loadDashboard(force){
 
     // 일별 카테고리 데이터는 위 통합 Promise.all에서 이미 받음 (voRes2/rcRes2/attRes2/prevVoRes/prevRcRes/prevAttRes 재사용)
     const voDaily=voRes2.data,rcDaily=rcRes2.data,attDaily=attRes2.data;
+    // ─── 새 기능: 월 소분류 집계 (월 보기 상세 패널 — 식자재>육류 등, 2026-06-03) ───
+    const monthChildMap={}; // { '식자재': { '육류': {amt:120000,color:'#F00'}, ... }, ... }
+    const _catIdToChild={};
+    (expCategories||[]).forEach(c=>{
+      if(!c.parent_id)return;
+      const parent=(expCategories||[]).find(p=>p.id===c.parent_id);
+      if(!parent)return;
+      _catIdToChild[c.id]={parentName:parent.name,childName:c.name,childColor:c.color||'#94A3B8'};
+    });
+    const _addChild=(catId,amt)=>{
+      if(!catId||!amt||amt<=0)return;
+      const m=_catIdToChild[catId];if(!m)return;
+      if(!monthChildMap[m.parentName])monthChildMap[m.parentName]={};
+      if(!monthChildMap[m.parentName][m.childName])monthChildMap[m.parentName][m.childName]={amt:0,color:m.childColor};
+      monthChildMap[m.parentName][m.childName].amt+=amt;
+    };
     // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "오늘 어디서 썼나", 2026-06-02) ───
     // FK: vendor_id→vendors(name). 직구(vendor_id NULL)·거래처 삭제(ON DELETE SET NULL)는 '직접 구매'
     const dailyVendorExp={}; // { '02': { '행복한정육점': {amt, cat}, ... } }
@@ -615,6 +631,7 @@ async function loadDashboard(force){
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(v.amount||0);
       _addVE(d, v.vendors?.name||'거래처', v.amount, k);
+      _addChild(v.vendors?.category_id, v.amount);
     });
     (rcDaily||[]).forEach(r=>{
       const d=r.receipt_date?.slice(8);if(!d)return;
@@ -623,6 +640,7 @@ async function loadDashboard(force){
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
       _addVE(d, r.vendors?.name||'직접 구매', r.total_price, k);
+      _addChild(r.category_id, r.total_price);
     });
     (attDaily||[]).forEach(a=>{
       if(monthlyEmpIds.has(a.employee_id)) return; // 월급제는 별도 분배
@@ -962,6 +980,7 @@ async function loadDashboard(force){
         catNames, catColors,
         expCatThresholds: settings.expense_thresholds || {},
         royaltyRate,
+        monthChildMap,
       });
       v17RenderAll();
     } catch(e){ console.error('v17 렌더 오류:', e); }
@@ -1465,9 +1484,22 @@ function setV17Context(args){
       ctx.DAYS[k] = v;
     });
   }
+  ctx.monthChildMap = args.monthChildMap || {};
   // 회계 주차 빌드
   ctx.WEEKS = v17BuildAccountingWeeks(ctx.YEAR, ctx.MONTH_IDX);
   _v17Ctx = ctx;
+}
+
+// ─── 새 기능: 월 보기 상세 패널 소분류 토글 (2026-06-03) ───
+function toggleMonthCatChildren(key){
+  const panel=document.querySelector('.v17-detail-panel[data-rest-detail="mth"]');
+  if(!panel) return;
+  const children=panel.querySelectorAll(`.v17-detail-child-row[data-parent="${key}"]`);
+  if(!children.length) return;
+  const expanded=children[0].style.display!=='none';
+  children.forEach(el=>{ el.style.display=expanded?'none':'grid'; });
+  const tog=document.getElementById(`v17SubTog_${key}`);
+  if(tog) tog.textContent=expanded?'▼':'▲';
 }
 
 // ─── 월 카드 렌더 (v6: 매출/예상 + 순수익/예상 + 간트 두 줄 + 상위3 + 상세보기) ───
@@ -1580,12 +1612,25 @@ function v17RenderMonthCard(){
       else if(d>0) momMini = `<span class="mom up">▲${Math.abs(d)}%</span>`;
       else momMini = `<span class="mom dn">▼${Math.abs(d)}%</span>`;
     }
-    detailRowsHtml += `<div class="v17-detail-row">
-      <div class="nm-side"><span class="dot" style="background:${c.color};"></span><span class="nm">${c.name}${warnIcon}</span></div>
+    const children=Object.entries(ctx.monthChildMap?.[c.name]||{}).sort((a,b)=>b[1].amt-a[1].amt);
+    const hasChild=children.length>0;
+    const subToggle=hasChild?`<span class="v17-sub-toggle" id="v17SubTog_${c.key}">▼</span>`:'';
+    const clickAttr=hasChild?`data-action="toggleMonthCatChildren|${c.key}"`:'';
+    detailRowsHtml += `<div class="v17-detail-row${hasChild?' has-child':''}" ${clickAttr}>
+      <div class="nm-side"><span class="dot" style="background:${c.color};"></span><span class="nm">${c.name}${warnIcon}</span>${subToggle}</div>
       <span class="amt">${v17FmtNoWon(v)}원</span>
       <span class="pct">${pct.toFixed(1)}%</span>
       ${momMini}
     </div>`;
+    children.forEach(([childName,childData])=>{
+      const childPct=cur.s>0?(childData.amt/cur.s*100):0;
+      detailRowsHtml+=`<div class="v17-detail-child-row" data-parent="${c.key}" style="display:none;">
+        <div class="nm-side"><span class="dot" style="background:${childData.color};"></span><span class="nm">${childName}</span></div>
+        <span class="amt">${v17FmtNoWon(childData.amt)}원</span>
+        <span class="pct">${childPct.toFixed(1)}%</span>
+        <span></span>
+      </div>`;
+    });
   });
   const detailPanelHtml = sortedCats.length>0 ? `
     <div class="v17-detail-panel" data-rest-detail="mth" style="display:none;">
