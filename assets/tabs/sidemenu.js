@@ -8447,29 +8447,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
     });
   }
   // ═══ v17 정산현황 이벤트 리스너 (2026-05-22) ═══
-  // 모드 토글 [월/주차]
-  document.querySelectorAll('#dashSettleCont .mode-tab').forEach(tab=>{
-    tab.addEventListener('click',()=>{
-      document.querySelectorAll('#dashSettleCont .mode-tab').forEach(t=>t.classList.remove('active'));
-      tab.classList.add('active');
-      const mode = tab.dataset.mode;
-      const mv = document.getElementById('v17MonthView');
-      const wv = document.getElementById('v17WeekView');
-      if(mv) mv.style.display = mode==='month' ? '' : 'none';
-      if(wv) wv.style.display = mode==='week' ? '' : 'none';
-      if(mode==='week') v17RenderWeekViewSingle();
-    });
-  });
-  // 진입 카드 → 모달
-  const enterBtn = document.getElementById('v17EnterModal');
-  if(enterBtn) enterBtn.addEventListener('click', v17OpenWeekModal);
-  const closeBtn = document.getElementById('v17WeekModalClose');
-  if(closeBtn) closeBtn.addEventListener('click', v17CloseWeekModal);
-  // 주차 네비 ◀▶
-  const wkPrev = document.getElementById('v17WeekPrevBtn');
-  if(wkPrev) wkPrev.addEventListener('click', ()=>v17MoveWeek(-1));
-  const wkNext = document.getElementById('v17WeekNextBtn');
-  if(wkNext) wkNext.addEventListener('click', ()=>v17MoveWeek(1));
+  // 2026-06-03 제거: [월/주차] 모드토글·주별비교모달·주차네비 → 월 세부 화면 주차 매트릭스로 통합
   // 캘린더 카테고리 필터
   const filterBtn = document.getElementById('v17CalFilterBtn');
   if(filterBtn) filterBtn.addEventListener('click', v17OpenFilterSheet);

@@ -915,10 +915,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
    월 보기 + 주차 보기 + 모달 + 한 줄 달력 + 문어체 코멘트
    mockup: docs/mockups/weekly_settle_calendar_v17.html
    ═══════════════════════════════════════════════════════════════ */
-/* 모드 토글 [월/주차] */
-.mode-tabs{display:flex;gap:4px;background:var(--gray-100);padding:3px;border-radius:12px;margin-bottom:12px;}
-.mode-tab{flex:1;padding:10px;font-size:13px;font-weight:800;border:0;background:transparent;border-radius:9px;cursor:pointer;color:var(--gray-500);}
-.mode-tab.active{background:var(--white);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08);}
 /* 월 카드 */
 .month-card{background:var(--white);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
 .month-card .mc-label{font-size:11px;font-weight:800;color:var(--gray-500);margin-bottom:6px;letter-spacing:-0.2px;}
@@ -935,28 +931,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .forecast-box .fc-item .vl.blue{color:var(--blue);}
 .forecast-box .fc-item .vl.red{color:#EF4444;}
 .forecast-box .fc-item .vl.green{color:#10B981;}
-/* 주차 네비 */
-.week-nav{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
-.week-nav .navbtn{flex:0 0 38px;padding:6px;background:var(--white);border-radius:8px;font-size:14px;font-weight:800;color:var(--gray-700);border:1px solid var(--gray-200);cursor:pointer;}
-.week-nav .week-label{flex:1;text-align:center;font-size:15px;font-weight:900;}
-/* 한 줄 달력 (주차 보기) */
-.week-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
-.week-cal .wc-cell{border-radius:8px;padding:7px 4px;display:flex;flex-direction:column;gap:2px;background:var(--gray-50);border:1px solid var(--gray-100);min-height:78px;overflow:hidden;cursor:pointer;}
-.week-cal .wc-cell.today{background:var(--blue-light);border:1.5px solid var(--blue);}
-.week-cal .wc-cell.future{background:transparent;border:1px dashed var(--gray-200);cursor:default;}
-.week-cal .wc-cell.closed{background:#FEF3C7;border-color:#FCD34D;}
-.week-cal .wc-cell.outside{background:#FAFBFC;}
-.week-cal .wc-wk{font-size:9.5px;font-weight:700;text-align:center;color:var(--gray-500);}
-.week-cal .wc-cell.sun .wc-wk,.week-cal .wc-cell.sun .wc-day{color:#EF4444;}
-.week-cal .wc-cell.sat .wc-wk,.week-cal .wc-cell.sat .wc-day{color:#3B82F6;}
-.week-cal .wc-day{font-size:12px;font-weight:800;text-align:center;color:var(--gray-700);}
-.week-cal .wc-cell.closed .wc-day,.week-cal .wc-cell.closed .wc-wk{color:#92400E;}
-.week-cal .wc-cell.today .wc-day{color:var(--blue);}
-.week-cal .wc-cell.outside .wc-day,.week-cal .wc-cell.outside .wc-wk{color:var(--gray-400);}
-.week-cal .wc-sale{font-size:9.5px;font-weight:800;color:var(--blue);text-align:center;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
-.week-cal .wc-profit{font-size:9px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
-.week-cal .wc-profit.pos{color:#10B981;}
-.week-cal .wc-profit.neg{color:#EF4444;}
 /* 월 네비 (v17용 — 옛 .dashPrevBtn과 별개) */
 .v17-month-nav{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
 .v17-month-nav .navbtn{flex:0 0 38px;padding:6px;background:var(--white);border-radius:8px;font-size:14px;font-weight:800;color:var(--gray-700);border:1px solid var(--gray-200);cursor:pointer;}
@@ -989,75 +963,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .v17-cal-cell .cc-sale.cc-mini{font-size:8.5px;letter-spacing:-0.4px;}
 .v17-cal-cell .cc-profit.cc-mini{font-size:8px;letter-spacing:-0.4px;}
 .v17-cal-cell .cc-cat.cc-mini{font-size:9px;letter-spacing:-0.4px;}
-/* 진입 카드 (모달 진입) */
-.enter-card{background:linear-gradient(135deg,#0050FF 0%,#3B82F6 100%);color:#fff;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,80,255,0.2);}
-.enter-card .ttl{font-size:14px;font-weight:900;}
-.enter-card .sub{font-size:11px;opacity:0.85;margin-top:3px;}
-.enter-card .arrow{font-size:22px;font-weight:300;}
-/* 풀스크린 모달 (주별 카드 5개 비교) */
-.v17-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:200;display:none;flex-direction:column;}
-.v17-modal.open{display:flex;}
-.v17-modal-hd{position:sticky;top:0;background:var(--white);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-200);z-index:5;}
-.v17-modal-hd .ttl{font-size:18px;font-weight:900;}
-.v17-modal-close{background:var(--gray-100);border:0;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--gray-700);cursor:pointer;}
-.v17-modal-body{flex:1;overflow-y:auto;padding:10px 12px 20px;-webkit-overflow-scrolling:touch;}
-/* 주별 카드 */
-.wk-card{background:var(--white);border-radius:12px;padding:12px;margin-bottom:9px;box-shadow:0 1px 2px rgba(0,0,0,0.04);position:relative;}
-.wk-card.current{border:2px solid var(--blue);padding:10px;}
-.wk-card.current::before{content:'진행중';position:absolute;top:-7px;right:10px;background:var(--blue);color:#fff;font-size:9px;font-weight:800;padding:1.5px 6px;border-radius:5px;letter-spacing:0.3px;}
-.wk-label{font-size:11px;font-weight:800;color:var(--gray-500);margin-bottom:4px;letter-spacing:-0.2px;}
-.wk-label b{color:var(--text);font-size:13px;}
-/* 3분할 박스 (매출/지출/순수익) */
-.wk-3box{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--gray-100);}
-.wk-3box > div{text-align:center;min-width:0;}
-.wk-3box .lb{font-size:10px;font-weight:700;color:var(--gray-500);display:block;margin-bottom:3px;letter-spacing:0;font-family:inherit;}
-.wk-3box .vl{font-weight:900;display:block;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;line-height:1.2;font-family:inherit;}
-.wk-3box .b-sale .vl{font-size:19px;}
-.wk-3box .b-sale .vl.fs-m{font-size:17px;}
-.wk-3box .b-sale .vl.fs-s{font-size:15px;}
-.wk-3box .b-sale .vl.fs-xs{font-size:13px;}
-.wk-3box .b-exp .vl, .wk-3box .b-profit .vl{font-size:14px;}
-.wk-3box .b-exp .vl.fs-m, .wk-3box .b-profit .vl.fs-m{font-size:13px;}
-.wk-3box .b-exp .vl.fs-s, .wk-3box .b-profit .vl.fs-s{font-size:12px;}
-.wk-3box .b-exp .vl.fs-xs, .wk-3box .b-profit .vl.fs-xs{font-size:11px;}
-.wk-3box .b-sale .vl{color:var(--blue);}
-.wk-3box .b-exp .vl{color:#EF4444;}
-.wk-3box .b-profit.pos .vl{color:#10B981;}
-.wk-3box .b-profit.neg .vl{color:#EF4444;}
-.wk-3box .mom-pct{font-size:10px;font-weight:700;display:block;margin-top:2px;color:var(--gray-400);font-variant-numeric:tabular-nums;}
-.wk-3box .b-profit.pos .mom-pct{color:#10B981;}
-.wk-3box .b-profit.neg .mom-pct{color:#EF4444;}
-/* 간트 누적 막대 */
-.gantt-stack{display:flex;height:14px;border-radius:5px;overflow:hidden;background:var(--gray-100);margin-bottom:8px;}
-.gantt-stack > span{height:100%;position:relative;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;letter-spacing:-0.3px;}
-.gantt-stack > span.over{background-image:repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0, rgba(0,0,0,0.18) 3px, transparent 3px, transparent 7px);}
-.gantt-stack > span.profit{background:#DCFCE7;color:#10B981 !important;}
-.gantt-stack > span.loss{background:#FEE2E2;color:#EF4444 !important;}
-/* 범례 칩 (상위 3개 — 매출대비%위 + 전주대비%아래) */
-.gantt-legend{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
-.gantt-legend .lg{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px;padding:7px 8px;background:var(--gray-50);border-radius:7px;font-variant-numeric:tabular-nums;min-width:0;}
-.gantt-legend .lg .nm-side{display:flex;align-items:center;gap:4px;min-width:0;}
-.gantt-legend .lg .dot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
-.gantt-legend .lg .nm{font-size:11px;font-weight:700;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.gantt-legend .lg .pct-side{display:flex;flex-direction:column;align-items:center;gap:1px;}
-.gantt-legend .lg .pct-side .pct{font-size:12px;font-weight:800;color:var(--text);line-height:1.1;}
-.gantt-legend .lg .pct-side .mom-mini{font-size:9.5px;font-weight:800;line-height:1.1;}
-.gantt-legend .lg .pct-side .mom-mini.good{color:#10B981;}
-.gantt-legend .lg .pct-side .mom-mini.bad{color:#EF4444;}
-.gantt-legend .lg .pct-side .mom-mini.same{color:var(--gray-400);}
-.gantt-legend .lg.over{background:#FEE2E2;}
-.gantt-legend .lg.over .pct{color:#EF4444;}
-.gantt-legend .lg.over .nm{color:#EF4444;}
-/* + 그 외 펼침 */
-.gantt-rest{font-size:12px;color:var(--gray-600);font-weight:700;text-align:center;margin-bottom:6px;padding:10px;background:var(--gray-50);border-radius:8px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;}
-.gantt-rest:active{background:var(--gray-200);}
-.gantt-rest-detail{margin-bottom:8px;padding:6px 10px;background:var(--gray-50);border-radius:6px;}
-.gantt-rest-detail .rest-line{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--gray-100);font-size:11.5px;font-variant-numeric:tabular-nums;}
-.gantt-rest-detail .rest-line:last-child{border-bottom:0;}
-.gantt-rest-detail .rest-line .dot{width:8px;height:8px;border-radius:2px;}
-.gantt-rest-detail .rest-line .nm{font-weight:700;color:var(--text);}
-.gantt-rest-detail .rest-line .vl{font-weight:800;color:var(--text);}
-.gantt-rest-detail .rest-line .pct{font-weight:700;color:var(--gray-500);min-width:40px;text-align:right;}
 /* 대비 증감률 + 문어체 */
 .wk-mom{padding-top:8px;border-top:1px dashed var(--gray-200);font-variant-numeric:tabular-nums;}
 .wk-mom .mom-lb{font-size:10.5px;font-weight:700;color:var(--gray-500);margin-bottom:4px;letter-spacing:0;}
@@ -1189,6 +1094,52 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 끼임 안내 박스 (1주차) */
 .cross-note{font-size:11px;color:#854D0E;font-weight:700;background:#FEF9C3;padding:8px 10px;border-radius:8px;margin-bottom:8px;line-height:1.5;border-left:3px solid #F59E0B;}
 .cross-note b{color:#713F12;}
+
+/* ─── 월 요약 카드 "자세히" 힌트 (2026-06-03) ─── */
+.v17-card-v6 .m6-more-hint{display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:12px;font-weight:700;color:var(--blue);padding-top:12px;margin-top:2px;border-top:1px solid var(--gray-100);}
+.v17-card-v6 .m6-more-hint .go{font-size:14px;font-weight:800;}
+
+/* ─── 월 세부 화면 (요약 카드 탭 진입, 2026-06-03) ─── */
+/* 1. 큰 요약 히어로 */
+.md-hero{background:linear-gradient(135deg,#3182F6 0%,#0064FF 100%);border-radius:18px;padding:20px;margin-bottom:14px;color:#fff;box-shadow:0 6px 20px rgba(49,130,246,0.22);}
+.md-hero .md-hero-lb{font-size:12.5px;font-weight:700;opacity:.88;margin-bottom:8px;letter-spacing:-0.3px;}
+.md-hero .md-hero-amt{font-size:29px;font-weight:800;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;line-height:1.1;}
+.md-hero .md-hero-amt .won{font-size:18px;opacity:.85;margin-left:2px;font-weight:700;}
+.md-hero .md-hero-row{display:flex;gap:8px;margin-top:14px;}
+.md-hero .md-cell{flex:1;background:rgba(255,255,255,0.15);border-radius:11px;padding:10px 12px;}
+.md-hero .md-cell .k{font-size:10.5px;opacity:.85;font-weight:600;margin-bottom:3px;}
+.md-hero .md-cell .v{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+/* 2. 예상마감 */
+.md-fc{background:var(--white);border-radius:16px;padding:16px 18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(20,40,80,0.04);}
+.md-fc .md-fc-ttl{font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;}
+.md-fc .md-fc-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--gray-100);}
+.md-fc .md-fc-row:first-of-type{border-top:none;}
+.md-fc .md-fc-row .k{font-size:12.5px;color:var(--gray-600);font-weight:600;display:flex;align-items:center;gap:5px;}
+.md-fc .md-est-tag{font-size:9px;background:#EDF4FF;color:#0064FF;font-weight:800;padding:2px 5px;border-radius:5px;}
+.md-fc .md-fc-row .v{font-size:14.5px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+.md-fc .md-fc-row .v.pos{color:#0CAB6C;}
+.md-fc .md-fc-row .v.neg{color:#EF4444;}
+/* 5. 주차별 매트릭스 표 */
+.wk-matrix{background:var(--white);border-radius:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(20,40,80,0.04);overflow:hidden;}
+.wk-matrix .wk-matrix-ttl{font-size:13.5px;font-weight:800;color:var(--text);padding:16px 16px 10px;}
+.wk-matrix .wk-matrix-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.wk-matrix .wk-matrix-note{padding:10px 14px 14px;font-size:10.5px;color:var(--gray-400);font-weight:600;}
+.wk-tbl{border-collapse:collapse;font-size:12px;}
+.wk-tbl thead tr th{background:#F8FAFB;padding:8px 6px;font-size:11px;font-weight:800;color:var(--gray-500);text-align:right;border-bottom:1px solid var(--gray-200);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.wk-tbl thead tr th:first-child{text-align:left;padding-left:14px;width:84px;}
+.wk-tbl tbody tr.row-parent td{padding:9px 6px;font-size:12.5px;font-weight:800;color:var(--text);text-align:right;border-bottom:1px solid var(--gray-100);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.wk-tbl tbody tr.row-parent td:first-child{text-align:left;padding-left:14px;}
+.wk-tbl tbody tr.row-child td{padding:7px 6px;font-size:11.5px;font-weight:600;color:var(--gray-600);text-align:right;border-bottom:1px solid var(--gray-100);font-variant-numeric:tabular-nums;background:#FAFBFC;white-space:nowrap;}
+.wk-tbl tbody tr.row-child td:first-child{text-align:left;padding-left:22px;}
+.wk-tbl tbody tr.row-child td:first-child::before{content:"ㄴ ";color:var(--gray-400);}
+.wk-tbl tbody tr.row-sales td{border-bottom:2px solid var(--gray-200);}
+.wk-tbl tbody tr.row-sales td:first-child{color:var(--blue);}
+.wk-tbl .pct-sub{display:block;font-size:9.5px;color:var(--gray-400);font-weight:600;margin-top:1px;}
+.wk-tbl th.cur,.wk-tbl td.cur{background:#EDF4FF;}
+.wk-tbl th.cur{color:#0064FF;}
+.wk-tbl tbody tr.row-total td{padding:11px 6px;font-size:12px;font-weight:800;color:#EF4444;text-align:right;border-top:2px solid var(--gray-200);font-variant-numeric:tabular-nums;background:#FFF8F8;white-space:nowrap;}
+.wk-tbl tbody tr.row-total td:first-child{text-align:left;padding-left:14px;color:var(--gray-700);}
+
 /* v17 시트 (셀 탭 → 일별 상세) */
 .v17-sht-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;padding:12px;background:var(--gray-50);border-radius:10px;}
 .v17-sht-summary .lb{font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:2px;}

@@ -1270,49 +1270,16 @@
     </div>
 
     <!-- 이번 달 매출 — 홈에 직접 노출 (2026-06-03 settle 탭→홈 이동) -->
+    <!-- 2026-06-03 갈아엎기: [월/주차] 모드탭·주별비교카드·주차뷰 제거. 월 요약 카드만 → 탭하면 month-detail -->
     <div id="dashSettleCont">
-      <!-- v17 정산현황 -->
-      <!-- 모드 토글 [월/주차] -->
-      <div class="mode-tabs">
-        <button class="mode-tab active" id="v17ModeMonth" data-mode="month">📅 월 보기</button>
-        <button class="mode-tab" id="v17ModeWeek" data-mode="week">📆 주차 보기</button>
+      <!-- 월 네비 (홈 오늘매출 카드와도 연동) -->
+      <div class="v17-month-nav">
+        <button class="navbtn" id="dashPrevBtn">‹</button>
+        <span class="month-label" id="dashMonthLabel">-</span>
+        <button class="navbtn" id="dashNextBtn">›</button>
       </div>
-
-      <!-- 월 보기 컨테이너 -->
-      <div id="v17MonthView">
-        <!-- 월 네비 -->
-        <div class="v17-month-nav">
-          <button class="navbtn" id="dashPrevBtn">‹</button>
-          <span class="month-label" id="dashMonthLabel">-</span>
-          <button class="navbtn" id="dashNextBtn">›</button>
-        </div>
-        <!-- 월 카드 -->
-        <div id="v17MonthCard"></div>
-        <!-- 월 캘린더는 바텀시트로 이동 (2026-06-03) — 오늘매출 카드 📅 버튼으로 진입 -->
-        <!-- 주별 카테고리 비교 진입 카드 -->
-        <div class="enter-card" id="v17EnterModal">
-          <div>
-            <div class="ttl">📊 주별 카테고리 비교</div>
-            <div class="sub">식자재·인건비 비율 한눈에 보기</div>
-          </div>
-          <div class="arrow">›</div>
-        </div>
-      </div>
-
-      <!-- 주차 보기 컨테이너 -->
-      <div id="v17WeekView" style="display:none;">
-        <div class="week-nav">
-          <button class="navbtn" id="v17WeekPrevBtn">‹</button>
-          <span class="week-label" id="v17WeekNavLabel">-</span>
-          <button class="navbtn" id="v17WeekNextBtn">›</button>
-        </div>
-        <div id="v17SingleWeekCard"></div>
-        <div id="v17WeekCrossNote"></div>
-        <div class="card">
-          <div style="font-size:11px;color:var(--gray-500);font-weight:700;margin-bottom:8px;">📅 그 주 일별</div>
-          <div class="week-cal" id="v17WeekCalRow"></div>
-        </div>
-      </div>
+      <!-- 월 요약 카드 (탭 → 세부 화면). JS v17RenderMonthCard가 채움 -->
+      <div id="v17MonthCard" data-dash-go="month-detail" style="cursor:pointer;"></div>
     </div>
 
     <!-- 이번 달 매출 진입 카드 — 홈 직접 노출로 대체됨, DOM ID 유지 (JS 참조) -->
@@ -1425,6 +1392,22 @@
 
   <!-- ═══ stage: settle — 홈 직접 노출로 대체됨 (2026-06-03), 빈 탭 유지 ═══ -->
   <div class="dash-stage" data-dash-stage="settle"></div>
+
+  <!-- ═══ stage: month-detail (월 세부 — 월 요약 카드 탭 진입, 2026-06-03) ═══ -->
+  <div class="dash-stage" data-dash-stage="month-detail">
+    <div class="dash-back-row" data-dash-go="home">
+      <div class="back-btn">‹</div>
+      <div class="back-ttl">월 상세</div>
+    </div>
+    <!-- 월 네비 (세부 화면 안에서도 월 이동) -->
+    <div class="v17-month-nav" style="margin-bottom:14px;">
+      <button class="navbtn" id="mdPrevBtn" data-action="moveDashMonth|-1" data-stop="1">‹</button>
+      <span class="month-label" id="mdMonthLabel">-</span>
+      <button class="navbtn" id="mdNextBtn" data-action="moveDashMonth|1" data-stop="1">›</button>
+    </div>
+    <!-- 세부 본문 (JS v17RenderMonthDetail가 채움): 큰요약 + 예상마감 + 카테고리별 + 전월대비 + 주차 매트릭스 -->
+    <div id="v17MonthDetailBody"></div>
+  </div>
 
   <!-- ═══ stage: extra (기타매출 누적) ═══ -->
   <div class="dash-stage" data-dash-stage="extra">
@@ -3004,16 +2987,7 @@
   <button class="btn btn-secondary btn-full" data-action="closeAllSheets">취소</button>
 </div>
 
-<!-- v17 주별 카테고리 비교 풀스크린 모달 (body 직하위) — 2026-05-22 신설 -->
-<div class="v17-modal" id="v17WeekModal">
-  <div class="v17-modal-hd">
-    <div class="ttl">📊 주별 카테고리 비교</div>
-    <button class="v17-modal-close" id="v17WeekModalClose">✕ 닫기</button>
-  </div>
-  <div class="v17-modal-body">
-    <div id="v17WeekCardsContainer"></div>
-  </div>
-</div>
+<!-- 2026-06-03 제거: v17 주별 비교 풀스크린 모달 → 월 세부 화면 주차 매트릭스로 흡수 -->
 
 <!-- v17 일별 시트 (캘린더 셀 탭) — 옛 .sheet-overlay 패턴 -->
 <div class="sheet-overlay" id="v17DailySheet">
