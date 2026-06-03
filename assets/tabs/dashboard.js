@@ -50,37 +50,53 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   if(card) card.style.display='none';
   _todayVendorDataCache = (hasSale && veMap && Object.keys(veMap).length) ? {veMap, dayExp} : null;
 }
-// ─── 오늘 지출 바텀시트 열기 (2026-06-03) ───
+// ─── 어디에 썼나 바텀시트 열기 (2026-06-03 카테고리별 그룹핑) ───
 function openTodayVendorSheet(){
   const d = _todayVendorDataCache;
   if(!d){ toast('지출 데이터가 없습니다.'); return; }
   const {veMap, dayExp} = d;
-  const rows = Object.entries(veMap).map(([name,o])=>({name,amt:o.amt,cat:o.cat})).sort((a,b)=>b.amt-a.amt);
+  // veMap = { '쿠팡|비품': {name, cat, amt}, ... } → 거래처+카테고리 단위
+  const rows = Object.values(veMap).map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}));
+  const total = dayExp || rows.reduce((s,r)=>s+r.amt, 0);
+
+  // 카테고리별 그룹 묶기
+  const catGroups = {};
+  rows.forEach(r=>{
+    if(!catGroups[r.cat]) catGroups[r.cat]={cat:r.cat, sum:0, items:[]};
+    catGroups[r.cat].sum += r.amt;
+    catGroups[r.cat].items.push(r);
+  });
+  // 카테고리는 합계 큰 순, 카테고리 내 거래처도 금액 큰 순
+  const groups = Object.values(catGroups).sort((a,b)=>b.sum-a.sum);
+  groups.forEach(g=>g.items.sort((a,b)=>b.amt-a.amt));
+
   const sumEl = document.getElementById('vendorExpSheetSum');
   const listEl = document.getElementById('vendorExpSheetList');
-  if(sumEl) sumEl.innerText = `${rows.length}곳 · ${fmt(dayExp||rows.reduce((s,r)=>s+r.amt,0))}원`;
+  // '곳' = 고유 거래처 수 (쿠팡이 비품·식자재로 쪼개져도 1곳)
+  const vendorCount = new Set(rows.map(r=>r.name)).size;
+  if(sumEl) sumEl.innerText = `${vendorCount}곳 · ${fmt(total)}원`;
   if(listEl){
-    const TOP=4;
-    const rowsHtml=rows.map((r,i)=>{
-      const color=_VE_COLORS[i%_VE_COLORS.length];
-      const tag=r.cat?`<span class="ve-tag">${esc(r.cat)}</span>`:'';
-      const moreCls=i>=TOP?' ve-row-more':'';
-      const moreStyle=i>=TOP?' style="display:none;"':'';
-      return `<div class="ve-row${moreCls}"${moreStyle}><span class="vdot" style="background:${color};"></span><span class="vname">${esc(r.name)}</span>${tag}<span class="vamt">${fmt(r.amt)}원</span></div>`;
+    const groupsHtml = groups.map((g,i)=>{
+      const color = _VE_COLORS[i % _VE_COLORS.length];
+      const pct = total>0 ? Math.round(g.sum/total*100) : 0;
+      const itemsHtml = g.items.map(it=>
+        `<div class="ve-row"><span class="vname">${esc(it.name)}</span><span class="vamt">${fmt(it.amt)}원</span></div>`
+      ).join('');
+      return `<div class="ve-group">`
+        + `<div class="ve-cat-head"><span class="ve-cat-dot" style="background:${color};"></span>`
+        + `<span class="ve-cat-name">${esc(g.cat)}</span>`
+        + `<span class="ve-cat-pct">${pct}%</span>`
+        + `<span class="ve-cat-sum">${fmt(g.sum)}원</span></div>`
+        + itemsHtml
+        + `</div>`;
     }).join('');
-    const moreBtn=rows.length>TOP?`<button type="button" class="ve-more-btn" data-action="toggleVendorMoreSheet|this">${rows.length-TOP}곳 더보기 ▾</button>`:'';
-    listEl.innerHTML=rowsHtml+moreBtn;
+    const totalHtml = `<div class="ve-total"><span class="ve-total-lb">전체 합계</span><span class="ve-total-vl">${fmt(total)}원</span></div>`;
+    listEl.innerHTML = groupsHtml + totalHtml;
   }
   openSheet('vendorExpSheet');
 }
-// 바텀시트 내 더보기 토글 (2026-06-03)
-function toggleVendorMoreSheet(btn){
-  const list=document.getElementById('vendorExpSheetList'); if(!list) return;
-  const more=list.querySelectorAll('.ve-row-more'); if(!more.length) return;
-  const expanded=more[0].style.display!=='none';
-  more.forEach(el=>{ el.style.display=expanded?'none':'flex'; });
-  btn.innerHTML=expanded?`${more.length}곳 더보기 ▾`:'접기 ▴';
-}
+// 바텀시트 내 더보기 토글 — 카테고리 그룹핑 전환으로 더보기 폐기 (호환 유지, 2026-06-03)
+function toggleVendorMoreSheet(btn){ /* 더보기 없음 (전부 표시) */ }
 // ─── 홈 매출 카드 날짜 네비 (2026-06-03) ───
 function topCardDayMove(dir){
   if(!_topCardCtx || !_topCardDay) return;
@@ -709,14 +725,16 @@ async function loadDashboard(force){
       if(!monthChildMap[m.parentName][m.childName])monthChildMap[m.parentName][m.childName]={amt:0,color:m.childColor};
       monthChildMap[m.parentName][m.childName].amt+=amt;
     };
-    // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "오늘 어디서 썼나", 2026-06-02) ───
+    // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "어디에 썼나", 2026-06-02 / 2026-06-03 카테고리+거래처 분리) ───
     // FK: vendor_id→vendors(name). 직구(vendor_id NULL)·거래처 삭제(ON DELETE SET NULL)는 '직접 구매'
-    const dailyVendorExp={}; // { '02': { '행복한정육점': {amt, cat}, ... } }
+    // 키 = '거래처명|카테고리' 조합 → 쿠팡(비품)·쿠팡(식자재) 별도 집계 (카테고리 섞임 방지)
+    const dailyVendorExp={}; // { '02': { '쿠팡|비품': {name, cat, amt}, ... } }
     const _addVE=(d,name,amt,catName)=>{
       if(!amt||amt<=0||!d)return;
       if(!dailyVendorExp[d])dailyVendorExp[d]={};
-      const key=name||'기타';
-      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={amt:0,cat:catName||''};
+      const nm=name||'기타', ct=catName||'기타';
+      const key=nm+'|'+ct;
+      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={name:nm,cat:ct,amt:0};
       dailyVendorExp[d][key].amt+=amt;
     };
     // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
