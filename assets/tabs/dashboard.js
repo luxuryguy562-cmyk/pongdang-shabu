@@ -1563,16 +1563,15 @@ function v17RenderMonthCard(){
     donutAcc += pct;
   });
   const donutBg = donutStops.length ? `conic-gradient(${donutStops.join(',')})` : '#F2F4F6';
-  // 세로 수익률 막대 (도넛 오른쪽, 2026-06-03 사장님 지시)
+  // 수익률 막대 (도넛 폭에 맞춤, 도넛 아래 — 매출 대비 순수익)
   const profitPctSale = cur.s>0 ? (profit/cur.s*100) : 0;
-  let profitBarVertHtml = '';
+  const expPctSale = cur.s>0 ? (cur.e/cur.s*100) : 0;
+  let profitBarHtml = '';
   if(profit>=0){
-    const p=Math.min(profitPctSale,100).toFixed(0), e=Math.max(100-profitPctSale,0).toFixed(0);
-    profitBarVertHtml = `<span style="background:#10B981;flex:0 0 ${p}%;"></span><span style="background:var(--gray-200);flex:0 0 ${e}%;"></span>`;
+    profitBarHtml = `<span style="background:#10B981;width:${profitPctSale}%;">+${profitPctSale.toFixed(0)}%</span><span style="background:var(--gray-200);width:${expPctSale}%;color:var(--gray-500);">지출</span>`;
   } else {
-    const lossPct=Math.abs(profitPctSale);
-    const p=Math.min(lossPct,100).toFixed(0), e=Math.max(100-lossPct,0).toFixed(0);
-    profitBarVertHtml = `<span style="background:#EF4444;flex:0 0 ${p}%;"></span><span style="background:var(--gray-200);flex:0 0 ${e}%;"></span>`;
+    const lossPct = Math.abs(profitPctSale);
+    profitBarHtml = `<span style="background:#EF4444;width:${Math.min(lossPct,100)}%;">-${lossPct.toFixed(0)}%</span><span style="background:var(--gray-200);width:${Math.max(100-lossPct,0)}%;color:var(--gray-500);">지출</span>`;
   }
 
 
@@ -1672,13 +1671,12 @@ function v17RenderMonthCard(){
             <div class="est-line"><span class="tag">예상</span>마감 ${fcProfitStr}</div>
           </div>
         </div>
-        <div class="m6-donut-col">
+        <div class="m6-right">
           <div class="m6-donut-wrap">${donutHtml}</div>
-        </div>
-        <div class="m6-rate-col">
-          <div class="rate-v-lbl">순수익률</div>
-          <div class="rate-v-pct" style="color:${profitRateColor};">${profitRateStr}</div>
-          <div class="v6-bar-v">${profitBarVertHtml}</div>
+          <div class="m6-rate-wrap">
+            <div class="rate-lb"><span>순수익률</span><b style="color:${profitRateColor};">${profitRateStr}</b></div>
+            <div class="v6-bar profit-bar">${profitBarHtml}</div>
+          </div>
         </div>
       </div>
       ${detailPanelHtml}

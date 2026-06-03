@@ -1078,8 +1078,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .wk-mom .bad{color:#EF4444;font-weight:800;}
 .wk-mom .same{color:var(--gray-400);}
 .wk-mom .mom-comment{font-size:12px;color:var(--text);font-weight:700;line-height:1.55;margin-top:8px;padding:8px 10px;background:var(--gray-50);border-radius:8px;}
-/* ─── v17 월 카드: 매출/순수익(왼) + 도넛(가운데) + 세로막대(오른) 3열 (2026-06-03) ─── */
-.m6-top{display:grid;grid-template-columns:1fr 124px 40px;gap:8px;align-items:start;margin-bottom:14px;}
+/* ─── v17 월 카드: 매출/순수익(왼) + 도넛+수익률막대(오른) 2열 (2026-06-03) ─── */
+.m6-top{display:grid;grid-template-columns:1fr 124px;gap:14px;align-items:center;margin-bottom:14px;}
 .m6-left{display:flex;flex-direction:column;gap:12px;min-width:0;}
 .m6-metric .lb{font-size:10.5px;font-weight:700;color:var(--gray-500);margin-bottom:2px;}
 .m6-metric .vl{font-size:22px;font-weight:900;color:var(--text);letter-spacing:-0.5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -1094,18 +1094,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .m6-metric .est-line{font-size:10.5px;font-weight:700;color:var(--gray-400);margin-top:3px;font-variant-numeric:tabular-nums;}
 .m6-metric .est-line .tag{font-size:8.5px;font-weight:800;padding:1px 4px;border-radius:4px;background:var(--gray-100);color:var(--gray-500);margin-right:3px;}
 .m6-metric.profit{padding-top:10px;border-top:1px solid var(--gray-100);}
-.m6-donut-col{display:flex;justify-content:center;}
+.m6-right{display:flex;flex-direction:column;align-items:center;gap:8px;}
 .m6-donut-wrap{position:relative;width:124px;height:124px;}
 .m6-donut{width:124px;height:124px;border-radius:50%;}
 .m6-donut-wrap::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;border-radius:50%;background:var(--white);}
 .m6-donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;width:80px;}
 .m6-donut-center .dc-pct{display:block;font-size:19px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;}
 .m6-donut-center .dc-lb{display:block;font-size:9px;font-weight:700;color:var(--gray-500);margin-top:3px;}
-.m6-rate-col{display:flex;flex-direction:column;align-items:center;gap:3px;}
-.m6-rate-col .rate-v-lbl{font-size:7.5px;font-weight:700;color:var(--gray-500);writing-mode:vertical-lr;transform:rotate(180deg);white-space:nowrap;line-height:1.2;}
-.m6-rate-col .rate-v-pct{font-size:10px;font-weight:900;font-variant-numeric:tabular-nums;text-align:center;}
-.m6-rate-col .v6-bar-v{display:flex;flex-direction:column;width:18px;flex:1;min-height:72px;border-radius:5px;overflow:hidden;background:var(--gray-100);}
-.m6-rate-col .v6-bar-v > span{display:block;width:100%;}
+.m6-rate-wrap{width:124px;}
+.m6-rate-wrap .rate-lb{font-size:9.5px;font-weight:700;color:var(--gray-500);margin-bottom:4px;display:flex;justify-content:space-between;}
+.m6-rate-wrap .v6-bar{display:flex;height:13px;border-radius:5px;overflow:hidden;background:var(--gray-100);}
+.m6-rate-wrap .v6-bar > span{display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;height:100%;white-space:nowrap;}
 /* ─── v17 카드 v6 (2026-05-22 사장님 양식 갈아엎기) ─── */
 .v17-card-v6{background:var(--white);border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
 .v17-card-v6 .v6-ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
