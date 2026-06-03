@@ -978,33 +978,33 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .wk-mom .same{color:var(--gray-400);}
 .wk-mom .mom-comment{font-size:12px;color:var(--text);font-weight:700;line-height:1.55;margin-top:8px;padding:8px 10px;background:var(--gray-50);border-radius:8px;}
 /* ─── v17 월 카드: 도넛(수익률, 왼) + 매출/지출/수익 3줄(오른) + 순수익률 바 + 예상마감 (2026-06-03 목업 갈아엎기) ─── */
-.m6-top{display:grid;grid-template-columns:116px 1fr;gap:18px;align-items:center;margin-bottom:14px;}
-.m6-donut-wrap{position:relative;width:116px;height:116px;}
-.m6-donut{width:116px;height:116px;border-radius:50%;}
-.m6-donut-wrap::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;background:var(--white);}
-.m6-donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;width:76px;}
-.m6-donut-center .dc-pct{display:block;font-size:23px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
-.m6-donut-center .dc-lb{display:block;font-size:10px;font-weight:700;color:var(--gray-500);margin-top:3px;}
+.m6-top{display:grid;grid-template-columns:100px 1fr;gap:14px;align-items:center;margin-bottom:10px;}
+.m6-donut-wrap{position:relative;width:100px;height:100px;}
+.m6-donut{width:100px;height:100px;border-radius:50%;}
+.m6-donut-wrap::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:66px;height:66px;border-radius:50%;background:var(--white);}
+.m6-donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;width:66px;}
+.m6-donut-center .dc-pct{display:block;font-size:21px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
+.m6-donut-center .dc-lb{display:block;font-size:9.5px;font-weight:700;color:var(--gray-500);margin-top:2px;}
 /* 매출/지출/수익 3줄 */
 .m6-mrows{display:flex;flex-direction:column;min-width:0;}
-.m6-mr{display:flex;align-items:center;padding:7px 0;font-size:15px;}
+.m6-mr{display:flex;align-items:center;padding:5px 0;font-size:14.5px;}
 .m6-mr .k{color:var(--gray-600);font-weight:600;flex-shrink:0;}
 .m6-mr .v{margin-left:auto;padding-left:8px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .m6-mr .v.green{color:#0CAB6C;}
 .m6-mr .v.red{color:#EF4444;}
 /* 순수익률 바 */
-.m6-bar-row{margin-bottom:12px;}
-.m6-bar-row .bar-lb{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--gray-500);margin-bottom:5px;}
-.m6-bar-row .v6-bar{display:flex;height:14px;border-radius:5px;overflow:hidden;background:var(--gray-100);}
+.m6-bar-row{margin-bottom:9px;}
+.m6-bar-row .bar-lb{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--gray-500);margin-bottom:4px;}
+.m6-bar-row .v6-bar{display:flex;height:13px;border-radius:5px;overflow:hidden;background:var(--gray-100);}
 .m6-bar-row .v6-bar > span{display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;color:#fff;height:100%;white-space:nowrap;}
 /* 예상매출 강조 박스 + 자세히 */
-.m6-fc{display:flex;align-items:center;margin-top:12px;padding:12px 14px;background:var(--toss-blue-light);border-radius:12px;font-size:12.5px;}
+.m6-fc{display:flex;align-items:center;margin-top:10px;padding:10px 13px;background:var(--toss-blue-light);border-radius:11px;font-size:12px;}
 .m6-fc .fc-tx{color:var(--gray-700);font-weight:700;letter-spacing:-0.2px;}
 .m6-fc .fc-tx b{color:var(--toss-blue-strong);font-size:15.5px;font-weight:900;margin:0 1px;letter-spacing:-0.3px;}
 .m6-fc .fc-more{margin-left:auto;color:var(--toss-blue-strong);font-weight:800;flex-shrink:0;padding-left:8px;}
 /* ─── v17 카드 v6 (2026-05-22 사장님 양식 갈아엎기) ─── */
-.v17-card-v6{background:var(--white);border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
-.v17-card-v6 .v6-ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.v17-card-v6{background:var(--white);border-radius:14px;padding:14px;margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.v17-card-v6 .v6-ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
 .v17-card-v6 .v6-ttl{font-size:12px;font-weight:800;color:var(--gray-700);}
 .v17-card-v6 .v6-ttl b{color:var(--text);font-size:14px;font-weight:900;margin-right:4px;}
 .v17-card-v6 .v6-progress-tag{font-size:10px;padding:3px 8px;border-radius:8px;background:#EEF1FF;color:var(--blue);font-weight:800;}
@@ -1188,11 +1188,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 #dashboardCont .dash-stage{display:none;}
 #dashboardCont .dash-stage.active{display:block;}
 /* 인사 헤더 */
-.dash-hello{margin:4px 4px 18px;}
-.dash-hello h1{font-size:22px;font-weight:800;color:#191F28;margin:0 0 4px;letter-spacing:-0.7px;line-height:1.25;}
-.dash-hello p{font-size:13px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;}
+.dash-hello{margin:2px 4px 11px;}
+.dash-hello h1{font-size:20px;font-weight:800;color:#191F28;margin:0 0 2px;letter-spacing:-0.7px;line-height:1.2;}
+.dash-hello p{font-size:12px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;}
 /* 오늘 매출 풀카드 v7 */
-.dash-today-v7{background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);border-radius:20px;padding:22px 22px 18px;margin-bottom:14px;box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);position:relative;}
+.dash-today-v7{background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);border-radius:20px;padding:16px 18px 14px;margin-bottom:0;box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);position:relative;}
 .dash-today-v7:active{transform:scale(.985);}
 /* 홈 매출 카드 헤더 v2 — 날짜 네비 (2026-06-03) */
 .dash-today-v7 .t7-head-v2{display:flex;align-items:center;margin-bottom:10px;gap:0;}
@@ -1213,14 +1213,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .todo-banner .todo-tx{font-size:13px;font-weight:700;color:#B45309;flex:1;letter-spacing:-0.3px;}
 .todo-banner .todo-tx b{font-weight:800;color:#92400E;}
 .todo-banner .todo-go{font-size:16px;font-weight:700;color:#D97706;flex-shrink:0;}
-.dash-today-v7 .t7-amt{font-size:36px;font-weight:800;color:#191F28;letter-spacing:-1.4px;font-variant-numeric:tabular-nums;line-height:1.1;}
+.dash-today-v7 .t7-amt{font-size:31px;font-weight:800;color:#191F28;letter-spacing:-1.3px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .dash-today-v7 .t7-amt .won{font-size:22px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
 .dash-today-v7 .t7-amt.empty{font-size:24px;color:#B0B8C1;font-weight:700;}
 .dash-today-v7 .t7-time{font-size:12px;color:#8B95A1;margin-top:6px;font-weight:500;letter-spacing:-0.2px;display:flex;align-items:center;gap:6px;}
 .dash-today-v7 .t7-time .refresh{color:#0064FF;cursor:pointer;font-weight:600;}
 /* 지출·수익 세로 목록 — 3열 격자 (라벨|금액|화살표) */
-.dash-today-v7 .t7-rows{margin-top:16px;padding-top:0;border-top:1px solid #F2F4F6;}
-.dash-today-v7 .t7-row{display:grid;grid-template-columns:1fr 130px 22px;align-items:center;padding:10px 0;border-bottom:1px solid #F2F4F6;}
+.dash-today-v7 .t7-rows{margin-top:10px;padding-top:0;border-top:1px solid #F2F4F6;}
+.dash-today-v7 .t7-row{display:grid;grid-template-columns:1fr 130px 22px;align-items:center;padding:7px 0;border-bottom:1px solid #F2F4F6;}
 .dash-today-v7 .t7-row:last-child{border-bottom:none;}
 .dash-today-v7 .t7-row .r-lb{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#8B95A1;font-weight:600;letter-spacing:-0.2px;}
 .dash-today-v7 .t7-row .r-lb .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
@@ -1231,6 +1231,22 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-row .r-amt.red{color:#F04452;}
 .dash-today-v7 .t7-row .r-amt.green{color:#0CAB6C;}
 .dash-today-v7 .t7-row .r-go{font-size:16px;font-weight:800;color:#3182F6;cursor:pointer;text-align:center;padding-left:4px;}
+/* 어디에 썼나 — 오늘 카드 안 통합 (A안, 2026-06-03). 거래처 많으면 이 안에서만 스크롤 */
+.dash-today-v7 .t7-ve-section{margin-top:14px;padding-top:13px;border-top:1px dashed #E5E8EB;}
+.dash-today-v7 .t7-ve-head{font-size:12.5px;font-weight:800;color:#191F28;display:flex;align-items:center;margin-bottom:2px;}
+.dash-today-v7 .t7-ve-note{margin-left:auto;font-size:10px;font-weight:600;color:#B0B8C1;}
+.dash-today-v7 .t7-ve-list{max-height:84px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.dash-today-v7 .t7-ve-list::-webkit-scrollbar{width:3px;}
+.dash-today-v7 .t7-ve-list::-webkit-scrollbar-thumb{background:#D1D6DD;border-radius:3px;}
+.dash-today-v7 .t7-ve-list .ve-item{display:flex;align-items:center;font-size:12.5px;padding:8px 0;border-top:1px solid #F2F4F6;}
+.dash-today-v7 .t7-ve-list .ve-item:first-of-type{border-top:none;}
+.dash-today-v7 .t7-ve-list .vdot{width:8px;height:8px;border-radius:50%;margin-right:8px;flex-shrink:0;}
+.dash-today-v7 .t7-ve-list .vname{font-weight:700;color:#191F28;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dash-today-v7 .t7-ve-list .ve-cat-tag{font-size:10px;color:#8B95A1;font-weight:600;margin-left:6px;background:#F2F4F6;padding:1px 6px;border-radius:5px;flex-shrink:0;}
+.dash-today-v7 .t7-ve-list .vamt{margin-left:auto;padding-left:8px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;flex-shrink:0;}
+/* 홈 섹션 헤더 (오늘 / 이번 달 구분) */
+.dash-sec{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:#6B7684;margin:13px 2px 7px;}
+.dash-sec .ic{font-size:13px;}
 .dash-today-v7 .t7-act{margin-top:16px;display:flex;gap:8px;}
 .dash-today-v7 .t7-act .btn{flex:1;padding:13px;font-size:14px;font-weight:700;border:0;border-radius:12px;cursor:pointer;letter-spacing:-0.3px;transition:transform .15s;}
 .dash-today-v7 .t7-act .btn:active{transform:scale(.97);}
