@@ -39,36 +39,49 @@ function dashGoStage(stage){
 //  · 같은 월 안 = 메모리만 사용. 다른 월 = 1차 미지원 (토스트 안내)
 let _tdContext = null;
 let _tdDay = null;
-// ─── 거래처별 오늘 지출 렌더 (홈 "오늘 어디서 썼나", 2026-06-02) ───
+let _todayVendorDataCache = null;
+// ─── 거래처별 오늘 지출 캐싱 (2026-06-03 바텀시트로 전환) ───
 const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#94A3B8'];
 function renderTodayVendorExp(veMap, hasSale, dayExp){
+  // 기존 카드는 항상 숨김 — 데이터만 캐싱 (바텀시트에서 사용)
   const card=document.getElementById('dashTodayVendorCard');
-  const list=document.getElementById('dashTodayVendorList');
-  const sumEl=document.getElementById('dashTodayVendorSum');
-  if(!card||!list) return;
-  if(!hasSale || !veMap || !Object.keys(veMap).length){ card.style.display='none'; return; }
-  card.style.display='block';
-  const rows=Object.entries(veMap).map(([name,o])=>({name,amt:o.amt,cat:o.cat})).sort((a,b)=>b.amt-a.amt);
-  if(sumEl) sumEl.innerText=`${rows.length}곳 · ${fmt(dayExp||rows.reduce((s,r)=>s+r.amt,0))}원`;
-  // ─── 새 기능: 상위 4곳만 노출 + 더보기 토글 (2026-06-02) ───
-  const TOP=4;
-  const rowsHtml=rows.map((r,i)=>{
-    const color=_VE_COLORS[i%_VE_COLORS.length];
-    const tag=r.cat?`<span class="ve-tag">${esc(r.cat)}</span>`:'';
-    const moreCls=i>=TOP?' ve-row-more':'';
-    const moreStyle=i>=TOP?' style="display:none;"':'';
-    return `<div class="ve-row${moreCls}"${moreStyle}><span class="vdot" style="background:${color};"></span><span class="vname">${esc(r.name)}</span>${tag}<span class="vamt">${fmt(r.amt)}원</span></div>`;
-  }).join('');
-  const moreBtn=rows.length>TOP?`<button type="button" class="ve-more-btn" data-action="toggleVendorMore|this">${rows.length-TOP}곳 더보기 ▾</button>`:'';
-  list.innerHTML=rowsHtml+moreBtn;
+  if(card) card.style.display='none';
+  _todayVendorDataCache = (hasSale && veMap && Object.keys(veMap).length) ? {veMap, dayExp} : null;
 }
-// 거래처별 지출 더보기 토글 (상위 4곳 외 펼침/접힘, 2026-06-02)
-function toggleVendorMore(btn){
-  const list=document.getElementById('dashTodayVendorList'); if(!list) return;
+// ─── 오늘 지출 바텀시트 열기 (2026-06-03) ───
+function openTodayVendorSheet(){
+  const d = _todayVendorDataCache;
+  if(!d){ toast('지출 데이터가 없습니다.'); return; }
+  const {veMap, dayExp} = d;
+  const rows = Object.entries(veMap).map(([name,o])=>({name,amt:o.amt,cat:o.cat})).sort((a,b)=>b.amt-a.amt);
+  const sumEl = document.getElementById('vendorExpSheetSum');
+  const listEl = document.getElementById('vendorExpSheetList');
+  if(sumEl) sumEl.innerText = `${rows.length}곳 · ${fmt(dayExp||rows.reduce((s,r)=>s+r.amt,0))}원`;
+  if(listEl){
+    const TOP=4;
+    const rowsHtml=rows.map((r,i)=>{
+      const color=_VE_COLORS[i%_VE_COLORS.length];
+      const tag=r.cat?`<span class="ve-tag">${esc(r.cat)}</span>`:'';
+      const moreCls=i>=TOP?' ve-row-more':'';
+      const moreStyle=i>=TOP?' style="display:none;"':'';
+      return `<div class="ve-row${moreCls}"${moreStyle}><span class="vdot" style="background:${color};"></span><span class="vname">${esc(r.name)}</span>${tag}<span class="vamt">${fmt(r.amt)}원</span></div>`;
+    }).join('');
+    const moreBtn=rows.length>TOP?`<button type="button" class="ve-more-btn" data-action="toggleVendorMoreSheet|this">${rows.length-TOP}곳 더보기 ▾</button>`:'';
+    listEl.innerHTML=rowsHtml+moreBtn;
+  }
+  openSheet('vendorExpSheet');
+}
+// 바텀시트 내 더보기 토글 (2026-06-03)
+function toggleVendorMoreSheet(btn){
+  const list=document.getElementById('vendorExpSheetList'); if(!list) return;
   const more=list.querySelectorAll('.ve-row-more'); if(!more.length) return;
   const expanded=more[0].style.display!=='none';
   more.forEach(el=>{ el.style.display=expanded?'none':'flex'; });
   btn.innerHTML=expanded?`${more.length}곳 더보기 ▾`:'접기 ▴';
+}
+// 거래처별 지출 더보기 토글 — 구 카드용 (호환 유지)
+function toggleVendorMore(btn){
+  toggleVendorMoreSheet(btn);
 }
 function renderTodayDetailForDay(dayStr){
   if(!_tdContext) return;
@@ -1550,15 +1563,16 @@ function v17RenderMonthCard(){
     donutAcc += pct;
   });
   const donutBg = donutStops.length ? `conic-gradient(${donutStops.join(',')})` : '#F2F4F6';
-  // 수익률 막대 (도넛 폭에 맞춤 — 매출 대비 순수익)
+  // 세로 수익률 막대 (도넛 오른쪽, 2026-06-03 사장님 지시)
   const profitPctSale = cur.s>0 ? (profit/cur.s*100) : 0;
-  const expPctSale = cur.s>0 ? (cur.e/cur.s*100) : 0;
-  let profitBarHtml = '';
+  let profitBarVertHtml = '';
   if(profit>=0){
-    profitBarHtml = `<span style="background:#10B981;width:${profitPctSale}%;">+${profitPctSale.toFixed(0)}%</span><span style="background:var(--gray-200);width:${expPctSale}%;color:var(--gray-500);">지출</span>`;
+    const p=Math.min(profitPctSale,100).toFixed(0), e=Math.max(100-profitPctSale,0).toFixed(0);
+    profitBarVertHtml = `<span style="background:#10B981;flex:0 0 ${p}%;"></span><span style="background:var(--gray-200);flex:0 0 ${e}%;"></span>`;
   } else {
-    const lossPct = Math.abs(profitPctSale);
-    profitBarHtml = `<span style="background:#EF4444;width:${Math.min(lossPct,100)}%;">-${lossPct.toFixed(0)}%</span><span style="background:var(--gray-200);width:${Math.max(100-lossPct,0)}%;color:var(--gray-500);">지출</span>`;
+    const lossPct=Math.abs(profitPctSale);
+    const p=Math.min(lossPct,100).toFixed(0), e=Math.max(100-lossPct,0).toFixed(0);
+    profitBarVertHtml = `<span style="background:#EF4444;flex:0 0 ${p}%;"></span><span style="background:var(--gray-200);flex:0 0 ${e}%;"></span>`;
   }
 
 
@@ -1658,12 +1672,13 @@ function v17RenderMonthCard(){
             <div class="est-line"><span class="tag">예상</span>마감 ${fcProfitStr}</div>
           </div>
         </div>
-        <div class="m6-right">
+        <div class="m6-donut-col">
           <div class="m6-donut-wrap">${donutHtml}</div>
-          <div class="m6-rate-wrap">
-            <div class="rate-lb"><span>순수익률</span><b style="color:${profitRateColor};">${profitRateStr}</b></div>
-            <div class="v6-bar profit-bar">${profitBarHtml}</div>
-          </div>
+        </div>
+        <div class="m6-rate-col">
+          <div class="rate-v-lbl">순수익률</div>
+          <div class="rate-v-pct" style="color:${profitRateColor};">${profitRateStr}</div>
+          <div class="v6-bar-v">${profitBarVertHtml}</div>
         </div>
       </div>
       ${detailPanelHtml}
@@ -2398,13 +2413,12 @@ async function markDateAsClosed(date){
   }
 }
 
-// ─── 새 기능: 일별 매출 캘린더 시트 (2026-05-15) ─── //
+// ─── 달력 버튼: 홈 v17 캘린더로 스크롤 (2026-06-03 사장님 지시 — 중복 달력 제거) ─── //
 let _salesCalendarMonth=null;
 async function openSalesCalendarSheet(){
-  if(!currentStore){toast('매장을 먼저 선택하세요');return;}
-  _salesCalendarMonth=dashMonthStr||new Date().toISOString().slice(0,7);
-  openSheet('salesCalendarSheet');
-  await renderSalesCalendar();
+  // salesCalendarSheet 대신 홈에 있는 v17CalGrid로 스크롤
+  const calEl = document.getElementById('v17CalGrid');
+  if(calEl) calEl.scrollIntoView({behavior:'smooth', block:'start'});
 }
 function moveSalesCalendarMonth(dir){
   if(!_salesCalendarMonth)return;
