@@ -1126,18 +1126,23 @@ async function loadDashboard(force){
       }
       const _mLb=document.getElementById('dashHomeMonthLb');
       const _mSale=document.getElementById('dashHomeMonthSale');
-      const _mSub=document.getElementById('dashHomeMonthSub');
       const _mProg=document.getElementById('dashHomeMonthProgress');
-      const _mProfitRate=document.getElementById('dashHomeMonthProfitRate');
+      const _mExp=document.getElementById('dashHomeMonthExp');
+      const _mProfit=document.getElementById('dashHomeMonthProfit');
+      const _mRate=document.getElementById('dashHomeMonthRate');
+      const _mRateRow=document.getElementById('dashHomeMonthRateRow');
       if(_mSale){
         if(_mLb) _mLb.innerText=isCurMonth?'이번 달 매출':`${mo}월 매출`;
         _mSale.innerText=fmt(totalRevenue||0);
         const _profitV=(totalRevenue||0)-(totalCost||0);
-        if(_mSub){
-          // 수익/손해 단어 전환 (적자/흑자·순수익 표현 폐기 — 2026-06-02)
-          const _pWord=_profitV>=0?'수익':'손해';
-          const _pSign=_profitV>=0?'+':'';
-          _mSub.innerHTML=`지출 <b>${fmt(totalCost)}원</b> · ${_pWord} <b${_profitV<0?' class="red"':''}>${_pSign}${fmt(Math.abs(_profitV))}원</b>`;
+        const _isP=_profitV>=0;
+        // 지출 줄 (라벨-값 우측정렬, 예상마감과 통일 — 2026-06-03)
+        if(_mExp) _mExp.innerText=fmt(totalCost)+'원';
+        // 수익 줄 (라벨 '수익' 고정, 음수는 -, 색상 동적 — 하드코딩 X)
+        if(_mProfit){
+          _mProfit.innerText=(_isP?'':'-')+fmt(Math.abs(_profitV))+'원';
+          _mProfit.classList.toggle('red',!_isP);
+          _mProfit.classList.toggle('green',_isP);
         }
         // 진행 일자 → 라벨 우측 배지. 사장님 표현 그대로 "5월 22일 / 31일"
         if(_mProg){
@@ -1149,19 +1154,15 @@ async function loadDashboard(force){
             _mProg.innerText=`${mo}월 마감 (${lastDay}일)`;
           }
         }
-        // 수익률 (매출 대비) → 순수익 우측
-        if(_mProfitRate){
+        // 수익률 줄 (매출 대비, 음수는 -, 색상 동적)
+        if(_mRate&&_mRateRow){
           if((totalRevenue||0)>0){
             const _rate=(_profitV/totalRevenue*100);
-            const _rsign=_rate>=0?'+':'';
-            _mProfitRate.innerText=`수익률 ${_rsign}${_rate.toFixed(1)}%`;
-            _mProfitRate.classList.remove('red','good','gray');
-            if(_rate<0) _mProfitRate.classList.add('red');
-            else if(_rate>=15) _mProfitRate.classList.add('good');
-            _mProfitRate.style.display='';
-          } else {
-            _mProfitRate.style.display='none';
-          }
+            _mRate.innerText=(_rate>=0?'':'-')+Math.abs(_rate).toFixed(1)+'%';
+            _mRate.classList.toggle('red',_rate<0);
+            _mRate.classList.toggle('green',_rate>=0);
+            _mRateRow.style.display='';
+          } else { _mRateRow.style.display='none'; }
         }
         // ─── 새 기능: 전월 동일 대비 (홈 이번달 카드) ───
         const _mMom=document.getElementById('dashHomeMonthMom');
@@ -1182,14 +1183,37 @@ async function loadDashboard(force){
           if(isCurMonth && passedDays>0 && passedDays<lastDay){
             const _fcSaleEl=document.getElementById('dashHomeFcSale');
             const _fcProfitEl=document.getElementById('dashHomeFcProfit');
-            const _fcProfitLb=document.getElementById('dashHomeFcProfitLb');
+            const _fcSaleMom=document.getElementById('dashHomeFcSaleMom');
+            const _fcProfitMom=document.getElementById('dashHomeFcProfitMom');
+            // 예상 매출
             if(_fcSaleEl) _fcSaleEl.innerText=fmt(estRevenue)+'원';
+            // 예상 수익 (라벨 '예상 수익' 고정, 음수는 -, 색상 동적)
             const _isFcP=estNetProfit>=0;
-            if(_fcProfitLb) _fcProfitLb.innerText=_isFcP?'예상 수익':'예상 손해';
             if(_fcProfitEl){
-              _fcProfitEl.innerText=(_isFcP?'+':'')+fmt(Math.abs(estNetProfit))+'원';
+              _fcProfitEl.innerText=(_isFcP?'':'-')+fmt(Math.abs(estNetProfit))+'원';
               _fcProfitEl.classList.toggle('red',!_isFcP);
               _fcProfitEl.classList.toggle('green',_isFcP);
+            }
+            // 지난달 마감 대비 증감 칩 (예상 월말값 vs 전월 전체 마감)
+            const _prevNet=prevTotalRevenue-prevTotalCostFull;
+            if(_fcSaleMom){
+              if(prevTotalRevenue>0){
+                const _d=Math.round((estRevenue-prevTotalRevenue)/prevTotalRevenue*100);
+                _fcSaleMom.innerText=(_d>=0?'▲':'▼')+Math.abs(_d)+'%';
+                _fcSaleMom.classList.remove('red','green');
+                _fcSaleMom.classList.add(_d>=0?'green':'red');
+                _fcSaleMom.style.display='';
+              } else { _fcSaleMom.style.display='none'; }
+            }
+            if(_fcProfitMom){
+              // 수익은 늘면 좋음(초록▲) / 줄면 나쁨(빨강▼). 분모는 절대값
+              if(prevTotalRevenue>0 && _prevNet!==0){
+                const _d=Math.round((estNetProfit-_prevNet)/Math.abs(_prevNet)*100);
+                _fcProfitMom.innerText=(_d>=0?'▲':'▼')+Math.abs(_d)+'%';
+                _fcProfitMom.classList.remove('red','green');
+                _fcProfitMom.classList.add(_d>=0?'green':'red');
+                _fcProfitMom.style.display='';
+              } else { _fcProfitMom.style.display='none'; }
             }
             _fcBlock.style.display='';
           } else { _fcBlock.style.display='none'; }

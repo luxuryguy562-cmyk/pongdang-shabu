@@ -1293,6 +1293,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-enter-v7 .fc-row .v.red{color:#F04452;}
 .dash-enter-v7 .fc-row .v.green{color:#0CAB6C;}
 .dash-enter-v7 .fc-row .badge-exp{font-size:9px;font-weight:800;color:var(--gray-500);background:var(--gray-100);padding:1px 5px;border-radius:5px;margin-left:5px;vertical-align:middle;}
+/* 예상마감 줄 — 지난달 대비 증감 칩 (2026-06-03) */
+.dash-enter-v7 .fc-row .mom-chip{font-size:10px;font-weight:800;margin-left:6px;font-variant-numeric:tabular-nums;letter-spacing:-0.2px;vertical-align:middle;}
+.dash-enter-v7 .fc-row .mom-chip.red{color:#F04452;}
+.dash-enter-v7 .fc-row .mom-chip.green{color:#0CAB6C;}
 .dash-pm-card{background:#FFFFFF;border-radius:18px;padding:18px 20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(20,40,80,0.04);}
 .dash-pm-card .pm-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
 .dash-pm-card .pm-ttl{font-size:14px;font-weight:800;color:#191F28;letter-spacing:-0.3px;}
