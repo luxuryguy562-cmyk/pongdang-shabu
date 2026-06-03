@@ -51,7 +51,7 @@ let _pendingTopCardDay = null; // 월 경계 넘을 때 로드 후 표시할 날
 // ─── 거래처별 오늘 지출 캐싱 (2026-06-03 바텀시트로 전환) ───
 const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#94A3B8'];
 function renderTodayVendorExp(veMap, hasSale, dayExp){
-  const card=document.getElementById('dashTodayVendorCard');
+  const card=document.getElementById('dashTopVendorSection');  // 오늘 카드 안 통합 섹션 (A안)
   const listEl=document.getElementById('dashTodayVendorList');
   // 바텀시트용 데이터 캐싱 (오늘매출 카드 지출 줄 탭 → 전체 상세)
   _todayVendorDataCache = (hasSale && veMap && Object.keys(veMap).length) ? {veMap, dayExp} : null;

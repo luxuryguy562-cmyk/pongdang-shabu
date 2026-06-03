@@ -1257,6 +1257,11 @@
           <span class="r-go"></span>
         </div>
       </div>
+      <!-- 어디에 썼나 (오늘 카드 안 통합 — 2026-06-03 A안). 거래처 많으면 이 안에서만 스크롤 -->
+      <div id="dashTopVendorSection" class="t7-ve-section" style="display:none;">
+        <div class="t7-ve-head">🧾 어디에 썼나<span class="t7-ve-note">고정비·인건비 제외 · 밀어서 더보기</span></div>
+        <div id="dashTodayVendorList" class="t7-ve-list"></div>
+      </div>
       <!-- 빈 상태 (오늘 첫 매출) -->
       <div id="dashTopSalesEmptyCta" class="t7-empty" style="display:none;">
         <p>오늘 첫 매출인가요?</p>
@@ -1266,13 +1271,8 @@
       </div>
     </div>
 
-    <!-- 오늘 어디에 썼나 (변동 지출만, 거래처별 나열) — 홈 첫 화면 -->
-    <div class="dash-ve-card" id="dashTodayVendorCard" style="display:none;">
-      <div class="ve-head"><span>🧾 오늘 어디에 썼나</span><span class="ve-note">고정비·인건비 제외</span></div>
-      <div id="dashTodayVendorList"></div>
-    </div>
-
-    <!-- 이번 달 매출 — 홈에 직접 노출 (2026-06-03 settle 탭→홈 이동) -->
+    <!-- 이번 달 (오늘과 구분 — 2026-06-03 A안) -->
+    <div class="dash-sec"><span class="ic">📆</span>이번 달</div>
     <!-- 2026-06-03 홈 월네비 제거: 홈 월요약 = 이번 달 고정. 다른 달은 카드 탭 → 세부화면 월네비로 -->
     <div id="dashSettleCont">
       <!-- 월 요약 카드 (이번 달, 탭 → 세부 화면). JS v17RenderMonthCard가 채움 -->
