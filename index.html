@@ -1228,6 +1228,9 @@
       <p id="dashHelloDate">-</p>
     </div>
 
+    <!-- 할 일 알림 배너 (카드 밖 위) — 마감 안 한 날 있으면 표시, 탭 → 마감정산 -->
+    <div id="dashTodoAlert" class="todo-banner" data-action="nav|settle" data-stop="1" style="display:none;"></div>
+
     <!-- 오늘 매출 풀카드 v7 (탭 → today-detail) -->
     <div class="dash-today-v7" id="dashTopSalesCard" style="display:none;">
       <div class="t7-head-v2">
@@ -1240,8 +1243,6 @@
         </div>
         <button type="button" class="t7-nav t7-nav-next" id="dashTopNavNext" data-action="topCardDayMove|1" data-stop="1" disabled>›</button>
       </div>
-      <!-- 할 일 알림 (안 B) — 마감 안 한 날 있으면 표시, 탭 → 마감정산 -->
-      <div id="dashTodoAlert" class="t7-todo" data-action="nav|settle" data-stop="1" style="display:none;"></div>
       <div id="dashTopSalesAmt" class="t7-amt">0<span class="won">원</span></div>
       <div id="dashTopSalesUpdated" class="t7-time" style="display:none;" title="강제 갱신">방금 갱신됨 <span class="refresh">↻</span></div>
       <div id="dashTopSalesProfitExpense" class="t7-rows" style="display:none;">
@@ -1265,9 +1266,9 @@
       </div>
     </div>
 
-    <!-- 어디에 썼나 (거래처별 지출) — 홈 첫 화면 -->
+    <!-- 오늘 어디에 썼나 TOP3 (카테고리 상위 3 + 거래처 펼침) — 홈 첫 화면 -->
     <div class="dash-ve-card" id="dashTodayVendorCard" style="display:none;">
-      <div class="ve-head"><span>🧾 어디에 썼나</span><span class="ve-sub" id="dashTodayVendorSum"></span></div>
+      <div class="ve-head"><span>🧾 오늘 어디에 썼나 TOP3</span></div>
       <div id="dashTodayVendorList"></div>
     </div>
 
