@@ -51,25 +51,21 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   // 바텀시트용 데이터 캐싱 (오늘매출 카드 지출 줄 탭 → 전체 상세)
   _todayVendorDataCache = (hasSale && veMap && Object.keys(veMap).length) ? {veMap, dayExp} : null;
   if(!card) return;
-  if(!_todayVendorDataCache){ card.style.display='none'; return; }
-  // 카테고리 TOP3 + 각 카테고리 아래 거래처 펼침 (총액·자세히보기 없음)
-  const rows = Object.values(veMap).map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}));
-  const total = dayExp || rows.reduce((s,r)=>s+r.amt,0);
-  const catGroups={};
-  rows.forEach(r=>{ if(!catGroups[r.cat])catGroups[r.cat]={cat:r.cat,sum:0,items:[]}; catGroups[r.cat].sum+=r.amt; catGroups[r.cat].items.push(r); });
-  const groups=Object.values(catGroups).sort((a,b)=>b.sum-a.sum).slice(0,3);
-  groups.forEach(g=>g.items.sort((a,b)=>b.amt-a.amt));
+  // 변동 지출만 (인건비·고정비 = 매달 자동으로 나갈 돈이라 제외), 거래처별로 쭉 나열
+  const exclude = _topCardCtx?.veExcludeCats || new Set();
+  const items = Object.values(veMap||{})
+    .filter(o=> o.amt>0 && !exclude.has(o.cat))
+    .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
+    .sort((a,b)=>b.amt-a.amt);
+  if(!items.length){ card.style.display='none'; return; }
   if(listEl){
-    listEl.innerHTML = groups.map((g,i)=>{
-      const color=_VE_COLORS[i % _VE_COLORS.length];
-      const pct = total>0?Math.round(g.sum/total*100):0;
-      const catRow=`<div class="ve-cat"><span class="vdot" style="background:${color};"></span>`
-        +`<span class="vname">${esc(g.cat)}</span><span class="ve-pct">${pct}%</span>`
-        +`<span class="vamt">${fmt(g.sum)}원</span></div>`;
-      const subRows=g.items.map(it=>
-        `<div class="ve-sub"><span class="sn">${esc(it.name)}</span><span class="sv">${fmt(it.amt)}원</span></div>`
-      ).join('');
-      return catRow+subRows;
+    const catColor={}; let ci=0;
+    listEl.innerHTML = items.map(it=>{
+      if(!(it.cat in catColor)) catColor[it.cat]=_VE_COLORS[ci++ % _VE_COLORS.length];
+      return `<div class="ve-item"><span class="vdot" style="background:${catColor[it.cat]};"></span>`
+        +`<span class="vname">${esc(it.name)}</span>`
+        +`<span class="ve-cat-tag">${esc(it.cat)}</span>`
+        +`<span class="vamt">${fmt(it.amt)}원</span></div>`;
     }).join('');
   }
   card.style.display='';
@@ -1192,6 +1188,8 @@ async function loadDashboard(force){
         dailySalesMap, dailyExpTotal, dailyVendorExp,
         prevDailySalesMap, prevDailyExpTotal,
         isUpsMode, momTxt,
+        // 어디에 썼나에서 뺄 카테고리 (인건비·고정비 = 매달 자동으로 나가는 돈)
+        veExcludeCats: new Set([_laborParentName, ...fixedCats.map(c=>c.name)]),
       };
       topCard.style.display='block';
 
@@ -1671,7 +1669,7 @@ function v17RenderMonthCard(){
         <div class="v6-bar">${profitBarHtml}</div>
       </div>
       <div class="m6-fc">
-        <span class="fc-tx">📈 이대로 가면 월말 <b>${fcManStr}</b></span>
+        <span class="fc-tx">📈 이대로 가면 월말 예상매출 <b>${fcManStr}</b></span>
         <span class="fc-more">자세히 ›</span>
       </div>
     </div>`;

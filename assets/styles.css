@@ -997,11 +997,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .m6-bar-row .bar-lb{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--gray-500);margin-bottom:5px;}
 .m6-bar-row .v6-bar{display:flex;height:14px;border-radius:5px;overflow:hidden;background:var(--gray-100);}
 .m6-bar-row .v6-bar > span{display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;color:#fff;height:100%;white-space:nowrap;}
-/* 예상마감 + 자세히 */
-.m6-fc{display:flex;align-items:center;padding-top:12px;border-top:1px solid var(--gray-100);font-size:12.5px;}
-.m6-fc .fc-tx{color:var(--gray-600);font-weight:700;letter-spacing:-0.2px;}
-.m6-fc .fc-tx b{color:var(--text);}
-.m6-fc .fc-more{margin-left:auto;color:var(--blue);font-weight:700;flex-shrink:0;padding-left:8px;}
+/* 예상매출 강조 박스 + 자세히 */
+.m6-fc{display:flex;align-items:center;margin-top:12px;padding:12px 14px;background:var(--toss-blue-light);border-radius:12px;font-size:12.5px;}
+.m6-fc .fc-tx{color:var(--gray-700);font-weight:700;letter-spacing:-0.2px;}
+.m6-fc .fc-tx b{color:var(--toss-blue-strong);font-size:15.5px;font-weight:900;margin:0 1px;letter-spacing:-0.3px;}
+.m6-fc .fc-more{margin-left:auto;color:var(--toss-blue-strong);font-weight:800;flex-shrink:0;padding-left:8px;}
 /* ─── v17 카드 v6 (2026-05-22 사장님 양식 갈아엎기) ─── */
 .v17-card-v6{background:var(--white);border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
 .v17-card-v6 .v6-ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
@@ -1293,17 +1293,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 오늘 어디서 썼나 (거래처별 지출) */
 .dash-ve-card{background:#FFFFFF;border-radius:18px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 8px rgba(20,40,80,0.04);}
 .dash-ve-card .ve-head{display:flex;align-items:center;font-size:13.5px;font-weight:800;color:var(--text);margin-bottom:4px;}
-/* 카테고리 행 (TOP3) */
-.dash-ve-card .ve-cat{display:flex;align-items:center;font-size:13.5px;padding:10px 0;border-top:1px solid var(--gray-100);}
-.dash-ve-card .ve-cat:first-of-type{border-top:none;}
+.dash-ve-card .ve-head .ve-note{margin-left:auto;font-size:10.5px;font-weight:600;color:var(--gray-400);}
+/* 거래처 행 (변동 지출, 영수증 조회처럼 쭉) */
+.dash-ve-card .ve-item{display:flex;align-items:center;font-size:13.5px;padding:10px 0;border-top:1px solid var(--gray-100);}
+.dash-ve-card .ve-item:first-of-type{border-top:none;}
 .dash-ve-card .vdot{width:9px;height:9px;border-radius:50%;margin-right:9px;flex-shrink:0;}
 .dash-ve-card .vname{font-weight:700;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dash-ve-card .ve-pct{font-size:11px;color:var(--gray-400);font-weight:600;margin-left:7px;flex-shrink:0;}
+.dash-ve-card .ve-cat-tag{font-size:10.5px;color:var(--gray-500);font-weight:600;margin-left:7px;background:var(--gray-100);padding:2px 7px;border-radius:6px;flex-shrink:0;}
 .dash-ve-card .vamt{margin-left:auto;padding-left:8px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0;}
-/* 거래처 서브행 */
-.dash-ve-card .ve-sub{display:flex;align-items:center;padding:5px 0 5px 18px;font-size:12.5px;}
-.dash-ve-card .ve-sub .sn{color:var(--gray-600);font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dash-ve-card .ve-sub .sv{margin-left:auto;padding-left:8px;color:var(--gray-600);font-weight:600;font-variant-numeric:tabular-nums;flex-shrink:0;}
 /* 어디에 썼나 — 카테고리별 그룹 (2026-06-03 바텀시트) */
 .dash-ve-card .ve-group{margin-bottom:14px;}
 .dash-ve-card .ve-cat-head{display:flex;align-items:center;gap:7px;padding:8px 8px;background:#F8FAFB;border-radius:9px;margin-bottom:2px;}
