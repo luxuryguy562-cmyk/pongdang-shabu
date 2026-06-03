@@ -1235,7 +1235,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-ve-section{margin-top:14px;padding-top:13px;border-top:1px dashed #E5E8EB;}
 .dash-today-v7 .t7-ve-head{font-size:12.5px;font-weight:800;color:#191F28;display:flex;align-items:center;margin-bottom:2px;}
 .dash-today-v7 .t7-ve-note{margin-left:auto;font-size:10px;font-weight:600;color:#B0B8C1;}
-.dash-today-v7 .t7-ve-list{max-height:84px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.dash-today-v7 .t7-ve-list{max-height:160px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar{width:3px;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar-thumb{background:#D1D6DD;border-radius:3px;}
 .dash-today-v7 .t7-ve-list .ve-item{display:flex;align-items:center;font-size:12.5px;padding:8px 0;border-top:1px solid #F2F4F6;}
