@@ -42,6 +42,7 @@ let _tdDay = null;
 let _todayVendorDataCache = null;
 let _topCardCtx = null;   // 홈 매출 카드 날짜 네비 컨텍스트 (2026-06-03)
 let _topCardDay = null;   // 현재 표시 중인 날짜 'YYYY-MM-DD'
+let _pendingTopCardDay = null; // 월 경계 넘을 때 로드 후 표시할 날짜 (2026-06-03 통합 흐름)
 // ─── 거래처별 오늘 지출 캐싱 (2026-06-03 바텀시트로 전환) ───
 const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#94A3B8'];
 function renderTodayVendorExp(veMap, hasSale, dayExp){
@@ -97,12 +98,22 @@ function openTodayVendorSheet(){
 function toggleVendorMoreSheet(btn){ /* 더보기 없음 (전부 표시) */ }
 // ─── 홈 매출 카드 날짜 네비 (2026-06-03) ───
 function topCardDayMove(dir){
-  if(!_topCardCtx || !_topCardDay) return;
-  const d = parseInt(_topCardDay.slice(8), 10);
-  const newD = d + Number(dir);
-  if(newD < 1) return;
-  if(newD > new Date().getDate()) return;
-  renderTopCardForDay(_topCardCtx.ym + '-' + String(newD).padStart(2,'0'));
+  if(!_topCardDay) return;
+  const cur = new Date(_topCardDay + 'T00:00:00');
+  cur.setDate(cur.getDate() + Number(dir));
+  const newStr = cur.toISOString().slice(0,10);
+  const _todayStr = new Date().toISOString().slice(0,10);
+  if(newStr > _todayStr) return; // 미래 막기
+  const newMonth = newStr.slice(0,7);
+  if(newMonth === dashMonthStr){
+    // 같은 달 안 → 카드만 갱신
+    renderTopCardForDay(newStr);
+  } else {
+    // 월 경계 넘음 → 그 달 데이터 로드 후 그 날짜 표시 (월카드·달력 자동 연동)
+    _pendingTopCardDay = newStr;
+    dashMonthStr = newMonth;
+    loadDashboard();
+  }
 }
 function renderTopCardForDay(dayStr){
   if(!_topCardCtx) return;
@@ -110,8 +121,10 @@ function renderTopCardForDay(dayStr){
   _topCardDay = dayStr;
   const dayPad = dayStr.slice(8);
   const d = parseInt(dayPad, 10);
-  const todayD = new Date().getDate();
-  const isTodayShown = d === todayD;
+  const _todayStr = new Date().toISOString().slice(0,10);
+  const _yest = (()=>{ const y=new Date(); y.setDate(y.getDate()-1); return y.toISOString().slice(0,10); })();
+  const isTodayShown = dayStr === _todayStr;
+  const isYesterday = dayStr === _yest;
 
   const topAmtEl = document.getElementById('dashTopSalesAmt');
   const topModeEl = document.getElementById('dashTopSalesMode');
@@ -129,10 +142,11 @@ function renderTopCardForDay(dayStr){
   // 라벨
   const dow = ['일','월','화','수','목','금','토'][new Date(ctx.ym+'-'+dayPad+'T00:00:00').getDay()];
   const moStr = String(ctx.mo).padStart(2,'0');
-  const titleLabel = isTodayShown ? '오늘 매출' : '어제 매출';
-  // "마감" 배지 제거 — 과거 날짜는 항상 마감이라 정보 없음. 오늘 미확정(준비중)·실시간만 표시
-  const modeLabel = ctx.isUpsMode ? '실시간' : (isTodayShown ? '(준비중)' : '');
-  document.getElementById('dashTopSalesLabel').innerText = `${titleLabel} · ${moStr}.${dayPad}(${dow})`;
+  // 오늘/어제/그 외 날짜 — 어느 달이든 안 사라지고 그날 매출 표시 (2026-06-03 통합 흐름)
+  const titleWord = isTodayShown ? '오늘 매출' : (isYesterday ? '어제 매출' : '매출');
+  // "마감" 배지 — 오늘만 (준비중)·실시간, 과거는 표시 없음
+  const modeLabel = (ctx.isUpsMode && isTodayShown) ? '실시간' : (isTodayShown ? '(준비중)' : '');
+  document.getElementById('dashTopSalesLabel').innerText = `${titleWord} · ${moStr}.${dayPad}(${dow})`;
   if(modeLabel){
     topModeEl.innerText = modeLabel;
     topModeEl.className = 't7-mode' + (ctx.isUpsMode ? ' live' : '');
@@ -178,11 +192,11 @@ function renderTopCardForDay(dayStr){
     renderTodayVendorExp(null, false, 0);
   }
 
-  // 네비 버튼 상태 업데이트
+  // 네비 버튼 상태 — ‹ 과거는 항상 가능(월 넘김), › 미래(오늘 이후)만 막기
   const prevBtn = document.getElementById('dashTopNavPrev');
   const nextBtn = document.getElementById('dashTopNavNext');
-  if(prevBtn) prevBtn.disabled = (d <= 1);
-  if(nextBtn) nextBtn.disabled = (d >= todayD);
+  if(prevBtn) prevBtn.disabled = false;
+  if(nextBtn) nextBtn.disabled = (dayStr >= _todayStr);
 }
 // 거래처별 지출 더보기 토글 — 구 카드용 (호환 유지)
 function toggleVendorMore(btn){
@@ -1114,16 +1128,10 @@ async function loadDashboard(force){
     // ══ A-5. 일별 차트 제거 (2026-05-15) — 주단위 요약 카드와 정보 중복 ══
     destroyChart('dailyChart');
 
-    // ─── 새 기능: 1순위 매출 통합 카드 (매출+지출+순수익, 2026-05-15) ─── //
-    // 현재 월일 때만 카드 표시 (다른 월에서 "오늘 매출" 의미 X)
+    // ─── 매출 통합 카드 (매출+지출+순수익) — 모든 달에서 표시, 날짜 커서로 위·아래 연동 (2026-06-03) ─── //
     const isCurMonth=today.toISOString().slice(0,7)===dashMonthStr;
     const topCard=document.getElementById('dashTopSalesCard');
-    const emptyCtaEl=document.getElementById('dashTopSalesEmptyCta');
-    const peEl=document.getElementById('dashTopSalesProfitExpense');
-    const topModeEl=document.getElementById('dashTopSalesMode');
-    const topAmtEl=document.getElementById('dashTopSalesAmt');
-    const topUpdEl=document.getElementById('dashTopSalesUpdated');
-    if(isCurMonth){
+    {
       // 전월 일별 지출 맵 (% 비교용, 변동성 큰 vendor/receipt/attendance만)
       const prevDailyExpTotal={};
       (prevVoRes.data||[]).forEach(v=>{const d=v.order_date?.slice(8);if(!d)return;prevDailyExpTotal[d]=(prevDailyExpTotal[d]||0)+(v.amount||0);});
@@ -1133,11 +1141,8 @@ async function loadDashboard(force){
       // 최근 매출일 찾기 (passedDays까지, source='closed'는 매출 0이라 자동 제외됨)
       const sortedDays=Object.keys(dailySalesMap).filter(d=>parseInt(d)<=passedDays && dailySalesMap[d]>0).sort();
       const lastSaleDay=sortedDays[sortedDays.length-1]||null;
-      const todayDayStr=String(today.getDate()).padStart(2,'0');
-      const isTodayShown=lastSaleDay===todayDayStr;
       const isUpsMode=(dashSaleSource==='ups');
 
-      // ─── 홈 매출 카드 날짜 네비 컨텍스트 저장 + 렌더 (2026-06-03) ─── //
       _topCardCtx={
         ym, mo,
         dailySalesMap, dailyExpTotal, dailyVendorExp,
@@ -1145,36 +1150,28 @@ async function loadDashboard(force){
         isUpsMode, momTxt,
       };
       topCard.style.display='block';
-      const _initDay=lastSaleDay
-        ? ym+'-'+String(lastSaleDay).padStart(2,'0')
-        : new Date().toISOString().slice(0,10);
+
+      // 표시할 날짜: ① 일 네비로 넘어온 특정일(같은 달) ② 그 달 최근 영업일 ③ 현재월=오늘 / 과거월=말일
+      let _initDay;
+      if(_pendingTopCardDay && _pendingTopCardDay.slice(0,7)===dashMonthStr){
+        _initDay=_pendingTopCardDay;
+      } else if(lastSaleDay){
+        _initDay=ym+'-'+String(lastSaleDay).padStart(2,'0');
+      } else {
+        _initDay = isCurMonth ? new Date().toISOString().slice(0,10) : ym+'-'+String(lastDay).padStart(2,'0');
+      }
+      _pendingTopCardDay=null;
       renderTopCardForDay(_initDay);
 
-      // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22, 2026-05-25 일자 네비 지원) ───
+      // ─── today-detail 드릴다운 컨텍스트 (모든 달) ───
       try {
         _tdContext = {
           ym, mo, lastDay,
           dailySalesMap, dailyExpTotal, settle, dailyVendorExp,
-          lastSaleDay, isUpsMode, isTodayShown, isCurMonth
+          lastSaleDay, isUpsMode, isTodayShown: _initDay===new Date().toISOString().slice(0,10), isCurMonth
         };
         renderTodayDetailForDay(_initDay);
       } catch(e){ console.warn('[dashTodayDetail]', e.message); }
-    } else {
-      topCard.style.display='none';
-      _topCardCtx = null;
-      _topCardDay = null;
-      // today-detail도 빈 상태 (다른 월 보기)
-      const _ddAmtX=document.getElementById('dashTodayDetailAmt');
-      if(_ddAmtX){
-        _ddAmtX.classList.add('empty');
-        _ddAmtX.innerText='다른 달은 오늘 매출 없음';
-        const _ddDateX=document.getElementById('dashTodayDetailDate');
-        const _ddSubX=document.getElementById('dashTodayDetailSub');
-        if(_ddDateX) _ddDateX.innerHTML='다른 달 보기 중';
-        if(_ddSubX) _ddSubX.innerText='‹ 홈으로 돌아가 이번 달 보기';
-      }
-      const _pmWrapX=document.getElementById('dashPmCardWrap');
-      if(_pmWrapX) _pmWrapX.style.display='none';
     }
 
     // ─── 홈 v7: 인사 헤더 + 이번 달 매출 박스 (isCurMonth 무관, 2026-05-22) ───
