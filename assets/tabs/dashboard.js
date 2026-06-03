@@ -349,6 +349,9 @@ async function loadDashboard(force){
   try{
     const ym=dashMonthStr;
     document.getElementById('dashMonthLabel').innerText=ym;
+    // 매출 달력 시트 월 라벨도 동기화 (시트 안 ‹ › 네비 → 라벨 갱신, 2026-06-03)
+    const _calSheetLbl=document.getElementById('salesCalSheetMonth');
+    if(_calSheetLbl) _calSheetLbl.innerText=ym;
     const[y,mo]=ym.split('-').map(Number);
     const lastDay=new Date(y,mo,0).getDate();
     const start=ym+'-01',end=ym+'-'+String(lastDay).padStart(2,'0');
