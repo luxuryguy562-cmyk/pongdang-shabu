@@ -101,8 +101,8 @@ function topCardDayMove(dir){
   if(!_topCardDay) return;
   const cur = new Date(_topCardDay + 'T00:00:00');
   cur.setDate(cur.getDate() + Number(dir));
-  const newStr = cur.toISOString().slice(0,10);
-  const _todayStr = new Date().toISOString().slice(0,10);
+  const newStr = ymdLocal(cur);            // 한국 시간 기준 (toISOString는 UTC라 하루 어긋남)
+  const _todayStr = ymdLocal(new Date());
   if(newStr > _todayStr) return; // 미래 막기
   const newMonth = newStr.slice(0,7);
   if(newMonth === dashMonthStr){
@@ -121,8 +121,8 @@ function renderTopCardForDay(dayStr){
   _topCardDay = dayStr;
   const dayPad = dayStr.slice(8);
   const d = parseInt(dayPad, 10);
-  const _todayStr = new Date().toISOString().slice(0,10);
-  const _yest = (()=>{ const y=new Date(); y.setDate(y.getDate()-1); return y.toISOString().slice(0,10); })();
+  const _todayStr = ymdLocal(new Date());
+  const _yest = (()=>{ const y=new Date(); y.setDate(y.getDate()-1); return ymdLocal(y); })();
   const isTodayShown = dayStr === _todayStr;
   const isYesterday = dayStr === _yest;
 
@@ -221,7 +221,7 @@ function renderTodayDetailForDay(dayStr){
   const _amt = ctx.dailySalesMap[d] || 0;
   const _dexp = ctx.dailyExpTotal[d] || 0;
   const _dprofit = _amt - _dexp;
-  const _todayStr = new Date().toISOString().slice(0,10);
+  const _todayStr = ymdLocal(new Date());
   const isFuture = dayStr > _todayStr;
   const isToday = dayStr === _todayStr;
 
@@ -272,7 +272,7 @@ function renderTodayDetailForDay(dayStr){
   const prevBtn = document.getElementById('tdDayPrev');
   const nextBtn = document.getElementById('tdDayNext');
   const picker = document.getElementById('tdDayPicker');
-  const _yesterdayStr = (()=>{ const y=new Date(); y.setDate(y.getDate()-1); return y.toISOString().slice(0,10); })();
+  const _yesterdayStr = (()=>{ const y=new Date(); y.setDate(y.getDate()-1); return ymdLocal(y); })();
   let relativeLabel = '';
   if(isToday) relativeLabel = ' · 오늘';
   else if(dayStr === _yesterdayStr) relativeLabel = ' · 어제';
@@ -1158,7 +1158,7 @@ async function loadDashboard(force){
       } else if(lastSaleDay){
         _initDay=ym+'-'+String(lastSaleDay).padStart(2,'0');
       } else {
-        _initDay = isCurMonth ? new Date().toISOString().slice(0,10) : ym+'-'+String(lastDay).padStart(2,'0');
+        _initDay = isCurMonth ? ymdLocal(new Date()) : ym+'-'+String(lastDay).padStart(2,'0');
       }
       _pendingTopCardDay=null;
       renderTopCardForDay(_initDay);
@@ -1168,7 +1168,7 @@ async function loadDashboard(force){
         _tdContext = {
           ym, mo, lastDay,
           dailySalesMap, dailyExpTotal, settle, dailyVendorExp,
-          lastSaleDay, isUpsMode, isTodayShown: _initDay===new Date().toISOString().slice(0,10), isCurMonth
+          lastSaleDay, isUpsMode, isTodayShown: _initDay===ymdLocal(new Date()), isCurMonth
         };
         renderTodayDetailForDay(_initDay);
       } catch(e){ console.warn('[dashTodayDetail]', e.message); }
