@@ -1293,6 +1293,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-enter-v7 .fc-row .v.red{color:#F04452;}
 .dash-enter-v7 .fc-row .v.green{color:#0CAB6C;}
 .dash-enter-v7 .fc-row .badge-exp{font-size:9px;font-weight:800;color:var(--gray-500);background:var(--gray-100);padding:1px 5px;border-radius:5px;margin-left:5px;vertical-align:middle;}
+/* 이번달 지출·손해·예상마감 줄맞춤 (B단계 2026-06-03) */
+.dash-enter-v7 .mrow{display:flex;align-items:baseline;gap:6px;margin-top:5px;}
+.dash-enter-v7 .mrow .mk{width:64px;flex-shrink:0;font-size:12px;color:#8B95A1;font-weight:600;letter-spacing:-0.3px;}
+.dash-enter-v7 .mrow .mv{font-size:13.5px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+.dash-enter-v7 .mrow .mv.red{color:#F04452;}
+.dash-enter-v7 .mrow .mv.green{color:#0CAB6C;}
+.dash-enter-v7 .mrow .mrate{margin-left:auto;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.2px;}
+.dash-enter-v7 .mrow .mrate.red{color:#F04452;}
+.dash-enter-v7 .mrow .mrate.green{color:#0CAB6C;}
 .dash-pm-card{background:#FFFFFF;border-radius:18px;padding:18px 20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(20,40,80,0.04);}
 .dash-pm-card .pm-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
 .dash-pm-card .pm-ttl{font-size:14px;font-weight:800;color:#191F28;letter-spacing:-0.3px;}

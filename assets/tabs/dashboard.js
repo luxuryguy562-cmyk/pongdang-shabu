@@ -1126,18 +1126,37 @@ async function loadDashboard(force){
       }
       const _mLb=document.getElementById('dashHomeMonthLb');
       const _mSale=document.getElementById('dashHomeMonthSale');
-      const _mSub=document.getElementById('dashHomeMonthSub');
       const _mProg=document.getElementById('dashHomeMonthProgress');
-      const _mProfitRate=document.getElementById('dashHomeMonthProfitRate');
+      const _mExpAmt=document.getElementById('dashHomeMonthExpAmt');
+      const _mProfitAmt=document.getElementById('dashHomeMonthProfitAmt');
+      const _mProfitLb2=document.getElementById('dashHomeMonthProfitLb2');
+      const _mProfitRate2=document.getElementById('dashHomeMonthProfitRate2');
       if(_mSale){
         if(_mLb) _mLb.innerText=isCurMonth?'이번 달 매출':`${mo}월 매출`;
         _mSale.innerText=fmt(totalRevenue||0);
         const _profitV=(totalRevenue||0)-(totalCost||0);
-        if(_mSub){
-          // 수익/손해 단어 전환 (적자/흑자·순수익 표현 폐기 — 2026-06-02)
-          const _pWord=_profitV>=0?'수익':'손해';
-          const _pSign=_profitV>=0?'+':'';
-          _mSub.innerHTML=`지출 <b>${fmt(totalCost)}원</b> · ${_pWord} <b${_profitV<0?' class="red"':''}>${_pSign}${fmt(Math.abs(_profitV))}원</b>`;
+        const _isP=_profitV>=0;
+        const _pSign=_isP?'+':'';
+        // 지출 줄
+        if(_mExpAmt) _mExpAmt.innerText=fmt(totalCost)+'원';
+        // 손해/수익 줄 — 라벨·색상 동적 전환 (하드코딩 금지)
+        if(_mProfitLb2) _mProfitLb2.innerText=_isP?'수익':'손해';
+        if(_mProfitAmt){
+          _mProfitAmt.innerText=_pSign+fmt(Math.abs(_profitV))+'원';
+          _mProfitAmt.classList.toggle('red',!_isP);
+          _mProfitAmt.classList.toggle('green',_isP);
+        }
+        // 수익률 배지 (손해/수익 줄 우측)
+        if(_mProfitRate2){
+          if((totalRevenue||0)>0){
+            const _rate=(_profitV/totalRevenue*100);
+            const _rsign=_rate>=0?'+':'';
+            _mProfitRate2.innerText=`수익률 ${_rsign}${_rate.toFixed(1)}%`;
+            _mProfitRate2.classList.remove('red','green');
+            _mProfitRate2.classList.toggle('red',!_isP);
+            _mProfitRate2.classList.toggle('green',_isP);
+            _mProfitRate2.style.display='';
+          } else { _mProfitRate2.style.display='none'; }
         }
         // 진행 일자 → 라벨 우측 배지. 사장님 표현 그대로 "5월 22일 / 31일"
         if(_mProg){
@@ -1147,20 +1166,6 @@ async function loadDashboard(force){
           } else {
             _mProg.style.display='';
             _mProg.innerText=`${mo}월 마감 (${lastDay}일)`;
-          }
-        }
-        // 수익률 (매출 대비) → 순수익 우측
-        if(_mProfitRate){
-          if((totalRevenue||0)>0){
-            const _rate=(_profitV/totalRevenue*100);
-            const _rsign=_rate>=0?'+':'';
-            _mProfitRate.innerText=`수익률 ${_rsign}${_rate.toFixed(1)}%`;
-            _mProfitRate.classList.remove('red','good','gray');
-            if(_rate<0) _mProfitRate.classList.add('red');
-            else if(_rate>=15) _mProfitRate.classList.add('good');
-            _mProfitRate.style.display='';
-          } else {
-            _mProfitRate.style.display='none';
           }
         }
         // ─── 새 기능: 전월 동일 대비 (홈 이번달 카드) ───
