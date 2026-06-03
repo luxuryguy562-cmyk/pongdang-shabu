@@ -51,10 +51,10 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   // 바텀시트용 데이터 캐싱 (오늘매출 카드 지출 줄 탭 → 전체 상세)
   _todayVendorDataCache = (hasSale && veMap && Object.keys(veMap).length) ? {veMap, dayExp} : null;
   if(!card) return;
-  // 변동 지출만 (인건비·고정비 = 매달 자동으로 나갈 돈이라 제외), 거래처별로 쭉 나열
-  const exclude = _topCardCtx?.veExcludeCats || new Set();
+  // 영수증·거래처로 등록하는 변동 지출만 (고정비·인건비·로열티 등 고정성 자동 제외), 거래처별로 쭉 나열
+  const include = _topCardCtx?.veIncludeCats;
   const items = Object.values(veMap||{})
-    .filter(o=> o.amt>0 && !exclude.has(o.cat))
+    .filter(o=> o.amt>0 && (!include || include.has(o.cat)))
     .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
     .sort((a,b)=>b.amt-a.amt);
   if(!items.length){ card.style.display='none'; return; }
@@ -1188,8 +1188,13 @@ async function loadDashboard(force){
         dailySalesMap, dailyExpTotal, dailyVendorExp,
         prevDailySalesMap, prevDailyExpTotal,
         isUpsMode, momTxt,
-        // 어디에 썼나에서 뺄 카테고리 (인건비·고정비 = 매달 자동으로 나가는 돈)
-        veExcludeCats: new Set([_laborParentName, ...fixedCats.map(c=>c.name)]),
+        // 어디에 썼나 = 영수증·거래처로 등록하는 변동 지출만 (data_source 화이트리스트)
+        // 고정비·공과금(fixed_costs)·인건비(attendance)·로열티·세금 등(manual)은 자동 제외
+        veIncludeCats: new Set(
+          (expCategories||[])
+            .filter(c=>c.is_active && ['vendor_orders','receipts','composite'].includes(c.data_source))
+            .map(c=>c.name)
+        ),
       };
       topCard.style.display='block';
 
