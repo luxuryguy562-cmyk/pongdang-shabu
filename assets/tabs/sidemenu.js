@@ -8413,14 +8413,9 @@ document.addEventListener('DOMContentLoaded', async()=>{
   // 예비비 박스 핸들러 폐기 (2026-05-22)
   // ─── 홈 v7: 오늘 매출 카드 탭 → today-detail stage 진입 (2026-05-22) ─── //
   document.getElementById('dashTopSalesCard').addEventListener('click',(e)=>{
-    if(e.target.closest('#dashTopSalesActionRow'))return;
     if(e.target.closest('#dashTopSalesEmptyCta'))return;
     if(e.target.closest('[data-stop]'))return; // 달력 버튼 등 미니 버튼은 카드 진입 X (2026-06-02)
     dashGoStage('today-detail');
-  });
-  document.getElementById('dashTopSalesInputBtn').addEventListener('click',(e)=>{
-    e.stopPropagation();
-    openQuickSalesInput();
   });
   // 빈 데이터 CTA (홈 v7: 휴무 버튼 제거 — 캘린더 셀에서만, 2026-05-22)
   document.getElementById('dashTopEmptyInputBtn').addEventListener('click',(e)=>{e.stopPropagation();openQuickSalesInput();});

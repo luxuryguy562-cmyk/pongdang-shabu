@@ -1013,7 +1013,6 @@ async function loadDashboard(force){
     const topModeEl=document.getElementById('dashTopSalesMode');
     const topAmtEl=document.getElementById('dashTopSalesAmt');
     const topUpdEl=document.getElementById('dashTopSalesUpdated');
-    const topActionRow=document.getElementById('dashTopSalesActionRow');
     if(isCurMonth){
       // 전월 일별 지출 맵 (% 비교용, 변동성 큰 vendor/receipt/attendance만)
       const prevDailyExpTotal={};
@@ -1040,7 +1039,6 @@ async function loadDashboard(force){
         topAmtEl.innerText='아직 입력 안 됨';
         emptyCtaEl.style.display='block';
         peEl.style.display='none';
-        topActionRow.style.display='none';
         topUpdEl.style.display='none';
       } else {
         // ─── 데이터 있음 — 매출/지출/순수익 + 모드 표시 (홈 v7) ─── //
@@ -1055,14 +1053,12 @@ async function loadDashboard(force){
         const titleLabel=isTodayShown?'오늘 매출':'어제 매출';
         // 실시간 동기화 미작동 → 사장님 매장은 '(준비중)' 표시 (2026-05-22)
         const modeLabel=isUpsMode?'실시간':(isTodayShown?'(준비중)':'마감');
-        const showInputBtn=!isUpsMode && !dailySalesMap[todayDayStr];
 
         document.getElementById('dashTopSalesLabel').innerText=`${titleLabel} · ${dateLabel}`;
         topModeEl.innerText=modeLabel;
         topModeEl.className='t7-mode'+(isUpsMode?' live':'');
         const saleAmt=dailySalesMap[lastSaleDay]||0;
         topAmtEl.innerHTML=fmt(saleAmt)+'<span class="won">원</span>';
-        topActionRow.style.display=showInputBtn?'flex':'none';
         if(isUpsMode){
           const hh=String(today.getHours()).padStart(2,'0'),mi=String(today.getMinutes()).padStart(2,'0');
           topUpdEl.innerHTML=`업데이트 ${hh}:${mi} <span class="refresh">↻</span>`;
