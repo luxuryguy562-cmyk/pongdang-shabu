@@ -1230,27 +1230,30 @@
 
     <!-- 오늘 매출 풀카드 v7 (탭 → today-detail) -->
     <div class="dash-today-v7" id="dashTopSalesCard" style="display:none;">
-      <div class="t7-head">
-        <div class="t7-label"><span class="live-dot"></span><span id="dashTopSalesLabel">오늘 매출</span><span id="dashTopSalesMode" class="t7-mode">(준비중)</span></div>
-        <button type="button" data-action="openSalesCalendarSheet" data-stop="1" title="월 달력으로 보기" style="border:none;background:#EAF3FF;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0;padding:0;margin-left:auto;">📅</button>
-        <div class="t7-arrow">›</div>
+      <div class="t7-head-v2">
+        <button type="button" class="t7-nav" id="dashTopNavPrev" data-action="topCardDayMove|-1" data-stop="1" disabled>‹</button>
+        <div class="t7-center">
+          <span class="live-dot"></span>
+          <span id="dashTopSalesLabel">오늘 매출</span>
+          <span id="dashTopSalesMode" class="t7-mode">(준비중)</span>
+          <button type="button" class="t7-cal-btn" data-action="openSalesCalendarSheet" data-stop="1" title="월 달력으로 보기">📅</button>
+        </div>
+        <button type="button" class="t7-nav t7-nav-next" id="dashTopNavNext" data-action="topCardDayMove|1" data-stop="1" disabled>›</button>
       </div>
       <div id="dashTopSalesAmt" class="t7-amt">0<span class="won">원</span></div>
       <div id="dashTopSalesUpdated" class="t7-time" style="display:none;" title="강제 갱신">방금 갱신됨 <span class="refresh">↻</span></div>
-      <div id="dashTopSalesProfitExpense" class="t7-pe" style="display:none;">
-        <div class="t7-pe-cell" style="cursor:pointer;" data-action="openTodayVendorSheet" data-stop="1">
-          <div class="pe-lb"><span class="dot red"></span>오늘 지출 <span style="font-size:9.5px;font-weight:700;color:#3182F6;background:#EDF4FF;border-radius:5px;padding:1px 5px;margin-left:3px;">상세보기 ›</span></div>
-          <div><span id="dashTopExpenseAmt" class="t7-pe-vl pe-vl red">0원</span></div>
-          <div id="dashTopExpenseDelta" class="pe-delta">-</div>
+      <div id="dashTopSalesProfitExpense" class="t7-rows" style="display:none;">
+        <div class="t7-row" data-action="openTodayVendorSheet" data-stop="1" style="cursor:pointer;">
+          <div class="r-lb"><span class="dot red"></span>지출<span id="dashTopExpenseDelta" class="r-delta"></span></div>
+          <span id="dashTopExpenseAmt" class="r-amt red">0원</span>
+          <span class="r-go">›</span>
         </div>
-        <div class="t7-pe-cell">
-          <div class="pe-lb"><span class="dot green" id="dashTopProfitDot"></span><span id="dashTopProfitLb">오늘 순수익</span></div>
-          <div><span id="dashTopProfitAmt" class="t7-pe-vl pe-vl green">0원</span></div>
-          <div id="dashTopProfitDelta" class="pe-delta">-</div>
+        <div class="t7-row">
+          <div class="r-lb"><span class="dot green" id="dashTopProfitDot"></span><span id="dashTopProfitLb">수익</span><span id="dashTopProfitDelta" class="r-delta"></span></div>
+          <span id="dashTopProfitAmt" class="r-amt green">0원</span>
+          <span class="r-go"></span>
         </div>
       </div>
-      <!-- 지출 카테고리 비중 막대 -->
-      <div id="dashTopExpBar" class="t7-expbar" style="display:none;"></div>
       <!-- 빈 상태 (오늘 첫 매출) -->
       <div id="dashTopSalesEmptyCta" class="t7-empty" style="display:none;">
         <p>오늘 첫 매출인가요?</p>
