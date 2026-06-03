@@ -15,7 +15,7 @@
 }
 *{box-sizing:border-box;}
 html{overflow-x:hidden;overscroll-behavior:none;background:#FFFFFF;}
-body{font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,Roboto,'Helvetica Neue','Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;margin:0;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;padding-top:calc(60px + env(safe-area-inset-top,0));padding-bottom:calc(80px + env(safe-area-inset-bottom,0));overflow-x:hidden;overflow-y:auto;position:relative;max-width:100vw;min-height:100vh;min-height:100dvh;}
+body{font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,Roboto,'Helvetica Neue','Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;margin:0;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;padding-top:calc(60px + env(safe-area-inset-top,0));padding-bottom:calc(80px + env(safe-area-inset-bottom,0));overflow-x:hidden;overflow-x:clip;overflow-y:visible;position:relative;max-width:100vw;min-height:100vh;min-height:100dvh;}
 /* 모든 요소 폰트 강제 상속 (monospace 등 명시 클래스만 예외) */
 *:not(.account-masked){font-family:inherit;}
 input,select,textarea,button{font-family:inherit;}
@@ -935,6 +935,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .v17-month-nav{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
 .v17-month-nav .navbtn{flex:0 0 38px;padding:6px;background:var(--white);border-radius:8px;font-size:14px;font-weight:800;color:var(--gray-700);border:1px solid var(--gray-200);cursor:pointer;}
 .v17-month-nav .month-label{flex:1;text-align:center;font-size:16px;font-weight:900;}
+/* 월 세부 화면 안의 월 네비 = 스크롤해도 상단 고정 (월 이동 비교 용이 — 2026-06-03) */
+.dash-stage[data-dash-stage="month-detail"] .v17-month-nav{
+  position:sticky;top:calc(60px + env(safe-area-inset-top,0));z-index:50;
+  background:var(--bg);padding:10px 0;margin:0 -2px 14px;
+  box-shadow:0 4px 10px -6px rgba(20,40,80,0.15);
+}
 /* v17 캘린더 (월 보기) */
 .v17-cal-head{display:flex;justify-content:flex-end;align-items:center;margin-bottom:10px;gap:8px;}
 .cal-chip{padding:7px 14px;font-size:12px;font-weight:700;background:var(--gray-100);color:var(--gray-700);border:0;border-radius:8px;cursor:pointer;}
@@ -1119,26 +1125,42 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .md-fc .md-fc-row .v{font-size:14.5px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
 .md-fc .md-fc-row .v.pos{color:#0CAB6C;}
 .md-fc .md-fc-row .v.neg{color:#EF4444;}
-/* 5. 주차별 매트릭스 표 */
-.wk-matrix{background:var(--white);border-radius:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(20,40,80,0.04);overflow:hidden;}
-.wk-matrix .wk-matrix-ttl{font-size:13.5px;font-weight:800;color:var(--text);padding:16px 16px 10px;}
+/* 5. 주차별 매트릭스 표 (안 A — 2026-06-03 개편) */
+.wk-matrix{background:var(--white);border-radius:18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(20,40,80,0.05);overflow:hidden;}
+.wk-matrix .wk-head{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;}
+.wk-matrix .wk-head .ttl{font-size:14px;font-weight:800;color:var(--text);}
+.wk-matrix .wk-head .wk-badge{font-size:10.5px;font-weight:700;color:var(--toss-blue-strong);background:var(--toss-blue-light);padding:4px 9px;border-radius:99px;}
 .wk-matrix .wk-matrix-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.wk-matrix .wk-matrix-note{padding:10px 14px 14px;font-size:10.5px;color:var(--gray-400);font-weight:600;}
-.wk-tbl{border-collapse:collapse;font-size:12px;}
-.wk-tbl thead tr th{background:#F8FAFB;padding:8px 6px;font-size:11px;font-weight:800;color:var(--gray-500);text-align:right;border-bottom:1px solid var(--gray-200);font-variant-numeric:tabular-nums;white-space:nowrap;}
-.wk-tbl thead tr th:first-child{text-align:left;padding-left:14px;width:84px;}
-.wk-tbl tbody tr.row-parent td{padding:9px 6px;font-size:12.5px;font-weight:800;color:var(--text);text-align:right;border-bottom:1px solid var(--gray-100);font-variant-numeric:tabular-nums;white-space:nowrap;}
-.wk-tbl tbody tr.row-parent td:first-child{text-align:left;padding-left:14px;}
-.wk-tbl tbody tr.row-child td{padding:7px 6px;font-size:11.5px;font-weight:600;color:var(--gray-600);text-align:right;border-bottom:1px solid var(--gray-100);font-variant-numeric:tabular-nums;background:#FAFBFC;white-space:nowrap;}
-.wk-tbl tbody tr.row-child td:first-child{text-align:left;padding-left:22px;}
-.wk-tbl tbody tr.row-child td:first-child::before{content:"ㄴ ";color:var(--gray-400);}
-.wk-tbl tbody tr.row-sales td{border-bottom:2px solid var(--gray-200);}
-.wk-tbl tbody tr.row-sales td:first-child{color:var(--blue);}
-.wk-tbl .pct-sub{display:block;font-size:9.5px;color:var(--gray-400);font-weight:600;margin-top:1px;}
-.wk-tbl th.cur,.wk-tbl td.cur{background:#EDF4FF;}
-.wk-tbl th.cur{color:#0064FF;}
-.wk-tbl tbody tr.row-total td{padding:11px 6px;font-size:12px;font-weight:800;color:#EF4444;text-align:right;border-top:2px solid var(--gray-200);font-variant-numeric:tabular-nums;background:#FFF8F8;white-space:nowrap;}
-.wk-tbl tbody tr.row-total td:first-child{text-align:left;padding-left:14px;color:var(--gray-700);}
+.wk-matrix .wk-matrix-note{padding:10px 16px 15px;font-size:10px;color:var(--gray-400);font-weight:600;}
+.wk-tbl{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;}
+.wk-tbl th,.wk-tbl td{text-align:right;white-space:nowrap;}
+.wk-tbl thead th{font-size:11px;font-weight:800;color:var(--toss-text-4);padding:7px 5px;border-bottom:1px solid var(--gray-200);}
+.wk-tbl thead th:first-child{text-align:left;padding-left:16px;width:72px;}
+.wk-tbl thead th .wd{display:block;font-size:9px;color:var(--toss-text-5);font-weight:600;margin-top:1px;}
+.wk-tbl td:first-child{text-align:left;padding-left:16px;}
+.wk-tbl .dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px;vertical-align:middle;}
+/* 진행주 강조 */
+.wk-tbl th.cur,.wk-tbl td.cur{background:var(--toss-blue-light);}
+.wk-tbl th.cur{color:var(--toss-blue-strong);}
+/* 매출 행 */
+.wk-tbl tbody tr.row-sales td{padding:11px 5px;font-size:13px;font-weight:800;color:var(--toss-blue-strong);border-bottom:1px solid var(--gray-200);}
+.wk-tbl tbody tr.row-sales td:first-child{color:var(--text);}
+.wk-tbl tbody tr.row-sales td.cur{color:var(--toss-blue-strong);}
+/* 부모(카테고리) 행 */
+.wk-tbl tbody tr.row-parent td{padding:9px 5px;font-size:12.5px;font-weight:800;color:var(--text);border-bottom:1px solid var(--gray-100);}
+.wk-tbl tbody tr.row-parent td .ps{display:block;font-size:9px;color:var(--toss-text-5);font-weight:600;margin-top:1px;}
+.wk-tbl tbody tr.row-parent.zero td{color:var(--toss-text-5);font-weight:600;}
+/* 자식 행 */
+.wk-tbl tbody tr.row-child td{padding:6px 5px;font-size:11.5px;font-weight:600;color:var(--toss-text-3);background:#FAFBFC;border-bottom:1px solid var(--gray-100);}
+.wk-tbl tbody tr.row-child td:first-child{padding-left:30px;position:relative;}
+.wk-tbl tbody tr.row-child td:first-child::before{content:"ㄴ";position:absolute;left:18px;color:var(--toss-text-5);}
+/* 지출 합계 행 */
+.wk-tbl tbody tr.row-total td{padding:11px 5px;font-size:12.5px;font-weight:800;color:var(--danger);border-top:2px solid var(--gray-200);background:#FFF8F8;}
+.wk-tbl tbody tr.row-total td:first-child{color:var(--toss-text-2);}
+/* 순수익 행 */
+.wk-tbl tbody tr.row-profit td{padding:11px 5px;font-size:12.5px;font-weight:800;color:var(--success);background:#F0FBF6;}
+.wk-tbl tbody tr.row-profit td:first-child{color:var(--toss-text-2);}
+.wk-tbl tbody tr.row-profit td.neg{color:var(--danger);}
 
 /* v17 시트 (셀 탭 → 일별 상세) */
 .v17-sht-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;padding:12px;background:var(--gray-50);border-radius:10px;}
@@ -1185,6 +1207,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-mode{font-size:10px;padding:2px 7px;border-radius:8px;background:#F2F4F6;color:#6B7684;font-weight:800;letter-spacing:-0.2px;flex-shrink:0;}
 .dash-today-v7 .t7-mode.live{background:#EDF4FF;color:#0064FF;}
 .dash-today-v7 .t7-cal-btn{border:none;background:#EAF3FF;color:#3182F6;height:26px;border-radius:13px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;padding:0 10px;margin-left:2px;line-height:1;white-space:nowrap;letter-spacing:-0.3px;}
+/* 할 일 알림 (안 B) — 마감 안 한 날 */
+.dash-today-v7 .t7-todo{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#B54708;background:#FFF4E5;border:1px solid #FFE0B2;border-radius:10px;padding:8px 11px;margin-bottom:12px;cursor:pointer;letter-spacing:-0.3px;}
+.dash-today-v7 .t7-todo .todo-ic{font-size:12px;}
+.dash-today-v7 .t7-todo b{font-weight:800;color:#E8590C;}
+.dash-today-v7 .t7-todo .todo-go{margin-left:auto;font-size:11px;font-weight:700;color:#E8590C;flex-shrink:0;}
 .dash-today-v7 .t7-amt{font-size:36px;font-weight:800;color:#191F28;letter-spacing:-1.4px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .dash-today-v7 .t7-amt .won{font-size:22px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
 .dash-today-v7 .t7-amt.empty{font-size:24px;color:#B0B8C1;font-weight:700;}
