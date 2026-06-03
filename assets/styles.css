@@ -980,13 +980,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* ─── v17 월 카드: 매출/순수익(왼) + 도넛+수익률막대(오른) 2열 (2026-06-03) ─── */
 .m6-top{display:grid;grid-template-columns:1fr 124px;gap:14px;align-items:center;margin-bottom:14px;}
 .m6-left{display:flex;flex-direction:column;gap:12px;min-width:0;}
-.m6-metric .lb{font-size:10.5px;font-weight:700;color:var(--gray-500);margin-bottom:2px;}
-.m6-metric .vl{font-size:22px;font-weight:900;color:var(--text);letter-spacing:-0.5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.m6-metric .lb{font-size:11.5px;font-weight:700;color:var(--gray-500);margin-bottom:3px;}
+.m6-metric .vl{font-size:27px;font-weight:900;color:var(--text);letter-spacing:-0.6px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15;}
 .m6-metric .vl.sale{color:var(--blue);}
 .m6-metric .vl.neg{color:#EF4444;}
-.m6-metric .vl.fs-m{font-size:18px;}
-.m6-metric .vl.fs-s{font-size:15px;}
-.m6-metric .vl.fs-xs{font-size:13px;}
+.m6-metric .vl.fs-m{font-size:23px;}
+.m6-metric .vl.fs-s{font-size:19px;}
+.m6-metric .vl.fs-xs{font-size:16px;}
 .m6-metric .vl .delta{font-size:11px;font-weight:800;margin-left:4px;}
 .m6-metric .vl .delta.up{color:#10B981;}
 .m6-metric .vl .delta.dn{color:#EF4444;}

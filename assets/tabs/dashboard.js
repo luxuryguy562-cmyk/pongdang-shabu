@@ -66,7 +66,6 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
       const color=_VE_COLORS[i % _VE_COLORS.length];
       return `<div class="ve-row"><span class="vdot" style="background:${color};"></span>`
         +`<span class="vname">${esc(g.cat)}</span>`
-        +`<span class="ve-tag">${g.n}곳</span>`
         +`<span class="vamt">${fmt(g.sum)}원</span></div>`;
     }).join('')
     + `<button class="ve-more-btn" data-action="openTodayVendorSheet" data-stop="1">자세히 보기 ›</button>`;
@@ -1609,12 +1608,11 @@ function v17RenderMonthCard(){
   const st = _v17MonthStats(ctx);
   const {cur, prev, profit, expPctNum, progressDays, progressPct, fcSale, fcProfit, profitPctSale, expPctSale} = st;
 
-  // 자동 폰트
+  // 자동 폰트 — 큰 글자 줄(.vl)에 실제 들어가는 매출·순수익만 기준
+  // (예상마감 금액은 아래 작은 줄이라 제외 — 본 금액 키우기, 2026-06-03)
   const maxLen = Math.max(
     Math.abs(cur.s).toLocaleString().length,
-    Math.abs(profit).toLocaleString().length + 1,
-    fcSale!==null ? Math.abs(fcSale).toLocaleString().length : 0,
-    fcProfit!==null ? Math.abs(fcProfit).toLocaleString().length + 1 : 0
+    Math.abs(profit).toLocaleString().length + 1
   );
   let cls = '';
   if(maxLen >= 12) cls = 'fs-xs';
