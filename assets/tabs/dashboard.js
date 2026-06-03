@@ -28,6 +28,11 @@ function fmtMan(v){return v>=0?fmt(Math.round(v/10000)):'-'+fmt(Math.round(Math.
 // 사장님 OK: 토스 스타일 1단계(큰 박스) ↔ 2단계(상세). nav('dashboard') 진입 시 자동 home 리셋.
 function dashGoStage(stage){
   if(!stage) stage = 'home';
+  // 홈 복귀 시 항상 이번 달로 (홈 월요약 = 이번 달 고정. 세부화면에서 과거 봤어도 홈은 현재월)
+  if(stage==='home' && typeof dashMonthStr!=='undefined'){
+    const nowYm=new Date().toISOString().slice(0,7);
+    if(dashMonthStr!==nowYm){ dashMonthStr=nowYm; loadDashboard(); }
+  }
   const stages = document.querySelectorAll('#dashboardCont .dash-stage');
   stages.forEach(s=>s.classList.toggle('active', s.dataset.dashStage===stage));
   window.scrollTo({top:0, behavior:'instant'});
@@ -381,7 +386,7 @@ async function loadDashboard(force){
   renderExtraRevenueDashboard().catch(e=>console.warn('[dashExtraRevenue]',e.message));
   try{
     const ym=dashMonthStr;
-    document.getElementById('dashMonthLabel').innerText=ym;
+    const _dml=document.getElementById('dashMonthLabel'); if(_dml)_dml.innerText=ym; // 홈 월네비 제거됨(2026-06-03), 세부화면은 mdMonthLabel
     // 매출 달력 시트 월 라벨도 동기화 (시트 안 ‹ › 네비 → 라벨 갱신, 2026-06-03)
     const _calSheetLbl=document.getElementById('salesCalSheetMonth');
     if(_calSheetLbl) _calSheetLbl.innerText=ym;

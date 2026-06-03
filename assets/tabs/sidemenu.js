@@ -8402,8 +8402,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
   });
 
   // ─── 대시보드 이벤트 바인딩 ───
-  document.getElementById('dashPrevBtn').addEventListener('click',()=>moveDashMonth(-1));
-  document.getElementById('dashNextBtn').addEventListener('click',()=>moveDashMonth(1));
+  // 홈 월네비 제거(2026-06-03) — 월 이동은 세부화면(month-detail)의 mdPrevBtn/mdNextBtn에서만
   // 매출소스 토글/크롤 버튼 제거 (2026-05-15) — 자동 모드 판별로 대체
   // v17: 가마감/진마감 토글 폐기 (DOM 없음, null safe)
   const _dmpEl = document.getElementById('dashModeProvisional');
