@@ -1084,21 +1084,9 @@ async function loadDashboard(force){
         peEl.style.display='grid';
         // 거래처별 오늘 지출 (홈 첫 화면 "어디서 썼나")
         renderTodayVendorExp(dailyVendorExp[lastSaleDay], true, dayExp);
-        // 지출 카테고리 비중 막대 (오늘 매출 카드)
-        const _tCatMap=dailyCatMap[lastSaleDay]||{};
-        const _tCatEnt=Object.entries(_tCatMap).filter(([k,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-        const _tCatTot=_tCatEnt.reduce((s,[,v])=>s+v,0);
+        // 지출 비중 막대 제거 (2026-06-03 사장님 지시 — 하루 단위 비중은 의미 없음)
         const _tBarEl=document.getElementById('dashTopExpBar');
-        if(_tBarEl){
-          if(_tCatTot>0){
-            _tBarEl.innerHTML=_tCatEnt.map(([k,v])=>{
-              const w=(v/_tCatTot*100);
-              const color=catColors[k]||'#CBD5E1';
-              return `<span style="width:${w.toFixed(1)}%;background:${color};" title="${esc(k)} ${w.toFixed(0)}%"></span>`;
-            }).join('');
-            _tBarEl.style.display='flex';
-          } else { _tBarEl.style.display='none'; }
-        }
+        if(_tBarEl) _tBarEl.style.display='none';
       }
 
       // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22, 2026-05-25 일자 네비 지원) ───
@@ -1550,53 +1538,29 @@ function v17RenderMonthCard(){
   const sortedCats = [...cats].sort((a,b)=>(cur.byCat[b.key]||0)-(cur.byCat[a.key]||0)).filter(c=>(cur.byCat[c.key]||0)>0);
   const topCats = sortedCats.slice(0,3);
 
-  // 4줄: 간트 두 줄 (지출 분포 / 매출 대비)
-  let expStackHtml = '';
+  // 도넛: 지출 카테고리 분포 (conic-gradient 누적, 2026-06-03 막대→도넛 전환)
+  let donutAcc = 0;
+  const donutStops = [];
   cats.forEach(c=>{
     const v = cur.byCat[c.key]||0;
     if(v<=0) return;
     const pct = cur.e>0 ? (v/cur.e*100) : 0;  // 지출 대비 (분포)
     if(pct < 0.5) return;
-    const overSalePct = cur.s>0 ? (v/cur.s*100) : 0;
-    const overCls = (c.threshold && overSalePct>c.threshold) ? ' over' : '';
-    const showText = pct >= 8;
-    expStackHtml += `<span class="${overCls.trim()}" style="background:${c.color};width:${pct}%;">${showText?c.name+' '+pct.toFixed(0)+'%':''}</span>`;
+    donutStops.push(`${c.color} ${donutAcc.toFixed(2)}% ${(donutAcc+pct).toFixed(2)}%`);
+    donutAcc += pct;
   });
+  const donutBg = donutStops.length ? `conic-gradient(${donutStops.join(',')})` : '#F2F4F6';
+  // 수익률 막대 (도넛 폭에 맞춤 — 매출 대비 순수익)
   const profitPctSale = cur.s>0 ? (profit/cur.s*100) : 0;
   const expPctSale = cur.s>0 ? (cur.e/cur.s*100) : 0;
   let profitBarHtml = '';
   if(profit>=0){
-    profitBarHtml = `<span style="background:#10B981;width:${profitPctSale}%;">+${profitPctSale.toFixed(0)}%</span><span style="background:var(--gray-200);width:${expPctSale}%;color:var(--gray-500);">지출 ${expPctSale.toFixed(0)}%</span>`;
+    profitBarHtml = `<span style="background:#10B981;width:${profitPctSale}%;">+${profitPctSale.toFixed(0)}%</span><span style="background:var(--gray-200);width:${expPctSale}%;color:var(--gray-500);">지출</span>`;
   } else {
     const lossPct = Math.abs(profitPctSale);
-    profitBarHtml = `<span style="background:#EF4444;width:${lossPct}%;">-${lossPct.toFixed(0)}%</span><span style="background:var(--gray-200);width:${expPctSale}%;color:var(--gray-500);">지출 ${expPctSale.toFixed(0)}%</span>`;
+    profitBarHtml = `<span style="background:#EF4444;width:${Math.min(lossPct,100)}%;">-${lossPct.toFixed(0)}%</span><span style="background:var(--gray-200);width:${Math.max(100-lossPct,0)}%;color:var(--gray-500);">지출</span>`;
   }
 
-  // 5줄: 상위 카테고리 3개 가로 (사진 양식)
-  let catsRowHtml = '';
-  topCats.forEach(c=>{
-    const v = cur.byCat[c.key]||0;
-    const prevV = prev.byCat?.[c.key]||0;
-    const pct = cur.s>0 ? (v/cur.s*100) : 0;
-    const overCls = (c.threshold && pct>c.threshold) ? ' over' : '';
-    const warnIcon = (c.threshold && pct>c.threshold) ? `<span class="warn">⚠️</span>` : '';
-    let momMini = '';
-    if(prevV>0){
-      const d = Math.round((v-prevV)/prevV*100);
-      if(d===0) momMini = `<span class="mom same">━</span>`;
-      else if(d>0) momMini = `<span class="mom up">▲${Math.abs(d)}%</span>`;
-      else momMini = `<span class="mom dn">▼${Math.abs(d)}%</span>`;
-    }
-    catsRowHtml += `<div class="v6-cat-chip${overCls}">
-      <div class="top"><span class="dot" style="background:${c.color};"></span><span class="nm">${c.name}</span>${warnIcon}</div>
-      <div class="bot"><span class="pct">${pct.toFixed(1)}%</span>${momMini}</div>
-    </div>`;
-  });
-  // 채워넣기 (3개 미만이면 빈 슬롯)
-  while(topCats.length + (catsRowHtml.match(/v6-cat-chip empty/g)||[]).length < 3){
-    catsRowHtml += `<div class="v6-cat-chip empty" style="visibility:hidden;"></div>`;
-    if((catsRowHtml.match(/v6-cat-chip/g)||[]).length >= 3) break;
-  }
 
   // 6줄: 상세 보기 패널 (전체 카테고리)
   let detailRowsHtml = '';
@@ -1633,7 +1597,7 @@ function v17RenderMonthCard(){
     });
   });
   const detailPanelHtml = sortedCats.length>0 ? `
-    <div class="v17-detail-panel" data-rest-detail="mth" style="display:none;">
+    <div class="v17-detail-panel" data-rest-detail="mth" style="display:block;">
       <div class="pan-ttl">카테고리별 지출 (전체)</div>
       ${detailRowsHtml}
       <div class="v17-detail-sum">
@@ -1663,44 +1627,45 @@ function v17RenderMonthCard(){
   const fcSaleStr = fcSale!==null ? `${v17FmtNoWon(fcSale)}원` : '—';
   const fcProfitStr = fcProfit!==null ? `${fcProfit>=0?'+':''}${v17FmtNoWon(fcProfit)}원` : '—';
 
+  // 순수익률 (매출 대비) 표시
+  const profitRateStr = `${profit>=0?'+':''}${profitPctSale.toFixed(0)}%`;
+  const profitRateColor = profit>=0 ? '#10B981' : '#EF4444';
+  const donutHtml = donutStops.length
+    ? `<div class="m6-donut" style="background:${donutBg};"></div>
+       <div class="m6-donut-center">
+         <span class="dc-pct" style="color:${expPctNum>100?'#EF4444':'#191F28'};">${expPctNum}%</span>
+         <span class="dc-lb">매출 대비 지출</span>
+       </div>`
+    : `<div class="m6-donut" style="background:#F2F4F6;"></div>
+       <div class="m6-donut-center"><span class="dc-lb">지출 없음</span></div>`;
+
   el.innerHTML = `
     <div class="v17-card-v6">
       <div class="v6-ttl-row">
         <div class="v6-ttl"><b>${ctx.TARGET_MONTH}월</b>${progressDays}일 진행</div>
         <span class="v6-progress-tag">${progressPct}%</span>
       </div>
-      <div class="v6-row2">
-        <div>
-          <div class="lb">매출</div>
-          <div class="vl sale ${cls}">${v17FmtNoWon(cur.s)}원${saleDeltaHtml}</div>
+      <div class="m6-top">
+        <div class="m6-left">
+          <div class="m6-metric">
+            <div class="lb">매출</div>
+            <div class="vl sale ${cls}">${v17FmtNoWon(cur.s)}원${saleDeltaHtml}</div>
+            <div class="est-line"><span class="tag">예상</span>마감 ${fcSaleStr}</div>
+          </div>
+          <div class="m6-metric profit">
+            <div class="lb">순수익</div>
+            <div class="vl ${profit<0?'neg':''} ${cls}">${v17FmtNoWonSigned(profit)}원</div>
+            <div class="est-line"><span class="tag">예상</span>마감 ${fcProfitStr}</div>
+          </div>
         </div>
-        <div>
-          <div class="lb est">예상마감 매출 <span class="est-tag">예상</span></div>
-          <div class="vl est-val ${cls}">${fcSaleStr}</div>
+        <div class="m6-right">
+          <div class="m6-donut-wrap">${donutHtml}</div>
+          <div class="m6-rate-wrap">
+            <div class="rate-lb"><span>순수익률</span><b style="color:${profitRateColor};">${profitRateStr}</b></div>
+            <div class="v6-bar profit-bar">${profitBarHtml}</div>
+          </div>
         </div>
       </div>
-      <div class="v6-row2 profit-row">
-        <div>
-          <div class="lb">순수익</div>
-          <div class="vl ${profit<0?'neg':''} ${cls}">${v17FmtNoWonSigned(profit)}원</div>
-        </div>
-        <div>
-          <div class="lb est">예상마감 순수익 <span class="est-tag">예상</span></div>
-          <div class="vl est-val ${cls}">${fcProfitStr}</div>
-        </div>
-      </div>
-      <div class="v6-exp-row">
-        <span class="lb">💸 지출</span>
-        <span><span class="vl">${v17FmtNoWon(cur.e)}원</span><span class="ratio">(${expPctNum}%)</span></span>
-      </div>
-      <div class="v6-gantt">
-        <div class="gantt-lb"><span>지출 분포</span><span style="color:#EF4444;">${expPctNum}%</span></div>
-        <div class="v6-bar">${expStackHtml || '<span style="width:100%;color:var(--gray-400);background:transparent;">지출 데이터 없음</span>'}</div>
-        <div class="gantt-lb"><span>매출 대비 순수익</span><span style="color:${profit>=0?'#10B981':'#EF4444'};">${profit>=0?'+':''}${profitPctSale.toFixed(0)}%</span></div>
-        <div class="v6-bar profit-bar">${profitBarHtml}</div>
-      </div>
-      <div class="v6-cats-row">${catsRowHtml || '<div style="grid-column:1/-1;text-align:center;font-size:11px;color:var(--gray-400);padding:6px;">지출 카테고리 없음</div>'}</div>
-      ${sortedCats.length>0 ? `<button class="v17-detail-btn" data-rest-toggle="mth">상세 보기 <span class="arr">▾</span></button>` : ''}
       ${detailPanelHtml}
       ${momHtml}
     </div>`;
