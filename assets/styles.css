@@ -909,26 +909,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .qsi-memo-row{display:flex;align-items:center;gap:10px;padding:12px 0;}
 .qsi-memo-label{font-size:13px;font-weight:700;color:var(--toss-text-3);width:50px;letter-spacing:-0.2px;}
 .qsi-memo-input{flex:1;padding:11px 13px;border:0;background:var(--toss-line);border-radius:11px;font-size:14px;font-family:inherit;color:var(--toss-text-1);font-weight:500;outline:none;letter-spacing:-0.2px;}
-/* ─── 새 기능: 일별 매출 캘린더 그리드 (2026-05-15) ─── */
-.sales-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
-.sales-cal-wkh{font-size:11px;font-weight:800;text-align:center;padding:6px 0;color:var(--gray-500);}
-.sales-cal-wkh.sun{color:#EF4444;}
-.sales-cal-wkh.sat{color:#3B82F6;}
-.sales-cal-cell{min-height:62px;border-radius:8px;padding:5px 4px;display:flex;flex-direction:column;gap:1px;background:var(--gray-50);border:1px solid var(--gray-100);overflow:hidden;}
-.sales-cal-cell.empty{background:transparent;border:none;}
-.sales-cal-cell.today{background:var(--blue-light);border:1.5px solid var(--blue);}
-.sales-cal-cell.future{background:transparent;border:1px dashed var(--gray-200);}
-.sales-cal-cell.noSale{background:var(--gray-50);cursor:pointer;}
-.sales-cal-cell.closed{background:#FEF3C7;border-color:#FCD34D;cursor:pointer;}
-.sales-cal-cell.closed .sc-day{color:#92400E;}
-.sales-cal-cell .sc-day{font-size:11px;font-weight:800;color:var(--gray-700);}
-.sales-cal-cell.sun .sc-day{color:#EF4444;}
-.sales-cal-cell.sat .sc-day{color:#3B82F6;}
-.sales-cal-cell .sc-sale{font-size:10.5px;font-weight:800;color:var(--blue);line-height:1.25;letter-spacing:-0.3px;}
-.sales-cal-cell .sc-profit{font-size:10px;font-weight:700;line-height:1.2;letter-spacing:-0.3px;}
-.sc-profit.pos{color:#10B981;}
-.sc-profit.neg{color:#EF4444;}
-.sales-cal-cell.today .sc-day{color:var(--blue);}
+/* 옛 sales-cal 달력 스타일 제거 (2026-06-03 — v17 달력 바텀시트로 통합) */
 /* ═══════════════════════════════════════════════════════════════
    ═══ v17 정산현황 탭 전면 개편 (2026-05-22) ═══
    월 보기 + 주차 보기 + 모달 + 한 줄 달력 + 문어체 코멘트
@@ -1252,7 +1233,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-center #dashTopSalesLabel{font-size:13.5px;font-weight:700;color:#333D4B;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .dash-today-v7 .t7-mode{font-size:10px;padding:2px 7px;border-radius:8px;background:#F2F4F6;color:#6B7684;font-weight:800;letter-spacing:-0.2px;flex-shrink:0;}
 .dash-today-v7 .t7-mode.live{background:#EDF4FF;color:#0064FF;}
-.dash-today-v7 .t7-cal-btn{border:none;background:#EAF3FF;width:28px;height:28px;border-radius:50%;font-size:13px;cursor:pointer;flex-shrink:0;padding:0;margin-left:2px;line-height:1;}
+.dash-today-v7 .t7-cal-btn{border:none;background:#EAF3FF;color:#3182F6;height:26px;border-radius:13px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;padding:0 10px;margin-left:2px;line-height:1;white-space:nowrap;letter-spacing:-0.3px;}
 .dash-today-v7 .t7-amt{font-size:36px;font-weight:800;color:#191F28;letter-spacing:-1.4px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .dash-today-v7 .t7-amt .won{font-size:22px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
 .dash-today-v7 .t7-amt.empty{font-size:24px;color:#B0B8C1;font-weight:700;}
