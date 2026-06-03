@@ -1270,8 +1270,60 @@
       <div id="dashTodayVendorList"></div>
     </div>
 
-    <!-- 이번 달 매출 (탭 → settle) -->
-    <div class="dash-enter-v7" data-dash-go="settle">
+    <!-- 이번 달 매출 — 홈에 직접 노출 (2026-06-03 settle 탭→홈 이동) -->
+    <div id="dashSettleCont">
+      <!-- v17 정산현황 -->
+      <!-- 모드 토글 [월/주차] -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="v17ModeMonth" data-mode="month">📅 월 보기</button>
+        <button class="mode-tab" id="v17ModeWeek" data-mode="week">📆 주차 보기</button>
+      </div>
+
+      <!-- 월 보기 컨테이너 -->
+      <div id="v17MonthView">
+        <!-- 월 네비 -->
+        <div class="v17-month-nav">
+          <button class="navbtn" id="dashPrevBtn">‹</button>
+          <span class="month-label" id="dashMonthLabel">-</span>
+          <button class="navbtn" id="dashNextBtn">›</button>
+        </div>
+        <!-- 월 카드 -->
+        <div id="v17MonthCard"></div>
+        <!-- 월 캘린더 -->
+        <div class="card">
+          <div class="v17-cal-head">
+            <button class="cal-chip" id="v17CalFilterBtn"><span id="v17CalModeChip">📊 매출+순수익 ▾</span></button>
+          </div>
+          <div class="v17-cal-grid" id="v17CalGrid"></div>
+        </div>
+        <!-- 주별 카테고리 비교 진입 카드 -->
+        <div class="enter-card" id="v17EnterModal">
+          <div>
+            <div class="ttl">📊 주별 카테고리 비교</div>
+            <div class="sub">식자재·인건비 비율 한눈에 보기</div>
+          </div>
+          <div class="arrow">›</div>
+        </div>
+      </div>
+
+      <!-- 주차 보기 컨테이너 -->
+      <div id="v17WeekView" style="display:none;">
+        <div class="week-nav">
+          <button class="navbtn" id="v17WeekPrevBtn">‹</button>
+          <span class="week-label" id="v17WeekNavLabel">-</span>
+          <button class="navbtn" id="v17WeekNextBtn">›</button>
+        </div>
+        <div id="v17SingleWeekCard"></div>
+        <div id="v17WeekCrossNote"></div>
+        <div class="card">
+          <div style="font-size:11px;color:var(--gray-500);font-weight:700;margin-bottom:8px;">📅 그 주 일별</div>
+          <div class="week-cal" id="v17WeekCalRow"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이번 달 매출 진입 카드 — 홈 직접 노출로 대체됨, DOM ID 유지 (JS 참조) -->
+    <div class="dash-enter-v7" data-dash-go="settle" style="display:none;">
       <div class="ic-wrap blue">
         <svg viewBox="0 0 24 24" fill="none" stroke="#3182F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       </div>
@@ -1378,64 +1430,8 @@
     </div>
   </div>
 
-  <!-- ═══ stage: settle (이번 달 매출 — 기존 v17 정산) ═══ -->
-  <div class="dash-stage" data-dash-stage="settle">
-    <div class="dash-back-row" data-dash-go="home">
-      <div class="back-btn">‹</div>
-      <div class="back-ttl">이번 달 매출</div>
-    </div>
-
-    <div id="dashSettleCont">
-      <!-- v17 정산현황. mockup: docs/mockups/weekly_settle_calendar_v17.html -->
-      <!-- 모드 토글 [월/주차] -->
-      <div class="mode-tabs">
-        <button class="mode-tab active" id="v17ModeMonth" data-mode="month">📅 월 보기</button>
-        <button class="mode-tab" id="v17ModeWeek" data-mode="week">📆 주차 보기</button>
-      </div>
-
-      <!-- 월 보기 컨테이너 -->
-      <div id="v17MonthView">
-        <!-- 월 네비 -->
-        <div class="v17-month-nav">
-          <button class="navbtn" id="dashPrevBtn">‹</button>
-          <span class="month-label" id="dashMonthLabel">-</span>
-          <button class="navbtn" id="dashNextBtn">›</button>
-        </div>
-        <!-- 월 카드 -->
-        <div id="v17MonthCard"></div>
-        <!-- 월 캘린더 -->
-        <div class="card">
-          <div class="v17-cal-head">
-            <button class="cal-chip" id="v17CalFilterBtn"><span id="v17CalModeChip">📊 매출+순수익 ▾</span></button>
-          </div>
-          <div class="v17-cal-grid" id="v17CalGrid"></div>
-        </div>
-        <!-- 주별 카테고리 비교 진입 카드 -->
-        <div class="enter-card" id="v17EnterModal">
-          <div>
-            <div class="ttl">📊 주별 카테고리 비교</div>
-            <div class="sub">식자재·인건비 비율 한눈에 보기</div>
-          </div>
-          <div class="arrow">›</div>
-        </div>
-      </div>
-
-      <!-- 주차 보기 컨테이너 -->
-      <div id="v17WeekView" style="display:none;">
-        <div class="week-nav">
-          <button class="navbtn" id="v17WeekPrevBtn">‹</button>
-          <span class="week-label" id="v17WeekNavLabel">-</span>
-          <button class="navbtn" id="v17WeekNextBtn">›</button>
-        </div>
-        <div id="v17SingleWeekCard"></div>
-        <div id="v17WeekCrossNote"></div>
-        <div class="card">
-          <div style="font-size:11px;color:var(--gray-500);font-weight:700;margin-bottom:8px;">📅 그 주 일별</div>
-          <div class="week-cal" id="v17WeekCalRow"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- ═══ stage: settle — 홈 직접 노출로 대체됨 (2026-06-03), 빈 탭 유지 ═══ -->
+  <div class="dash-stage" data-dash-stage="settle"></div>
 
   <!-- ═══ stage: extra (기타매출 누적) ═══ -->
   <div class="dash-stage" data-dash-stage="extra">
