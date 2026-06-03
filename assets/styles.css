@@ -1334,6 +1334,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-ve-card .ve-tag{font-size:10.5px;color:var(--gray-500);font-weight:600;margin-left:7px;background:var(--gray-100);padding:1px 7px;border-radius:5px;flex-shrink:0;}
 .dash-ve-card .vamt{margin-left:auto;padding-left:8px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0;}
 .dash-ve-card .ve-more-btn{display:block;width:100%;margin-top:8px;padding:9px;border:none;background:var(--gray-50);border-radius:9px;font-size:12px;font-weight:700;color:var(--gray-600);cursor:pointer;text-align:center;}
+/* 어디에 썼나 — 카테고리별 그룹 (2026-06-03 바텀시트) */
+.dash-ve-card .ve-group{margin-bottom:14px;}
+.dash-ve-card .ve-cat-head{display:flex;align-items:center;gap:7px;padding:8px 8px;background:#F8FAFB;border-radius:9px;margin-bottom:2px;}
+.dash-ve-card .ve-cat-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+.dash-ve-card .ve-cat-name{font-size:14px;font-weight:800;color:#333D4B;letter-spacing:-0.3px;}
+.dash-ve-card .ve-cat-pct{font-size:11px;font-weight:700;color:#B0B8C1;margin-left:4px;}
+.dash-ve-card .ve-cat-sum{font-size:14.5px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;margin-left:auto;}
+.dash-ve-card .ve-group .ve-row{display:flex;align-items:center;font-size:13px;padding:8px 8px 8px 24px;border-top:none;}
+.dash-ve-card .ve-group .ve-row .vname{font-weight:600;color:#6B7684;flex:1;}
+.dash-ve-card .ve-group .ve-row .vamt{margin-left:auto;padding-left:8px;font-weight:700;color:#4E5968;font-variant-numeric:tabular-nums;flex-shrink:0;}
+.dash-ve-card .ve-total{display:flex;align-items:center;padding:14px 8px 0;margin-top:4px;border-top:2px solid var(--gray-100);}
+.dash-ve-card .ve-total-lb{font-size:14px;font-weight:800;color:#333D4B;flex:1;letter-spacing:-0.3px;}
+.dash-ve-card .ve-total-vl{font-size:18px;font-weight:800;color:#F04452;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
 /* 예상마감 (홈 이번 달 카드 — 이대로 가면 월말 예상, 2026-06-02) */
 .dash-enter-v7 .fc-block{margin-top:13px;padding-top:12px;border-top:1px dashed var(--gray-200);}
 .dash-enter-v7 .fc-ttl{font-size:11.5px;font-weight:700;color:var(--gray-500);margin-bottom:7px;letter-spacing:-0.3px;}
