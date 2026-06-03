@@ -53,14 +53,13 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   _todayVendorDataCache = (hasSale && veMap && Object.keys(veMap).length) ? {veMap, dayExp} : null;
   if(!card) return;
   if(!_todayVendorDataCache){ card.style.display='none'; return; }
-  // 카테고리별로 묶어 홈 카드에 요약 (상위 4개 + 자세히 보기)
+  // 카테고리별로 묶어 홈 카드에 요약 (TOP3 + 자세히 보기 → 바텀시트)
   const rows = Object.values(veMap).map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}));
   const total = dayExp || rows.reduce((s,r)=>s+r.amt,0);
   const catGroups={};
   rows.forEach(r=>{ if(!catGroups[r.cat])catGroups[r.cat]={cat:r.cat,sum:0,n:0}; catGroups[r.cat].sum+=r.amt; catGroups[r.cat].n++; });
   const groups=Object.values(catGroups).sort((a,b)=>b.sum-a.sum);
-  const shown=groups.slice(0,4);
-  const restN=groups.length-shown.length;
+  const shown=groups.slice(0,3);
   if(sumEl) sumEl.innerText = fmt(total)+'원';
   if(listEl){
     listEl.innerHTML = shown.map((g,i)=>{
@@ -70,7 +69,7 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
         +`<span class="ve-tag">${g.n}곳</span>`
         +`<span class="vamt">${fmt(g.sum)}원</span></div>`;
     }).join('')
-    + `<button class="ve-more-btn" data-action="openTodayVendorSheet" data-stop="1">${restN>0?`+${restN}개 더 · `:''}거래처별 자세히 보기 ›</button>`;
+    + `<button class="ve-more-btn" data-action="openTodayVendorSheet" data-stop="1">자세히 보기 ›</button>`;
   }
   card.style.display='';
 }
@@ -1886,27 +1885,26 @@ function v17BuildWeekMatrixHtml(ctx){
   });
   total += `</tr>`;
 
-  // 순수익 행 (매출 - 지출합계)
+  // 순수익 행 (매출 - 지출합계) — 적자(음수)도 표시
+  const fmtManSigned = (won)=>{ const man = Math.round((won||0)/10000); return man.toLocaleString('ko-KR'); };
   let profit = `<tr class="row-profit"><td>순수익</td>`;
   weekAgg.forEach(w=>{
     let e=0; (ctx.cats||[]).forEach(c=>{ e+=w.byCat[c.key]||0; });
     const p = w.sale - e;
     const hasAny = w.sale>0 || e>0;
     const cls = (w.isCurrent?'cur ':'') + (p<0?'neg':'');
-    profit += `<td class="${cls.trim()}">${hasAny ? fmtMan(p) : '-'}</td>`;
+    profit += `<td class="${cls.trim()}">${hasAny ? fmtManSigned(p) : '-'}</td>`;
   });
   profit += `</tr>`;
 
   return `
     <div class="wk-matrix">
-      <div class="wk-head"><span class="ttl">📊 주차별 흐름</span>${badge}</div>
-      <div class="wk-matrix-scroll">
-        <table class="wk-tbl" style="width:100%;">
-          <thead><tr>${head}</tr></thead>
-          <tbody>${body}${total}${profit}</tbody>
-        </table>
-      </div>
-      <div class="wk-matrix-note">금액 단위: 만원 · % 는 해당 주 매출 대비 · 진행 안 한 주는 -</div>
+      <div class="wk-head"><span class="ttl">📊 주차별 흐름 <span class="unit">단위: 만원</span></span>${badge}</div>
+      <table class="wk-tbl">
+        <thead><tr>${head}</tr></thead>
+        <tbody>${body}${total}${profit}</tbody>
+      </table>
+      <div class="wk-matrix-note">% 는 해당 주 매출 대비 · 진행 안 한 주는 -</div>
     </div>`;
 }
 

@@ -1129,15 +1129,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .wk-matrix{background:var(--white);border-radius:18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(20,40,80,0.05);overflow:hidden;}
 .wk-matrix .wk-head{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;}
 .wk-matrix .wk-head .ttl{font-size:14px;font-weight:800;color:var(--text);}
-.wk-matrix .wk-head .wk-badge{font-size:10.5px;font-weight:700;color:var(--toss-blue-strong);background:var(--toss-blue-light);padding:4px 9px;border-radius:99px;}
-.wk-matrix .wk-matrix-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.wk-matrix .wk-matrix-note{padding:10px 16px 15px;font-size:10px;color:var(--gray-400);font-weight:600;}
-.wk-tbl{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;}
-.wk-tbl th,.wk-tbl td{text-align:right;white-space:nowrap;}
+.wk-matrix .wk-head .ttl .unit{font-size:10px;font-weight:700;color:var(--toss-text-4);margin-left:4px;}
+.wk-matrix .wk-head .wk-badge{font-size:10.5px;font-weight:700;color:var(--toss-blue-strong);background:var(--toss-blue-light);padding:4px 9px;border-radius:99px;flex-shrink:0;}
+.wk-matrix .wk-matrix-note{padding:10px 14px 15px;font-size:10px;color:var(--gray-400);font-weight:600;}
+/* 셀 너비 균등 — 첫 칼럼 고정 + 1~5주 동일 폭 (table-layout:fixed) */
+.wk-tbl{border-collapse:collapse;width:100%;table-layout:fixed;font-variant-numeric:tabular-nums;}
+.wk-tbl th,.wk-tbl td{text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .wk-tbl thead th{font-size:11px;font-weight:800;color:var(--toss-text-4);padding:7px 5px;border-bottom:1px solid var(--gray-200);}
-.wk-tbl thead th:first-child{text-align:left;padding-left:16px;width:72px;}
+.wk-tbl thead th:first-child{text-align:left;padding-left:14px;width:74px;}
+.wk-tbl thead th:last-child,.wk-tbl tbody td:last-child{padding-right:12px;}
 .wk-tbl thead th .wd{display:block;font-size:9px;color:var(--toss-text-5);font-weight:600;margin-top:1px;}
-.wk-tbl td:first-child{text-align:left;padding-left:16px;}
+.wk-tbl td:first-child{text-align:left;padding-left:14px;}
 .wk-tbl .dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px;vertical-align:middle;}
 /* 진행주 강조 */
 .wk-tbl th.cur,.wk-tbl td.cur{background:var(--toss-blue-light);}
