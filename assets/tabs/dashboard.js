@@ -40,6 +40,8 @@ function dashGoStage(stage){
 let _tdContext = null;
 let _tdDay = null;
 let _todayVendorDataCache = null;
+let _topCardCtx = null;   // 홈 매출 카드 날짜 네비 컨텍스트 (2026-06-03)
+let _topCardDay = null;   // 현재 표시 중인 날짜 'YYYY-MM-DD'
 // ─── 거래처별 오늘 지출 캐싱 (2026-06-03 바텀시트로 전환) ───
 const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#94A3B8'];
 function renderTodayVendorExp(veMap, hasSale, dayExp){
@@ -78,6 +80,89 @@ function toggleVendorMoreSheet(btn){
   const expanded=more[0].style.display!=='none';
   more.forEach(el=>{ el.style.display=expanded?'none':'flex'; });
   btn.innerHTML=expanded?`${more.length}곳 더보기 ▾`:'접기 ▴';
+}
+// ─── 홈 매출 카드 날짜 네비 (2026-06-03) ───
+function topCardDayMove(dir){
+  if(!_topCardCtx || !_topCardDay) return;
+  const d = parseInt(_topCardDay.slice(8), 10);
+  const newD = d + Number(dir);
+  if(newD < 1) return;
+  if(newD > new Date().getDate()) return;
+  renderTopCardForDay(_topCardCtx.ym + '-' + String(newD).padStart(2,'0'));
+}
+function renderTopCardForDay(dayStr){
+  if(!_topCardCtx) return;
+  const ctx = _topCardCtx;
+  _topCardDay = dayStr;
+  const dayPad = dayStr.slice(8);
+  const d = parseInt(dayPad, 10);
+  const todayD = new Date().getDate();
+  const isTodayShown = d === todayD;
+
+  const topAmtEl = document.getElementById('dashTopSalesAmt');
+  const topModeEl = document.getElementById('dashTopSalesMode');
+  const topUpdEl = document.getElementById('dashTopSalesUpdated');
+  const peEl = document.getElementById('dashTopSalesProfitExpense');
+  const emptyCtaEl = document.getElementById('dashTopSalesEmptyCta');
+
+  const saleAmt = ctx.dailySalesMap[dayPad] || 0;
+  const dayExp = ctx.dailyExpTotal[dayPad] || 0;
+  const dayProfit = saleAmt - dayExp;
+  const prevExp = ctx.prevDailyExpTotal[dayPad] || 0;
+  const prevSale = ctx.prevDailySalesMap[dayPad] || 0;
+  const prevProfit = prevSale - prevExp;
+
+  // 라벨
+  const dow = ['일','월','화','수','목','금','토'][new Date(ctx.ym+'-'+dayPad+'T00:00:00').getDay()];
+  const moStr = String(ctx.mo).padStart(2,'0');
+  const titleLabel = isTodayShown ? '오늘 매출' : '어제 매출';
+  const modeLabel = ctx.isUpsMode ? '실시간' : (isTodayShown ? '(준비중)' : '마감');
+  document.getElementById('dashTopSalesLabel').innerText = `${titleLabel} · ${moStr}.${dayPad}(${dow})`;
+  topModeEl.innerText = modeLabel;
+  topModeEl.className = 't7-mode' + (ctx.isUpsMode ? ' live' : '');
+
+  if(saleAmt > 0){
+    topAmtEl.classList.remove('empty');
+    topAmtEl.innerHTML = fmt(saleAmt) + '<span class="won">원</span>';
+    if(ctx.isUpsMode && isTodayShown){
+      const now = new Date();
+      topUpdEl.innerHTML = `업데이트 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} <span class="refresh">↻</span>`;
+      topUpdEl.style.display = '';
+    } else { topUpdEl.style.display = 'none'; }
+    emptyCtaEl.style.display = 'none';
+    const _isP = dayProfit >= 0;
+    document.getElementById('dashTopExpenseAmt').innerText = '-' + fmt(dayExp) + '원';
+    const profitEl = document.getElementById('dashTopProfitAmt');
+    profitEl.innerText = (_isP?'+':'-') + fmt(Math.abs(dayProfit)) + '원';
+    profitEl.classList.toggle('red', !_isP);
+    profitEl.classList.toggle('green', _isP);
+    const _pDot = document.getElementById('dashTopProfitDot');
+    if(_pDot){ _pDot.classList.toggle('green',_isP); _pDot.classList.toggle('red',!_isP); }
+    const renderDelta = (el, m) => {
+      if(!el) return;
+      if(!m){ el.innerText=''; el.style.color=''; return; }
+      if(m.text==='비슷'){ el.innerText='비슷'; el.style.color='#8B95A1'; return; }
+      el.innerText = `${m.arrow}${m.pct}%`;
+      el.style.color = m.cls==='mom-good'?'#0CAB6C':(m.cls==='mom-bad'?'#F04452':'#B0B8C1');
+    };
+    renderDelta(document.getElementById('dashTopExpenseDelta'), ctx.momTxt(dayExp, prevExp, false));
+    renderDelta(document.getElementById('dashTopProfitDelta'), ctx.momTxt(dayProfit, prevProfit, true));
+    peEl.style.display = 'block';
+    renderTodayVendorExp(ctx.dailyVendorExp[dayPad], true, dayExp);
+  } else {
+    topAmtEl.classList.add('empty');
+    topAmtEl.innerText = '아직 입력 안 됨';
+    topUpdEl.style.display = 'none';
+    emptyCtaEl.style.display = 'block';
+    peEl.style.display = 'none';
+    renderTodayVendorExp(null, false, 0);
+  }
+
+  // 네비 버튼 상태 업데이트
+  const prevBtn = document.getElementById('dashTopNavPrev');
+  const nextBtn = document.getElementById('dashTopNavNext');
+  if(prevBtn) prevBtn.disabled = (d <= 1);
+  if(nextBtn) nextBtn.disabled = (d >= todayD);
 }
 // 거래처별 지출 더보기 토글 — 구 카드용 (호환 유지)
 function toggleVendorMore(btn){
@@ -1027,93 +1112,32 @@ async function loadDashboard(force){
       const isTodayShown=lastSaleDay===todayDayStr;
       const isUpsMode=(dashSaleSource==='ups');
 
+      // ─── 홈 매출 카드 날짜 네비 컨텍스트 저장 + 렌더 (2026-06-03) ─── //
+      _topCardCtx={
+        ym, mo,
+        dailySalesMap, dailyExpTotal, dailyVendorExp,
+        prevDailySalesMap, prevDailyExpTotal,
+        isUpsMode, momTxt,
+      };
       topCard.style.display='block';
-
-      if(!lastSaleDay){
-        // ─── 빈 데이터 — "오늘 첫 매출" CTA (홈 v7) ─── //
-        document.getElementById('dashTopSalesLabel').innerText='오늘 매출';
-        topModeEl.innerText='(준비중)';
-        topModeEl.className='t7-mode';
-        topModeEl.style.display='';
-        topAmtEl.classList.add('empty');
-        topAmtEl.innerText='아직 입력 안 됨';
-        emptyCtaEl.style.display='block';
-        peEl.style.display='none';
-        topUpdEl.style.display='none';
-      } else {
-        // ─── 데이터 있음 — 매출/지출/순수익 + 모드 표시 (홈 v7) ─── //
-        emptyCtaEl.style.display='none';
-        topModeEl.style.display='';
-        topAmtEl.classList.remove('empty');
-
-        // 라벨
-        const dayOfWeek=['일','월','화','수','목','금','토'][new Date(ym+'-'+lastSaleDay+'T00:00:00').getDay()];
-        const moStr=String(mo).padStart(2,'0');
-        const dateLabel=`${moStr}.${lastSaleDay}(${dayOfWeek})`;
-        const titleLabel=isTodayShown?'오늘 매출':'어제 매출';
-        // 실시간 동기화 미작동 → 사장님 매장은 '(준비중)' 표시 (2026-05-22)
-        const modeLabel=isUpsMode?'실시간':(isTodayShown?'(준비중)':'마감');
-
-        document.getElementById('dashTopSalesLabel').innerText=`${titleLabel} · ${dateLabel}`;
-        topModeEl.innerText=modeLabel;
-        topModeEl.className='t7-mode'+(isUpsMode?' live':'');
-        const saleAmt=dailySalesMap[lastSaleDay]||0;
-        topAmtEl.innerHTML=fmt(saleAmt)+'<span class="won">원</span>';
-        if(isUpsMode){
-          const hh=String(today.getHours()).padStart(2,'0'),mi=String(today.getMinutes()).padStart(2,'0');
-          topUpdEl.innerHTML=`업데이트 ${hh}:${mi} <span class="refresh">↻</span>`;
-          topUpdEl.style.display='';
-        }else{topUpdEl.style.display='none';}
-
-        // 순수익/지출 (홈 v7)
-        const dayExp=dailyExpTotal[lastSaleDay]||0;
-        const dayProfit=saleAmt-dayExp;
-        const prevExp=prevDailyExpTotal[lastSaleDay]||0;
-        const prevSale=prevDailySalesMap[lastSaleDay]||0;
-        const prevProfit=prevSale-prevExp;
-        const profitEl=document.getElementById('dashTopProfitAmt');
-        const _isP=dayProfit>=0;  // 수익/손해 단어 전환 (2026-06-02)
-        profitEl.innerText=(_isP?'+':'')+fmt(Math.abs(dayProfit))+'원';
-        profitEl.classList.toggle('red', !_isP);
-        profitEl.classList.toggle('green', _isP);
-        const _pLb=document.getElementById('dashTopProfitLb');
-        if(_pLb) _pLb.innerText=_isP?'오늘 수익':'오늘 손해';
-        const _pDot=document.getElementById('dashTopProfitDot');
-        if(_pDot){ _pDot.classList.toggle('green',_isP); _pDot.classList.toggle('red',!_isP); }
-        document.getElementById('dashTopExpenseAmt').innerText='-'+fmt(dayExp)+'원';
-        const renderDelta=(el,m)=>{
-          if(!el)return;
-          if(!m){el.innerText='';return;}
-          if(m.text==='비슷'){el.innerText='비슷';el.style.color='#8B95A1';return;}
-          el.innerText=`${m.arrow}${m.pct}%`;
-          el.style.color=m.cls==='mom-good'?'#0CAB6C':(m.cls==='mom-bad'?'#F04452':'#B0B8C1');
-        };
-        renderDelta(document.getElementById('dashTopProfitDelta'),momTxt(dayProfit,prevProfit,true));
-        renderDelta(document.getElementById('dashTopExpenseDelta'),momTxt(dayExp,prevExp,false));
-        peEl.style.display='grid';
-        // 거래처별 오늘 지출 (홈 첫 화면 "어디서 썼나")
-        renderTodayVendorExp(dailyVendorExp[lastSaleDay], true, dayExp);
-        // 지출 비중 막대 제거 (2026-06-03 사장님 지시 — 하루 단위 비중은 의미 없음)
-        const _tBarEl=document.getElementById('dashTopExpBar');
-        if(_tBarEl) _tBarEl.style.display='none';
-      }
+      const _initDay=lastSaleDay
+        ? ym+'-'+String(lastSaleDay).padStart(2,'0')
+        : new Date().toISOString().slice(0,10);
+      renderTopCardForDay(_initDay);
 
       // ─── 홈 v7 드릴다운: today-detail 화면 채우기 (2026-05-22, 2026-05-25 일자 네비 지원) ───
-      //  · _tdContext에 데이터 박아두고 _tdDay 기준으로 렌더링 (좌·우·데이트피커가 _tdDay 변경)
-      //  · 첫 진입 = lastSaleDay (없으면 오늘)
       try {
         _tdContext = {
           ym, mo, lastDay,
           dailySalesMap, dailyExpTotal, settle, dailyVendorExp,
           lastSaleDay, isUpsMode, isTodayShown, isCurMonth
         };
-        const _initDay = lastSaleDay
-          ? ym+'-'+String(lastSaleDay).padStart(2,'0')
-          : (isCurMonth ? new Date().toISOString().slice(0,10) : ym+'-01');
         renderTodayDetailForDay(_initDay);
       } catch(e){ console.warn('[dashTodayDetail]', e.message); }
     } else {
       topCard.style.display='none';
+      _topCardCtx = null;
+      _topCardDay = null;
       // today-detail도 빈 상태 (다른 월 보기)
       const _ddAmtX=document.getElementById('dashTodayDetailAmt');
       if(_ddAmtX){
