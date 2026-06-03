@@ -48,27 +48,29 @@ const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#
 function renderTodayVendorExp(veMap, hasSale, dayExp){
   const card=document.getElementById('dashTodayVendorCard');
   const listEl=document.getElementById('dashTodayVendorList');
-  const sumEl=document.getElementById('dashTodayVendorSum');
-  // 바텀시트용 데이터 캐싱 (지출 줄 탭 → 전체 상세)
+  // 바텀시트용 데이터 캐싱 (오늘매출 카드 지출 줄 탭 → 전체 상세)
   _todayVendorDataCache = (hasSale && veMap && Object.keys(veMap).length) ? {veMap, dayExp} : null;
   if(!card) return;
   if(!_todayVendorDataCache){ card.style.display='none'; return; }
-  // 카테고리별로 묶어 홈 카드에 요약 (TOP3 + 자세히 보기 → 바텀시트)
+  // 카테고리 TOP3 + 각 카테고리 아래 거래처 펼침 (총액·자세히보기 없음)
   const rows = Object.values(veMap).map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}));
   const total = dayExp || rows.reduce((s,r)=>s+r.amt,0);
   const catGroups={};
-  rows.forEach(r=>{ if(!catGroups[r.cat])catGroups[r.cat]={cat:r.cat,sum:0,n:0}; catGroups[r.cat].sum+=r.amt; catGroups[r.cat].n++; });
-  const groups=Object.values(catGroups).sort((a,b)=>b.sum-a.sum);
-  const shown=groups.slice(0,3);
-  if(sumEl) sumEl.innerText = fmt(total)+'원';
+  rows.forEach(r=>{ if(!catGroups[r.cat])catGroups[r.cat]={cat:r.cat,sum:0,items:[]}; catGroups[r.cat].sum+=r.amt; catGroups[r.cat].items.push(r); });
+  const groups=Object.values(catGroups).sort((a,b)=>b.sum-a.sum).slice(0,3);
+  groups.forEach(g=>g.items.sort((a,b)=>b.amt-a.amt));
   if(listEl){
-    listEl.innerHTML = shown.map((g,i)=>{
+    listEl.innerHTML = groups.map((g,i)=>{
       const color=_VE_COLORS[i % _VE_COLORS.length];
-      return `<div class="ve-row"><span class="vdot" style="background:${color};"></span>`
-        +`<span class="vname">${esc(g.cat)}</span>`
+      const pct = total>0?Math.round(g.sum/total*100):0;
+      const catRow=`<div class="ve-cat"><span class="vdot" style="background:${color};"></span>`
+        +`<span class="vname">${esc(g.cat)}</span><span class="ve-pct">${pct}%</span>`
         +`<span class="vamt">${fmt(g.sum)}원</span></div>`;
-    }).join('')
-    + `<button class="ve-more-btn" data-action="openTodayVendorSheet" data-stop="1">자세히 보기 ›</button>`;
+      const subRows=g.items.map(it=>
+        `<div class="ve-sub"><span class="sn">${esc(it.name)}</span><span class="sv">${fmt(it.amt)}원</span></div>`
+      ).join('');
+      return catRow+subRows;
+    }).join('');
   }
   card.style.display='';
 }
@@ -1193,10 +1195,10 @@ async function loadDashboard(force){
       };
       topCard.style.display='block';
 
-      // ── 할 일 알림 (안 B): 이번 달 매출 있는데 마감(정산) 안 한 지난 날 ──
+      // ── 할 일 알림 배너: 이번 달 매출 있는데 마감(정산) 안 한 지난 날 ──
       const _todoEl=document.getElementById('dashTodoAlert');
       if(_todoEl){
-        let todoCnt=0;
+        const unsettled=[];   // 미마감 일자(숫자) 목록
         if(isCurMonth){
           const settledSet=new Set((setRes2?.data||[]).map(s=>s.settle_date?.slice(8)).filter(Boolean));
           const closedSet=new Set();
@@ -1207,11 +1209,17 @@ async function loadDashboard(force){
             if((dailySalesMap[d]||0)<=0) return; // 매출 없는 날 제외
             if(closedSet.has(d)) return;         // 휴무 제외
             if(settledSet.has(d)) return;        // 이미 마감
-            todoCnt++;
+            unsettled.push(di);
           });
         }
-        if(todoCnt>0){
-          _todoEl.innerHTML=`<span class="todo-ic">📌</span>마감 안 한 날 <b>${todoCnt}일</b> 있어요 <span class="todo-go">정산하기 ›</span>`;
+        if(unsettled.length>0){
+          unsettled.sort((a,b)=>b-a);            // 최근 날 먼저
+          const recent=unsettled[0];
+          const isYesterday=(recent===passedDays-1);
+          const dayLabel=`${mo}/${recent}`;
+          const head=isYesterday ? `<b>어제(${dayLabel})</b> 마감을 안 했어요` : `<b>${dayLabel}</b> 마감을 안 했어요`;
+          const more=unsettled.length>1 ? ` <span style="opacity:.75;">외 ${unsettled.length-1}일</span>` : '';
+          _todoEl.innerHTML=`<span class="todo-ic">🔔</span><span class="todo-tx">${head}${more}</span><span class="todo-go">›</span>`;
           _todoEl.style.display='';
         } else { _todoEl.style.display='none'; }
       }
@@ -1606,29 +1614,9 @@ function v17RenderMonthCard(){
   const ctx = _v17Ctx; if(!ctx) return;
   const el = document.getElementById('v17MonthCard'); if(!el) return;
   const st = _v17MonthStats(ctx);
-  const {cur, prev, profit, expPctNum, progressDays, progressPct, fcSale, fcProfit, profitPctSale, expPctSale} = st;
+  const {cur, profit, progressDays, progressPct, fcSale, profitPctSale, expPctSale} = st;
 
-  // 자동 폰트 — 큰 글자 줄(.vl)에 실제 들어가는 매출·순수익만 기준
-  // (예상마감 금액은 아래 작은 줄이라 제외 — 본 금액 키우기, 2026-06-03)
-  const maxLen = Math.max(
-    Math.abs(cur.s).toLocaleString().length,
-    Math.abs(profit).toLocaleString().length + 1
-  );
-  let cls = '';
-  if(maxLen >= 12) cls = 'fs-xs';
-  else if(maxLen >= 11) cls = 'fs-s';
-  else if(maxLen >= 10) cls = 'fs-m';
-
-  // 매출 전월 대비 %
-  let saleDeltaHtml = '';
-  if(prev.s > 0){
-    const dS = Math.round((cur.s - prev.s)/prev.s*100);
-    if(dS === 0) saleDeltaHtml = `<span class="delta" style="color:var(--gray-400);">━</span>`;
-    else if(dS > 0) saleDeltaHtml = `<span class="delta up">▲${Math.abs(dS)}%</span>`;
-    else saleDeltaHtml = `<span class="delta dn">▼${Math.abs(dS)}%</span>`;
-  }
-
-  // 도넛: 지출 카테고리 분포
+  // 도넛: 지출 카테고리 분포 (배경), 가운데 = 수익률
   const cats = ctx.cats || [];
   let donutAcc = 0;
   const donutStops = [];
@@ -1641,26 +1629,25 @@ function v17RenderMonthCard(){
     donutAcc += pct;
   });
   const donutBg = donutStops.length ? `conic-gradient(${donutStops.join(',')})` : '#F2F4F6';
+
+  // 순수익률 바
   let profitBarHtml = '';
   if(profit>=0){
-    profitBarHtml = `<span style="background:#10B981;width:${profitPctSale}%;">+${profitPctSale.toFixed(0)}%</span><span style="background:var(--gray-200);width:${expPctSale}%;color:var(--gray-500);">지출</span>`;
+    profitBarHtml = `<span style="background:#0CAB6C;width:${profitPctSale}%;">+${profitPctSale.toFixed(0)}%</span><span style="background:var(--gray-200);width:${expPctSale}%;color:var(--gray-500);">지출</span>`;
   } else {
     const lossPct = Math.abs(profitPctSale);
     profitBarHtml = `<span style="background:#EF4444;width:${Math.min(lossPct,100)}%;">-${lossPct.toFixed(0)}%</span><span style="background:var(--gray-200);width:${Math.max(100-lossPct,0)}%;color:var(--gray-500);">지출</span>`;
   }
 
-  const fcSaleStr = fcSale!==null ? `${v17FmtNoWon(fcSale)}원` : '—';
-  const fcProfitStr = fcProfit!==null ? `${fcProfit>=0?'+':''}${v17FmtNoWon(fcProfit)}원` : '—';
   const profitRateStr = `${profit>=0?'+':''}${profitPctSale.toFixed(0)}%`;
-  const profitRateColor = profit>=0 ? '#10B981' : '#EF4444';
-  const donutHtml = donutStops.length
-    ? `<div class="m6-donut" style="background:${donutBg};"></div>
-       <div class="m6-donut-center">
-         <span class="dc-pct" style="color:${expPctNum>100?'#EF4444':'#191F28'};">${expPctNum}%</span>
-         <span class="dc-lb">매출 대비 지출</span>
-       </div>`
-    : `<div class="m6-donut" style="background:#F2F4F6;"></div>
-       <div class="m6-donut-center"><span class="dc-lb">지출 없음</span></div>`;
+  const profitRateColor = profit>=0 ? '#0CAB6C' : '#EF4444';
+
+  // 도넛 가운데 = 수익률 (목업 형태)
+  const donutCenter = donutStops.length
+    ? `<span class="dc-pct" style="color:${profitRateColor};">${profitRateStr}</span><span class="dc-lb">수익률</span>`
+    : `<span class="dc-lb">지출 없음</span>`;
+  // 예상마감 (만원 압축 — 좁은 한 줄)
+  const fcManStr = fcSale!==null ? `${Math.round(fcSale/10000).toLocaleString('ko-KR')}만원` : '—';
 
   el.innerHTML = `
     <div class="v17-card-v6">
@@ -1669,27 +1656,24 @@ function v17RenderMonthCard(){
         <span class="v6-progress-tag">${progressPct}%</span>
       </div>
       <div class="m6-top">
-        <div class="m6-left">
-          <div class="m6-metric">
-            <div class="lb">매출</div>
-            <div class="vl sale ${cls}">${v17FmtNoWon(cur.s)}원${saleDeltaHtml}</div>
-            <div class="est-line"><span class="tag">예상</span>마감 ${fcSaleStr}</div>
-          </div>
-          <div class="m6-metric profit">
-            <div class="lb">순수익</div>
-            <div class="vl ${profit<0?'neg':''} ${cls}">${v17FmtNoWonSigned(profit)}원</div>
-            <div class="est-line"><span class="tag">예상</span>마감 ${fcProfitStr}</div>
-          </div>
+        <div class="m6-donut-wrap">
+          <div class="m6-donut" style="background:${donutBg};"></div>
+          <div class="m6-donut-center">${donutCenter}</div>
         </div>
-        <div class="m6-right">
-          <div class="m6-donut-wrap">${donutHtml}</div>
-          <div class="m6-rate-wrap">
-            <div class="rate-lb"><span>순수익률</span><b style="color:${profitRateColor};">${profitRateStr}</b></div>
-            <div class="v6-bar profit-bar">${profitBarHtml}</div>
-          </div>
+        <div class="m6-mrows">
+          <div class="m6-mr"><span class="k">매출</span><span class="v">${v17FmtNoWon(cur.s)}원</span></div>
+          <div class="m6-mr"><span class="k">지출</span><span class="v">${v17FmtNoWon(cur.e)}원</span></div>
+          <div class="m6-mr"><span class="k">수익</span><span class="v ${profit>=0?'green':'red'}">${v17FmtNoWonSigned(profit)}원</span></div>
         </div>
       </div>
-      <div class="m6-more-hint">카테고리별·주차별 자세히 <span class="go">›</span></div>
+      <div class="m6-bar-row">
+        <div class="bar-lb"><span>순수익률</span><b style="color:${profitRateColor};">${profitRateStr}</b></div>
+        <div class="v6-bar">${profitBarHtml}</div>
+      </div>
+      <div class="m6-fc">
+        <span class="fc-tx">📈 이대로 가면 월말 <b>${fcManStr}</b></span>
+        <span class="fc-more">자세히 ›</span>
+      </div>
     </div>`;
 }
 
