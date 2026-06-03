@@ -46,10 +46,33 @@ let _pendingTopCardDay = null; // 월 경계 넘을 때 로드 후 표시할 날
 // ─── 거래처별 오늘 지출 캐싱 (2026-06-03 바텀시트로 전환) ───
 const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#94A3B8'];
 function renderTodayVendorExp(veMap, hasSale, dayExp){
-  // 기존 카드는 항상 숨김 — 데이터만 캐싱 (바텀시트에서 사용)
   const card=document.getElementById('dashTodayVendorCard');
-  if(card) card.style.display='none';
+  const listEl=document.getElementById('dashTodayVendorList');
+  const sumEl=document.getElementById('dashTodayVendorSum');
+  // 바텀시트용 데이터 캐싱 (지출 줄 탭 → 전체 상세)
   _todayVendorDataCache = (hasSale && veMap && Object.keys(veMap).length) ? {veMap, dayExp} : null;
+  if(!card) return;
+  if(!_todayVendorDataCache){ card.style.display='none'; return; }
+  // 카테고리별로 묶어 홈 카드에 요약 (상위 4개 + 자세히 보기)
+  const rows = Object.values(veMap).map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}));
+  const total = dayExp || rows.reduce((s,r)=>s+r.amt,0);
+  const catGroups={};
+  rows.forEach(r=>{ if(!catGroups[r.cat])catGroups[r.cat]={cat:r.cat,sum:0,n:0}; catGroups[r.cat].sum+=r.amt; catGroups[r.cat].n++; });
+  const groups=Object.values(catGroups).sort((a,b)=>b.sum-a.sum);
+  const shown=groups.slice(0,4);
+  const restN=groups.length-shown.length;
+  if(sumEl) sumEl.innerText = fmt(total)+'원';
+  if(listEl){
+    listEl.innerHTML = shown.map((g,i)=>{
+      const color=_VE_COLORS[i % _VE_COLORS.length];
+      return `<div class="ve-row"><span class="vdot" style="background:${color};"></span>`
+        +`<span class="vname">${esc(g.cat)}</span>`
+        +`<span class="ve-tag">${g.n}곳</span>`
+        +`<span class="vamt">${fmt(g.sum)}원</span></div>`;
+    }).join('')
+    + `<button class="ve-more-btn" data-action="openTodayVendorSheet" data-stop="1">${restN>0?`+${restN}개 더 · `:''}거래처별 자세히 보기 ›</button>`;
+  }
+  card.style.display='';
 }
 // ─── 어디에 썼나 바텀시트 열기 (2026-06-03 카테고리별 그룹핑) ───
 function openTodayVendorSheet(){
@@ -1172,6 +1195,29 @@ async function loadDashboard(force){
       };
       topCard.style.display='block';
 
+      // ── 할 일 알림 (안 B): 이번 달 매출 있는데 마감(정산) 안 한 지난 날 ──
+      const _todoEl=document.getElementById('dashTodoAlert');
+      if(_todoEl){
+        let todoCnt=0;
+        if(isCurMonth){
+          const settledSet=new Set((setRes2?.data||[]).map(s=>s.settle_date?.slice(8)).filter(Boolean));
+          const closedSet=new Set();
+          (settleRes?.data||[]).forEach(s=>{ if(s.source==='closed'){const d=s.date?.slice(8); if(d)closedSet.add(d);} });
+          Object.keys(dailySalesMap).forEach(d=>{
+            const di=parseInt(d,10);
+            if(di>=passedDays) return;           // 오늘·미래 제외 (오늘은 아직 안 해도 정상)
+            if((dailySalesMap[d]||0)<=0) return; // 매출 없는 날 제외
+            if(closedSet.has(d)) return;         // 휴무 제외
+            if(settledSet.has(d)) return;        // 이미 마감
+            todoCnt++;
+          });
+        }
+        if(todoCnt>0){
+          _todoEl.innerHTML=`<span class="todo-ic">📌</span>마감 안 한 날 <b>${todoCnt}일</b> 있어요 <span class="todo-go">정산하기 ›</span>`;
+          _todoEl.style.display='';
+        } else { _todoEl.style.display='none'; }
+      }
+
       // 표시할 날짜: ① 일 네비로 넘어온 특정일(같은 달) ② 그 달 최근 영업일 ③ 현재월=오늘 / 과거월=말일
       let _initDay;
       if(_pendingTopCardDay && _pendingTopCardDay.slice(0,7)===dashMonthStr){
@@ -1747,29 +1793,34 @@ function v17RenderMonthDetail(){
     </div>`;
   }
 
-  // ── 5. 주차별 매트릭스 ──
-  const matrixHtml = v17BuildWeekMatrixHtml(ctx, sortedCats);
+  // ── 5. 주차별 매트릭스 (카테고리 전부 + 5주 고정, 안 A) ──
+  const matrixHtml = v17BuildWeekMatrixHtml(ctx);
 
   el.innerHTML = heroHtml + fcHtml + detailPanelHtml + momHtml + matrixHtml;
 }
 
-// ─── 주차별 매트릭스 표 (만원 단위, 5열 한 화면) — 2026-06-03 신설 ───
-// 행: 매출 / 각 지출부모(+자식 펼침) / 지출 합계. 열: 1~N주(이 달 주차, 진행주 강조).
-// 자식 = 동적 (식자재>육류·야채 카테고리, 인건비>고정급·시급 급여방식). 하드코딩 X.
-function v17BuildWeekMatrixHtml(ctx, sortedCats){
+// ─── 주차별 매트릭스 표 (안 A · 만원 단위) — 2026-06-03 신설 / 2026-06-03 개편 ───
+// 행: 매출 / 지출 카테고리 전부(+자식 펼침, 0원도 흐리게 표시) / 지출 합계 / 순수익.
+// 열: 그 달 회계주 전부(1~5주 고정, 진행 안 한 주는 -). 진행주 파랑 강조 + 배지.
+// 자식·카테고리 = 동적 (설정 기반). 하드코딩 X.
+function v17BuildWeekMatrixHtml(ctx){
   const WEEKS = ctx.WEEKS || [];
-  // 이 달 날짜만 주차별로 합산 (열 합계 = 월 합계 보장)
+  const TM = ctx.TARGET_MONTH;
+  // 그 달 회계주 전부 합산 (이 달 날이 하나라도 있으면 열 표시 — 미래주도 포함)
   const weekAgg = [];
-  WEEKS.forEach((wk,i)=>{
-    let sale=0; const byCat={}; const byChild={}; let isCurrent=false, hasData=false;
+  WEEKS.forEach(wk=>{
+    let sale=0; const byCat={}; const byChild={};
+    let isCurrent=false, hasThisMonth=false, firstD=null, lastD=null;
     wk.forEach(day=>{
-      if(day.m !== ctx.TARGET_MONTH) return;            // 다른 달 끼임 제외
-      if(ctx.IS_CURRENT && day.d > ctx.TODAY) return;   // 미래 제외
+      if(day.m !== TM) return;                          // 다른 달 끼임 제외
+      hasThisMonth=true;
+      if(firstD===null) firstD=day.d;
+      lastD=day.d;
+      if(ctx.IS_CURRENT && day.d===ctx.TODAY) isCurrent=true;  // 데이터 유무 무관 진행주 표시
+      if(ctx.IS_CURRENT && day.d > ctx.TODAY) return;   // 미래 집계만 제외
       const key = `${day.m}-${String(day.d).padStart(2,'0')}`;
       const data = ctx.DAYS[key];
       if(!data) return;
-      hasData = true;
-      if(ctx.IS_CURRENT && day.d===ctx.TODAY) isCurrent=true;
       sale += data.sale||0;
       (ctx.cats||[]).forEach(c=>{ byCat[c.key]=(byCat[c.key]||0)+(data.byCat?.[c.key]||0); });
       Object.entries(data.byChild||{}).forEach(([pName,kids])=>{
@@ -1777,35 +1828,46 @@ function v17BuildWeekMatrixHtml(ctx, sortedCats){
         Object.entries(kids).forEach(([cName,amt])=>{ byChild[pName][cName]=(byChild[pName][cName]||0)+amt; });
       });
     });
-    if(hasData) weekAgg.push({label:`${weekAgg.length+1}주`, sale, byCat, byChild, isCurrent});
+    if(hasThisMonth) weekAgg.push({idx:weekAgg.length+1, sale, byCat, byChild, isCurrent, firstD, lastD});
   });
   if(!weekAgg.length) return '';
 
-  const nCol = weekAgg.length;
   const fmtMan = (won)=>{ const man = Math.round((won||0)/10000); return man>0 ? man.toLocaleString('ko-KR') : '-'; };
+  // 카테고리 전부 (월 총합 큰 순, 0원도 포함 — 뒤로 감)
+  const allCats = [...(ctx.cats||[])].sort((a,b)=>{
+    const av=weekAgg.reduce((s,w)=>s+(w.byCat[a.key]||0),0);
+    const bv=weekAgg.reduce((s,w)=>s+(w.byCat[b.key]||0),0);
+    return bv-av;
+  });
+  // 진행주 배지
+  const curWk = weekAgg.find(w=>w.isCurrent);
+  const badge = (ctx.IS_CURRENT && curWk) ? `<span class="wk-badge">${curWk.idx}주차 진행중</span>` : '';
 
-  // 헤더
+  // 헤더 (주차 + 날짜 범위, 첫 주만 월 표기)
   let head = '<th></th>';
-  weekAgg.forEach(w=>{ head += `<th class="${w.isCurrent?'cur':''}">${w.label}</th>`; });
+  weekAgg.forEach(w=>{
+    const wd = (w.idx===1) ? `${TM}/${w.firstD}~${w.lastD}` : `${w.firstD}~${w.lastD}`;
+    head += `<th class="${w.isCurrent?'cur':''}">${w.idx}주<span class="wd">${wd}</span></th>`;
+  });
 
   // 매출 행
-  let body = `<tr class="row-parent row-sales"><td>매출</td>`;
+  let body = `<tr class="row-sales"><td>매출</td>`;
   weekAgg.forEach(w=>{ body += `<td class="${w.isCurrent?'cur':''}">${fmtMan(w.sale)}</td>`; });
   body += `</tr>`;
 
-  // 지출 부모 + 자식
-  sortedCats.forEach(c=>{
-    // 자식 키 목록 (월 단위 monthChildMap 기준 — 있으면 펼침)
+  // 지출 카테고리 전부 + 자식
+  allCats.forEach(c=>{
+    const monthTotal = weekAgg.reduce((s,w)=>s+(w.byCat[c.key]||0),0);
+    const zeroCls = monthTotal>0 ? '' : ' zero';
     const childNames = Object.keys(ctx.monthChildMap?.[c.name]||{});
-    body += `<tr class="row-parent"><td>${c.name}</td>`;
+    body += `<tr class="row-parent${zeroCls}"><td><span class="dot" style="background:${c.color};"></span>${c.name}</td>`;
     weekAgg.forEach(w=>{
       const v = w.byCat[c.key]||0;
-      const pct = w.sale>0 && v>0 ? Math.round(v/w.sale*100) : 0;
-      const pctSub = (v>0 && pct>0) ? `<span class="pct-sub">${pct}%</span>` : '';
-      body += `<td class="${w.isCurrent?'cur':''}">${fmtMan(v)}${v>0?'<br>':''}${pctSub}</td>`;
+      const pct = (w.sale>0 && v>0) ? Math.round(v/w.sale*100) : 0;
+      const pctSub = (v>0 && pct>0) ? `<span class="ps">${pct}%</span>` : '';
+      body += `<td class="${w.isCurrent?'cur':''}">${fmtMan(v)}${pctSub}</td>`;
     });
     body += `</tr>`;
-    // 자식 행 (동적 — 있으면 펼침)
     childNames.forEach(cn=>{
       body += `<tr class="row-child"><td>${cn}</td>`;
       weekAgg.forEach(w=>{
@@ -1824,16 +1886,27 @@ function v17BuildWeekMatrixHtml(ctx, sortedCats){
   });
   total += `</tr>`;
 
+  // 순수익 행 (매출 - 지출합계)
+  let profit = `<tr class="row-profit"><td>순수익</td>`;
+  weekAgg.forEach(w=>{
+    let e=0; (ctx.cats||[]).forEach(c=>{ e+=w.byCat[c.key]||0; });
+    const p = w.sale - e;
+    const hasAny = w.sale>0 || e>0;
+    const cls = (w.isCurrent?'cur ':'') + (p<0?'neg':'');
+    profit += `<td class="${cls.trim()}">${hasAny ? fmtMan(p) : '-'}</td>`;
+  });
+  profit += `</tr>`;
+
   return `
     <div class="wk-matrix">
-      <div class="wk-matrix-ttl">주차별 항목</div>
+      <div class="wk-head"><span class="ttl">📊 주차별 흐름</span>${badge}</div>
       <div class="wk-matrix-scroll">
         <table class="wk-tbl" style="width:100%;">
           <thead><tr>${head}</tr></thead>
-          <tbody>${body}${total}</tbody>
+          <tbody>${body}${total}${profit}</tbody>
         </table>
       </div>
-      <div class="wk-matrix-note">금액 단위: 만원 · 퍼센트는 해당 주 매출 대비</div>
+      <div class="wk-matrix-note">금액 단위: 만원 · % 는 해당 주 매출 대비 · 진행 안 한 주는 -</div>
     </div>`;
 }
 
