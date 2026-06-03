@@ -1281,14 +1281,15 @@
           <div class="progress-tag" id="dashHomeMonthProgress" style="display:none;">- 월 -일 / -</div>
         </div>
         <div class="vl"><span id="dashHomeMonthSale">0</span><span class="won">원</span></div>
-        <div class="mrow" id="dashHomeMonthExpRow"><span class="mk">지출</span><span class="mv" id="dashHomeMonthExpAmt">-</span></div>
-        <div class="mrow" id="dashHomeMonthProfitRow"><span class="mk" id="dashHomeMonthProfitLb2">손해</span><span class="mv" id="dashHomeMonthProfitAmt">-</span><span class="mrate" id="dashHomeMonthProfitRate2" style="display:none;">-</span></div>
+        <div class="fc-row" style="margin-top:7px;"><span class="k">지출</span><span class="v" id="dashHomeMonthExp">-</span></div>
+        <div class="fc-row"><span class="k">수익</span><span class="v" id="dashHomeMonthProfit">-</span></div>
+        <div class="fc-row" id="dashHomeMonthRateRow"><span class="k">수익률</span><span class="v" id="dashHomeMonthRate">-</span></div>
         <div class="mom-mini" id="dashHomeMonthMom" style="display:none;font-size:11.5px;font-weight:700;color:var(--gray-600);margin-top:4px;"></div>
-        <!-- 예상마감 (이대로 가면 월말 예상) — 2026-06-02 -->
+        <!-- 예상마감 (이대로 가면 월말 예상) — 2026-06-02 / 2026-06-03 전월대비 증감 추가 -->
         <div class="fc-block" id="dashHomeFcBlock" style="display:none;">
           <div class="fc-ttl">📈 이대로 가면 (월말 예상)</div>
-          <div class="mrow"><span class="mk">예상 매출<span class="badge-exp">예상</span></span><span class="mv" id="dashHomeFcSale">-</span></div>
-          <div class="mrow"><span class="mk"><span id="dashHomeFcProfitLb">예상 손해</span><span class="badge-exp">예상</span></span><span class="mv" id="dashHomeFcProfit">-</span></div>
+          <div class="fc-row"><span class="k">예상 매출<span class="mom-chip" id="dashHomeFcSaleMom" style="display:none;"></span></span><span class="v" id="dashHomeFcSale">-</span></div>
+          <div class="fc-row"><span class="k">예상 수익<span class="mom-chip" id="dashHomeFcProfitMom" style="display:none;"></span></span><span class="v" id="dashHomeFcProfit">-</span></div>
         </div>
       </div>
       <div class="arrow">›</div>
