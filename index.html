@@ -1961,13 +1961,15 @@
 </div>
 <!-- ─── 오늘 지출 거래처별 바텀시트 (2026-06-03) ─── -->
 <div class="sheet-overlay" id="vendorExpSheet">
-  <div class="sheet" style="max-height:80vh;">
+  <div class="sheet vexp-sheet">
     <div class="sheet-header">
       <div class="sheet-title">🧾 어디에 썼나</div>
       <button class="sheet-close" data-action="closeSheet|vendorExpSheet">✕</button>
     </div>
-    <div id="vendorExpSheetSum" style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:10px;"></div>
-    <div class="dash-ve-card" id="vendorExpSheetList" style="background:none;border-radius:0;padding:0;margin:0;box-shadow:none;"></div>
+    <div class="vexp-scroll">
+      <div class="dash-ve-card" id="vendorExpSheetList" style="background:none;border-radius:0;padding:0;margin:0;box-shadow:none;"></div>
+    </div>
+    <div class="vexp-footer" id="vendorExpSheetTotal"></div>
   </div>
 </div>
 <!-- ─── 새 기능: 일별 매출 캘린더 시트 (2026-05-15) ─── -->

@@ -70,11 +70,8 @@ function openTodayVendorSheet(){
   const groups = Object.values(catGroups).sort((a,b)=>b.sum-a.sum);
   groups.forEach(g=>g.items.sort((a,b)=>b.amt-a.amt));
 
-  const sumEl = document.getElementById('vendorExpSheetSum');
   const listEl = document.getElementById('vendorExpSheetList');
-  // '곳' = 고유 거래처 수 (쿠팡이 비품·식자재로 쪼개져도 1곳)
-  const vendorCount = new Set(rows.map(r=>r.name)).size;
-  if(sumEl) sumEl.innerText = `${vendorCount}곳 · ${fmt(total)}원`;
+  const totalEl = document.getElementById('vendorExpSheetTotal');
   if(listEl){
     const groupsHtml = groups.map((g,i)=>{
       const color = _VE_COLORS[i % _VE_COLORS.length];
@@ -90,9 +87,10 @@ function openTodayVendorSheet(){
         + itemsHtml
         + `</div>`;
     }).join('');
-    const totalHtml = `<div class="ve-total"><span class="ve-total-lb">전체 합계</span><span class="ve-total-vl">${fmt(total)}원</span></div>`;
-    listEl.innerHTML = groupsHtml + totalHtml;
+    listEl.innerHTML = groupsHtml;
   }
+  // 전체 합계 — 항상 고정 (스크롤 밖)
+  if(totalEl) totalEl.innerHTML = `<span class="ve-total-lb">전체 합계</span><span class="ve-total-vl">${fmt(total)}원</span>`;
   openSheet('vendorExpSheet');
 }
 // 바텀시트 내 더보기 토글 — 카테고리 그룹핑 전환으로 더보기 폐기 (호환 유지, 2026-06-03)
@@ -132,10 +130,16 @@ function renderTopCardForDay(dayStr){
   const dow = ['일','월','화','수','목','금','토'][new Date(ctx.ym+'-'+dayPad+'T00:00:00').getDay()];
   const moStr = String(ctx.mo).padStart(2,'0');
   const titleLabel = isTodayShown ? '오늘 매출' : '어제 매출';
-  const modeLabel = ctx.isUpsMode ? '실시간' : (isTodayShown ? '(준비중)' : '마감');
+  // "마감" 배지 제거 — 과거 날짜는 항상 마감이라 정보 없음. 오늘 미확정(준비중)·실시간만 표시
+  const modeLabel = ctx.isUpsMode ? '실시간' : (isTodayShown ? '(준비중)' : '');
   document.getElementById('dashTopSalesLabel').innerText = `${titleLabel} · ${moStr}.${dayPad}(${dow})`;
-  topModeEl.innerText = modeLabel;
-  topModeEl.className = 't7-mode' + (ctx.isUpsMode ? ' live' : '');
+  if(modeLabel){
+    topModeEl.innerText = modeLabel;
+    topModeEl.className = 't7-mode' + (ctx.isUpsMode ? ' live' : '');
+    topModeEl.style.display = '';
+  } else {
+    topModeEl.style.display = 'none';
+  }
 
   if(saleAmt > 0){
     topAmtEl.classList.remove('empty');
