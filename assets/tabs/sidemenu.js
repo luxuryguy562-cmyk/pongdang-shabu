@@ -8434,17 +8434,8 @@ document.addEventListener('DOMContentLoaded', async()=>{
     if(typeof manualCrawl==='function')manualCrawl();
     else loadDashboard();
   });
-  // 캘린더 셀 클릭 (이벤트 위임)
-  document.getElementById('salesCalendarGrid').addEventListener('click',(e)=>{
-    const cell=e.target.closest('.sales-cal-cell[data-day]');
-    if(!cell)return;
-    if(cell.classList.contains('future')||cell.classList.contains('empty'))return;
-    const day=cell.dataset.day;
-    if(!_salesCalendarMonth||!day)return;
-    handleCalCellClick(`${_salesCalendarMonth}-${day}`);
-  });
-  document.getElementById('salesCalendarPrev').addEventListener('click',()=>moveSalesCalendarMonth(-1));
-  document.getElementById('salesCalendarNext').addEventListener('click',()=>moveSalesCalendarMonth(1));
+  // 옛 sales-cal-grid 달력 이벤트 제거 (2026-06-03 — v17 달력 바텀시트로 통합)
+  // 셀 클릭은 v17RenderCalendar 내부에서 v17OpenDailySheet로 직접 바인딩됨
   // Part F: 결제수단 색상 피커 ↔ hex 입력 양방향 동기화
   const pmePicker=document.getElementById('pmeColor');
   const pmeHex=document.getElementById('pmeColorHex');

@@ -2443,8 +2443,7 @@ async function markDateAsClosed(date){
     }
     closeSheet('calCellActionSheet');
     toast('휴무로 표시됐어요','success');
-    if(document.getElementById('salesCalendarSheet').style.display!=='none')await renderSalesCalendar();
-    await loadDashboard(true);
+    await loadDashboard(true);  // v17 달력은 loadDashboard 끝 v17RenderAll에서 갱신
   }catch(e){
     console.error('휴무 저장:',e);
     toast('저장 실패: '+e.message,'error');
@@ -2453,105 +2452,12 @@ async function markDateAsClosed(date){
   }
 }
 
-// ─── 달력 버튼: 홈 v17 캘린더로 스크롤 (2026-06-03 사장님 지시 — 중복 달력 제거) ─── //
-let _salesCalendarMonth=null;
-async function openSalesCalendarSheet(){
-  // salesCalendarSheet 대신 홈에 있는 v17CalGrid로 스크롤
-  const calEl = document.getElementById('v17CalGrid');
-  if(calEl) calEl.scrollIntoView({behavior:'smooth', block:'start'});
-}
-function moveSalesCalendarMonth(dir){
-  if(!_salesCalendarMonth)return;
-  const d=new Date(_salesCalendarMonth+'-01');d.setMonth(d.getMonth()+dir);
-  _salesCalendarMonth=d.toISOString().slice(0,7);
-  renderSalesCalendar();
-}
-async function renderSalesCalendar(){
-  const ym=_salesCalendarMonth;
-  document.getElementById('salesCalendarMonthLabel').innerText=ym;
-  document.getElementById('salesCalendarGrid').innerHTML='<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--gray-500);">불러오는 중...</div>';
-  document.getElementById('salesCalendarSummary').innerText='-';
-  const[y,mo]=ym.split('-').map(Number);
-  const lastDay=new Date(y,mo,0).getDate();
-  const start=ym+'-01',end=ym+'-'+String(lastDay).padStart(2,'0');
-  const sid=currentStore.id;
-  try{
-    const[salesRes,voRes,rcRes,attRes]=await Promise.all([
-      sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
-      sb.from('vendor_orders').select('amount,order_date').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-      sb.from('receipts').select('total_price,receipt_date').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
-      sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end)
-    ]);
-    // 일별 매출 + source 메타 (휴무 표시용)
-    const dailySales={};
-    const dailySource={};
-    (salesRes.data||[]).forEach(s=>{const d=s.date?.slice(8);if(d){dailySales[d]=salesRowTotal(s);dailySource[d]=s.source||'';}});
-    // 일별 지출 (변동 비용만 — 고정비/로열티 일할 생략. 캘린더는 시각적 추세 비교 본질)
-    const dailyExp={};
-    (voRes.data||[]).forEach(v=>{const d=v.order_date?.slice(8);if(!d)return;dailyExp[d]=(dailyExp[d]||0)+(v.amount||0);});
-    (rcRes.data||[]).forEach(r=>{const d=r.receipt_date?.slice(8);if(!d)return;dailyExp[d]=(dailyExp[d]||0)+(r.total_price||0);});
-    const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-    (attRes.data||[]).forEach(a=>{if(monthlyEmpIds.has(a.employee_id))return;const d=a.work_date?.slice(8);if(!d)return;dailyExp[d]=(dailyExp[d]||0)+(a.calculated_wage||0);});
-
-    // 그리드 그리기
-    const firstDayOfWeek=new Date(y,mo-1,1).getDay();
-    const todayDate=new Date();
-    const todayYm=todayDate.toISOString().slice(0,7);
-    const todayDay=todayYm===ym?todayDate.getDate():-1;
-
-    let html='';
-    ['일','월','화','수','목','금','토'].forEach((wk,i)=>{
-      const cls=i===0?'sun':(i===6?'sat':'');
-      html+=`<div class="sales-cal-wkh ${cls}">${wk}</div>`;
-    });
-    for(let i=0;i<firstDayOfWeek;i++)html+=`<div class="sales-cal-cell empty"></div>`;
-    let totalSale=0,totalProfit=0,saleDays=0;
-    const compactWon=v=>{const a=Math.abs(v);if(a>=10000)return(v<0?'-':'')+Math.round(a/10000)+'만';return fmt(v);};
-    for(let d=1;d<=lastDay;d++){
-      const dd=String(d).padStart(2,'0');
-      const sale=dailySales[dd]||0;
-      const exp=dailyExp[dd]||0;
-      const profit=sale-exp;
-      const isToday=d===todayDay;
-      const isFuture=todayDay>0&&d>todayDay;
-      const dayOfWeek=(firstDayOfWeek+d-1)%7;
-      const wkCls=dayOfWeek===0?'sun':(dayOfWeek===6?'sat':'');
-      const isClosed=(dailySource[dd]==='closed');
-      if(isFuture){
-        html+=`<div class="sales-cal-cell future ${wkCls}"><span class="sc-day">${d}</span></div>`;
-      }else if(isClosed){
-        html+=`<div class="sales-cal-cell closed ${isToday?'today':''} ${wkCls}" data-day="${dd}">
-          <span class="sc-day">${d}</span>
-          <span style="font-size:14px;text-align:center;">🏖</span>
-          <span style="font-size:9px;text-align:center;color:#92400E;font-weight:800;">휴무</span>
-        </div>`;
-      }else if(sale){
-        html+=`<div class="sales-cal-cell ${isToday?'today':''} ${wkCls}" data-day="${dd}">
-          <span class="sc-day">${d}</span>
-          <span class="sc-sale">${compactWon(sale)}</span>
-          <span class="sc-profit ${profit>=0?'pos':'neg'}">${profit>=0?'+':''}${compactWon(profit)}</span>
-        </div>`;
-        totalSale+=sale;totalProfit+=profit;saleDays++;
-      }else{
-        html+=`<div class="sales-cal-cell noSale ${isToday?'today':''} ${wkCls}" data-day="${dd}">
-          <span class="sc-day">${d}</span>
-          <span style="font-size:9px;color:var(--gray-400);margin-top:auto;text-align:center;">+</span>
-        </div>`;
-      }
-    }
-    document.getElementById('salesCalendarGrid').innerHTML=html;
-    document.getElementById('salesCalendarSummary').innerHTML=
-      `<div style="display:flex;justify-content:space-between;align-items:center;">
-        <span>📊 매출 합계 <span style="color:var(--gray-400);font-size:11px;">(${saleDays}일)</span></span>
-        <b style="color:var(--blue);">${fmt(totalSale)}원</b>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-        <span>💵 순수익 합계</span>
-        <b style="color:${totalProfit>=0?'#10B981':'#EF4444'};">${totalProfit>=0?'+':''}${fmt(totalProfit)}원</b>
-      </div>`;
-  }catch(e){
-    console.error('캘린더 오류:',e);
-    document.getElementById('salesCalendarGrid').innerHTML='<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--danger);">불러오기 실패</div>';
-  }
+// ─── 달력 버튼: v17 달력 바텀시트 열기 (2026-06-03 — 인라인 달력 → 시트 이동) ─── //
+function openSalesCalendarSheet(){
+  // v17CalGrid는 시트 안으로 옮겨졌고, _v17Ctx로 이미 렌더됨. 시트만 열면 됨
+  const lbl=document.getElementById('salesCalSheetMonth');
+  if(lbl) lbl.innerText=dashMonthStr;
+  if(_v17Ctx) v17RenderCalendar();
+  openSheet('salesCalendarSheet');
 }
 
