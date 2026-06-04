@@ -1229,9 +1229,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .todo-banner .todo-tx{font-size:13px;font-weight:700;color:#B45309;flex:1;letter-spacing:-0.3px;}
 .todo-banner .todo-tx b{font-weight:800;color:#92400E;}
 .todo-banner .todo-go{font-size:16px;font-weight:700;color:#D97706;flex-shrink:0;}
+/* 매출 금액 행 — 높이 고정 (금액 있을 때 기준 34px). "아직 매출 기록이 없어요"여도 안 튐 (2026-06-04) */
+.dash-today-v7 .t7-amt-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;min-height:34px;}
 .dash-today-v7 .t7-amt{font-size:31px;font-weight:800;color:#191F28;letter-spacing:-1.3px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .dash-today-v7 .t7-amt .won{font-size:22px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
-.dash-today-v7 .t7-amt.empty{font-size:24px;color:#B0B8C1;font-weight:700;}
+.dash-today-v7 .t7-amt.empty{font-size:18px;color:#B0B8C1;font-weight:700;line-height:34px;}
 .dash-today-v7 .t7-detail-link{border:none;background:transparent;padding:0;font-size:13px;font-weight:700;color:#3182F6;cursor:pointer;white-space:nowrap;align-self:flex-end;margin-bottom:4px;flex-shrink:0;}
 .dash-today-v7 .t7-time{font-size:12px;color:#8B95A1;margin-top:6px;font-weight:500;letter-spacing:-0.2px;display:flex;align-items:center;gap:6px;}
 .dash-today-v7 .t7-time .refresh{color:#0064FF;cursor:pointer;font-weight:600;}
