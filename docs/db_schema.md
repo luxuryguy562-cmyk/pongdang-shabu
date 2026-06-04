@@ -241,10 +241,14 @@ franchises (프랜차이즈/브랜드)
 | receipt_date, vendor, category, item | 날짜/거래처/분류(문자열)/품목 |
 | **category_id** (FK→expense_categories) | **소분류 id 저장 규칙** (2026-04-22 확립). 품목이 명시돼 있어 소분류 추론 가능. mydata는 대분류 id. 집계 시 parent 조인으로 대분류 합산 |
 | **vendor_id** (FK→vendors ON DELETE SET NULL, 2026-05-18 추가) | **영수증 진입 분기** 시 거래처 모드면 박힘. 직구·옛 영수증은 NULL. 인덱스 `idx_receipts_vendor_id` |
-| total_price (int) | 합계 금액 |
+| total_price (int) | 합계 금액 (**세후=실제 낸 돈**, 2026-06-04 세후 통일) |
+| **supply_price** (int, 2026-06-04) | 공급가(세전) = total_price − tax_amount. 옛 영수증 NULL |
+| **tax_amount** (int, 2026-06-04) | 행 세액(부가세). 인쇄된 세액만, 없거나 면세면 0. 부가세 역산 안 함 |
 | note | 정상/오답/반품 등 |
 | created_at | 등록일시 |
 
+> ⚠️ **2026-06-04 추가 (세액 분리 + 세후 통일)**: `supply_price INT`, `tax_amount INT` 신설. 모든 영수증의 `total_price`를 **세후(실제 낸 돈)로 통일** + 공급가·세액 분리 보관(부가세 신고 발판). AI가 행마다 세액(t) 읽음 → supply = total − tax. 부가세 역산(÷1.1) 안 함(면세·과세 섞임 오류 방지). 옛 영수증 117건 = NULL 호환. 마이그레이션: `add_receipts_supply_tax_20260604`. 롤백: `ALTER TABLE receipts DROP COLUMN supply_price, DROP COLUMN tax_amount;`.
+>
 > ⚠️ **2026-05-15 정정**: 옛 문서엔 `price, count` 컬럼이 있다고 적혀있었으나 **실제 DB에는 존재하지 않음** (42703 에러로 발견). 코드에서 `price/count` SELECT/INSERT 모두 제거. 단가/수량 분리 저장이 필요해지면 추후 ALTER TABLE로 추가하고 본 문서 동기화.
 >
 > ⚠️ **2026-05-18 추가**: `vendor_id` FK 도입 (영수증 진입 분기 거래처/직구). 거래처 모드 = vendor_id + 거래처.category_id 자동 박힘 + 학습 스킵. 직구 모드 = vendor_id NULL + AI 품목별 분류 + 학습 작동. 마이그레이션: `add_receipts_vendor_id_20260518`. 롤백: `DROP INDEX idx_receipts_vendor_id; ALTER TABLE receipts DROP COLUMN vendor_id;`.
