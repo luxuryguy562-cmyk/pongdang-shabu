@@ -8416,8 +8416,6 @@ document.addEventListener('DOMContentLoaded', async()=>{
     if(e.target.closest('[data-stop]'))return;
     nav('receipt');
   });
-  // 빈 데이터 CTA (홈 v7: 휴무 버튼 제거 — 캘린더 셀에서만, 2026-05-22)
-  document.getElementById('dashTopEmptyInputBtn').addEventListener('click',(e)=>{e.stopPropagation();openQuickSalesInput();});
   // today-detail 매출 입력 CTA — 보고 있던 일자(_tdDay)로 시트 진입 (2026-05-25 사장님 호소)
   const _ddInputCta=document.getElementById('dashTodayInputCta');
   if(_ddInputCta) _ddInputCta.addEventListener('click',()=>openQuickSalesInput(_tdDay||null));

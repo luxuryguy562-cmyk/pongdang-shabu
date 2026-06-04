@@ -193,7 +193,6 @@ function renderTopCardForDay(dayStr){
   const topModeEl = document.getElementById('dashTopSalesMode');
   const topUpdEl = document.getElementById('dashTopSalesUpdated');
   const peEl = document.getElementById('dashTopSalesProfitExpense');
-  const emptyCtaEl = document.getElementById('dashTopSalesEmptyCta');
 
   const saleAmt = ctx.dailySalesMap[dayPad] || 0;
   const dayExp = ctx.dailyExpTotal[dayPad] || 0;
@@ -226,7 +225,6 @@ function renderTopCardForDay(dayStr){
       topUpdEl.innerHTML = `업데이트 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} <span class="refresh">↻</span>`;
       topUpdEl.style.display = '';
     } else { topUpdEl.style.display = 'none'; }
-    emptyCtaEl.style.display = 'none';
     const _isP = dayProfit >= 0;
     document.getElementById('dashTopExpenseAmt').innerText = '-' + fmt(dayExp) + '원';
     const profitEl = document.getElementById('dashTopProfitAmt');
@@ -261,10 +259,8 @@ function renderTopCardForDay(dayStr){
       if(_pDot){ _pDot.classList.remove('green','red'); _pDot.classList.add('gray'); }
       document.getElementById('dashTopProfitDelta').innerText = '';
       peEl.style.display = 'block';
-      emptyCtaEl.style.display = '';
       renderTodayVendorExp(ctx.dailyVendorExp[dayPad]||{}, false, dayExp);
     } else {
-      emptyCtaEl.style.display = 'block';
       peEl.style.display = 'none';
       renderTodayVendorExp(null, false, 0);
     }
@@ -1718,6 +1714,7 @@ function v17RenderMonthCard(){
       <div class="v6-ttl-row">
         <div class="v6-ttl"><b>${ctx.TARGET_MONTH}월</b>${progressDays}일 진행</div>
         <span class="v6-progress-tag">${progressPct}%</span>
+        <span class="fc-more" data-action="dashGoStage|month-detail">자세히 ›</span>
       </div>
       <div class="m6-top">
         <div class="m6-donut-wrap">
@@ -1736,7 +1733,6 @@ function v17RenderMonthCard(){
       </div>
       <div class="m6-fc">
         <span class="fc-tx">📈 이대로 가면 월말 예상매출 <b>${fcManStr}</b></span>
-        <span class="fc-more" data-action="dashGoStage|month-detail">자세히 ›</span>
       </div>
     </div>`;
 }
