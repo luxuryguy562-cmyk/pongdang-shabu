@@ -1239,11 +1239,13 @@
       <div class="t7-head-v2">
         <button type="button" class="t7-nav" id="dashTopNavPrev" data-action="topCardDayMove|-1" data-stop="1" disabled>‹</button>
         <div class="t7-center">
-          <span class="live-dot"></span>
-          <span id="dashTopSalesLabel">오늘 매출</span>
-          <span id="dashTopSalesMode" class="t7-mode">(준비중)</span>
-          <button type="button" class="t7-cal-btn" data-action="openSalesCalendarSheet" data-stop="1" title="월 달력으로 보기">📅 매출 달력 보기</button>
+          <div class="t7-day-row">
+            <span id="dashTopSalesLabel" class="t7-day-main">오늘 매출</span>
+            <span id="dashTopSalesRel" class="t7-day-badge" style="display:none;"></span>
+          </div>
+          <span id="dashTopSalesMode" class="t7-day-sub"></span>
         </div>
+        <button type="button" class="t7-cal-btn" data-action="openSalesCalendarSheet" data-stop="1" title="월 달력으로 보기">📅</button>
         <button type="button" class="t7-nav t7-nav-next" id="dashTopNavNext" data-action="topCardDayMove|1" data-stop="1" disabled>›</button>
       </div>
       <div class="t7-amt-row">

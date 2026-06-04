@@ -1210,19 +1210,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 오늘 매출 풀카드 v7 */
 .dash-today-v7{background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);border-radius:20px;padding:16px 18px 14px;margin-bottom:0;box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);position:relative;}
 .dash-today-v7:active{transform:scale(.985);}
-/* 홈 매출 카드 헤더 v2 — 날짜 네비 (2026-06-03) */
+/* 홈 매출 카드 헤더 — 안 A (날짜 메인 + 상대표현 배지 + 상태 보조줄, 2026-06-04) */
 .dash-today-v7 .t7-head-v2{display:flex;align-items:center;margin-bottom:10px;gap:0;}
-.dash-today-v7 .t7-nav{border:none;background:transparent;width:32px;height:36px;font-size:21px;color:#C0C8D2;cursor:pointer;border-radius:8px;padding:0;flex-shrink:0;transition:color .15s,opacity .15s;line-height:1;}
+.dash-today-v7 .t7-nav{border:none;background:transparent;width:30px;height:36px;font-size:20px;color:#C0C8D2;cursor:pointer;border-radius:8px;padding:0;flex-shrink:0;transition:color .15s,opacity .15s;line-height:1;}
 .dash-today-v7 .t7-nav:disabled{opacity:.2;cursor:default;}
 .dash-today-v7 .t7-nav.t7-nav-next{color:#333D4B;font-weight:700;}
-.dash-today-v7 .t7-center{flex:1;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;}
-.dash-today-v7 .t7-center .live-dot{width:8px;height:8px;border-radius:50%;background:#0CAB6C;position:relative;flex-shrink:0;}
-.dash-today-v7 .t7-center .live-dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;background:#0CAB6C;opacity:.25;animation:dashPulse 2s infinite;}
-@keyframes dashPulse{0%{transform:scale(1);opacity:.3;}70%{transform:scale(2);opacity:0;}100%{opacity:0;}}
-.dash-today-v7 .t7-center #dashTopSalesLabel{font-size:13.5px;font-weight:700;color:#333D4B;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dash-today-v7 .t7-mode{font-size:10px;padding:2px 7px;border-radius:8px;background:#F2F4F6;color:#6B7684;font-weight:800;letter-spacing:-0.2px;flex-shrink:0;}
-.dash-today-v7 .t7-mode.live{background:#EDF4FF;color:#0064FF;}
-.dash-today-v7 .t7-cal-btn{border:none;background:#EAF3FF;color:#3182F6;height:26px;border-radius:13px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;padding:0 10px;margin-left:2px;line-height:1;white-space:nowrap;letter-spacing:-0.3px;}
+.dash-today-v7 .t7-center{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;align-items:flex-start;overflow:hidden;}
+.dash-today-v7 .t7-day-row{display:flex;align-items:center;gap:6px;min-width:0;}
+.dash-today-v7 .t7-day-main{font-size:16px;font-weight:800;color:#191F28;letter-spacing:-0.5px;white-space:nowrap;}
+.dash-today-v7 .t7-day-badge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:7px;background:#F2F4F6;color:#8B95A1;flex-shrink:0;letter-spacing:-0.2px;}
+.dash-today-v7 .t7-day-badge.today{background:#E7F4EE;color:#0CAB6C;}
+.dash-today-v7 .t7-day-sub{font-size:11.5px;color:#A0A8B3;font-weight:600;letter-spacing:-0.2px;}
+.dash-today-v7 .t7-day-sub.live{color:#0CAB6C;font-weight:700;}
+.dash-today-v7 .t7-cal-btn{border:none;background:#F2F4F6;width:34px;height:34px;border-radius:11px;font-size:15px;cursor:pointer;flex-shrink:0;margin-left:4px;line-height:1;padding:0;}
 /* 할 일 알림 배너 (카드 밖 위 — 2026-06-03) */
 .todo-banner{display:flex;align-items:center;gap:9px;background:#FFF8E8;border:1px solid #FFE7A8;border-radius:14px;padding:13px 15px;margin-bottom:12px;cursor:pointer;}
 .todo-banner .todo-ic{font-size:16px;flex-shrink:0;}
@@ -1318,6 +1318,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-detail-head .lb{font-size:13px;font-weight:600;opacity:.88;display:flex;align-items:center;gap:6px;letter-spacing:-0.3px;margin-bottom:8px;}
 .dash-today-detail-head .lb .live-dot{width:7px;height:7px;border-radius:50%;background:#fff;position:relative;}
 .dash-today-detail-head .lb .live-dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;background:#fff;opacity:.35;animation:dashPulse 2s infinite;}
+@keyframes dashPulse{0%{transform:scale(1);opacity:.3;}70%{transform:scale(2);opacity:0;}100%{opacity:0;}}
 .dash-today-detail-head .amt{font-size:38px;font-weight:800;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .dash-today-detail-head .amt .won{font-size:22px;font-weight:700;opacity:.85;margin-left:2px;}
 .dash-today-detail-head .amt.empty{font-size:24px;opacity:.7;font-weight:700;}
