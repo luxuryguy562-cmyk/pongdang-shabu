@@ -1246,7 +1246,10 @@
         </div>
         <button type="button" class="t7-nav t7-nav-next" id="dashTopNavNext" data-action="topCardDayMove|1" data-stop="1" disabled>›</button>
       </div>
-      <div id="dashTopSalesAmt" class="t7-amt">0<span class="won">원</span></div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;">
+        <div id="dashTopSalesAmt" class="t7-amt">0<span class="won">원</span></div>
+        <button type="button" class="t7-detail-link" data-action="dashGoStage|today-detail" data-stop="1">자세히 ›</button>
+      </div>
       <div id="dashTopSalesUpdated" class="t7-time" style="display:none;" title="강제 갱신">방금 갱신됨 <span class="refresh">↻</span></div>
       <div id="dashTopSalesProfitExpense" class="t7-rows" style="display:none;">
         <div class="t7-row" data-action="openTodayVendorSheet" data-stop="1" style="cursor:pointer;">
@@ -1264,13 +1267,6 @@
       <div id="dashTopVendorSection" class="t7-ve-section" style="display:none;">
         <div class="t7-ve-head">🧾 어디에 썼나<span class="t7-ve-note">고정비·인건비 제외 · 밀어서 더보기</span></div>
         <div id="dashTodayVendorList" class="t7-ve-list"></div>
-      </div>
-      <!-- 빈 상태 (오늘 첫 매출) -->
-      <div id="dashTopSalesEmptyCta" class="t7-empty" style="display:none;">
-        <p>오늘 첫 매출인가요?</p>
-        <div class="t7-act">
-          <button id="dashTopEmptyInputBtn" class="btn btn-pri">📝 매출 입력</button>
-        </div>
       </div>
     </div>
 

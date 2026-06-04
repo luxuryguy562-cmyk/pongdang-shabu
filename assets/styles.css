@@ -1232,6 +1232,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-amt{font-size:31px;font-weight:800;color:#191F28;letter-spacing:-1.3px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .dash-today-v7 .t7-amt .won{font-size:22px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
 .dash-today-v7 .t7-amt.empty{font-size:24px;color:#B0B8C1;font-weight:700;}
+.dash-today-v7 .t7-detail-link{border:none;background:transparent;padding:0;font-size:13px;font-weight:700;color:#3182F6;cursor:pointer;white-space:nowrap;align-self:flex-end;margin-bottom:4px;flex-shrink:0;}
 .dash-today-v7 .t7-time{font-size:12px;color:#8B95A1;margin-top:6px;font-weight:500;letter-spacing:-0.2px;display:flex;align-items:center;gap:6px;}
 .dash-today-v7 .t7-time .refresh{color:#0064FF;cursor:pointer;font-weight:600;}
 /* 지출·수익 세로 목록 — 3열 격자 (라벨|금액|화살표) */
