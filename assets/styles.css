@@ -1188,26 +1188,25 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 #dashboardCont .dash-stage{display:none;}
 #dashboardCont .dash-stage.active{display:block;}
 /* 인사 헤더 */
-.dash-hello{margin:2px 4px 11px;}
+.dash-hello{margin:2px 4px 13px;}
 .dash-hello h1{font-size:20px;font-weight:800;color:#191F28;margin:0 0 2px;letter-spacing:-0.7px;line-height:1.2;}
 .dash-hello p{font-size:12px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;}
-/* 지금 근무 인원 배지 (2026-06-04) — 동그라미 최대 3개 + +N명, 한 줄 고정 */
-.wn-badge{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:11px 14px;margin:0 0 9px;box-shadow:0 2px 8px rgba(20,40,80,.05);cursor:pointer;transition:transform .15s;}
-.wn-badge:active{transform:scale(.985);}
-.wn-live{width:7px;height:7px;border-radius:50%;background:#0CAB6C;box-shadow:0 0 0 3px rgba(12,171,108,.18);flex-shrink:0;}
-.wn-live-off{background:#D1D5DB;box-shadow:0 0 0 3px rgba(209,213,219,.25);}
-.wn-tt-off{color:#B0B8C1;font-weight:600;}
+/* 지금 근무 인원 칩 (2026-06-04) — 날짜 줄 바로 아래, 작고 가벼운 칩 형태 */
+.wn-chip{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:4px 10px 4px 7px;border-radius:20px;background:#EAF8F1;cursor:pointer;transition:opacity .15s;}
+.wn-chip:active{opacity:.7;}
+.wn-chip.off{background:#F2F4F6;}
+.wn-live{width:6px;height:6px;border-radius:50%;background:#0CAB6C;box-shadow:0 0 0 2px rgba(12,171,108,.2);flex-shrink:0;}
+.wn-live.off{background:#C9CDD2;box-shadow:none;}
 .wn-avstk{display:flex;flex-shrink:0;}
-.wn-avstk .wn-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;border:2px solid #fff;margin-left:-9px;flex-shrink:0;}
+.wn-avstk .wn-av{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:7.5px;color:#fff;border:1.5px solid #EAF8F1;margin-left:-5px;flex-shrink:0;}
 .wn-avstk .wn-av:first-child{margin-left:0;}
+.wn-chip.off .wn-av{border-color:#F2F4F6;}
 .wn-c0{background:linear-gradient(135deg,#34D399,#10B981);}
 .wn-c1{background:linear-gradient(135deg,#60A5FA,#3B82F6);}
 .wn-c2{background:linear-gradient(135deg,#FBBF24,#F59E0B);}
-.wn-more{background:#B0B8C1;font-size:11px !important;font-weight:700;}
-.wn-inf{flex:1;min-width:0;}
-.wn-tt{font-size:13px;font-weight:800;color:#191F28;line-height:1.2;}
-.wn-nm{font-size:10.5px;color:#8B95A1;font-weight:600;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.wn-arr{color:#B0B8C1;font-weight:800;font-size:15px;flex-shrink:0;}
+.wn-more{background:#C9CDD2;font-size:7px !important;font-weight:700;}
+.wn-tt{font-size:11px;font-weight:700;color:#0A7D4F;}
+.wn-tt.off{color:#8B95A1;font-weight:600;}
 /* 오늘 매출 풀카드 v7 */
 .dash-today-v7{background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);border-radius:20px;padding:16px 18px 14px;margin-bottom:0;box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);position:relative;}
 .dash-today-v7:active{transform:scale(.985);}
