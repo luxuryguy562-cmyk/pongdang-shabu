@@ -1267,6 +1267,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 홈 섹션 헤더 (오늘 / 이번 달 구분) */
 .dash-sec{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:#6B7684;margin:13px 2px 7px;}
 .dash-sec .ic{font-size:13px;}
+.dash-sec .dash-sec-more{margin-left:auto;font-size:12px;font-weight:700;color:#3182F6;cursor:pointer;}
 .dash-today-v7 .t7-act{margin-top:16px;display:flex;gap:8px;}
 .dash-today-v7 .t7-act .btn{flex:1;padding:13px;font-size:14px;font-weight:700;border:0;border-radius:12px;cursor:pointer;letter-spacing:-0.3px;transition:transform .15s;}
 .dash-today-v7 .t7-act .btn:active{transform:scale(.97);}
