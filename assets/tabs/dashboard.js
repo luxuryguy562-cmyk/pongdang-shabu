@@ -53,7 +53,7 @@ const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#
 
 // ─── 새 기능: 지금 근무 인원 카드 (2026-06-04) ───
 //  · 위치: 인사말 바로 아래 compact 카드, 항상 표시
-//  · 0명 = 회색 카드 "아직 출근 기록이 없어요", N명 = 초록 + 동그라미 최대 3개 + +N명
+//  · 오늘 기록 없음 = "아직 출근 기록이 없어요" / 근무 중 N명 = 초록 + 동그라미 / 전원 퇴근 = "오늘 N명 근무 완료"
 async function renderWorkingNow(){
   const card=document.getElementById('dashWorkingNow');
   if(!card) return;
@@ -69,8 +69,22 @@ async function renderWorkingNow(){
     .eq('store_id',currentStore.id).eq('work_date',today)
     .not('app_in','is',null);
   if(error){ console.warn('[renderWorkingNow]', error.message); noData(); return; }
-  const working=(data||[]).filter(r=>!r.app_out);
-  if(!working.length){ noData(); return; }
+  const allToday=(data||[]);
+  const working=allToday.filter(r=>!r.app_out);
+  if(!working.length){
+    if(allToday.length){
+      // 오늘 출근 기록은 있지만 전원 퇴근 완료
+      const names=allToday.map(r=>r.employees?.name||'직원');
+      const n=allToday.length;
+      const nameTxt=n<=3?names.join(' · '):`${names.slice(0,3).join(' · ')} 외 ${n-3}명`;
+      card.innerHTML=`<span class="wn-live off"></span>`
+        +`<div><div class="wn-tt off">오늘 ${n}명 근무 완료</div><div class="wn-nm">${esc(nameTxt)}</div></div>`
+        +`<span class="wn-arr">›</span>`;
+    } else {
+      noData();
+    }
+    return;
+  }
   const names=working.map(r=>r.employees?.name||'직원');
   const n=working.length;
   const avCls=['wn-c0','wn-c1','wn-c2'];
