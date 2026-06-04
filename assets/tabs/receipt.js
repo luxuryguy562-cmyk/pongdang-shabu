@@ -743,7 +743,7 @@ function handleImg(input) {
     const img = new Image();
     img.onload = () => {
       const cvs = document.createElement('canvas');
-      let w=img.width,h=img.height; if(w>1280){h*=1280/w;w=1280;}
+      let w=img.width,h=img.height; if(w>2000){h*=2000/w;w=2000;} // 글자 많은 명세서 선명도 ↑ (1280→2000, 가재/가래 오독 방지)
       cvs.width=w;cvs.height=h;cvs.getContext('2d').drawImage(img,0,0,w,h);
       const dataUrl = cvs.toDataURL('image/jpeg',0.85);
       const b64Part = dataUrl.split(',')[1];
