@@ -1238,7 +1238,7 @@
     <div class="dash-today-v7" id="dashTopSalesCard" style="display:none;">
       <div class="t7-head-v2">
         <button type="button" class="t7-nav" id="dashTopNavPrev" data-action="topCardDayMove|-1" data-stop="1" disabled>‹</button>
-        <div class="t7-center" data-action="dashGoStage|today-detail" style="cursor:pointer;">
+        <div class="t7-center">
           <span class="live-dot"></span>
           <span id="dashTopSalesLabel">오늘 매출</span>
           <span id="dashTopSalesMode" class="t7-mode">(준비중)</span>
@@ -1271,7 +1271,7 @@
     </div>
 
     <!-- 이번 달 (오늘과 구분 — 2026-06-03 A안) -->
-    <div class="dash-sec"><span class="ic">📆</span>이번 달</div>
+    <div class="dash-sec"><span class="ic">📆</span>이번 달<span class="dash-sec-more" data-action="dashGoStage|month-detail">자세히 ›</span></div>
     <!-- 2026-06-03 홈 월네비 제거: 홈 월요약 = 이번 달 고정. 다른 달은 카드 탭 → 세부화면 월네비로 -->
     <div id="dashSettleCont">
       <!-- 월 요약 카드 (이번 달, 탭 → 세부 화면). JS v17RenderMonthCard가 채움 -->
