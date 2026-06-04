@@ -150,6 +150,65 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
   throw lastErr || new Error('AI 호출 실패');
 }
 
+// ─── 영수증/거래명세서 분석 프롬프트 (영수증 탭 + 측정실 공통 — 2026-06-04 통일) ───
+//   isVendorMode=true(거래처): vendor·category 출력 X / false(직구): vendor·category 출력
+//   ⚠️ 영수증 탭(receipt.js)·측정실(accuracy_lab.js) 둘 다 이 함수만 호출 → 검증=실제 동일 보장
+function buildReceiptPrompt({isVendorMode=true, vendorName='', catList='', pageCount=1}={}){
+  const modeHint = isVendorMode
+    ? `[모드:거래처] vendor="${vendorName}" 이미 선택. v·c·d 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
+[BOX/EA] q=(BOX×단위)+EA. ⚠️ BOX=0이면 단위 무시, EA가 q.
+  · 단위20·BOX1·EA10→q=30
+  · 단위8·BOX1·EA0→q=8
+  · 단위40·BOX0·EA5→q=5  ← BOX 0
+  · 단위12·BOX0·EA5→q=5  ← BOX 0`
+    : `[모드:직구] 마트·배민. d 출력 X. vendor 최상위 1번. 영수증 1장 = 같은 날짜·매장.
+품목별 c를 [${catList}]에서 선택.`;
+  const multiPageHint = pageCount>1
+    ? `\n[멀티페이지] 사진 ${pageCount}장 = 같은 영수증의 다른 페이지. 모든 페이지 행을 items에 통합. date·vendor·total_sum은 1번만.`
+    : '';
+  return `한국 영수증을 JSON으로만 응답. 설명·주석 X.
+${modeHint}${multiPageHint}
+
+[응답]
+{${isVendorMode ? '' : `
+  "vendor": "상호명",`}
+  "date": "영수증 발행일 YYYY-MM-DD (영수증에 연도가 명확히 안 보이면 ${new Date().getFullYear()}년으로)",
+  "items": [ ${isVendorMode ? '{i,u,q,p}' : '{i,u,q,p,c}'} 행 배열 ],
+  "total_supply": 세전 공급가액 소계(정수). 행마다 세액 칸이 별도인 양식만, 아니면 null,
+  "total_tax": 세액 소계(정수). 없으면 null,
+  "total_sum": 이번 거래 결제합(세후,정수,없으면 null) — 금일합계>합계액>총합계액>결제금액. ⚠️전미수·전잔액·당일입금·현잔액·누계·채권 = 무시(이번 거래분 아님),
+  "page_info": {"current":현재페이지,"total":총페이지수} — 영수증에 "Page (N/M)" 인쇄 시. 없으면 {"current":1,"total":1}
+}
+
+[필드]
+- i:품목명
+- u:단가 (없으면 null)
+- q:수량 (없으면 1) ${isVendorMode ? '— BOX/EA 정확히 적용. BOX 0 = EA만. 중량거래(kg·g)면 q=중량값(소수점 허용).' : ''}
+- p:행 금액 인쇄값 그대로 정수. 행마다 [공급가·세액·합계] 칸 따로면 [공급가](세전) 칸, 아니면 [합계/금액] 칸. u×q 계산 X — 1~2원 차이도 인쇄 우선 (회계 증빙)${isVendorMode ? '' : `
+- c:카테고리 [${catList}]`}
+
+[규칙]
+- [수량 검산] q를 정한 뒤 반드시 u(단가)×q(수량)≈p(공급가) 확인. 안 맞으면 단위 바꿔 q 재선택. 박스+EA는 q=(박스×단위)+EA, 중량거래(kg·g)는 q=중량값(소수점). p는 인쇄값 그대로 — 검산은 q 고르기 전용.
+- 합계행·소계·부가세행·할인전·외상행·용기보증금 = items에서 제외 (공급가액/세액 소계는 total_supply/total_tax로만)
+- [세액 별도 양식] 행에 공급가·세액·합계 칸 따로면: p=공급가(세전) 칸, total_supply=공급가액 소계, total_tax=세액 소계, total_sum=총합계액(세후). 세액 칸 없으면 total_supply·total_tax=null + p=합계 칸
+- [함정] total_sum·total_supply에 전미수·전잔액·당일입금·현잔액·누계·채권 절대 X. "이번 거래분(금일)"만
+- 숫자 쉼표·원 제거, 음수·빈배열 X
+- 흐릿해도 근접 추정
+- 면세(*)/과세 표시는 무시 — p는 인쇄값 그대로
+
+[예시 — 거래명세서 (BOX/EA 박힘)]
+{"date":"2026-04-09","items":[{"i":"위즈복대-날치알 500g","u":9400,"q":30,"p":282000},{"i":"넙적분모자 250g","u":1100,"q":5,"p":5500},{"i":"두부피쉬볼 500g","u":5800,"q":5,"p":29000}],"total_sum":1416049,"page_info":{"current":1,"total":2}}
+(넙적분모자 = 단위40·BOX0·EA5 → q=5 / 두부피쉬볼 = 단위12·BOX0·EA5 → q=5. BOX 0이면 EA만)
+
+[예시 — 세액 별도 거래명세서 (공급가·세액·합계 칸이 따로)]
+{"items":[{"i":"가위바위보뉴진면","u":3800,"q":6,"p":22800},{"i":"투명뉴진면","u":3750,"q":6,"p":22500}],"total_supply":212840,"total_tax":20000,"total_sum":232840}
+(행 p=공급가 칸(세전) 그대로. 공급가 소계 212840 + 세액 20000 = 총합계액 232840)
+
+[예시 — 중량거래 거래명세서 (박스+중량 동시)]
+{"items":[{"i":"냉동돈육 돈목살","u":9400,"q":90.54,"p":851076},{"i":"냉동우육 설도","u":14800,"q":97.80,"p":1447440}]}
+(돈목살 = 11Box·90.54kg → 박스 q=11이면 9400×11=10만 ≠ 851076, 중량 q=90.54면 9400×90.54≈851076 → q=90.54. 박스 무시, 중량을 q로)`;
+}
+
 // ══════════════════════════════════════════
 // 전역 상태
 // ══════════════════════════════════════════
