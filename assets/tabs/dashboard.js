@@ -234,7 +234,9 @@ function renderTopCardForDay(dayStr){
     else { relEl.style.display='none'; }
   }
   // 상태 보조줄: 오늘 실시간/마감 전, 과거 마감 (항상 표시 — 줄 높이 안정)
-  const subLabel = (ctx.isUpsMode && isTodayShown) ? '실시간' : (isTodayShown ? '마감 전' : '마감');
+  const subLabel = (ctx.isUpsMode && isTodayShown) ? '실시간'
+    : (isTodayShown && !ctx.isTodaySettled) ? '마감 전'
+    : '마감';
   topModeEl.innerText = `● ${subLabel}`;
   topModeEl.className = 't7-day-sub' + ((ctx.isUpsMode && isTodayShown) ? ' live' : '');
 
@@ -1259,12 +1261,15 @@ async function loadDashboard(force){
       const sortedDays=Object.keys(dailySalesMap).filter(d=>parseInt(d)<=passedDays && dailySalesMap[d]>0).sort();
       const lastSaleDay=sortedDays[sortedDays.length-1]||null;
       const isUpsMode=(dashSaleSource==='ups');
+      // 오늘 마감 완료 여부 — settlements 테이블에 오늘 날짜 행이 있으면 마감 완료
+      const _todayDD=String(passedDays).padStart(2,'0');
+      const isTodaySettled=(setRes2?.data||[]).some(s=>s.settle_date?.slice(8)===_todayDD);
 
       _topCardCtx={
         ym, mo,
         dailySalesMap, dailyExpTotal, dailyVendorExp,
         prevDailySalesMap, prevDailyExpTotal,
-        isUpsMode, momTxt,
+        isUpsMode, isTodaySettled, momTxt,
         // 어디에 썼나 = 영수증·거래처로 등록하는 변동 지출만 (data_source 화이트리스트)
         // 고정비·공과금(fixed_costs)·인건비(attendance)·로열티·세금 등(manual)은 자동 제외
         veIncludeCats: new Set(
