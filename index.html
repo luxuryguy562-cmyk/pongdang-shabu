@@ -1226,10 +1226,9 @@
     <div class="dash-hello">
       <h1>안녕하세요, 사장님</h1>
       <p id="dashHelloDate">-</p>
+      <!-- 지금 근무 인원 칩 — 날짜 바로 아래, 항상 표시 (근무 있으면 초록, 없으면 회색) -->
+      <div id="dashWorkingNow" class="wn-chip" data-action="nav|attendance" data-stop="1"></div>
     </div>
-
-    <!-- 지금 근무 인원 배지 — 오늘 출근 찍고 퇴근 안 한 직원, 탭 → 근태관리 -->
-    <div id="dashWorkingNow" class="wn-badge" data-action="nav|attendance" data-stop="1" style="display:none;"></div>
 
     <!-- 할 일 알림 배너 (카드 밖 위) — 마감 안 한 날 있으면 표시, 탭 → 마감정산 -->
     <div id="dashTodoAlert" class="todo-banner" data-action="nav|settle" data-stop="1" style="display:none;"></div>

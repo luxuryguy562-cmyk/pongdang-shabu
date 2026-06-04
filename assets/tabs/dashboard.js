@@ -51,43 +51,35 @@ let _pendingTopCardDay = null; // 월 경계 넘을 때 로드 후 표시할 날
 // ─── 거래처별 오늘 지출 캐싱 (2026-06-03 바텀시트로 전환) ───
 const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#94A3B8'];
 
-// ─── 새 기능: 지금 근무 인원 배지 (2026-06-04) ───
-//  · 오늘 출근(app_in) 찍고 퇴근(app_out) 안 한 직원 = 지금 근무 중
-//  · 동그라미 최대 3개 + 나머지는 +N명 (인원 많아도 한 줄 고정)
-//  · 0명(출근 기록 없음) = 회색으로 "아직 출근 기록이 없어요" 표시 (항상 공간 유지). 탭 → 근태관리
+// ─── 새 기능: 지금 근무 인원 칩 (2026-06-04) ───
+//  · 위치: 인사말 날짜 바로 아래 (작은 칩 형태, 재무 흐름 안 건드림)
+//  · 0명 = 회색 칩 "아직 출근 없음", N명 = 초록 칩 + 동그라미 최대 3개 + +N명
 async function renderWorkingNow(){
-  const badge=document.getElementById('dashWorkingNow');
-  if(!badge) return;
-  if(!currentStore?.id){
-    badge.innerHTML=`<span class="wn-live wn-live-off"></span><div class="wn-inf"><div class="wn-tt wn-tt-off">아직 출근 기록이 없어요</div></div><span class="wn-arr">›</span>`;
-    badge.style.display='';
-    return;
-  }
+  const chip=document.getElementById('dashWorkingNow');
+  if(!chip) return;
+  const noData=()=>{
+    chip.className='wn-chip off';
+    chip.innerHTML=`<span class="wn-live off"></span><span class="wn-tt off">아직 출근 없음</span>`;
+  };
+  if(!currentStore?.id){ noData(); return; }
   const today=ymdLocal(new Date());
   const {data,error}=await sb.from('attendance_logs')
     .select('employee_id,app_in,app_out,employees(name)')
     .eq('store_id',currentStore.id).eq('work_date',today)
-    .not('app_in','is',null);   // 출근 찍은 기록만
-  if(error){ console.warn('[renderWorkingNow]', error.message); badge.style.display='none'; return; }
-  // 출근은 찍었고 퇴근(app_out)은 아직 안 찍음 = 지금 근무 중
+    .not('app_in','is',null);
+  if(error){ console.warn('[renderWorkingNow]', error.message); noData(); return; }
   const working=(data||[]).filter(r=>!r.app_out);
-  if(!working.length){
-    badge.innerHTML=`<span class="wn-live wn-live-off"></span><div class="wn-inf"><div class="wn-tt wn-tt-off">아직 출근 기록이 없어요</div></div><span class="wn-arr">›</span>`;
-    badge.style.display='';
-    return;
-  }
+  if(!working.length){ noData(); return; }
   const names=working.map(r=>r.employees?.name||'직원');
   const n=working.length;
   const avCls=['wn-c0','wn-c1','wn-c2'];
   const shown=names.slice(0,3);
   const avs=shown.map((nm,i)=>`<div class="wn-av ${avCls[i%3]}">${esc(nm.slice(0,1))}</div>`).join('');
   const more=n>3?`<div class="wn-av wn-more">+${n-3}</div>`:'';
-  const nameTxt = n<=3 ? names.join(' · ') : `${shown.join(' · ')} 외 ${n-3}명`;
-  badge.innerHTML=`<span class="wn-live"></span>`
+  chip.className='wn-chip';
+  chip.innerHTML=`<span class="wn-live"></span>`
     +`<div class="wn-avstk">${avs}${more}</div>`
-    +`<div class="wn-inf"><div class="wn-tt">지금 ${n}명 근무 중</div><div class="wn-nm">${esc(nameTxt)}</div></div>`
-    +`<span class="wn-arr">›</span>`;
-  badge.style.display='';
+    +`<span class="wn-tt">${n}명 근무 중</span>`;
 }
 
 function renderTodayVendorExp(veMap, hasSale, dayExp){
