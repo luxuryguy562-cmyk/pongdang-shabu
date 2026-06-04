@@ -172,6 +172,7 @@ async function accAnalyze(){
     _accCur = JSON.parse(JSON.stringify(_accOrig));
     _accLastCost = cost;
     _accSaveVendor(_accVendor);
+    await _accAutoSave(); // 분석 직후 DB 자동 저장 (채점 전 — CTO가 스샷 없이 AI 원본 확인)
     _accRenderResult();
     _accAutoSave(); // 백그라운드 자동 저장 (await X — 화면 로딩 안 막음)
   }catch(e){

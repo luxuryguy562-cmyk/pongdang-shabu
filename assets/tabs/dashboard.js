@@ -53,7 +53,7 @@ const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#
 
 // ─── 새 기능: 지금 근무 인원 카드 (2026-06-04) ───
 //  · 위치: 인사말 바로 아래 compact 카드, 항상 표시
-//  · 0명 = 회색 카드 "아직 출근 기록이 없어요", N명 = 초록 + 동그라미 최대 3개 + +N명
+//  · 오늘 기록 없음 = "아직 출근 기록이 없어요" / 근무 중 N명 = 초록 + 동그라미 / 전원 퇴근 = "오늘 N명 근무 완료"
 async function renderWorkingNow(){
   const card=document.getElementById('dashWorkingNow');
   if(!card) return;
@@ -69,8 +69,22 @@ async function renderWorkingNow(){
     .eq('store_id',currentStore.id).eq('work_date',today)
     .not('app_in','is',null);
   if(error){ console.warn('[renderWorkingNow]', error.message); noData(); return; }
-  const working=(data||[]).filter(r=>!r.app_out);
-  if(!working.length){ noData(); return; }
+  const allToday=(data||[]);
+  const working=allToday.filter(r=>!r.app_out);
+  if(!working.length){
+    if(allToday.length){
+      // 오늘 출근 기록은 있지만 전원 퇴근 완료
+      const names=allToday.map(r=>r.employees?.name||'직원');
+      const n=allToday.length;
+      const nameTxt=n<=3?names.join(' · '):`${names.slice(0,3).join(' · ')} 외 ${n-3}명`;
+      card.innerHTML=`<span class="wn-live off"></span>`
+        +`<div><div class="wn-tt off">오늘 ${n}명 근무 완료</div><div class="wn-nm">${esc(nameTxt)}</div></div>`
+        +`<span class="wn-arr">›</span>`;
+    } else {
+      noData();
+    }
+    return;
+  }
   const names=working.map(r=>r.employees?.name||'직원');
   const n=working.length;
   const avCls=['wn-c0','wn-c1','wn-c2'];
@@ -219,8 +233,10 @@ function renderTopCardForDay(dayStr){
     else if(isYesterday){ relEl.innerText='어제'; relEl.className='t7-day-badge'; relEl.style.display=''; }
     else { relEl.style.display='none'; }
   }
-  // 상태 보조줄: 오늘 실시간/마감 전, 과거 마감 (항상 표시 — 줄 높이 안정)
-  const subLabel = (ctx.isUpsMode && isTodayShown) ? '실시간' : (isTodayShown ? '마감 전' : '마감');
+  // 상태 보조줄: 오늘 실시간/영업 중/마감, 과거 마감 (항상 표시 — 줄 높이 안정)
+  const subLabel = (ctx.isUpsMode && isTodayShown) ? '실시간'
+    : (isTodayShown && !ctx.isTodaySettled) ? '영업 중'
+    : '마감';
   topModeEl.innerText = `● ${subLabel}`;
   topModeEl.className = 't7-day-sub' + ((ctx.isUpsMode && isTodayShown) ? ' live' : '');
 
@@ -317,7 +333,7 @@ function renderTodayDetailForDay(dayStr){
   let stateLabel;
   if(hasSale) stateLabel = (ctx.isUpsMode && isToday) ? '실시간' : '마감';
   else if(isFuture) stateLabel = '미래';
-  else if(isToday) stateLabel = ctx.isUpsMode ? '실시간' : '아직 마감 전';
+  else if(isToday) stateLabel = ctx.isUpsMode ? '실시간' : '영업 중';
   else stateLabel = '마감 안 됨';
 
   if(_ddDate) _ddDate.innerHTML = `${ctx.mo}월 ${dayInt}일 (${dow}) · ${stateLabel}`;
@@ -1245,12 +1261,15 @@ async function loadDashboard(force){
       const sortedDays=Object.keys(dailySalesMap).filter(d=>parseInt(d)<=passedDays && dailySalesMap[d]>0).sort();
       const lastSaleDay=sortedDays[sortedDays.length-1]||null;
       const isUpsMode=(dashSaleSource==='ups');
+      // 오늘 마감 완료 여부 — settlements 테이블에 오늘 날짜 행이 있으면 마감 완료
+      const _todayDD=String(passedDays).padStart(2,'0');
+      const isTodaySettled=(setRes2?.data||[]).some(s=>s.settle_date?.slice(8)===_todayDD);
 
       _topCardCtx={
         ym, mo,
         dailySalesMap, dailyExpTotal, dailyVendorExp,
         prevDailySalesMap, prevDailyExpTotal,
-        isUpsMode, momTxt,
+        isUpsMode, isTodaySettled, momTxt,
         // 어디에 썼나 = 영수증·거래처로 등록하는 변동 지출만 (data_source 화이트리스트)
         // 고정비·공과금(fixed_costs)·인건비(attendance)·로열티·세금 등(manual)은 자동 제외
         veIncludeCats: new Set(
