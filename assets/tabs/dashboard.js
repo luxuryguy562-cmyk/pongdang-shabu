@@ -51,15 +51,16 @@ let _pendingTopCardDay = null; // 월 경계 넘을 때 로드 후 표시할 날
 // ─── 거래처별 오늘 지출 캐싱 (2026-06-03 바텀시트로 전환) ───
 const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#94A3B8'];
 
-// ─── 새 기능: 지금 근무 인원 칩 (2026-06-04) ───
-//  · 위치: 인사말 날짜 바로 아래 (작은 칩 형태, 재무 흐름 안 건드림)
-//  · 0명 = 회색 칩 "아직 출근 없음", N명 = 초록 칩 + 동그라미 최대 3개 + +N명
+// ─── 새 기능: 지금 근무 인원 카드 (2026-06-04) ───
+//  · 위치: 인사말 바로 아래 compact 카드, 항상 표시
+//  · 0명 = 회색 카드 "아직 출근 기록이 없어요", N명 = 초록 + 동그라미 최대 3개 + +N명
 async function renderWorkingNow(){
-  const chip=document.getElementById('dashWorkingNow');
-  if(!chip) return;
+  const card=document.getElementById('dashWorkingNow');
+  if(!card) return;
   const noData=()=>{
-    chip.className='wn-chip off';
-    chip.innerHTML=`<span class="wn-live off"></span><span class="wn-tt off">아직 출근 없음</span>`;
+    card.innerHTML=`<span class="wn-live off"></span>`
+      +`<span class="wn-tt off">아직 출근 기록이 없어요</span>`
+      +`<span class="wn-arr">›</span>`;
   };
   if(!currentStore?.id){ noData(); return; }
   const today=ymdLocal(new Date());
@@ -76,10 +77,11 @@ async function renderWorkingNow(){
   const shown=names.slice(0,3);
   const avs=shown.map((nm,i)=>`<div class="wn-av ${avCls[i%3]}">${esc(nm.slice(0,1))}</div>`).join('');
   const more=n>3?`<div class="wn-av wn-more">+${n-3}</div>`:'';
-  chip.className='wn-chip';
-  chip.innerHTML=`<span class="wn-live"></span>`
+  const nameTxt=n<=3?names.join(' · '):`${shown.join(' · ')} 외 ${n-3}명`;
+  card.innerHTML=`<span class="wn-live"></span>`
     +`<div class="wn-avstk">${avs}${more}</div>`
-    +`<span class="wn-tt">${n}명 근무 중</span>`;
+    +`<div><div class="wn-tt">지금 ${n}명 근무 중</div><div class="wn-nm">${esc(nameTxt)}</div></div>`
+    +`<span class="wn-arr">›</span>`;
 }
 
 function renderTodayVendorExp(veMap, hasSale, dayExp){
