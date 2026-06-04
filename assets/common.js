@@ -177,6 +177,7 @@ ${modeHint}${multiPageHint}
   "total_supply": 세전 공급가액 소계(정수). 행마다 세액 칸이 별도인 양식만, 아니면 null,
   "total_tax": 세액 소계(정수). 없으면 null,
   "total_sum": 이번 거래 결제합(세후,정수,없으면 null) — 금일합계>합계액>총합계액>결제금액. ⚠️전미수·전잔액·당일입금·현잔액·누계·채권 = 무시(이번 거래분 아님),
+  "multi_receipt": 사진 여러 장이 서로 다른 거래처·합계의 독립 영수증이면 true (같은 영수증 연속 페이지 Page N/M면 false). 사진 1장이면 false,
   "page_info": {"current":현재페이지,"total":총페이지수} — 영수증에 "Page (N/M)" 인쇄 시. 없으면 {"current":1,"total":1}
 }
 

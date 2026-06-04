@@ -565,6 +565,11 @@
         <div id="rcpPagesList" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
       </div>
       <div id="uploadGroup" style="display:none;margin-top:0;">
+        <!-- 사전 안내: 한 거래처 영수증만 (2026-06-04 여러 거래처 섞임 방지) -->
+        <div style="font-size:12px;color:#92400E;background:#FEF3C7;border-radius:9px;padding:9px 12px;margin-bottom:10px;line-height:1.55;">
+          📄 <b>한 거래처 영수증만</b> 올려주세요. 거래처가 다르면 <b>따로따로</b> 올려야 정확해요.<br>
+          <span style="font-size:11px;opacity:.85;">같은 영수증이 여러 장(2~3페이지)인 건 함께 올려도 OK 👍</span>
+        </div>
         <div class="action-group" style="margin-top:0;">
           <label class="btn btn-primary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
             <span id="rcpUploadLabelCam">📸 촬영</span><input type="file" accept="image/*" capture="environment" style="display:none" data-change="handleImg|this">
