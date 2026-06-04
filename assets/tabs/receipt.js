@@ -879,44 +879,28 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplyS
   }
   // 2️⃣ 합계 바 (목업 A안 — 깔끔한 한 줄. 일치=파랑 / 차이=빨강 / 페이지누락=주황)
   if(!sumBox) return;
-  // 세액 별도 거래명세서(공급가·세액·합계 칸 따로): 행 p=공급가(세전) → 세전끼리(공급가액 소계) 비교.
-  //  그 외(POS·일반 영수증, 세액 포함가): 세후 총액끼리 비교 (기존 동작 유지)
-  //  2026-06-04 사장님 호소 "공급가 계산 후 세액 붙이는 양식" 거짓 차이 경고 해결
-  let hasSupply = supplySum!=null && supplySum>0;
-  let hasTax = taxSum!=null && taxSum>0;
-  let effSupply = supplySum, effTax = taxSum;
-  // 🛟 안전망: AI가 공급가/세액을 안 채워줘도(모델이 필드 누락), 총액-행합 차이가
-  //   부가세(공급가의 약 10%)로 보이면 세액 별도 양식으로 자동 감지 → 거짓 경고 방지
-  //   (2026-06-04 실제 제미나이가 total_supply 누락 대비)
-  if(!hasSupply && receiptTotalSum>0 && rowSum>0 && receiptTotalSum>rowSum){
-    const gap = receiptTotalSum - rowSum;
-    const gapPct = gap/rowSum*100;
-    if(gapPct>=8.5 && gapPct<=11){ // 부가세 10% ± 면세 섞임 여유
-      hasSupply=true; hasTax=true; effSupply=rowSum; effTax=gap;
-    }
-  }
-  const compareBase = hasSupply ? effSupply : receiptTotalSum;
-  const hasCompare = compareBase!=null && compareBase>0;
+  // 행 금액(p)이 세후로 통일됨(2026-06-04) → 영수증 총액과 세후끼리 단순 비교 + 부가세 따로 표시
+  const rowTax = (list||[]).reduce((a,r)=>a+(parseInt(r.taxAmount)||0),0); // 세액 합
+  const rowSupply = rowSum - rowTax;                                       // 공급가(세전) 합
   let cls = 'rcp-sumbar', sub = '';
-  if(hasCompare){
-    const diff = Math.abs(compareBase - rowSum);
-    const diffPct = compareBase>0 ? (diff/compareBase*100) : 0;
+  if(hasReceiptSum){
+    const diff = Math.abs(receiptTotalSum - rowSum);
+    const diffPct = receiptTotalSum>0 ? (diff/receiptTotalSum*100) : 0;
     const ok = diff <= 10 || diffPct < 0.5;
     if(pagesMissing){
       cls += ' warn';
       sub = `⏳ ${pageTotal}페이지 중 ${photos}장 — 남은 페이지 추가 시 일치 예정`;
     } else if(ok){
-      if(hasSupply && hasTax){
-        // 세액 별도 양식: 공급가 일치 + 부가세 별도 안내 (사장님이 232,840이 어디 갔는지 이해되게)
-        sub = `✅ 공급가 일치 · 부가세 ${fmt(effTax)}원 별도${receiptTotalSum?` (영수증 합계 ${fmt(receiptTotalSum)}원)`:''}`;
-      } else {
-        sub = `✅ 영수증 원본 ${fmt(receiptTotalSum||compareBase)}원과 일치${diff>0?` (${fmt(diff)}원 반올림)`:''}`;
-      }
+      sub = rowTax>0
+        ? `✅ 영수증 ${fmt(receiptTotalSum)}원 일치 · 공급가 ${fmt(rowSupply)} + 부가세 ${fmt(rowTax)}`
+        : `✅ 영수증 원본 ${fmt(receiptTotalSum)}원과 일치${diff>0?` (${fmt(diff)}원 반올림)`:''}`;
     } else {
       cls += ' danger';
-      const baseLabel = hasSupply ? '공급가액' : '영수증 원본';
-      sub = `⚠️ ${baseLabel} ${fmt(compareBase)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 행별 확인`;
+      sub = `⚠️ 영수증 원본 ${fmt(receiptTotalSum)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 행별 확인`;
     }
+  } else if(rowTax>0){
+    // 영수증 총액을 못 읽었어도 세액 정보는 보여줌
+    sub = `공급가 ${fmt(rowSupply)} + 부가세 ${fmt(rowTax)} = ${fmt(rowSum)}원`;
   }
   sumBox.className = cls;
   sumBox.innerHTML = `<div class="rsb-l">📋 합계 <span class="rsb-cnt">(${cnt}개 품목)</span></div>`
@@ -1003,8 +987,11 @@ async function runAI() {
       unitPrice: x.u ?? x.unitPrice ?? null,
       qty: x.q ?? x.qty ?? null,
       totalPrice: x.p ?? x.totalPrice ?? 0,
+      taxAmount: x.t ?? x.taxAmount ?? 0,
       category: x.c || x.category || defaultCat
     }));
+    // 공급가(세전) = 합계(세후) − 세액. 세후 통일(2026-06-04) 후 검산·저장용
+    list.forEach(it=>{ it.supplyPrice = (parseInt(it.totalPrice)||0) - (parseInt(it.taxAmount)||0); });
     // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
     list=await applyRulesToReceipt(list);
     // 임계값 = max(100원, 0.5%) — 2026-05-19 (4) 사장님 호소: 회계 기준 5% 너무 느슨
@@ -1015,14 +1002,15 @@ async function runAI() {
     list.forEach((it,idx)=>{
       const u = parseFloat(it.unitPrice)||0;
       const q = parseFloat(it.qty)||0;
-      const p = parseFloat(it.totalPrice)||0;
-      if(u>0 && q>0 && p>0){
+      // 검산은 공급가(세전=합계−세액) 기준 — u×q는 공급가와 맞음 (세후 합계와는 부가세만큼 차이날 수 있음)
+      const sp = parseFloat(it.supplyPrice)||0;
+      if(u>0 && q>0 && sp>0){
         const calc = u*q;
-        const diff = Math.abs(calc-p);
-        const threshold = Math.max(100, Math.max(calc,p) * 0.005);
+        const diff = Math.abs(calc-sp);
+        const threshold = Math.max(100, Math.max(calc,sp) * 0.005);
         if(diff > threshold){
           const calcInt = Math.round(calc);
-          suspectRows.push({idx:idx+1, item:it.item, u, q, p, calc:calcInt, diff});
+          suspectRows.push({idx:idx+1, item:it.item, u, q, p:sp, calc:calcInt, diff});
           it._suspect = {calc:calcInt, diff};
         }
       }
@@ -1144,6 +1132,7 @@ function buildReceiptRow(i={}) {
     </div>
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
     <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
+    <input type="hidden" class="c-t" value="${parseInt(i.taxAmount)||0}">
   </div>`;
 }
 // 단가/수량 입력 시 자동 금액 계산 (사용자 편의 — 2026-05-19)
@@ -1241,6 +1230,7 @@ async function saveReceipt(){
       ? (rcpCatId || tr.dataset.catId || resolveReceiptCatId(cat) || null)
       : (tr.dataset.catId ? tr.dataset.catId : (resolveReceiptCatId(cat) || null));
     const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,'');
+    const taxRaw=(tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''); // 행 세액(부가세) — 합계는 세후
     // 거래처 모드면 vendor 텍스트도 거래처명으로 통일 (AI 추출 vendor가 누락이거나 다를 때 보호)
     const vendorText = isVendorMode
       ? (rcpVendorName || tr.querySelector('.c-v').value)
@@ -1259,6 +1249,8 @@ async function saveReceipt(){
       unit_price: unitRaw ? parseInt(unitRaw,10) : null,
       qty: qtyRaw,
       total_price:parseInt(amtRaw,10)||0,
+      tax_amount: parseInt(taxRaw,10)||0,
+      supply_price: (parseInt(amtRaw,10)||0) - (parseInt(taxRaw,10)||0), // 공급가(세전)
       category:cat||null,category_id:category_id||null,
       input_method: rcpInputMethod || null,
       receipt_group_id: groupId,
