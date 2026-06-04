@@ -920,8 +920,7 @@ async function applyRulesToReceipt(list){
       else matched=itemText.includes(kw)||vendorText.includes(kw);
       if(matched){
         item.category=r.sub_category?`${r.category}>${r.sub_category}`:r.category;
-        // 학습된 표시명이 있으면 자동 교체 (2026-05-19 사장님 호소 "위즈복대 → 날치알" 학습)
-        if(r.display_item) item.item = r.display_item;
+        // 품목명 자동 덮어쓰기(display_item) 폐기 (2026-06-04) — 짧은 키워드 오염 방지. AI가 읽은 그대로 + 교정.
         item._ruleMatched=true;
         break;
       }
@@ -933,6 +932,8 @@ async function applyRulesToReceipt(list){
 async function runAI() {
   if(!b64Pages.length) return toast('이미지를 먼저 업로드해주세요.','warn');
   const pageCount = b64Pages.length;
+  // 여러 장이면 AI 호출(비용 발생) 전에 확인 — 다른 거래처 섞임 방지 (2026-06-04, 비용 0으로 차단)
+  if(pageCount>1 && !confirm(`사진 ${pageCount}장이 선택됐어요.\n\n같은 영수증의 여러 페이지인가요?\n거래처가 다르면 '취소' 후 한 곳씩 올려주세요.`)) return;
   setLoad(true, pageCount>1 ? `AI 분석 중... (사진 ${pageCount}장 통합)` : 'AI 분석 중...');
   try {
     const catList = getCatListForPrompt();
@@ -968,6 +969,13 @@ async function runAI() {
       } else {
         throw geminiErr;
       }
+    }
+    // 여러 장인데 서로 다른 거래처 영수증이 섞임 감지 → 중단 + 안내 (2026-06-04)
+    //   엉킨 결과를 저장하는 사고 방지. 거래처별로 따로 올리도록 유도.
+    if(pageCount>1 && !Array.isArray(raw) && raw?.multi_receipt===true){
+      setLoad(false);
+      toast('📄 서로 다른 거래처 영수증이 섞여 있어요.\n거래처별로 한 번에 한 곳씩 올려주세요.', 'warn', 7000);
+      return;
     }
     // 응답 호환: 옛 배열 형식과 새 객체 형식 둘 다 받음
     // 2026-05-19 (4)+ 출력 다이어트: date·vendor 최상위 1번 → 행 fallback
@@ -1280,37 +1288,18 @@ async function saveReceipt(){
   if(_badDates.length){
     if(!confirm(`⚠️ 영수증 날짜가 이상해요: ${_badDates.join(', ')}\n오늘은 ${_today}입니다.\nAI가 날짜를 잘못 읽었을 수 있어요 — 위 '📅 영수증 날짜'를 확인하세요.\n\n이대로 저장할까요?`)) return;
   }
-  // 임시 진단 필드 제거 후 insert (_idx/_cat/_origItem은 DB 컬럼 X → 학습 전 분리)
-  const learnMeta = rows.map(r => ({ item: r.item, origItem: r._origItem, category: r.category, note: r.note }));
+  // 임시 진단 필드 제거 후 insert (_idx/_cat/_origItem은 DB 컬럼 X)
   const cleaned=rows.map(({_idx,_cat,_origItem,...rest})=>rest);
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').insert(cleaned);
   setLoad(false);
   if(error) return errToast('저장', error);
-  // 자동 학습: 품목→(카테고리 + display_item) 규칙 저장 (정상 행만, 매장별)
-  // 키워드 = AI 원본 텍스트의 첫 단어 (origItem) — 사장님이 정정해도 다음 OCR 매칭 가능
-  // display_item = 사장님이 저장한 정정 텍스트 (item) — 매칭 시 자동 교체
-  // 거래처 모드는 학습 스킵 — 카테고리는 거래처 설정대로 자동
-  let learnedCount=0;
-  if(!isVendorMode){
-    learnMeta.filter(m=>m.note==='정상'&&m.item&&m.category).forEach(m=>{
-      const parts=String(m.category).split('>').map(s=>s.trim());
-      const mainCat=parts[0]||'';
-      const subCat=parts[1]||'';
-      // 키워드: AI 원본의 첫 단어 (사장님 정정 X 시 = item 첫 단어)
-      const kw=normalizeItemKeyword(m.origItem||m.item);
-      // display_item: 사장님이 수정한 경우만 박음 (원본과 다를 때)
-      const displayItem = (m.origItem && m.origItem !== m.item) ? m.item : null;
-      if(mainCat&&kw){ learnClassification(kw,mainCat,subCat,'receipt',false,displayItem).catch(()=>{}); learnedCount++; }
-    });
-  }
-  const successMsg=learnedCount>0?`저장됐어요. ✨ ${learnedCount}건 AI 학습됐어요`:'저장됐어요';
+  // 영수증 품목 자동 학습 폐기 (2026-06-04) — 짧은 키워드 오염 방지. 분류·품목명은 AI가 직접 판단.
+  const successMsg='저장됐어요';
   // 진입 컨텍스트 따라 흐름 분기 (2026-05-19 사장님 결정 A안)
   if(rcpEntryReturn){
     // 거래처(vendors:<id>) 또는 카테고리(catReceipt:<mode>) 진입 = 기존 reload + 자동 복귀
     try{ localStorage.setItem('pd_rcp_return', rcpEntryReturn); }catch(e){}
-    // reload 직전 토스트는 사라지므로 localStorage로 전달 → 로그인 후 자동복귀에서 학습 토스트 표시
-    try{ if(learnedCount>0) localStorage.setItem('pd_rcp_learned', String(learnedCount)); }catch(e){}
     toast(successMsg,'success');
     location.reload();
   } else {
