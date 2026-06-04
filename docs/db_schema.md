@@ -244,6 +244,7 @@ franchises (프랜차이즈/브랜드)
 | total_price (int) | 합계 금액 (**세후=실제 낸 돈**, 2026-06-04 세후 통일) |
 | **supply_price** (int, 2026-06-04) | 공급가(세전) = total_price − tax_amount. 옛 영수증 NULL |
 | **tax_amount** (int, 2026-06-04) | 행 세액(부가세). 인쇄된 세액만, 없거나 면세면 0. 부가세 역산 안 함 |
+| **is_tax_free** (boolean, 2026-06-04) | 면세 여부. true=면세(육류·야채 등 미가공 농축수산물), false=과세, NULL=옛 영수증. 의제매입세액공제 집계용. 마이그레이션 `add_receipts_is_tax_free_20260604` |
 | note | 정상/오답/반품 등 |
 | created_at | 등록일시 |
 

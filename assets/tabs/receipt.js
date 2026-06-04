@@ -987,6 +987,7 @@ async function runAI() {
       qty: x.q ?? x.qty ?? null,
       totalPrice: x.p ?? x.totalPrice ?? 0,
       taxAmount: x.t ?? x.taxAmount ?? 0,
+      isTaxFree: (x.f===true || x.f==='true' || x.isTaxFree===true), // 면세 여부 (의제매입세액공제용)
       category: x.c || x.category || defaultCat
     }));
     // 공급가(세전) = 합계(세후) − 세액. 세후 통일(2026-06-04) 후 검산·저장용
@@ -1119,9 +1120,9 @@ function buildReceiptRow(i={}) {
   const suspect = i._suspect;
   const suspectCls = suspect ? ' suspect' : '';
   const suspectMark = suspect ? `<span title="단가×수량(${fmt(suspect.calc)}) ≠ 공급가 — ${fmt(suspect.diff)}원 차이. 수량 확인 필요" style="font-size:13px;cursor:help;">⚠️</span>` : '';
-  // 면세 배지 (세액 섞인 영수증의 세액 0 행 = 면세) — 2026-06-04 가안 A
+  // 면세 배지 — AI 면세 판단(isTaxFree) 우선, 없으면 세액 섞인 영수증의 세액 0 행 = 면세
   const _tax = parseInt(i.taxAmount)||0;
-  const freeBadge = (i._taxFormat && _tax===0) ? `<span class="ric-free">면세</span>` : '';
+  const freeBadge = (i.isTaxFree || (i._taxFormat && _tax===0)) ? `<span class="ric-free">면세</span>` : '';
   return `<div class="rcp-item-card${suspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
       <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목">
@@ -1139,6 +1140,7 @@ function buildReceiptRow(i={}) {
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
     <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
     <input type="hidden" class="c-t" value="${parseInt(i.taxAmount)||0}">
+    <input type="hidden" class="c-f" value="${i.isTaxFree?'1':'0'}">
   </div>`;
 }
 // 단가/수량 입력 시 자동 금액 계산 (사용자 편의 — 2026-05-19)
@@ -1237,6 +1239,7 @@ async function saveReceipt(){
       : (tr.dataset.catId ? tr.dataset.catId : (resolveReceiptCatId(cat) || null));
     const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,'');
     const taxRaw=(tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''); // 행 세액(부가세) — 합계는 세후
+    const isFree=(tr.querySelector('.c-f')?.value||'0')==='1'; // 면세 여부
     // 거래처 모드면 vendor 텍스트도 거래처명으로 통일 (AI 추출 vendor가 누락이거나 다를 때 보호)
     const vendorText = isVendorMode
       ? (rcpVendorName || tr.querySelector('.c-v').value)
@@ -1257,6 +1260,7 @@ async function saveReceipt(){
       total_price:parseInt(amtRaw,10)||0,
       tax_amount: parseInt(taxRaw,10)||0,
       supply_price: (parseInt(amtRaw,10)||0) - (parseInt(taxRaw,10)||0), // 공급가(세전)
+      is_tax_free: isFree, // 면세 여부 (의제매입세액공제용)
       category:cat||null,category_id:category_id||null,
       input_method: rcpInputMethod || null,
       receipt_group_id: groupId,

@@ -173,7 +173,7 @@ ${modeHint}${multiPageHint}
 {${isVendorMode ? '' : `
   "vendor": "상호명",`}
   "date": "영수증 발행일 YYYY-MM-DD (영수증에 연도가 명확히 안 보이면 ${new Date().getFullYear()}년으로)",
-  "items": [ ${isVendorMode ? '{i,u,q,p,t}' : '{i,u,q,p,t,c}'} 행 배열 ],
+  "items": [ ${isVendorMode ? '{i,u,q,p,t,f}' : '{i,u,q,p,t,f,c}'} 행 배열 ],
   "total_supply": 세전 공급가액 소계(정수). 행마다 세액 칸이 별도인 양식만, 아니면 null,
   "total_tax": 세액 소계(정수). 없으면 null,
   "total_sum": 이번 거래 결제합(세후,정수,없으면 null) — 금일합계>합계액>총합계액>결제금액. ⚠️전미수·전잔액·당일입금·현잔액·누계·채권 = 무시(이번 거래분 아님),
@@ -185,7 +185,8 @@ ${modeHint}${multiPageHint}
 - u:단가 (없으면 null)
 - q:수량 (없으면 1) ${isVendorMode ? '— BOX/EA 정확히 적용. BOX 0 = EA만. 중량거래(kg·g)면 q=중량값(소수점 허용).' : ''}
 - p:행 [합계/금액] 칸 인쇄값 그대로 정수(세후=실제 낸 돈). 행마다 [공급가·세액·합계] 칸 따로면 [합계] 칸. u×q 계산 X — 1~2원 차이도 인쇄 우선
-- t:행 [세액] 칸 값(정수). 세액 칸이 따로 있으면 그 값, 없거나 면세면 0${isVendorMode ? '' : `
+- t:행 [세액] 칸 값(정수). 세액 칸이 따로 있으면 그 값, 없거나 면세면 0
+- f:면세 여부(true/false). t>0이면 false. 면세표시(*)·면세 칸·미가공 농축수산물(육류·생선·야채·과일·쌀)이면 true${isVendorMode ? '' : `
 - c:카테고리 [${catList}]`}
 
 [규칙]
