@@ -1229,9 +1229,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .todo-banner .todo-tx{font-size:13px;font-weight:700;color:#B45309;flex:1;letter-spacing:-0.3px;}
 .todo-banner .todo-tx b{font-weight:800;color:#92400E;}
 .todo-banner .todo-go{font-size:16px;font-weight:700;color:#D97706;flex-shrink:0;}
+/* 매출 금액 행 — 높이 고정 (금액 있을 때 기준 34px). "아직 매출 기록이 없어요"여도 안 튐 (2026-06-04) */
+.dash-today-v7 .t7-amt-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;min-height:34px;}
 .dash-today-v7 .t7-amt{font-size:31px;font-weight:800;color:#191F28;letter-spacing:-1.3px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .dash-today-v7 .t7-amt .won{font-size:22px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
-.dash-today-v7 .t7-amt.empty{font-size:24px;color:#B0B8C1;font-weight:700;}
+.dash-today-v7 .t7-amt.empty{font-size:18px;color:#B0B8C1;font-weight:700;line-height:34px;}
+.dash-today-v7 .t7-detail-link{border:none;background:transparent;padding:0;font-size:13px;font-weight:700;color:#3182F6;cursor:pointer;white-space:nowrap;align-self:flex-end;margin-bottom:4px;flex-shrink:0;}
 .dash-today-v7 .t7-time{font-size:12px;color:#8B95A1;margin-top:6px;font-weight:500;letter-spacing:-0.2px;display:flex;align-items:center;gap:6px;}
 .dash-today-v7 .t7-time .refresh{color:#0064FF;cursor:pointer;font-weight:600;}
 /* 지출·수익 세로 목록 — 3열 격자 (라벨|금액|화살표) */
@@ -1246,9 +1249,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-row .r-amt{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;text-align:right;}
 .dash-today-v7 .t7-row .r-amt.red{color:#F04452;}
 .dash-today-v7 .t7-row .r-amt.green{color:#0CAB6C;}
+.dash-today-v7 .t7-row .r-amt.gray{color:#B0B8C1;font-size:13px;font-weight:600;}
 .dash-today-v7 .t7-row .r-go{font-size:16px;font-weight:800;color:#3182F6;cursor:pointer;text-align:center;padding-left:4px;}
 /* 어디에 썼나 — 오늘 카드 안 통합 (A안, 2026-06-03). 거래처 많으면 이 안에서만 스크롤 */
-.dash-today-v7 .t7-ve-section{margin-top:14px;padding-top:13px;border-top:1px dashed #E5E8EB;}
+.dash-today-v7 .t7-ve-section{margin-top:14px;padding-top:13px;border-top:1px dashed #E5E8EB;cursor:pointer;}
 .dash-today-v7 .t7-ve-head{font-size:12.5px;font-weight:800;color:#191F28;display:flex;align-items:center;margin-bottom:2px;}
 .dash-today-v7 .t7-ve-note{margin-left:auto;font-size:10px;font-weight:600;color:#B0B8C1;}
 .dash-today-v7 .t7-ve-list{height:160px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -1265,6 +1269,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 홈 섹션 헤더 (오늘 / 이번 달 구분) */
 .dash-sec{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:#6B7684;margin:13px 2px 7px;}
 .dash-sec .ic{font-size:13px;}
+.dash-sec .dash-sec-more{margin-left:auto;font-size:12px;font-weight:700;color:#3182F6;cursor:pointer;}
 .dash-today-v7 .t7-act{margin-top:16px;display:flex;gap:8px;}
 .dash-today-v7 .t7-act .btn{flex:1;padding:13px;font-size:14px;font-weight:700;border:0;border-radius:12px;cursor:pointer;letter-spacing:-0.3px;transition:transform .15s;}
 .dash-today-v7 .t7-act .btn:active{transform:scale(.97);}

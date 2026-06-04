@@ -8410,14 +8410,12 @@ document.addEventListener('DOMContentLoaded', async()=>{
   const _dmfEl = document.getElementById('dashModeFinal');
   if(_dmfEl) _dmfEl.addEventListener('click',()=>switchDashMode('final'));
   // 예비비 박스 핸들러 폐기 (2026-05-22)
-  // ─── 홈 v7: 오늘 매출 카드 탭 → today-detail stage 진입 (2026-05-22) ─── //
-  document.getElementById('dashTopSalesCard').addEventListener('click',(e)=>{
-    if(e.target.closest('#dashTopSalesEmptyCta'))return;
-    if(e.target.closest('[data-stop]'))return; // 달력 버튼 등 미니 버튼은 카드 진입 X (2026-06-02)
-    dashGoStage('today-detail');
+  // ─── 홈 v7: 오늘 매출 카드 — 헤더 라벨 영역만 today-detail 진입 (2026-06-04) ─── //
+  // 카드 전체 탭 제거: 어디에썼나=지출탭, 지출행=바텀시트, 헤더라벨=today-detail
+  document.getElementById('dashTopVendorSection').addEventListener('click',(e)=>{
+    if(e.target.closest('[data-stop]'))return;
+    nav('receipt');
   });
-  // 빈 데이터 CTA (홈 v7: 휴무 버튼 제거 — 캘린더 셀에서만, 2026-05-22)
-  document.getElementById('dashTopEmptyInputBtn').addEventListener('click',(e)=>{e.stopPropagation();openQuickSalesInput();});
   // today-detail 매출 입력 CTA — 보고 있던 일자(_tdDay)로 시트 진입 (2026-05-25 사장님 호소)
   const _ddInputCta=document.getElementById('dashTodayInputCta');
   if(_ddInputCta) _ddInputCta.addEventListener('click',()=>openQuickSalesInput(_tdDay||null));

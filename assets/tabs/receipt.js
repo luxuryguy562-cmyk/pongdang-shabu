@@ -879,9 +879,6 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplyS
   }
   // 2️⃣ 합계 바 (목업 A안 — 깔끔한 한 줄. 일치=파랑 / 차이=빨강 / 페이지누락=주황)
   if(!sumBox) return;
-  // 세액 별도 거래명세서(공급가·세액·합계 칸 따로): 행 p=공급가(세전) → 세전끼리(공급가액 소계) 비교.
-  //  그 외(POS·일반 영수증, 세액 포함가): 세후 총액끼리 비교 (기존 동작 유지)
-  //  2026-06-04 사장님 호소 "공급가 계산 후 세액 붙이는 양식" 거짓 차이 경고 해결
   // 행 금액(p)이 세후로 통일됨(2026-06-04) → 영수증 총액과 세후끼리 단순 비교 + 부가세 따로 표시
   const rowTax = (list||[]).reduce((a,r)=>a+(parseInt(r.taxAmount)||0),0); // 세액 합
   const rowSupply = rowSum - rowTax;                                       // 공급가(세전) 합
