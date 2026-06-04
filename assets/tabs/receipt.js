@@ -933,6 +933,8 @@ async function applyRulesToReceipt(list){
 async function runAI() {
   if(!b64Pages.length) return toast('이미지를 먼저 업로드해주세요.','warn');
   const pageCount = b64Pages.length;
+  // 여러 장이면 AI 호출(비용 발생) 전에 확인 — 다른 거래처 섞임 방지 (2026-06-04, 비용 0으로 차단)
+  if(pageCount>1 && !confirm(`사진 ${pageCount}장이 선택됐어요.\n\n같은 영수증의 여러 페이지인가요?\n거래처가 다르면 '취소' 후 한 곳씩 올려주세요.`)) return;
   setLoad(true, pageCount>1 ? `AI 분석 중... (사진 ${pageCount}장 통합)` : 'AI 분석 중...');
   try {
     const catList = getCatListForPrompt();
