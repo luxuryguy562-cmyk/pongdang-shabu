@@ -358,6 +358,7 @@ function nav(tab, el) {
     settingsBasic: { container: 'settings', sub: null },
     settingsWage: { container: 'settings', sub: null },
     settingsSettle: { container: 'settings', sub: null },
+    attendanceRecord: { container: 'attendance', sub: 'all' },
   };
   if (subTabMap[tab]) {
     subTab = subTabMap[tab].sub;
