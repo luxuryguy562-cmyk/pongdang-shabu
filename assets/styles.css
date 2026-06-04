@@ -1250,7 +1250,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-ve-section{margin-top:14px;padding-top:13px;border-top:1px dashed #E5E8EB;}
 .dash-today-v7 .t7-ve-head{font-size:12.5px;font-weight:800;color:#191F28;display:flex;align-items:center;margin-bottom:2px;}
 .dash-today-v7 .t7-ve-note{margin-left:auto;font-size:10px;font-weight:600;color:#B0B8C1;}
-.dash-today-v7 .t7-ve-list{max-height:160px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.dash-today-v7 .t7-ve-list{min-height:88px;max-height:160px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar{width:3px;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar-thumb{background:#D1D6DD;border-radius:3px;}
 .dash-today-v7 .t7-ve-list .ve-item{display:flex;align-items:center;font-size:12.5px;padding:8px 0;border-top:1px solid #F2F4F6;}
@@ -1260,7 +1260,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-ve-list .ve-cat-tag{font-size:10px;color:#8B95A1;font-weight:600;margin-left:6px;background:#F2F4F6;padding:1px 6px;border-radius:5px;flex-shrink:0;}
 .dash-today-v7 .t7-ve-list .vamt{margin-left:auto;padding-left:8px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;flex-shrink:0;}
 /* 지출 기록 없는 날 빈 안내 (2026-06-04) — 카드 사라지지 않고 살아있음을 표시 */
-.dash-today-v7 .t7-ve-list .t7-ve-empty{text-align:center;color:#B0B8C1;font-size:12px;font-weight:600;padding:14px 0 10px;}
+.dash-today-v7 .t7-ve-list .t7-ve-empty{display:flex;align-items:center;justify-content:center;height:88px;color:#B0B8C1;font-size:12px;font-weight:600;}
 /* 홈 섹션 헤더 (오늘 / 이번 달 구분) */
 .dash-sec{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:#6B7684;margin:13px 2px 7px;}
 .dash-sec .ic{font-size:13px;}
