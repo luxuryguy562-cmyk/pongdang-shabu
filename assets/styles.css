@@ -1212,7 +1212,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7:active{transform:scale(.985);}
 /* 홈 매출 카드 헤더 — 안 A (날짜 메인 + 상대표현 배지 + 상태 보조줄, 2026-06-04) */
 .dash-today-v7 .t7-head-v2{display:flex;align-items:center;margin-bottom:10px;gap:0;}
-.dash-today-v7 .t7-nav{border:none;background:transparent;width:30px;height:36px;font-size:20px;color:#C0C8D2;cursor:pointer;border-radius:8px;padding:0;flex-shrink:0;transition:color .15s,opacity .15s;line-height:1;}
+.dash-today-v7 .t7-nav{border:none;background:transparent;width:36px;height:40px;font-size:26px;color:#C0C8D2;cursor:pointer;border-radius:8px;padding:0;flex-shrink:0;transition:color .15s,opacity .15s;line-height:1;}
 .dash-today-v7 .t7-nav:disabled{opacity:.2;cursor:default;}
 .dash-today-v7 .t7-nav.t7-nav-next{color:#333D4B;font-weight:700;}
 .dash-today-v7 .t7-center{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;align-items:flex-start;overflow:hidden;}
@@ -1264,8 +1264,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-ve-list .vname{font-weight:700;color:#191F28;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dash-today-v7 .t7-ve-list .ve-cat-tag{font-size:10px;color:#8B95A1;font-weight:600;margin-left:6px;background:#F2F4F6;padding:1px 6px;border-radius:5px;flex-shrink:0;}
 .dash-today-v7 .t7-ve-list .vamt{margin-left:auto;padding-left:8px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;flex-shrink:0;}
-/* 지출 기록 없는 날 빈 안내 (2026-06-04) — 카드 사라지지 않고 살아있음을 표시 */
-.dash-today-v7 .t7-ve-list .t7-ve-empty{display:flex;align-items:center;justify-content:center;height:100%;color:#B0B8C1;font-size:12px;font-weight:600;}
+/* 지출 기록 없는 날 빈 안내 — 안 2: 점선 박스 + 흐린 예시 줄 (2026-06-04) */
+.dash-today-v7 .t7-ve-list .t7-ve-dash2{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px dashed #DDE2E8;border-radius:14px;background:#FAFBFC;padding:10px;}
+.dash-today-v7 .t7-ve-list .t7-ve-dash2 .ve-d2-tx{font-size:12px;font-weight:700;color:#A0A8B3;}
+.dash-today-v7 .t7-ve-list .ghost-rows{width:100%;display:flex;flex-direction:column;gap:5px;margin-top:2px;opacity:.45;}
+.dash-today-v7 .t7-ve-list .ghost-row{display:flex;align-items:center;gap:6px;padding:0 4px;}
+.dash-today-v7 .t7-ve-list .ghost-dot{width:7px;height:7px;border-radius:50%;background:#D8DDE4;flex-shrink:0;}
+.dash-today-v7 .t7-ve-list .ghost-bar{height:8px;border-radius:4px;background:#E5E9EE;}
 /* 홈 섹션 헤더 (오늘 / 이번 달 구분) */
 .dash-sec{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:#6B7684;margin:13px 2px 7px;}
 .dash-sec .ic{font-size:13px;}
