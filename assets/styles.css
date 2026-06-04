@@ -1522,4 +1522,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .ric-mini input{border:none;background:transparent;width:46px;font-size:12px;font-weight:700;text-align:right;color:var(--toss-text-1);outline:none;font-family:inherit;}
 .ric-chip{margin-left:auto;font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;background:var(--toss-blue-light);color:var(--toss-blue);border:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
 .ric-chip.empty{background:var(--toss-line);color:var(--toss-text-4);}
+/* 행별 세액 줄 (세액 있는 영수증만 — 2026-06-04) */
+.ric-l3{margin-top:6px;padding-top:6px;border-top:1px dashed var(--toss-line);font-size:11px;color:var(--toss-text-4);font-weight:600;display:flex;gap:12px;}
+.ric-l3 b{color:var(--toss-text-3);font-weight:700;}
+.ric-l3.free{color:var(--warn);}
 .rcp-learn-badge{font-size:13px;}

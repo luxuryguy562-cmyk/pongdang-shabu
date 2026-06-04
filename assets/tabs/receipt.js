@@ -992,6 +992,9 @@ async function runAI() {
     }));
     // 공급가(세전) = 합계(세후) − 세액. 세후 통일(2026-06-04) 후 검산·저장용
     list.forEach(it=>{ it.supplyPrice = (parseInt(it.totalPrice)||0) - (parseInt(it.taxAmount)||0); });
+    // 영수증에 세액이 하나라도 있으면 = 세액 별도 양식 → 행마다 공급가·부가세 줄 표시 (세액 0 행은 면세)
+    const _hasAnyTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
+    list.forEach(it=> it._taxFormat = _hasAnyTax);
     // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
     list=await applyRulesToReceipt(list);
     // 임계값 = max(100원, 0.5%) — 2026-05-19 (4) 사장님 호소: 회계 기준 5% 너무 느슨
@@ -1116,7 +1119,15 @@ function buildReceiptRow(i={}) {
   // 토스트는 8초면 사라지지만 행 시각화는 영구. 사장님이 어느 행이 사고인지 즉시 인지.
   const suspect = i._suspect;
   const suspectCls = suspect ? ' suspect' : '';
-  const suspectMark = suspect ? `<span title="단가×수량(${fmt(suspect.calc)}) ≠ 합계 — ${fmt(suspect.diff)}원 차이. 수량 확인 필요" style="font-size:13px;cursor:help;">⚠️</span>` : '';
+  const suspectMark = suspect ? `<span title="단가×수량(${fmt(suspect.calc)}) ≠ 공급가 — ${fmt(suspect.diff)}원 차이. 수량 확인 필요" style="font-size:13px;cursor:help;">⚠️</span>` : '';
+  // 행별 세액 줄 (세액 있는 영수증만 — i._taxFormat 플래그) — 2026-06-04
+  const _tax = parseInt(i.taxAmount)||0;
+  const _supply = (i.supplyPrice!=null) ? parseInt(i.supplyPrice) : ((parseInt(i.totalPrice)||0) - _tax);
+  const taxLine = i._taxFormat
+    ? (_tax>0
+        ? `<div class="ric-l3"><span>공급가 <b>${fmt(_supply)}</b></span><span>부가세 <b>${fmt(_tax)}</b></span></div>`
+        : `<div class="ric-l3 free"><span>🌱 면세 (부가세 없음)</span></div>`)
+    : '';
   return `<div class="rcp-item-card${suspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
       <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목">
@@ -1130,6 +1141,7 @@ function buildReceiptRow(i={}) {
       ${learnBadge}
       <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
     </div>
+    ${taxLine}
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
     <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
     <input type="hidden" class="c-t" value="${parseInt(i.taxAmount)||0}">
