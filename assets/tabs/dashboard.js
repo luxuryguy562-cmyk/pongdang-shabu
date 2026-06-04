@@ -236,8 +236,8 @@ function renderTopCardForDay(dayStr){
     document.getElementById('dashTopExpenseAmt').innerText = '-' + fmt(dayExp) + '원';
     const profitEl = document.getElementById('dashTopProfitAmt');
     profitEl.innerText = (_isP?'+':'-') + fmt(Math.abs(dayProfit)) + '원';
-    profitEl.classList.toggle('red', !_isP);
-    profitEl.classList.toggle('green', _isP);
+    // className 통째 재설정 — 매출 없던 날의 gray(작은 회색) 잔재 제거 (2026-06-04)
+    profitEl.className = 'r-amt ' + (_isP ? 'green' : 'red');
     const _pDot = document.getElementById('dashTopProfitDot');
     if(_pDot){ _pDot.classList.toggle('green',_isP); _pDot.classList.toggle('red',!_isP); }
     const renderDelta = (el, m) => {
@@ -262,8 +262,9 @@ function renderTopCardForDay(dayStr){
       const profitEl = document.getElementById('dashTopProfitAmt');
       profitEl.innerText = '마감 후 확인';
       profitEl.className = 'r-amt gray';
+      // 매출 기록 전이어도 수익 점은 초록 유지 — 매출·지출·수익 점 통일 (2026-06-04)
       const _pDot = document.getElementById('dashTopProfitDot');
-      if(_pDot){ _pDot.classList.remove('green','red'); _pDot.classList.add('gray'); }
+      if(_pDot){ _pDot.classList.remove('red','gray'); _pDot.classList.add('green'); }
       document.getElementById('dashTopProfitDelta').innerText = '';
       peEl.style.display = 'block';
       renderTodayVendorExp(ctx.dailyVendorExp[dayPad]||{}, false, dayExp);
