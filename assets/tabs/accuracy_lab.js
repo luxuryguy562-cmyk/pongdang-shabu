@@ -13,6 +13,7 @@ function accBuildPrompt(vendor){
 
 const ACC_ENGINES = [
   {id:'gemini',name:'Gemini 2.5 Flash',meta:'구글 · 현재 사용',cost:'~6원/장',tag:'연결됨',cls:'acc-tag-ok',on:true},
+  {id:'gpt4o',name:'GPT-4o',meta:'OpenAI · 고정밀(비쌈)',cost:'~35원/장',tag:'연결됨',cls:'acc-tag-ok',on:true},
   {id:'clova-doc',name:'클로바 문서전용',meta:'네이버 · 표 인식',tag:'키 발급 필요',cls:'acc-tag-key',on:false},
   {id:'upstage',name:'업스테이지',meta:'한국 문서 특화',tag:'키 발급 필요',cls:'acc-tag-key',on:false},
 ];
@@ -47,7 +48,11 @@ function accFileToB64(file){
 async function accCallGemini(b64list){
   const parts=[{text:accBuildPrompt(_accVendor)}];
   b64list.forEach(b=>parts.push({inline_data:{mime_type:'image/jpeg',data:b}}));
-  const raw=await callGemini(parts, 30+(b64list.length-1)*5, 'accuracy_test', 'gemini-2.5-flash', 'gemini');
+  // 측정실 엔진 선택 — gemini(싸고 빠름) vs gpt4o(고정밀·비쌈) 비교용
+  const isGpt = _accCurEngine==='gpt4o';
+  const model = isGpt ? 'gpt-4o' : 'gemini-2.5-flash';
+  const provider = isGpt ? 'gpt' : 'gemini';
+  const raw=await callGemini(parts, 30+(b64list.length-1)*5, 'accuracy_test', model, provider);
   const cost=(typeof lastAIUsage!=='undefined'&&lastAIUsage)?lastAIUsage.costWon:null;
   return {raw, cost};
 }
