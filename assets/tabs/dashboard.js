@@ -233,9 +233,9 @@ function renderTopCardForDay(dayStr){
     else if(isYesterday){ relEl.innerText='어제'; relEl.className='t7-day-badge'; relEl.style.display=''; }
     else { relEl.style.display='none'; }
   }
-  // 상태 보조줄: 오늘 실시간/마감 전, 과거 마감 (항상 표시 — 줄 높이 안정)
+  // 상태 보조줄: 오늘 실시간/영업 중/마감, 과거 마감 (항상 표시 — 줄 높이 안정)
   const subLabel = (ctx.isUpsMode && isTodayShown) ? '실시간'
-    : (isTodayShown && !ctx.isTodaySettled) ? '마감 전'
+    : (isTodayShown && !ctx.isTodaySettled) ? '영업 중'
     : '마감';
   topModeEl.innerText = `● ${subLabel}`;
   topModeEl.className = 't7-day-sub' + ((ctx.isUpsMode && isTodayShown) ? ' live' : '');
@@ -333,7 +333,7 @@ function renderTodayDetailForDay(dayStr){
   let stateLabel;
   if(hasSale) stateLabel = (ctx.isUpsMode && isToday) ? '실시간' : '마감';
   else if(isFuture) stateLabel = '미래';
-  else if(isToday) stateLabel = ctx.isUpsMode ? '실시간' : '아직 마감 전';
+  else if(isToday) stateLabel = ctx.isUpsMode ? '실시간' : '영업 중';
   else stateLabel = '마감 안 됨';
 
   if(_ddDate) _ddDate.innerHTML = `${ctx.mo}월 ${dayInt}일 (${dow}) · ${stateLabel}`;
