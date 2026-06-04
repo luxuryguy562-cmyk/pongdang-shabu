@@ -977,16 +977,8 @@ async function runAI() {
       toast('📄 서로 다른 거래처 영수증이 섞여 있어요.\n거래처별로 한 번에 한 곳씩 올려주세요.', 'warn', 7000);
       return;
     }
-    // 품목명 자신 없으면(needs_review) GPT-4o로 자동 재분석 — 순창국제 등 어려운 거래처 자동 대응 (2026-06-04)
-    //   사용자는 난이도 몰라도 됨. 제미나이가 "낯선 약어·한자 많아 자신 없다" 신고하면 더 센 모델로.
-    if(!usedFallback && !Array.isArray(raw) && raw?.needs_review===true){
-      try{
-        setLoad(true, '품목명이 어려워 GPT-4o로 다시 읽는 중...');
-        const gptRaw = await callGemini(parts, timeoutSec+15, 'receipt_ocr', 'gpt-4o', 'gpt');
-        const gptItems = Array.isArray(gptRaw) ? gptRaw : (gptRaw && gptRaw.items);
-        if(gptItems && gptItems.length){ raw = gptRaw; usedFallback = true; }
-      }catch(e){ /* GPT 실패 시 제미나이 결과 그대로 유지 */ }
-    }
+    // (2026-06-04) needs_review 자동 GPT-4o 전환 제거 — 순창국제 등 손글씨는 GPT가 오히려 환각(냉동돈육),
+    //   제미나이가 원문 유지로 더 나음(데이터 확인). 어려운 건 측정실에서 수동 비교.
     // 응답 호환: 옛 배열 형식과 새 객체 형식 둘 다 받음
     // 2026-05-19 (4)+ 출력 다이어트: date·vendor 최상위 1번 → 행 fallback
     const itemsRaw = Array.isArray(raw) ? raw : (raw?.items || []);
