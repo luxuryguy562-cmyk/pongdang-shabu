@@ -849,7 +849,7 @@ function normalizeItemKeyword(item){
 // 📊 합계 + 📄 페이지 감지 박스 (2026-05-19 (4) — Page(N/M) 인쇄 감지 + 페이지 누락 안내)
 //   pageInfo: {current, total} (AI 응답에서 추출, 없으면 null)
 //   photoCount: 사장님이 업로드한 사진 수 (b64Pages.length)
-function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount){
+function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplySum, taxSum){
   const sumBox = document.getElementById('rcpSumCheck');
   const pageBox = document.getElementById('rcpPageInfoBox');
   const rowSum = (list||[]).reduce((a,r)=>a+(parseInt(r.totalPrice)||0),0);
@@ -879,19 +879,32 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount){
   }
   // 2️⃣ 합계 바 (목업 A안 — 깔끔한 한 줄. 일치=파랑 / 차이=빨강 / 페이지누락=주황)
   if(!sumBox) return;
+  // 세액 별도 거래명세서(공급가·세액·합계 칸 따로): 행 p=공급가(세전) → 세전끼리(공급가액 소계) 비교.
+  //  그 외(POS·일반 영수증, 세액 포함가): 세후 총액끼리 비교 (기존 동작 유지)
+  //  2026-06-04 사장님 호소 "공급가 계산 후 세액 붙이는 양식" 거짓 차이 경고 해결
+  const hasSupply = supplySum!=null && supplySum>0;
+  const hasTax = taxSum!=null && taxSum>0;
+  const compareBase = hasSupply ? supplySum : receiptTotalSum;
+  const hasCompare = compareBase!=null && compareBase>0;
   let cls = 'rcp-sumbar', sub = '';
-  if(hasReceiptSum){
-    const diff = Math.abs(receiptTotalSum - rowSum);
-    const diffPct = receiptTotalSum>0 ? (diff/receiptTotalSum*100) : 0;
+  if(hasCompare){
+    const diff = Math.abs(compareBase - rowSum);
+    const diffPct = compareBase>0 ? (diff/compareBase*100) : 0;
     const ok = diff <= 10 || diffPct < 0.5;
     if(pagesMissing){
       cls += ' warn';
       sub = `⏳ ${pageTotal}페이지 중 ${photos}장 — 남은 페이지 추가 시 일치 예정`;
     } else if(ok){
-      sub = `✅ 영수증 원본 ${fmt(receiptTotalSum)}원과 일치${diff>0?` (${fmt(diff)}원 반올림)`:''}`;
+      if(hasSupply && hasTax){
+        // 세액 별도 양식: 공급가 일치 + 부가세 별도 안내 (사장님이 232,840이 어디 갔는지 이해되게)
+        sub = `✅ 공급가 일치 · 부가세 ${fmt(taxSum)}원 별도${receiptTotalSum?` (영수증 합계 ${fmt(receiptTotalSum)}원)`:''}`;
+      } else {
+        sub = `✅ 영수증 원본 ${fmt(receiptTotalSum||compareBase)}원과 일치${diff>0?` (${fmt(diff)}원 반올림)`:''}`;
+      }
     } else {
       cls += ' danger';
-      sub = `⚠️ 영수증 원본 ${fmt(receiptTotalSum)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 행별 확인`;
+      const baseLabel = hasSupply ? '공급가액' : '영수증 원본';
+      sub = `⚠️ ${baseLabel} ${fmt(compareBase)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 행별 확인`;
     }
   }
   sumBox.className = cls;
@@ -956,7 +969,9 @@ ${modeHint}${multiPageHint}
   "vendor": "상호명",`}
   "date": "영수증 발행일 YYYY-MM-DD (영수증에 연도가 명확히 안 보이면 ${new Date().getFullYear()}년으로)",
   "items": [ ${isVendorModeAI ? '{i,u,q,p}' : '{i,u,q,p,c}'} 행 배열 ],
-  "total_sum": 영수증 박스값(정수,없으면 null) — 우선순위: 금일합계>합계액>결제금액. 전미수·총합계·잔액·누계·채권 무시,
+  "total_supply": 세전 공급가액 소계(정수). 행마다 세액 칸이 별도인 양식만, 아니면 null,
+  "total_tax": 세액 소계(정수). 없으면 null,
+  "total_sum": 이번 거래 결제합(세후,정수,없으면 null) — 금일합계>합계액>총합계액>결제금액. ⚠️전미수·전잔액·당일입금·현잔액·누계·채권 = 무시(이번 거래분 아님),
   "page_info": {"current":현재페이지,"total":총페이지수} — 영수증에 "Page (N/M)" 인쇄 시. 없으면 {"current":1,"total":1}
 }
 
@@ -964,15 +979,17 @@ ${modeHint}${multiPageHint}
 - i:품목명
 - u:단가 (없으면 null)
 - q:수량 (없으면 1) ${isVendorModeAI ? '— BOX/EA 정확히 적용. BOX 0 = EA만. 중량거래(kg·g)면 q=중량값(소수점 허용).' : ''}
-- p:영수증 [합계] 컬럼 인쇄값 그대로 정수. u×q 계산 X — 1~2원 차이도 영수증 인쇄 우선 (회계 증빙)${isVendorModeAI ? '' : `
+- p:행 금액 인쇄값 그대로 정수. 행마다 [공급가·세액·합계] 칸 따로면 [공급가](세전) 칸, 아니면 [합계/금액] 칸. u×q 계산 X — 1~2원 차이도 인쇄 우선 (회계 증빙)${isVendorModeAI ? '' : `
 - c:카테고리 [${catList}]`}
 
 [규칙]
 - [수량 검산] q를 정한 뒤 반드시 u(단가)×q(수량)≈p(공급가) 확인. 안 맞으면 단위 바꿔 q 재선택. 박스+EA는 q=(박스×단위)+EA, 중량거래(kg·g)는 q=중량값(소수점). p는 인쇄값 그대로 — 검산은 q 고르기 전용.
-- 합계행·소계·부가세·할인전·외상행·용기보증금 = 제외
+- 합계행·소계·부가세행·할인전·외상행·용기보증금 = items에서 제외 (공급가액/세액 소계는 total_supply/total_tax로만)
+- [세액 별도 양식] 행에 공급가·세액·합계 칸 따로면: p=공급가(세전) 칸, total_supply=공급가액 소계, total_tax=세액 소계, total_sum=총합계액(세후). 세액 칸 없으면 total_supply·total_tax=null + p=합계 칸
+- [함정] total_sum·total_supply에 전미수·전잔액·당일입금·현잔액·누계·채권 절대 X. "이번 거래분(금일)"만
 - 숫자 쉼표·원 제거, 음수·빈배열 X
 - 흐릿해도 근접 추정
-- 면세(*)/과세 무시 — p만
+- 면세(*)/과세 표시는 무시 — p는 인쇄값 그대로
 
 [예시 — 거래명세서 (BOX/EA 박힘)]
 {"date":"2026-04-09","items":[{"i":"위즈복대-날치알 500g","u":9400,"q":30,"p":282000},{"i":"넙적분모자 250g","u":1100,"q":5,"p":5500},{"i":"두부피쉬볼 500g","u":5800,"q":5,"p":29000}],"total_sum":1416049,"page_info":{"current":1,"total":2}}
@@ -1009,6 +1026,8 @@ ${modeHint}${multiPageHint}
     // 2026-05-19 (4)+ 출력 다이어트: date·vendor 최상위 1번 → 행 fallback
     const itemsRaw = Array.isArray(raw) ? raw : (raw?.items || []);
     const receiptTotalSum = Array.isArray(raw) ? null : (raw?.total_sum || null);
+    const receiptSupplySum = Array.isArray(raw) ? null : (raw?.total_supply || null); // 세전 공급가액 소계 (세액 별도 양식)
+    const receiptTaxSum = Array.isArray(raw) ? null : (raw?.total_tax || null);       // 세액 소계
     const pageInfo = (raw && raw.page_info && typeof raw.page_info.total==='number') ? raw.page_info : null;
     const respDate = (!Array.isArray(raw) && raw?.date) ? raw.date : null;
     const respVendor = (!Array.isArray(raw) && raw?.vendor) ? raw.vendor : '';
@@ -1058,7 +1077,7 @@ ${modeHint}${multiPageHint}
     const _rcpVenEl=document.getElementById('rcpReceiptVendor');
     if(_rcpVenEl){ _rcpVenEl.value=(list[0]&&list[0].vendor)||rcpVendorName||''; }
     // 📊 합계 + 📄 페이지 박스 (pageInfo + photoCount 함께 전달)
-    _renderRcpSumCheck(receiptTotalSum, list, pageInfo, pageCount);
+    _renderRcpSumCheck(receiptTotalSum, list, pageInfo, pageCount, receiptSupplySum, receiptTaxSum);
     const resultArea=document.getElementById('resultArea');
     resultArea.style.display='block';
     // 분석 완료 알림 (토큰·비용 표시는 제거 — 사장님 2026-06-02). GPT-4o 백업 전환 시만 추가 안내.
