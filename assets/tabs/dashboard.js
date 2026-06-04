@@ -98,7 +98,13 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
     .sort((a,b)=>b.amt-a.amt);
   if(!items.length){
     // 데이터 없어도 섹션은 항상 표시 — height:160px 고정이라 아래 월요약 카드 위치 안 튐 (2026-06-04)
-    if(listEl) listEl.innerHTML=`<div class="t7-ve-empty">오늘은 아직 지출 내역이 없어요</div>`;
+    if(listEl) listEl.innerHTML=`<div class="t7-ve-dash2">`
+      +`<span class="ve-d2-tx">🧾 지출 내역이 여기 나와요</span>`
+      +`<div class="ghost-rows">`
+      +`<div class="ghost-row"><span class="ghost-dot"></span><span class="ghost-bar" style="width:90px;"></span><span class="ghost-bar" style="width:50px;margin-left:auto;"></span></div>`
+      +`<div class="ghost-row"><span class="ghost-dot"></span><span class="ghost-bar" style="width:70px;"></span><span class="ghost-bar" style="width:45px;margin-left:auto;"></span></div>`
+      +`<div class="ghost-row"><span class="ghost-dot"></span><span class="ghost-bar" style="width:80px;"></span><span class="ghost-bar" style="width:55px;margin-left:auto;"></span></div>`
+      +`</div></div>`;
     card.style.display='';
     return;
   }
