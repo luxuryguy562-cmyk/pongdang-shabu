@@ -1714,6 +1714,7 @@ function v17RenderMonthCard(){
       <div class="v6-ttl-row">
         <div class="v6-ttl"><b>${ctx.TARGET_MONTH}월</b>${progressDays}일 진행</div>
         <span class="v6-progress-tag">${progressPct}%</span>
+        <span class="fc-more" data-action="dashGoStage|month-detail">자세히 ›</span>
       </div>
       <div class="m6-top">
         <div class="m6-donut-wrap">
@@ -1732,7 +1733,6 @@ function v17RenderMonthCard(){
       </div>
       <div class="m6-fc">
         <span class="fc-tx">📈 이대로 가면 월말 예상매출 <b>${fcManStr}</b></span>
-        <span class="fc-more" data-action="dashGoStage|month-detail">자세히 ›</span>
       </div>
     </div>`;
 }
