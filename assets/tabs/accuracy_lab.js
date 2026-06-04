@@ -5,30 +5,10 @@
 // 답지·로그는 localStorage (DB 도입은 검증 후 헌법 8조 승인 받고).
 // ════════════════════════════════════════════════════════
 
-// ─── 거래처 분석 프롬프트 (receipt.js 거래처 모드 동일, vendor 동적) ───
+// ─── 거래처 분석 프롬프트 = common.js 공통 함수 (영수증 탭과 100% 동일 — 2026-06-04 통일) ───
+//   측정실에서 검증한 결과가 실제 영수증 탭에 그대로 반영되도록 같은 프롬프트만 사용
 function accBuildPrompt(vendor){
-  return `한국 영수증을 JSON으로만 응답. 설명·주석 X.
-[모드:거래처] vendor="${vendor||'거래처'}" 이미 선택. 영수증 1장 = 같은 날짜.
-[BOX/EA] q=(BOX×단위)+EA. ⚠️ BOX=0이면 단위 무시, EA가 q.
-  · 단위20·BOX1·EA10→q=30
-  · 단위8·BOX1·EA0→q=8
-  · 단위40·BOX0·EA5→q=5  ← BOX 0
-  · 단위12·BOX0·EA5→q=5  ← BOX 0
-[멀티페이지] 사진 여러 장 = 같은 영수증 다른 페이지. 모든 행 items 통합. date·total_sum 1번만.
-
-[응답]
-{"date":"YYYY-MM-DD","items":[{i,u,q,p} 행 배열],"total_sum":영수증 박스값(정수,없으면null)}
-
-[필드]
-- i:품목명
-- u:단가 (없으면 null)
-- q:수량 — BOX/EA 정확히 적용. BOX 0 = EA만.
-- p:합계 컬럼 인쇄값 그대로 정수. u×q 계산 X — 1~2원 차이도 인쇄 우선
-
-[규칙]
-- 합계행·소계·부가세·할인전·외상행·용기보증금 = 제외
-- 숫자 쉼표·원 제거, 음수·빈배열 X. 흐릿해도 근접 추정
-- total_sum 우선순위: 금일합계>합계액>결제금액. 전미수·총합계·잔액·누계 무시`;
+  return buildReceiptPrompt({ isVendorMode:true, vendorName:vendor||'거래처' });
 }
 
 const ACC_ENGINES = [
@@ -41,6 +21,7 @@ let _accVendor='';
 let _accFileBuf=[];
 let _accOrig=null;     // AI 원본 (정확도 비교 기준)
 let _accCur=null;      // 사장님 정정본 (= 정답)
+let _accRawFull=null;  // AI 응답 통째 (total_supply/total_tax 포함 — DB 저장용)
 let _accLastCost=null;
 let _accStyleInjected=false;
 
@@ -180,7 +161,8 @@ async function accAnalyze(){
   try{
     const b64s=[]; for(const f of _accFileBuf){ b64s.push(await accFileToB64(f)); }
     const {raw, cost}=await accCallGemini(b64s);
-    _accOrig = { date:raw.date||'', total_sum:raw.total_sum, items:(raw.items||[]).map(it=>({i:it.i,q:it.q,p:it.p})) };
+    _accRawFull = raw; // AI 원본 통째 보관 (공급가·세액 포함 → DB 저장)
+    _accOrig = { date:raw.date||'', total_sum:raw.total_sum, total_supply:raw.total_supply??null, total_tax:raw.total_tax??null, items:(raw.items||[]).map(it=>({i:it.i,u:it.u,q:it.q,p:it.p})) };
     _accCur = JSON.parse(JSON.stringify(_accOrig));
     _accLastCost = cost;
     _accSaveVendor(_accVendor);
@@ -244,6 +226,19 @@ function accScore(){
   const overall = Math.round(((sumOk?1:0)*0.4 + (qOk/n)*0.4 + (nOk/n)*0.2)*100);
   const date=_accCur.date||'(날짜미상)';
   _accSaveAnswer(_accVendor, date, _accCur);
+  // DB 저장 — CTO가 AI 인식 원본(공급가·세액 포함)을 데이터 창고에서 보며 프롬프트 개선 (2026-06-04)
+  try{
+    if(typeof sb!=='undefined' && sb){
+      sb.from('accuracy_lab_logs').insert({
+        store_id: (typeof currentStore!=='undefined' && currentStore) ? currentStore.id : null,
+        vendor: _accVendor, receipt_date: date,
+        engine: ACC_ENGINES.find(e=>e.id===_accCurEngine).name,
+        ai_raw: _accRawFull, corrected: _accCur,
+        score_overall: overall, score_sum: sumOk, score_qty:`${qOk}/${n}`, score_name:`${nOk}/${n}`,
+        cost_won: _accLastCost
+      }).then(({error})=>{ if(error) console.warn('[accuracy_lab_logs] insert 실패:', error.message); });
+    }
+  }catch(e){ console.warn('[accuracy_lab_logs] 예외:', e); }
   _accAddLog({t:new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),
     eng:ACC_ENGINES.find(e=>e.id===_accCurEngine).name, vendor:_accVendor, date, overall,
     sum:sumOk?'O':'X', qty:`${qOk}/${n}`, name:`${nOk}/${n}`, cost:_accLastCost!=null?_accLastCost.toFixed(1)+'원':'-'});
