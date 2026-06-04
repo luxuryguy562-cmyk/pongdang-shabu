@@ -969,6 +969,13 @@ async function runAI() {
         throw geminiErr;
       }
     }
+    // 여러 장인데 서로 다른 거래처 영수증이 섞임 감지 → 중단 + 안내 (2026-06-04)
+    //   엉킨 결과를 저장하는 사고 방지. 거래처별로 따로 올리도록 유도.
+    if(pageCount>1 && !Array.isArray(raw) && raw?.multi_receipt===true){
+      setLoad(false);
+      toast('📄 서로 다른 거래처 영수증이 섞여 있어요.\n거래처별로 한 번에 한 곳씩 올려주세요.', 'warn', 7000);
+      return;
+    }
     // 응답 호환: 옛 배열 형식과 새 객체 형식 둘 다 받음
     // 2026-05-19 (4)+ 출력 다이어트: date·vendor 최상위 1번 → 행 fallback
     const itemsRaw = Array.isArray(raw) ? raw : (raw?.items || []);
