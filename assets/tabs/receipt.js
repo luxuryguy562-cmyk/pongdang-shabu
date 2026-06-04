@@ -882,9 +882,20 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplyS
   // 세액 별도 거래명세서(공급가·세액·합계 칸 따로): 행 p=공급가(세전) → 세전끼리(공급가액 소계) 비교.
   //  그 외(POS·일반 영수증, 세액 포함가): 세후 총액끼리 비교 (기존 동작 유지)
   //  2026-06-04 사장님 호소 "공급가 계산 후 세액 붙이는 양식" 거짓 차이 경고 해결
-  const hasSupply = supplySum!=null && supplySum>0;
-  const hasTax = taxSum!=null && taxSum>0;
-  const compareBase = hasSupply ? supplySum : receiptTotalSum;
+  let hasSupply = supplySum!=null && supplySum>0;
+  let hasTax = taxSum!=null && taxSum>0;
+  let effSupply = supplySum, effTax = taxSum;
+  // 🛟 안전망: AI가 공급가/세액을 안 채워줘도(모델이 필드 누락), 총액-행합 차이가
+  //   부가세(공급가의 약 10%)로 보이면 세액 별도 양식으로 자동 감지 → 거짓 경고 방지
+  //   (2026-06-04 실제 제미나이가 total_supply 누락 대비)
+  if(!hasSupply && receiptTotalSum>0 && rowSum>0 && receiptTotalSum>rowSum){
+    const gap = receiptTotalSum - rowSum;
+    const gapPct = gap/rowSum*100;
+    if(gapPct>=8.5 && gapPct<=11){ // 부가세 10% ± 면세 섞임 여유
+      hasSupply=true; hasTax=true; effSupply=rowSum; effTax=gap;
+    }
+  }
+  const compareBase = hasSupply ? effSupply : receiptTotalSum;
   const hasCompare = compareBase!=null && compareBase>0;
   let cls = 'rcp-sumbar', sub = '';
   if(hasCompare){
@@ -897,7 +908,7 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplyS
     } else if(ok){
       if(hasSupply && hasTax){
         // 세액 별도 양식: 공급가 일치 + 부가세 별도 안내 (사장님이 232,840이 어디 갔는지 이해되게)
-        sub = `✅ 공급가 일치 · 부가세 ${fmt(taxSum)}원 별도${receiptTotalSum?` (영수증 합계 ${fmt(receiptTotalSum)}원)`:''}`;
+        sub = `✅ 공급가 일치 · 부가세 ${fmt(effTax)}원 별도${receiptTotalSum?` (영수증 합계 ${fmt(receiptTotalSum)}원)`:''}`;
       } else {
         sub = `✅ 영수증 원본 ${fmt(receiptTotalSum||compareBase)}원과 일치${diff>0?` (${fmt(diff)}원 반올림)`:''}`;
       }
