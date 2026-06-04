@@ -23,6 +23,7 @@ let _accFileBuf=[];
 let _accOrig=null;     // AI 원본 (정확도 비교 기준)
 let _accCur=null;      // 사장님 정정본 (= 정답)
 let _accRawFull=null;  // AI 응답 통째 (total_supply/total_tax 포함 — DB 저장용)
+let _accLogId=null;    // 분석 직후 자동저장된 DB 행 id (채점 시 update용)
 let _accLastCost=null;
 let _accStyleInjected=false;
 
@@ -171,6 +172,7 @@ async function accAnalyze(){
     _accCur = JSON.parse(JSON.stringify(_accOrig));
     _accLastCost = cost;
     _accSaveVendor(_accVendor);
+    await _accAutoSave(); // 분석 직후 DB 자동 저장 (채점 전 — CTO가 스샷 없이 AI 원본 확인)
     _accRenderResult();
   }catch(e){
     const r=document.getElementById('accResult');
@@ -217,6 +219,21 @@ function _accRenderResult(){
   if(sb2) sb2.addEventListener('click', accScore);
 }
 
+// ─── 분석 직후 자동 저장 (채점 없이도 CTO가 DB로 AI 원본 확인 — 2026-06-04) ───
+async function _accAutoSave(){
+  _accLogId = null;
+  try{
+    if(typeof sb==='undefined' || !sb) return;
+    const {data, error} = await sb.from('accuracy_lab_logs').insert({
+      store_id: (typeof currentStore!=='undefined' && currentStore) ? currentStore.id : null,
+      vendor: _accVendor, receipt_date: (_accOrig && _accOrig.date) || null,
+      engine: ACC_ENGINES.find(e=>e.id===_accCurEngine).name,
+      ai_raw: _accRawFull, corrected: null, cost_won: _accLastCost
+    }).select('id').single();
+    if(!error && data) _accLogId = data.id;
+  }catch(e){ console.warn('[accuracy_lab_logs] 자동저장 실패:', e); }
+}
+
 // ─── 채점 (AI 원본 vs 사장님 정정본) ───
 function accScore(){
   if(!_accOrig||!_accCur) return;
@@ -231,17 +248,19 @@ function accScore(){
   const overall = Math.round(((sumOk?1:0)*0.4 + (qOk/n)*0.4 + (nOk/n)*0.2)*100);
   const date=_accCur.date||'(날짜미상)';
   _accSaveAnswer(_accVendor, date, _accCur);
-  // DB 저장 — CTO가 AI 인식 원본(공급가·세액 포함)을 데이터 창고에서 보며 프롬프트 개선 (2026-06-04)
+  // 채점 결과 저장 — 분석 때 자동저장된 행(_accLogId) 있으면 update, 없으면 insert (2026-06-04)
   try{
     if(typeof sb!=='undefined' && sb){
-      sb.from('accuracy_lab_logs').insert({
-        store_id: (typeof currentStore!=='undefined' && currentStore) ? currentStore.id : null,
-        vendor: _accVendor, receipt_date: date,
-        engine: ACC_ENGINES.find(e=>e.id===_accCurEngine).name,
-        ai_raw: _accRawFull, corrected: _accCur,
-        score_overall: overall, score_sum: sumOk, score_qty:`${qOk}/${n}`, score_name:`${nOk}/${n}`,
-        cost_won: _accLastCost
-      }).then(({error})=>{ if(error) console.warn('[accuracy_lab_logs] insert 실패:', error.message); });
+      const payload = { corrected:_accCur, score_overall:overall, score_sum:sumOk, score_qty:`${qOk}/${n}`, score_name:`${nOk}/${n}` };
+      if(_accLogId){
+        sb.from('accuracy_lab_logs').update(payload).eq('id',_accLogId).then(({error})=>{ if(error) console.warn('[accuracy_lab_logs] update 실패:', error.message); });
+      } else {
+        sb.from('accuracy_lab_logs').insert(Object.assign({
+          store_id: (typeof currentStore!=='undefined' && currentStore) ? currentStore.id : null,
+          vendor:_accVendor, receipt_date:date, engine:ACC_ENGINES.find(e=>e.id===_accCurEngine).name,
+          ai_raw:_accRawFull, cost_won:_accLastCost
+        }, payload)).then(({error})=>{ if(error) console.warn('[accuracy_lab_logs] insert 실패:', error.message); });
+      }
     }
   }catch(e){ console.warn('[accuracy_lab_logs] 예외:', e); }
   _accAddLog({t:new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),
