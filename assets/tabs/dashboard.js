@@ -54,11 +54,15 @@ const _VE_COLORS=['#22C55E','#3B82F6','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#
 // ─── 새 기능: 지금 근무 인원 배지 (2026-06-04) ───
 //  · 오늘 출근(app_in) 찍고 퇴근(app_out) 안 한 직원 = 지금 근무 중
 //  · 동그라미 최대 3개 + 나머지는 +N명 (인원 많아도 한 줄 고정)
-//  · 0명(출근 기록 없음) = 배지 숨김. 탭 → 근태관리
+//  · 0명(출근 기록 없음) = 회색으로 "아직 출근 기록이 없어요" 표시 (항상 공간 유지). 탭 → 근태관리
 async function renderWorkingNow(){
   const badge=document.getElementById('dashWorkingNow');
   if(!badge) return;
-  if(!currentStore?.id){ badge.style.display='none'; return; }
+  if(!currentStore?.id){
+    badge.innerHTML=`<span class="wn-live wn-live-off"></span><div class="wn-inf"><div class="wn-tt wn-tt-off">아직 출근 기록이 없어요</div></div><span class="wn-arr">›</span>`;
+    badge.style.display='';
+    return;
+  }
   const today=ymdLocal(new Date());
   const {data,error}=await sb.from('attendance_logs')
     .select('employee_id,app_in,app_out,employees(name)')
@@ -67,7 +71,11 @@ async function renderWorkingNow(){
   if(error){ console.warn('[renderWorkingNow]', error.message); badge.style.display='none'; return; }
   // 출근은 찍었고 퇴근(app_out)은 아직 안 찍음 = 지금 근무 중
   const working=(data||[]).filter(r=>!r.app_out);
-  if(!working.length){ badge.style.display='none'; return; }
+  if(!working.length){
+    badge.innerHTML=`<span class="wn-live wn-live-off"></span><div class="wn-inf"><div class="wn-tt wn-tt-off">아직 출근 기록이 없어요</div></div><span class="wn-arr">›</span>`;
+    badge.style.display='';
+    return;
+  }
   const names=working.map(r=>r.employees?.name||'직원');
   const n=working.length;
   const avCls=['wn-c0','wn-c1','wn-c2'];
@@ -95,14 +103,9 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
     .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
     .sort((a,b)=>b.amt-a.amt);
   if(!items.length){
-    // 매출 있는 날인데 지출 기록만 없음 → 빈 안내 표시 (기능이 살아있음을 보여줌, 2026-06-04)
-    // 매출도 없는 날(hasSale=false)은 '첫 매출 CTA'가 따로 떠서 여기선 섹션 숨김
-    if(hasSale){
-      if(listEl) listEl.innerHTML=`<div class="t7-ve-empty">오늘은 아직 지출 내역이 없어요</div>`;
-      card.style.display='';
-    } else {
-      card.style.display='none';
-    }
+    // 데이터 없어도 섹션은 항상 표시 — height:160px 고정이라 아래 월요약 카드 위치 안 튐 (2026-06-04)
+    if(listEl) listEl.innerHTML=`<div class="t7-ve-empty">오늘은 아직 지출 내역이 없어요</div>`;
+    card.style.display='';
     return;
   }
   if(listEl){
