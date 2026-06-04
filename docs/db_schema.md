@@ -601,6 +601,29 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 - 마이그레이션: `create_ai_usage_logs_20260519`
 - 롤백: `DROP INDEX idx_ai_usage_*; DROP TABLE ai_usage_logs;`
 
+### accuracy_lab_logs (신규 2026-06-04 — 측정실 DB 저장)
+| 컬럼 | 용도 |
+|------|------|
+| id (UUID, default gen_random_uuid()) | PK |
+| store_id (FK→stores) | 매장 |
+| vendor (TEXT) | 거래처명 |
+| receipt_date (TEXT) | 영수증 날짜 |
+| engine (TEXT) | 분석 엔진명 (예: `Gemini 2.5 Flash`) |
+| ai_raw (JSONB) | **AI 원본 응답 통째** (total_sum/total_supply/total_tax/items) — CTO 프롬프트 개선용 |
+| corrected (JSONB) | 사장님 정정본 (= 정답) |
+| score_overall (INT) | 종합 정확도 % |
+| score_sum (BOOLEAN) | 합계 일치 여부 |
+| score_qty (TEXT) | 수량 정확 `N/M` |
+| score_name (TEXT) | 품목 정확 `N/M` |
+| cost_won (NUMERIC) | 1회 분석 비용(원) |
+| created_at (TIMESTAMPTZ default now()) | 채점 시각 |
+
+- 인덱스: `idx_accuracy_lab_store (store_id, created_at DESC)`
+- 용도: 측정실(#admin) 채점 결과 저장 → **CTO가 AI 인식 원본을 DB로 보며 프롬프트 개선**. 기존 localStorage(브라우저)와 병행.
+- 마이그레이션: `create_accuracy_lab_logs_20260604`
+- 롤백: `DROP INDEX idx_accuracy_lab_store; DROP TABLE accuracy_lab_logs;`
+- ⚠️ RLS 미적용 (ai_usage_logs와 동일 패턴, #admin PIN 게이트 전용). 추후 RLS 검토.
+
 ## 주의사항
 - **RLS 1차 활성 (2026-04-17 Phase 2b)**: 매장별 22개 테이블 RLS ON + `pd_phase2b_all` 정책
   - 정책: `USING(true) WITH CHECK(store_id IS NOT NULL) FOR ALL TO public`
