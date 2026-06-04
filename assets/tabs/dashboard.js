@@ -98,7 +98,13 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
     .sort((a,b)=>b.amt-a.amt);
   if(!items.length){
     // 데이터 없어도 섹션은 항상 표시 — height:160px 고정이라 아래 월요약 카드 위치 안 튐 (2026-06-04)
-    if(listEl) listEl.innerHTML=`<div class="t7-ve-empty">오늘은 아직 지출 내역이 없어요</div>`;
+    if(listEl) listEl.innerHTML=`<div class="t7-ve-dash2">`
+      +`<span class="ve-d2-tx">🧾 지출 내역이 여기 나와요</span>`
+      +`<div class="ghost-rows">`
+      +`<div class="ghost-row"><span class="ghost-dot"></span><span class="ghost-bar" style="width:90px;"></span><span class="ghost-bar" style="width:50px;margin-left:auto;"></span></div>`
+      +`<div class="ghost-row"><span class="ghost-dot"></span><span class="ghost-bar" style="width:70px;"></span><span class="ghost-bar" style="width:45px;margin-left:auto;"></span></div>`
+      +`<div class="ghost-row"><span class="ghost-dot"></span><span class="ghost-bar" style="width:80px;"></span><span class="ghost-bar" style="width:55px;margin-left:auto;"></span></div>`
+      +`</div></div>`;
     card.style.display='';
     return;
   }
@@ -201,21 +207,22 @@ function renderTopCardForDay(dayStr){
   const prevSale = ctx.prevDailySalesMap[dayPad] || 0;
   const prevProfit = prevSale - prevExp;
 
-  // 라벨
+  // 헤더 안 A — 날짜 메인 + 상대표현 배지 + 상태 보조줄 (2026-06-04)
   const dow = ['일','월','화','수','목','금','토'][new Date(ctx.ym+'-'+dayPad+'T00:00:00').getDay()];
-  const moStr = String(ctx.mo).padStart(2,'0');
-  // 오늘/어제/그 외 날짜 — 어느 달이든 안 사라지고 그날 매출 표시 (2026-06-03 통합 흐름)
-  const titleWord = isTodayShown ? '오늘 매출' : (isYesterday ? '어제 매출' : '매출');
-  // "마감" 배지 — 오늘만 (준비중)·실시간, 과거는 표시 없음
-  const modeLabel = (ctx.isUpsMode && isTodayShown) ? '실시간' : (isTodayShown ? '마감 전' : '');
-  document.getElementById('dashTopSalesLabel').innerText = `${titleWord} · ${moStr}.${dayPad}(${dow})`;
-  if(modeLabel){
-    topModeEl.innerText = modeLabel;
-    topModeEl.className = 't7-mode' + (ctx.isUpsMode ? ' live' : '');
-    topModeEl.style.display = '';
-  } else {
-    topModeEl.style.display = 'none';
+  const dayN = parseInt(dayPad, 10);
+  // 메인: "6월 4일 (목)"
+  document.getElementById('dashTopSalesLabel').innerText = `${ctx.mo}월 ${dayN}일 (${dow})`;
+  // 상대표현 배지: 오늘=초록, 어제=회색, 그 외=숨김
+  const relEl = document.getElementById('dashTopSalesRel');
+  if(relEl){
+    if(isTodayShown){ relEl.innerText='오늘'; relEl.className='t7-day-badge today'; relEl.style.display=''; }
+    else if(isYesterday){ relEl.innerText='어제'; relEl.className='t7-day-badge'; relEl.style.display=''; }
+    else { relEl.style.display='none'; }
   }
+  // 상태 보조줄: 오늘 실시간/마감 전, 과거 마감 (항상 표시 — 줄 높이 안정)
+  const subLabel = (ctx.isUpsMode && isTodayShown) ? '실시간' : (isTodayShown ? '마감 전' : '마감');
+  topModeEl.innerText = `● ${subLabel}`;
+  topModeEl.className = 't7-day-sub' + ((ctx.isUpsMode && isTodayShown) ? ' live' : '');
 
   if(saleAmt > 0){
     topAmtEl.classList.remove('empty');
