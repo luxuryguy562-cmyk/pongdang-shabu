@@ -360,6 +360,7 @@ function nav(tab, el) {
     settingsBasic: { container: 'settings', sub: null },
     settingsWage: { container: 'settings', sub: null },
     settingsSettle: { container: 'settings', sub: null },
+    attendanceRecord: { container: 'attendance', sub: 'all' },
   };
   if (subTabMap[tab]) {
     subTab = subTabMap[tab].sub;
@@ -432,12 +433,10 @@ function nav(tab, el) {
     const firstSub = document.querySelector(`#${tab}Cont .sub-tabs .sub-tab:first-child`);
     if (firstSub && !firstSub.classList.contains('active')) firstSub.click();
   }
-  // 서브탭 전환
+  // 서브탭 전환 — 동기 즉시 처리 (지연 시 기본 서브탭 화면이 깜빡 보이는 잔상 방지)
   if (subTab) {
-    setTimeout(() => {
-      const subBtn = document.querySelector(`#${tab}Cont .sub-tab[data-sub="${subTab}"]`);
-      if (subBtn) subBtn.click();
-    }, 50);
+    const subBtn = document.querySelector(`#${tab}Cont .sub-tab[data-sub="${subTab}"]`);
+    if (subBtn) subBtn.click();
   }
 }
 function openSheet(id) {
