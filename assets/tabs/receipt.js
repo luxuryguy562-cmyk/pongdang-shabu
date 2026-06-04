@@ -877,34 +877,33 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplyS
       pageBox.style.display='none';
     }
   }
-  // 2️⃣ 합계 바 (목업 A안 — 깔끔한 한 줄. 일치=파랑 / 차이=빨강 / 페이지누락=주황)
+  // 2️⃣ 영수증 요약 카드 (가안 A — 합계 크게 + 공급가/부가세/합계 한 곳. 2026-06-04)
   if(!sumBox) return;
-  // 행 금액(p)이 세후로 통일됨(2026-06-04) → 영수증 총액과 세후끼리 단순 비교 + 부가세 따로 표시
   const rowTax = (list||[]).reduce((a,r)=>a+(parseInt(r.taxAmount)||0),0); // 세액 합
   const rowSupply = rowSum - rowTax;                                       // 공급가(세전) 합
-  let cls = 'rcp-sumbar', sub = '';
+  let cls = 'rcp-sumcard', okLine = `${cnt}개 품목`;
   if(hasReceiptSum){
     const diff = Math.abs(receiptTotalSum - rowSum);
     const diffPct = receiptTotalSum>0 ? (diff/receiptTotalSum*100) : 0;
     const ok = diff <= 10 || diffPct < 0.5;
     if(pagesMissing){
       cls += ' warn';
-      sub = `⏳ ${pageTotal}페이지 중 ${photos}장 — 남은 페이지 추가 시 일치 예정`;
+      okLine = `⏳ ${pageTotal}페이지 중 ${photos}장 — 남은 페이지 추가 시 일치 예정`;
     } else if(ok){
-      sub = rowTax>0
-        ? `✅ 영수증 ${fmt(receiptTotalSum)}원 일치 · 공급가 ${fmt(rowSupply)} + 부가세 ${fmt(rowTax)}`
-        : `✅ 영수증 원본 ${fmt(receiptTotalSum)}원과 일치${diff>0?` (${fmt(diff)}원 반올림)`:''}`;
+      okLine = `✅ 영수증 원본과 일치 · ${cnt}개 품목${diff>0?` (${fmt(diff)}원 반올림)`:''}`;
     } else {
       cls += ' danger';
-      sub = `⚠️ 영수증 원본 ${fmt(receiptTotalSum)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 행별 확인`;
+      okLine = `⚠️ 영수증 원본 ${fmt(receiptTotalSum)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 확인`;
     }
-  } else if(rowTax>0){
-    // 영수증 총액을 못 읽었어도 세액 정보는 보여줌
-    sub = `공급가 ${fmt(rowSupply)} + 부가세 ${fmt(rowTax)} = ${fmt(rowSum)}원`;
   }
   sumBox.className = cls;
-  sumBox.innerHTML = `<div class="rsb-l">📋 합계 <span class="rsb-cnt">(${cnt}개 품목)</span></div>`
-    + `<div class="rsb-r"><div class="rsb-v">${fmt(rowSum)}원</div>${sub?`<div class="rsb-sub">${sub}</div>`:''}</div>`;
+  // 세액 있으면 공급가/부가세/합계 3줄, 없으면 합계 큰 숫자만
+  const taxLines = rowTax>0
+    ? `<hr class="rsc-br"><div class="rsc-ln"><span>공급가</span><b>${fmt(rowSupply)}</b></div>`
+      + `<div class="rsc-ln"><span>부가세</span><b>${fmt(rowTax)}</b></div>`
+      + `<div class="rsc-ln total"><span>합계</span><b>${fmt(rowSum)}</b></div>`
+    : '';
+  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>${taxLines}`;
 }
 async function applyRulesToReceipt(list){
   if(!storeClassRules?.length) await loadClassificationRules();
@@ -1120,17 +1119,13 @@ function buildReceiptRow(i={}) {
   const suspect = i._suspect;
   const suspectCls = suspect ? ' suspect' : '';
   const suspectMark = suspect ? `<span title="단가×수량(${fmt(suspect.calc)}) ≠ 공급가 — ${fmt(suspect.diff)}원 차이. 수량 확인 필요" style="font-size:13px;cursor:help;">⚠️</span>` : '';
-  // 행별 세액 줄 (세액 있는 영수증만 — i._taxFormat 플래그) — 2026-06-04
+  // 면세 배지 (세액 섞인 영수증의 세액 0 행 = 면세) — 2026-06-04 가안 A
   const _tax = parseInt(i.taxAmount)||0;
-  const _supply = (i.supplyPrice!=null) ? parseInt(i.supplyPrice) : ((parseInt(i.totalPrice)||0) - _tax);
-  const taxLine = i._taxFormat
-    ? (_tax>0
-        ? `<div class="ric-l3"><span>공급가 <b>${fmt(_supply)}</b></span><span>부가세 <b>${fmt(_tax)}</b></span></div>`
-        : `<div class="ric-l3 free"><span>🌱 면세 (부가세 없음)</span></div>`)
-    : '';
+  const freeBadge = (i._taxFormat && _tax===0) ? `<span class="ric-free">면세</span>` : '';
   return `<div class="rcp-item-card${suspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
       <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목">
+      ${freeBadge}
       <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
       <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
     </div>
@@ -1141,7 +1136,6 @@ function buildReceiptRow(i={}) {
       ${learnBadge}
       <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
     </div>
-    ${taxLine}
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
     <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
     <input type="hidden" class="c-t" value="${parseInt(i.taxAmount)||0}">

@@ -1522,8 +1522,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .ric-mini input{border:none;background:transparent;width:46px;font-size:12px;font-weight:700;text-align:right;color:var(--toss-text-1);outline:none;font-family:inherit;}
 .ric-chip{margin-left:auto;font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;background:var(--toss-blue-light);color:var(--toss-blue);border:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
 .ric-chip.empty{background:var(--toss-line);color:var(--toss-text-4);}
-/* 행별 세액 줄 (세액 있는 영수증만 — 2026-06-04) */
-.ric-l3{margin-top:6px;padding-top:6px;border-top:1px dashed var(--toss-line);font-size:11px;color:var(--toss-text-4);font-weight:600;display:flex;gap:12px;}
-.ric-l3 b{color:var(--toss-text-3);font-weight:700;}
-.ric-l3.free{color:var(--warn);}
+/* 면세 배지 (품목명 옆 — 2026-06-04 가안 A) */
+.ric-free{flex:0 0 auto;font-size:9px;font-weight:800;color:var(--warn);border:1px solid var(--warn);border-radius:5px;padding:1px 5px;}
+/* 영수증 요약 카드 (가안 A — 공급가/부가세/합계 한 곳에) */
+.rcp-sumcard{background:#fff;border-radius:14px;box-shadow:var(--card-shadow);padding:14px 16px;margin-bottom:10px;}
+.rcp-sumcard .rsc-big{font-size:24px;font-weight:900;color:var(--toss-text-1);letter-spacing:-.5px;font-variant-numeric:tabular-nums;}
+.rcp-sumcard .rsc-ok{font-size:11.5px;color:#05C072;font-weight:700;margin-top:2px;}
+.rcp-sumcard.warn{background:var(--warn-light);} .rcp-sumcard.warn .rsc-ok{color:#92400E;}
+.rcp-sumcard.danger{background:var(--danger-light);} .rcp-sumcard.danger .rsc-ok{color:var(--danger);}
+.rcp-sumcard .rsc-br{border:none;border-top:1px solid var(--toss-line);margin:11px 0;}
+.rcp-sumcard .rsc-ln{display:flex;justify-content:space-between;font-size:13px;margin:5px 0;color:var(--toss-text-3);font-weight:600;}
+.rcp-sumcard .rsc-ln b{color:var(--toss-text-1);font-weight:700;font-variant-numeric:tabular-nums;}
+.rcp-sumcard .rsc-ln.total{font-size:14px;color:var(--toss-text-1);font-weight:800;}
 .rcp-learn-badge{font-size:13px;}
