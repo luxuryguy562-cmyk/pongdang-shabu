@@ -961,7 +961,7 @@ async function loadDashboard(force){
       const dayNum=parseInt(d);
       if(dayNum>passedDays) return;
       const hasSale=dailySalesMap.hasOwnProperty(d);
-      if(!hasSale) return;
+      // hasSale 여부와 무관하게 지출은 항상 계산 (매출 미입력일에도 실시간 지출 표시 — 2026-06-05)
       if(!dailyCatMap[d])dailyCatMap[d]={};
       fixedCats.forEach(cat=>{
         if(dailyFixedShareByCat[cat.name]>0){ dailyCatMap[d][cat.name]=dailyFixedShareByCat[cat.name]; _addVE(d, cat.name, dailyFixedShareByCat[cat.name], '고정비'); }
