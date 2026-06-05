@@ -993,7 +993,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .m6-mr .v.green{color:#0CAB6C;}
 .m6-mr .v.red{color:#EF4444;}
 /* 예상마감 문장형 배너 — "이대로 가면 이번달 ○○ 매출에 ○○ 이득/손해예요" (2026-06-05 A안) */
-.m6-fc{display:flex;align-items:center;gap:7px;margin-top:8px;padding:9px 13px;background:#F0FDF7;border:1.5px solid #BBF7D0;border-radius:11px;}
+.m6-fc{display:flex;align-items:center;gap:7px;margin-top:8px;padding:9px 13px;background:#F0FDF7;border:1.5px solid #BBF7D0;border-radius:11px;cursor:pointer;transition:filter .15s;}
+.m6-fc:active{filter:brightness(.96);}
 .m6-fc.neg{background:#FEF2F2;border-color:#FECACA;}
 .m6-fc .fc-tx{font-size:12px;font-weight:700;color:#4B5563;letter-spacing:-0.3px;line-height:1.45;}
 .m6-fc .fc-tx .fc-sale{font-weight:900;color:#191F28;}
@@ -1208,8 +1209,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .wn-nm{font-size:10.5px;color:#8B95A1;font-weight:600;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .wn-arr{margin-left:auto;color:#B0B8C1;font-weight:800;font-size:14px;flex-shrink:0;}
 /* 오늘 매출 풀카드 v7 */
-.dash-today-v7{background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);border-radius:20px;padding:16px 18px 14px;margin-bottom:0;box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.4,1);position:relative;}
-.dash-today-v7:active{transform:scale(.985);}
+.dash-today-v7{background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);border-radius:20px;padding:16px 18px 14px;margin-bottom:0;box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);position:relative;}
+/* 카드 전체 눌림 효과 제거 — 클릭 가능한 줄(지출·자세히)만 개별 반응 (2026-06-05) */
+.dash-today-v7 .t7-row[data-action]{cursor:pointer;transition:background .15s;border-radius:8px;}
+.dash-today-v7 .t7-row[data-action]:active{background:#F2F4F6;}
 /* 홈 매출 카드 헤더 — 안 A (날짜 메인 + 상대표현 배지 + 상태 보조줄, 2026-06-04) */
 .dash-today-v7 .t7-head-v2{display:flex;align-items:center;margin-bottom:10px;gap:0;}
 .dash-today-v7 .t7-nav{border:none;background:transparent;width:36px;height:40px;font-size:26px;color:#333D4B;font-weight:700;cursor:pointer;border-radius:8px;padding:0;flex-shrink:0;transition:color .15s,opacity .15s;line-height:1;}
