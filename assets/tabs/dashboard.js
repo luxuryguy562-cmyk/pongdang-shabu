@@ -126,9 +126,10 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
     const catColor={}; let ci=0;
     listEl.innerHTML = items.map(it=>{
       if(!(it.cat in catColor)) catColor[it.cat]=_VE_COLORS[ci++ % _VE_COLORS.length];
-      return `<div class="ve-item"><span class="vdot" style="background:${catColor[it.cat]};"></span>`
+      // 왼쪽 점 제거 → 카테고리 색을 태그에 흡수 (매출·지출·수익 점과 위계 분리, 2026-06-05)
+      return `<div class="ve-item">`
         +`<span class="vname">${esc(it.name)}</span>`
-        +`<span class="ve-cat-tag">${esc(it.cat)}</span>`
+        +`<span class="ve-cat-tag" style="background:${catColor[it.cat]}1A;color:${catColor[it.cat]};">${esc(it.cat)}</span>`
         +`<span class="vamt">${fmt(it.amt)}원</span></div>`;
     }).join('');
   }
