@@ -1186,10 +1186,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* stage 토글 */
 #dashboardCont .dash-stage{display:none;}
 #dashboardCont .dash-stage.active{display:block;}
-/* 인사 헤더 */
-.dash-hello{margin:2px 4px 8px;}
-.dash-hello h1{font-size:20px;font-weight:800;color:#191F28;margin:0 0 2px;letter-spacing:-0.7px;line-height:1.2;}
-.dash-hello p{font-size:12px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;}
+/* 인사 헤더 — 한 줄 압축 (2026-06-05 A안, 모바일 한 화면 확보) */
+.dash-hello{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 4px 8px;}
+.dash-hello h1{font-size:15px;font-weight:800;color:#191F28;margin:0;letter-spacing:-0.5px;line-height:1.2;white-space:nowrap;}
+.dash-hello p{font-size:11.5px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;white-space:nowrap;}
 /* 지금 근무 인원 카드 (2026-06-04) — 날짜 아래 compact 카드, 항상 표시 */
 .wn-card{display:flex;align-items:center;gap:9px;background:#fff;border-radius:13px;padding:8px 13px;margin:0 0 9px;min-height:46px;box-shadow:0 1px 4px rgba(20,40,80,.06);cursor:pointer;transition:transform .15s;}
 .wn-card:active{transform:scale(.985);}
