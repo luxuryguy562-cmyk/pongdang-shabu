@@ -1029,6 +1029,37 @@ async function runAI() {
     list.forEach(it=> it._taxFormat = _hasAnyTax);
     // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
     list=await applyRulesToReceipt(list);
+    // ─── Self-Reflection: 합계 불일치 시 AI 재검산 최대 2회 (2026-06-05) ───
+    if(receiptTotalSum && !usedFallback){
+      for(let _ref=0; _ref<2; _ref++){
+        const _rowSum=list.reduce((s,it)=>s+(parseInt(it.totalPrice)||0),0);
+        const _diff=Math.abs(_rowSum-receiptTotalSum);
+        if(_diff<=Math.max(500, receiptTotalSum*0.005)) break; // 0.5% 또는 500원 이내 = 통과
+        setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`);
+        try{
+          const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u) 오류를 찾아 수정된 JSON만 반환.`},...parts.slice(1)];
+          const _fixRaw=await callGemini(_rParts,timeoutSec+10,'receipt_reflection',aiModel,'gemini');
+          const _fixItems=Array.isArray(_fixRaw)?_fixRaw:(_fixRaw?.items||[]);
+          if(!_fixItems.length) break;
+          raw=_fixRaw;
+          list=_fixItems.map(x=>({
+            date:x.d||x.date||respDate||ymdLocal(new Date()),
+            vendor:x.v??x.vendor??respVendor??'',
+            item:x.i||x.item||'',
+            unitPrice:x.u??x.unitPrice??null,
+            qty:x.q??x.qty??null,
+            totalPrice:x.p??x.totalPrice??0,
+            taxAmount:x.t??x.taxAmount??0,
+            isTaxFree:(x.f===true||x.f==='true'||x.isTaxFree===true),
+            category:x.c||x.category||defaultCat
+          }));
+          list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
+          const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
+          list.forEach(it=>it._taxFormat=_ht2);
+          list=await applyRulesToReceipt(list);
+        }catch(e){break;}
+      }
+    }
     // 임계값 = max(100원, 0.5%) — 2026-05-19 (4) 사장님 호소: 회계 기준 5% 너무 느슨
     // 1원 차이(반올림) = 자동 통과, 100원 이내·0.5% 이내 = 정상, 그 외 = ⚠️ catch
     // 예: 116,000 vs 115,999 (1원) → 통과 / 282,000 vs 28,200 (253,800원) → catch
