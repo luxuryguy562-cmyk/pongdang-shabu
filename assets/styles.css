@@ -1265,8 +1265,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-row .r-go{font-size:16px;font-weight:800;color:#3182F6;cursor:pointer;text-align:center;padding-left:4px;}
 /* 어디에 썼나 — 오늘 카드 안 통합 (A안, 2026-06-03). 거래처 많으면 이 안에서만 스크롤 */
 .dash-today-v7 .t7-ve-section{position:relative;margin-top:2px;padding-top:8px;border-top:1px dashed #E5E8EB;}
-/* 스크롤 신호: 박스 하단 흐림 → "더 있어요" (2026-06-05 B2) */
-.dash-today-v7 .t7-ve-section::after{content:'';position:absolute;left:3px;right:3px;bottom:3px;height:16px;background:linear-gradient(to bottom,rgba(250,251,252,0) 0%,rgba(250,251,252,.7) 55%,rgba(250,251,252,.98) 100%);border-radius:0 0 13px 13px;pointer-events:none;}
+/* 스크롤 신호: 박스 하단 흐림 → "더 있어요" (2026-06-05 B1) */
+.dash-today-v7 .t7-ve-section::after{content:'';position:absolute;left:3px;right:3px;bottom:3px;height:28px;background:linear-gradient(to bottom,rgba(250,251,252,0) 0%,rgba(250,251,252,.3) 25%,rgba(250,251,252,.7) 60%,rgba(250,251,252,.95) 85%,#FAFBFC 100%);border-radius:0 0 13px 13px;pointer-events:none;}
 .dash-today-v7 .t7-ve-head{font-size:12.5px;font-weight:800;color:#191F28;display:flex;align-items:center;margin-bottom:2px;}
 .dash-today-v7 .t7-ve-note{margin-left:auto;font-size:10px;font-weight:600;color:#B0B8C1;}
 .dash-today-v7 .t7-ve-list{height:82px;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;border:2px dashed #DDE2E8;border-radius:14px;background:#FAFBFC;padding:2px 12px;}
