@@ -12,6 +12,7 @@ let rcpCatId = null;     // 거래처 자동 박힌 category_id
 let rcpCatName = '';     // 거래처 자동 박힌 category 텍스트
 let rcpInputMethod = null; // 'photo' | 'manual' — 영수증 단위 입력 방식 (📸/✏️ 이모지 표시용)
 let rcpEntryReturn = null; // 영수증 저장 후 자동 복귀할 화면 ('catReceipt:direct'|'catReceipt:etc'|'vendors:<id>')
+let rcpPastItems = [];   // 현재 거래처 과거 품목명 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
 
 function setRcpMode(mode){
   if(!guardStore()) return;
@@ -743,7 +744,7 @@ function handleImg(input) {
     const img = new Image();
     img.onload = () => {
       const cvs = document.createElement('canvas');
-      let w=img.width,h=img.height; if(w>1280){h*=1280/w;w=1280;}
+      let w=img.width,h=img.height; if(w>2000){h*=2000/w;w=2000;} // 글자 많은 명세서 선명도 ↑ (1280→2000, 가재/가래 오독 방지)
       cvs.width=w;cvs.height=h;cvs.getContext('2d').drawImage(img,0,0,w,h);
       const dataUrl = cvs.toDataURL('image/jpeg',0.85);
       const b64Part = dataUrl.split(',')[1];
@@ -944,6 +945,20 @@ async function runAI() {
     //  · total_sum 우선순위 정정: 금일합계 > 합계액 > 결제금액 (전미수/총합계/잔액/누계 무시)
     //  · page_info: {current, total} 신설 — 영수증 "Page (N/M)" 인쇄 감지
     //  · 멀티페이지: parts에 inline_data 여러 개 → AI가 통합 분석
+    // 거래처 과거 품목 로드 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
+    rcpPastItems = [];
+    if(isVendorModeAI && rcpVendorId){
+      const {data:pData} = await sb.from('receipts')
+        .select('item')
+        .eq('store_id', currentStore.id)
+        .eq('vendor_id', rcpVendorId)
+        .not('item','is',null)
+        .order('created_at',{ascending:false})
+        .limit(300);
+      if(pData && pData.length){
+        rcpPastItems = [...new Set(pData.map(r=>(r.item||'').trim()).filter(Boolean))].slice(0,120);
+      }
+    }
     // 프롬프트 = common.js 공통 함수 (측정실과 100% 동일 — 검증=실제 보장)
     const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, vendorName:rcpVendorName, catList, pageCount });
     // AI 단독 (2026-05-19 (4)): OCR 제거 — Gemini Flash 단독 (3차 best ~95%+) + High demand 시 GPT-4o fallback
@@ -977,6 +992,15 @@ async function runAI() {
       toast('📄 서로 다른 거래처 영수증이 섞여 있어요.\n거래처별로 한 번에 한 곳씩 올려주세요.', 'warn', 7000);
       return;
     }
+    // 품목명 자신 없으면(needs_review) GPT-4o로 자동 재분석 (2026-06-04) — 제미나이 오류 많을 때 더 센 모델로
+    if(!usedFallback && !Array.isArray(raw) && raw?.needs_review===true){
+      try{
+        setLoad(true, '품목명이 어려워 GPT-4o로 다시 읽는 중...');
+        const gptRaw = await callGemini(parts, timeoutSec+15, 'receipt_ocr', 'gpt-4o', 'gpt');
+        const gptItems = Array.isArray(gptRaw) ? gptRaw : (gptRaw && gptRaw.items);
+        if(gptItems && gptItems.length){ raw = gptRaw; usedFallback = true; }
+      }catch(e){ /* GPT 실패 시 제미나이 결과 유지 */ }
+    }
     // 응답 호환: 옛 배열 형식과 새 객체 형식 둘 다 받음
     // 2026-05-19 (4)+ 출력 다이어트: date·vendor 최상위 1번 → 행 fallback
     const itemsRaw = Array.isArray(raw) ? raw : (raw?.items || []);
@@ -1005,6 +1029,37 @@ async function runAI() {
     list.forEach(it=> it._taxFormat = _hasAnyTax);
     // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
     list=await applyRulesToReceipt(list);
+    // ─── Self-Reflection: 합계 불일치 시 AI 재검산 최대 2회 (2026-06-05) ───
+    if(receiptTotalSum && !usedFallback){
+      for(let _ref=0; _ref<2; _ref++){
+        const _rowSum=list.reduce((s,it)=>s+(parseInt(it.totalPrice)||0),0);
+        const _diff=Math.abs(_rowSum-receiptTotalSum);
+        if(_diff<=Math.max(500, receiptTotalSum*0.005)) break; // 0.5% 또는 500원 이내 = 통과
+        setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`);
+        try{
+          const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u) 오류를 찾아 수정된 JSON만 반환.`},...parts.slice(1)];
+          const _fixRaw=await callGemini(_rParts,timeoutSec+10,'receipt_reflection',aiModel,'gemini');
+          const _fixItems=Array.isArray(_fixRaw)?_fixRaw:(_fixRaw?.items||[]);
+          if(!_fixItems.length) break;
+          raw=_fixRaw;
+          list=_fixItems.map(x=>({
+            date:x.d||x.date||respDate||ymdLocal(new Date()),
+            vendor:x.v??x.vendor??respVendor??'',
+            item:x.i||x.item||'',
+            unitPrice:x.u??x.unitPrice??null,
+            qty:x.q??x.qty??null,
+            totalPrice:x.p??x.totalPrice??0,
+            taxAmount:x.t??x.taxAmount??0,
+            isTaxFree:(x.f===true||x.f==='true'||x.isTaxFree===true),
+            category:x.c||x.category||defaultCat
+          }));
+          list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
+          const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
+          list.forEach(it=>it._taxFormat=_ht2);
+          list=await applyRulesToReceipt(list);
+        }catch(e){break;}
+      }
+    }
     // 임계값 = max(100원, 0.5%) — 2026-05-19 (4) 사장님 호소: 회계 기준 5% 너무 느슨
     // 1원 차이(반올림) = 자동 통과, 100원 이내·0.5% 이내 = 정상, 그 외 = ⚠️ catch
     // 예: 116,000 vs 115,999 (1원) → 통과 / 282,000 vs 28,200 (253,800원) → catch
@@ -1032,7 +1087,7 @@ async function runAI() {
       toast(`⚠️ 단가×수량 ≠ 합계 의심 ${suspectRows.length}건\n${detail}${more}\n저장 전 확인하세요`, 'warn', 8000);
     }
     rowCount=0;
-    document.getElementById('resTable').innerHTML=list.map(i=>buildReceiptRow(i)).join('');
+    document.getElementById('resTable').innerHTML=_rcpDatalistHtml()+list.map(i=>buildReceiptRow(i)).join('');
     rowCount=list.length;
     // 영수증 날짜 상단 입력칸에 AI 인식 날짜 표시 + 이상 경고 (2026-06-02: 날짜 hidden 문제 해결)
     const _rcpDateEl=document.getElementById('rcpReceiptDate');
@@ -1112,6 +1167,13 @@ function openReceiptCatPicker(idx){
     }
   });
 }
+// ─── 거래처 과거 품목 자동완성 목록 (품목명 원터치 수정 — 2026-06-05) ───
+//   AI가 한자 음차 품목명을 잘못 읽으면, 사장님이 품목 칸 눌러 과거 품목에서 톡 선택.
+//   AI·DB 자동 덮어쓰기 X (dev_lessons #135 결론 유지) — 순수 사장님 수동 선택.
+function _rcpDatalistHtml(){
+  if(!rcpPastItems || !rcpPastItems.length) return '';
+  return `<datalist id="rcpPastItems">${rcpPastItems.map(n=>`<option value="${esc(n)}"></option>`).join('')}</datalist>`;
+}
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
   const cat=String(i.category||'').trim();
@@ -1133,7 +1195,7 @@ function buildReceiptRow(i={}) {
   const freeBadge = (i.isTaxFree || (i._taxFormat && _tax===0)) ? `<span class="ric-free">면세</span>` : '';
   return `<div class="rcp-item-card${suspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
-      <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목">
+      <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목" list="rcpPastItems" autocomplete="off">
       ${freeBadge}
       <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
       <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>

@@ -13,6 +13,7 @@ function accBuildPrompt(vendor){
 
 const ACC_ENGINES = [
   {id:'gemini',name:'Gemini 2.5 Flash',meta:'구글 · 현재 사용',cost:'~6원/장',tag:'연결됨',cls:'acc-tag-ok',on:true},
+  {id:'gpt4o',name:'GPT-4o',meta:'OpenAI · 고정밀(비쌈)',cost:'~35원/장',tag:'연결됨',cls:'acc-tag-ok',on:true},
   {id:'clova-doc',name:'클로바 문서전용',meta:'네이버 · 표 인식',tag:'키 발급 필요',cls:'acc-tag-key',on:false},
   {id:'upstage',name:'업스테이지',meta:'한국 문서 특화',tag:'키 발급 필요',cls:'acc-tag-key',on:false},
 ];
@@ -22,6 +23,7 @@ let _accFileBuf=[];
 let _accOrig=null;     // AI 원본 (정확도 비교 기준)
 let _accCur=null;      // 사장님 정정본 (= 정답)
 let _accRawFull=null;  // AI 응답 통째 (total_supply/total_tax 포함 — DB 저장용)
+let _accLogId=null;    // 분석 직후 자동저장된 DB 행 id (채점 시 update용)
 let _accLastCost=null;
 let _accStyleInjected=false;
 
@@ -33,7 +35,7 @@ function accFileToB64(file){
       const img=new Image();
       img.onload=()=>{
         const cvs=document.createElement('canvas');
-        let w=img.width,h=img.height; if(w>1280){h*=1280/w;w=1280;}
+        let w=img.width,h=img.height; if(w>2000){h*=2000/w;w=2000;} // 글자 많은 명세서 선명도 ↑ (1280→2000)
         cvs.width=w; cvs.height=h; cvs.getContext('2d').drawImage(img,0,0,w,h);
         resolve(cvs.toDataURL('image/jpeg',0.85).split(',')[1]);
       };
@@ -47,7 +49,11 @@ function accFileToB64(file){
 async function accCallGemini(b64list){
   const parts=[{text:accBuildPrompt(_accVendor)}];
   b64list.forEach(b=>parts.push({inline_data:{mime_type:'image/jpeg',data:b}}));
-  const raw=await callGemini(parts, 30+(b64list.length-1)*5, 'accuracy_test', 'gemini-2.5-flash', 'gemini');
+  // 측정실 엔진 선택 — gemini(싸고 빠름) vs gpt4o(고정밀·비쌈) 비교용
+  const isGpt = _accCurEngine==='gpt4o';
+  const model = isGpt ? 'gpt-4o' : 'gemini-2.5-flash';
+  const provider = isGpt ? 'gpt' : 'gemini';
+  const raw=await callGemini(parts, 30+(b64list.length-1)*5, 'accuracy_test', model, provider);
   const cost=(typeof lastAIUsage!=='undefined'&&lastAIUsage)?lastAIUsage.costWon:null;
   return {raw, cost};
 }
@@ -166,7 +172,9 @@ async function accAnalyze(){
     _accCur = JSON.parse(JSON.stringify(_accOrig));
     _accLastCost = cost;
     _accSaveVendor(_accVendor);
+    await _accAutoSave(); // 분석 직후 DB 자동 저장 (채점 전 — CTO가 스샷 없이 AI 원본 확인)
     _accRenderResult();
+    _accAutoSave(); // 백그라운드 자동 저장 (await X — 화면 로딩 안 막음)
   }catch(e){
     const r=document.getElementById('accResult');
     if(r) r.innerHTML=`<div class="card acc-sec" style="padding:14px;"><div class="acc-err">⚠️ 분석 실패: ${(e&&e.message)||''}<br><span class="acc-mini">중계서버가 막거나 사진이 너무 큰 경우입니다.</span></div></div>`;
@@ -212,6 +220,21 @@ function _accRenderResult(){
   if(sb2) sb2.addEventListener('click', accScore);
 }
 
+// ─── 분석 직후 자동 저장 (채점 없이도 CTO가 DB로 AI 원본 확인 — 2026-06-04) ───
+async function _accAutoSave(){
+  _accLogId = null;
+  try{
+    if(typeof sb==='undefined' || !sb) return;
+    const {data, error} = await sb.from('accuracy_lab_logs').insert({
+      store_id: (typeof currentStore!=='undefined' && currentStore) ? currentStore.id : null,
+      vendor: _accVendor, receipt_date: (_accOrig && _accOrig.date) || null,
+      engine: ACC_ENGINES.find(e=>e.id===_accCurEngine).name,
+      ai_raw: _accRawFull, corrected: null, cost_won: _accLastCost
+    }).select('id').single();
+    if(!error && data) _accLogId = data.id;
+  }catch(e){ console.warn('[accuracy_lab_logs] 자동저장 실패:', e); }
+}
+
 // ─── 채점 (AI 원본 vs 사장님 정정본) ───
 function accScore(){
   if(!_accOrig||!_accCur) return;
@@ -226,17 +249,19 @@ function accScore(){
   const overall = Math.round(((sumOk?1:0)*0.4 + (qOk/n)*0.4 + (nOk/n)*0.2)*100);
   const date=_accCur.date||'(날짜미상)';
   _accSaveAnswer(_accVendor, date, _accCur);
-  // DB 저장 — CTO가 AI 인식 원본(공급가·세액 포함)을 데이터 창고에서 보며 프롬프트 개선 (2026-06-04)
+  // 채점 결과 저장 — 분석 때 자동저장된 행(_accLogId) 있으면 update, 없으면 insert (2026-06-04)
   try{
     if(typeof sb!=='undefined' && sb){
-      sb.from('accuracy_lab_logs').insert({
-        store_id: (typeof currentStore!=='undefined' && currentStore) ? currentStore.id : null,
-        vendor: _accVendor, receipt_date: date,
-        engine: ACC_ENGINES.find(e=>e.id===_accCurEngine).name,
-        ai_raw: _accRawFull, corrected: _accCur,
-        score_overall: overall, score_sum: sumOk, score_qty:`${qOk}/${n}`, score_name:`${nOk}/${n}`,
-        cost_won: _accLastCost
-      }).then(({error})=>{ if(error) console.warn('[accuracy_lab_logs] insert 실패:', error.message); });
+      const payload = { corrected:_accCur, score_overall:overall, score_sum:sumOk, score_qty:`${qOk}/${n}`, score_name:`${nOk}/${n}` };
+      if(_accLogId){
+        sb.from('accuracy_lab_logs').update(payload).eq('id',_accLogId).then(({error})=>{ if(error) console.warn('[accuracy_lab_logs] update 실패:', error.message); });
+      } else {
+        sb.from('accuracy_lab_logs').insert(Object.assign({
+          store_id: (typeof currentStore!=='undefined' && currentStore) ? currentStore.id : null,
+          vendor:_accVendor, receipt_date:date, engine:ACC_ENGINES.find(e=>e.id===_accCurEngine).name,
+          ai_raw:_accRawFull, cost_won:_accLastCost
+        }, payload)).then(({error})=>{ if(error) console.warn('[accuracy_lab_logs] insert 실패:', error.message); });
+      }
     }
   }catch(e){ console.warn('[accuracy_lab_logs] 예외:', e); }
   _accAddLog({t:new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),
