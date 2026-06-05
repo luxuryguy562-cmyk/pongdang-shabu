@@ -527,7 +527,7 @@ async function loadDashboard(force){
           :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
         // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
         sb.from('vendor_orders').select('amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-        sb.from('receipts').select('total_price,category_id,receipt_date,vendor_id,vendors(name)').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+        sb.from('receipts').select('total_price,category_id,receipt_date,vendor_id,vendor,vendors(name)').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
         sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
         // ── 전월 일별 식자재/영수증/인건비 ──
         sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
@@ -892,7 +892,9 @@ async function loadDashboard(force){
         || srcToCat['receipts'] || '비품';
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
-      _addVE(d, r.vendors?.name||'직접 구매', r.total_price, k, true);
+      // 이름 우선순위: 등록 거래처(vendors.name) > 영수증 상호 텍스트(vendor) > '직접 구매'
+      // 직구(vendor_id NULL)도 영수증에 찍힌 상호명 그대로 표시 (2026-06-05 '논산농협 하나로마트')
+      _addVE(d, r.vendors?.name||r.vendor||'직접 구매', r.total_price, k, true);
       _addChild(r.category_id, r.total_price, d);
     });
     // 인건비 부모 이름 (srcToCat 기준) — 고정급/시급 하위는 이 부모 아래로 박음
