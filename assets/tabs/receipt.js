@@ -734,7 +734,8 @@ async function pickRcpVendor(vendorId){
 }
 
 // 사진 1장 추가 — 멀티페이지 영수증 지원 (2026-05-19 (4))
-// 해상도 1600 → 1280 다운사이즈 (Gemini 768px tile 단위라 영향 작음, ~20% 토큰 ↓)
+// 해상도 1280 다운사이즈 (Gemini 768px tile 단위, 비용 = 픽셀면적 비례)
+// 2026-06-05: 2000px 회귀 — 한자 품목명은 2000px도 못 읽어 효과 없고 비용만 2.4배 ↑. 1280 복원 (#97/#136)
 // b64Pages 배열에 append (1장이든 5장이든 동일 흐름)
 function handleImg(input) {
   if(!input.files[0]) return;
@@ -744,7 +745,7 @@ function handleImg(input) {
     const img = new Image();
     img.onload = () => {
       const cvs = document.createElement('canvas');
-      let w=img.width,h=img.height; if(w>2000){h*=2000/w;w=2000;} // 글자 많은 명세서 선명도 ↑ (1280→2000, 가재/가래 오독 방지)
+      let w=img.width,h=img.height; if(w>1280){h*=1280/w;w=1280;} // 1280px 다운사이즈 (비용 절감, 한자는 해상도 무관)
       cvs.width=w;cvs.height=h;cvs.getContext('2d').drawImage(img,0,0,w,h);
       const dataUrl = cvs.toDataURL('image/jpeg',0.85);
       const b64Part = dataUrl.split(',')[1];
@@ -992,15 +993,9 @@ async function runAI() {
       toast('📄 서로 다른 거래처 영수증이 섞여 있어요.\n거래처별로 한 번에 한 곳씩 올려주세요.', 'warn', 7000);
       return;
     }
-    // 품목명 자신 없으면(needs_review) GPT-4o로 자동 재분석 (2026-06-04) — 제미나이 오류 많을 때 더 센 모델로
-    if(!usedFallback && !Array.isArray(raw) && raw?.needs_review===true){
-      try{
-        setLoad(true, '품목명이 어려워 GPT-4o로 다시 읽는 중...');
-        const gptRaw = await callGemini(parts, timeoutSec+15, 'receipt_ocr', 'gpt-4o', 'gpt');
-        const gptItems = Array.isArray(gptRaw) ? gptRaw : (gptRaw && gptRaw.items);
-        if(gptItems && gptItems.length){ raw = gptRaw; usedFallback = true; }
-      }catch(e){ /* GPT 실패 시 제미나이 결과 유지 */ }
-    }
+    // GPT-4o 자동전환 제거 (2026-06-05) — needs_review 자가판단 못 믿음(오늘 10개 틀렸는데 false) +
+    // 한자 품목명은 GPT-4o가 오히려 더 나쁨(#97: GPT 62.5% < 제미나이 95%, '냉동돈육' 환각) + 비용 6배(6→35원).
+    // 한자 품목 한계는 모델로 못 풀고 사장님 원터치 수정(자동완성)으로 해결. GPT 비교는 측정실 수동에만 유지.
     // 응답 호환: 옛 배열 형식과 새 객체 형식 둘 다 받음
     // 2026-05-19 (4)+ 출력 다이어트: date·vendor 최상위 1번 → 행 fallback
     const itemsRaw = Array.isArray(raw) ? raw : (raw?.items || []);
@@ -1085,6 +1080,13 @@ async function runAI() {
       const detail = suspectRows.slice(0,3).map(s=>`${s.idx}행 "${s.item.slice(0,12)}": ${fmt(s.u)}×${s.q}=${fmt(s.calc)} ≠ ${fmt(s.p)} (차이 ${fmt(s.diff)}원)`).join('\n');
       const more = suspectRows.length>3?`\n외 ${suspectRows.length-3}건`:'';
       toast(`⚠️ 단가×수량 ≠ 합계 의심 ${suspectRows.length}건\n${detail}${more}\n저장 전 확인하세요`, 'warn', 8000);
+    }
+    // ⚠️ 품목명 의심 감지 (2026-06-05) — AI needs_review 자가판단 대신 출력값 패턴 검사 (100% 결정적)
+    // 한자 칸을 못 읽으면 옆 글자(주소·전화·사업자번호)를 끌어다 채우는 환각 → 코드가 무조건 잡아 빨간 강조
+    let nameSuspectCnt=0;
+    list.forEach(it=>{ const r=_rcpNameSuspect(it.item); if(r){ it._nameSuspect=r; nameSuspectCnt++; } });
+    if(nameSuspectCnt){
+      toast(`🔴 품목명 확인 필요 ${nameSuspectCnt}건 — 빨간 칸을 눌러 고쳐주세요`, 'warn', 7000);
     }
     rowCount=0;
     document.getElementById('resTable').innerHTML=_rcpDatalistHtml()+list.map(i=>buildReceiptRow(i)).join('');
@@ -1174,6 +1176,20 @@ function _rcpDatalistHtml(){
   if(!rcpPastItems || !rcpPastItems.length) return '';
   return `<datalist id="rcpPastItems">${rcpPastItems.map(n=>`<option value="${esc(n)}"></option>`).join('')}</datalist>`;
 }
+// ─── 품목명 환각 패턴 감지 (2026-06-05) — AI 자가판단(needs_review) 대신 출력값 검사 ───
+//   AI가 한자 칸을 못 읽으면 옆에 보이는 주소·전화·사업자번호를 품목으로 끌어옴.
+//   100% 결정적 규칙만 사용 (애매한 "처음 보는 품목"은 첫 거래처에서 전부 걸려 노이즈 → 제외).
+//   의심 사유(문자열) 반환, 정상이면 '' 반환.
+function _rcpNameSuspect(name){
+  const s=String(name||'').trim();
+  if(!s) return '품목명이 비어 있어요';
+  if(/(로|길)\s*\d{1,4}/.test(s)) return '주소(도로명)가 들어간 것 같아요';           // 범지기로 189
+  if(/[가-힣]{2,}(시|도)\s*[가-힣]{2,}(시|군|구)/.test(s)) return '주소가 들어간 것 같아요'; // 안산시 단원구
+  if(/\d{2,4}-\d{3,4}-\d{4}/.test(s)) return '전화번호가 들어간 것 같아요';
+  if(/\d{3}-\d{2}-\d{5}/.test(s)) return '사업자번호가 들어간 것 같아요';
+  if(s.length>=28) return '품목명이 너무 길어요 (오인식 의심)';
+  return '';
+}
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
   const cat=String(i.category||'').trim();
@@ -1190,11 +1206,16 @@ function buildReceiptRow(i={}) {
   const suspect = i._suspect;
   const suspectCls = suspect ? ' suspect' : '';
   const suspectMark = suspect ? `<span title="단가×수량(${fmt(suspect.calc)}) ≠ 공급가 — ${fmt(suspect.diff)}원 차이. 수량 확인 필요" style="font-size:13px;cursor:help;">⚠️</span>` : '';
+  // 🔴 품목명 의심 (2026-06-05) — 주소·전화 등 환각 패턴이면 품목 칸 빨간 강조
+  const nameSuspect = i._nameSuspect;
+  const nameSuspectCls = nameSuspect ? ' name-suspect' : '';
+  const nameSuspectMark = nameSuspect ? `<span title="${esc(nameSuspect)} — 눌러서 고쳐주세요" style="font-size:13px;cursor:help;">🔴</span>` : '';
   // 면세 배지 — AI 면세 판단(isTaxFree) 우선, 없으면 세액 섞인 영수증의 세액 0 행 = 면세
   const _tax = parseInt(i.taxAmount)||0;
   const freeBadge = (i.isTaxFree || (i._taxFormat && _tax===0)) ? `<span class="ric-free">면세</span>` : '';
-  return `<div class="rcp-item-card${suspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
+  return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
+      ${nameSuspectMark}
       <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목" list="rcpPastItems" autocomplete="off">
       ${freeBadge}
       <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
