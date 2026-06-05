@@ -1253,13 +1253,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-row .r-amt{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;text-align:right;}
 .dash-today-v7 .t7-row .r-amt.red{color:#F04452;}
 .dash-today-v7 .t7-row .r-amt.green{color:#0CAB6C;}
-.dash-today-v7 .t7-row .r-amt.gray{color:#B0B8C1;font-size:15px;font-weight:700;}
+.dash-today-v7 .t7-row .r-amt.gray{color:#B0B8C1;font-size:17px;font-weight:800;}
 .dash-today-v7 .t7-row .r-go{font-size:16px;font-weight:800;color:#3182F6;cursor:pointer;text-align:center;padding-left:4px;}
 /* 어디에 썼나 — 오늘 카드 안 통합 (A안, 2026-06-03). 거래처 많으면 이 안에서만 스크롤 */
 .dash-today-v7 .t7-ve-section{margin-top:8px;padding-top:9px;border-top:1px dashed #E5E8EB;cursor:pointer;}
 .dash-today-v7 .t7-ve-head{font-size:12.5px;font-weight:800;color:#191F28;display:flex;align-items:center;margin-bottom:2px;}
 .dash-today-v7 .t7-ve-note{margin-left:auto;font-size:10px;font-weight:600;color:#B0B8C1;}
-.dash-today-v7 .t7-ve-list{height:100px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:2px dashed #DDE2E8;border-radius:14px;background:#FAFBFC;padding:2px 12px;}
+.dash-today-v7 .t7-ve-list{height:88px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:2px dashed #DDE2E8;border-radius:14px;background:#FAFBFC;padding:2px 12px;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar{width:3px;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar-thumb{background:#D1D6DD;border-radius:3px;}
 .dash-today-v7 .t7-ve-list .ve-item{display:flex;align-items:center;font-size:12.5px;padding:8px 0;border-top:1px solid #F2F4F6;}
