@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>어디에 썼나 — 스크롤 신호 비교</title>
+<link rel="stylesheet" href="../../assets/styles.css">
+<style>
+  body{margin:0;background:#3A4250;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:30px;}
+  .stage{display:flex;flex-direction:column;gap:26px;align-items:flex-start;}
+  .col{display:flex;flex-direction:row;align-items:center;gap:24px;}
+  .col-head{width:300px;text-align:right;}
+  .col-ttl{color:#fff;font-size:21px;font-weight:800;}
+  .col-sub{color:#C6CDD6;font-size:14px;line-height:1.6;margin-top:6px;}
+  .card{width:460px;}
+  .card .t7-ve-section{border-top:none!important;padding-top:0!important;margin-top:0!important;}
+
+  /* 그라데이션 오버레이 (박스 안쪽 하단 흐릿) */
+  .ve-grad .t7-ve-section{position:relative;}
+  .ve-grad .t7-ve-section::after{content:'';position:absolute;left:3px;right:3px;bottom:3px;height:24px;
+    background:linear-gradient(to bottom, rgba(250,251,252,0) 0%, rgba(250,251,252,.92) 70%, #FAFBFC 100%);
+    border-radius:0 0 13px 13px;pointer-events:none;}
+  /* B: 3번째 살짝 걸치게 높이 ↑ */
+  .h-mid .t7-ve-list{height:84px!important;}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="col">
+    <div class="col-head"><div class="col-ttl">A · 현재</div><div class="col-sub">높이 70px · 스크롤 있는지 모호</div></div>
+    <div class="dash-today-v7 card">
+      <div class="t7-ve-section" style="display:block;">
+        <div class="t7-ve-head">🧾 어디에 썼나<span class="t7-ve-note">고정비·인건비 제외</span></div>
+        <div class="t7-ve-list" id="listA"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-head"><div class="col-ttl">B · 걸침+흐릿 ⭐</div><div class="col-sub">높이 84px · 3번째 살짝 걸침<br>+ 아래 흐릿 → "더 있어요"</div></div>
+    <div class="dash-today-v7 card ve-grad h-mid">
+      <div class="t7-ve-section" style="display:block;">
+        <div class="t7-ve-head">🧾 어디에 썼나<span class="t7-ve-note">고정비·인건비 제외</span></div>
+        <div class="t7-ve-list" id="listB"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-head"><div class="col-ttl">C · 흐릿만</div><div class="col-sub">높이 70px 유지<br>+ 아래 흐릿만 추가</div></div>
+    <div class="dash-today-v7 card ve-grad">
+      <div class="t7-ve-section" style="display:block;">
+        <div class="t7-ve-head">🧾 어디에 썼나<span class="t7-ve-note">고정비·인건비 제외</span></div>
+        <div class="t7-ve-list" id="listC"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const items = [
+  {n:'프레시원', c:'식자재', col:'#0CAB6C', a:'304,886원'},
+  {n:'논산농협 하나로마트', c:'기타', col:'#3182F6', a:'30,550원'},
+  {n:'웰스토리', c:'식자재', col:'#0CAB6C', a:'20,911원'},
+  {n:'쿠팡', c:'비품', col:'#F5A11E', a:'12,400원'},
+  {n:'CJ프레시웨이', c:'식자재', col:'#0CAB6C', a:'9,800원'},
+];
+function listHtml(){
+  return items.map(it=>`<div class="ve-item"><span class="vname">${it.n}</span>`
+    +`<span class="ve-cat-tag" style="background:${it.col}1A;color:${it.col};">${it.c}</span>`
+    +`<span class="vamt">${it.a}</span></div>`).join('');
+}
+['listA','listB','listC'].forEach(id=>document.getElementById(id).innerHTML=listHtml());
+</script>
+</body>
+</html>
