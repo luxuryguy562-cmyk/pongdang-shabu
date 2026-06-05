@@ -26,6 +26,7 @@ let _accRawFull=null;  // AI 응답 통째 (total_supply/total_tax 포함 — DB
 let _accLogId=null;    // 분석 직후 자동저장된 DB 행 id (채점 시 update용)
 let _accLastCost=null;
 let _accStyleInjected=false;
+let _accPastItems=[];  // 거래처 과거 품목명 — 품목 칸 자동완성(원터치 수정)용 (2026-06-05, 영수증 탭과 동일 방식)
 
 // ─── 이미지 → base64 (1280px 리사이즈, 우리 앱 동일) ───
 function accFileToB64(file){
@@ -58,6 +59,25 @@ async function accCallGemini(b64list){
   return {raw, cost};
 }
 
+// ─── 거래처 과거 품목 로드 (품목 칸 자동완성용 — 거래처명 텍스트로 매칭) ───
+//   vendors에서 이름 매칭 → vendor_id로 receipts.item 조회. 못 찾으면 vendor 텍스트로 조회.
+//   자동완성은 사장님이 직접 고르는 것 → 잘못 떠도 무해 (자동 덮어쓰기 X)
+async function _accLoadPastItems(){
+  _accPastItems=[];
+  try{
+    if(typeof sb==='undefined' || !sb || typeof currentStore==='undefined' || !currentStore || !_accVendor) return;
+    const {data:vs}=await sb.from('vendors').select('id').eq('store_id',currentStore.id).ilike('name',`%${_accVendor}%`).limit(1);
+    const vid = (vs && vs[0]) ? vs[0].id : null;
+    let q = sb.from('receipts').select('item').eq('store_id',currentStore.id).not('item','is',null).order('created_at',{ascending:false}).limit(300);
+    q = vid ? q.eq('vendor_id',vid) : q.ilike('vendor',`%${_accVendor}%`);
+    const {data}=await q;
+    if(data && data.length) _accPastItems=[...new Set(data.map(r=>(r.item||'').trim()).filter(Boolean))].slice(0,120);
+  }catch(e){ console.warn('[acc past items]', e); }
+}
+function _accDatalistHtml(){
+  if(!_accPastItems || !_accPastItems.length) return '';
+  return `<datalist id="accPastItems">${_accPastItems.map(n=>`<option value="${(n||'').replace(/"/g,'&quot;')}"></option>`).join('')}</datalist>`;
+}
 function accNameNorm(s){return String(s||'').replace(/[\s()\[\]\/·,]/g,'').replace(/\d+(g|kg|L|ml)/gi,'').replace(/[①-⑨]/g,'').replace(/코리아|완자/g,'').slice(0,5);}
 function accNameMatch(a,b){const x=accNameNorm(a),y=accNameNorm(b);if(!x||!y)return false;return x===y||x.includes(y)||y.includes(x);}
 function _accFmt(x){return x==null?'-':Number(x).toLocaleString('ko-KR');}
@@ -173,6 +193,7 @@ async function accAnalyze(){
     _accLastCost = cost;
     _accSaveVendor(_accVendor);
     await _accAutoSave(); // 분석 직후 DB 자동 저장 (채점 전 — CTO가 스샷 없이 AI 원본 확인)
+    await _accLoadPastItems(); // 과거 품목 로드 → 품목 칸 자동완성(원터치 수정)
     _accRenderResult();
     _accAutoSave(); // 백그라운드 자동 저장 (await X — 화면 로딩 안 막음)
   }catch(e){
@@ -189,12 +210,12 @@ function _accRenderResult(){
   if(!_accCur){ box.innerHTML=''; return; }
   const rows=_accCur.items.map((it,i)=>`<tr>
     <td>${i+1}</td>
-    <td><input class="acc-tin" data-r="${i}" data-f="i" value="${(it.i||'').replace(/"/g,'&quot;')}"></td>
+    <td><input class="acc-tin" data-r="${i}" data-f="i" value="${(it.i||'').replace(/"/g,'&quot;')}" list="accPastItems" autocomplete="off"></td>
     <td><input class="acc-tin num" data-r="${i}" data-f="q" value="${it.q==null?'':it.q}" inputmode="numeric"></td>
     <td><input class="acc-tin num" data-r="${i}" data-f="p" value="${it.p==null?'':Number(it.p).toLocaleString('ko-KR')}" inputmode="numeric"></td>
   </tr>`).join('');
-  box.innerHTML=`<div class="card acc-sec" style="padding:14px;">
-    <div class="acc-lbl">④ AI가 읽은 결과 — 틀린 칸을 고치세요 (고친 만큼 노란색)</div>
+  box.innerHTML=`<div class="card acc-sec" style="padding:14px;">${_accDatalistHtml()}
+    <div class="acc-lbl">④ AI가 읽은 결과 — 틀린 칸을 고치세요 (고친 만큼 노란색)${_accPastItems.length?` <span class="acc-mini">· 품목 칸 누르면 이 거래처 과거 품목 ${_accPastItems.length}개 자동완성</span>`:''}</div>
     <table class="acc-tbl"><tr><th>No</th><th>품목</th><th class="num" style="text-align:right">수량</th><th class="num" style="text-align:right">합계</th></tr>${rows}</table>
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
       <span class="acc-mini" style="min-width:64px;">영수증 합계</span>
