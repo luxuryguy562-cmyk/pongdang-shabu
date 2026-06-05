@@ -1348,7 +1348,7 @@ async function loadDashboard(force){
         const _ampm=_hour<12?'오전':'오후';
         const _h12=_hour%12||12;
         const _mm=String(_t.getMinutes()).padStart(2,'0');
-        _hd.innerText=`${_t.getMonth()+1}월 ${_t.getDate()}일 ${_dowN}요일 · ${_ampm} ${_h12}:${_mm}`;
+        _hd.innerText=`${_t.getMonth()+1}월 ${_t.getDate()}일 (${_dowN}) · ${_ampm} ${_h12}:${_mm}`;
       }
       // 지금 근무 인원 배지 (오늘 출근자 — 비동기, 실패해도 홈 렌더 영향 X)
       renderWorkingNow();

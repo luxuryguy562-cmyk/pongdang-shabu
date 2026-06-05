@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>홈 한 화면 압축 비교</title>
+<link rel="stylesheet" href="../../assets/styles.css">
+<style>
+  body{margin:0;background:#5B6573;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:24px;}
+  .stage{display:flex;gap:26px;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .col-ttl{color:#fff;font-size:15px;font-weight:800;letter-spacing:-.3px;}
+  .col-sub{color:#C6CDD6;font-size:11.5px;margin-top:-4px;text-align:center;line-height:1.4;}
+  /* 아이폰 한 화면 프레임 (393 x 852, iPhone 15 논리 픽셀) */
+  .phone{width:393px;height:852px;background:#F2F4F6;border-radius:30px;overflow:hidden;position:relative;
+         box-shadow:0 14px 40px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);}
+  .phone .scr{height:852px;overflow:hidden;}
+  /* 상태바 흉내 */
+  .sbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-weight:700;font-size:14px;color:#191F28;}
+  /* 헤더 흉내 (실제 변경대상 아님 — 맥락용) */
+  .hdr{display:flex;align-items:center;gap:7px;padding:8px 16px 10px;background:#fff;border-bottom:1px solid #F2F4F6;}
+  .hdr .lg{display:flex;align-items:center;gap:6px;font-weight:800;color:#0050FF;font-size:17px;}
+  .hdr .lgm{width:24px;height:24px;border-radius:7px;background:#0050FF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+  .hdr .chip{margin-left:auto;background:#F2F4F6;border-radius:14px;padding:6px 11px;font-size:12px;font-weight:700;color:#4E5968;}
+  .hdr .chip.boss{background:#FEF3C7;color:#92660C;}
+  .hdr .chip.usr{background:#F2F4F6;color:#4E5968;}
+  /* 콘텐츠 영역 = 실제 홈과 동일 패딩 */
+  .body{padding:14px 16px;}
+  /* 한 화면 경계선 표시 안함(프레임 자체가 852라 잘리면 그게 실제) */
+
+  /* ── 압축안 A: 인사말 한 줄 ── */
+  .hello-a{display:flex;align-items:baseline;justify-content:space-between;margin:2px 4px 8px;}
+  .hello-a .t{font-size:15px;font-weight:800;color:#191F28;letter-spacing:-.5px;}
+  .hello-a .d{font-size:11.5px;color:#8B95A1;font-weight:500;}
+  /* ── 압축안 B: 날짜만 ── */
+  .hello-b{margin:2px 4px 8px;}
+  .hello-b .d{font-size:12.5px;color:#4E5968;font-weight:700;letter-spacing:-.3px;}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ========== 1. 현재 (Before) ========== -->
+  <div class="col">
+    <div class="col-ttl">현재</div>
+    <div class="col-sub">인사말 2줄<br>(지금 잘리는 상태)</div>
+    <div class="phone"><div class="scr">
+      <div class="sbar"><span>4:19</span><span>📶 81%</span></div>
+      <div class="hdr"><div class="lg"><span class="lgm">₩</span>캐쉬플로우</div><span class="chip">퐁당샤브 논산점</span><span class="chip boss">사장</span><span class="chip usr">이송은</span></div>
+      <div class="body" id="b-cur"></div>
+    </div></div>
+  </div>
+
+  <!-- ========== 2. 압축안 A ========== -->
+  <div class="col">
+    <div class="col-ttl">압축안 A</div>
+    <div class="col-sub">인사말 한 줄<br>(이름 + 날짜 같은 줄)</div>
+    <div class="phone"><div class="scr">
+      <div class="sbar"><span>4:19</span><span>📶 81%</span></div>
+      <div class="hdr"><div class="lg"><span class="lgm">₩</span>캐쉬플로우</div><span class="chip">퐁당샤브 논산점</span><span class="chip boss">사장</span><span class="chip usr">이송은</span></div>
+      <div class="body" id="b-a"></div>
+    </div></div>
+  </div>
+
+  <!-- ========== 3. 압축안 B ========== -->
+  <div class="col">
+    <div class="col-ttl">압축안 B</div>
+    <div class="col-sub">인사말 빼고<br>날짜만 작게</div>
+    <div class="phone"><div class="scr">
+      <div class="sbar"><span>4:19</span><span>📶 81%</span></div>
+      <div class="hdr"><div class="lg"><span class="lgm">₩</span>캐쉬플로우</div><span class="chip">퐁당샤브 논산점</span><span class="chip boss">사장</span><span class="chip usr">이송은</span></div>
+      <div class="body" id="b-b"></div>
+    </div></div>
+  </div>
+
+</div>
+
+<script>
+// 인사말만 다르고 나머지(출근배너+오늘카드+월요약)는 동일 → 공통 함수로 생성
+function helloHtml(kind){
+  if(kind==='cur') return '<div class="dash-hello"><h1>안녕하세요, 사장님</h1><p>6월 5일 금요일 · 오후 4:19</p></div>';
+  if(kind==='a')   return '<div class="hello-a"><span class="t">안녕하세요, 사장님</span><span class="d">6월 5일 (금) · 오후 4:19</span></div>';
+  if(kind==='b')   return '<div class="hello-b"><span class="d">6월 5일 (금) · 오후 4:19</span></div>';
+}
+function commonBelow(){
+  return `
+    <!-- 출근 인원 카드 -->
+    <div class="wn-card"><span class="wn-live off"></span><span class="wn-tt wait">아직 출근한 직원이 없어요</span><span class="wn-arr go">›</span></div>
+
+    <!-- 오늘 매출 풀카드 v7 -->
+    <div class="dash-today-v7">
+      <div class="t7-head-v2">
+        <button type="button" class="t7-nav" disabled>‹</button>
+        <div class="t7-center">
+          <div class="t7-day-row"><span class="t7-day-main">6월 5일 (금)</span><span class="t7-day-badge" style="display:inline-block;">오늘</span></div>
+          <span class="t7-day-sub live"><span class="live-dot-wrap"><span class="live-dot-ring"></span><span class="live-dot-inner"></span></span><span class="t7-sub-tx">영업 중</span></span>
+        </div>
+        <button type="button" class="t7-cal-btn">📅</button>
+        <button type="button" class="t7-nav t7-nav-next" disabled>›</button>
+      </div>
+      <div class="t7-amt-row">
+        <div class="t7-sales-col"><span class="t7-sales-lb">매출</span><div class="t7-amt" style="font-size:15px;color:#8B95A1;font-weight:600;">아직 매출 기록이 없어요</div></div>
+        <button type="button" class="t7-detail-link">자세히 ›</button>
+      </div>
+      <div class="t7-rows" style="display:block;">
+        <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red">-841,475원</span><span class="r-go">›</span></div>
+        <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div><span class="r-amt" style="color:#8B95A1;font-weight:700;">마감 후 확인</span><span class="r-go"></span></div>
+      </div>
+      <div class="t7-ve-section" style="display:block;">
+        <div class="t7-ve-head">🧾 어디에 썼나<span class="t7-ve-note">고정비·인건비 제외</span></div>
+        <div class="t7-ve-list">
+          <div class="ve-item"><span class="vname">프레시원</span><span class="ve-cat-tag" style="background:#0CAB6C1A;color:#0CAB6C;">식자재</span><span class="vamt">304,886원</span></div>
+          <div class="ve-item"><span class="vname">논산농협 하나로마트</span><span class="ve-cat-tag" style="background:#3182F61A;color:#3182F6;">기타</span><span class="vamt">30,550원</span></div>
+          <div class="ve-item"><span class="vname">웰스토리</span><span class="ve-cat-tag" style="background:#0CAB6C1A;color:#0CAB6C;">식자재</span><span class="vamt">20,911원</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이번 달 요약 -->
+    <div class="dash-sec"><span class="ic">📆</span>이번 달 요약</div>
+    <div class="v17-card-v6">
+      <div class="v6-ttl-row"><div class="v6-ttl"><b>6월</b> 5일 진행</div><span class="v6-progress-tag">17%</span></div>
+      <div class="m6-top">
+        <div class="m6-donut-wrap">
+          <div class="m6-donut" style="background:conic-gradient(#0CAB6C 0% 62%, #3182F6 62% 84%, #F5A11E 84% 92%, #8B5CF6 92% 97%, #EF4444 97% 100%);"></div>
+          <div class="m6-donut-center"><span class="dc-pct" style="color:#EF4444;">-5%</span><span class="dc-lb">수익률</span></div>
+        </div>
+        <div class="m6-mrows">
+          <div class="m6-mr"><span class="k">매출</span><span class="v">8,903,804원</span></div>
+          <div class="m6-mr"><span class="k">지출</span><span class="v">9,393,037원</span></div>
+          <div class="m6-mr"><span class="k">수익</span><span class="v red">-489,233원</span></div>
+        </div>
+      </div>
+      <div class="m6-fc neg"><span class="fc-tx">이대로 가면 이번달 <span class="fc-sale">5,342만</span> 매출에 <span class="fc-gl">294만 손해</span>예요</span><span class="fc-more">자세히 ›</span></div>
+    </div>
+  `;
+}
+document.getElementById('b-cur').innerHTML = helloHtml('cur') + commonBelow();
+document.getElementById('b-a').innerHTML   = helloHtml('a')   + commonBelow();
+document.getElementById('b-b').innerHTML   = helloHtml('b')   + commonBelow();
+</script>
+</body>
+</html>
