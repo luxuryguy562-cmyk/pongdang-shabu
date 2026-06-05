@@ -91,7 +91,12 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
       });
       if(!res.ok){
         const errText=await res.text().catch(()=>'');
-        // 모델 과부하 감지 (429/503 또는 high demand 텍스트)
+        // 충전금 소진/할당량 초과 = 재시도해도 안 풀림 → 즉시 명확 안내 (무한로딩 방지, 2026-06-05)
+        if(/RESOURCE_EXHAUSTED|credit.{0,15}deplet|prepayment credit|insufficient_quota|exceeded your current quota|quota.{0,15}exceed/i.test(errText)){
+          _logAIUsage(feature, null, Date.now()-startedAt, false, 'quota_exhausted', requestModel);
+          throw new Error('AI 충전금(사용 크레딧)이 떨어졌어요. 결제·충전 후 다시 시도해주세요.');
+        }
+        // 모델 과부하 감지 (429/503 또는 high demand 텍스트) — 일시적, 재시도 대상
         const isOverload = (res.status===429 || res.status===503 || /high demand|overload|currently experiencing/i.test(errText));
         if(isOverload && attempt < MAX_RETRY-1){
           await new Promise(r=>setTimeout(r, BACKOFF_MS[attempt]));
@@ -101,12 +106,18 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
       }
       const data=await res.json();
       if(data.error){
-        const isOverload = /high demand|overload|currently experiencing/i.test(data.error.message||'');
+        const errMsg = data.error.message||'';
+        // 충전금 소진/할당량 초과 = 즉시 명확 안내 (재시도 X)
+        if(/RESOURCE_EXHAUSTED|credit.{0,15}deplet|prepayment credit|insufficient_quota|exceeded your current quota|quota.{0,15}exceed/i.test(errMsg)){
+          _logAIUsage(feature, null, Date.now()-startedAt, false, 'quota_exhausted', requestModel);
+          throw new Error('AI 충전금(사용 크레딧)이 떨어졌어요. 결제·충전 후 다시 시도해주세요.');
+        }
+        const isOverload = /high demand|overload|currently experiencing/i.test(errMsg);
         if(isOverload && attempt < MAX_RETRY-1){
           await new Promise(r=>setTimeout(r, BACKOFF_MS[attempt]));
           continue;
         }
-        throw new Error(data.error.message||'AI 응답 오류');
+        throw new Error(errMsg||'AI 응답 오류');
       }
       const txt=data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if(!txt) throw new Error('AI 응답이 비어있습니다');
