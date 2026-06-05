@@ -1735,10 +1735,10 @@ function v17RenderMonthCard(){
   let fcHtml = '';
   if(fcSale!==null){
     const _isGain = fcProfit>=0;
-    fcHtml = `<div class="m6-fc${_isGain?'':' neg'}">`
+    fcHtml = `<div class="m6-fc${_isGain?'':' neg'}" data-action="dashGoStage|month-detail" data-stop="1">`
       +`<span class="fc-tx">이대로 가면 이번달 <span class="fc-sale">${v17FmtCompact(fcSale)}</span> 매출에 `
       +`<span class="fc-gl">${v17FmtCompact(Math.abs(fcProfit))} ${_isGain?'이득':'손해'}</span>${_isGain?'이에요':'예요'}</span>`
-      +`<span class="fc-more" data-action="dashGoStage|month-detail">자세히 ›</span></div>`;
+      +`<span class="fc-more">자세히 ›</span></div>`;
   }
 
   el.innerHTML = `
