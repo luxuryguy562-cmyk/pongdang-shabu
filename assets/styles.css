@@ -992,16 +992,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .m6-mr .v{margin-left:auto;padding-left:8px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .m6-mr .v.green{color:#0CAB6C;}
 .m6-mr .v.red{color:#EF4444;}
-/* 순수익률 바 */
-.m6-bar-row{margin-bottom:9px;}
-.m6-bar-row .bar-lb{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--gray-500);margin-bottom:4px;}
-.m6-bar-row .v6-bar{display:flex;height:13px;border-radius:5px;overflow:hidden;background:var(--gray-100);}
-.m6-bar-row .v6-bar > span{display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;color:#fff;height:100%;white-space:nowrap;}
-/* 예상매출 강조 박스 + 자세히 */
-.m6-fc{display:flex;align-items:center;margin-top:10px;padding:10px 13px;background:var(--toss-blue-light);border-radius:11px;font-size:12px;}
-.m6-fc .fc-tx{color:var(--gray-700);font-weight:700;letter-spacing:-0.2px;}
-.m6-fc .fc-tx b{color:var(--toss-blue-strong);font-size:15.5px;font-weight:900;margin:0 1px;letter-spacing:-0.3px;}
-.m6-fc .fc-more{margin-left:auto;color:var(--toss-blue-strong);font-weight:800;flex-shrink:0;padding-left:8px;}
+/* 예상마감 문장형 배너 — "이대로 가면 이번달 ○○ 매출에 ○○ 이득/손해예요" (2026-06-05 A안) */
+.m6-fc{display:flex;align-items:center;gap:7px;margin-top:8px;padding:9px 13px;background:#F0FDF7;border:1.5px solid #BBF7D0;border-radius:11px;}
+.m6-fc.neg{background:#FEF2F2;border-color:#FECACA;}
+.m6-fc .fc-tx{font-size:12px;font-weight:700;color:#4B5563;letter-spacing:-0.3px;line-height:1.45;}
+.m6-fc .fc-tx .fc-sale{font-weight:900;color:#191F28;}
+.m6-fc .fc-tx .fc-gl{font-weight:900;color:#0CAB6C;font-size:13.5px;}
+.m6-fc.neg .fc-tx .fc-gl{color:#F04452;}
+.m6-fc .fc-more{margin-left:auto;font-size:12.5px;font-weight:800;color:#3182F6;flex-shrink:0;white-space:nowrap;align-self:center;}
 /* ─── v17 카드 v6 (2026-05-22 사장님 양식 갈아엎기) ─── */
 .v17-card-v6{background:var(--white);border-radius:14px;padding:14px;margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
 .v17-card-v6 .v6-ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
@@ -1188,7 +1186,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 #dashboardCont .dash-stage{display:none;}
 #dashboardCont .dash-stage.active{display:block;}
 /* 인사 헤더 */
-.dash-hello{margin:2px 4px 13px;}
+.dash-hello{margin:2px 4px 8px;}
 .dash-hello h1{font-size:20px;font-weight:800;color:#191F28;margin:0 0 2px;letter-spacing:-0.7px;line-height:1.2;}
 .dash-hello p{font-size:12px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;}
 /* 지금 근무 인원 카드 (2026-06-04) — 날짜 아래 compact 카드, 항상 표시 */
@@ -1221,8 +1219,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-day-main{font-size:16px;font-weight:800;color:#191F28;letter-spacing:-0.5px;white-space:nowrap;}
 .dash-today-v7 .t7-day-badge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:7px;background:#F2F4F6;color:#8B95A1;flex-shrink:0;letter-spacing:-0.2px;}
 .dash-today-v7 .t7-day-badge.today{background:#E7F4EE;color:#0CAB6C;}
-.dash-today-v7 .t7-day-sub{font-size:11.5px;color:#A0A8B3;font-weight:600;letter-spacing:-0.2px;}
+.dash-today-v7 .t7-day-sub{font-size:11.5px;color:#A0A8B3;font-weight:600;letter-spacing:-0.2px;display:flex;align-items:center;gap:5px;}
 .dash-today-v7 .t7-day-sub.live{color:#0CAB6C;font-weight:700;}
+/* 영업 중·실시간 = 초록 점 + 퍼지는 원 깜빡임 / 마감 = 회색 정적 점 (2026-06-05) */
+.dash-today-v7 .t7-sub-dot{width:6px;height:6px;border-radius:50%;background:#A0A8B3;flex-shrink:0;}
+.dash-today-v7 .live-dot-wrap{display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;position:relative;flex-shrink:0;}
+.dash-today-v7 .live-dot-inner{width:7px;height:7px;border-radius:50%;background:#0CAB6C;position:relative;z-index:1;}
+.dash-today-v7 .live-dot-ring{position:absolute;inset:0;border-radius:50%;background:#0CAB6C;animation:livePulse 1.8s ease-out infinite;opacity:0;}
+@keyframes livePulse{0%{transform:scale(.7);opacity:.6;}70%{transform:scale(2.2);opacity:0;}100%{opacity:0;}}
 .dash-today-v7 .t7-cal-btn{border:none;background:#F2F4F6;width:34px;height:34px;border-radius:11px;font-size:15px;cursor:pointer;flex-shrink:0;margin-left:4px;line-height:1;padding:0;}
 /* 할 일 알림 배너 (카드 밖 위 — 2026-06-03) */
 .todo-banner{display:flex;align-items:center;gap:9px;background:#FFF8E8;border:1px solid #FFE7A8;border-radius:14px;padding:13px 15px;margin-bottom:12px;cursor:pointer;}
