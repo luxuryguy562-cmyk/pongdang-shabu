@@ -153,7 +153,7 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
 // ─── 영수증/거래명세서 분석 프롬프트 (영수증 탭 + 측정실 공통 — 2026-06-04 통일) ───
 //   isVendorMode=true(거래처): vendor·category 출력 X / false(직구): vendor·category 출력
 //   ⚠️ 영수증 탭(receipt.js)·측정실(accuracy_lab.js) 둘 다 이 함수만 호출 → 검증=실제 동일 보장
-function buildReceiptPrompt({isVendorMode=true, vendorName='', catList='', pageCount=1}={}){
+function buildReceiptPrompt({isVendorMode=true, vendorName='', catList='', pageCount=1, pastItems=''}={}){
   const modeHint = isVendorMode
     ? `[모드:거래처] vendor="${vendorName}" 이미 선택. v·c·d 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
 [BOX/EA] q=(BOX×단위)+EA. ⚠️ BOX=0이면 단위 무시, EA가 q.
@@ -193,7 +193,7 @@ ${modeHint}${multiPageHint}
 
 [규칙]
 - [회계 검산] 두 등식이 반드시 맞아야 함: ①단가(u)×수량(q)=공급가(p−t) ②공급가+세액(t)=합계(p). 안 맞으면 u·q·t·p를 다시 읽어라 — 특히 공급가를 단가나 합계 칸에 잘못 넣는 실수 주의. 박스+EA는 q=(박스×단위)+EA, 중량거래(kg·g)는 q=중량값(소수점)으로 재시도.
-- i:품목명 — 영수증 인쇄 그대로. 못 읽으면 보이는 대로, 지어내지 마라.
+- i:품목명 — 영수증 인쇄 그대로 읽되, [과거 품목]에 있는 단어와 1~2글자 차이면 과거 품목명으로 교정. [과거 품목] 없는 신규 품목은 보이는 대로.
 - 합계행·소계·부가세행·할인전·외상행·용기보증금 = items에서 제외 (공급가액/세액 소계는 total_supply/total_tax로만)
 - [세액 별도 양식] 행에 공급가·세액·합계 칸 따로면: p=합계(세후) 칸, t=세액 칸, total_supply=공급가액 소계, total_tax=세액 소계, total_sum=총합계액(세후). 세액 칸 없으면 t=0 + total_supply·total_tax=null
 - [함정] total_sum·total_supply에 전미수·전잔액·당일입금·현잔액·누계·채권 절대 X. "이번 거래분(금일)"만
@@ -211,7 +211,10 @@ ${modeHint}${multiPageHint}
 
 [예시 — 중량거래 거래명세서 (박스+중량 동시)]
 {"items":[{"i":"냉동돈육 돈목살","u":9400,"q":90.54,"p":851076},{"i":"냉동우육 설도","u":14800,"q":97.80,"p":1447440}]}
-(돈목살 = 11Box·90.54kg → 박스 q=11이면 9400×11=10만 ≠ 851076, 중량 q=90.54면 9400×90.54≈851076 → q=90.54. 박스 무시, 중량을 q로)`;
+(돈목살 = 11Box·90.54kg → 박스 q=11이면 9400×11=10만 ≠ 851076, 중량 q=90.54면 9400×90.54≈851076 → q=90.54. 박스 무시, 중량을 q로)${pastItems ? `
+
+[과거 품목 — 흐릿하거나 1~2글자 오차 시 이 목록에서 교정]
+${pastItems}` : ''}`;
 }
 
 // ══════════════════════════════════════════

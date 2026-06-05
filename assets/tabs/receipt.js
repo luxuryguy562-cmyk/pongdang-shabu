@@ -944,8 +944,23 @@ async function runAI() {
     //  · total_sum 우선순위 정정: 금일합계 > 합계액 > 결제금액 (전미수/총합계/잔액/누계 무시)
     //  · page_info: {current, total} 신설 — 영수증 "Page (N/M)" 인쇄 감지
     //  · 멀티페이지: parts에 inline_data 여러 개 → AI가 통합 분석
+    // 거래처 과거 품목 조회 — AI 품목명 교정 컨텍스트 (2026-06-05)
+    let pastItems = '';
+    if(isVendorModeAI && rcpVendorId){
+      const {data:pData} = await sb.from('receipts')
+        .select('item')
+        .eq('store_id', currentStore.id)
+        .eq('vendor_id', rcpVendorId)
+        .not('item','is',null)
+        .order('created_at',{ascending:false})
+        .limit(200);
+      if(pData && pData.length){
+        const unique = [...new Set(pData.map(r=>(r.item||'').trim()).filter(Boolean))].slice(0,80);
+        pastItems = unique.join(', ');
+      }
+    }
     // 프롬프트 = common.js 공통 함수 (측정실과 100% 동일 — 검증=실제 보장)
-    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, vendorName:rcpVendorName, catList, pageCount });
+    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, vendorName:rcpVendorName, catList, pageCount, pastItems });
     // AI 단독 (2026-05-19 (4)): OCR 제거 — Gemini Flash 단독 (3차 best ~95%+) + High demand 시 GPT-4o fallback
     const aiModel = isVendorModeAI ? 'gemini-2.5-flash' : 'gemini-2.5-flash-lite';
     // 모든 페이지를 parts에 박음 (Gemini multi-image 지원)
