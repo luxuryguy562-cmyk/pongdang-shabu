@@ -311,8 +311,8 @@ function renderTodayDetailForDay(dayStr){
   const ctx = _tdContext;
   const sameMonth = dayStr.slice(0,7) === ctx.ym;
   if(!sameMonth){
-    toast(`${ctx.ym} 외 다른 달은 곧 추가됩니다. 대시보드에서 월을 먼저 바꿔주세요.`, 'warn');
-    // picker 값은 원래대로 되돌림
+    // 날짜 선택기(tdDayPicker) min/max가 해당 달로 제한돼 사용자가 다른 달을 직접 고를 수 없음.
+    // 화면 전환 중 이전 달 값이 남아 발동하는 경우뿐이라 토스트 없이 조용히 무시 (2026-06-05)
     const _p = document.getElementById('tdDayPicker');
     if(_p && _tdDay) _p.value = _tdDay;
     return;
