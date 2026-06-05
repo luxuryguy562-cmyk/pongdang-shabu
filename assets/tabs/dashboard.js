@@ -105,9 +105,9 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   _todayVendorDataCache = (veMap && Object.keys(veMap||{}).length) ? {veMap, dayExp} : null;
   if(!card) return;
   // 영수증·거래처로 등록하는 변동 지출만 (고정비·인건비·로열티 등 고정성 자동 제외), 거래처별로 쭉 나열
-  const include = _topCardCtx?.veIncludeCats;
+  // isVar로 판정 — 데이터가 영수증·거래처 표에서 왔는지 (카테고리 무관, 2026-06-05 빙산 수정)
   const items = Object.values(veMap||{})
-    .filter(o=> o.amt>0 && (!include || include.has(o.cat)))
+    .filter(o=> o.amt>0 && o.isVar)
     .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
     .sort((a,b)=>b.amt-a.amt);
   if(!items.length){
@@ -126,9 +126,10 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
     const catColor={}; let ci=0;
     listEl.innerHTML = items.map(it=>{
       if(!(it.cat in catColor)) catColor[it.cat]=_VE_COLORS[ci++ % _VE_COLORS.length];
-      return `<div class="ve-item"><span class="vdot" style="background:${catColor[it.cat]};"></span>`
+      // 왼쪽 점 제거 → 카테고리 색을 태그에 흡수 (매출·지출·수익 점과 위계 분리, 2026-06-05)
+      return `<div class="ve-item">`
         +`<span class="vname">${esc(it.name)}</span>`
-        +`<span class="ve-cat-tag">${esc(it.cat)}</span>`
+        +`<span class="ve-cat-tag" style="background:${catColor[it.cat]}1A;color:${catColor[it.cat]};">${esc(it.cat)}</span>`
         +`<span class="vamt">${fmt(it.amt)}원</span></div>`;
     }).join('');
   }
@@ -237,8 +238,13 @@ function renderTopCardForDay(dayStr){
   const subLabel = (ctx.isUpsMode && isTodayShown) ? '실시간'
     : (isTodayShown && !ctx.isTodaySettled) ? '영업 중'
     : '마감';
-  topModeEl.innerText = `● ${subLabel}`;
-  topModeEl.className = 't7-day-sub' + ((ctx.isUpsMode && isTodayShown) ? ' live' : '');
+  // 영업 중·실시간 = 초록 점 + 퍼지는 원 깜빡임 / 마감 = 회색 정적 점 (2026-06-05)
+  const _isLive = isTodayShown && !ctx.isTodaySettled;
+  const _subDot = _isLive
+    ? `<span class="live-dot-wrap"><span class="live-dot-ring"></span><span class="live-dot-inner"></span></span>`
+    : `<span class="t7-sub-dot"></span>`;
+  topModeEl.innerHTML = _subDot + `<span class="t7-sub-tx">${subLabel}</span>`;
+  topModeEl.className = 't7-day-sub' + (_isLive ? ' live' : '');
 
   if(saleAmt > 0){
     topAmtEl.classList.remove('empty');
@@ -305,8 +311,8 @@ function renderTodayDetailForDay(dayStr){
   const ctx = _tdContext;
   const sameMonth = dayStr.slice(0,7) === ctx.ym;
   if(!sameMonth){
-    toast(`${ctx.ym} 외 다른 달은 곧 추가됩니다. 대시보드에서 월을 먼저 바꿔주세요.`, 'warn');
-    // picker 값은 원래대로 되돌림
+    // 날짜 선택기(tdDayPicker) min/max가 해당 달로 제한돼 사용자가 다른 달을 직접 고를 수 없음.
+    // 화면 전환 중 이전 달 값이 남아 발동하는 경우뿐이라 토스트 없이 조용히 무시 (2026-06-05)
     const _p = document.getElementById('tdDayPicker');
     if(_p && _tdDay) _p.value = _tdDay;
     return;
@@ -527,7 +533,7 @@ async function loadDashboard(force){
           :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
         // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
         sb.from('vendor_orders').select('amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-        sb.from('receipts').select('total_price,category_id,receipt_date,vendor_id,vendors(name)').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+        sb.from('receipts').select('total_price,category_id,receipt_date,vendor_id,vendor,vendors(name)').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
         sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
         // ── 전월 일별 식자재/영수증/인건비 ──
         sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
@@ -861,14 +867,18 @@ async function loadDashboard(force){
     // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "어디에 썼나", 2026-06-02 / 2026-06-03 카테고리+거래처 분리) ───
     // FK: vendor_id→vendors(name). 직구(vendor_id NULL)·거래처 삭제(ON DELETE SET NULL)는 '직접 구매'
     // 키 = '거래처명|카테고리' 조합 → 쿠팡(비품)·쿠팡(식자재) 별도 집계 (카테고리 섞임 방지)
-    const dailyVendorExp={}; // { '02': { '쿠팡|비품': {name, cat, amt}, ... } }
-    const _addVE=(d,name,amt,catName)=>{
+    const dailyVendorExp={}; // { '02': { '쿠팡|비품': {name, cat, amt, isVar}, ... } }
+    // isVar=true = 영수증·거래처 표에서 온 변동 지출 (어디에 썼나 표시 대상)
+    // isVar=false = 고정비·인건비·로열티 등 자동 고정성 (어디에 썼나 제외)
+    // ⚠️ 카테고리 data_source가 아니라 '데이터 출처 표'로 판정 (2026-06-05 빙산 수정 — 기타>간식 누락)
+    const _addVE=(d,name,amt,catName,isVar=false)=>{
       if(!amt||amt<=0||!d)return;
       if(!dailyVendorExp[d])dailyVendorExp[d]={};
       const nm=name||'기타', ct=catName||'기타';
       const key=nm+'|'+ct;
-      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={name:nm,cat:ct,amt:0};
+      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={name:nm,cat:ct,amt:0,isVar:false};
       dailyVendorExp[d][key].amt+=amt;
+      if(isVar)dailyVendorExp[d][key].isVar=true;
     };
     // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
     const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
@@ -879,7 +889,7 @@ async function loadDashboard(force){
         || srcToCat['vendor_orders'] || '식자재';
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(v.amount||0);
-      _addVE(d, v.vendors?.name||'거래처', v.amount, k);
+      _addVE(d, v.vendors?.name||'거래처', v.amount, k, true);
       _addChild(v.vendors?.category_id, v.amount, d);
     });
     (rcDaily||[]).forEach(r=>{
@@ -888,7 +898,9 @@ async function loadDashboard(force){
         || srcToCat['receipts'] || '비품';
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
-      _addVE(d, r.vendors?.name||'직접 구매', r.total_price, k);
+      // 이름 우선순위: 등록 거래처(vendors.name) > 영수증 상호 텍스트(vendor) > '직접 구매'
+      // 직구(vendor_id NULL)도 영수증에 찍힌 상호명 그대로 표시 (2026-06-05 '논산농협 하나로마트')
+      _addVE(d, r.vendors?.name||r.vendor||'직접 구매', r.total_price, k, true);
       _addChild(r.category_id, r.total_price, d);
     });
     // 인건비 부모 이름 (srcToCat 기준) — 고정급/시급 하위는 이 부모 아래로 박음
@@ -961,7 +973,7 @@ async function loadDashboard(force){
       const dayNum=parseInt(d);
       if(dayNum>passedDays) return;
       const hasSale=dailySalesMap.hasOwnProperty(d);
-      if(!hasSale) return;
+      // hasSale 여부와 무관하게 지출은 항상 계산 (매출 미입력일에도 실시간 지출 표시 — 2026-06-05)
       if(!dailyCatMap[d])dailyCatMap[d]={};
       fixedCats.forEach(cat=>{
         if(dailyFixedShareByCat[cat.name]>0){ dailyCatMap[d][cat.name]=dailyFixedShareByCat[cat.name]; _addVE(d, cat.name, dailyFixedShareByCat[cat.name], '고정비'); }
@@ -1270,13 +1282,7 @@ async function loadDashboard(force){
         dailySalesMap, dailyExpTotal, dailyVendorExp,
         prevDailySalesMap, prevDailyExpTotal,
         isUpsMode, isTodaySettled, momTxt,
-        // 어디에 썼나 = 영수증·거래처로 등록하는 변동 지출만 (data_source 화이트리스트)
-        // 고정비·공과금(fixed_costs)·인건비(attendance)·로열티·세금 등(manual)은 자동 제외
-        veIncludeCats: new Set(
-          (expCategories||[])
-            .filter(c=>c.is_active && ['vendor_orders','receipts','composite'].includes(c.data_source))
-            .map(c=>c.name)
-        ),
+        // 어디에 썼나 = veMap의 isVar(영수증·거래처 출처)로 필터 (renderTodayVendorExp, 2026-06-05 빙산 수정)
       };
       topCard.style.display='block';
 
@@ -1342,7 +1348,7 @@ async function loadDashboard(force){
         const _ampm=_hour<12?'오전':'오후';
         const _h12=_hour%12||12;
         const _mm=String(_t.getMinutes()).padStart(2,'0');
-        _hd.innerText=`${_t.getMonth()+1}월 ${_t.getDate()}일 ${_dowN}요일 · ${_ampm} ${_h12}:${_mm}`;
+        _hd.innerText=`${_t.getMonth()+1}월 ${_t.getDate()}일 (${_dowN}) · ${_ampm} ${_h12}:${_mm}`;
       }
       // 지금 근무 인원 배지 (오늘 출근자 — 비동기, 실패해도 홈 렌더 영향 X)
       renderWorkingNow();
@@ -1701,7 +1707,7 @@ function v17RenderMonthCard(){
   const ctx = _v17Ctx; if(!ctx) return;
   const el = document.getElementById('v17MonthCard'); if(!el) return;
   const st = _v17MonthStats(ctx);
-  const {cur, profit, progressDays, progressPct, fcSale, profitPctSale, expPctSale} = st;
+  const {cur, profit, progressDays, progressPct, fcSale, fcProfit, profitPctSale, expPctSale} = st;
 
   // 도넛: 지출 카테고리 분포 (배경), 가운데 = 수익률
   const cats = ctx.cats || [];
@@ -1717,15 +1723,6 @@ function v17RenderMonthCard(){
   });
   const donutBg = donutStops.length ? `conic-gradient(${donutStops.join(',')})` : '#F2F4F6';
 
-  // 순수익률 바
-  let profitBarHtml = '';
-  if(profit>=0){
-    profitBarHtml = `<span style="background:#0CAB6C;width:${profitPctSale}%;">+${profitPctSale.toFixed(0)}%</span><span style="background:var(--gray-200);width:${expPctSale}%;color:var(--gray-500);">지출</span>`;
-  } else {
-    const lossPct = Math.abs(profitPctSale);
-    profitBarHtml = `<span style="background:#EF4444;width:${Math.min(lossPct,100)}%;">-${lossPct.toFixed(0)}%</span><span style="background:var(--gray-200);width:${Math.max(100-lossPct,0)}%;color:var(--gray-500);">지출</span>`;
-  }
-
   const profitRateStr = `${profit>=0?'+':''}${profitPctSale.toFixed(0)}%`;
   const profitRateColor = profit>=0 ? '#0CAB6C' : '#EF4444';
 
@@ -1733,8 +1730,16 @@ function v17RenderMonthCard(){
   const donutCenter = donutStops.length
     ? `<span class="dc-pct" style="color:${profitRateColor};">${profitRateStr}</span><span class="dc-lb">수익률</span>`
     : `<span class="dc-lb">지출 없음</span>`;
-  // 예상마감 (만원 압축 — 좁은 한 줄)
-  const fcManStr = fcSale!==null ? `${Math.round(fcSale/10000).toLocaleString('ko-KR')}만원` : '—';
+  // 예상마감 문장형 — "이대로 가면 이번달 ○○ 매출에 ○○ 이득/손해예요" (2026-06-05 A안)
+  // fcSale=null(월 첫날·마감월)이면 배너 자체 숨김
+  let fcHtml = '';
+  if(fcSale!==null){
+    const _isGain = fcProfit>=0;
+    fcHtml = `<div class="m6-fc${_isGain?'':' neg'}" data-action="dashGoStage|month-detail" data-stop="1">`
+      +`<span class="fc-tx">이대로 가면 이번달 <span class="fc-sale">${v17FmtCompact(fcSale)}</span> 매출에 `
+      +`<span class="fc-gl">${v17FmtCompact(Math.abs(fcProfit))} ${_isGain?'이득':'손해'}</span>${_isGain?'이에요':'예요'}</span>`
+      +`<span class="fc-more">자세히 ›</span></div>`;
+  }
 
   el.innerHTML = `
     <div class="v17-card-v6">
@@ -1753,14 +1758,7 @@ function v17RenderMonthCard(){
           <div class="m6-mr"><span class="k">수익</span><span class="v ${profit>=0?'green':'red'}">${v17FmtNoWonSigned(profit)}원</span></div>
         </div>
       </div>
-      <div class="m6-bar-row">
-        <div class="bar-lb"><span>순수익률</span><b style="color:${profitRateColor};">${profitRateStr}</b></div>
-        <div class="v6-bar">${profitBarHtml}</div>
-      </div>
-      <div class="m6-fc">
-        <span class="fc-tx">📈 이대로 가면 월말 예상매출 <b>${fcManStr}</b></span>
-        <span class="fc-more" data-action="dashGoStage|month-detail">자세히 ›</span>
-      </div>
+      ${fcHtml}
     </div>`;
 }
 
