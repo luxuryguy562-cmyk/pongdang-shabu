@@ -59,8 +59,8 @@ async function renderWorkingNow(){
   if(!card) return;
   const noData=()=>{
     card.innerHTML=`<span class="wn-live off"></span>`
-      +`<span class="wn-tt off">아직 출근 기록이 없어요</span>`
-      +`<span class="wn-arr">›</span>`;
+      +`<span class="wn-tt wait">아직 출근한 직원이 없어요</span>`
+      +`<span class="wn-arr go">›</span>`;
   };
   if(!currentStore?.id){ noData(); return; }
   const today=ymdLocal(new Date());
