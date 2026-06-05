@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>홈 한 화면 — 노치·홈바 정확 반영 검증</title>
+<link rel="stylesheet" href="../../assets/styles.css">
+<style>
+  body{margin:0;background:#3A4250;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:26px;}
+  .stage{display:flex;gap:34px;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:9px;}
+  .col-ttl{color:#fff;font-size:14.5px;font-weight:800;}
+  .fit{font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;}
+  .fit.ok{background:#0CAB6C;color:#fff;}
+  .fit.no{background:#EF4444;color:#fff;}
+  /* 폰 베젤 */
+  .device{background:#0A0A0A;border-radius:46px;padding:11px;box-shadow:0 16px 44px rgba(0,0,0,.4);}
+  .screen{background:#F2F4F6;border-radius:36px;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+  /* safe-area 상단 (상태바 + 노치) */
+  .safetop{background:#fff;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 4px;position:relative;flex:none;}
+  .safetop .clk{font-size:14px;font-weight:700;color:#191F28;}
+  .safetop .rgt{font-size:12px;color:#191F28;}
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:108px;height:30px;background:#0A0A0A;border-radius:18px;}
+  /* 앱 헤더 */
+  .apphdr{flex:none;display:flex;align-items:center;gap:6px;padding:0 14px;background:#fff;border-bottom:1px solid #F2F4F6;}
+  .apphdr .lg{display:flex;align-items:center;gap:5px;font-weight:800;color:#0050FF;font-size:16px;}
+  .apphdr .lgm{width:23px;height:23px;border-radius:7px;background:#0050FF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+  .apphdr .chip{margin-left:auto;background:#F2F4F6;border-radius:13px;padding:5px 9px;font-size:11px;font-weight:700;color:#4E5968;}
+  .apphdr .chip.boss{background:#FEF3C7;color:#92660C;margin-left:6px;}
+  .apphdr .chip.usr{color:#4E5968;margin-left:6px;}
+  /* 콘텐츠 (실제 가용 높이 — 넘치면 잘림) */
+  .content{overflow:hidden;position:relative;}
+  .content .body{padding:14px 16px;}
+  /* 콘텐츠 끝선(잘림 경계) 빨간 점선 표시는 안함 — overflow가 곧 실제 */
+  /* 앱 탭바 */
+  .tabbar{flex:none;display:flex;align-items:center;justify-content:space-around;background:#fff;border-top:1px solid #F2F4F6;}
+  .tabbar .tb{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:#8B95A1;}
+  .tabbar .tb.on{color:#0050FF;font-weight:700;}
+  .tabbar .tb .i{font-size:17px;}
+  /* safe-area 하단 (홈 막대) */
+  .safebottom{background:#fff;flex:none;display:flex;align-items:center;justify-content:center;}
+  .safebottom .bar{width:134px;height:5px;border-radius:3px;background:#191F28;}
+</style>
+</head>
+<body>
+<div class="stage" id="stage"></div>
+
+<script>
+const devices = [
+  {key:'ip15', name:'아이폰 15 Pro',  w:393, h:852, safetop:59, hdr:50, tab:56, safebot:34, island:true},
+  {key:'gx',   name:'갤럭시 (표준)',   w:360, h:800, safetop:32, hdr:50, tab:56, safebot:24, island:false},
+  {key:'se',   name:'아이폰 SE (작음)',w:375, h:667, safetop:24, hdr:50, tab:50, safebot:8,  island:false},
+];
+
+function homeHtml(){
+  return `
+    <div class="dash-hello"><h1>안녕하세요, 사장님</h1><p>6월 5일 (금) · 오후 4:32</p></div>
+    <div class="wn-card"><span class="wn-live off"></span><span class="wn-tt wait">아직 출근한 직원이 없어요</span><span class="wn-arr go">›</span></div>
+    <div class="dash-today-v7">
+      <div class="t7-head-v2">
+        <button type="button" class="t7-nav" disabled>‹</button>
+        <div class="t7-center">
+          <div class="t7-day-row"><span class="t7-day-main">6월 5일 (금)</span><span class="t7-day-badge" style="display:inline-block;">오늘</span></div>
+          <span class="t7-day-sub live"><span class="live-dot-wrap"><span class="live-dot-ring"></span><span class="live-dot-inner"></span></span><span class="t7-sub-tx">영업 중</span></span>
+        </div>
+        <button type="button" class="t7-cal-btn">📅</button>
+        <button type="button" class="t7-nav t7-nav-next" disabled>›</button>
+      </div>
+      <div class="t7-amt-row">
+        <div class="t7-sales-col"><span class="t7-sales-lb">매출</span><div class="t7-amt" style="font-size:15px;color:#8B95A1;font-weight:600;">아직 매출 기록이 없어요</div></div>
+        <button type="button" class="t7-detail-link">자세히 ›</button>
+      </div>
+      <div class="t7-rows" style="display:block;">
+        <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red">-841,475원</span><span class="r-go">›</span></div>
+        <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div><span class="r-amt" style="color:#8B95A1;font-weight:700;">마감 후 확인</span><span class="r-go"></span></div>
+      </div>
+      <div class="t7-ve-section" style="display:block;">
+        <div class="t7-ve-head">🧾 어디에 썼나<span class="t7-ve-note">고정비·인건비 제외</span></div>
+        <div class="t7-ve-list">
+          <div class="ve-item"><span class="vname">프레시원</span><span class="ve-cat-tag" style="background:#0CAB6C1A;color:#0CAB6C;">식자재</span><span class="vamt">304,886원</span></div>
+          <div class="ve-item"><span class="vname">논산농협 하나로마트</span><span class="ve-cat-tag" style="background:#3182F61A;color:#3182F6;">기타</span><span class="vamt">30,550원</span></div>
+          <div class="ve-item"><span class="vname">웰스토리</span><span class="ve-cat-tag" style="background:#0CAB6C1A;color:#0CAB6C;">식자재</span><span class="vamt">20,911원</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="dash-sec"><span class="ic">📆</span>이번 달 요약</div>
+    <div class="v17-card-v6">
+      <div class="v6-ttl-row"><div class="v6-ttl"><b>6월</b> 5일 진행</div><span class="v6-progress-tag">17%</span></div>
+      <div class="m6-top">
+        <div class="m6-donut-wrap">
+          <div class="m6-donut" style="background:conic-gradient(#0CAB6C 0% 62%, #3182F6 62% 84%, #F5A11E 84% 92%, #8B5CF6 92% 97%, #EF4444 97% 100%);"></div>
+          <div class="m6-donut-center"><span class="dc-pct" style="color:#EF4444;">-5%</span><span class="dc-lb">수익률</span></div>
+        </div>
+        <div class="m6-mrows">
+          <div class="m6-mr"><span class="k">매출</span><span class="v">8,903,804원</span></div>
+          <div class="m6-mr"><span class="k">지출</span><span class="v">9,393,037원</span></div>
+          <div class="m6-mr"><span class="k">수익</span><span class="v red">-489,233원</span></div>
+        </div>
+      </div>
+      <div class="m6-fc neg"><span class="fc-tx">이대로 가면 이번달 <span class="fc-sale">5,342만</span> 매출에 <span class="fc-gl">294만 손해</span>예요</span><span class="fc-more">자세히 ›</span></div>
+    </div>
+  `;
+}
+function tabbar(){
+  return `<div class="tabbar">
+    <div class="tb on"><span class="i">🏠</span>홈</div>
+    <div class="tb"><span class="i">🕐</span>근태관리</div>
+    <div class="tb"><span class="i">🐷</span>개시·마감</div>
+    <div class="tb"><span class="i">💳</span>지출관리</div>
+    <div class="tb"><span class="i">⊞</span>더보기</div>
+  </div>`;
+}
+
+const stage = document.getElementById('stage');
+devices.forEach(d=>{
+  const contentH = d.h - d.safetop - d.hdr - d.tab - d.safebot;
+  const col = document.createElement('div'); col.className='col';
+  col.innerHTML = `
+    <div class="col-ttl">${d.name} · ${d.w}×${d.h}</div>
+    <div class="fit" id="fit-${d.key}">측정중…</div>
+    <div class="device">
+      <div class="screen" style="width:${d.w}px;height:${d.h}px;">
+        <div class="safetop" style="height:${d.safetop}px;">
+          ${d.island?'<div class="island"></div>':''}
+          <span class="clk">4:38</span><span class="rgt">📶 🔋</span>
+        </div>
+        <div class="apphdr" style="height:${d.hdr}px;">
+          <div class="lg"><span class="lgm">₩</span>캐쉬플로우</div>
+          <span class="chip">퐁당샤브 논산점</span><span class="chip boss">사장</span><span class="chip usr">이송은</span>
+        </div>
+        <div class="content" style="height:${contentH}px;" id="content-${d.key}">
+          <div class="body" id="body-${d.key}"></div>
+        </div>
+        <div style="height:${d.tab}px;">${tabbar()}</div>
+        <div class="safebottom" style="height:${d.safebot}px;"><div class="bar"></div></div>
+      </div>
+    </div>`;
+  stage.appendChild(col);
+  document.getElementById('body-'+d.key).innerHTML = homeHtml();
+  // 콘텐츠 실제 높이 vs 가용 높이 비교
+  setTimeout(()=>{
+    const body = document.getElementById('body-'+d.key);
+    const need = body.scrollHeight;
+    const fit = document.getElementById('fit-'+d.key);
+    if(need <= contentH){ fit.className='fit ok'; fit.textContent=`✅ 한 화면 OK (${need}/${contentH}px)`; }
+    else { fit.className='fit no'; fit.textContent=`❌ ${need-contentH}px 넘침 (${need}/${contentH}px)`; }
+  }, 200);
+});
+</script>
+</body>
+</html>
