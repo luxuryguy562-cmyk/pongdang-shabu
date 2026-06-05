@@ -105,9 +105,9 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   _todayVendorDataCache = (veMap && Object.keys(veMap||{}).length) ? {veMap, dayExp} : null;
   if(!card) return;
   // 영수증·거래처로 등록하는 변동 지출만 (고정비·인건비·로열티 등 고정성 자동 제외), 거래처별로 쭉 나열
-  const include = _topCardCtx?.veIncludeCats;
+  // isVar로 판정 — 데이터가 영수증·거래처 표에서 왔는지 (카테고리 무관, 2026-06-05 빙산 수정)
   const items = Object.values(veMap||{})
-    .filter(o=> o.amt>0 && (!include || include.has(o.cat)))
+    .filter(o=> o.amt>0 && o.isVar)
     .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
     .sort((a,b)=>b.amt-a.amt);
   if(!items.length){
@@ -861,14 +861,18 @@ async function loadDashboard(force){
     // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "어디에 썼나", 2026-06-02 / 2026-06-03 카테고리+거래처 분리) ───
     // FK: vendor_id→vendors(name). 직구(vendor_id NULL)·거래처 삭제(ON DELETE SET NULL)는 '직접 구매'
     // 키 = '거래처명|카테고리' 조합 → 쿠팡(비품)·쿠팡(식자재) 별도 집계 (카테고리 섞임 방지)
-    const dailyVendorExp={}; // { '02': { '쿠팡|비품': {name, cat, amt}, ... } }
-    const _addVE=(d,name,amt,catName)=>{
+    const dailyVendorExp={}; // { '02': { '쿠팡|비품': {name, cat, amt, isVar}, ... } }
+    // isVar=true = 영수증·거래처 표에서 온 변동 지출 (어디에 썼나 표시 대상)
+    // isVar=false = 고정비·인건비·로열티 등 자동 고정성 (어디에 썼나 제외)
+    // ⚠️ 카테고리 data_source가 아니라 '데이터 출처 표'로 판정 (2026-06-05 빙산 수정 — 기타>간식 누락)
+    const _addVE=(d,name,amt,catName,isVar=false)=>{
       if(!amt||amt<=0||!d)return;
       if(!dailyVendorExp[d])dailyVendorExp[d]={};
       const nm=name||'기타', ct=catName||'기타';
       const key=nm+'|'+ct;
-      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={name:nm,cat:ct,amt:0};
+      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={name:nm,cat:ct,amt:0,isVar:false};
       dailyVendorExp[d][key].amt+=amt;
+      if(isVar)dailyVendorExp[d][key].isVar=true;
     };
     // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
     const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
@@ -879,7 +883,7 @@ async function loadDashboard(force){
         || srcToCat['vendor_orders'] || '식자재';
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(v.amount||0);
-      _addVE(d, v.vendors?.name||'거래처', v.amount, k);
+      _addVE(d, v.vendors?.name||'거래처', v.amount, k, true);
       _addChild(v.vendors?.category_id, v.amount, d);
     });
     (rcDaily||[]).forEach(r=>{
@@ -888,7 +892,7 @@ async function loadDashboard(force){
         || srcToCat['receipts'] || '비품';
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
-      _addVE(d, r.vendors?.name||'직접 구매', r.total_price, k);
+      _addVE(d, r.vendors?.name||'직접 구매', r.total_price, k, true);
       _addChild(r.category_id, r.total_price, d);
     });
     // 인건비 부모 이름 (srcToCat 기준) — 고정급/시급 하위는 이 부모 아래로 박음
@@ -1270,13 +1274,7 @@ async function loadDashboard(force){
         dailySalesMap, dailyExpTotal, dailyVendorExp,
         prevDailySalesMap, prevDailyExpTotal,
         isUpsMode, isTodaySettled, momTxt,
-        // 어디에 썼나 = 영수증·거래처로 등록하는 변동 지출만 (data_source 화이트리스트)
-        // 고정비·공과금(fixed_costs)·인건비(attendance)·로열티·세금 등(manual)은 자동 제외
-        veIncludeCats: new Set(
-          (expCategories||[])
-            .filter(c=>c.is_active && ['vendor_orders','receipts','composite'].includes(c.data_source))
-            .map(c=>c.name)
-        ),
+        // 어디에 썼나 = veMap의 isVar(영수증·거래처 출처)로 필터 (renderTodayVendorExp, 2026-06-05 빙산 수정)
       };
       topCard.style.display='block';
 
