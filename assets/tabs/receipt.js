@@ -12,6 +12,7 @@ let rcpCatId = null;     // 거래처 자동 박힌 category_id
 let rcpCatName = '';     // 거래처 자동 박힌 category 텍스트
 let rcpInputMethod = null; // 'photo' | 'manual' — 영수증 단위 입력 방식 (📸/✏️ 이모지 표시용)
 let rcpEntryReturn = null; // 영수증 저장 후 자동 복귀할 화면 ('catReceipt:direct'|'catReceipt:etc'|'vendors:<id>')
+let rcpPastItems = [];   // 현재 거래처 과거 품목명 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
 
 function setRcpMode(mode){
   if(!guardStore()) return;
@@ -944,8 +945,8 @@ async function runAI() {
     //  · total_sum 우선순위 정정: 금일합계 > 합계액 > 결제금액 (전미수/총합계/잔액/누계 무시)
     //  · page_info: {current, total} 신설 — 영수증 "Page (N/M)" 인쇄 감지
     //  · 멀티페이지: parts에 inline_data 여러 개 → AI가 통합 분석
-    // 거래처 과거 품목 조회 — AI 품목명 교정 컨텍스트 (2026-06-05)
-    let pastItems = '';
+    // 거래처 과거 품목 로드 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
+    rcpPastItems = [];
     if(isVendorModeAI && rcpVendorId){
       const {data:pData} = await sb.from('receipts')
         .select('item')
@@ -953,14 +954,13 @@ async function runAI() {
         .eq('vendor_id', rcpVendorId)
         .not('item','is',null)
         .order('created_at',{ascending:false})
-        .limit(200);
+        .limit(300);
       if(pData && pData.length){
-        const unique = [...new Set(pData.map(r=>(r.item||'').trim()).filter(Boolean))].slice(0,80);
-        pastItems = unique.join(', ');
+        rcpPastItems = [...new Set(pData.map(r=>(r.item||'').trim()).filter(Boolean))].slice(0,120);
       }
     }
     // 프롬프트 = common.js 공통 함수 (측정실과 100% 동일 — 검증=실제 보장)
-    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, vendorName:rcpVendorName, catList, pageCount, pastItems });
+    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, vendorName:rcpVendorName, catList, pageCount });
     // AI 단독 (2026-05-19 (4)): OCR 제거 — Gemini Flash 단독 (3차 best ~95%+) + High demand 시 GPT-4o fallback
     const aiModel = isVendorModeAI ? 'gemini-2.5-flash' : 'gemini-2.5-flash-lite';
     // 모든 페이지를 parts에 박음 (Gemini multi-image 지원)
@@ -1087,7 +1087,7 @@ async function runAI() {
       toast(`⚠️ 단가×수량 ≠ 합계 의심 ${suspectRows.length}건\n${detail}${more}\n저장 전 확인하세요`, 'warn', 8000);
     }
     rowCount=0;
-    document.getElementById('resTable').innerHTML=list.map(i=>buildReceiptRow(i)).join('');
+    document.getElementById('resTable').innerHTML=_rcpDatalistHtml()+list.map(i=>buildReceiptRow(i)).join('');
     rowCount=list.length;
     // 영수증 날짜 상단 입력칸에 AI 인식 날짜 표시 + 이상 경고 (2026-06-02: 날짜 hidden 문제 해결)
     const _rcpDateEl=document.getElementById('rcpReceiptDate');
@@ -1167,6 +1167,13 @@ function openReceiptCatPicker(idx){
     }
   });
 }
+// ─── 거래처 과거 품목 자동완성 목록 (품목명 원터치 수정 — 2026-06-05) ───
+//   AI가 한자 음차 품목명을 잘못 읽으면, 사장님이 품목 칸 눌러 과거 품목에서 톡 선택.
+//   AI·DB 자동 덮어쓰기 X (dev_lessons #135 결론 유지) — 순수 사장님 수동 선택.
+function _rcpDatalistHtml(){
+  if(!rcpPastItems || !rcpPastItems.length) return '';
+  return `<datalist id="rcpPastItems">${rcpPastItems.map(n=>`<option value="${esc(n)}"></option>`).join('')}</datalist>`;
+}
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
   const cat=String(i.category||'').trim();
@@ -1188,7 +1195,7 @@ function buildReceiptRow(i={}) {
   const freeBadge = (i.isTaxFree || (i._taxFormat && _tax===0)) ? `<span class="ric-free">면세</span>` : '';
   return `<div class="rcp-item-card${suspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
-      <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목">
+      <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목" list="rcpPastItems" autocomplete="off">
       ${freeBadge}
       <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
       <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
