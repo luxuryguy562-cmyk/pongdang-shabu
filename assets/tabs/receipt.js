@@ -1398,7 +1398,7 @@ function _checkRcpDateWarn(dateStr){
   warn.style.display=bad?'inline':'none';
 }
 // in-page 초기화 (2026-05-19 사장님 호소 "취소하면 PWA 재실행" 해결)
-// 옛 동작: location.reload() — saveReceipt rcpEntryReturn 분기에서 별도 처리
+// 저장·취소 모두 reload 없이 in-page 전환 (2026-06-08 reload 잔재 전면 제거, 교훈 #141)
 function resetReceipt(){
   const resTable=document.getElementById('resTable');
   if(resTable) resTable.innerHTML='';
