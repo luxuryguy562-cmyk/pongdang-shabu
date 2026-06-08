@@ -566,6 +566,7 @@ function renderCatReceiptList(rows){
       //  · 거래처 주문: openEditOrderSheet / deleteOrderGroupFromCard
       //  · mydata(통장·카드): openTxEditSheet (행 1건 = 1그룹, 삭제는 시트 내부)
       let actionsHtml = '';
+      let rowClickAttr = '';
       if(isMydata){
         const txId = g.rows[0]?.id || g.recId;
         const txType = g.rows[0]?.txType || 'bank';
@@ -581,13 +582,11 @@ function renderCatReceiptList(rows){
           </div>`;
       } else {
         const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
-        actionsHtml = `<div class="grp-hdr-actions">
-            <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
-            <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
-          </div>`;
+        actionsHtml = `<span style="font-size:18px;color:#C8CDD4;font-weight:700;flex-shrink:0;">›</span>`;
+        rowClickAttr = `style="cursor:pointer;" data-action="openReceiptGroupEdit|${editKey}"`;
       }
       html += `<tr class="grp-hdr${firstGroup?' first':''}">
-        <td colspan="5"><div class="grp-hdr-row">
+        <td colspan="5"><div class="grp-hdr-row" ${rowClickAttr}>
           <div class="grp-hdr-info">
             <span class="emoji">${headerIcon}</span>
             <span class="name">${esc(g.vendor||'(거래처 없음)')}</span>
@@ -1752,17 +1751,14 @@ function renderReceiptList(){
       const photoBadge=g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'');
       const errBadge=g.hasErr?`<span style="font-size:10px;color:var(--gray-500);margin-left:4px;">· 일부 오답</span>`:'';
       html+=`<tr class="grp-hdr${firstGroup?' first':''}">
-        <td colspan="6"><div class="grp-hdr-row">
+        <td colspan="6"><div class="grp-hdr-row" style="cursor:pointer;" data-action="openReceiptGroupEdit|${editKey}">
           <div class="grp-hdr-info">
             ${photoBadge?`<span class="emoji">${photoBadge} 🧾</span>`:`<span class="emoji">🧾</span>`}
             <span class="name">${esc(g.vendor||'(거래처 없음)')}</span>
             <span class="sum">· ${fmt(g.total)}원</span>
             ${errBadge}
           </div>
-          <div class="grp-hdr-actions">
-            <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
-            <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
-          </div>
+          <span style="font-size:18px;color:#C8CDD4;font-weight:700;flex-shrink:0;">›</span>
         </div></td>
       </tr>`;
       firstGroup=false;
@@ -1918,6 +1914,9 @@ function openReceiptGroupEdit(editKey){
   document.getElementById('rgeTitle').innerText=`영수증 편집 — ${first.vendor||'(거래처 없음)'}`;
   document.getElementById('rgeDate').value=first.receipt_date||ymdLocal(new Date());
   document.getElementById('rgeVendor').value=first.vendor||'';
+  const totalAmt=records.filter(r=>r.note==='정상').reduce((s,r)=>s+(r.total_price||0),0);
+  const totalAmtEl=document.getElementById('rgeTotalAmt');
+  if(totalAmtEl) totalAmtEl.textContent=fmt(totalAmt)+'원';
   renderRgeTable();
   openSheet('receiptGroupEditSheet');
 }
