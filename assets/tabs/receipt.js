@@ -64,7 +64,7 @@ function renderRcpVendorRow(selected){
     if(icon) icon.textContent = '🏪';
     val.textContent = rcpVendorName;
     val.style.color = 'var(--toss-text-1)';
-    if(sub){ sub.textContent = (rcpCatName || '미지정') + ' · 자동 분류'; sub.style.display = 'block'; }
+    if(sub){ sub.textContent = 'AI가 품목별 자동 분류'; sub.style.display = 'block'; }
     if(arrow) arrow.textContent = '바꾸기 ›';
   } else {
     if(icon) icon.textContent = '🏠';
@@ -140,8 +140,8 @@ function renderRcpModeBadge(){
     icon.textContent = '📦';
     value.textContent = '거래처 영수증';
     label.textContent = '정기 거래 · 외상';
-    if(guide) guide.innerHTML = rcpCatName
-      ? `🎯 카테고리는 <b>${esc(rcpCatName)}</b>로 자동 분류돼요.`
+    if(guide) guide.innerHTML = rcpVendorName
+      ? `🤖 AI가 품목별로 분류해드려요. 한 거래처라도 식자재·비품 섞이면 따로 잡아드려요.`
       : `🏠 거래처를 먼저 골라주세요.`;
   } else if(rcpMode === 'direct'){
     icon.textContent = '🛒';
@@ -1486,14 +1486,11 @@ async function saveReceipt(){
   // 모든 행에 동일 group_id 박음 → 기록내역 그룹 묶음 표시 + 그룹 편집·삭제 가능
   const groupId = (typeof crypto!=='undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
   const rows=Array.from(document.querySelectorAll('#resTable .rcp-item-card')).map((tr,idx)=>{
-    // 거래처 모드: 사용자가 사전 선택한 카테고리 강제 사용 (AI 분류 무시)
-    const cat = isVendorMode
-      ? (rcpCatName || (tr.dataset.cat||'').trim())
-      : (tr.dataset.cat||'').trim();
-    // dataset.catId가 비어있으면 picker가 안 거쳐진 케이스 → 재계산. 거래처 모드면 rcpCatId 우선
-    const category_id = isVendorMode
-      ? (rcpCatId || tr.dataset.catId || resolveReceiptCatId(cat) || null)
-      : (tr.dataset.catId ? tr.dataset.catId : (resolveReceiptCatId(cat) || null));
+    // 카테고리 = 모드 무관 행(품목)별 (거래처 카테고리 고정 폐지 2026-06-10)
+    // 거래처도 AI 품목별 분류 + picker 수정 존중. AI 못 읽은 행은 buildReceiptRow defaultCat(거래처 카테고리) fallback
+    const cat = (tr.dataset.cat||'').trim();
+    // dataset.catId가 비어있으면 picker 안 거친 케이스 → cat 이름으로 FK 재계산
+    const category_id = tr.dataset.catId ? tr.dataset.catId : (resolveReceiptCatId(cat) || null);
     const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9-]/g,''); // 마이너스(-) 보존 — 할인 행(-500 등) 음수 유지 (2026-06-08 버그수정)
     const taxRaw=(tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''); // 행 세액(부가세) — 합계는 세후
     const isFree=(tr.querySelector('.c-f')?.value||'0')==='1'; // 면세 여부
