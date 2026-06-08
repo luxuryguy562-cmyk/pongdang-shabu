@@ -613,8 +613,9 @@ function renderCatReceiptList(rows){
           : (r._source === 'mydata'
               ? `openTxEditSheet|${r.id}|${r.txType||'bank'}`
               : `openReceiptEdit|${r.id}`);
+        const catChip = r.category ? `<span class="gb-itemcat">${esc(r.category)}</span>` : '';
         html += `<tr class="${cls.join(' ')}" data-action="${clickAction}">`
-          + `<td title="${itemTitle}">${itemTxt}</td>`
+          + `<td title="${itemTitle}">${itemTxt}${catChip}</td>`
           + `<td class="gb-unit">${unitTxt}</td>`
           + `<td class="gb-qty">${qtyTxt}</td>`
           + `<td class="gb-amt">${fmt(r.amount||0)}</td>`

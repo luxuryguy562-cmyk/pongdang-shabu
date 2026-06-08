@@ -327,6 +327,16 @@ function initVendorSortable(){
   });
 }
 
+// 거래처 취급품목 라벨 (2026-06-10) — handled_category_ids 이름들. maxShow 초과 시 "외 N개"
+//   카드(좁음)=2개까지, 상세 헤더(넓음)=전체(99)
+function _vendorCatLabel(v, maxShow=2){
+  const ids=Array.isArray(v.handled_category_ids)?v.handled_category_ids:[];
+  if(!ids.length) return v.category||'기타';
+  const names=ids.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean);
+  if(!names.length) return v.category||'기타';
+  if(names.length<=maxShow) return names.join('·');
+  return names.slice(0,maxShow).join('·')+` 외 ${names.length-maxShow}`;
+}
 function renderVendorList(){
   // 2026-05-15: 필터 옵션 value = category_id (FK). 텍스트 매칭에서 FK 매칭으로.
   const catId=document.getElementById('vendorCatFilter')?.value||'';
@@ -357,14 +367,10 @@ function renderVendorList(){
       ? `<div class="vc-month has"><span class="vc-cnt">${t.count}건</span><span class="vc-amt">${fmt(t.total)}원</span></div>`
       : `<div class="vc-month empty">주문 없음</div>`;
     const badge=!v.is_active?' <span class="badge badge-gray" style="font-size:9px;">거래종료</span>':'';
-    // 취급품목 전부 표시 (2026-06-10) — handled_category_ids 이름들, 없으면 옛 category
-    const _catLabel=(Array.isArray(v.handled_category_ids)&&v.handled_category_ids.length)
-      ? v.handled_category_ids.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean).join('·')
-      : (v.category||'기타');
     return `<div class="vendor-card ${v.is_active?'':'inactive'}" data-vendor-id="${v.id}" data-action="openVendorDetail|${v.id}">
       <div class="vc-head">
         <span class="vendor-drag-handle" title="드래그로 순서 변경">☰</span>
-        <span class="vc-cat">${esc(_catLabel)}</span>
+        <span class="vc-cat">${esc(_vendorCatLabel(v))}</span>
       </div>
       <div class="vc-name">${v.name}${badge}</div>
       ${monthLine}
@@ -392,10 +398,8 @@ async function openVendorDetail(vendorId){
   const cat=document.getElementById('vdCategory');
   const editBtn=document.getElementById('vdEditBtn');
   if(nm) nm.textContent=v?.name||'-';
-  // 취급품목 전부 표시 (2026-06-10) — 헤더도 카드와 동일
-  const _vdCat=(v&&Array.isArray(v.handled_category_ids)&&v.handled_category_ids.length)
-    ? v.handled_category_ids.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean).join('·')
-    : (v?.category||'-');
+  // 취급품목 표시 (2026-06-10) — 카드와 동일 헬퍼. 헤더는 공간 넉넉해 전체 표시
+  const _vdCat=v?_vendorCatLabel(v,99):'-';
   if(cat) cat.textContent=_vdCat+(v?.is_active===false?' · 거래종료':'');
   if(editBtn){
     editBtn.style.display='';
