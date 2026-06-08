@@ -92,6 +92,7 @@ function _clearRcpData(){
   const ra = document.getElementById('resultArea'); if(ra) ra.style.display = 'none';
   const ag = document.getElementById('actionGroup'); if(ag) ag.style.display = 'none';
   const ip = document.getElementById('imgPreview'); if(ip){ ip.style.display = 'none'; ip.src = ''; }
+  const hint = document.getElementById('rcpImgHint'); if(hint) hint.style.display = 'none';
   const pb = document.getElementById('rcpPageInfoBox'); if(pb) pb.style.display = 'none';
   const sc = document.getElementById('rcpSumCheck'); if(sc){ sc.innerHTML = ''; sc.className = 'rcp-sumbar'; }
 }
@@ -756,7 +757,9 @@ function handleImg(input) {
       // 미리보기 = 항상 마지막 추가된 사진 (사장님이 방금 찍은 것 확인용)
       document.getElementById('imgPreview').src=dataUrl;
       document.getElementById('imgPreview').style.display='block';
-      // uploadGroup 유지 — 사장님이 추가 페이지 더 찍을 수 있음
+      const hint = document.getElementById('rcpImgHint'); if(hint) hint.style.display='block';
+      // 사진 추가 후 uploadGroup 숨김 — rcpPagesArea 안 "페이지 추가" 버튼으로 추가 가능
+      document.getElementById('uploadGroup').style.display='none';
       document.getElementById('actionGroup').style.display='flex';
       _updateRcpActionLabel();
       // 같은 파일 다시 선택 가능 (input value 초기화)
@@ -810,9 +813,24 @@ function rcpRePickImage(){
   _renderRcpPages();
   document.getElementById('imgPreview').style.display='none';
   document.getElementById('imgPreview').src='';
+  const hint = document.getElementById('rcpImgHint'); if(hint) hint.style.display='none';
   document.getElementById('actionGroup').style.display='none';
   document.getElementById('uploadGroup').style.display='block';
   _updateRcpActionLabel();
+}
+// ─── 새 기능: 영수증 사진 전체화면 미리보기 ───
+function openImgFullPreview(){
+  const src = document.getElementById('imgPreview')?.src;
+  if(!src || src.length < 10) return;
+  const overlay = document.getElementById('imgFullOverlay');
+  const fullImg = document.getElementById('imgFullSrc');
+  if(!overlay || !fullImg) return;
+  fullImg.src = src;
+  overlay.style.display = 'flex';
+}
+function closeImgFullPreview(){
+  const overlay = document.getElementById('imgFullOverlay');
+  if(overlay) overlay.style.display = 'none';
 }
 async function getVendorHints() {
   if(!currentStore) return '';
