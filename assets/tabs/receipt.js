@@ -957,8 +957,18 @@ async function runAI() {
   if(pageCount>1 && !confirm(`사진 ${pageCount}장이 선택됐어요.\n\n같은 영수증의 여러 페이지인가요?\n거래처가 다르면 '취소' 후 한 곳씩 올려주세요.`)) return;
   setLoad(true, pageCount>1 ? `AI 분석 중... (사진 ${pageCount}장 통합)` : 'AI 분석 중...');
   try {
-    const catList = getCatListForPrompt();
+    let catList = getCatListForPrompt();
     const isVendorModeAI = rcpMode === 'vendor';
+    // 거래처 모드 = 그 거래처 취급품목만 AI 후보로 (2026-06-10) — 후보 좁힘 → 정확도↑·검수↓
+    // 온라인·마트(직구)는 전체 자율(getCatListForPrompt 그대로)
+    if(isVendorModeAI && rcpVendorId){
+      const _v = (typeof vendors!=='undefined') ? vendors.find(x=>x.id===rcpVendorId) : null;
+      const _handled = _v && Array.isArray(_v.handled_category_ids) ? _v.handled_category_ids : [];
+      if(_handled.length){
+        const _names = _handled.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean);
+        if(_names.length) catList = _names.join(','); // 1개면 AI가 자연히 그 분류로 고정
+      }
+    }
     // ─── 통합 개선 (2026-05-19 (4)) ───
     //  · 프롬프트 다이어트 (11규칙→핵심만, 예시 단축) → 입력 토큰 ~30% ↓
     //  · p = 영수증 [합계] 컬럼 인쇄값 그대로 (사장님 호소 ② 116,000 vs 115,999 catch)
