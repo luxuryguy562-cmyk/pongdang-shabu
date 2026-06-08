@@ -1554,6 +1554,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .rcp-guess-tag{font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-light);border-radius:6px;padding:2px 7px;white-space:nowrap;flex-shrink:0;cursor:pointer;}
 /* 과거 품목 원터치 📋 버튼 */
 .ric-past-btn{flex:none;border:1px solid var(--toss-blue);background:var(--toss-blue-light);color:var(--toss-blue);border-radius:8px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1;}
+/* 규격 줄 (거래처 모드 전용 — 2026-06-08) */
+.ric-spec{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.ric-spec-lbl{font-size:10px;font-weight:800;color:var(--toss-text-4);flex:none;background:var(--toss-line);border-radius:6px;padding:3px 6px;}
+.ric-spec .c-spec{flex:1;border:none;background:var(--gray-100);border-radius:8px;padding:6px 9px;font-size:12px;font-weight:600;color:var(--toss-text-2);outline:none;font-family:inherit;min-width:0;}
+/* 원산지 칩 (점선 — 참고 정보) */
+.ric-meta{background:transparent;border:1px dashed var(--toss-line-2);border-radius:8px;padding:5px 9px;font-size:11px;color:var(--toss-text-4);font-weight:600;display:flex;align-items:center;gap:4px;}
+.ric-meta input{border:none;background:transparent;font-size:12px;font-weight:700;text-align:left;color:var(--toss-text-2);outline:none;font-family:inherit;width:54px;}
 /* 과거 품목 시트 내 행 */
 .past-item-row{padding:11px 14px;border:1px solid var(--toss-line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--toss-text-1);}
 .past-item-row:active{background:var(--toss-blue-light);}
