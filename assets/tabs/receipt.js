@@ -1494,7 +1494,7 @@ async function saveReceipt(){
     const category_id = isVendorMode
       ? (rcpCatId || tr.dataset.catId || resolveReceiptCatId(cat) || null)
       : (tr.dataset.catId ? tr.dataset.catId : (resolveReceiptCatId(cat) || null));
-    const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,'');
+    const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9-]/g,''); // 마이너스(-) 보존 — 할인 행(-500 등) 음수 유지 (2026-06-08 버그수정)
     const taxRaw=(tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''); // 행 세액(부가세) — 합계는 세후
     const isFree=(tr.querySelector('.c-f')?.value||'0')==='1'; // 면세 여부
     // 거래처 모드면 vendor 텍스트도 거래처명으로 통일 (AI 추출 vendor가 누락이거나 다를 때 보호)
@@ -1502,7 +1502,7 @@ async function saveReceipt(){
       ? (rcpVendorName || tr.querySelector('.c-v').value)
       : (tr.querySelector('.c-v')?.value || '');
     // 단가/수량 추출 (2026-05-19 부활) — 가격 추세 분석 기반
-    const unitRaw=(tr.querySelector('.c-u')?.value||'').replace(/[^0-9]/g,'');
+    const unitRaw=(tr.querySelector('.c-u')?.value||'').replace(/[^0-9-]/g,''); // 마이너스 보존 — 할인 행 단가 음수 유지 (2026-06-08)
     const qtyRaw=parseFloat((tr.querySelector('.c-q')?.value||'').replace(/[^0-9.]/g,''))||null;
     const itemText = tr.querySelector('.c-i')?.value || '';
     // AI 원본 텍스트 보존 (사장님이 수정 시 학습용)
