@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>온라인 모드 신설 — 계획서</title>
+<style>
+  :root{
+    --blue:#3182F6; --blue-light:#EBF3FF; --green:#16A34A; --green-light:#DCFCE7;
+    --amber:#D97706; --amber-light:#FEF3C7; --red:#DC2626; --red-light:#FEE2E2;
+    --gray-900:#191F28; --gray-700:#4E5968; --gray-500:#8B95A1; --gray-200:#E5E8EB;
+    --gray-100:#F2F4F6; --gray-50:#F9FAFB;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+       background:var(--gray-50); color:var(--gray-900); line-height:1.7; padding:16px; max-width:760px; margin:0 auto;}
+  h1{font-size:24px; font-weight:800; margin-bottom:4px;}
+  .sub{color:var(--gray-500); font-size:13px; margin-bottom:20px;}
+  .card{background:#fff; border-radius:16px; padding:18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+  .card h2{font-size:17px; font-weight:800; margin-bottom:12px; display:flex; align-items:center; gap:8px;}
+  .label{display:inline-block; font-size:12px; font-weight:800; padding:4px 12px; border-radius:20px; margin-bottom:10px;}
+  .label.green{background:var(--green-light); color:var(--green);}
+  .badge{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px;}
+  .badge.new{background:var(--blue-light); color:var(--blue);}
+  .badge.keep{background:var(--gray-100); color:var(--gray-700);}
+  .badge.rename{background:var(--amber-light); color:var(--amber);}
+  .warn-box{background:var(--amber-light); border-left:4px solid var(--amber); border-radius:8px; padding:14px; margin:10px 0;}
+  .warn-box .t{font-weight:800; color:var(--amber); margin-bottom:6px;}
+  .ok-box{background:var(--green-light); border-left:4px solid var(--green); border-radius:8px; padding:14px; margin:10px 0;}
+  .ok-box .t{font-weight:800; color:var(--green); margin-bottom:6px;}
+  .pick-box{background:var(--blue-light); border:2px solid var(--blue); border-radius:12px; padding:16px; margin:12px 0;}
+  .pick-box .t{font-weight:800; color:var(--blue); margin-bottom:8px; font-size:15px;}
+  table{width:100%; border-collapse:collapse; margin:10px 0; font-size:13px;}
+  th,td{border:1px solid var(--gray-200); padding:10px; text-align:left; vertical-align:top;}
+  th{background:var(--gray-100); font-weight:800; font-size:12px;}
+  td.c{text-align:center; white-space:nowrap;}
+  ul{padding-left:20px; margin:8px 0;}
+  li{margin-bottom:6px;}
+  .flow{font-size:13px; background:var(--gray-50); border-radius:8px; padding:12px; font-family:monospace;}
+  .en{color:var(--gray-500); font-size:12px;}
+  .q{font-weight:800; color:var(--gray-900); margin:14px 0 6px;}
+  .rec{display:inline-block; background:var(--green); color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px; margin-left:6px;}
+  .step{display:flex; gap:10px; margin-bottom:10px;}
+  .step .n{flex:none; width:24px; height:24px; background:var(--blue); color:#fff; border-radius:50%; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center;}
+  hr{border:none; border-top:1px solid var(--gray-200); margin:14px 0;}
+  .small{font-size:12px; color:var(--gray-500);}
+</style>
+</head>
+<body>
+
+<h1>🌐 온라인 모드 신설 — 계획서</h1>
+<div class="sub">영수증 탭에 "온라인(쿠팡·네이버 등)" 종류 추가 + "직구" 이름 변경 · 2026-06-10</div>
+
+<div class="card">
+  <span class="label green">🟢 루트 안 — 식당 사장님 일상 식자재·비품 구매처라 비전 일치</span>
+  <h2>📌 한 줄 요약</h2>
+  <p>영수증 등록 종류를 <b>2개 → 3개</b>로 늘립니다. 온라인 구매처(쿠팡·네이버 등)는
+     상호를 <b>플랫폼 이름으로 고정</b>해서, 카드·통장 내역의 "쿠팡"과 <b>자동으로 짝이 맞게</b> 만듭니다.</p>
+</div>
+
+<div class="card">
+  <h2>⚠️ 가장 먼저 봐야 할 것 — 쿠팡 기능이 이미 있습니다</h2>
+  <div class="warn-box">
+    <div class="t">🔍 빙산 발견 (헌법 1-8)</div>
+    <p>2026-05-26에 <b>거래처 → 쿠팡</b> 경로로 쿠팡 처리 기능이 이미 만들어져 있습니다.
+       사장님이 이번에 <b>영수증 탭</b>에서 쿠팡을 분석하셔서, 그 기능을 안 거치고
+       일반 영수증으로 읽혀 결과가 엉망이 된 겁니다.</p>
+  </div>
+  <p><b>이미 있는 쿠팡 기능 (거래처 → 쿠팡 진입 시):</b></p>
+  <ul>
+    <li>📸 <b>쿠팡 스샷 → AI 분석</b> — 전용 규칙으로 주문 추출 <span class="en">(sidemenu.js)</span></li>
+    <li>📥 <b>분류 대기함</b> — AI가 추천한 카테고리를 사장님이 확인 후 저장 <span class="en">(coupang_inbox 표)</span></li>
+    <li>🔖 <b>북마클릿 자동 동기화</b> — 쿠팡 사이트에서 주문을 자동으로 가져옴 <span class="en">(Edge Function)</span></li>
+  </ul>
+  <p class="small">→ 저장 위치도 다릅니다. 기존 쿠팡 = <b>주문 내역</b>(vendor_orders) / 영수증 탭 = <b>영수증</b>(receipts).</p>
+</div>
+
+<div class="card">
+  <h2>🗣️ 사장님 요구사항 정리</h2>
+  <ul>
+    <li>온라인 = <b>쿠팡·네이버·G마켓·11번가</b> 등 대형 몇 개 + <b>기타</b> 하나</li>
+    <li>온라인도 <b>직구처럼 품목별 카테고리</b>(식자재/비품 등)를 정할 수 있어야 함</li>
+    <li>"직구" → <b>"마트·시장"</b>으로 이름 변경 (기능은 지금 그대로)</li>
+    <li>배민·쿠팡이츠도 <b>온라인</b> (편의점 식자재 등 구매 가능)</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>🎯 제안 구조 — 종류 3개</h2>
+  <table>
+    <tr><th>종류</th><th>대상</th><th>상호(거래처) 처리</th><th>카테고리</th><th>변화</th></tr>
+    <tr>
+      <td class="c">🏪<br>거래처</td>
+      <td>등록된 정기 거래처<br><span class="small">프레시원 등</span></td>
+      <td>미리 선택</td>
+      <td>고정</td>
+      <td class="c"><span class="badge keep">그대로</span></td>
+    </tr>
+    <tr>
+      <td class="c">🌐<br>온라인</td>
+      <td>쿠팡·네이버·G마켓·<br>11번가·배민·기타</td>
+      <td><b>플랫폼 이름 고정</b><br><span class="small">목록에서 선택</span></td>
+      <td>품목별 AI 분류</td>
+      <td class="c"><span class="badge new">신설</span></td>
+    </tr>
+    <tr>
+      <td class="c">🛒<br>마트·시장</td>
+      <td>마트·시장 직접 구매</td>
+      <td>AI가 읽음</td>
+      <td>품목별 AI 분류</td>
+      <td class="c"><span class="badge rename">이름만 변경</span></td>
+    </tr>
+  </table>
+  <div class="ok-box">
+    <div class="t">✅ 핵심 효과 — 이름이 짝이 맞습니다</div>
+    <p>온라인 모드는 상호를 <b>"쿠팡"으로 고정</b>하고, 실제 판매자(예: 철물인)는 <b>품목명에 남깁니다</b>.
+       그러면 카드·통장 내역의 "쿠팡"과 영수증의 "쿠팡"이 <b>같은 이름으로 묶여서</b> 한 화면에 보입니다.
+       <span class="small">(직구/온라인 화면은 상호 글자로 묶는 구조라 가능 — 코드 확인 완료)</span></p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>❓ 사장님 결정 필요 — 기존 쿠팡 기능을 어떻게 할까요</h2>
+  <p>온라인 모드를 새로 만들면 <b>거래처 → 쿠팡 스샷 분석</b>과 겹칩니다. 잔재로 남으면 헷갈리니(헌법 1-6) 정리 방향을 정해야 합니다.</p>
+
+  <div class="q">방법 A — 영수증 탭 온라인 모드로 일원화 <span class="rec">CTO 추천</span></div>
+  <ul>
+    <li>온라인 구매는 전부 <b>영수증 탭 → 온라인</b>에서 처리 (사장님이 자연스럽게 들어간 그 자리)</li>
+    <li>기존 거래처 → 쿠팡 스샷 분석 버튼은 <b>제거</b> (중복 정리)</li>
+    <li>북마클릿 <b>자동 동기화는 유지</b> (사장님 손 안 가는 자동화라 가치 큼 — 비전)</li>
+    <li class="small">⚠️ 저장 위치 통일 필요: 영수증(receipts)로 모을지, 주문내역(vendor_orders)로 모을지 — 구현 시 한쪽으로</li>
+  </ul>
+
+  <div class="q">방법 B — 둘 다 유지</div>
+  <ul>
+    <li>거래처 → 쿠팡(자동 동기화·대기함) + 영수증 탭 온라인(스샷 즉석) 둘 다 둠</li>
+    <li class="small">⚠️ 같은 쿠팡 주문을 두 군데서 입력 가능 → 중복 위험 + 사장님 헷갈림</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>🔧 작업 범위 (대형)</h2>
+  <table>
+    <tr><th>구분</th><th>내용</th></tr>
+    <tr><td class="c">화면<br><span class="en">index.html</span></td>
+        <td>종류 선택 버튼 2개 → 3개 / "직구 영수증" 글자 → "마트·시장"으로 / 온라인 플랫폼 선택 줄 추가</td></tr>
+    <tr><td class="c">로직<br><span class="en">receipt.js</span></td>
+        <td>모드 분기에 'online' 추가 / 플랫폼(쿠팡·네이버 등) 목록 + 기타 / 저장 시 상호=플랫폼 고정</td></tr>
+    <tr><td class="c">AI 규칙<br><span class="en">common.js</span></td>
+        <td>온라인 모드 전용 안내 — 상호=플랫폼, 실제 판매자는 품목명에, 소계 직독 + 배송비 별도</td></tr>
+    <tr><td class="c">기존 정리<br><span class="en">sidemenu.js</span></td>
+        <td>(방법 A 선택 시) 거래처→쿠팡 스샷 분석 버튼 제거 / 자동 동기화는 유지</td></tr>
+    <tr><td class="c">문서</td>
+        <td>db_schema·plan·dev_lessons 동기화</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>🗄️ DB(데이터베이스) 변경 여부</h2>
+  <div class="ok-box">
+    <div class="t">✅ 표 구조 변경 없음</div>
+    <p>온라인 영수증은 기존 영수증 표(receipts)의 칸을 그대로 씁니다 — 상호(vendor)에 "쿠팡",
+       분류(category_id)는 품목별로. <b>새 칸·새 표 안 만듭니다.</b>
+       <span class="small">(방법 A에서 저장 위치를 vendor_orders로 정하면 그건 기존 표라 역시 변경 없음)</span></p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>🛡️ 기존 기능 안전 (회귀 방지)</h2>
+  <ul>
+    <li>마트·시장 = <b>이름만</b> 바뀌고 동작은 100% 동일 (기존 직구 영수증 그대로 보임)</li>
+    <li>거래처 모드 = 손대지 않음</li>
+    <li>이미 저장된 영수증 = 영향 없음</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>⚡ 리스크</h2>
+  <ul>
+    <li>"직구" 글자가 코드 여러 곳에 흩어져 있음 → 한 군데라도 놓치면 옛 이름 잔재. <b>전부 찾아 바꾸고 검증</b>(헌법 11조)</li>
+    <li>방법 A에서 기존 쿠팡 스샷 기능 제거 시 → 그 흐름에 익숙한 동작 끊김. <b>자동 동기화는 살려서</b> 완충</li>
+    <li>온라인 플랫폼 목록 = 코드에 박으면 나중에 추가 번거로움 → <b>"기타" 직접 입력</b>으로 보완</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>👉 다음 단계</h2>
+  <div class="pick-box">
+    <div class="t">사장님이 정해주실 것</div>
+    <ol style="padding-left:20px;">
+      <li><b>기존 쿠팡 기능</b> → 방법 A(일원화·추천) / 방법 B(둘 다 유지) 중 선택</li>
+      <li>방법 A면 <b>저장 위치</b> → 영수증(receipts) / 주문내역(vendor_orders) 중 선택<br>
+          <span class="small">(추천: 영수증 — 마트·시장과 같은 칸에 모여 카테고리별 합산 일관)</span></li>
+      <li>온라인 <b>플랫폼 목록</b> 확정 → 쿠팡·네이버·G마켓·11번가·배민·쿠팡이츠 + 기타 (추가·삭제 의견)</li>
+    </ol>
+  </div>
+  <p class="small">→ 사장님 결정 주시면 상세 구현 계획서(함수·인수인계 포함)로 확정하고 코딩 들어갑니다.</p>
+</div>
+
+</body>
+</html>
