@@ -164,9 +164,10 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
 }
 
 // ─── 영수증/거래명세서 분석 프롬프트 (영수증 탭 + 측정실 공통 — 2026-06-04 통일) ───
-//   isVendorMode=true(거래처): vendor·category 출력 X / false(직구): vendor·category 출력
+//   isVendorMode=true(거래처): vendor·category 출력 X / false(직구·온라인): vendor·category 출력
+//   isOnline=true(온라인): 쿠팡·네이버 등 웹 주문 화면. vendor=플랫폼명, 실판매자는 품목명.
 //   ⚠️ 영수증 탭(receipt.js)·측정실(accuracy_lab.js) 둘 다 이 함수만 호출 → 검증=실제 동일 보장
-function buildReceiptPrompt({isVendorMode=true, vendorName='', catList='', pageCount=1}={}){
+function buildReceiptPrompt({isVendorMode=true, isOnline=false, vendorName='', catList='', pageCount=1}={}){
   const modeHint = isVendorMode
     ? `[모드:거래처] vendor="${vendorName}" 이미 선택. v·d 출력 X. 품목별 c를 [${catList}]에서 선택 — 한 거래처라도 품목마다 분류가 다를 수 있다(예: 육류·공산품 섞임). 영수증 1장 = 같은 날짜 (date 최상위 1번).
 [수량 칸 우선] ⚠️표에 "수량" 칸이 따로 있으면 q=그 "수량" 칸 값 그대로. "Box입수량"·"박스입수"·"입수" 칸은 한 박스에 든 개수(메타)일 뿐이니 q에 절대 쓰지 마라.
@@ -178,7 +179,11 @@ function buildReceiptPrompt({isVendorMode=true, vendorName='', catList='', pageC
   · 단위8·BOX1·EA0→q=8
   · 단위40·BOX0·EA5→q=5  ← BOX 0
   · 단위12·BOX0·EA5→q=5  ← BOX 0`
-    : `[모드:직구] 마트·배민. d 출력 X. vendor 최상위 1번. 영수증 1장 = 같은 날짜·매장.
+    : isOnline
+    ? `[모드:온라인] 쿠팡·네이버·G마켓·11번가·옥션 등 웹 주문 확인 화면. d 출력 X. 품목별 c를 [${catList}]에서 선택.
+⚠️vendor = 화면 상단의 플랫폼명(쿠팡·네이버 등). 실제 판매자(셀러)명은 vendor가 아니라 품목명(i) 앞에 둬라.
+⚠️p = 화면에 인쇄된 "상품금액/주문금액"(행 소계) 그대로. u×q 계산 금지(작은 단가 오독 증폭). 배송비는 별도 items 행(i="배송비", q=1).`
+    : `[모드:직구] 마트·시장. d 출력 X. vendor 최상위 1번(영수증에 찍힌 가게명). 영수증 1장 = 같은 날짜·매장.
 품목별 c를 [${catList}]에서 선택.`;
   const multiPageHint = pageCount>1
     ? `\n[멀티페이지] 사진 ${pageCount}장 = 같은 영수증의 다른 페이지. 모든 페이지 행을 items에 통합. date·vendor·total_sum은 1번만.`
