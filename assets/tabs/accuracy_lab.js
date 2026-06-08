@@ -62,7 +62,9 @@ async function accCallGemini(b64list){
   const isGpt = _accCurEngine==='gpt4o';
   const model = isGpt ? 'gpt-4o' : (_accCurEngine==='gemini-pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash');
   const provider = isGpt ? 'gpt' : 'gemini';
-  const raw=await callGemini(parts, 30+(b64list.length-1)*5, 'accuracy_test', model, provider);
+  // GPT-4o는 큰 사진에서 느려 30초로 부족 → 60초. 제미나이는 빨라서 30초 유지 (2026-06-08 실측: GPT만 타임아웃)
+  const baseTimeout = isGpt ? 60 : 30;
+  const raw=await callGemini(parts, baseTimeout+(b64list.length-1)*5, 'accuracy_test', model, provider);
   const cost=(typeof lastAIUsage!=='undefined'&&lastAIUsage)?lastAIUsage.costWon:null;
   return {raw, cost};
 }
