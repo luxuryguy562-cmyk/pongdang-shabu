@@ -145,8 +145,8 @@ function renderRcpModeBadge(){
       : `🏠 거래처를 먼저 골라주세요.`;
   } else if(rcpMode === 'direct'){
     icon.textContent = '🛒';
-    value.textContent = '직구 영수증';
-    label.textContent = '마트 · 일반 · 배민 등';
+    value.textContent = '마트·시장 영수증';
+    label.textContent = '마트 · 시장 · 동네가게';
     if(guide) guide.innerHTML = `🤖 AI가 품목별로 분류해드려요. 한 영수증에 식자재·비품이 섞여도 따로 잡아드려요.`;
   } else if(rcpMode === 'manual'){
     icon.textContent = '✏️';
@@ -158,7 +158,7 @@ function renderRcpModeBadge(){
 
 // ─── 새 기능: 수동 입력 (사진 없이 빈 행 1개로 시작) ───
 function manualReceipt(){
-  if(!rcpMode) return toast('먼저 거래처 또는 직구를 골라주세요','warn');
+  if(!rcpMode) return toast('먼저 거래처 또는 마트·시장을 골라주세요','warn');
   rcpInputMethod = 'manual';
   document.getElementById('uploadGroup').style.display='none';
   document.getElementById('actionGroup').style.display='none';
@@ -343,7 +343,7 @@ async function loadCatReceiptData(){
   let title = '', iconEmoji = '🛒';
   let catParent = null;
   if(catReceiptMode === 'direct'){
-    title = '직구'; iconEmoji = '🛒';
+    title = '마트·시장'; iconEmoji = '🛒';
   } else if(catReceiptMode.startsWith('cat:')){
     const cid = catReceiptMode.split(':')[1];
     catParent = (expCategories||[]).find(c=>c.id===cid);
