@@ -821,7 +821,7 @@
   <!-- 거래 채널 (토스 통일 2026-05-22) -->
   <div class="exp-section-ttl">🚚 거래 채널</div>
   <div class="exp-channel-grid">
-    <button type="button" class="exp-channel-card" data-action="nav|vendors">
+    <button type="button" class="exp-channel-card" data-action="openVendorChannel|vendor">
       <div class="ec-head">
         <div class="ec-icon-wrap blue">
           <svg viewBox="0 0 24 24" fill="none" stroke="#3182F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
@@ -830,6 +830,16 @@
       </div>
       <div class="ec-vl" id="expMiniVendor">-</div>
       <div class="ec-sub" id="expMiniVendorSub">이번달</div>
+    </button>
+    <button type="button" class="exp-channel-card" data-action="openVendorChannel|online">
+      <div class="ec-head">
+        <div class="ec-icon-wrap" style="background:#E8F5E9;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
+        <div class="ec-nm">온라인</div>
+      </div>
+      <div class="ec-vl" id="expMiniOnline">-</div>
+      <div class="ec-sub" id="expMiniOnlineSub">이번달</div>
     </button>
     <button type="button" class="exp-channel-card" data-action="openCatReceipt|direct">
       <div class="ec-head">
@@ -1517,7 +1527,7 @@
 
 <!-- ══ [6] 거래처 관리 ══ -->
 <div id="vendorsCont" class="container">
-  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">거래처 관리</span></div>
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl" id="vendorViewTitle">거래처 관리</span></div>
   <!-- 서브탭(파일 업로드·대조&단가) 제거 (2026-06-02 사장님 요청 — 단순화. 대조는 정산 대조에서 별도 관리) -->
 
   <div id="vendorList">
@@ -1526,8 +1536,8 @@
         <!-- 옵션은 refreshVendorListFilter에서 동적 채움 -->
         <option value="">전체 카테고리</option>
       </select>
-      <button class="btn btn-secondary btn-sm" style="flex:0 0 auto;padding:10px 10px;font-size:12px;" data-action="openVendorReclassSheet" title="기존 식자재/직구 거래처를 육류/야채/공산품으로 재지정">🔄 재분류</button>
-      <button class="btn btn-primary btn-sm" data-action="openAddVendorSheet">+ 추가</button>
+      <button id="vendorReclassBtn" class="btn btn-secondary btn-sm" style="flex:0 0 auto;padding:10px 10px;font-size:12px;" data-action="openVendorReclassSheet" title="기존 식자재/직구 거래처를 육류/야채/공산품으로 재지정">🔄 재분류</button>
+      <button id="vendorAddBtn" class="btn btn-primary btn-sm" data-action="openAddVendorSheet|vendor">+ 추가</button>
     </div>
     <div id="vendorListData"><div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div></div>
   </div>
@@ -2803,13 +2813,18 @@
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addVendorTitle">거래처 추가</div>
   <input id="vendorNameInput" class="input-field" placeholder="거래처명 *" type="text">
-  <!-- 취급품목 다중 선택 (2026-06-10) — 이 거래처가 파는 품목만 체크. 영수증 분석 시 AI 후보로 제한.
+  <!-- 취급품목 다중 선택 (2026-06-10) — 거래처(kind=vendor)만. 온라인 플랫폼은 자율이라 숨김.
        카테고리는 DB 동적(하드코딩 X). 대분류 [전체] + 소분류 개별. 세금·고정비·공과금 등 비구매는 후보 제외. -->
-  <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin:4px 0 6px;">취급품목 <span style="font-weight:500;color:var(--gray-500);">(사는 것만 체크 · 여러 개 가능)</span></div>
-  <div id="vendorHandledCats" style="max-height:240px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:10px;margin-bottom:4px;">
-    <!-- refreshVendorHandledCategories()가 동적 생성 -->
+  <div id="vendorHandledCatsWrap">
+    <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin:4px 0 6px;">취급품목 <span style="font-weight:500;color:var(--gray-500);">(사는 것만 체크 · 여러 개 가능)</span></div>
+    <div id="vendorHandledCats" style="max-height:240px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:10px;margin-bottom:4px;">
+      <!-- refreshVendorHandledCategories()가 동적 생성 -->
+    </div>
   </div>
+  <!-- 온라인 플랫폼 안내 (kind=online일 때만 표시) -->
+  <div id="vendorOnlineHint" style="display:none;font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:10px;padding:12px;margin-bottom:4px;line-height:1.6;">🌐 온라인 플랫폼은 품목이 다양해서 <b>취급품목을 정하지 않습니다</b>. 영수증마다 AI가 품목별로 분류해드려요.</div>
   <input type="hidden" id="editVendorId">
+  <input type="hidden" id="vendorKindInput" value="vendor">
   <div class="action-group">
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveVendor">저장</button>

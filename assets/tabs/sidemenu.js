@@ -39,7 +39,8 @@ async function loadVendors(){
   renderVendorList();
   // 드롭다운 채우기
   const sels=['orderVendorFilter','uploadVendorSel','orderVendorInput'];
-  sels.forEach(id=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML=(id==='orderVendorFilter'?'<option value="">전체 거래처</option>':'')+vendors.map(v=>`<option value="${v.id}"${!v.is_active?' (거래종료)':''}>${v.name}</option>`).join('');if(cur)el.value=cur;});
+  const vendorOnly=vendors.filter(v=>(v.kind||'vendor')!=='online'); // 주문 드롭다운엔 거래처만(온라인 제외)
+  sels.forEach(id=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML=(id==='orderVendorFilter'?'<option value="">전체 거래처</option>':'')+vendorOnly.map(v=>`<option value="${v.id}"${!v.is_active?' (거래종료)':''}>${v.name}</option>`).join('');if(cur)el.value=cur;});
 }
 function vendorTab(tab,el){
   document.querySelectorAll('#vendorsCont .sub-tab').forEach(t=>t.classList.remove('active'));
@@ -337,10 +338,28 @@ function _vendorCatLabel(v, maxShow=2){
   if(names.length<=maxShow) return names.join('·');
   return names.slice(0,maxShow).join('·')+` 외 ${names.length-maxShow}`;
 }
+let vendorListKind = 'vendor'; // 거래처 관리 화면 종류 (2026-06-10): 'vendor'(정기 거래처) | 'online'(쿠팡 등 플랫폼)
+// 거래 채널 카드(거래처/온라인) 진입 — 종류 설정 후 거래처 관리 화면
+function openVendorChannel(kind){
+  vendorListKind = (kind==='online') ? 'online' : 'vendor';
+  nav('vendors');
+  _applyVendorViewKind();
+  renderVendorList();
+}
+// 거래처 관리 화면을 종류에 맞게 (제목·필터·추가버튼)
+function _applyVendorViewKind(){
+  const online = vendorListKind==='online';
+  const ttl=document.getElementById('vendorViewTitle'); if(ttl) ttl.textContent = online?'온라인 플랫폼':'거래처 관리';
+  const flt=document.getElementById('vendorCatFilter'); if(flt) flt.style.display = online?'none':'';
+  const rcl=document.getElementById('vendorReclassBtn'); if(rcl) rcl.style.display = online?'none':'';
+  const add=document.getElementById('vendorAddBtn');
+  if(add){ add.setAttribute('data-action', online?'openAddVendorSheet|online':'openAddVendorSheet|vendor'); add.textContent = online?'+ 플랫폼':'+ 추가'; }
+}
 function renderVendorList(){
   // 2026-05-15: 필터 옵션 value = category_id (FK). 텍스트 매칭에서 FK 매칭으로.
   const catId=document.getElementById('vendorCatFilter')?.value||'';
-  let list=vendors;
+  // 종류 필터 (2026-06-10) — 거래처 화면엔 거래처만, 온라인 화면엔 온라인만
+  let list=vendors.filter(v=>(v.kind||'vendor')===vendorListKind);
   if(catId) list=list.filter(v=>v.category_id===catId);
   // 사용자 지정 순서 적용 (없으면 기본 name 정렬 유지)
   const userOrder=getVendorOrder();
@@ -881,11 +900,17 @@ function refreshVendorListFilter(){
     cats.map(c=>`<option value="${c.id}">${c.vendor_category}</option>`).join('');
   if(cur==='' || cats.find(c=>c.id===cur)) filter.value=cur;
 }
-function openAddVendorSheet(){
+// 거래처 추가 시트 — kind='vendor'(기본) / 'online'(쿠팡·네이버 등). 온라인은 취급품목 없이 자율
+function openAddVendorSheet(kind){
   if(!guardStore()) return;
-  refreshVendorHandledCategories([]);
-  document.getElementById('addVendorTitle').innerText='거래처 추가';
+  kind = (kind==='online') ? 'online' : 'vendor';
+  closeAllSheets();
+  document.getElementById('vendorKindInput').value=kind;
+  _applyVendorSheetKind(kind);
+  if(kind==='vendor') refreshVendorHandledCategories([]);
+  document.getElementById('addVendorTitle').innerText = kind==='online' ? '온라인 플랫폼 추가' : '거래처 추가';
   document.getElementById('vendorNameInput').value='';
+  document.getElementById('vendorNameInput').placeholder = kind==='online' ? '플랫폼명 (예: 쿠팡, 네이버, 옥션) *' : '거래처명 *';
   document.getElementById('editVendorId').value='';
   const delBtn=document.getElementById('vendorDeleteBtn');
   if(delBtn) delBtn.style.display='none'; // 신규 추가 시 삭제 버튼 숨김
@@ -893,10 +918,21 @@ function openAddVendorSheet(){
   if(togBtn) togBtn.style.display='none'; // 신규 추가 시 거래종료 버튼 숨김
   openSheet('addVendorSheet');
 }
+// 시트의 취급품목/온라인안내 표시 토글
+function _applyVendorSheetKind(kind){
+  const wrap=document.getElementById('vendorHandledCatsWrap');
+  const hint=document.getElementById('vendorOnlineHint');
+  if(wrap) wrap.style.display = kind==='online' ? 'none' : 'block';
+  if(hint) hint.style.display = kind==='online' ? 'block' : 'none';
+}
 function openEditVendorSheet(id){
   const v=vendors.find(x=>x.id===id);
   if(!v) return;
-  document.getElementById('addVendorTitle').innerText='거래처 편집';
+  const kind=(v.kind==='online') ? 'online' : 'vendor';
+  document.getElementById('vendorKindInput').value=kind;
+  _applyVendorSheetKind(kind);
+  document.getElementById('vendorNameInput').placeholder = kind==='online' ? '플랫폼명 *' : '거래처명 *';
+  document.getElementById('addVendorTitle').innerText = kind==='online' ? '온라인 플랫폼 편집' : '거래처 편집';
   document.getElementById('vendorNameInput').value=v.name;
   document.getElementById('editVendorId').value=v.id;
   const delBtn=document.getElementById('vendorDeleteBtn');
@@ -915,26 +951,35 @@ function openEditVendorSheet(id){
       togBtn.classList.add('btn-success');
     }
   }
-  // 취급품목 복원 — handled_category_ids 우선, 없으면 옛 category_id 1개로 (하위호환)
-  let handled = Array.isArray(v.handled_category_ids) ? v.handled_category_ids
-    : (v.category_id ? [v.category_id] : []);
-  refreshVendorHandledCategories(handled);
+  // 취급품목 복원 (거래처만) — handled_category_ids 우선, 없으면 옛 category_id 1개로 (하위호환)
+  if(kind==='vendor'){
+    let handled = Array.isArray(v.handled_category_ids) ? v.handled_category_ids
+      : (v.category_id ? [v.category_id] : []);
+    refreshVendorHandledCategories(handled);
+  }
   openSheet('addVendorSheet');
 }
 async function saveVendor(){
   if(!guardStore()) return;
   const name=document.getElementById('vendorNameInput').value.trim();
-  if(!name) return toast('거래처명을 입력하세요.','warn');
-  // 취급품목 체크 수집 (leaf id 배열)
-  const handledIds=Array.from(document.querySelectorAll('#vendorHandledCats .vhc:checked')).map(c=>c.value);
-  if(!handledIds.length) return toast('취급품목을 1개 이상 골라주세요.','warn');
-  // 주 분류(category_id) = 첫 번째 = fallback·기존 집계 호환. category 텍스트 동기화
-  const category_id=handledIds[0];
-  const cat=(expCategories||[]).find(c=>c.id===category_id);
-  const categoryText=cat?.vendor_category||cat?.name||'';
+  const kind=document.getElementById('vendorKindInput')?.value || 'vendor';
+  if(!name) return toast(kind==='online'?'플랫폼명을 입력하세요.':'거래처명을 입력하세요.','warn');
   const eid=document.getElementById('editVendorId').value;
+  let payload;
+  if(kind==='online'){
+    // 온라인 플랫폼 = 취급품목 없이 자율. 카테고리는 영수증 품목별로 정해짐
+    payload={name,kind:'online',category:null,category_id:null,handled_category_ids:[]};
+  } else {
+    // 취급품목 체크 수집 (leaf id 배열)
+    const handledIds=Array.from(document.querySelectorAll('#vendorHandledCats .vhc:checked')).map(c=>c.value);
+    if(!handledIds.length) return toast('취급품목을 1개 이상 골라주세요.','warn');
+    // 주 분류(category_id) = 첫 번째 = fallback·기존 집계 호환. category 텍스트 동기화
+    const category_id=handledIds[0];
+    const cat=(expCategories||[]).find(c=>c.id===category_id);
+    const categoryText=cat?.vendor_category||cat?.name||'';
+    payload={name,kind:'vendor',category:categoryText,category_id,handled_category_ids:handledIds};
+  }
   setLoad(true,'저장 중...');
-  const payload={name,category:categoryText,category_id,handled_category_ids:handledIds};
   const{error}=eid
     ? await sb.from('vendors').update(payload).eq('id',eid)
     : await sb.from('vendors').insert({...payload,store_id:currentStore.id});
@@ -4475,7 +4520,7 @@ function showWelcomeCard(storeCode){
     <div style="display:flex;flex-direction:column;gap:6px;">
       <button class="btn btn-secondary" style="justify-content:flex-start;padding:10px 14px;font-size:12px;" data-action="nav|receipt">🧾 첫 영수증 찍어보기</button>
       <button class="btn btn-secondary" style="justify-content:flex-start;padding:10px 14px;font-size:12px;" data-action="nav|settle">💰 오늘 매출 기록</button>
-      <button class="btn btn-secondary" style="justify-content:flex-start;padding:10px 14px;font-size:12px;" data-action="nav|vendors">🏪 거래처 추가</button>
+      <button class="btn btn-secondary" style="justify-content:flex-start;padding:10px 14px;font-size:12px;" data-action="openVendorChannel|vendor">🏪 거래처 추가</button>
     </div>
   </div>`;
   // 대시보드 최상단에 환영 카드 임시 표시 (localStorage로 1회만)
@@ -5171,14 +5216,22 @@ async function loadExpHubData(force){
   const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
   const setText=(id,v)=>{const el=document.getElementById(id);if(el) el.textContent=v;};
 
-  // 거래처(vendorMonthTotals 캐시) + 카테고리 활성 개수 — DB 호출 X, 즉시 처리
+  // 거래처(kind=vendor) / 온라인(kind=online) 분리 합산 (2026-06-10) — vendorMonthTotals 캐시, DB 호출 X
   try{
-    const totals=Object.values(vendorMonthTotals||{});
-    const sum=totals.reduce((a,t)=>a+(t.total||0),0);
-    const vendorCnt=totals.length;
-    setText('expMiniVendor', sum?fmt(sum):'0');
-    setText('expMiniVendorSub', vendorCnt?`${vendorCnt}곳`:'주문 없음');
-  }catch(e){setText('expMiniVendor','-');}
+    const kindOf=id=>{const v=(vendors||[]).find(x=>x.id===id); return v?(v.kind||'vendor'):'vendor';};
+    let vSum=0,vCnt=0,oSum=0,oCnt=0;
+    Object.entries(vendorMonthTotals||{}).forEach(([id,t])=>{
+      if(kindOf(id)==='online'){ oSum+=t.total||0; oCnt++; }
+      else { vSum+=t.total||0; vCnt++; }
+    });
+    // 곳 수 = 등록된 거래처/플랫폼 수(주문 없어도 카운트)
+    const vendorReg=(vendors||[]).filter(v=>(v.kind||'vendor')==='vendor' && v.is_active!==false).length;
+    const onlineReg=(vendors||[]).filter(v=>(v.kind||'vendor')==='online' && v.is_active!==false).length;
+    setText('expMiniVendor', vSum?fmt(vSum):'0');
+    setText('expMiniVendorSub', vendorReg?`${vendorReg}곳`:'주문 없음');
+    setText('expMiniOnline', oSum?fmt(oSum):'0');
+    setText('expMiniOnlineSub', onlineReg?`${onlineReg}곳 · 이번달`:'이번달');
+  }catch(e){setText('expMiniVendor','-');setText('expMiniOnline','-');}
   try{
     const list=(expCategories||[]).filter(c=>c.is_active!==false);
     setText('expFullCat', `활성 ${list.length}개`);
