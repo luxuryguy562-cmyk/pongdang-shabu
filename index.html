@@ -705,23 +705,11 @@
       <span style="font-size:12px;font-weight:700;color:#8B95A1;">합계</span>
       <span id="rgeTotalAmt" style="font-size:18px;font-weight:900;color:#191F28;letter-spacing:-0.5px;">0원</span>
     </div>
-    <div style="font-size:12px;color:#8B95A1;margin-bottom:6px;">📦 품목 (행마다 ⓧ = 정상↔오답 토글, 🏷 = 분류 변경)</div>
-    <div class="table-wrap" style="margin:0;">
-      <table style="font-size:12px;">
-        <thead><tr>
-          <th style="width:24px">X</th>
-          <th>품목</th>
-          <th style="width:54px">단가</th>
-          <th style="width:42px">수량</th>
-          <th style="width:72px">금액</th>
-          <th style="width:74px">분류</th>
-        </tr></thead>
-        <tbody id="rgeTable"></tbody>
-      </table>
-    </div>
-    <div class="add-row-btn" data-action="addRgeRow">＋ 행 추가</div>
+    <div style="font-size:12px;color:#8B95A1;margin-bottom:6px;">📦 품목 — 품목명·금액 탭해서 수정, × = 오답 처리</div>
+    <div id="rgeTable"></div>
+    <div class="add-row-btn" data-action="addRgeRow">＋ 품목 추가</div>
     <div style="padding:8px 0;font-size:11px;color:var(--gray-500);line-height:1.5;">
-      💡 정상 행만 합계·집계·학습에 들어가요. ⓧ 누르면 오답 처리(집계 제외).
+      💡 정상 행만 합계·집계에 들어가요. × 누르면 오답 처리(집계 제외).
     </div>
     <div style="display:flex;gap:8px;margin-top:4px;">
       <button class="btn btn-danger" style="padding:14px 16px;font-size:13px;" data-action="deleteReceiptGroupFromSheet">🗑 삭제</button>
