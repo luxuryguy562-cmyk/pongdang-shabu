@@ -1067,6 +1067,7 @@ async function loadVendorOrders(){
     const labelName = showVendor ? esc(g.vendor||'(거래처 없음)') : (dateShort||'-');
     const labelSub = showVendor && dateShort ? ` · ${dateShort}` : '';
     let actionsHtml='';
+    let rowClickAttr='';
     if(isOrder){
       const editId = g.rows[0]?.id || g.recId;
       const delKey = g.groupId ? ('g:'+g.groupId) : ('s:'+g.recId);
@@ -1076,13 +1077,11 @@ async function loadVendorOrders(){
         </div>`;
     } else {
       const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
-      actionsHtml = `<div class="grp-hdr-actions">
-          <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
-          <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
-        </div>`;
+      actionsHtml = `<span style="font-size:18px;color:#C8CDD4;font-weight:700;flex-shrink:0;">›</span>`;
+      rowClickAttr = `style="cursor:pointer;" data-action="openReceiptGroupEdit|${editKey}"`;
     }
     html+=`<tr class="grp-hdr${firstGroup?' first':''}">
-      <td colspan="5"><div class="grp-hdr-row">
+      <td colspan="5"><div class="grp-hdr-row" ${rowClickAttr}>
         <div class="grp-hdr-info">
           <span class="emoji">${headerIcon}</span>
           <span class="name">${labelName}${labelSub}</span>
