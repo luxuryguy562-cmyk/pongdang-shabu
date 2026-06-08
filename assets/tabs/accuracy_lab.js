@@ -217,6 +217,7 @@ async function accAnalyze(){
     const r=document.getElementById('accResult');
     if(r) r.innerHTML=`<div class="card acc-sec" style="padding:14px;"><div class="acc-err">⚠️ 분석 실패: ${(e&&e.message)||''}<br><span class="acc-mini">중계서버가 막거나 사진이 너무 큰 경우입니다.</span></div></div>`;
   }finally{
+    setLoad(false); // callGemini가 재시도("2/3") 중 켠 전체화면 로딩을 반드시 끔 — 측정실엔 끄는 코드가 없어 호출 실패 시 무한로딩 됐음 (2026-06-08 사장님 호소)
     if(btn){ btn.disabled=false; btn.textContent='🤖 AI 분석'; }
   }
 }
