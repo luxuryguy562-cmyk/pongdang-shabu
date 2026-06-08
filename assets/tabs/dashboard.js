@@ -135,46 +135,35 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   }
   card.style.display='';
 }
-// ─── 어디에 썼나 바텀시트 열기 (2026-06-03 카테고리별 그룹핑) ───
+// ─── 어디에 썼나 바텀시트 열기 (거래처별 순차 나열) ───
 function openTodayVendorSheet(){
   const d = _todayVendorDataCache;
   if(!d){ toast('지출 데이터가 없습니다.'); return; }
   const {veMap, dayExp} = d;
-  // veMap = { '쿠팡|비품': {name, cat, amt}, ... } → 거래처+카테고리 단위
-  const rows = Object.values(veMap).map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}));
+  // 거래처별 flat 리스트 — 금액 큰 순
+  const rows = Object.values(veMap)
+    .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
+    .sort((a,b)=>b.amt-a.amt);
   const total = dayExp || rows.reduce((s,r)=>s+r.amt, 0);
-
-  // 카테고리별 그룹 묶기
-  const catGroups = {};
-  rows.forEach(r=>{
-    if(!catGroups[r.cat]) catGroups[r.cat]={cat:r.cat, sum:0, items:[]};
-    catGroups[r.cat].sum += r.amt;
-    catGroups[r.cat].items.push(r);
-  });
-  // 카테고리는 합계 큰 순, 카테고리 내 거래처도 금액 큰 순
-  const groups = Object.values(catGroups).sort((a,b)=>b.sum-a.sum);
-  groups.forEach(g=>g.items.sort((a,b)=>b.amt-a.amt));
 
   const listEl = document.getElementById('vendorExpSheetList');
   const totalEl = document.getElementById('vendorExpSheetTotal');
   if(listEl){
-    const groupsHtml = groups.map((g,i)=>{
-      const color = _VE_COLORS[i % _VE_COLORS.length];
-      const pct = total>0 ? Math.round(g.sum/total*100) : 0;
-      const itemsHtml = g.items.map(it=>
-        `<div class="ve-row"><span class="vname">${esc(it.name)}</span><span class="vamt">${fmt(it.amt)}원</span></div>`
-      ).join('');
-      return `<div class="ve-group">`
-        + `<div class="ve-cat-head"><span class="ve-cat-dot" style="background:${color};"></span>`
-        + `<span class="ve-cat-name">${esc(g.cat)}</span>`
-        + `<span class="ve-cat-pct">${pct}%</span>`
-        + `<span class="ve-cat-sum">${fmt(g.sum)}원</span></div>`
-        + itemsHtml
-        + `</div>`;
+    const html = rows.map(r=>{
+      const pct = total>0 ? Math.round(r.amt/total*100) : 0;
+      return `<div class="ve-row" style="padding:12px 0;border-bottom:1px solid #F2F4F6;display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#191F28;margin-bottom:3px;">${esc(r.name)}</div>
+          <span style="font-size:11px;font-weight:700;color:#8B95A1;background:#F2F4F6;border-radius:6px;padding:2px 7px;">${esc(r.cat)}</span>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:15px;font-weight:900;color:#191F28;">${fmt(r.amt)}원</div>
+          <div style="font-size:11px;color:#B0B8C1;">${pct}%</div>
+        </div>
+      </div>`;
     }).join('');
-    listEl.innerHTML = groupsHtml;
+    listEl.innerHTML = html || `<div style="text-align:center;padding:20px 0;color:var(--gray-400);font-size:12px;">내역 없음</div>`;
   }
-  // 전체 합계 — 항상 고정 (스크롤 밖)
   if(totalEl) totalEl.innerHTML = `<span class="ve-total-lb">전체 합계</span><span class="ve-total-vl">${fmt(total)}원</span>`;
   openSheet('vendorExpSheet');
 }
