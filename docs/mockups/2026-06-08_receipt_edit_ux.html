@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>영수증 수정 UX — 행 클릭 방식 비교</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#3A4250;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:26px;}
+  .stage{display:flex;gap:28px;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .col-ttl{color:#fff;font-size:14px;font-weight:800;text-align:center;}
+  .col-sub{color:#C6CDD6;font-size:11.5px;text-align:center;line-height:1.5;}
+  .device{background:#0A0A0A;border-radius:46px;padding:11px;box-shadow:0 16px 44px rgba(0,0,0,.4);}
+  .screen{background:#F2F4F6;border-radius:36px;overflow:hidden;display:flex;flex-direction:column;width:393px;height:852px;position:relative;}
+  .safetop{background:#fff;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;position:relative;flex:none;height:59px;}
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:108px;height:30px;background:#0A0A0A;border-radius:18px;}
+  .safetop .clk{font-size:14px;font-weight:700;color:#191F28;}
+  .safetop .rgt{font-size:12px;color:#191F28;}
+  .apphdr{flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;background:#fff;border-bottom:1px solid #F2F4F6;height:50px;}
+  .back{font-size:22px;font-weight:700;color:#191F28;margin-right:2px;cursor:pointer;}
+  .apphdr-ttl{font-size:17px;font-weight:800;color:#191F28;letter-spacing:-0.4px;}
+  .content{flex:1;overflow-y:auto;}
+  .body{padding:14px 16px 20px;}
+  .tabbar{background:#fff;border-top:1px solid #F2F4F6;display:flex;align-items:center;justify-content:space-around;height:48px;flex:none;}
+  .tb{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9.5px;color:#8B95A1;}
+  .tb.on{color:#0050FF;font-weight:700;}
+  .tb .i{font-size:20px;}
+  .safebottom{background:#fff;flex:none;height:34px;display:flex;align-items:center;justify-content:center;}
+  .safebottom .bar{width:134px;height:5px;border-radius:3px;background:#191F28;}
+
+  /* ── 거래처 상세 헤더 ── */
+  .vd-head{background:#fff;padding:16px;margin-bottom:2px;}
+  .vd-name{font-size:19px;font-weight:900;color:#191F28;letter-spacing:-0.5px;}
+  .vd-sub{font-size:12px;color:#8B95A1;margin-top:2px;}
+  .vd-chips{display:flex;gap:6px;margin-top:8px;}
+  .chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+  .chip.green{background:#E7F4EE;color:#0CAB6C;}
+  .chip.gray{background:#F2F4F6;color:#4E5968;}
+
+  /* ── 영수증 목록 ── */
+  .sec-ttl{font-size:12px;font-weight:700;color:#8B95A1;padding:10px 16px 4px;letter-spacing:0.2px;}
+
+  /* ── 현재: 행 + 버튼 2개 ── */
+  .cur-row{background:#fff;display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #F2F4F6;gap:8px;}
+  .cur-row .main{flex:1;min-width:0;}
+  .cur-row .ttl{font-size:13.5px;font-weight:700;color:#191F28;}
+  .cur-row .sub{font-size:11px;color:#8B95A1;margin-top:2px;}
+  .cur-row .amt{font-size:14px;font-weight:800;color:#191F28;margin-right:4px;white-space:nowrap;}
+  .btn-xs{border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .btn-xs.sec{background:#F2F4F6;color:#4E5968;}
+  .btn-xs.red{background:#FEE2E2;color:#DC2626;}
+
+  /* ── 개선: 행 전체 클릭 (토스 스타일) ── */
+  .new-row{background:#fff;display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid #F2F4F6;cursor:pointer;gap:10px;}
+  .new-row:active{background:#F8F9FA;}
+  .new-row .main{flex:1;min-width:0;}
+  .new-row .ttl{font-size:14px;font-weight:700;color:#191F28;letter-spacing:-0.3px;}
+  .new-row .sub{font-size:11.5px;color:#8B95A1;margin-top:2px;}
+  .new-row .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+  .new-row .amt{font-size:15px;font-weight:800;color:#191F28;letter-spacing:-0.5px;}
+  .new-row .arr{font-size:18px;color:#C8CDD4;font-weight:700;}
+
+  /* ── 바텀시트 공통 ── */
+  .bsheet{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;padding:0 0 34px;box-shadow:0 -4px 24px rgba(0,0,0,.12);}
+  .bsh-handle{width:36px;height:4px;background:#E5E8EB;border-radius:2px;margin:10px auto 0;}
+  .bsh-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;}
+  .bsh-ttl{font-size:17px;font-weight:900;color:#191F28;letter-spacing:-0.4px;}
+  .bsh-close{border:none;background:#F2F4F6;border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer;}
+
+  /* 현재 시트 — 행 레이아웃 */
+  .cur-field{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid #F2F4F6;}
+  .cur-field .lbl{font-size:12px;color:#8B95A1;width:52px;flex-shrink:0;}
+  .cur-field input{flex:1;border:1px solid #E5E8EB;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:600;color:#191F28;font-family:inherit;outline:none;}
+  .cur-field .tag{background:#F0FFF4;color:#0CAB6C;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;}
+  .cur-tbl{width:100%;font-size:11.5px;border-collapse:collapse;margin:0 18px;width:calc(100% - 36px);}
+  .cur-tbl th{text-align:left;color:#8B95A1;font-weight:700;padding:6px 4px;border-bottom:1px solid #F2F4F6;}
+  .cur-tbl td{padding:8px 4px;border-bottom:1px solid #F9F9F9;color:#191F28;font-weight:600;}
+
+  /* 개선 시트 — 카드형 */
+  .new-meta{display:flex;gap:8px;padding:8px 18px 12px;}
+  .new-meta-card{flex:1;background:#F8F9FA;border-radius:12px;padding:10px 12px;}
+  .new-meta-lbl{font-size:10px;font-weight:700;color:#B0B8C1;margin-bottom:3px;}
+  .new-meta-val{font-size:14px;font-weight:800;color:#191F28;}
+  .new-meta-val input{border:none;background:transparent;font-size:14px;font-weight:800;color:#191F28;width:100%;outline:none;font-family:inherit;padding:0;}
+  .new-total{margin:0 18px 10px;background:#F8F9FA;border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
+  .new-total .tl{font-size:12px;color:#8B95A1;font-weight:700;}
+  .new-total .amt{font-size:22px;font-weight:900;color:#191F28;letter-spacing:-0.8px;}
+  .new-items{margin:0 18px;}
+  .new-item{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #F2F4F6;}
+  .new-item:last-child{border-bottom:none;}
+  .new-item .iname{flex:1;font-size:13px;font-weight:700;color:#191F28;}
+  .new-item .itag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;}
+  .new-item .iamt{font-size:13px;font-weight:800;color:#191F28;}
+  .new-item .idel{font-size:16px;color:#D1D5DB;cursor:pointer;}
+  .new-savebar{display:flex;gap:8px;padding:12px 18px 0;}
+  .new-del{background:#FEE2E2;color:#DC2626;border:none;border-radius:12px;padding:13px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .new-save{flex:1;background:#0050FF;color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 현재: ✏ 버튼 따로 눌러야 함 -->
+  <div class="col">
+    <div class="col-ttl">현재 — ✏ 버튼 따로</div>
+    <div class="col-sub">수정하려면 버튼을 찾아야 함</div>
+    <div class="device"><div class="screen">
+      <div class="safetop"><div class="island"></div><span class="clk">9:56</span><span class="rgt">📶 🔋</span></div>
+      <div class="apphdr"><span class="back">‹</span><div class="apphdr-ttl">프레시원</div></div>
+      <div class="content"><div class="body" style="padding:0;">
+        <div class="vd-head">
+          <div class="vd-name">🏢 프레시원</div>
+          <div class="vd-sub">식자재 · 정기 거래처</div>
+          <div class="vd-chips"><span class="chip green">이번달 304,886원</span><span class="chip gray">총 26건</span></div>
+        </div>
+        <div class="sec-ttl">이번달 영수증</div>
+
+        <!-- 행마다 버튼 2개 -->
+        <div class="cur-row">
+          <div class="main">
+            <div class="ttl">프레시원 영수증</div>
+            <div class="sub">6월 6일 · 식자재 3품목</div>
+          </div>
+          <div class="amt">304,886원</div>
+          <button class="btn-xs sec">✏</button>
+          <button class="btn-xs red">🗑</button>
+        </div>
+        <div class="cur-row">
+          <div class="main">
+            <div class="ttl">프레시원 영수증</div>
+            <div class="sub">5월 30일 · 식자재 5품목</div>
+          </div>
+          <div class="amt">241,520원</div>
+          <button class="btn-xs sec">✏</button>
+          <button class="btn-xs red">🗑</button>
+        </div>
+        <div class="cur-row">
+          <div class="main">
+            <div class="ttl">프레시원 영수증</div>
+            <div class="sub">5월 22일 · 식자재 4품목</div>
+          </div>
+          <div class="amt">198,200원</div>
+          <button class="btn-xs sec">✏</button>
+          <button class="btn-xs red">🗑</button>
+        </div>
+      </div></div>
+      <div class="tabbar"><div class="tb on"><span class="i">💳</span>지출관리</div></div>
+      <div class="safebottom"><div class="bar"></div></div>
+
+      <!-- 수정 시트 (현재 디자인) -->
+      <div class="bsheet" style="max-height:72%;">
+        <div class="bsh-handle"></div>
+        <div class="bsh-head"><span class="bsh-ttl">영수증 편집</span><button class="bsh-close">✕</button></div>
+        <div class="cur-field"><span class="lbl">📅 날짜</span><input value="2026-06-06" type="date"></div>
+        <div class="cur-field"><span class="lbl">🏪 거래처</span><input value="프레시원"></div>
+        <div style="padding:8px 18px;font-size:11px;color:#8B95A1;margin-bottom:4px;">📦 품목</div>
+        <table class="cur-tbl">
+          <thead><tr><th>X</th><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th>분류</th></tr></thead>
+          <tbody>
+            <tr><td>⊗</td><td>대파 5kg</td><td>18,500</td><td>2</td><td>37,000</td><td class="tag" style="background:#E7F4EE;color:#0CAB6C;font-size:10px;border-radius:4px;padding:2px 5px;">식자재</td></tr>
+            <tr><td>⊗</td><td>두부 모둠</td><td>8,900</td><td>3</td><td>26,700</td><td class="tag" style="background:#E7F4EE;color:#0CAB6C;font-size:10px;border-radius:4px;padding:2px 5px;">식자재</td></tr>
+          </tbody>
+        </table>
+        <div style="display:flex;gap:8px;padding:12px 18px 0;">
+          <button style="flex:1;background:#FEE2E2;color:#DC2626;border:none;border-radius:10px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;">🗑 영수증 통째 삭제</button>
+          <button style="flex:1.5;background:#0050FF;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;">💾 저장</button>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- 개선: 행 전체 클릭 (토스 스타일) -->
+  <div class="col">
+    <div class="col-ttl">개선안 ⭐ — 행 탭 = 열기</div>
+    <div class="col-sub">누르면 바로 상세+수정 가능</div>
+    <div class="device"><div class="screen">
+      <div class="safetop"><div class="island"></div><span class="clk">9:56</span><span class="rgt">📶 🔋</span></div>
+      <div class="apphdr"><span class="back">‹</span><div class="apphdr-ttl">프레시원</div></div>
+      <div class="content"><div class="body" style="padding:0;">
+        <div class="vd-head">
+          <div class="vd-name">🏢 프레시원</div>
+          <div class="vd-sub">식자재 · 정기 거래처</div>
+          <div class="vd-chips"><span class="chip green">이번달 304,886원</span><span class="chip gray">총 26건</span></div>
+        </div>
+        <div class="sec-ttl">이번달 영수증</div>
+
+        <!-- 행 전체 클릭 -->
+        <div class="new-row">
+          <div class="main">
+            <div class="ttl">6월 6일 (토)</div>
+            <div class="sub">식자재 3품목 · AI 분석</div>
+          </div>
+          <div class="right"><span class="amt">304,886원</span><span class="arr">›</span></div>
+        </div>
+        <div class="new-row">
+          <div class="main">
+            <div class="ttl">5월 30일 (금)</div>
+            <div class="sub">식자재 5품목 · AI 분석</div>
+          </div>
+          <div class="right"><span class="amt">241,520원</span><span class="arr">›</span></div>
+        </div>
+        <div class="new-row">
+          <div class="main">
+            <div class="ttl">5월 22일 (목)</div>
+            <div class="sub">식자재 4품목 · AI 분석</div>
+          </div>
+          <div class="right"><span class="amt">198,200원</span><span class="arr">›</span></div>
+        </div>
+      </div></div>
+      <div class="tabbar"><div class="tb on"><span class="i">💳</span>지출관리</div></div>
+      <div class="safebottom"><div class="bar"></div></div>
+
+      <!-- 개선 시트 (카드형) -->
+      <div class="bsheet" style="max-height:78%;">
+        <div class="bsh-handle"></div>
+        <div class="bsh-head"><span class="bsh-ttl">6월 6일 영수증</span><button class="bsh-close">✕</button></div>
+
+        <!-- 거래처 + 날짜 카드형 -->
+        <div class="new-meta">
+          <div class="new-meta-card">
+            <div class="new-meta-lbl">🏪 거래처</div>
+            <div class="new-meta-val"><input value="프레시원"></div>
+          </div>
+          <div class="new-meta-card">
+            <div class="new-meta-lbl">📅 날짜</div>
+            <div class="new-meta-val"><input type="date" value="2026-06-06" style="font-size:13px;font-weight:800;"></div>
+          </div>
+        </div>
+
+        <!-- 합계 -->
+        <div class="new-total">
+          <span class="tl">합계</span>
+          <span class="amt">304,886원</span>
+        </div>
+
+        <!-- 품목 리스트 -->
+        <div class="new-items">
+          <div class="new-item">
+            <span class="iname">대파 5kg</span>
+            <span class="itag" style="background:#E7F4EE;color:#0CAB6C;">식자재</span>
+            <span class="iamt">37,000원</span>
+            <span class="idel">×</span>
+          </div>
+          <div class="new-item">
+            <span class="iname">두부 모둠</span>
+            <span class="itag" style="background:#E7F4EE;color:#0CAB6C;">식자재</span>
+            <span class="iamt">26,700원</span>
+            <span class="idel">×</span>
+          </div>
+          <div class="new-item">
+            <span class="iname">고추장 업소용</span>
+            <span class="itag" style="background:#3182F61A;color:#3182F6;">기타</span>
+            <span class="iamt">48,000원</span>
+            <span class="idel">×</span>
+          </div>
+          <div style="text-align:center;padding:10px 0;font-size:12.5px;font-weight:700;color:#3182F6;cursor:pointer;border-top:1px dashed #E5E8EB;">＋ 품목 추가</div>
+        </div>
+
+        <!-- 저장/삭제 -->
+        <div class="new-savebar">
+          <button class="new-del">🗑 삭제</button>
+          <button class="new-save">저장하기</button>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+</body>
+</html>

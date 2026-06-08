@@ -689,37 +689,43 @@
       <div class="sheet-title" id="rgeTitle">영수증 편집</div>
       <button class="sheet-close" data-action="closeSheet|receiptGroupEditSheet">✕</button>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
-      <span style="font-size:12px;color:var(--gray-600);width:56px;">📅 날짜</span>
-      <input type="date" id="rgeDate" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
-      <span style="font-size:12px;color:var(--gray-600);width:56px;">🏪 거래처</span>
-      <input type="text" id="rgeVendor" placeholder="거래처명" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
-    </div>
-    <div style="padding:12px 0;border-bottom:1px solid var(--gray-100);">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px;">📦 품목 (행마다 ⓧ = 정상↔오답 토글, 🏷 = 분류 변경)</div>
-      <div class="table-wrap" style="margin:0;">
-        <table style="font-size:12px;">
-          <thead><tr>
-            <th style="width:24px">X</th>
-            <th>품목</th>
-            <th style="width:54px">단가</th>
-            <th style="width:42px">수량</th>
-            <th style="width:72px">금액</th>
-            <th style="width:74px">분류</th>
-          </tr></thead>
-          <tbody id="rgeTable"></tbody>
-        </table>
+    <!-- 거래처 + 날짜 카드형 (2열) -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="flex:1;background:#F8F9FA;border-radius:12px;padding:10px 12px;">
+        <div style="font-size:10.5px;font-weight:700;color:#B0B8C1;margin-bottom:4px;">🏪 거래처</div>
+        <input type="text" id="rgeVendor" placeholder="거래처명" style="border:none;background:transparent;font-size:14px;font-weight:800;color:#191F28;width:100%;outline:none;font-family:inherit;padding:0;">
       </div>
-      <div class="add-row-btn" data-action="addRgeRow">＋ 행 추가</div>
+      <div style="flex:1;background:#F8F9FA;border-radius:12px;padding:10px 12px;min-width:0;">
+        <div style="font-size:10.5px;font-weight:700;color:#B0B8C1;margin-bottom:4px;">📅 날짜</div>
+        <input type="date" id="rgeDate" style="border:none;background:transparent;font-size:12.5px;font-weight:800;color:#191F28;width:100%;outline:none;font-family:inherit;padding:0;">
+      </div>
     </div>
-    <div style="padding:10px 0;font-size:11px;color:var(--gray-500);line-height:1.5;">
+    <!-- 합계 바 -->
+    <div style="background:#F2F4F6;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:12px;font-weight:700;color:#8B95A1;">합계</span>
+      <span id="rgeTotalAmt" style="font-size:18px;font-weight:900;color:#191F28;letter-spacing:-0.5px;">0원</span>
+    </div>
+    <div style="font-size:12px;color:#8B95A1;margin-bottom:6px;">📦 품목 (행마다 ⓧ = 정상↔오답 토글, 🏷 = 분류 변경)</div>
+    <div class="table-wrap" style="margin:0;">
+      <table style="font-size:12px;">
+        <thead><tr>
+          <th style="width:24px">X</th>
+          <th>품목</th>
+          <th style="width:54px">단가</th>
+          <th style="width:42px">수량</th>
+          <th style="width:72px">금액</th>
+          <th style="width:74px">분류</th>
+        </tr></thead>
+        <tbody id="rgeTable"></tbody>
+      </table>
+    </div>
+    <div class="add-row-btn" data-action="addRgeRow">＋ 행 추가</div>
+    <div style="padding:8px 0;font-size:11px;color:var(--gray-500);line-height:1.5;">
       💡 정상 행만 합계·집계·학습에 들어가요. ⓧ 누르면 오답 처리(집계 제외).
     </div>
-    <div class="action-group" style="margin-top:12px;">
-      <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="deleteReceiptGroupFromSheet">🗑 영수증 통째 삭제</button>
-      <button class="btn btn-primary" style="flex:2;padding:14px;" data-action="saveReceiptGroupEdit">💾 저장</button>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn btn-danger" style="padding:14px 16px;font-size:13px;" data-action="deleteReceiptGroupFromSheet">🗑 삭제</button>
+      <button class="btn btn-primary" style="flex:1;padding:14px;" data-action="saveReceiptGroupEdit">💾 저장</button>
     </div>
   </div>
 </div>
