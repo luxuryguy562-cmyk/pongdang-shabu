@@ -1270,7 +1270,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-ve-head{font-size:12.5px;font-weight:800;color:#191F28;display:flex;align-items:center;margin-bottom:2px;}
 .dash-today-v7 .t7-ve-note{margin-left:auto;font-size:10px;font-weight:600;color:#B0B8C1;}
 /* 하단 흐리기: 스크롤 더 있을 때만 JS 인라인으로 mask-image 적용 (CSS 고정 제거 — 항상 흐리면 오해, 2026-06-08) */
-.dash-today-v7 .t7-ve-list{height:82px;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;border:none;border-radius:12px;background:#F5F6F8;padding:4px 12px;}
+.dash-today-v7 .t7-ve-list{height:108px;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;border:none;border-radius:12px;background:#F5F6F8;padding:4px 12px;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar{width:3px;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar-thumb{background:#D1D6DD;border-radius:3px;}
 .dash-today-v7 .t7-ve-list .ve-item{display:flex;align-items:center;font-size:12.5px;padding:5.5px 0;border-top:1px solid #F2F4F6;}
