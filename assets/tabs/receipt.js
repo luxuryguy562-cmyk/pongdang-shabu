@@ -1488,14 +1488,14 @@ async function saveReceipt(){
     const itemText = tr.querySelector('.c-i')?.value || '';
     // AI 원본 텍스트 보존 (사장님이 수정 시 학습용)
     const origItem = tr.dataset.origItem || itemText;
-    // spec·origin — DB 컬럼 추가 후 아래 주석 해제 (현재 표시만, 저장 보류)
-    // const specText = tr.querySelector('.c-spec')?.value?.trim() || null;
-    // const originText = tr.querySelector('.c-og')?.value?.trim() || null;
+    // spec·origin — 거래처 영수증 규격·원산지 분리 저장 (2026-06-08)
+    const specText = tr.querySelector('.c-spec')?.value?.trim() || null;
+    const originText = tr.querySelector('.c-og')?.value?.trim() || null;
     return {
       _idx:idx+1, _cat:cat, _origItem: origItem, // 학습용 메타 (DB 저장 X)
       store_id:currentStore.id,receipt_date:tr.querySelector('.c-d').value,
       vendor:vendorText,item:itemText,
-      // spec:specText, origin:originText, // ← DB migration 후 활성화
+      spec:specText, origin:originText,
       vendor_id: isVendorMode ? rcpVendorId : null,
       unit_price: unitRaw ? parseInt(unitRaw,10) : null,
       qty: qtyRaw,
