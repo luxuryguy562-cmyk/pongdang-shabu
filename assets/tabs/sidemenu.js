@@ -1739,8 +1739,6 @@ function renderEmpList(){
   if(fRole)list=list.filter(e=>e.role===fRole);
   const c=document.getElementById('empList');if(!c)return;
   // 아바타 배경색 팔레트
-  const avatarColors=['#4F46E5','#7C3AED','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#6366F1'];
-  const colorFor=(name)=>avatarColors[(name?.charCodeAt(0)||0)%avatarColors.length];
   // 보건증 상태 (만료 여부 포함)
   const healthDocIcon=(e)=>{
     if(!e.doc_health_cert) return '<span style="font-size:18px;filter:grayscale(1);opacity:.3;" title="보건증 미제출">📋</span>';
@@ -1760,7 +1758,7 @@ function renderEmpList(){
     return `
     <div style="background:#fff;border-radius:18px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;${!e.is_active?'opacity:.6;':''}">
       <div style="display:flex;align-items:center;gap:13px;padding:14px 14px 12px;cursor:pointer;" data-action="openEmpDetailSheet|${e.id}">
-        <div class="emp-avatar" style="width:46px;height:46px;border-radius:14px;background:${colorFor(e.name)};font-size:17px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
+        <div class="emp-avatar" style="width:46px;height:46px;border-radius:14px;background:#EEF0F3;color:#4E5968;font-size:17px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
             <span style="font-size:16px;font-weight:900;color:#191F28;">${e.name}</span>
@@ -1787,8 +1785,7 @@ function renderEmpList(){
 function openEmpDetailSheet(empId){
   const e=employees.find(emp=>emp.id===empId); if(!e)return;
   const maskId=(num)=>{if(!num)return'-';const d=num.replace(/[^\d]/g,'');if(d.length<7)return num;return d.slice(0,6)+'-'+d[6]+'******';};
-  const avatarColors=['#4F46E5','#7C3AED','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#6366F1'];
-  const avatarBg=avatarColors[(e.name?.charCodeAt(0)||0)%avatarColors.length];
+  const avatarBg='#EEF0F3';
   const authLabel={owner:'사장',franchise_admin:'본사 관리자',store_manager:'점장',staff:'직원'};
   const authBadge=e.auth_level==='store_manager'||e.is_manager?`<span class="badge badge-warn" style="font-size:10px;">관리자</span>`:'';
   const roleBadge=e.role?`<span class="badge badge-blue" style="font-size:10px;">${e.role}</span>`:'';
@@ -1831,7 +1828,7 @@ function openEmpDetailSheet(empId){
   const content=document.getElementById('empDetailContent'); if(!content)return;
   content.innerHTML=`
     <div style="display:flex;align-items:center;gap:14px;padding:6px 0 16px;border-bottom:1px solid #F2F4F6;">
-      <div class="emp-avatar" style="width:58px;height:58px;border-radius:18px;background:${avatarBg};font-size:22px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
+      <div class="emp-avatar" style="width:58px;height:58px;border-radius:18px;background:${avatarBg};color:#4E5968;font-size:22px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
           <span style="font-size:19px;font-weight:900;color:#191F28;">${e.name}</span>
