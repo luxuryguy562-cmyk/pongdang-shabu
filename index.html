@@ -919,7 +919,7 @@
       <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px;">이번 달 누적 급여</div>
       <div id="myinfoWage" style="font-size:18px;font-weight:800;color:var(--blue);">-</div>
     </div>
-    <button class="btn btn-secondary btn-full" style="margin-top:16px;" data-action="openMyInfoSheet">PIN·기기 변경</button>
+    <button id="myInfoPinBtn" class="btn btn-secondary btn-full" style="margin-top:16px;" data-action="openMyInfoSheet">PIN·기기 변경</button>
     <button class="btn btn-danger btn-full" style="margin-top:8px;" data-action="doLogout">로그아웃</button>
   </div>
 </div>
@@ -2506,6 +2506,17 @@
     <div class="sheet-title">직원 선택</div>
     <div id="empSheetList"></div>
     <button class="btn btn-secondary btn-full" style="margin-top:8px;" data-action="closeSheet|empSheet">취소</button>
+  </div>
+</div>
+
+<!-- 직원 상세 보기 -->
+<div class="sheet-overlay" id="empDetailSheet">
+  <div class="sheet sheet-content" style="max-height:90vh;padding-bottom:80px;">
+    <div class="sheet-header">
+      <div class="sheet-title">직원 상세</div>
+      <button class="sheet-close" data-action="closeSheet|empDetailSheet">✕</button>
+    </div>
+    <div id="empDetailContent"></div>
   </div>
 </div>
 
