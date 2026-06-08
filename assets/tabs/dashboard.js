@@ -1707,7 +1707,9 @@ function toggleMonthCatChildren(key){
 // ─── 월 통계 계산 (요약 카드 + 세부 화면 공용, 2026-06-03 분리) ───
 function _v17MonthStats(ctx){
   const cur = v17SumMonth(ctx, ctx.TARGET_MONTH, 31);
-  const prev = v17SumMonth(ctx, ctx.TARGET_MONTH-1, cur.lastDay);
+  // 전월 비교: 이달 매출 있는 마지막 날 기준 (매출 0인 날이 분모 부풀리지 않게)
+  const _cmpDay = cur.saleLastDay || cur.lastDay;
+  const prev = v17SumMonth(ctx, ctx.TARGET_MONTH-1, _cmpDay);
   const profit = cur.s - cur.e;
   const expPctNum = cur.s>0 ? Math.round(cur.e/cur.s*100) : 0;
   const monthLastDay = new Date(ctx.YEAR, ctx.TARGET_MONTH, 0).getDate();
@@ -1874,7 +1876,7 @@ function v17RenderMonthDetail(){
   if(prev.s>0){
     const sI = v17MomTag(cur.s, prev.s, 'sale');
     const eI = v17MomTag(cur.e, prev.e, 'expense');
-    const compareLabel = `${ctx.TARGET_MONTH-1}/${cur.lastDay}`;
+    const compareLabel = `${ctx.TARGET_MONTH-1}/${cur.saleLastDay || cur.lastDay}`;
     const dS = prev.s>0 ? Math.round((cur.s-prev.s)/prev.s*100) : 0;
     const dE = prev.e>0 ? Math.round((cur.e-prev.e)/prev.e*100) : 0;
     const comment = v17MomComment(dS, dE);
