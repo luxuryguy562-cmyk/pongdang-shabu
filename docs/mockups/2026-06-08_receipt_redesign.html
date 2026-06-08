@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>영수증 분석 — 개선 목업</title>
+<link rel="stylesheet" href="../../assets/styles.css">
+<style>
+  body{margin:0;background:#3A4250;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:26px;}
+  .stage{display:flex;gap:28px;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .col-ttl{color:#fff;font-size:14px;font-weight:800;text-align:center;}
+  .col-sub{color:#C6CDD6;font-size:11.5px;text-align:center;line-height:1.5;}
+  /* 폰 베젤 */
+  .device{background:#0A0A0A;border-radius:46px;padding:11px;box-shadow:0 16px 44px rgba(0,0,0,.4);}
+  .screen{background:#F2F4F6;border-radius:36px;overflow:hidden;display:flex;flex-direction:column;width:393px;height:852px;}
+  .safetop{background:#fff;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;position:relative;flex:none;height:59px;}
+  .safetop .clk{font-size:14px;font-weight:700;color:#191F28;}
+  .safetop .rgt{font-size:12px;color:#191F28;}
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:108px;height:30px;background:#0A0A0A;border-radius:18px;}
+  .apphdr{flex:none;display:flex;align-items:center;gap:6px;padding:0 14px;background:#fff;border-bottom:1px solid #F2F4F6;height:50px;}
+  .apphdr .lg{display:flex;align-items:center;gap:5px;font-weight:800;color:#0050FF;font-size:16px;}
+  .apphdr .lgm{width:23px;height:23px;border-radius:7px;background:#0050FF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+  .apphdr .chip{margin-left:auto;background:#F2F4F6;border-radius:13px;padding:5px 9px;font-size:11px;font-weight:700;color:#4E5968;}
+  .apphdr .chip.on{background:#EDF4FF;color:#0050FF;}
+  .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#F2F4F6;}
+  .body{padding:16px;}
+
+  /* 탭 헤더 */
+  .tab-seg{display:flex;background:#fff;border-bottom:1px solid #F2F4F6;flex:none;}
+  .tab-seg .seg{flex:1;text-align:center;padding:11px 0;font-size:12px;font-weight:700;color:#8B95A1;border-bottom:2px solid transparent;}
+  .tab-seg .seg.on{color:#0050FF;border-bottom-color:#0050FF;}
+
+  /* ── 공통 UI ── */
+  .card2{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(20,40,80,.06);}
+  .btn2{border:none;border-radius:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:filter .15s;font-family:inherit;}
+  .btn2:active{filter:brightness(.94);}
+  .btn2.primary{background:#0050FF;color:#fff;font-size:15px;padding:16px;width:100%;}
+  .btn2.secondary{background:#F2F4F6;color:#191F28;font-size:14px;padding:14px;}
+  .btn2.ghost{background:transparent;color:#8B95A1;font-size:13px;padding:10px;width:100%;}
+
+  /* ── 1단계: 초기 ── */
+  .init-hero{text-align:center;padding:28px 0 20px;}
+  .init-hero .ic{font-size:52px;margin-bottom:10px;}
+  .init-hero h2{font-size:18px;font-weight:900;color:#191F28;margin:0 0 6px;letter-spacing:-0.5px;}
+  .init-hero p{font-size:13px;color:#8B95A1;margin:0;line-height:1.6;}
+  .init-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .init-btn{background:#fff;border-radius:16px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;box-shadow:0 1px 4px rgba(20,40,80,.06);border:none;font-family:inherit;}
+  .init-btn .ib-ic{font-size:28px;}
+  .init-btn .ib-ttl{font-size:14px;font-weight:800;color:#191F28;}
+  .init-btn .ib-sub{font-size:11px;color:#8B95A1;font-weight:500;}
+  .init-btn.blue .ib-ttl{color:#0050FF;}
+  .init-btn-manual{background:#fff;border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 1px 4px rgba(20,40,80,.06);border:none;width:100%;font-family:inherit;}
+  .init-btn-manual .ib-ic{font-size:24px;flex-shrink:0;}
+  .init-btn-manual .ib-txt .ib-ttl{font-size:14px;font-weight:800;color:#191F28;margin-bottom:1px;}
+  .init-btn-manual .ib-txt .ib-sub{font-size:11.5px;color:#8B95A1;}
+  .init-btn-manual .arr{margin-left:auto;font-size:18px;color:#B0B8C1;}
+
+  /* ── 2단계: 사진 있음 ── */
+  .photo-preview{background:#fff;border-radius:16px;overflow:hidden;margin-bottom:12px;position:relative;display:flex;align-items:center;justify-content:center;height:140px;box-shadow:0 1px 4px rgba(20,40,80,.06);}
+  .photo-preview img{width:100%;height:100%;object-fit:cover;}
+  .photo-badge{position:absolute;top:10px;right:10px;background:#191F28cc;color:#fff;font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px;}
+  .photo-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+  .photo-action-main{grid-column:1/-1;}
+
+  /* ── 3단계: 분석 완료 ── */
+  /* 거래처 + 날짜 행 (오버플로 수정: 세로 배치) */
+  .rcp-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+  .rcp-meta-item{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(20,40,80,.04);}
+  .rcp-meta-item .ml{font-size:10.5px;font-weight:700;color:#B0B8C1;margin-bottom:4px;}
+  .rcp-meta-item input{border:none;background:transparent;font-size:15px;font-weight:800;color:#191F28;width:100%;outline:none;font-family:inherit;padding:0;}
+  /* 합계 카드 */
+  .rcp-total{background:#fff;border-radius:16px;padding:18px 16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(20,40,80,.06);}
+  .rcp-total .tl{font-size:12px;font-weight:700;color:#B0B8C1;margin-bottom:4px;}
+  .rcp-total .amt{font-size:34px;font-weight:900;color:#191F28;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.1;}
+  .rcp-total .amt .won{font-size:22px;font-weight:700;color:#6B7684;}
+  .rcp-total .sub{font-size:12px;color:#0CAB6C;font-weight:700;margin-top:5px;}
+  /* 품목 목록 */
+  .rcp-items{background:#fff;border-radius:16px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 4px rgba(20,40,80,.06);}
+  .rcp-item{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid #F2F4F6;gap:10px;}
+  .rcp-item:last-child{border-bottom:none;}
+  .rcp-item .iname{flex:1;font-size:13.5px;font-weight:700;color:#191F28;min-width:0;}
+  .rcp-item .itag{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap;flex-shrink:0;}
+  .rcp-item .iamt{font-size:14px;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;text-align:right;flex-shrink:0;}
+  .rcp-item .idel{font-size:16px;color:#D1D5DB;flex-shrink:0;cursor:pointer;}
+  .add-item{display:flex;align-items:center;justify-content:center;gap:6px;padding:13px;font-size:13px;font-weight:700;color:#3182F6;cursor:pointer;border-top:1px dashed #E5E8EB;}
+  /* 저장 버튼 영역 */
+  .save-area{padding:0 0 12px;}
+  .save-area .btn-save{background:#0050FF;color:#fff;border:none;border-radius:16px;width:100%;padding:18px;font-size:16px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:-0.3px;margin-bottom:8px;}
+  .save-area .btn-row{display:flex;gap:8px;}
+  .save-area .btn-retry{flex:1;background:#F2F4F6;color:#4E5968;border:none;border-radius:14px;padding:14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .save-area .btn-cancel{flex:1;background:transparent;color:#B0B8C1;border:none;border-radius:14px;padding:14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+  /* 탭바 */
+  .tabbar{background:#fff;border-top:1px solid #F2F4F6;display:flex;align-items:center;justify-content:space-around;height:48px;flex:none;}
+  .tb{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9.5px;color:#8B95A1;}
+  .tb.on{color:#0050FF;font-weight:700;}
+  .tb .i{font-size:20px;}
+  .safebottom{background:#fff;flex:none;height:34px;display:flex;align-items:center;justify-content:center;}
+  .safebottom .bar{width:134px;height:5px;border-radius:3px;background:#191F28;}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 1단계: 초기 -->
+  <div class="col">
+    <div class="col-ttl">1단계 — 초기</div>
+    <div class="col-sub">진입 시</div>
+    <div class="device"><div class="screen">
+      <div class="safetop"><div class="island"></div><span class="clk">9:56</span><span class="rgt">📶 🔋</span></div>
+      <div class="apphdr"><div class="lg"><span class="lgm">₩</span>캐쉬플로우</div><span class="chip on">💳 지출관리</span></div>
+      <div class="tab-seg">
+        <div class="seg on">📄 영수증 입력</div>
+        <div class="seg">📋 지출 내역</div>
+      </div>
+      <div class="content"><div class="body">
+        <div class="init-hero">
+          <div class="ic">🧾</div>
+          <h2>영수증을 기록할게요</h2>
+          <p>사진 찍으면 AI가 품목·금액을<br>자동으로 읽어드려요</p>
+        </div>
+        <div class="init-btns">
+          <button class="init-btn blue">
+            <span class="ib-ic">📸</span>
+            <span class="ib-ttl">촬영</span>
+            <span class="ib-sub">카메라로 찍기</span>
+          </button>
+          <button class="init-btn">
+            <span class="ib-ic">🖼</span>
+            <span class="ib-ttl">업로드</span>
+            <span class="ib-sub">사진 보관함에서</span>
+          </button>
+        </div>
+        <button class="init-btn-manual">
+          <span class="ib-ic">✏️</span>
+          <div class="ib-txt">
+            <div class="ib-ttl">수동 입력</div>
+            <div class="ib-sub">사진 없이 직접 입력</div>
+          </div>
+          <span class="arr">›</span>
+        </button>
+      </div></div>
+      <div class="tabbar">
+        <div class="tb"><span class="i">🏠</span>홈</div>
+        <div class="tb"><span class="i">🕐</span>근태관리</div>
+        <div class="tb"><span class="i">🐷</span>개시·마감</div>
+        <div class="tb on"><span class="i">💳</span>지출관리</div>
+        <div class="tb"><span class="i">⊞</span>더보기</div>
+      </div>
+      <div class="safebottom"><div class="bar"></div></div>
+    </div></div>
+  </div>
+
+  <!-- 2단계: 사진 올림 -->
+  <div class="col">
+    <div class="col-ttl">2단계 — 사진 올림</div>
+    <div class="col-sub">분석 전</div>
+    <div class="device"><div class="screen">
+      <div class="safetop"><div class="island"></div><span class="clk">9:56</span><span class="rgt">📶 🔋</span></div>
+      <div class="apphdr"><div class="lg"><span class="lgm">₩</span>캐쉬플로우</div><span class="chip on">💳 지출관리</span></div>
+      <div class="tab-seg">
+        <div class="seg on">📄 영수증 입력</div>
+        <div class="seg">📋 지출 내역</div>
+      </div>
+      <div class="content"><div class="body">
+        <div class="photo-preview" style="background:#E0F2FE;">
+          <span style="font-size:56px;">🧾</span>
+          <div class="photo-badge">사진 1장</div>
+        </div>
+        <div style="background:#FEF3C7;border-radius:12px;padding:10px 13px;margin-bottom:12px;font-size:12px;color:#92400E;line-height:1.55;">
+          📄 <b>한 거래처 영수증만</b> 올려주세요. 여러 페이지면 전부 추가 후 AI 분석하세요.
+        </div>
+        <button class="btn2 primary" style="margin-bottom:8px;">✨ AI 분석</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="btn2 secondary">🔄 사진 다시</button>
+          <button class="btn2 secondary">✕ 취소</button>
+        </div>
+      </div></div>
+      <div class="tabbar">
+        <div class="tb"><span class="i">🏠</span>홈</div>
+        <div class="tb"><span class="i">🕐</span>근태관리</div>
+        <div class="tb"><span class="i">🐷</span>개시·마감</div>
+        <div class="tb on"><span class="i">💳</span>지출관리</div>
+        <div class="tb"><span class="i">⊞</span>더보기</div>
+      </div>
+      <div class="safebottom"><div class="bar"></div></div>
+    </div></div>
+  </div>
+
+  <!-- 3단계: 분석 완료 -->
+  <div class="col">
+    <div class="col-ttl">3단계 — 분석 완료 ⭐</div>
+    <div class="col-sub">저장/다시만 — 나머지 버튼 없음</div>
+    <div class="device"><div class="screen">
+      <div class="safetop"><div class="island"></div><span class="clk">9:56</span><span class="rgt">📶 🔋</span></div>
+      <div class="apphdr"><div class="lg"><span class="lgm">₩</span>캐쉬플로우</div><span class="chip on">💳 지출관리</span></div>
+      <div class="tab-seg">
+        <div class="seg on">📄 영수증 입력</div>
+        <div class="seg">📋 지출 내역</div>
+      </div>
+      <div class="content"><div class="body">
+
+        <!-- 거래처 + 날짜: 세로 배치로 날짜 넘침 해결 -->
+        <div class="rcp-meta">
+          <div class="rcp-meta-item">
+            <div class="ml">🏪 거래처</div>
+            <input value="논산농협 하나로마트" readonly>
+          </div>
+          <div class="rcp-meta-item">
+            <div class="ml">📅 날짜</div>
+            <input value="2026. 6. 6." readonly>
+          </div>
+        </div>
+
+        <!-- 합계 -->
+        <div class="rcp-total">
+          <div class="tl">합계</div>
+          <div class="amt">13,120<span class="won">원</span></div>
+          <div class="sub">✅ 영수증 원본과 일치 · 3개 품목</div>
+        </div>
+
+        <!-- 품목 목록 -->
+        <div class="rcp-items">
+          <div class="rcp-item">
+            <div class="iname">삼립 아침미소 샌드위치식빵</div>
+            <span class="itag" style="background:#0CAB6C1A;color:#0CAB6C;">식자재·공산품</span>
+            <div class="iamt">9,160원</div>
+            <span class="idel">×</span>
+          </div>
+          <div class="rcp-item">
+            <div class="iname">P 시금치/특품/단</div>
+            <span class="itag" style="background:#0CAB6C1A;color:#0CAB6C;">식자재</span>
+            <div class="iamt">5,960원</div>
+            <span class="idel">×</span>
+          </div>
+          <div class="add-item">＋ 품목 추가</div>
+        </div>
+
+        <!-- 저장 버튼 영역 — 촬영/업로드/AI분석 버튼 없음 -->
+        <div class="save-area">
+          <button class="btn-save">저장하기</button>
+          <div class="btn-row">
+            <button class="btn-retry">🔄 다시 분석</button>
+            <button class="btn-cancel">취소</button>
+          </div>
+        </div>
+
+      </div></div>
+      <div class="tabbar">
+        <div class="tb"><span class="i">🏠</span>홈</div>
+        <div class="tb"><span class="i">🕐</span>근태관리</div>
+        <div class="tb"><span class="i">🐷</span>개시·마감</div>
+        <div class="tb on"><span class="i">💳</span>지출관리</div>
+        <div class="tb"><span class="i">⊞</span>더보기</div>
+      </div>
+      <div class="safebottom"><div class="bar"></div></div>
+    </div></div>
+  </div>
+
+</div>
+</body>
+</html>
