@@ -739,6 +739,22 @@
   </div>
 </div>
 
+<!-- ─── 새 기능: 과거 품목 원터치 선택 시트 (2026-06-05) ─── -->
+<div class="sheet-overlay" id="rcpPastItemSheet">
+  <div class="sheet sheet-content" style="max-height:82vh;padding-bottom:40px;">
+    <div class="sheet-header">
+      <div class="sheet-title">📋 이전 품목 선택</div>
+      <button class="sheet-close" data-action="closeSheet|rcpPastItemSheet">✕</button>
+    </div>
+    <div style="padding:4px 0 10px;font-size:12px;color:var(--gray-600);line-height:1.5;">
+      과거에 저장한 품목이에요. 톡 누르면 채워집니다.<br>
+      단가가 비슷한 후보가 위에 뜨고, 검색으로 좁힐 수도 있어요.
+    </div>
+    <input type="text" id="rcpPastItemSearch" class="sheet-search" placeholder="🔍 검색 (예: 새우)" data-input="onRcpPastItemSearch|this">
+    <div id="rcpPastItemList" style="margin-top:6px;max-height:52vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
 <!-- ══ [Hub] 영업 허브 ══ -->
 <div id="busHubCont" class="container">
   <div class="hub-grid" style="grid-template-columns:repeat(2,1fr);">

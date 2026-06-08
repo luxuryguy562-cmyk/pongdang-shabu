@@ -12,7 +12,9 @@ let rcpCatId = null;     // 거래처 자동 박힌 category_id
 let rcpCatName = '';     // 거래처 자동 박힌 category 텍스트
 let rcpInputMethod = null; // 'photo' | 'manual' — 영수증 단위 입력 방식 (📸/✏️ 이모지 표시용)
 let rcpEntryReturn = null; // 영수증 저장 후 자동 복귀할 화면 ('catReceipt:direct'|'catReceipt:etc'|'vendors:<id>')
-let rcpPastItems = [];   // 현재 거래처 과거 품목명 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
+let rcpPastItems = [];       // 현재 거래처 과거 품목명 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
+let rcpPastPriceMap = new Map(); // 단가 → Set<품목명> (단가 매칭 자동채움용, 2026-06-05)
+let rcpPastSheetTargetIdx = null; // 과거 품목 시트 열 때 대상 행 인덱스
 
 function setRcpMode(mode){
   if(!guardStore()) return;
@@ -946,18 +948,30 @@ async function runAI() {
     //  · total_sum 우선순위 정정: 금일합계 > 합계액 > 결제금액 (전미수/총합계/잔액/누계 무시)
     //  · page_info: {current, total} 신설 — 영수증 "Page (N/M)" 인쇄 감지
     //  · 멀티페이지: parts에 inline_data 여러 개 → AI가 통합 분석
-    // 거래처 과거 품목 로드 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
+    // 거래처 과거 품목 로드 — 품목명 자동완성 + 단가 매칭 자동채움용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
     rcpPastItems = [];
+    rcpPastPriceMap = new Map();
     if(isVendorModeAI && rcpVendorId){
       const {data:pData} = await sb.from('receipts')
-        .select('item')
+        .select('item, unit_price')
         .eq('store_id', currentStore.id)
         .eq('vendor_id', rcpVendorId)
         .not('item','is',null)
         .order('created_at',{ascending:false})
         .limit(300);
       if(pData && pData.length){
-        rcpPastItems = [...new Set(pData.map(r=>(r.item||'').trim()).filter(Boolean))].slice(0,120);
+        const seen = new Set();
+        pData.forEach(r => {
+          const nm = (r.item||'').trim();
+          if(!nm) return;
+          seen.add(nm);
+          const p = parseInt(r.unit_price)||0;
+          if(p > 0){
+            if(!rcpPastPriceMap.has(p)) rcpPastPriceMap.set(p, new Set());
+            rcpPastPriceMap.get(p).add(nm);
+          }
+        });
+        rcpPastItems = [...seen].slice(0,120);
       }
     }
     // 프롬프트 = common.js 공통 함수 (측정실과 100% 동일 — 검증=실제 보장)
@@ -1083,10 +1097,43 @@ async function runAI() {
     }
     // ⚠️ 품목명 의심 감지 (2026-06-05) — AI needs_review 자가판단 대신 출력값 패턴 검사 (100% 결정적)
     // 한자 칸을 못 읽으면 옆 글자(주소·전화·사업자번호)를 끌어다 채우는 환각 → 코드가 무조건 잡아 빨간 강조
-    let nameSuspectCnt=0;
-    list.forEach(it=>{ const r=_rcpNameSuspect(it.item); if(r){ it._nameSuspect=r; nameSuspectCnt++; } });
+    list.forEach(it=>{ const r=_rcpNameSuspect(it.item); if(r) it._nameSuspect=r; });
+    // ─── 단가 매칭 자동채움 (2026-06-05) ───
+    // 과거 영수증 단가가 등록된 거래처에서: 이번 행 단가 → 과거 단가 목록 대조 → 품목명 자동채움
+    // 🟢 정확 일치 + 후보 1개 → 자동 채움 (빨간불 해제)
+    // 🟡 정확 일치 후보 여럿 또는 ±15% 근접 → _nameCandidates 저장 (원터치 선택 추천)
+    // 🔴 일치 없음 → 기존 nameSuspect 유지
+    if(isVendorModeAI && rcpPastPriceMap.size){
+      list.forEach(it => {
+        const u = parseInt(it.unitPrice)||0;
+        if(!u) return;
+        if(rcpPastPriceMap.has(u)){
+          const candidates = [...rcpPastPriceMap.get(u)];
+          if(candidates.length === 1){
+            it.item = candidates[0];
+            it._nameSuspect = null;
+            it._autoFilled = true;
+          } else {
+            it._nameCandidates = candidates;
+            it._nameSuspect = null;
+          }
+        } else {
+          // ±15% 근접 후보 탐색 (정확 일치 없을 때만)
+          const nearby = [];
+          rcpPastPriceMap.forEach((names, pastPrice) => {
+            if(Math.abs(pastPrice - u) / u <= 0.15) nearby.push(...names);
+          });
+          if(nearby.length) it._nameCandidates = [...new Set(nearby)];
+        }
+      });
+    }
+    const nameSuspectCnt = list.filter(it => it._nameSuspect).length;
+    const autoFilledCnt  = list.filter(it => it._autoFilled).length;
+    if(autoFilledCnt){
+      toast(`✅ 단가로 품목명 ${autoFilledCnt}건 자동 채움 — 맞는지 확인하세요`, 'success', 5000);
+    }
     if(nameSuspectCnt){
-      toast(`🔴 품목명 확인 필요 ${nameSuspectCnt}건 — 빨간 칸을 눌러 고쳐주세요`, 'warn', 7000);
+      toast(`🔴 품목명 확인 필요 ${nameSuspectCnt}건 — 📋 눌러 고쳐주세요`, 'warn', 7000);
     }
     rowCount=0;
     document.getElementById('resTable').innerHTML=_rcpDatalistHtml()+list.map(i=>buildReceiptRow(i)).join('');
@@ -1209,22 +1256,30 @@ function buildReceiptRow(i={}) {
   // 🔴 품목명 의심 (2026-06-05) — 주소·전화 등 환각 패턴이면 품목 칸 빨간 강조
   const nameSuspect = i._nameSuspect;
   const nameSuspectCls = nameSuspect ? ' name-suspect' : '';
-  const nameSuspectMark = nameSuspect ? `<span title="${esc(nameSuspect)} — 눌러서 고쳐주세요" style="font-size:13px;cursor:help;">🔴</span>` : '';
+  const nameSuspectMark = nameSuspect ? `<span class="rcp-ns-mark" title="${esc(nameSuspect)} — 📋 눌러 고쳐주세요" style="font-size:13px;cursor:help;">🔴</span>` : '';
   // 면세 배지 — AI 면세 판단(isTaxFree) 우선, 없으면 세액 섞인 영수증의 세액 0 행 = 면세
   const _tax = parseInt(i.taxAmount)||0;
   const freeBadge = (i.isTaxFree || (i._taxFormat && _tax===0)) ? `<span class="ric-free">면세</span>` : '';
+  // 📋 버튼 — 과거 품목 원터치 선택 (거래처 모드 + 과거 품목 있을 때만)
+  const pastBtn = rcpPastItems.length ? `<button type="button" class="ric-past-btn" data-action="openRcpPastSheet|${idx}" title="과거 품목 선택">📋</button>` : '';
+  // 단가 매칭 뱃지 (2026-06-05)
+  const autoTag = i._autoFilled
+    ? `<span class="rcp-auto-tag">✅ 단가 자동채움</span>`
+    : (i._nameCandidates?.length ? `<span class="rcp-guess-tag" data-action="openRcpPastSheet|${idx}">🟡 후보 ${i._nameCandidates.length}개</span>` : '');
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
       ${nameSuspectMark}
       <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목" list="rcpPastItems" autocomplete="off">
       ${freeBadge}
       <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
+      ${pastBtn}
       <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
     </div>
     <div class="ric-l2">
       ${suspectMark}
       <span class="ric-mini">단가 <input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></span>
       <span class="ric-mini">수량 <input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></span>
+      ${autoTag}
       ${learnBadge}
       <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
     </div>
@@ -1264,8 +1319,10 @@ function _rcpRecalcAmount(tr){
 function onReceiptAmountInput(inputEl){
   const pos=inputEl.selectionStart;
   const before=inputEl.value;
+  const isNeg=before.startsWith('-');
   const digits=String(before).replace(/[^0-9]/g,'');
-  const formatted=digits?fmt(parseInt(digits,10)):'';
+  const num=(isNeg?-1:1)*(parseInt(digits,10)||0);
+  const formatted=digits?(isNeg?'-'+fmt(parseInt(digits,10)):fmt(parseInt(digits,10))):'';
   if(formatted===before) return;
   inputEl.value=formatted;
   // 커서 위치 보정 (콤마 삽입으로 위치 어긋남)
@@ -1300,6 +1357,65 @@ function resetReceipt(){
   resetRcpMode();
 }
 function openReasonSheet(idx){currentTargetRowIdx=idx;openSheet('reasonSheet');}
+
+// ─── 새 기능: 과거 품목 원터치 선택 시트 (2026-06-05) ───
+// 📋 버튼 → 시트 올라옴 → 과거 품목 선택 → 행 품목명 채워짐 + 빨간불 해제
+function openRcpPastSheet(idx){
+  rcpPastSheetTargetIdx = idx;
+  const row = document.getElementById('row-'+idx);
+  // 현재 행의 단가로 후보 계산
+  let candidates = [];
+  if(row){
+    const u = parseInt(String(row.querySelector('.c-u')?.value||'').replace(/,/g,''))||0;
+    if(u){
+      if(rcpPastPriceMap.has(u)){
+        candidates = [...rcpPastPriceMap.get(u)];
+      } else {
+        rcpPastPriceMap.forEach((names, p) => {
+          if(Math.abs(p-u)/u <= 0.15) candidates.push(...names);
+        });
+        candidates = [...new Set(candidates)];
+      }
+    }
+  }
+  document.getElementById('rcpPastItemSearch').value = '';
+  _renderPastItemList(candidates, '');
+  openSheet('rcpPastItemSheet');
+}
+function _renderPastItemList(topCandidates, search){
+  const listEl = document.getElementById('rcpPastItemList');
+  if(!listEl) return;
+  const q = search.trim().toLowerCase();
+  const items = q
+    ? rcpPastItems.filter(n => n.toLowerCase().includes(q))
+    : (topCandidates.length ? topCandidates : rcpPastItems);
+  if(!items.length){
+    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">' + (q ? '검색 결과 없음' : '저장된 과거 품목이 없어요') + '</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(nm =>
+    `<div class="past-item-row" data-name="${esc(nm)}" data-action="selectPastItemFromEl|this">${esc(nm)}</div>`
+  ).join('');
+}
+function onRcpPastItemSearch(el){
+  // 현재 시트에 띄워진 top 후보는 따로 저장하지 않으므로 검색 시엔 전체 목록에서 필터
+  _renderPastItemList([], el.value);
+}
+function selectPastItemFromEl(el){
+  const name = el.dataset.name;
+  if(!name || rcpPastSheetTargetIdx === null) return;
+  const row = document.getElementById('row-'+rcpPastSheetTargetIdx);
+  if(row){
+    const input = row.querySelector('.c-i');
+    if(input) input.value = name;
+    // 빨간불 + 배경 해제
+    row.classList.remove('name-suspect');
+    row.querySelector('.rcp-ns-mark')?.remove();
+  }
+  closeAllSheets();
+  rcpPastSheetTargetIdx = null;
+}
+
 function selectReason(r){
   const tr=document.getElementById('row-'+currentTargetRowIdx);
   const btn=tr.querySelector('.x-btn');

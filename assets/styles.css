@@ -1549,3 +1549,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .rcp-sumcard .rsc-ln b{color:var(--toss-text-1);font-weight:700;font-variant-numeric:tabular-nums;}
 .rcp-sumcard .rsc-ln.total{font-size:14px;color:var(--toss-text-1);font-weight:800;}
 .rcp-learn-badge{font-size:13px;}
+/* 단가 매칭 자동채움 뱃지 (2026-06-05) */
+.rcp-auto-tag{font-size:11px;font-weight:700;color:var(--success);background:var(--success-light);border-radius:6px;padding:2px 7px;white-space:nowrap;flex-shrink:0;}
+.rcp-guess-tag{font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-light);border-radius:6px;padding:2px 7px;white-space:nowrap;flex-shrink:0;cursor:pointer;}
+/* 과거 품목 원터치 📋 버튼 */
+.ric-past-btn{flex:none;border:1px solid var(--toss-blue);background:var(--toss-blue-light);color:var(--toss-blue);border-radius:8px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1;}
+/* 과거 품목 시트 내 행 */
+.past-item-row{padding:11px 14px;border:1px solid var(--toss-line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--toss-text-1);}
+.past-item-row:active{background:var(--toss-blue-light);}
+/* 시트 공통 검색창 */
+.sheet-search{width:100%;border:1px solid var(--toss-line);border-radius:10px;padding:10px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;}
