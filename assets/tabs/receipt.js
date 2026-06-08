@@ -736,8 +736,8 @@ async function pickRcpVendor(vendorId){
 }
 
 // 사진 1장 추가 — 멀티페이지 영수증 지원 (2026-05-19 (4))
-// 해상도 1280 다운사이즈 (Gemini 768px tile 단위, 비용 = 픽셀면적 비례)
-// 2026-06-05: 2000px 회귀 — 한자 품목명은 2000px도 못 읽어 효과 없고 비용만 2.4배 ↑. 1280 복원 (#97/#136)
+// 해상도 2400 다운사이즈 (Gemini 768px tile 단위)
+// 2026-06-08: 1280→2400 상향 — 한글 작은 글자 오인식(왕금녕→임금님, 올티슈→물티슈) 해결. 측정실 실측상 같은 영수증 비용 +1원 미만(품목 수가 비용 좌우, 화질 영향 미미). 한자 한계는 해상도 무관(#97/#136)이라 원터치 수정으로 별도 해결
 // b64Pages 배열에 append (1장이든 5장이든 동일 흐름)
 function handleImg(input) {
   if(!input.files[0]) return;
@@ -747,7 +747,7 @@ function handleImg(input) {
     const img = new Image();
     img.onload = () => {
       const cvs = document.createElement('canvas');
-      let w=img.width,h=img.height; if(w>1280){h*=1280/w;w=1280;} // 1280px 다운사이즈 (비용 절감, 한자는 해상도 무관)
+      let w=img.width,h=img.height; if(w>2400){h*=2400/w;w=2400;} // 2400px 다운사이즈 (한글 작은 글자 정확도 ↑, 비용 영향 미미 — 2026-06-08 실측)
       cvs.width=w;cvs.height=h;cvs.getContext('2d').drawImage(img,0,0,w,h);
       const dataUrl = cvs.toDataURL('image/jpeg',0.85);
       const b64Part = dataUrl.split(',')[1];
