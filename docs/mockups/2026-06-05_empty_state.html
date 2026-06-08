@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>빈 상태 처리 비교</title>
+<link rel="stylesheet" href="../../assets/styles.css">
+<style>
+  body{margin:0;background:#3A4250;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:30px;}
+  .stage{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;}
+  .col{display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:380px;}
+  .col-ttl{color:#fff;font-size:14px;font-weight:800;}
+  .col-sub{color:#C6CDD6;font-size:11.5px;line-height:1.5;margin-bottom:2px;}
+  .card-wrap{width:100%;background:#F2F4F6;border-radius:16px;padding:12px;}
+
+  /* 안 A: 대시(—) */
+  .a-amt{font-size:31px;font-weight:800;color:#D1D5DB;letter-spacing:-1px;line-height:1.1;}
+  .a-sub{font-size:11px;color:#B0B8C1;font-weight:600;margin-top:1px;}
+  .a-badge{display:inline-flex;align-items:center;background:#F2F4F6;border-radius:8px;padding:3px 9px;font-size:12px;font-weight:700;color:#B0B8C1;}
+
+  /* 안 B: 작은 회색 배지 */
+  .b-dash{font-size:28px;font-weight:900;color:#D1D5DB;letter-spacing:-1px;}
+  .b-pill{display:inline-flex;align-items:center;gap:4px;background:#F2F4F6;border-radius:20px;padding:4px 10px;font-size:11.5px;font-weight:700;color:#8B95A1;}
+
+  /* 안 C: 점점점 (...) 로딩감 */
+  .c-dot{font-size:26px;font-weight:900;color:#D1D5DB;letter-spacing:2px;line-height:1.2;}
+  .c-note{font-size:11px;color:#B0B8C1;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 현재 -->
+  <div class="col">
+    <div class="col-ttl">현재</div>
+    <div class="col-sub">긴 글자가 숫자 자리에 — 어색함</div>
+    <div class="card-wrap">
+      <div class="dash-today-v7" style="box-shadow:none;border-radius:0;padding:0;background:transparent;">
+        <div class="t7-amt-row">
+          <div class="t7-sales-col"><span class="t7-sales-lb">매출</span><div class="t7-amt" style="font-size:15px;color:#8B95A1;font-weight:600;">아직 매출 기록이 없어요</div></div>
+          <button type="button" class="t7-detail-link">자세히 ›</button>
+        </div>
+        <div class="t7-rows" style="display:block;">
+          <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red">-841,475원</span><span class="r-go">›</span></div>
+          <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div><span class="r-amt" style="color:#8B95A1;font-weight:700;">마감 후 확인</span><span class="r-go"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 안 A: 대시 + 작은 설명 -->
+  <div class="col">
+    <div class="col-ttl">안 A — 대시(—) + 작은 설명</div>
+    <div class="col-sub">숫자 자리엔 —, 설명은 아래 작게</div>
+    <div class="card-wrap">
+      <div class="dash-today-v7" style="box-shadow:none;border-radius:0;padding:0;background:transparent;">
+        <div class="t7-amt-row">
+          <div class="t7-sales-col">
+            <span class="t7-sales-lb">매출</span>
+            <div>
+              <div class="a-amt">—</div>
+              <div class="a-sub">아직 매출 기록 없음</div>
+            </div>
+          </div>
+          <button type="button" class="t7-detail-link">자세히 ›</button>
+        </div>
+        <div class="t7-rows" style="display:block;">
+          <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red">-841,475원</span><span class="r-go">›</span></div>
+          <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div>
+            <span class="r-amt"><span class="a-badge">마감 후 확인</span></span>
+            <span class="r-go"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 안 B: 배지 처리 -->
+  <div class="col">
+    <div class="col-ttl">안 B — 배지(동그란 태그)</div>
+    <div class="col-sub">매출도 —, 수익도 배지로 통일</div>
+    <div class="card-wrap">
+      <div class="dash-today-v7" style="box-shadow:none;border-radius:0;padding:0;background:transparent;">
+        <div class="t7-amt-row">
+          <div class="t7-sales-col">
+            <span class="t7-sales-lb">매출</span>
+            <div class="b-dash">—</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <button type="button" class="t7-detail-link">자세히 ›</button>
+            <span class="b-pill">📝 기록 없음</span>
+          </div>
+        </div>
+        <div class="t7-rows" style="display:block;">
+          <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red">-841,475원</span><span class="r-go">›</span></div>
+          <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div>
+            <span class="r-amt" style="text-align:right;"><span class="b-pill">🔒 마감 후 확인</span></span>
+            <span class="r-go"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 안 C: 색상 구분 -->
+  <div class="col">
+    <div class="col-ttl">안 C — 색 구분 + 이탤릭</div>
+    <div class="col-sub">미확정 상태는 파란 기울임체</div>
+    <div class="card-wrap">
+      <div class="dash-today-v7" style="box-shadow:none;border-radius:0;padding:0;background:transparent;">
+        <div class="t7-amt-row">
+          <div class="t7-sales-col">
+            <span class="t7-sales-lb">매출</span>
+            <div class="t7-amt" style="font-size:22px;color:#B0B8C1;font-weight:800;font-style:italic;letter-spacing:-0.5px;">기록 없음</div>
+          </div>
+          <button type="button" class="t7-detail-link">자세히 ›</button>
+        </div>
+        <div class="t7-rows" style="display:block;">
+          <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red">-841,475원</span><span class="r-go">›</span></div>
+          <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div>
+            <span class="r-amt" style="color:#B0B8C1;font-style:italic;font-size:14px;">마감 후 확인</span>
+            <span class="r-go"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1067,6 +1067,7 @@ async function loadVendorOrders(){
     const labelName = showVendor ? esc(g.vendor||'(거래처 없음)') : (dateShort||'-');
     const labelSub = showVendor && dateShort ? ` · ${dateShort}` : '';
     let actionsHtml='';
+    let rowClickAttr='';
     if(isOrder){
       const editId = g.rows[0]?.id || g.recId;
       const delKey = g.groupId ? ('g:'+g.groupId) : ('s:'+g.recId);
@@ -1076,13 +1077,11 @@ async function loadVendorOrders(){
         </div>`;
     } else {
       const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
-      actionsHtml = `<div class="grp-hdr-actions">
-          <button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏</button>
-          <button type="button" class="btn btn-danger" data-action="deleteReceiptGroup|${editKey}">🗑</button>
-        </div>`;
+      actionsHtml = `<span style="font-size:18px;color:#C8CDD4;font-weight:700;flex-shrink:0;">›</span>`;
+      rowClickAttr = `style="cursor:pointer;" data-action="openReceiptGroupEdit|${editKey}"`;
     }
     html+=`<tr class="grp-hdr${firstGroup?' first':''}">
-      <td colspan="5"><div class="grp-hdr-row">
+      <td colspan="5"><div class="grp-hdr-row" ${rowClickAttr}>
         <div class="grp-hdr-info">
           <span class="emoji">${headerIcon}</span>
           <span class="name">${labelName}${labelSub}</span>
@@ -1734,65 +1733,136 @@ async function loadEmployees(){
 function renderEmpList(){
   const fRole=document.getElementById('empFilterRole')?.value||'';
   const fStatus=document.getElementById('empFilterStatus')?.value||'active';
+  const fSearch=(document.getElementById('empSearchInput')?.value||'').trim().toLowerCase();
   let list=employees.filter(e=>e.auth_level!=='owner');
-  if(fStatus==='active')list=list.filter(e=>e.is_active);if(fStatus==='inactive')list=list.filter(e=>!e.is_active);if(fRole)list=list.filter(e=>e.role===fRole);
+  if(fStatus==='active')list=list.filter(e=>e.is_active);
+  if(fStatus==='inactive')list=list.filter(e=>!e.is_active);
+  if(fRole)list=list.filter(e=>e.role===fRole);
+  if(fSearch)list=list.filter(e=>(e.name||'').toLowerCase().includes(fSearch)||(e.phone||'').replace(/-/g,'').includes(fSearch.replace(/-/g,'')));
   const c=document.getElementById('empList');if(!c)return;
-  // 주민번호 마스킹 헬퍼
-  const maskId=(num)=>{if(!num)return'';const d=num.replace(/[^\d]/g,'');if(d.length<7)return num;return d.slice(0,6)+'-'+d[6]+'******';};
-  c.innerHTML=list.length?list.map(e=>{
-    const authBadge=e.auth_level==='store_manager'||e.is_manager?'<span class="badge badge-warn" style="font-size:9px;">관리자</span>':'';
-    const statusBadge=!e.is_active?'<span class="badge badge-gray" style="font-size:9px;">퇴사</span>':'';
-    const pinBadge=!e.pin?'<span class="badge badge-red" style="font-size:9px;">PIN미설정</span>':'';
-    const foreignBadge=e.is_foreign?'<span class="badge badge-purple" style="font-size:9px;">외국인</span>':'';
-    const reportBadge=e.is_foreign?(e.report_status==='신고'?'<span class="badge badge-green" style="font-size:9px;">신고</span>':'<span class="badge badge-red" style="font-size:9px;">미신고</span>'):'';
-    // 미성년자 판단 (만 18세 미만)
-    const isMinor=(()=>{if(!e.birth_date)return false;const bd=new Date(e.birth_date);const today=new Date();let age=today.getFullYear()-bd.getFullYear();if(today.getMonth()<bd.getMonth()||(today.getMonth()===bd.getMonth()&&today.getDate()<bd.getDate()))age--;return age<18;})();
-    const minorBadge=isMinor?'<span class="badge badge-red" style="font-size:9px;">🔞미성년</span>':'';
-    // 서류 배지 (개별 나열)
-    const docBadge=(check,label)=>check?`<span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--blue);color:#fff;">${label}✅</span>`:`<span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--gray-200);color:var(--gray-400);opacity:0.5;">${label}</span>`;
-    let docBadges=docBadge(e.doc_contract,'📄근로계약서')+' '+docBadge(e.doc_health_cert,'📋보건증');
-    // 보건증 만료 임박 체크
-    if(e.doc_health_cert&&e.doc_health_expires){const exp=new Date(e.doc_health_expires);const diff=Math.ceil((exp-new Date())/(1000*60*60*24));if(diff<=0)docBadges=docBadges.replace('📋보건증✅','📋보건증❌').replace('background:var(--blue)','background:var(--danger)');else if(diff<=30)docBadges=docBadges.replace('📋보건증✅','📋보건증⚠️').replace('background:var(--blue)','background:var(--warning)');}
-    if(isMinor) docBadges+=' '+docBadge(e.doc_minor_consent,'🔞법대동의서');
-    if(e.is_foreign){
-      docBadges+=' '+docBadge(e.doc_foreigner_id,'🛂외국인등록증');
-      // 비자 배지
-      if(e.visa_type){let visaColor='var(--success)',visaIcon='✅';if(e.visa_expires_at){const vExp=new Date(e.visa_expires_at);const vDiff=Math.ceil((vExp-new Date())/(1000*60*60*24));if(vDiff<=0){visaColor='var(--danger)';visaIcon='❌';}else if(vDiff<=30){visaColor='var(--warning)';visaIcon='⚠️';}}docBadges+=` <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:${visaColor};color:#fff;">🛃${e.visa_type}${visaIcon}</span>`;}
-      else docBadges+=' <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--gray-200);color:var(--gray-400);opacity:0.5;">🛃비자</span>';
+  // 아바타 배경색 팔레트
+  // 보건증 상태 (만료 여부 포함)
+  const healthDocIcon=(e)=>{
+    if(!e.doc_health_cert) return '<span style="font-size:18px;filter:grayscale(1);opacity:.3;" title="보건증 미제출">📋</span>';
+    if(e.doc_health_expires){
+      const diff=Math.ceil((new Date(e.doc_health_expires)-new Date())/(1000*60*60*24));
+      if(diff<=0) return '<span style="font-size:18px;" title="보건증 만료">📋❌</span>';
+      if(diff<=30) return '<span style="font-size:18px;" title="보건증 만료 임박">📋⚠️</span>';
     }
+    return '<span style="font-size:18px;" title="보건증 제출">📋</span>';
+  };
+  c.innerHTML=list.length?list.map(e=>{
+    const authBadge=e.auth_level==='store_manager'||e.is_manager?`<span class="badge badge-warn" style="font-size:9px;">관리자</span>`:'';
+    const pinBadge=!e.pin?`<span class="badge badge-red" style="font-size:9px;">PIN없음</span>`:'';
+    const foreignBadge=e.is_foreign?`<span class="badge badge-purple" style="font-size:9px;">외국인</span>`:'';
+    const quitBadge=!e.is_active?`<span class="badge badge-gray" style="font-size:9px;">퇴사</span>`:'';
+    const wageText=e.wage_type==='monthly'?`월급 ${fmt(e.monthly_wage||0)}만원`:`시급 ${fmt(e.base_wage||0)}원`;
     return `
-    <div style="background:var(--white);border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04);${!e.is_active?'opacity:0.6;':''}">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-        <div class="emp-avatar${e.is_active?'':' inactive'}" style="width:44px;height:44px;font-size:16px;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
+    <div style="background:#fff;border-radius:18px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;${!e.is_active?'opacity:.6;':''}">
+      <div style="display:flex;align-items:center;gap:13px;padding:14px 14px 12px;cursor:pointer;" data-action="openEmpDetailSheet|${e.id}">
+        <div class="emp-avatar" style="width:46px;height:46px;border-radius:14px;background:#EEF0F3;color:#4E5968;font-size:17px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
         <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-            <span style="font-size:15px;font-weight:800;">${e.name}</span>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
+            <span style="font-size:16px;font-weight:900;color:#191F28;">${e.name}</span>
             ${e.role?`<span class="badge badge-blue" style="font-size:9px;">${e.role}</span>`:''}
-            ${authBadge}${foreignBadge}${minorBadge}${reportBadge}${statusBadge}${pinBadge}
+            ${authBadge}${foreignBadge}${quitBadge}${pinBadge}
           </div>
-          <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">${maskId(e.id_number)}</div>
+          <div style="font-size:11.5px;color:#8B95A1;font-weight:600;">${wageText}${e.hire_date?' · '+e.hire_date+' 입사':''}</div>
+        </div>
+        <span style="font-size:22px;color:#D1D6DB;line-height:1;">›</span>
+      </div>
+      <div style="padding:0 14px 13px;display:flex;align-items:center;gap:8px;">
+        <a href="tel:${e.phone||''}" style="display:flex;align-items:center;gap:6px;background:#EBF4FF;border-radius:10px;padding:8px 14px;flex:1;text-decoration:none;${e.phone?'':'pointer-events:none;opacity:.4;'}">
+          <span style="font-size:14px;">📞</span>
+          <span style="font-size:13px;font-weight:700;color:#1B6FE4;">${e.phone||'번호 없음'}</span>
+        </a>
+        <div style="display:flex;align-items:center;gap:3px;">
+          <span style="font-size:18px;${e.doc_contract?'':'filter:grayscale(1);opacity:.3;'}" title="${e.doc_contract?'근로계약서 제출':'근로계약서 미제출'}">📄</span>
+          ${healthDocIcon(e)}
         </div>
       </div>
-      <a href="tel:${e.phone||''}" style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--gray-100);border-radius:10px;margin-bottom:8px;text-decoration:none;color:var(--text);${e.phone?'':'pointer-events:none;'}">
-        <span style="font-size:14px;">📞</span>
-        <span style="font-size:14px;font-weight:700;letter-spacing:0.5px;">${e.phone||'전화번호 없음'}</span>
-      </a>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${docBadges}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">
-        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
-          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">${e.wage_type==='monthly'?'월급':'시급'}</div>
-          <div style="font-size:13px;font-weight:800;color:var(--blue);">${e.wage_type==='monthly'?fmt(e.monthly_wage||0)+'만원':fmt(e.base_wage)+'원'}</div>
-        </div>
-        <div style="background:var(--gray-100);border-radius:10px;padding:8px;text-align:center;">
-          <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">입사일</div>
-          <div style="font-size:13px;font-weight:700;">${e.hire_date||'-'}</div>
-        </div>
-      </div>
-      ${isManager?`<div style="display:flex;gap:8px;">
-        <button class="btn btn-secondary btn-sm" style="flex:1;padding:10px;font-size:12px;" data-action="openEditEmpSheet|${e.id}">편집</button>
-        ${e.is_active?`<button class="btn btn-danger btn-sm" style="flex:1;padding:10px;font-size:12px;" data-action="toggleEmp|${e.id}|false">퇴사</button>`:`<button class="btn btn-success btn-sm" style="flex:1;padding:10px;font-size:12px;" data-action="toggleEmp|${e.id}|true">복직</button>`}
-      </div>`:''}
     </div>`}).join(''):'<div class="empty-state"><div class="empty-icon">👥</div><p>직원이 없습니다</p></div>';
+}
+
+function openEmpDetailSheet(empId){
+  const e=employees.find(emp=>emp.id===empId); if(!e)return;
+  const maskId=(num)=>{if(!num)return'-';const d=num.replace(/[^\d]/g,'');if(d.length<7)return num;return d.slice(0,6)+'-'+d[6]+'******';};
+  const avatarBg='#EEF0F3';
+  const authLabel={owner:'사장',franchise_admin:'본사 관리자',store_manager:'점장',staff:'직원'};
+  const authBadge=e.auth_level==='store_manager'||e.is_manager?`<span class="badge badge-warn" style="font-size:10px;">관리자</span>`:'';
+  const roleBadge=e.role?`<span class="badge badge-blue" style="font-size:10px;">${e.role}</span>`:'';
+  const wageText=e.wage_type==='monthly'?`월급 ${fmt(e.monthly_wage||0)}만원`:`시급 ${fmt(e.base_wage||0)}원`;
+  // 서류 칩
+  const docPill=(on,label)=>on
+    ?`<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#EEF6FF;color:#1B6FE4;">${label} ✅</span>`
+    :`<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#F2F4F6;color:#B0B8C1;">${label}</span>`;
+  // 보건증 (만료 감안)
+  let healthLabel='📋 보건증';
+  if(e.doc_health_cert&&e.doc_health_expires){
+    const diff=Math.ceil((new Date(e.doc_health_expires)-new Date())/(1000*60*60*24));
+    if(diff<=0) healthLabel='📋 보건증❌ (만료)';
+    else if(diff<=30) healthLabel=`📋 보건증⚠️ (${diff}일 남음)`;
+  }
+  const infoRow=(lbl,val)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:11px 0;border-bottom:1px solid #F8F9FA;">
+    <span style="font-size:12.5px;color:#8B95A1;font-weight:600;flex-shrink:0;">${lbl}</span>
+    <span style="font-size:13px;font-weight:700;color:#191F28;text-align:right;max-width:200px;">${val||'-'}</span>
+  </div>`;
+  const secHead=(txt)=>`<div style="font-size:10.5px;font-weight:800;color:#B0B8C1;letter-spacing:.8px;padding:14px 0 4px;">${txt}</div>`;
+  // PIN 박스 (사장님·관리자만)
+  const pinSection=isManager?`
+    <div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:14px;padding:13px 14px;margin-top:10px;">
+      <div style="font-size:10.5px;font-weight:800;color:#D97706;margin-bottom:8px;">🔐 앱 로그인 설정 — 관리자만 보임</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:12px;color:#92400E;font-weight:600;">PIN 번호</span>
+        <span style="font-size:20px;font-weight:900;color:#191F28;letter-spacing:5px;">${e.pin||'미설정'}</span>
+      </div>
+      ${e.caps_id?`<div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:#92400E;font-weight:600;">출퇴근 기기 번호</span>
+        <span style="font-size:13px;font-weight:700;color:#78716C;">${e.caps_id}</span>
+      </div>`:''}
+    </div>`:'' ;
+  const editBtn=isManager?`<div style="display:flex;gap:8px;margin-top:14px;">
+    <button style="flex:1;background:#191F28;color:#fff;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;" data-action="openEditEmpSheet|${e.id}">✏️ 편집하기</button>
+    ${e.is_active
+      ?`<button style="background:#FFE4E4;color:#DC2626;border:none;border-radius:14px;padding:15px 18px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;" data-action="toggleEmp|${e.id}|false">퇴사</button>`
+      :`<button style="background:#E6F7EE;color:#1E7E4A;border:none;border-radius:14px;padding:15px 18px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;" data-action="toggleEmp|${e.id}|true">복직</button>`}
+  </div>`:'';
+  const content=document.getElementById('empDetailContent'); if(!content)return;
+  content.innerHTML=`
+    <div style="display:flex;align-items:center;gap:14px;padding:6px 0 16px;border-bottom:1px solid #F2F4F6;">
+      <div class="emp-avatar" style="width:58px;height:58px;border-radius:18px;background:${avatarBg};color:#4E5968;font-size:22px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="font-size:19px;font-weight:900;color:#191F28;">${e.name}</span>
+          ${roleBadge}${authBadge}
+        </div>
+        <div style="font-size:12px;color:#8B95A1;font-weight:600;">${wageText}${e.hire_date?' · '+e.hire_date+' 입사':''}</div>
+        ${e.phone?`<a href="tel:${e.phone}" style="display:inline-flex;align-items:center;gap:6px;background:#EBF4FF;border-radius:10px;padding:6px 12px;text-decoration:none;margin-top:8px;">
+          <span>📞</span><span style="font-size:13px;font-weight:800;color:#1B6FE4;">${e.phone}</span>
+        </a>`:''}
+      </div>
+    </div>
+    ${secHead('기본 정보')}
+    ${infoRow('주민등록번호', maskId(e.id_number))}
+    ${infoRow('주소', e.address)}
+    ${secHead('급여')}
+    ${infoRow('급여 유형', e.wage_type==='monthly'?'월급':'시급')}
+    ${e.wage_type==='monthly'
+      ?infoRow('월급', fmt(e.monthly_wage||0)+'만원')
+      :infoRow('시급', fmt(e.base_wage||0)+'원')}
+    ${infoRow('은행', e.bank_name)}
+    ${infoRow('계좌번호', e.account_number)}
+    ${secHead('서류')}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;">
+      ${docPill(e.doc_contract,'📄 근로계약서')}
+      ${docPill(e.doc_health_cert,healthLabel)}
+      ${e.is_foreign?docPill(e.doc_foreigner_id,'🛂 외국인등록증'):''}
+      ${(()=>{const bd=e.birth_date?new Date(e.birth_date):null;const today=new Date();if(!bd)return'';let age=today.getFullYear()-bd.getFullYear();if(today.getMonth()<bd.getMonth()||(today.getMonth()===bd.getMonth()&&today.getDate()<bd.getDate()))age--;return age<18?docPill(e.doc_minor_consent,'🔞 법정동의서'):''})()}
+    </div>
+    ${pinSection}
+    ${editBtn}
+  `;
+  openSheet('empDetailSheet');
 }
 // 급여 종류 셀렉트 변경 → 시급/월급 입력칸 토글
 function onEmpWageTypeChange(){
@@ -2332,13 +2402,19 @@ async function downloadLaborExport(){
     const start=ym+'-01';
     const endD=new Date(ym+'-01');endD.setMonth(endD.getMonth()+1);
     const end=endD.toISOString().slice(0,10);
-    // 활성 직원 + 해당월 근태 + 특별수당 동시 조회
-    const[{data:emps},{data:logs},{data:sw}]=await Promise.all([
-      sb.from('employees').select('*').eq('store_id',currentStore.id).eq('is_active',true).order('name'),
+    // 전체 직원(퇴사자 포함) + 해당월 근태 + 특별수당 동시 조회
+    // ⚠️ is_active 필터 제거 — 그 달 일한 직원은 퇴사해도 노무 기록에 남아야 함 (데이터 무결성, 헌법 10조)
+    const[{data:allEmps},{data:logs},{data:sw}]=await Promise.all([
+      sb.from('employees').select('*').eq('store_id',currentStore.id).order('name'),
       sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).gte('work_date',start).lt('work_date',end).order('work_date'),
       sb.from('special_wages').select('*').eq('store_id',currentStore.id).gte('target_date',start).lt('target_date',end)
     ]);
-    if(!emps||emps.length===0){setLoad(false);return toast('등록된 직원이 없습니다','warn');}
+    if(!allEmps||allEmps.length===0){setLoad(false);return toast('등록된 직원이 없습니다','warn');}
+    // 그 달 근태·특별수당 활동이 있는 직원 id (퇴사해도 그 달 일했으면 명단에 포함)
+    const _activeInMonth=new Set([...(logs||[]).map(l=>l.employee_id),...(sw||[]).map(x=>x.employee_id)]);
+    // 현재 재직 중 OR 그 달 활동 있는 퇴사자 (이미 나간 지 오래된 사람은 제외)
+    const emps=allEmps.filter(e=>e.is_active||_activeInMonth.has(e.id));
+    if(emps.length===0){setLoad(false);return toast('해당 월에 일한 직원이 없습니다','warn');}
 
     const wb=XLSX.utils.book_new();
     if(optAtt){
@@ -2378,6 +2454,8 @@ function buildAttendanceSheet(ym, emps, logs){
   const dayNames=['일','월','화','수','목','금','토'];
   // 직원별로 묶고, 날짜순 정렬
   emps.forEach(e=>{
+    // 퇴사자는 이름 옆에 표시 (노무 신고 시 구분)
+    const _nm=e.is_active?e.name:`${e.name}(퇴사)`;
     const empLogs=logs.filter(l=>l.employee_id===e.id);
     const byDate=Object.fromEntries(empLogs.map(l=>[l.work_date,l]));
     dates.forEach(date=>{
@@ -2387,9 +2465,9 @@ function buildAttendanceSheet(ym, emps, logs){
       const isWeekend=dt.getDay()===0||dt.getDay()===6;
       if(l && l.app_in){
         const hrs=((l.total_work_min||0)/60).toFixed(1);
-        rows.push([date.slice(5), dn, e.name, fmtTime(l.app_in), fmtTime(l.app_out), l.rest_min||0, parseFloat(hrs), isWeekend?'O':'', l.app_out?'':'미퇴근']);
+        rows.push([date.slice(5), dn, _nm, fmtTime(l.app_in), fmtTime(l.app_out), l.rest_min||0, parseFloat(hrs), isWeekend?'O':'', l.app_out?'':'미퇴근']);
       } else {
-        rows.push([date.slice(5), dn, e.name, '', '', '', '', isWeekend?'O':'', '결근/휴무']);
+        rows.push([date.slice(5), dn, _nm, '', '', '', '', isWeekend?'O':'', '결근/휴무']);
       }
     });
     rows.push([]);  // 직원 사이 빈 행
@@ -2414,7 +2492,9 @@ function buildPayrollSheet(ym, emps, logs, sw){
     const overH=+(overMin/60).toFixed(1);
     const baseWage=empLogs.reduce((s,l)=>s+(l.calculated_wage||0),0);
     const extra=sw.filter(x=>x.employee_id===e.id).reduce((s,x)=>s+(x.extra_amount||0),0);
-    rows.push([e.name, maskRRN(e.id_number), e.hire_date||'', e.role||'', e.base_wage||'', days, totalH, weekendH, overH, baseWage, '', '', extra, '', baseWage+extra, e.is_foreign?'외국인':'']);
+    // 비고: 외국인 + 퇴사(날짜) 표기
+    const _note=[e.is_foreign?'외국인':'', e.is_active?'':('퇴사 '+(e.resign_date||''))].filter(Boolean).join(' / ');
+    rows.push([e.name, maskRRN(e.id_number), e.hire_date||'', e.role||'', e.base_wage||'', days, totalH, weekendH, overH, baseWage, '', '', extra, '', baseWage+extra, _note]);
   });
   // 합계 행
   rows.push([]);
@@ -2425,15 +2505,15 @@ function buildPayrollSheet(ym, emps, logs, sw){
   ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:10},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:10},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10}];
   return ws;
 }
-// 근로자명부 시트 (활성 직원, 근기법 §20 필수항목)
+// 근로자명부 (재직 + 해당월 일한 퇴사자, 근기법 §41 필수항목)
 function buildEmployeeSheet(emps){
-  const header=['성명','주민번호','생년월일','고용일','직무','시급','주소','연락처','은행','계좌','외국인','비자/신고','비고'];
+  const header=['성명','주민번호','생년월일','고용일','퇴사일','직무','시급','주소','연락처','은행','계좌','외국인','비자/신고','비고'];
   const rows=[[`근로자명부 — ${currentStore?.name||''} (근로기준법 §41)`],[],header];
   emps.forEach(e=>{
-    rows.push([e.name, maskRRN(e.id_number), e.birth_date||'', e.hire_date||'', e.role||'', e.base_wage||'', e.address||'', e.phone||'', e.bank_name||'', e.account_number||'', e.is_foreign?'O':'', e.report_status||'', '']);
+    rows.push([e.name, maskRRN(e.id_number), e.birth_date||'', e.hire_date||'', (e.is_active?'':(e.resign_date||'')), e.role||'', e.base_wage||'', e.address||'', e.phone||'', e.bank_name||'', e.account_number||'', e.is_foreign?'O':'', e.report_status||'', (e.is_active?'':'퇴사')]);
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:12},{wch:10},{wch:10},{wch:24},{wch:14},{wch:10},{wch:18},{wch:6},{wch:10},{wch:10}];
+  ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:12},{wch:12},{wch:10},{wch:10},{wch:24},{wch:14},{wch:10},{wch:18},{wch:6},{wch:10},{wch:10}];
   return ws;
 }
 // ══════════════════════════════════════════
@@ -5263,6 +5343,9 @@ async function loadMyInfo(){
     const labelMap={owner:'사장',franchise_admin:'본사 관리자',store_manager:'점장',staff:'직원'};
     role.textContent=labelMap[currentEmp.auth_level]||currentEmp.role||'-';
   }
+  // 미리보기 모드에서는 PIN·기기 변경 버튼 숨김 (직원이 PIN 변경하면 안 됨)
+  const pinBtn=document.getElementById('myInfoPinBtn');
+  if(pinBtn) pinBtn.style.display=viewAsLevel?'none':'block';
   if(wage){
     wage.textContent='계산 중...';
     try{

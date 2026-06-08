@@ -15,7 +15,7 @@
 }
 *{box-sizing:border-box;}
 html{overflow-x:hidden;overscroll-behavior:none;background:#FFFFFF;}
-body{font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,Roboto,'Helvetica Neue','Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;margin:0;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;padding-top:calc(60px + env(safe-area-inset-top,0));padding-bottom:calc(80px + env(safe-area-inset-bottom,0));overflow-x:hidden;overflow-x:clip;overflow-y:visible;position:relative;max-width:100vw;min-height:100vh;min-height:100dvh;}
+body{font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,Roboto,'Helvetica Neue','Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;margin:0;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;padding-top:calc(60px + env(safe-area-inset-top,0));padding-bottom:calc(56px + env(safe-area-inset-bottom,0));overflow-x:hidden;overflow-x:clip;overflow-y:visible;position:relative;max-width:100vw;min-height:100vh;min-height:100dvh;}
 /* 모든 요소 폰트 강제 상속 (monospace 등 명시 클래스만 예외) */
 *:not(.account-masked){font-family:inherit;}
 input,select,textarea,button{font-family:inherit;}
@@ -36,7 +36,7 @@ body.viewas-on{padding-top:34px;}
 /* VIEWAS-END */
 
 /* ─ 네비 */
-.bottom-nav{position:fixed;bottom:0;width:100%;height:calc(72px + env(safe-area-inset-bottom,0));padding-bottom:env(safe-area-inset-bottom,0);background:var(--white);display:flex;border-top:1px solid var(--gray-200);z-index:1000;overflow-x:auto;scrollbar-width:none;box-sizing:border-box;}
+.bottom-nav{position:fixed;bottom:0;width:100%;height:calc(48px + env(safe-area-inset-bottom,0));padding-bottom:env(safe-area-inset-bottom,0);background:var(--white);display:flex;border-top:1px solid var(--gray-200);z-index:1000;overflow-x:auto;scrollbar-width:none;box-sizing:border-box;}
 .bottom-nav::-webkit-scrollbar{display:none;}
 .nav-item{flex:1 1 0;min-width:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--toss-text-4);cursor:pointer;transition:color .2s;padding:0 2px;white-space:nowrap;letter-spacing:-0.2px;}
 .nav-item .ni{font-size:19px;margin-bottom:2px;line-height:1;display:inline-flex;align-items:center;justify-content:center;}
@@ -978,16 +978,16 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .wk-mom .same{color:var(--gray-400);}
 .wk-mom .mom-comment{font-size:12px;color:var(--text);font-weight:700;line-height:1.55;margin-top:8px;padding:8px 10px;background:var(--gray-50);border-radius:8px;}
 /* ─── v17 월 카드: 도넛(수익률, 왼) + 매출/지출/수익 3줄(오른) + 순수익률 바 + 예상마감 (2026-06-03 목업 갈아엎기) ─── */
-.m6-top{display:grid;grid-template-columns:100px 1fr;gap:14px;align-items:center;margin-bottom:8px;}
+.m6-top{display:grid;grid-template-columns:100px 1fr;gap:14px;align-items:center;margin-bottom:10px;}
 .m6-donut-wrap{position:relative;width:100px;height:100px;}
 .m6-donut{width:100px;height:100px;border-radius:50%;}
 .m6-donut-wrap::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:66px;height:66px;border-radius:50%;background:var(--white);}
 .m6-donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;width:66px;}
-.m6-donut-center .dc-pct{display:block;font-size:21px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
+.m6-donut-center .dc-pct{display:block;font-size:23px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
 .m6-donut-center .dc-lb{display:block;font-size:9.5px;font-weight:700;color:var(--gray-500);margin-top:2px;}
 /* 매출/지출/수익 3줄 */
 .m6-mrows{display:flex;flex-direction:column;min-width:0;}
-.m6-mr{display:flex;align-items:center;padding:5px 0;font-size:14.5px;}
+.m6-mr{display:flex;align-items:center;padding:5px 0;font-size:16.5px;}
 .m6-mr .k{color:var(--gray-600);font-weight:600;flex-shrink:0;}
 .m6-mr .v{margin-left:auto;padding-left:8px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .m6-mr .v.green{color:#0CAB6C;}
@@ -1002,7 +1002,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .m6-fc.neg .fc-tx .fc-gl{color:#F04452;}
 .m6-fc .fc-more{margin-left:auto;font-size:12.5px;font-weight:800;color:#3182F6;flex-shrink:0;white-space:nowrap;align-self:center;}
 /* ─── v17 카드 v6 (2026-05-22 사장님 양식 갈아엎기) ─── */
-.v17-card-v6{background:var(--white);border-radius:14px;padding:13px;margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.v17-card-v6{background:var(--white);border-radius:14px;padding:15px;margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
 .v17-card-v6 .v6-ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
 .v17-card-v6 .v6-ttl{font-size:12px;font-weight:800;color:var(--gray-700);}
 .v17-card-v6 .v6-ttl b{color:var(--text);font-size:14px;font-weight:900;margin-right:4px;}
@@ -1186,12 +1186,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* stage 토글 */
 #dashboardCont .dash-stage{display:none;}
 #dashboardCont .dash-stage.active{display:block;}
-/* 인사 헤더 — 한 줄 압축 (2026-06-05 A안, 모바일 한 화면 확보) */
-.dash-hello{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 4px 6px;}
-.dash-hello h1{font-size:15px;font-weight:800;color:#191F28;margin:0;letter-spacing:-0.5px;line-height:1.2;white-space:nowrap;}
-.dash-hello p{font-size:11.5px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;white-space:nowrap;}
+/* 인사 헤더 (2026-06-08 여백 풀기) */
+.dash-hello{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:6px 4px 12px;}
+.dash-hello h1{font-size:17px;font-weight:800;color:#191F28;margin:0;letter-spacing:-0.5px;line-height:1.2;white-space:nowrap;}
+.dash-hello p{font-size:12px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;white-space:nowrap;}
 /* 지금 근무 인원 카드 (2026-06-04) — 날짜 아래 compact 카드, 항상 표시 */
-.wn-card{display:flex;align-items:center;gap:9px;background:#fff;border-radius:13px;padding:7px 13px;margin:0 0 7px;min-height:42px;box-shadow:0 1px 4px rgba(20,40,80,.06);cursor:pointer;transition:transform .15s;}
+.wn-card{display:flex;align-items:center;gap:9px;background:#fff;border-radius:13px;padding:10px 14px;margin:0 0 12px;min-height:46px;box-shadow:0 1px 4px rgba(20,40,80,.06);cursor:pointer;transition:transform .15s;}
 .wn-card:active{transform:scale(.985);}
 .wn-live{width:7px;height:7px;border-radius:50%;background:#0CAB6C;box-shadow:0 0 0 3px rgba(12,171,108,.18);flex-shrink:0;}
 .wn-live.off{background:#D1D5DB;box-shadow:0 0 0 3px rgba(209,213,219,.2);}
@@ -1209,7 +1209,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .wn-nm{font-size:10.5px;color:#8B95A1;font-weight:600;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .wn-arr{margin-left:auto;color:#B0B8C1;font-weight:800;font-size:14px;flex-shrink:0;}
 /* 오늘 매출 풀카드 v7 */
-.dash-today-v7{background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);border-radius:20px;padding:14px 16px 12px;margin-bottom:0;box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);position:relative;}
+.dash-today-v7{background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);border-radius:20px;padding:16px 16px 14px;margin-bottom:0;box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);position:relative;}
 /* 카드 전체 눌림 효과 제거 — 클릭 가능한 줄(지출·자세히)만 개별 반응 (2026-06-05) */
 .dash-today-v7 .t7-row[data-action]{cursor:pointer;transition:background .15s;border-radius:8px;}
 .dash-today-v7 .t7-row[data-action]:active{background:#F2F4F6;}
@@ -1219,8 +1219,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-nav:disabled{opacity:.2;cursor:default;}
 .dash-today-v7 .t7-center{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;align-items:flex-start;overflow:hidden;}
 .dash-today-v7 .t7-day-row{display:flex;align-items:center;gap:6px;min-width:0;}
-.dash-today-v7 .t7-day-main{font-size:16px;font-weight:800;color:#191F28;letter-spacing:-0.5px;white-space:nowrap;}
-.dash-today-v7 .t7-day-badge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:7px;background:#F2F4F6;color:#8B95A1;flex-shrink:0;letter-spacing:-0.2px;}
+.dash-today-v7 .t7-day-main{font-size:20px;font-weight:900;color:#191F28;letter-spacing:-0.7px;white-space:nowrap;}
+.dash-today-v7 .t7-day-badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:7px;background:#F2F4F6;color:#8B95A1;flex-shrink:0;letter-spacing:-0.2px;}
 .dash-today-v7 .t7-day-badge.today{background:#E7F4EE;color:#0CAB6C;}
 .dash-today-v7 .t7-day-sub{font-size:11.5px;color:#A0A8B3;font-weight:600;letter-spacing:-0.2px;display:flex;align-items:center;gap:5px;}
 .dash-today-v7 .t7-day-sub.live{color:#0CAB6C;font-weight:700;}
@@ -1238,38 +1238,39 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .todo-banner .todo-tx b{font-weight:800;color:#92400E;}
 .todo-banner .todo-go{font-size:16px;font-weight:700;color:#D97706;flex-shrink:0;}
 /* 매출 금액 행 — 높이 고정 (금액 있을 때 기준 34px). "아직 매출 기록이 없어요"여도 안 튐 (2026-06-04) */
-.dash-today-v7 .t7-amt-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:30px;}
+.dash-today-v7 .t7-amt-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:60px;}
 /* 매출 라벨 + 금액 가로 한 줄 — 파란 점 + 연한 라벨, 지출·수익과 동일 구조(점6+간격6)로 열 맞춤. flex-end로 매출 유무와 무관하게 라벨 세로 위치 고정 (2026-06-04) */
 .dash-today-v7 .t7-sales-col{display:flex;flex-direction:row;align-items:center;gap:7px;min-width:0;}
 .dash-today-v7 .t7-sales-lb{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#B0B8C1;letter-spacing:-0.3px;flex-shrink:0;}
 .dash-today-v7 .t7-sales-lb::before{content:'';width:6px;height:6px;border-radius:50%;background:#3182F6;flex-shrink:0;}
 .dash-today-v7 .t7-amt{font-size:31px;font-weight:800;color:#191F28;letter-spacing:-1.3px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .dash-today-v7 .t7-amt .won{font-size:22px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
-.dash-today-v7 .t7-amt.empty{font-size:14px;color:#B0B8C1;font-weight:700;line-height:normal;margin-left:auto;text-align:right;}
+/* 빈 상태 — 매출 없을 때 (2026-06-08 C안) */
+.dash-today-v7 .t7-amt.empty{font-size:28px;color:#C8CDD4;font-weight:800;letter-spacing:-1px;line-height:1.1;font-variant-numeric:tabular-nums;}
+.dash-today-v7 .t7-amt-hint{font-size:10.5px;font-weight:500;color:#C8CDD4;margin-top:1px;letter-spacing:-0.2px;}
 .dash-today-v7 .t7-detail-link{border:none;background:transparent;padding:0;font-size:13px;font-weight:700;color:#3182F6;cursor:pointer;white-space:nowrap;align-self:center;flex-shrink:0;}
 .dash-today-v7 .t7-time{font-size:12px;color:#8B95A1;margin-top:6px;font-weight:500;letter-spacing:-0.2px;display:flex;align-items:center;gap:6px;}
 .dash-today-v7 .t7-time .refresh{color:#0064FF;cursor:pointer;font-weight:600;}
 /* 지출·수익 세로 목록 — 3열 격자 (라벨|금액|화살표) */
-.dash-today-v7 .t7-rows{margin-top:8px;padding-top:0;border-top:1px solid #F2F4F6;}
-.dash-today-v7 .t7-row{display:grid;grid-template-columns:1fr 130px 22px;align-items:center;height:33px;border-bottom:1px solid #F2F4F6;}
+.dash-today-v7 .t7-rows{margin-top:10px;padding-top:0;border-top:1px solid #F2F4F6;}
+.dash-today-v7 .t7-row{display:grid;grid-template-columns:1fr 130px 22px;align-items:center;height:38px;border-bottom:1px solid #F2F4F6;}
 .dash-today-v7 .t7-row:last-child{border-bottom:none;}
 .dash-today-v7 .t7-row .r-lb{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#8B95A1;font-weight:600;letter-spacing:-0.2px;}
 .dash-today-v7 .t7-row .r-lb .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .dash-today-v7 .t7-row .r-lb .dot.red{background:#F04452;}
 .dash-today-v7 .t7-row .r-lb .dot.green{background:#0CAB6C;}
 .dash-today-v7 .t7-row .r-delta{font-size:10px;font-weight:700;margin-left:3px;font-variant-numeric:tabular-nums;}
-.dash-today-v7 .t7-row .r-amt{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;text-align:right;}
+.dash-today-v7 .t7-row .r-amt{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;text-align:right;}
 .dash-today-v7 .t7-row .r-amt.red{color:#F04452;}
 .dash-today-v7 .t7-row .r-amt.green{color:#0CAB6C;}
 .dash-today-v7 .t7-row .r-amt.gray{color:#B0B8C1;font-size:17px;font-weight:800;}
 .dash-today-v7 .t7-row .r-go{font-size:16px;font-weight:800;color:#3182F6;cursor:pointer;text-align:center;padding-left:4px;}
-/* 어디에 썼나 — 오늘 카드 안 통합 (A안, 2026-06-03). 거래처 많으면 이 안에서만 스크롤 */
-.dash-today-v7 .t7-ve-section{position:relative;margin-top:2px;padding-top:8px;border-top:1px dashed #E5E8EB;}
-/* 스크롤 신호: 박스 하단 흐림 → "더 있어요" (2026-06-05 B2) */
-.dash-today-v7 .t7-ve-section::after{content:'';position:absolute;left:3px;right:3px;bottom:3px;height:16px;background:linear-gradient(to bottom,rgba(250,251,252,0) 0%,rgba(250,251,252,.7) 55%,rgba(250,251,252,.98) 100%);border-radius:0 0 13px 13px;pointer-events:none;}
+/* 어디에 썼나 — 오늘 카드 안 통합 (2026-06-08 점선 제거, 여백 풀기) */
+.dash-today-v7 .t7-ve-section{position:relative;margin-top:6px;padding-top:10px;border-top:1px solid #F2F4F6;}
 .dash-today-v7 .t7-ve-head{font-size:12.5px;font-weight:800;color:#191F28;display:flex;align-items:center;margin-bottom:2px;}
 .dash-today-v7 .t7-ve-note{margin-left:auto;font-size:10px;font-weight:600;color:#B0B8C1;}
-.dash-today-v7 .t7-ve-list{height:82px;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;border:2px dashed #DDE2E8;border-radius:14px;background:#FAFBFC;padding:2px 12px;}
+/* 하단 흐리기: 스크롤 더 있을 때만 JS 인라인으로 mask-image 적용 (CSS 고정 제거 — 항상 흐리면 오해, 2026-06-08) */
+.dash-today-v7 .t7-ve-list{height:108px;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;border:none;border-radius:12px;background:#F5F6F8;padding:4px 12px;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar{width:3px;}
 .dash-today-v7 .t7-ve-list::-webkit-scrollbar-thumb{background:#D1D6DD;border-radius:3px;}
 .dash-today-v7 .t7-ve-list .ve-item{display:flex;align-items:center;font-size:12.5px;padding:5.5px 0;border-top:1px solid #F2F4F6;}
@@ -1285,7 +1286,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-ve-list .ghost-dot{width:7px;height:7px;border-radius:50%;background:#D8DDE4;flex-shrink:0;}
 .dash-today-v7 .t7-ve-list .ghost-bar{height:8px;border-radius:4px;background:#E5E9EE;}
 /* 홈 섹션 헤더 (오늘 / 이번 달 구분) */
-.dash-sec{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:#6B7684;margin:8px 2px 5px;}
+.dash-sec{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:#6B7684;margin:14px 2px 8px;}
 .dash-sec .ic{font-size:13px;}
 .dash-sec .dash-sec-more{margin-left:auto;font-size:12px;font-weight:700;color:#3182F6;cursor:pointer;}
 .dash-today-v7 .t7-act{margin-top:16px;display:flex;gap:8px;}
@@ -1552,6 +1553,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .rcp-guess-tag{font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-light);border-radius:6px;padding:2px 7px;white-space:nowrap;flex-shrink:0;cursor:pointer;}
 /* 과거 품목 원터치 📋 버튼 */
 .ric-past-btn{flex:none;border:1px solid var(--toss-blue);background:var(--toss-blue-light);color:var(--toss-blue);border-radius:8px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1;}
+/* 규격 줄 (거래처 모드 전용 — 2026-06-08) */
+.ric-spec{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.ric-spec-lbl{font-size:10px;font-weight:800;color:var(--toss-text-4);flex:none;background:var(--toss-line);border-radius:6px;padding:3px 6px;}
+.ric-spec .c-spec{flex:1;border:none;background:var(--gray-100);border-radius:8px;padding:6px 9px;font-size:12px;font-weight:600;color:var(--toss-text-2);outline:none;font-family:inherit;min-width:0;}
+/* 원산지 칩 (점선 — 참고 정보) */
+.ric-meta{background:transparent;border:1px dashed var(--toss-line-2);border-radius:8px;padding:5px 9px;font-size:11px;color:var(--toss-text-4);font-weight:600;display:flex;align-items:center;gap:4px;}
+.ric-meta input{border:none;background:transparent;font-size:12px;font-weight:700;text-align:left;color:var(--toss-text-2);outline:none;font-family:inherit;width:54px;}
 /* 과거 품목 시트 내 행 */
 .past-item-row{padding:11px 14px;border:1px solid var(--toss-line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--toss-text-1);}
 .past-item-row:active{background:var(--toss-blue-light);}
