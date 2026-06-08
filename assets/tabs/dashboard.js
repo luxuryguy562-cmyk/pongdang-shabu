@@ -123,13 +123,9 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
     return;
   }
   if(listEl){
-    const catColor={}; let ci=0;
     listEl.innerHTML = items.map(it=>{
-      if(!(it.cat in catColor)) catColor[it.cat]=_VE_COLORS[ci++ % _VE_COLORS.length];
-      // 왼쪽 점 제거 → 카테고리 색을 태그에 흡수 (매출·지출·수익 점과 위계 분리, 2026-06-05)
       return `<div class="ve-item">`
         +`<span class="vname">${esc(it.name)}</span>`
-        +`<span class="ve-cat-tag" style="background:${catColor[it.cat]}1A;color:${catColor[it.cat]};">${esc(it.cat)}</span>`
         +`<span class="vamt">${fmt(it.amt)}원</span></div>`;
     }).join('');
   }
@@ -153,8 +149,7 @@ function openTodayVendorSheet(){
       const pct = total>0 ? Math.round(r.amt/total*100) : 0;
       return `<div class="ve-row" style="padding:12px 0;border-bottom:1px solid #F2F4F6;display:flex;align-items:center;gap:10px;">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;font-weight:800;color:#191F28;margin-bottom:3px;">${esc(r.name)}</div>
-          <span style="font-size:11px;font-weight:700;color:#8B95A1;background:#F2F4F6;border-radius:6px;padding:2px 7px;">${esc(r.cat)}</span>
+          <div style="font-size:14px;font-weight:800;color:#191F28;">${esc(r.name)}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-size:15px;font-weight:900;color:#191F28;">${fmt(r.amt)}원</div>
