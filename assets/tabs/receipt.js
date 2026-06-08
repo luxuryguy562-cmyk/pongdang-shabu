@@ -1319,8 +1319,10 @@ function _rcpRecalcAmount(tr){
 function onReceiptAmountInput(inputEl){
   const pos=inputEl.selectionStart;
   const before=inputEl.value;
+  const isNeg=before.startsWith('-');
   const digits=String(before).replace(/[^0-9]/g,'');
-  const formatted=digits?fmt(parseInt(digits,10)):'';
+  const num=(isNeg?-1:1)*(parseInt(digits,10)||0);
+  const formatted=digits?(isNeg?'-'+fmt(parseInt(digits,10)):fmt(parseInt(digits,10))):'';
   if(formatted===before) return;
   inputEl.value=formatted;
   // 커서 위치 보정 (콤마 삽입으로 위치 어긋남)
