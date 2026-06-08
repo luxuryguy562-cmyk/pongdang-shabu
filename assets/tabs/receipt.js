@@ -1151,6 +1151,23 @@ async function runAI() {
         }
       });
     }
+    // 🔴 같은 품목명인데 단가가 다른 행 = AI 복제 오독 의심 (2026-06-08)
+    // 인접한 같은 접두어 자체상품(예 "(풍당)…")을 AI가 옆줄에 이름 복붙하는 케이스 잡음
+    {
+      const nameGroups = {};
+      list.forEach(it => {
+        const nm = String(it.item||'').trim();
+        if(!nm) return;
+        (nameGroups[nm] = nameGroups[nm] || []).push(it);
+      });
+      Object.values(nameGroups).forEach(group => {
+        if(group.length < 2) return;
+        const prices = new Set(group.map(it => parseInt(it.unitPrice)||0));
+        if(prices.size > 1){ // 같은 이름인데 단가가 제각각 → 복제 의심
+          group.forEach(it => { if(!it._nameSuspect) it._nameSuspect = '같은 이름 다른 단가 — 복제 의심'; });
+        }
+      });
+    }
     const nameSuspectCnt = list.filter(it => it._nameSuspect).length;
     const autoFilledCnt  = list.filter(it => it._autoFilled).length;
     if(autoFilledCnt){
@@ -1319,7 +1336,7 @@ function buildReceiptRow(i={}) {
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
     <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
     <input type="hidden" class="c-t" value="${parseInt(i.taxAmount)||0}">
-    <input type="hidden" class="c-f" value="${i.isTaxFree?'1':'0'}">
+    <input type="hidden" class="c-f" value="${(i.isTaxFree || (i._taxFormat && (parseInt(i.taxAmount)||0)===0))?'1':'0'}">
   </div>`;
 }
 // 단가/수량 입력 시 자동 금액 계산 (사용자 편의 — 2026-05-19)
