@@ -1024,6 +1024,8 @@ async function runAI() {
       date: x.d || x.date || respDate || ymdLocal(new Date()),
       vendor: x.v ?? x.vendor ?? respVendor ?? '',
       item: x.i || x.item || '',
+      spec: x.spec || null,   // 규격 (거래처 모드 분리 — 2026-06-08)
+      origin: x.og || x.origin || null, // 원산지 (거래처 모드 분리 — 2026-06-08)
       unitPrice: x.u ?? x.unitPrice ?? null,
       qty: x.q ?? x.qty ?? null,
       totalPrice: x.p ?? x.totalPrice ?? 0,
@@ -1055,6 +1057,8 @@ async function runAI() {
             date:x.d||x.date||respDate||ymdLocal(new Date()),
             vendor:x.v??x.vendor??respVendor??'',
             item:x.i||x.item||'',
+            spec:x.spec||null,
+            origin:x.og||x.origin||null,
             unitPrice:x.u??x.unitPrice??null,
             qty:x.q??x.qty??null,
             totalPrice:x.p??x.totalPrice??0,
@@ -1266,6 +1270,14 @@ function buildReceiptRow(i={}) {
   const autoTag = i._autoFilled
     ? `<span class="rcp-auto-tag">✅ 단가 자동채움</span>`
     : (i._nameCandidates?.length ? `<span class="rcp-guess-tag" data-action="openRcpPastSheet|${idx}">🟡 후보 ${i._nameCandidates.length}개</span>` : '');
+  // 규격·원산지 칸 (거래처 모드에서만 표시 — 2026-06-08)
+  const isVendorRow = rcpMode === 'vendor';
+  const specRow = isVendorRow ? `
+    <div class="ric-spec">
+      <span class="ric-spec-lbl">규격</span>
+      <input type="text" class="c-spec" value="${esc(i.spec||'')}" placeholder="규격 없음">
+    </div>` : '';
+  const ogChip = isVendorRow ? `<span class="ric-meta">🌍 <input type="text" class="c-og" value="${esc(i.origin||'')}" placeholder="원산지"></span>` : '';
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
       ${nameSuspectMark}
@@ -1274,11 +1286,12 @@ function buildReceiptRow(i={}) {
       <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
       ${pastBtn}
       <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
-    </div>
+    </div>${specRow}
     <div class="ric-l2">
       ${suspectMark}
       <span class="ric-mini">단가 <input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></span>
       <span class="ric-mini">수량 <input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></span>
+      ${ogChip}
       ${autoTag}
       ${learnBadge}
       <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
@@ -1457,10 +1470,14 @@ async function saveReceipt(){
     const itemText = tr.querySelector('.c-i')?.value || '';
     // AI 원본 텍스트 보존 (사장님이 수정 시 학습용)
     const origItem = tr.dataset.origItem || itemText;
+    // spec·origin — DB 컬럼 추가 후 아래 주석 해제 (현재 표시만, 저장 보류)
+    // const specText = tr.querySelector('.c-spec')?.value?.trim() || null;
+    // const originText = tr.querySelector('.c-og')?.value?.trim() || null;
     return {
       _idx:idx+1, _cat:cat, _origItem: origItem, // 학습용 메타 (DB 저장 X)
       store_id:currentStore.id,receipt_date:tr.querySelector('.c-d').value,
       vendor:vendorText,item:itemText,
+      // spec:specText, origin:originText, // ← DB migration 후 활성화
       vendor_id: isVendorMode ? rcpVendorId : null,
       unit_price: unitRaw ? parseInt(unitRaw,10) : null,
       qty: qtyRaw,
