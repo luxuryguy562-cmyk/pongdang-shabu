@@ -1966,16 +1966,23 @@ function renderRgeTable(){
     const off=row.note!=='정상';
     const catLabel=row.cat?esc(row.cat):'🏷️ 분류';
     const offCls=off?' row-off':'';
+    const specRow=`<div class="ric-spec">
+        <span class="ric-spec-lbl">규격</span>
+        <input type="text" class="c-spec" value="${esc(row.spec||'')}" placeholder="규격 없음" data-input="setRgeRowField|${idx}|spec|this">
+      </div>`;
+    const ogChip=`<span class="ric-meta">🌍 <input type="text" class="c-og" value="${esc(row.origin||'')}" placeholder="원산지" data-input="setRgeRowField|${idx}|origin|this"></span>`;
     html+=`<div class="rcp-item-card${offCls}" id="rge-row-${idx}">
       <div class="ric-l1">
         <button type="button" class="ric-x x-btn" style="${off?'background:#E5E8EB;color:#8B95A1;':'background:#FFE5E5;color:#DC2626;'}" data-action="toggleRgeRowOff|${idx}" title="오답/정상 토글">×</button>
         <input type="text" class="c-i" value="${esc(row.item)}" placeholder="품목" data-input="setRgeRowField|${idx}|item|this">
         <input type="text" class="c-p" inputmode="numeric" value="${fmt(row.amount)}" data-input="setRgeRowAmount|${idx}|this">
       </div>
+      ${specRow}
       <div class="ric-l2">
         <button type="button" class="c-cBtn ric-chip${row.cat?'':' empty'}" data-action="openRgeCatPicker|${idx}">${catLabel}</button>
         <span class="ric-mini">단가 <input type="text" class="c-u" inputmode="numeric" value="${row.unitPrice?fmt(row.unitPrice):''}" placeholder="-" data-input="setRgeRowUnitPrice|${idx}|this"></span>
         <span class="ric-mini">수량 <input type="text" class="c-q" inputmode="decimal" value="${row.qty||''}" placeholder="-" data-input="setRgeRowQty|${idx}|this"></span>
+        ${ogChip}
       </div>
     </div>`;
   });
@@ -2065,7 +2072,8 @@ async function saveReceiptGroupEdit(){
     const {error}=await sb.from('receipts').update({
       receipt_date:date, vendor, item:r.item,
       unit_price:r.unitPrice||null, qty:r.qty||null, total_price:r.amount,
-      category:r.cat||null, category_id:r.catId||null, note:r.note
+      category:r.cat||null, category_id:r.catId||null, note:r.note,
+      spec:r.spec||null, origin:r.origin||null
     }).eq('id',r.id).eq('store_id',currentStore.id);
     if(error){ setLoad(false); return errToast('저장(수정)', error); }
   }
@@ -2076,7 +2084,8 @@ async function saveReceiptGroupEdit(){
       store_id:currentStore.id, receipt_date:date, vendor, item:r.item,
       unit_price:r.unitPrice||null, qty:r.qty||null,
       total_price:r.amount, category:r.cat||null, category_id:r.catId||null,
-      note:r.note, receipt_group_id:groupId
+      note:r.note, receipt_group_id:groupId,
+      spec:r.spec||null, origin:r.origin||null
     }));
     const {error}=await sb.from('receipts').insert(payload);
     if(error){ setLoad(false); return errToast('저장(추가)', error); }
