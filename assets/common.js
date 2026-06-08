@@ -70,8 +70,8 @@ function _logAIUsage(feature, usage, durationMs, success, errorMsg, modelUsed, c
   }catch(e){ console.warn('[ai_usage_logs] exception:', e); }
 }
 async function callGemini(parts, timeoutSec=30, feature='unknown', model, provider){
-  const MAX_RETRY = 3;
-  const BACKOFF_MS = [1000, 2000, 4000];
+  const MAX_RETRY = 4;
+  const BACKOFF_MS = [2000, 4000, 8000];
   let lastErr = null;
   const startedAt = Date.now();
   const requestModel = model || _DEFAULT_GEMINI_MODEL;
@@ -205,12 +205,14 @@ ${modeHint}${multiPageHint}
 [규칙]
 - [회계 검산] 두 등식이 반드시 맞아야 함: ①단가(u)×수량(q)=공급가(p−t) ②공급가+세액(t)=합계(p). 안 맞으면 u·q·t·p를 다시 읽어라 — 특히 공급가를 단가나 합계 칸에 잘못 넣는 실수 주의. 박스+EA는 q=(박스×단위)+EA, 중량거래(kg·g)는 q=중량값(소수점)으로 재시도.
 - i:품목명+규격(괄호 규격 포함)만. 품목명 끝에 붙은 포장·원산지 메타꼬리표는 제외 — "박스입수:N"·"입수:N"이 나오면 그 단어부터 끝까지 전부 버려라(뒤의 "/원산지"·"※주석" 포함). ⚠️단, 품명 안에 쉼표로 자연스럽게 섞인 원산지(예 "고기손만두,돈육:국내산", "냉동감자튀김,중국산")는 품명의 일부이니 그대로 둬라. 예) "이츠웰 유부(F0용 슬라이스 1Kg/EA) 박스입수:8/외국산 ※대두(미국산,캐나다산)" → "이츠웰 유부(F0용 슬라이스 1Kg/EA)". 꼬리표 없으면 그대로. 못 읽으면 보이는 대로, 지어내지 마라.
-- 합계행·소계·부가세행·할인전·외상행·용기보증금 = items에서 제외 (공급가액/세액 소계는 total_supply/total_tax로만)
+- 합계행·소계·부가세행·할인전소계·외상행·용기보증금 = items에서 제외 (공급가액/세액 소계는 total_supply/total_tax로만). ⚠️단 "카드쿠폰 -500", "[에누리] -1,000" 같은 개별 할인 행은 items에 포함 (아래 [할인 행] 참조)
 - [세액 별도 양식] 행에 공급가·세액·합계 칸 따로면: p=합계(세후) 칸, t=세액 칸, total_supply=공급가액 소계, total_tax=세액 소계, total_sum=총합계액(세후). 세액 칸 없으면 t=0 + total_supply·total_tax=null
 - [함정] total_sum·total_supply에 전미수·전잔액·당일입금·현잔액·누계·채권 절대 X. "이번 거래분(금일)"만
-- 숫자 쉼표·원 제거, 음수·빈배열 X
+- 숫자 쉼표·원 제거. 빈배열 X. 할인·쿠폰 행 제외 p·u는 양수
 - 흐릿해도 근접 추정
 - 면세(*)/과세 표시는 무시 — p는 인쇄값 그대로
+- [할인 행] "500원할인@비엔나", "[카드쿠폰] 시금치", "에누리(쿠폰)" 같은 개별 할인·쿠폰·에누리 라인은 items에 별도 행으로 포함. ⚠️영수증에 인쇄된 마이너스(-) 부호를 그대로 읽어라 — p·u는 인쇄된 음수 그대로(예 p:-500, u:-1500). 부호 떼고 양수로 만들지 마라
+- [온라인 주문] 쿠팡·네이버쇼핑 등 웹 주문 확인 화면 스크린샷인 경우: items 각 행에서 u=단가, q=수량, p=단가×수량(행소계·주문금액) — "단가×N개" 또는 별도 소계 칸 값으로 재계산. 배송비는 items 제외(total_sum에만 포함). 품목명 화면에 보이는 글자 전체 그대로 — 절대 자르지 마라. vendor는 실제 판매자명("쿠팡" X). total_sum=최종 결제금액(상품소계+배송비)
 
 [예시 — 거래명세서 (BOX/EA 박힘)]
 {"date":"2026-04-09","items":[{"i":"위즈복대-날치알 500g","u":9400,"q":30,"p":282000},{"i":"넙적분모자 250g","u":1100,"q":5,"p":5500},{"i":"두부피쉬볼 500g","u":5800,"q":5,"p":29000}],"total_sum":1416049,"page_info":{"current":1,"total":2}}

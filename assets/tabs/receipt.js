@@ -994,7 +994,7 @@ async function runAI() {
       if(isOverloadLike){
         setLoad(true, 'Gemini 과부하 → GPT-4o로 재시도 중...');
         toast('⚠️ Gemini 과부하 감지 — GPT-4o로 재시도', 'warn', 2500);
-        raw = await callGemini(parts, timeoutSec+15, 'receipt_ocr', 'gpt-4o', 'gpt');
+        raw = await callGemini(parts, 60+(pageCount-1)*5, 'receipt_ocr', 'gpt-4o', 'gpt');
         usedFallback = true;
       } else {
         throw geminiErr;
@@ -1442,7 +1442,7 @@ async function saveReceipt(){
     const category_id = isVendorMode
       ? (rcpCatId || tr.dataset.catId || resolveReceiptCatId(cat) || null)
       : (tr.dataset.catId ? tr.dataset.catId : (resolveReceiptCatId(cat) || null));
-    const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,'');
+    const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9-]/g,'');
     const taxRaw=(tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''); // 행 세액(부가세) — 합계는 세후
     const isFree=(tr.querySelector('.c-f')?.value||'0')==='1'; // 면세 여부
     // 거래처 모드면 vendor 텍스트도 거래처명으로 통일 (AI 추출 vendor가 누락이거나 다를 때 보호)
@@ -1450,7 +1450,7 @@ async function saveReceipt(){
       ? (rcpVendorName || tr.querySelector('.c-v').value)
       : (tr.querySelector('.c-v')?.value || '');
     // 단가/수량 추출 (2026-05-19 부활) — 가격 추세 분석 기반
-    const unitRaw=(tr.querySelector('.c-u')?.value||'').replace(/[^0-9]/g,'');
+    const unitRaw=(tr.querySelector('.c-u')?.value||'').replace(/[^0-9-]/g,'');
     const qtyRaw=parseFloat((tr.querySelector('.c-q')?.value||'').replace(/[^0-9.]/g,''))||null;
     const itemText = tr.querySelector('.c-i')?.value || '';
     // AI 원본 텍스트 보존 (사장님이 수정 시 학습용)
