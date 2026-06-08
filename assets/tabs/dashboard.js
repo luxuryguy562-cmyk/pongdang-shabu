@@ -108,7 +108,7 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   // isVar로 판정 — 데이터가 영수증·거래처 표에서 왔는지 (카테고리 무관, 2026-06-05 빙산 수정)
   const items = Object.values(veMap||{})
     .filter(o=> o.amt>0 && o.isVar)
-    .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
+    .map(o=>({name:o.name, amt:o.amt}))
     .sort((a,b)=>b.amt-a.amt);
   if(!items.length){
     // 데이터 없어도 섹션은 항상 표시 — height:160px 고정이라 아래 월요약 카드 위치 안 튐 (2026-06-04)
@@ -128,6 +128,13 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
         +`<span class="vname">${esc(it.name)}</span>`
         +`<span class="vamt">${fmt(it.amt)}원</span></div>`;
     }).join('');
+    // 스크롤이 실제로 더 있을 때만 하단 흐리기 적용 (2026-06-08)
+    requestAnimationFrame(()=>{
+      const hasMore=listEl.scrollHeight>listEl.clientHeight+2;
+      const msk=hasMore?'linear-gradient(to bottom,black 55%,rgba(0,0,0,.15) 82%,transparent 100%)':'';
+      listEl.style.webkitMaskImage=msk;
+      listEl.style.maskImage=msk;
+    });
   }
   card.style.display='';
 }
@@ -138,7 +145,7 @@ function openTodayVendorSheet(){
   const {veMap, dayExp} = d;
   // 거래처별 flat 리스트 — 금액 큰 순
   const rows = Object.values(veMap)
-    .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
+    .map(o=>({name:o.name, amt:o.amt}))
     .sort((a,b)=>b.amt-a.amt);
   const total = dayExp || rows.reduce((s,r)=>s+r.amt, 0);
 
@@ -853,21 +860,19 @@ async function loadDashboard(force){
       // 일별도 같이 박음 (주차별 매트릭스용)
       if(d)_addChildDayNamed(d, m.parentName, m.childName, amt, m.childColor);
     };
-    // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "어디에 썼나", 2026-06-02 / 2026-06-03 카테고리+거래처 분리) ───
+    // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "어디에 썼나", 2026-06-02 / 2026-06-08 거래처명만 키로)
     // FK: vendor_id→vendors(name). 직구(vendor_id NULL)·거래처 삭제(ON DELETE SET NULL)는 '직접 구매'
-    // 키 = '거래처명|카테고리' 조합 → 쿠팡(비품)·쿠팡(식자재) 별도 집계 (카테고리 섞임 방지)
-    const dailyVendorExp={}; // { '02': { '쿠팡|비품': {name, cat, amt, isVar}, ... } }
+    // 키 = 거래처명만 → 같은 거래처 카테고리 달라도 하나로 합산 (2026-06-08 사장님 요청)
+    const dailyVendorExp={}; // { '02': { '농협': {name, amt, isVar}, ... } }
     // isVar=true = 영수증·거래처 표에서 온 변동 지출 (어디에 썼나 표시 대상)
     // isVar=false = 고정비·인건비·로열티 등 자동 고정성 (어디에 썼나 제외)
-    // ⚠️ 카테고리 data_source가 아니라 '데이터 출처 표'로 판정 (2026-06-05 빙산 수정 — 기타>간식 누락)
     const _addVE=(d,name,amt,catName,isVar=false)=>{
       if(!amt||amt<=0||!d)return;
       if(!dailyVendorExp[d])dailyVendorExp[d]={};
-      const nm=name||'기타', ct=catName||'기타';
-      const key=nm+'|'+ct;
-      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={name:nm,cat:ct,amt:0,isVar:false};
-      dailyVendorExp[d][key].amt+=amt;
-      if(isVar)dailyVendorExp[d][key].isVar=true;
+      const nm=name||'기타';
+      if(!dailyVendorExp[d][nm])dailyVendorExp[d][nm]={name:nm,amt:0,isVar:false};
+      dailyVendorExp[d][nm].amt+=amt;
+      if(isVar)dailyVendorExp[d][nm].isVar=true;
     };
     // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
     const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
