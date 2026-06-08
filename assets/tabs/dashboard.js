@@ -1757,6 +1757,7 @@ function v17RenderMonthCard(){
 
   el.innerHTML = `
     <div class="v17-card-v6">
+      ${fcHtml}
       <div class="v6-ttl-row">
         <div class="v6-ttl"><b>${ctx.TARGET_MONTH}월</b>${progressDays}일 진행</div>
         <span class="v6-progress-tag">${progressPct}%</span>
@@ -1772,7 +1773,6 @@ function v17RenderMonthCard(){
           <div class="m6-mr"><span class="k">수익</span><span class="v ${profit>=0?'green':'red'}">${v17FmtNoWonSigned(profit)}원</span></div>
         </div>
       </div>
-      ${fcHtml}
     </div>`;
 }
 
