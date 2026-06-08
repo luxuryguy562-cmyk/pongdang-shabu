@@ -23,7 +23,12 @@
 - **타이밍 합의**: 지금은 사장님 혼자 → ①+GPT백업으로 충분. ②는 **손님 받기 직전 스위치 켜기**. CTO가 미리 코드+그림 준비.
 
 ### 다음 작업
-- ② Vertex용 Worker 코드 초안 + GCP 가입 그림 준비 (사장님 출시 결정 시 발동).
+- **② Vertex AI 이전 — 2026-06-08 사장님 "지금 시작" 결정. 진행 중.**
+  - 방식: 사장님 GCP 직접 가입(CTO 단계 안내) + 서비스계정 키는 Cloudflare 비밀값 직접 등록(채팅 미경유, 보안).
+  - 사장님 GCP 셋업 단계: ①가입+프로젝트 ②결제카드 ③Vertex AI API 사용설정 ④서비스계정"pongdang-worker"+역할"Vertex AI User"+JSON키 다운로드.
+  - CTO가 받을 비밀 아닌 정보 2개: **프로젝트 ID** + **리전**(모델 가용성 확인 후 권장 — us-central1 또는 서울 asia-northeast3).
+  - CTO 작업: Worker를 Vertex 방식으로 재작성 — 인증이 API키→OAuth2(서비스계정 JWT RS256 서명→토큰 교환, crypto.subtle). 토큰 1시간 캐시. 엔드포인트 `{region}-aiplatform.googleapis.com/v1/projects/{proj}/locations/{region}/publishers/google/models/{model}:generateContent`.
+  - Cloudflare 비밀값: GCP_SA_KEY(JSON 통째). 기존 GEM_ES_KEY(AI Studio)는 폴백으로 잠시 유지 후 제거.
 
 ---
 
