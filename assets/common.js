@@ -167,7 +167,11 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
 function buildReceiptPrompt({isVendorMode=true, vendorName='', catList='', pageCount=1}={}){
   const modeHint = isVendorMode
     ? `[모드:거래처] vendor="${vendorName}" 이미 선택. v·c·d 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
-[BOX/EA] q=(BOX×단위)+EA. ⚠️ BOX=0이면 단위 무시, EA가 q.
+[수량 칸 우선] ⚠️표에 "수량" 칸이 따로 있으면 q=그 "수량" 칸 값 그대로. "Box입수량"·"박스입수"·"입수" 칸은 한 박스에 든 개수(메타)일 뿐이니 q에 절대 쓰지 마라.
+  · Box입수량5·단위EA·수량2 → q=2 (5 아님)
+  · Box입수량10·단위EA·수량2 → q=2
+  · Box입수량1·단위BOX·수량3 → q=3
+[BOX/EA] 위처럼 별도 "수량" 칸이 없고 BOX·EA 칸만 있으면: q=(BOX×단위)+EA. ⚠️ BOX=0이면 단위 무시, EA가 q.
   · 단위20·BOX1·EA10→q=30
   · 단위8·BOX1·EA0→q=8
   · 단위40·BOX0·EA5→q=5  ← BOX 0

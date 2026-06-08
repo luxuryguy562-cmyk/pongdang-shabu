@@ -1127,6 +1127,9 @@ async function runAI() {
     // 🔴 일치 없음 → 기존 nameSuspect 유지
     if(isVendorModeAI && rcpPastPriceMap.size){
       list.forEach(it => {
+        // 품목명을 또렷이 읽은 행은 건드리지 않음 (후보 N개 과다 잡음 제거, 2026-06-08)
+        // 단가 매칭(자동채움·후보 추천)은 품목명 의심(🔴) 행에만 작동
+        if(!it._nameSuspect) return;
         const u = parseInt(it.unitPrice)||0;
         if(!u) return;
         if(rcpPastPriceMap.has(u)){
