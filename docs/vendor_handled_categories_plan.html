@@ -73,17 +73,30 @@
   <p>지금은 대분류·소분류 <b>1개만</b> 고르는 칸입니다. 이걸 <b>취급품목 여러 개 체크</b>로 바꿉니다.</p>
   <div class="mock">
     <div style="font-weight:700; margin-bottom:8px;">거래처 편집 — 웰스토리</div>
-    <div class="small" style="margin-bottom:6px;">거래처명: 웰스토리</div>
-    <div class="small" style="margin-bottom:6px;">취급품목 (여러 개 선택 가능):</div>
-    <div>
-      <span class="chk on">✓ 공산품</span>
-      <span class="chk on">✓ 육류</span>
-      <span class="chk">야채</span>
-      <span class="chk">수산</span>
-      <span class="chk">주류</span>
-      <span class="chk">비품</span>
+    <div class="small" style="margin-bottom:8px;">취급품목 (사장님이 <b>사는 것만</b> · 카테고리는 DB에서 자동 표시):</div>
+    <div style="margin-bottom:8px;">
+      <div style="font-weight:700; font-size:13px; margin-bottom:4px;">📦 식자재 <span class="chk" style="font-size:11px;">대분류 전체</span></div>
+      <div style="padding-left:10px;">
+        <span class="chk on">✓ 육류</span>
+        <span class="chk on">✓ 공산품</span>
+        <span class="chk">야채</span>
+        <span class="chk">수산</span>
+      </div>
     </div>
-    <div class="small" style="margin-top:8px; color:var(--green);">→ 웰스토리 영수증은 공산품·육류 중에서만 분류됩니다</div>
+    <div style="margin-bottom:8px;">
+      <div style="font-weight:700; font-size:13px;">🧹 비품 <span class="chk">대분류 전체</span></div>
+    </div>
+    <div class="small" style="margin-top:8px; color:var(--green);">→ 웰스토리 영수증은 육류·공산품 중에서만 분류됩니다</div>
+    <div class="small" style="margin-top:6px; color:var(--gray-500);">※ 세금·고정비·공과금은 "구매"가 아니라 후보에 안 나옴. 카테고리 이름·목록은 사장님 매장 DB 그대로(하드코딩 X)</div>
+  </div>
+  <div class="ok-box">
+    <div class="t">선택 방식 (사장님 지적 반영)</div>
+    <ul>
+      <li><b>대분류 전체</b> — "식자재 전체" 누르면 그 아래 육류·야채·공산품·수산 다 취급</li>
+      <li><b>소분류만</b> — "식자재 > 육류·공산품"처럼 일부만 (야채 빼고)</li>
+      <li>후보 목록 = <b>DB에서 동적</b> — 사장님이 카테고리 추가/이름변경하면 자동 반영</li>
+      <li>지출(구매) 카테고리만 — 세금·고정비·공과금·인건비 자동 제외</li>
+    </ul>
   </div>
 </div>
 
