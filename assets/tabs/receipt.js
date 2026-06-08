@@ -1673,7 +1673,8 @@ function _normalizeExpenseRow(row, source){
       group_id:row.order_group_id||null,
       input_method:'manual',
       note:'정상',
-      memo:row.memo||''
+      memo:row.memo||'',
+      category:row.vendors?.category||null // 거래처 단위 분류 (주문은 4단계 전까지 거래처 카테고리)
     };
   }
   if(source==='mydata'){
@@ -1716,7 +1717,8 @@ function _normalizeExpenseRow(row, source){
     group_id:row.receipt_group_id||null,
     input_method:row.input_method||null,
     note:row.note||'정상',
-    memo:''
+    memo:'',
+    category:row.category||null // 품목별 분류 (2026-06-10 기록 표시용)
   };
 }
 

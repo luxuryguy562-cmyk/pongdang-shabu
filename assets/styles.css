@@ -687,6 +687,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .grp-tbl .grp-body td{padding:8px 2px;font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--gray-100);}
 .grp-tbl .grp-body td:first-child{border-left:3px solid var(--blue);padding-left:8px;font-weight:600;color:var(--gray-700);text-align:center;}
 .grp-tbl .grp-body .gb-cat{font-size:10px;color:var(--gray-600);text-align:center;}
+/* 기록 표 품목별 카테고리 칩 (2026-06-10) */
+.grp-tbl .grp-body td .gb-itemcat{display:inline-block;font-size:9px;color:var(--blue);background:var(--blue-light);border-radius:4px;padding:1px 5px;margin-left:5px;font-weight:600;vertical-align:middle;white-space:nowrap;}
 .grp-tbl .grp-body .gb-unit, .grp-tbl .grp-body .gb-qty{text-align:right;font-variant-numeric:tabular-nums;color:var(--gray-600);padding-right:4px;}
 .grp-tbl .grp-body .gb-amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;padding-right:4px;}
 .grp-tbl .grp-body .gb-arrow{text-align:center;color:var(--gray-400);font-size:14px;padding:0;}
