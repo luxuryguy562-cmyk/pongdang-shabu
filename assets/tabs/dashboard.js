@@ -105,11 +105,14 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   _todayVendorDataCache = (veMap && Object.keys(veMap||{}).length) ? {veMap, dayExp} : null;
   if(!card) return;
   // 영수증·거래처로 등록하는 변동 지출만 (고정비·인건비·로열티 등 고정성 자동 제외), 거래처별로 쭉 나열
-  // isVar로 판정 — 데이터가 영수증·거래처 표에서 왔는지 (카테고리 무관, 2026-06-05 빙산 수정)
-  const items = Object.values(veMap||{})
-    .filter(o=> o.amt>0 && o.isVar)
-    .map(o=>({name:o.name, amt:o.amt}))
-    .sort((a,b)=>b.amt-a.amt);
+  // veMap 키는 '거래처명|카테고리'라 → 거래처명으로 재합산 (홈은 거래처별, 2026-06-08)
+  const _byVendor={};
+  Object.values(veMap||{}).forEach(o=>{
+    if(!(o.amt>0 && o.isVar)) return;
+    if(!_byVendor[o.name]) _byVendor[o.name]={name:o.name, amt:0};
+    _byVendor[o.name].amt+=o.amt;
+  });
+  const items = Object.values(_byVendor).sort((a,b)=>b.amt-a.amt);
   if(!items.length){
     // 데이터 없어도 섹션은 항상 표시 — height:160px 고정이라 아래 월요약 카드 위치 안 튐 (2026-06-04)
     if(listEl) listEl.innerHTML=`<div class="t7-ve-dash2">`
@@ -141,35 +144,46 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   }
   card.style.display='';
 }
-// ─── 지출 상세 바텀시트 열기 (거래처명 + 카테고리 태그, 이전 버전 복원 2026-06-08) ───
+// ─── 지출 상세 바텀시트 열기 (카테고리별 그룹: 카테고리 합계 + 아래 거래처 상세, 2026-06-08 복원) ───
 function openTodayVendorSheet(){
   const d = _todayVendorDataCache;
   if(!d){ toast('지출 데이터가 없습니다.'); return; }
   const {veMap, dayExp} = d;
-  const rows = Object.values(veMap)
-    .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
-    .sort((a,b)=>b.amt-a.amt);
+  // veMap = { '쿠팡|비품': {name, cat, amt}, ... } → 거래처+카테고리 단위
+  const rows = Object.values(veMap).map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}));
   const total = dayExp || rows.reduce((s,r)=>s+r.amt, 0);
+
+  // 카테고리별 그룹 묶기
+  const catGroups = {};
+  rows.forEach(r=>{
+    if(!catGroups[r.cat]) catGroups[r.cat]={cat:r.cat, sum:0, items:[]};
+    catGroups[r.cat].sum += r.amt;
+    catGroups[r.cat].items.push(r);
+  });
+  // 카테고리는 합계 큰 순, 카테고리 내 거래처도 금액 큰 순
+  const groups = Object.values(catGroups).sort((a,b)=>b.sum-a.sum);
+  groups.forEach(g=>g.items.sort((a,b)=>b.amt-a.amt));
 
   const listEl = document.getElementById('vendorExpSheetList');
   const totalEl = document.getElementById('vendorExpSheetTotal');
   const titleEl = document.querySelector('#vendorExpSheet .sheet-title');
   if(titleEl) titleEl.textContent = '💸 지출 내역';
   if(listEl){
-    const html = rows.map(r=>{
-      const pct = total>0 ? Math.round(r.amt/total*100) : 0;
-      return `<div class="ve-row" style="padding:12px 0;border-bottom:1px solid #F2F4F6;display:flex;align-items:center;gap:10px;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;font-weight:800;color:#191F28;margin-bottom:3px;">${esc(r.name)}</div>
-          <span style="font-size:11px;font-weight:700;color:#8B95A1;background:#F2F4F6;border-radius:6px;padding:2px 7px;">${esc(r.cat)}</span>
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div style="font-size:15px;font-weight:900;color:#191F28;">${fmt(r.amt)}원</div>
-          <div style="font-size:11px;color:#B0B8C1;">${pct}%</div>
-        </div>
-      </div>`;
+    const groupsHtml = groups.map((g,i)=>{
+      const color = _VE_COLORS[i % _VE_COLORS.length];
+      const pct = total>0 ? Math.round(g.sum/total*100) : 0;
+      const itemsHtml = g.items.map(it=>
+        `<div class="ve-row"><span class="vname">${esc(it.name)}</span><span class="vamt">${fmt(it.amt)}원</span></div>`
+      ).join('');
+      return `<div class="ve-group">`
+        + `<div class="ve-cat-head"><span class="ve-cat-dot" style="background:${color};"></span>`
+        + `<span class="ve-cat-name">${esc(g.cat)}</span>`
+        + `<span class="ve-cat-pct">${pct}%</span>`
+        + `<span class="ve-cat-sum">${fmt(g.sum)}원</span></div>`
+        + itemsHtml
+        + `</div>`;
     }).join('');
-    listEl.innerHTML = html || `<div style="text-align:center;padding:20px 0;color:var(--gray-400);font-size:12px;">내역 없음</div>`;
+    listEl.innerHTML = groupsHtml || `<div style="text-align:center;padding:20px 0;color:var(--gray-400);font-size:12px;">내역 없음</div>`;
   }
   if(totalEl) totalEl.innerHTML = `<span class="ve-total-lb">전체 합계</span><span class="ve-total-vl">${fmt(total)}원</span>`;
   openSheet('vendorExpSheet');
@@ -865,20 +879,20 @@ async function loadDashboard(force){
       // 일별도 같이 박음 (주차별 매트릭스용)
       if(d)_addChildDayNamed(d, m.parentName, m.childName, amt, m.childColor);
     };
-    // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "어디에 썼나", 2026-06-02 / 2026-06-08 거래처명만 키로)
+    // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "어디에 썼나", 2026-06-02 / 2026-06-08 거래처+카테고리 키)
     // FK: vendor_id→vendors(name). 직구(vendor_id NULL)·거래처 삭제(ON DELETE SET NULL)는 '직접 구매'
-    // 키 = 거래처명만 → 같은 거래처 카테고리 달라도 하나로 합산 (2026-06-08 사장님 요청)
-    const dailyVendorExp={}; // { '02': { '농협': {name, amt, isVar}, ... } }
+    // 키 = '거래처명|카테고리' → 지출 시트 카테고리별 그룹핑 정확. 홈 미리보기는 renderTodayVendorExp에서 거래처명으로 재합산
+    const dailyVendorExp={}; // { '02': { '농협|식자재': {name, cat, amt, isVar}, ... } }
     // isVar=true = 영수증·거래처 표에서 온 변동 지출 (어디에 썼나 표시 대상)
     // isVar=false = 고정비·인건비·로열티 등 자동 고정성 (어디에 썼나 제외)
     const _addVE=(d,name,amt,catName,isVar=false)=>{
       if(!amt||amt<=0||!d)return;
       if(!dailyVendorExp[d])dailyVendorExp[d]={};
       const nm=name||'기타', ct=catName||'기타';
-      // cat은 처음 등록된 카테고리 유지 (지출 시트 카테고리 태그용)
-      if(!dailyVendorExp[d][nm])dailyVendorExp[d][nm]={name:nm,cat:ct,amt:0,isVar:false};
-      dailyVendorExp[d][nm].amt+=amt;
-      if(isVar)dailyVendorExp[d][nm].isVar=true;
+      const key=nm+'|'+ct;
+      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={name:nm,cat:ct,amt:0,isVar:false};
+      dailyVendorExp[d][key].amt+=amt;
+      if(isVar)dailyVendorExp[d][key].isVar=true;
     };
     // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
     const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
