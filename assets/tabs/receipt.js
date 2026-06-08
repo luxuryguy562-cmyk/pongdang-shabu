@@ -1958,26 +1958,28 @@ function openReceiptGroupEdit(editKey){
   openSheet('receiptGroupEditSheet');
 }
 function renderRgeTable(){
-  const tbody=document.getElementById('rgeTable');
-  if(!tbody) return;
+  const container=document.getElementById('rgeTable');
+  if(!container) return;
   let html='';
   rgeRows.forEach((row,idx)=>{
-    if(row._deleted) return; // 삭제 표시 행은 렌더 X
+    if(row._deleted) return;
     const off=row.note!=='정상';
-    const offBtn=off
-      ? `<button type="button" class="c-cBtn" style="background:var(--gray-200);color:var(--gray-600);" data-action="toggleRgeRowOff|${idx}">＋</button>`
-      : `<button type="button" class="c-cBtn" style="background:var(--danger-light);color:var(--danger);" data-action="toggleRgeRowOff|${idx}">X</button>`;
-    const catLabel=row.cat?esc(row.cat):'미분류';
-    html+=`<tr${off?' class="row-off"':''}>
-      <td>${offBtn}</td>
-      <td><input type="text" class="c-i" value="${esc(row.item)}" data-input="setRgeRowField|${idx}|item|this" placeholder="품목"></td>
-      <td><input type="text" class="c-u" value="${row.unitPrice?fmt(row.unitPrice):''}" inputmode="numeric" placeholder="-" data-input="setRgeRowUnitPrice|${idx}|this"></td>
-      <td><input type="text" class="c-q" value="${row.qty||''}" inputmode="decimal" placeholder="-" data-input="setRgeRowQty|${idx}|this"></td>
-      <td><input type="text" class="c-p" value="${fmt(row.amount)}" inputmode="numeric" data-input="setRgeRowAmount|${idx}|this"></td>
-      <td><button type="button" class="c-cBtn empty" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;" data-action="openRgeCatPicker|${idx}">${catLabel} ▸</button></td>
-    </tr>`;
+    const catLabel=row.cat?esc(row.cat):'🏷️ 분류';
+    const offCls=off?' row-off':'';
+    html+=`<div class="rcp-item-card${offCls}" id="rge-row-${idx}">
+      <div class="ric-l1">
+        <button type="button" class="ric-x x-btn" style="${off?'background:#E5E8EB;color:#8B95A1;':'background:#FFE5E5;color:#DC2626;'}" data-action="toggleRgeRowOff|${idx}" title="오답/정상 토글">×</button>
+        <input type="text" class="c-i" value="${esc(row.item)}" placeholder="품목" data-input="setRgeRowField|${idx}|item|this">
+        <input type="text" class="c-p" inputmode="numeric" value="${fmt(row.amount)}" data-input="setRgeRowAmount|${idx}|this">
+      </div>
+      <div class="ric-l2">
+        <button type="button" class="c-cBtn ric-chip${row.cat?'':' empty'}" data-action="openRgeCatPicker|${idx}">${catLabel}</button>
+        <span class="ric-mini">단가 <input type="text" class="c-u" inputmode="numeric" value="${row.unitPrice?fmt(row.unitPrice):''}" placeholder="-" data-input="setRgeRowUnitPrice|${idx}|this"></span>
+        <span class="ric-mini">수량 <input type="text" class="c-q" inputmode="decimal" value="${row.qty||''}" placeholder="-" data-input="setRgeRowQty|${idx}|this"></span>
+      </div>
+    </div>`;
   });
-  tbody.innerHTML=html;
+  container.innerHTML=html;
 }
 function setRgeRowField(idx,field,el){
   const i=parseInt(idx,10);
@@ -2011,17 +2013,8 @@ function _rgeAutoCalcAmount(i){
   const r=rgeRows[i]; if(!r) return;
   if(r.unitPrice>0 && r.qty>0){
     r.amount=Math.round(r.unitPrice*r.qty);
-    // 해당 행의 금액 input 갱신
-    const tbody=document.getElementById('rgeTable');
-    if(!tbody) return;
-    const trs=Array.from(tbody.querySelectorAll('tr'));
-    // 렌더 시 _deleted 제외되므로 인덱스 맞추기 위해 visible 카운트
-    let visible=0;
-    for(let j=0;j<rgeRows.length;j++){
-      if(rgeRows[j]._deleted) continue;
-      if(j===i){ const tr=trs[visible]; if(tr){ const pEl=tr.querySelector('.c-p'); if(pEl) pEl.value=fmt(r.amount); } break; }
-      visible++;
-    }
+    const rowEl=document.getElementById('rge-row-'+i);
+    if(rowEl){ const pEl=rowEl.querySelector('.c-p'); if(pEl) pEl.value=fmt(r.amount); }
   }
 }
 function toggleRgeRowOff(idx){
