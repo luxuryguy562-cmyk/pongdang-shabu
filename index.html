@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css">
+<link rel="stylesheet" href="assets/styles.css?v=20260608">
 </head>
 <body>
 
@@ -555,7 +555,8 @@
       <!-- 행 타이틀: 영수증 사진 (모드 선택 후만) -->
       <div id="rcpUploadTitle" class="rcp-row-ttl" style="display:none;">영수증 사진</div>
 
-      <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:10px;max-height:240px;object-fit:contain;background:var(--gray-50);">
+      <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:4px;max-height:220px;object-fit:contain;background:var(--gray-50);cursor:pointer;" data-action="openImgFullPreview">
+      <div id="rcpImgHint" style="display:none;text-align:center;font-size:11.5px;color:#3182F6;font-weight:700;margin-bottom:10px;">🔍 눌러서 크게 확인</div>
       <!-- 멀티페이지 썸네일 영역 (2026-05-19 (4)) — 2~3페이지 거래명세서 대응 -->
       <div id="rcpPagesArea" style="display:none;margin-bottom:14px;background:#F0F9FF;border-radius:10px;padding:10px 12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
@@ -563,6 +564,9 @@
           <div style="font-size:11px;color:#1E40AF;text-align:right;line-height:1.4;">2~3페이지 영수증이면<br>모든 페이지 추가하세요</div>
         </div>
         <div id="rcpPagesList" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px;padding:10px;border-radius:10px;background:#E0F2FE;cursor:pointer;font-size:12.5px;font-weight:700;color:#1E40AF;">
+          ＋ 페이지 추가<input type="file" accept="image/*" style="display:none;" data-change="handleImg|this">
+        </label>
       </div>
       <div id="uploadGroup" style="display:none;margin-top:0;">
         <!-- 사전 안내: 한 거래처 영수증만 (2026-06-04 여러 거래처 섞임 방지) -->
@@ -591,15 +595,13 @@
       <div id="resultArea" style="display:none;">
         <!-- 🏪 거래처 + 📅 날짜 (영수증 1장 = 1거래처·1날짜) — 목업 A안: 맨 위 -->
         <div class="card" style="padding:16px;margin-bottom:14px;">
-          <div style="display:flex;gap:10px;">
-            <div style="flex:1;min-width:0;">
-              <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">🏪 거래처</label>
-              <input type="text" id="rcpReceiptVendor" placeholder="거래처" style="width:100%;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpVendorChange|this">
-            </div>
-            <div style="flex:1;min-width:0;">
-              <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">📅 날짜 <span id="rcpDateWarn" style="color:var(--danger);font-weight:800;display:none;">⚠️</span></label>
-              <input type="date" id="rcpReceiptDate" style="width:100%;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpDateChange|this">
-            </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">🏪 거래처</label>
+            <input type="text" id="rcpReceiptVendor" placeholder="거래처" style="width:100%;box-sizing:border-box;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;" data-change="onRcpVendorChange|this">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">📅 날짜 <span id="rcpDateWarn" style="color:var(--danger);font-weight:800;display:none;">⚠️</span></label>
+            <input type="date" id="rcpReceiptDate" style="width:100%;box-sizing:border-box;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;" data-change="onRcpDateChange|this">
           </div>
         </div>
         <!-- 📄 페이지 감지 (멀티페이지 영수증 시만 노출) -->
@@ -3264,13 +3266,19 @@
   </div>
 </div>
 
-<script src="assets/common.js"></script>
-<script src="assets/tabs/receipt.js"></script>
-<script src="assets/tabs/attendance.js"></script>
-<script src="assets/tabs/schedule.js"></script>
-<script src="assets/tabs/settlement.js"></script>
-<script src="assets/tabs/dashboard.js"></script>
-<script src="assets/tabs/sidemenu.js"></script>
-<script src="assets/tabs/accuracy_lab.js"></script>
+<script src="assets/common.js?v=20260608"></script>
+<!-- 영수증 사진 전체화면 미리보기 오버레이 -->
+<div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
+  <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>
+  <img id="imgFullSrc" style="max-width:90%;max-height:72vh;object-fit:contain;border-radius:12px;">
+  <button style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:30px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;" data-action="closeImgFullPreview">닫기</button>
+</div>
+<script src="assets/tabs/receipt.js?v=20260608"></script>
+<script src="assets/tabs/attendance.js?v=20260608"></script>
+<script src="assets/tabs/schedule.js?v=20260608"></script>
+<script src="assets/tabs/settlement.js?v=20260608"></script>
+<script src="assets/tabs/dashboard.js?v=20260608"></script>
+<script src="assets/tabs/sidemenu.js?v=20260608"></script>
+<script src="assets/tabs/accuracy_lab.js?v=20260608"></script>
 </body>
 </html>
