@@ -2402,13 +2402,19 @@ async function downloadLaborExport(){
     const start=ym+'-01';
     const endD=new Date(ym+'-01');endD.setMonth(endD.getMonth()+1);
     const end=endD.toISOString().slice(0,10);
-    // 활성 직원 + 해당월 근태 + 특별수당 동시 조회
-    const[{data:emps},{data:logs},{data:sw}]=await Promise.all([
-      sb.from('employees').select('*').eq('store_id',currentStore.id).eq('is_active',true).order('name'),
+    // 전체 직원(퇴사자 포함) + 해당월 근태 + 특별수당 동시 조회
+    // ⚠️ is_active 필터 제거 — 그 달 일한 직원은 퇴사해도 노무 기록에 남아야 함 (데이터 무결성, 헌법 10조)
+    const[{data:allEmps},{data:logs},{data:sw}]=await Promise.all([
+      sb.from('employees').select('*').eq('store_id',currentStore.id).order('name'),
       sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).gte('work_date',start).lt('work_date',end).order('work_date'),
       sb.from('special_wages').select('*').eq('store_id',currentStore.id).gte('target_date',start).lt('target_date',end)
     ]);
-    if(!emps||emps.length===0){setLoad(false);return toast('등록된 직원이 없습니다','warn');}
+    if(!allEmps||allEmps.length===0){setLoad(false);return toast('등록된 직원이 없습니다','warn');}
+    // 그 달 근태·특별수당 활동이 있는 직원 id (퇴사해도 그 달 일했으면 명단에 포함)
+    const _activeInMonth=new Set([...(logs||[]).map(l=>l.employee_id),...(sw||[]).map(x=>x.employee_id)]);
+    // 현재 재직 중 OR 그 달 활동 있는 퇴사자 (이미 나간 지 오래된 사람은 제외)
+    const emps=allEmps.filter(e=>e.is_active||_activeInMonth.has(e.id));
+    if(emps.length===0){setLoad(false);return toast('해당 월에 일한 직원이 없습니다','warn');}
 
     const wb=XLSX.utils.book_new();
     if(optAtt){
@@ -2448,6 +2454,8 @@ function buildAttendanceSheet(ym, emps, logs){
   const dayNames=['일','월','화','수','목','금','토'];
   // 직원별로 묶고, 날짜순 정렬
   emps.forEach(e=>{
+    // 퇴사자는 이름 옆에 표시 (노무 신고 시 구분)
+    const _nm=e.is_active?e.name:`${e.name}(퇴사)`;
     const empLogs=logs.filter(l=>l.employee_id===e.id);
     const byDate=Object.fromEntries(empLogs.map(l=>[l.work_date,l]));
     dates.forEach(date=>{
@@ -2457,9 +2465,9 @@ function buildAttendanceSheet(ym, emps, logs){
       const isWeekend=dt.getDay()===0||dt.getDay()===6;
       if(l && l.app_in){
         const hrs=((l.total_work_min||0)/60).toFixed(1);
-        rows.push([date.slice(5), dn, e.name, fmtTime(l.app_in), fmtTime(l.app_out), l.rest_min||0, parseFloat(hrs), isWeekend?'O':'', l.app_out?'':'미퇴근']);
+        rows.push([date.slice(5), dn, _nm, fmtTime(l.app_in), fmtTime(l.app_out), l.rest_min||0, parseFloat(hrs), isWeekend?'O':'', l.app_out?'':'미퇴근']);
       } else {
-        rows.push([date.slice(5), dn, e.name, '', '', '', '', isWeekend?'O':'', '결근/휴무']);
+        rows.push([date.slice(5), dn, _nm, '', '', '', '', isWeekend?'O':'', '결근/휴무']);
       }
     });
     rows.push([]);  // 직원 사이 빈 행
@@ -2484,7 +2492,9 @@ function buildPayrollSheet(ym, emps, logs, sw){
     const overH=+(overMin/60).toFixed(1);
     const baseWage=empLogs.reduce((s,l)=>s+(l.calculated_wage||0),0);
     const extra=sw.filter(x=>x.employee_id===e.id).reduce((s,x)=>s+(x.extra_amount||0),0);
-    rows.push([e.name, maskRRN(e.id_number), e.hire_date||'', e.role||'', e.base_wage||'', days, totalH, weekendH, overH, baseWage, '', '', extra, '', baseWage+extra, e.is_foreign?'외국인':'']);
+    // 비고: 외국인 + 퇴사(날짜) 표기
+    const _note=[e.is_foreign?'외국인':'', e.is_active?'':('퇴사 '+(e.resign_date||''))].filter(Boolean).join(' / ');
+    rows.push([e.name, maskRRN(e.id_number), e.hire_date||'', e.role||'', e.base_wage||'', days, totalH, weekendH, overH, baseWage, '', '', extra, '', baseWage+extra, _note]);
   });
   // 합계 행
   rows.push([]);
@@ -2495,15 +2505,15 @@ function buildPayrollSheet(ym, emps, logs, sw){
   ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:10},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:10},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10}];
   return ws;
 }
-// 근로자명부 시트 (활성 직원, 근기법 §20 필수항목)
+// 근로자명부 (재직 + 해당월 일한 퇴사자, 근기법 §41 필수항목)
 function buildEmployeeSheet(emps){
-  const header=['성명','주민번호','생년월일','고용일','직무','시급','주소','연락처','은행','계좌','외국인','비자/신고','비고'];
+  const header=['성명','주민번호','생년월일','고용일','퇴사일','직무','시급','주소','연락처','은행','계좌','외국인','비자/신고','비고'];
   const rows=[[`근로자명부 — ${currentStore?.name||''} (근로기준법 §41)`],[],header];
   emps.forEach(e=>{
-    rows.push([e.name, maskRRN(e.id_number), e.birth_date||'', e.hire_date||'', e.role||'', e.base_wage||'', e.address||'', e.phone||'', e.bank_name||'', e.account_number||'', e.is_foreign?'O':'', e.report_status||'', '']);
+    rows.push([e.name, maskRRN(e.id_number), e.birth_date||'', e.hire_date||'', (e.is_active?'':(e.resign_date||'')), e.role||'', e.base_wage||'', e.address||'', e.phone||'', e.bank_name||'', e.account_number||'', e.is_foreign?'O':'', e.report_status||'', (e.is_active?'':'퇴사')]);
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:12},{wch:10},{wch:10},{wch:24},{wch:14},{wch:10},{wch:18},{wch:6},{wch:10},{wch:10}];
+  ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:12},{wch:12},{wch:10},{wch:10},{wch:24},{wch:14},{wch:10},{wch:18},{wch:6},{wch:10},{wch:10}];
   return ws;
 }
 // ══════════════════════════════════════════
