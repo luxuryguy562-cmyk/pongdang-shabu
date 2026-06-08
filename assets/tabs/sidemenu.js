@@ -1733,14 +1733,14 @@ async function loadEmployees(){
 function renderEmpList(){
   const fRole=document.getElementById('empFilterRole')?.value||'';
   const fStatus=document.getElementById('empFilterStatus')?.value||'active';
+  const fSearch=(document.getElementById('empSearchInput')?.value||'').trim().toLowerCase();
   let list=employees.filter(e=>e.auth_level!=='owner');
   if(fStatus==='active')list=list.filter(e=>e.is_active);
   if(fStatus==='inactive')list=list.filter(e=>!e.is_active);
   if(fRole)list=list.filter(e=>e.role===fRole);
+  if(fSearch)list=list.filter(e=>(e.name||'').toLowerCase().includes(fSearch)||(e.phone||'').replace(/-/g,'').includes(fSearch.replace(/-/g,'')));
   const c=document.getElementById('empList');if(!c)return;
   // 아바타 배경색 팔레트
-  const avatarColors=['#4F46E5','#7C3AED','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#6366F1'];
-  const colorFor=(name)=>avatarColors[(name?.charCodeAt(0)||0)%avatarColors.length];
   // 보건증 상태 (만료 여부 포함)
   const healthDocIcon=(e)=>{
     if(!e.doc_health_cert) return '<span style="font-size:18px;filter:grayscale(1);opacity:.3;" title="보건증 미제출">📋</span>';
@@ -1760,7 +1760,7 @@ function renderEmpList(){
     return `
     <div style="background:#fff;border-radius:18px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;${!e.is_active?'opacity:.6;':''}">
       <div style="display:flex;align-items:center;gap:13px;padding:14px 14px 12px;cursor:pointer;" data-action="openEmpDetailSheet|${e.id}">
-        <div class="emp-avatar" style="width:46px;height:46px;border-radius:14px;background:${colorFor(e.name)};font-size:17px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
+        <div class="emp-avatar" style="width:46px;height:46px;border-radius:14px;background:#EEF0F3;color:#4E5968;font-size:17px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
             <span style="font-size:16px;font-weight:900;color:#191F28;">${e.name}</span>
@@ -1787,8 +1787,7 @@ function renderEmpList(){
 function openEmpDetailSheet(empId){
   const e=employees.find(emp=>emp.id===empId); if(!e)return;
   const maskId=(num)=>{if(!num)return'-';const d=num.replace(/[^\d]/g,'');if(d.length<7)return num;return d.slice(0,6)+'-'+d[6]+'******';};
-  const avatarColors=['#4F46E5','#7C3AED','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#6366F1'];
-  const avatarBg=avatarColors[(e.name?.charCodeAt(0)||0)%avatarColors.length];
+  const avatarBg='#EEF0F3';
   const authLabel={owner:'사장',franchise_admin:'본사 관리자',store_manager:'점장',staff:'직원'};
   const authBadge=e.auth_level==='store_manager'||e.is_manager?`<span class="badge badge-warn" style="font-size:10px;">관리자</span>`:'';
   const roleBadge=e.role?`<span class="badge badge-blue" style="font-size:10px;">${e.role}</span>`:'';
@@ -1831,7 +1830,7 @@ function openEmpDetailSheet(empId){
   const content=document.getElementById('empDetailContent'); if(!content)return;
   content.innerHTML=`
     <div style="display:flex;align-items:center;gap:14px;padding:6px 0 16px;border-bottom:1px solid #F2F4F6;">
-      <div class="emp-avatar" style="width:58px;height:58px;border-radius:18px;background:${avatarBg};font-size:22px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
+      <div class="emp-avatar" style="width:58px;height:58px;border-radius:18px;background:${avatarBg};color:#4E5968;font-size:22px;font-weight:900;flex-shrink:0;">${e.name?.charAt(0)||'?'}</div>
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
           <span style="font-size:19px;font-weight:900;color:#191F28;">${e.name}</span>
@@ -2403,13 +2402,19 @@ async function downloadLaborExport(){
     const start=ym+'-01';
     const endD=new Date(ym+'-01');endD.setMonth(endD.getMonth()+1);
     const end=endD.toISOString().slice(0,10);
-    // 활성 직원 + 해당월 근태 + 특별수당 동시 조회
-    const[{data:emps},{data:logs},{data:sw}]=await Promise.all([
-      sb.from('employees').select('*').eq('store_id',currentStore.id).eq('is_active',true).order('name'),
+    // 전체 직원(퇴사자 포함) + 해당월 근태 + 특별수당 동시 조회
+    // ⚠️ is_active 필터 제거 — 그 달 일한 직원은 퇴사해도 노무 기록에 남아야 함 (데이터 무결성, 헌법 10조)
+    const[{data:allEmps},{data:logs},{data:sw}]=await Promise.all([
+      sb.from('employees').select('*').eq('store_id',currentStore.id).order('name'),
       sb.from('attendance_logs').select('*').eq('store_id',currentStore.id).gte('work_date',start).lt('work_date',end).order('work_date'),
       sb.from('special_wages').select('*').eq('store_id',currentStore.id).gte('target_date',start).lt('target_date',end)
     ]);
-    if(!emps||emps.length===0){setLoad(false);return toast('등록된 직원이 없습니다','warn');}
+    if(!allEmps||allEmps.length===0){setLoad(false);return toast('등록된 직원이 없습니다','warn');}
+    // 그 달 근태·특별수당 활동이 있는 직원 id (퇴사해도 그 달 일했으면 명단에 포함)
+    const _activeInMonth=new Set([...(logs||[]).map(l=>l.employee_id),...(sw||[]).map(x=>x.employee_id)]);
+    // 현재 재직 중 OR 그 달 활동 있는 퇴사자 (이미 나간 지 오래된 사람은 제외)
+    const emps=allEmps.filter(e=>e.is_active||_activeInMonth.has(e.id));
+    if(emps.length===0){setLoad(false);return toast('해당 월에 일한 직원이 없습니다','warn');}
 
     const wb=XLSX.utils.book_new();
     if(optAtt){
@@ -2449,6 +2454,8 @@ function buildAttendanceSheet(ym, emps, logs){
   const dayNames=['일','월','화','수','목','금','토'];
   // 직원별로 묶고, 날짜순 정렬
   emps.forEach(e=>{
+    // 퇴사자는 이름 옆에 표시 (노무 신고 시 구분)
+    const _nm=e.is_active?e.name:`${e.name}(퇴사)`;
     const empLogs=logs.filter(l=>l.employee_id===e.id);
     const byDate=Object.fromEntries(empLogs.map(l=>[l.work_date,l]));
     dates.forEach(date=>{
@@ -2458,9 +2465,9 @@ function buildAttendanceSheet(ym, emps, logs){
       const isWeekend=dt.getDay()===0||dt.getDay()===6;
       if(l && l.app_in){
         const hrs=((l.total_work_min||0)/60).toFixed(1);
-        rows.push([date.slice(5), dn, e.name, fmtTime(l.app_in), fmtTime(l.app_out), l.rest_min||0, parseFloat(hrs), isWeekend?'O':'', l.app_out?'':'미퇴근']);
+        rows.push([date.slice(5), dn, _nm, fmtTime(l.app_in), fmtTime(l.app_out), l.rest_min||0, parseFloat(hrs), isWeekend?'O':'', l.app_out?'':'미퇴근']);
       } else {
-        rows.push([date.slice(5), dn, e.name, '', '', '', '', isWeekend?'O':'', '결근/휴무']);
+        rows.push([date.slice(5), dn, _nm, '', '', '', '', isWeekend?'O':'', '결근/휴무']);
       }
     });
     rows.push([]);  // 직원 사이 빈 행
@@ -2485,7 +2492,9 @@ function buildPayrollSheet(ym, emps, logs, sw){
     const overH=+(overMin/60).toFixed(1);
     const baseWage=empLogs.reduce((s,l)=>s+(l.calculated_wage||0),0);
     const extra=sw.filter(x=>x.employee_id===e.id).reduce((s,x)=>s+(x.extra_amount||0),0);
-    rows.push([e.name, maskRRN(e.id_number), e.hire_date||'', e.role||'', e.base_wage||'', days, totalH, weekendH, overH, baseWage, '', '', extra, '', baseWage+extra, e.is_foreign?'외국인':'']);
+    // 비고: 외국인 + 퇴사(날짜) 표기
+    const _note=[e.is_foreign?'외국인':'', e.is_active?'':('퇴사 '+(e.resign_date||''))].filter(Boolean).join(' / ');
+    rows.push([e.name, maskRRN(e.id_number), e.hire_date||'', e.role||'', e.base_wage||'', days, totalH, weekendH, overH, baseWage, '', '', extra, '', baseWage+extra, _note]);
   });
   // 합계 행
   rows.push([]);
@@ -2496,15 +2505,15 @@ function buildPayrollSheet(ym, emps, logs, sw){
   ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:10},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:10},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10}];
   return ws;
 }
-// 근로자명부 시트 (활성 직원, 근기법 §20 필수항목)
+// 근로자명부 (재직 + 해당월 일한 퇴사자, 근기법 §41 필수항목)
 function buildEmployeeSheet(emps){
-  const header=['성명','주민번호','생년월일','고용일','직무','시급','주소','연락처','은행','계좌','외국인','비자/신고','비고'];
+  const header=['성명','주민번호','생년월일','고용일','퇴사일','직무','시급','주소','연락처','은행','계좌','외국인','비자/신고','비고'];
   const rows=[[`근로자명부 — ${currentStore?.name||''} (근로기준법 §41)`],[],header];
   emps.forEach(e=>{
-    rows.push([e.name, maskRRN(e.id_number), e.birth_date||'', e.hire_date||'', e.role||'', e.base_wage||'', e.address||'', e.phone||'', e.bank_name||'', e.account_number||'', e.is_foreign?'O':'', e.report_status||'', '']);
+    rows.push([e.name, maskRRN(e.id_number), e.birth_date||'', e.hire_date||'', (e.is_active?'':(e.resign_date||'')), e.role||'', e.base_wage||'', e.address||'', e.phone||'', e.bank_name||'', e.account_number||'', e.is_foreign?'O':'', e.report_status||'', (e.is_active?'':'퇴사')]);
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:12},{wch:10},{wch:10},{wch:24},{wch:14},{wch:10},{wch:18},{wch:6},{wch:10},{wch:10}];
+  ws['!cols']=[{wch:10},{wch:16},{wch:12},{wch:12},{wch:12},{wch:10},{wch:10},{wch:24},{wch:14},{wch:10},{wch:18},{wch:6},{wch:10},{wch:10}];
   return ws;
 }
 // ══════════════════════════════════════════
