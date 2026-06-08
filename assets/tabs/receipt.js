@@ -1011,7 +1011,7 @@ async function runAI() {
       if(isOverloadLike){
         setLoad(true, 'Gemini 과부하 → GPT-4o로 재시도 중...');
         toast('⚠️ Gemini 과부하 감지 — GPT-4o로 재시도', 'warn', 2500);
-        raw = await callGemini(parts, timeoutSec+15, 'receipt_ocr', 'gpt-4o', 'gpt');
+        raw = await callGemini(parts, 60+(pageCount-1)*5, 'receipt_ocr', 'gpt-4o', 'gpt'); // GPT-4o 느림 → 60초 (2026-06-08 실측)
         usedFallback = true;
       } else {
         throw geminiErr;
