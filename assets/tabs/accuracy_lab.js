@@ -12,11 +12,19 @@ function accBuildPrompt(vendor){
 }
 
 const ACC_ENGINES = [
-  {id:'gemini',name:'Gemini 2.5 Flash',meta:'구글 · 현재 사용',cost:'~6원/장',tag:'연결됨',cls:'acc-tag-ok',on:true},
-  {id:'gpt4o',name:'GPT-4o',meta:'OpenAI · 고정밀(비쌈)',cost:'~35원/장',tag:'연결됨',cls:'acc-tag-ok',on:true},
+  {id:'gemini',name:'Gemini 2.5 Flash',meta:'구글 · 현재 사용',cost:'~4원/장',tag:'연결됨',cls:'acc-tag-ok',on:true},
+  {id:'gemini-pro',name:'Gemini 2.5 Pro',meta:'구글 · 상위 모델',cost:'~15~30원/장',tag:'연결됨',cls:'acc-tag-ok',on:true},
+  {id:'gpt4o',name:'GPT-4o',meta:'OpenAI · 고정밀(비쌈)',cost:'~27원/장',tag:'연결됨',cls:'acc-tag-ok',on:true},
   {id:'clova-doc',name:'클로바 문서전용',meta:'네이버 · 표 인식',tag:'키 발급 필요',cls:'acc-tag-key',on:false},
   {id:'upstage',name:'업스테이지',meta:'한국 문서 특화',tag:'키 발급 필요',cls:'acc-tag-key',on:false},
 ];
+// 사진 화질 선택 (높을수록 작은 글자 잘 읽힘 · 입력 토큰만 늘어 비용 소폭 ↑) — 2026-06-08
+const ACC_RES_OPTS = [
+  {v:1280, name:'1280px', meta:'현재 기본'},
+  {v:2000, name:'2000px', meta:'중간'},
+  {v:2400, name:'2400px', meta:'고화질'},
+];
+let _accRes=1280;
 let _accCurEngine='gemini';
 let _accVendor='';
 let _accFileBuf=[];
@@ -36,7 +44,7 @@ function accFileToB64(file){
       const img=new Image();
       img.onload=()=>{
         const cvs=document.createElement('canvas');
-        let w=img.width,h=img.height; if(w>1280){h*=1280/w;w=1280;} // 1280px (영수증 탭과 동일, 비용 절감 — 한자는 해상도 무관 #136)
+        let w=img.width,h=img.height; if(w>_accRes){h*=_accRes/w;w=_accRes;} // 화질 선택값(_accRes)으로 다운사이즈 (2026-06-08 측정실 비교용)
         cvs.width=w; cvs.height=h; cvs.getContext('2d').drawImage(img,0,0,w,h);
         resolve(cvs.toDataURL('image/jpeg',0.85).split(',')[1]);
       };
@@ -52,7 +60,7 @@ async function accCallGemini(b64list){
   b64list.forEach(b=>parts.push({inline_data:{mime_type:'image/jpeg',data:b}}));
   // 측정실 엔진 선택 — gemini(싸고 빠름) vs gpt4o(고정밀·비쌈) 비교용
   const isGpt = _accCurEngine==='gpt4o';
-  const model = isGpt ? 'gpt-4o' : 'gemini-2.5-flash';
+  const model = isGpt ? 'gpt-4o' : (_accCurEngine==='gemini-pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash');
   const provider = isGpt ? 'gpt' : 'gemini';
   const raw=await callGemini(parts, 30+(b64list.length-1)*5, 'accuracy_test', model, provider);
   const cost=(typeof lastAIUsage!=='undefined'&&lastAIUsage)?lastAIUsage.costWon:null;
@@ -140,6 +148,8 @@ function renderAccuracyLab(){
     <div class="card acc-sec" style="padding:14px;">
       <div class="acc-lbl">② 분석 엔진</div>
       <div class="acc-engines" id="accEngines"></div>
+      <div class="acc-lbl" style="margin-top:10px;">②-2 사진 화질 (높을수록 작은 글자 잘 읽힘 · 비용 소폭 ↑)</div>
+      <div class="acc-engines" id="accResSel"></div>
       <div class="acc-lbl" style="margin-top:10px;">③ 명세서 사진 (여러 장 OK)</div>
       <label class="acc-flabel" id="accFlabel">📷 사진 고르기<input type="file" accept="image/*" multiple id="accFileInput"></label>
       <button class="acc-btn" id="accAnalyzeBtn" style="margin-top:10px;">🤖 AI 분석</button>
@@ -149,7 +159,7 @@ function renderAccuracyLab(){
       <div class="acc-lbl">📜 채점 로그</div>
       <div id="accLogs"></div>
     </div>`;
-  _accRenderVendorChips(); _accRenderEngines(); _accRenderResult(); _accRenderLogs();
+  _accRenderVendorChips(); _accRenderEngines(); _accRenderRes(); _accRenderResult(); _accRenderLogs();
   const vi=document.getElementById('accVendorInput');
   if(vi) vi.addEventListener('input',()=>{ _accVendor=vi.value.trim(); _accRenderVendorChips(); });
   const fi=document.getElementById('accFileInput');
@@ -175,6 +185,12 @@ function _accRenderEngines(){
     if(!e.on){ alert(e.name+'\n\n키(접속 열쇠) 발급 후 연결됩니다.'); return; }
     _accCurEngine=e.id; _accRenderEngines();
   }));
+}
+// 화질 선택 렌더 (2026-06-08)
+function _accRenderRes(){
+  const box=document.getElementById('accResSel'); if(!box) return;
+  box.innerHTML=ACC_RES_OPTS.map(o=>`<span class="acc-eng ${o.v===_accRes?'on':''}" data-r="${o.v}" title="${o.meta}">${o.name}</span>`).join('');
+  box.querySelectorAll('.acc-eng').forEach(d=>d.addEventListener('click',()=>{ _accRes=parseInt(d.dataset.r,10); _accRenderRes(); }));
 }
 
 // ─── AI 분석 ───
@@ -249,7 +265,7 @@ async function _accAutoSave(){
     const {data, error} = await sb.from('accuracy_lab_logs').insert({
       store_id: (typeof currentStore!=='undefined' && currentStore) ? currentStore.id : null,
       vendor: _accVendor, receipt_date: (_accOrig && _accOrig.date) || null,
-      engine: ACC_ENGINES.find(e=>e.id===_accCurEngine).name,
+      engine: ACC_ENGINES.find(e=>e.id===_accCurEngine).name + ' @' + _accRes + 'px',
       ai_raw: _accRawFull, corrected: null, cost_won: _accLastCost
     }).select('id').single();
     if(!error && data) _accLogId = data.id;
