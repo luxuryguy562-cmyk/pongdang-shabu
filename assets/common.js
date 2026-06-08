@@ -168,7 +168,7 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
 //   ⚠️ 영수증 탭(receipt.js)·측정실(accuracy_lab.js) 둘 다 이 함수만 호출 → 검증=실제 동일 보장
 function buildReceiptPrompt({isVendorMode=true, vendorName='', catList='', pageCount=1}={}){
   const modeHint = isVendorMode
-    ? `[모드:거래처] vendor="${vendorName}" 이미 선택. v·c·d 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
+    ? `[모드:거래처] vendor="${vendorName}" 이미 선택. v·d 출력 X. 품목별 c를 [${catList}]에서 선택 — 한 거래처라도 품목마다 분류가 다를 수 있다(예: 육류·공산품 섞임). 영수증 1장 = 같은 날짜 (date 최상위 1번).
 [수량 칸 우선] ⚠️표에 "수량" 칸이 따로 있으면 q=그 "수량" 칸 값 그대로. "Box입수량"·"박스입수"·"입수" 칸은 한 박스에 든 개수(메타)일 뿐이니 q에 절대 쓰지 마라.
   · Box입수량5·단위EA·수량2 → q=2 (5 아님)
   · Box입수량10·단위EA·수량2 → q=2
@@ -190,7 +190,7 @@ ${modeHint}${multiPageHint}
 {${isVendorMode ? '' : `
   "vendor": "상호명",`}
   "date": "영수증 발행일 YYYY-MM-DD (영수증에 연도가 명확히 안 보이면 ${new Date().getFullYear()}년으로)",
-  "items": [ ${isVendorMode ? '{i,spec,og,u,q,p,t,f}' : '{i,u,q,p,t,f,c}'} 행 배열 ],
+  "items": [ ${isVendorMode ? '{i,spec,og,u,q,p,t,f,c}' : '{i,u,q,p,t,f,c}'} 행 배열 ],
   "total_supply": 세전 공급가액 소계(정수). 행마다 세액 칸이 별도인 양식만, 아니면 null,
   "total_tax": 세액 소계(정수). 없으면 null,
   "total_sum": 이번 거래 결제합(세후,정수,없으면 null) — 금일합계>합계액>총합계액>결제금액. ⚠️전미수·전잔액·당일입금·현잔액·누계·채권 = 무시(이번 거래분 아님),
@@ -207,8 +207,8 @@ ${modeHint}${multiPageHint}
 - q:수량 (없으면 1) ${isVendorMode ? '— BOX/EA 정확히 적용. BOX 0 = EA만. 중량거래(kg·g)면 q=중량값(소수점 허용).' : ''}
 - p:행 [합계/금액] 칸 인쇄값 그대로 정수(세후=실제 낸 돈). 행마다 [공급가·세액·합계] 칸 따로면 [합계] 칸. u×q 계산 X — 1~2원 차이도 인쇄 우선
 - t:행 [세액] 칸 값(정수). 세액 칸이 따로 있으면 그 값, 없거나 면세면 0
-- f:면세 여부(true/false). t>0이면 false. 면세표시(*)·면세 칸·미가공 농축수산물(육류·생선·야채·과일·쌀)이면 true${isVendorMode ? '' : `
-- c:카테고리 [${catList}]`}
+- f:면세 여부(true/false). t>0이면 false. 면세표시(*)·면세 칸·미가공 농축수산물(육류·생선·야채·과일·쌀)이면 true
+- c:카테고리 [${catList}] — 품목 성격대로 행마다. 못 정하면 가장 가까운 것. 빈 값 X
 
 [규칙]
 - [회계 검산] 두 등식이 반드시 맞아야 함: ①단가(u)×수량(q)=공급가(p−t) ②공급가+세액(t)=합계(p). 안 맞으면 u·q·t·p를 다시 읽어라 — 특히 공급가를 단가나 합계 칸에 잘못 넣는 실수 주의. 박스+EA는 q=(박스×단위)+EA, 중량거래(kg·g)는 q=중량값(소수점)으로 재시도.
