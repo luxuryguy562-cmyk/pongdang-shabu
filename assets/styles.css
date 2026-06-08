@@ -1238,7 +1238,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .todo-banner .todo-tx b{font-weight:800;color:#92400E;}
 .todo-banner .todo-go{font-size:16px;font-weight:700;color:#D97706;flex-shrink:0;}
 /* 매출 금액 행 — 높이 고정 (금액 있을 때 기준 34px). "아직 매출 기록이 없어요"여도 안 튐 (2026-06-04) */
-.dash-today-v7 .t7-amt-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:30px;}
+.dash-today-v7 .t7-amt-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:60px;}
 /* 매출 라벨 + 금액 가로 한 줄 — 파란 점 + 연한 라벨, 지출·수익과 동일 구조(점6+간격6)로 열 맞춤. flex-end로 매출 유무와 무관하게 라벨 세로 위치 고정 (2026-06-04) */
 .dash-today-v7 .t7-sales-col{display:flex;flex-direction:row;align-items:center;gap:7px;min-width:0;}
 .dash-today-v7 .t7-sales-lb{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#B0B8C1;letter-spacing:-0.3px;flex-shrink:0;}
