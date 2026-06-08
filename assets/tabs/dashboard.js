@@ -275,7 +275,11 @@ function renderTopCardForDay(dayStr){
     renderTodayVendorExp(ctx.dailyVendorExp[dayPad], true, dayExp);
   } else {
     topAmtEl.classList.add('empty');
-    topAmtEl.innerText = isTodayShown ? '아직 매출 기록이 없어요' : '아직 입력 안 됨';
+    if(isTodayShown){
+      topAmtEl.innerHTML = '0원<div class="t7-amt-hint">아직 오늘 매출 없음</div>';
+    } else {
+      topAmtEl.innerHTML = '0원<div class="t7-amt-hint">아직 입력 안 됨</div>';
+    }
     topUpdEl.style.display = 'none';
     if(isTodayShown){
       // 오늘 기준: 지출 실시간, 수익 마감 후 확인 (2026-06-04)
@@ -283,7 +287,8 @@ function renderTopCardForDay(dayStr){
       document.getElementById('dashTopExpenseDelta').innerText = '';
       const profitEl = document.getElementById('dashTopProfitAmt');
       profitEl.innerText = '마감 후 확인';
-      profitEl.className = 'r-amt gray';
+      profitEl.className = 'r-amt';
+      profitEl.style.cssText = 'font-size:13px;font-weight:600;color:#B0B8C1;letter-spacing:-0.3px;text-align:right;';
       // 매출 기록 전이어도 수익 점은 초록 유지 — 매출·지출·수익 점 통일 (2026-06-04)
       const _pDot = document.getElementById('dashTopProfitDot');
       if(_pDot){ _pDot.classList.remove('red','gray'); _pDot.classList.add('green'); }
