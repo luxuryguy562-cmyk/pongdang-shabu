@@ -357,10 +357,14 @@ function renderVendorList(){
       ? `<div class="vc-month has"><span class="vc-cnt">${t.count}건</span><span class="vc-amt">${fmt(t.total)}원</span></div>`
       : `<div class="vc-month empty">주문 없음</div>`;
     const badge=!v.is_active?' <span class="badge badge-gray" style="font-size:9px;">거래종료</span>':'';
+    // 취급품목 전부 표시 (2026-06-10) — handled_category_ids 이름들, 없으면 옛 category
+    const _catLabel=(Array.isArray(v.handled_category_ids)&&v.handled_category_ids.length)
+      ? v.handled_category_ids.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean).join('·')
+      : (v.category||'기타');
     return `<div class="vendor-card ${v.is_active?'':'inactive'}" data-vendor-id="${v.id}" data-action="openVendorDetail|${v.id}">
       <div class="vc-head">
         <span class="vendor-drag-handle" title="드래그로 순서 변경">☰</span>
-        <span class="vc-cat">${v.category||'기타'}</span>
+        <span class="vc-cat">${esc(_catLabel)}</span>
       </div>
       <div class="vc-name">${v.name}${badge}</div>
       ${monthLine}
@@ -388,7 +392,11 @@ async function openVendorDetail(vendorId){
   const cat=document.getElementById('vdCategory');
   const editBtn=document.getElementById('vdEditBtn');
   if(nm) nm.textContent=v?.name||'-';
-  if(cat) cat.textContent=(v?.category||'-')+(v?.is_active===false?' · 거래종료':'');
+  // 취급품목 전부 표시 (2026-06-10) — 헤더도 카드와 동일
+  const _vdCat=(v&&Array.isArray(v.handled_category_ids)&&v.handled_category_ids.length)
+    ? v.handled_category_ids.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean).join('·')
+    : (v?.category||'-');
+  if(cat) cat.textContent=_vdCat+(v?.is_active===false?' · 거래종료':'');
   if(editBtn){
     editBtn.style.display='';
     editBtn.dataset.vid=vendorId;
@@ -1030,7 +1038,7 @@ async function loadVendorOrders(){
   const [y,m]=monthStr.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
   const start=monthStr+'-01', end=monthStr+'-'+String(lastDay).padStart(2,'0');
-  let oq=sb.from('vendor_orders').select('id,order_date,vendor_id,item,amount,unit_price,quantity,memo,order_group_id,vendors(name)')
+  let oq=sb.from('vendor_orders').select('id,order_date,vendor_id,item,amount,unit_price,quantity,memo,order_group_id,vendors(name,category)')
     .eq('store_id',currentStore.id).gte('order_date',start).lte('order_date',end).order('order_date',{ascending:false});
   let rq=sb.from('receipts')
     .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty')
@@ -1100,8 +1108,9 @@ async function loadVendorOrders(){
       const unitTxt=r.unit?fmt(r.unit):'-';
       const qtyTxt=(r.qty!=null&&r.qty!=='')?String(r.qty):'-';
       const action = r._source==='order' ? `openEditOrderSheet|${r.id}` : `openReceiptEdit|${r.id}`;
+      const catChip = r.category ? `<span class="gb-itemcat">${esc(r.category)}</span>` : '';
       html+=`<tr class="grp-body" data-action="${action}">`
-        +`<td title="${itemTitle}">${itemTxt}</td>`
+        +`<td title="${itemTitle}">${itemTxt}${catChip}</td>`
         +`<td class="gb-unit">${unitTxt}</td>`
         +`<td class="gb-qty">${qtyTxt}</td>`
         +`<td class="gb-amt">${fmt(r.amount||0)}</td>`
