@@ -100,6 +100,12 @@
     <p><span class="en">receipt.js:1485, 1490</span> 의 "거래처 모드면 거래처 카테고리로 강제" 로직을
        "항상 줄별 선택값 사용"으로. 품목별 분류 화면(picker)은 <b>이미 만들어져 있어서</b> 켜기만 하면 됩니다.</p>
   </div>
+  <div class="ok-box">
+    <div class="t">✅ 규격·원산지·거래처 연결은 100% 유지 (사장님 지적)</div>
+    <p>거래처 영수증의 규격(spec)·원산지(origin) 분리 표시는 <b>카테고리와 완전히 다른 코드</b>입니다
+       (<span class="en">receipt.js:1510~1517 vs 카테고리 강제 1493~1496</span>). 카테고리 덮어쓰는 2줄만 풀고,
+       규격·원산지·거래처 연결(vendor_id)은 <b>손도 안 댑니다</b>. 거래처 영수증은 지금처럼 규격·원산지가 따로 나옵니다.</p>
+  </div>
   <div class="warn-box">
     <div class="t">⚠️ 주의 — 이건 영수증(receipts)만</div>
     <p>거래처 주문내역(vendor_orders)은 4단계에서 따로. 기존 거래처 카테고리 데이터(<code>vendors.category_id</code>)는
