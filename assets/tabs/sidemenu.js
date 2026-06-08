@@ -1733,10 +1733,12 @@ async function loadEmployees(){
 function renderEmpList(){
   const fRole=document.getElementById('empFilterRole')?.value||'';
   const fStatus=document.getElementById('empFilterStatus')?.value||'active';
+  const fSearch=(document.getElementById('empSearchInput')?.value||'').trim().toLowerCase();
   let list=employees.filter(e=>e.auth_level!=='owner');
   if(fStatus==='active')list=list.filter(e=>e.is_active);
   if(fStatus==='inactive')list=list.filter(e=>!e.is_active);
   if(fRole)list=list.filter(e=>e.role===fRole);
+  if(fSearch)list=list.filter(e=>(e.name||'').toLowerCase().includes(fSearch)||(e.phone||'').replace(/-/g,'').includes(fSearch.replace(/-/g,'')));
   const c=document.getElementById('empList');if(!c)return;
   // 아바타 배경색 팔레트
   // 보건증 상태 (만료 여부 포함)
