@@ -2793,14 +2793,11 @@
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addVendorTitle">거래처 추가</div>
   <input id="vendorNameInput" class="input-field" placeholder="거래처명 *" type="text">
-  <!-- 대분류 + 소분류 2단 select. 자식 없는 대분류는 소분류 disable. (헌법 10조 2번 데이터 기반) -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-    <select id="vendorCatParent" class="input-field" data-change="onVendorCatParentChange|this">
-      <option value="">대분류 선택</option>
-    </select>
-    <select id="vendorCatChild" class="input-field" disabled>
-      <option value="">소분류 (선택)</option>
-    </select>
+  <!-- 취급품목 다중 선택 (2026-06-10) — 이 거래처가 파는 품목만 체크. 영수증 분석 시 AI 후보로 제한.
+       카테고리는 DB 동적(하드코딩 X). 대분류 [전체] + 소분류 개별. 세금·고정비·공과금 등 비구매는 후보 제외. -->
+  <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin:4px 0 6px;">취급품목 <span style="font-weight:500;color:var(--gray-500);">(사는 것만 체크 · 여러 개 가능)</span></div>
+  <div id="vendorHandledCats" style="max-height:240px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:10px;margin-bottom:4px;">
+    <!-- refreshVendorHandledCategories()가 동적 생성 -->
   </div>
   <input type="hidden" id="editVendorId">
   <div class="action-group">

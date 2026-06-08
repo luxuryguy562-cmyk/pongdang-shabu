@@ -803,41 +803,60 @@ async function toggleVendorFromSheet(){
 //   대분류 = parent_id IS NULL + composite/vendor_orders + expense + active
 //   소분류 = 선택한 대분류의 자식 (자식 없으면 disabled)
 //   저장 = category_id (자식 우선, 없으면 부모) + category 텍스트(vendor_category, calcExpense 호환)
-function refreshVendorCategoryParents(){
+// ─── 새 기능: 거래처 취급품목 체크박스 트리 (2026-06-10) ───
+// DB 동적(하드코딩 X). 구매성 지출만(식자재·주류·음료·비품). 인건비·고정비·공과금·세금·매출 제외.
+// 자식 있는 대분류(식자재)=그룹[전체]+소분류 / 자식 없는 대분류(주류·음료·비품)=자기 자신이 leaf.
+// 저장 단위 = leaf id 배열 (vendors.handled_category_ids).
+function _vendorBuyableCat(c){
+  return c.is_active!==false
+    && (c.category_type||'expense')==='expense'
+    && ['composite','vendor_orders','receipts'].includes(c.data_source);
+}
+function refreshVendorHandledCategories(selectedIds){
+  const sel=new Set(selectedIds||[]);
+  const box=document.getElementById('vendorHandledCats');
+  if(!box) return;
   const parents=(expCategories||[])
-    .filter(c=>!c.parent_id && c.is_active!==false
-              && (c.category_type||'expense')==='expense'
-              && ['composite','vendor_orders'].includes(c.data_source))
+    .filter(c=>!c.parent_id && _vendorBuyableCat(c))
     .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-  const sel=document.getElementById('vendorCatParent');
-  if(!sel) return;
-  const cur=sel.value;
-  sel.innerHTML='<option value="">대분류 선택</option>'+
-    parents.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-  if(cur && parents.find(p=>p.id===cur)) sel.value=cur;
+  let html='';
+  parents.forEach(p=>{
+    const children=(expCategories||[])
+      .filter(c=>c.parent_id===p.id && _vendorBuyableCat(c))
+      .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+    if(children.length){
+      const childIds=children.map(c=>c.id).join(',');
+      const allOn=children.every(c=>sel.has(c.id));
+      html+=`<div style="margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px;margin-bottom:5px;cursor:pointer;">
+          <input type="checkbox" class="vhc-all" data-change="vendorCatToggleAll|this" data-children="${childIds}" ${allOn?'checked':''} style="width:17px;height:17px;">
+          ${esc(p.name)} <span style="font-size:11px;color:var(--gray-500);font-weight:500;">전체</span>
+        </label>
+        <div style="padding-left:22px;display:flex;flex-wrap:wrap;gap:10px;">
+          ${children.map(c=>`<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" class="vhc" value="${c.id}" ${sel.has(c.id)?'checked':''} style="width:16px;height:16px;">
+            ${esc(c.name)}</label>`).join('')}
+        </div>
+      </div>`;
+    } else {
+      html+=`<div style="margin-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px;cursor:pointer;">
+          <input type="checkbox" class="vhc" value="${p.id}" ${sel.has(p.id)?'checked':''} style="width:17px;height:17px;">
+          ${esc(p.name)}</label>
+      </div>`;
+    }
+  });
+  box.innerHTML=html||'<div style="font-size:13px;color:var(--gray-500);padding:8px;">선택할 카테고리가 없습니다</div>';
 }
-function refreshVendorCategoryChildren(parentId, preferChildId){
-  const sel=document.getElementById('vendorCatChild');
-  if(!sel) return;
-  if(!parentId){
-    sel.innerHTML='<option value="">대분류부터 선택</option>';
-    sel.disabled=true; sel.value=''; return;
-  }
-  const children=(expCategories||[])
-    .filter(c=>c.parent_id===parentId && c.is_active!==false)
-    .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-  if(children.length===0){
-    sel.innerHTML='<option value="">소분류 없음</option>';
-    sel.disabled=true; sel.value=''; return;
-  }
-  sel.disabled=false;
-  sel.innerHTML='<option value="">소분류 선택 (필수)</option>'+
-    children.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  if(preferChildId && children.find(c=>c.id===preferChildId)) sel.value=preferChildId;
+// 대분류 [전체] 체크 → 그 그룹 소분류 일괄 토글
+function vendorCatToggleAll(el){
+  const ids=(el.dataset.children||'').split(',').filter(Boolean);
+  const box=document.getElementById('vendorHandledCats');
+  if(!box) return;
+  ids.forEach(id=>{ const chk=box.querySelector(`.vhc[value="${id}"]`); if(chk) chk.checked=el.checked; });
 }
-function onVendorCatParentChange(el){
-  refreshVendorCategoryChildren(el.value);
-}
+// (2026-06-10) 거래처 카테고리 2단 select(refreshVendorCategoryParents/Children, onVendorCatParentChange) 제거
+//   → 취급품목 체크박스(refreshVendorHandledCategories)로 대체.
 // 목록 필터 — FK 매칭. 옵션 value=category_id, label=vendor_category (사용자 표시)
 function refreshVendorListFilter(){
   const cats=(expCategories||[])
@@ -852,11 +871,9 @@ function refreshVendorListFilter(){
 }
 function openAddVendorSheet(){
   if(!guardStore()) return;
-  refreshVendorCategoryParents();
-  refreshVendorCategoryChildren('');
+  refreshVendorHandledCategories([]);
   document.getElementById('addVendorTitle').innerText='거래처 추가';
   document.getElementById('vendorNameInput').value='';
-  document.getElementById('vendorCatParent').value='';
   document.getElementById('editVendorId').value='';
   const delBtn=document.getElementById('vendorDeleteBtn');
   if(delBtn) delBtn.style.display='none'; // 신규 추가 시 삭제 버튼 숨김
@@ -867,7 +884,6 @@ function openAddVendorSheet(){
 function openEditVendorSheet(id){
   const v=vendors.find(x=>x.id===id);
   if(!v) return;
-  refreshVendorCategoryParents();
   document.getElementById('addVendorTitle').innerText='거래처 편집';
   document.getElementById('vendorNameInput').value=v.name;
   document.getElementById('editVendorId').value=v.id;
@@ -887,40 +903,26 @@ function openEditVendorSheet(id){
       togBtn.classList.add('btn-success');
     }
   }
-  // category_id 기준 복원 (자식이면 부모 + 자식 선택, 부모면 부모만)
-  const cat=v.category_id?(expCategories||[]).find(c=>c.id===v.category_id):null;
-  if(cat){
-    if(cat.parent_id){
-      document.getElementById('vendorCatParent').value=cat.parent_id;
-      refreshVendorCategoryChildren(cat.parent_id, cat.id);
-    } else {
-      document.getElementById('vendorCatParent').value=cat.id;
-      refreshVendorCategoryChildren(cat.id);
-    }
-  } else {
-    // category_id 없음(옛 거래처) 또는 카테고리 삭제됨 → 빈 상태. 사장님이 재선택.
-    document.getElementById('vendorCatParent').value='';
-    refreshVendorCategoryChildren('');
-  }
+  // 취급품목 복원 — handled_category_ids 우선, 없으면 옛 category_id 1개로 (하위호환)
+  let handled = Array.isArray(v.handled_category_ids) ? v.handled_category_ids
+    : (v.category_id ? [v.category_id] : []);
+  refreshVendorHandledCategories(handled);
   openSheet('addVendorSheet');
 }
 async function saveVendor(){
   if(!guardStore()) return;
   const name=document.getElementById('vendorNameInput').value.trim();
   if(!name) return toast('거래처명을 입력하세요.','warn');
-  const parentId=document.getElementById('vendorCatParent').value;
-  const childId=document.getElementById('vendorCatChild').value;
-  if(!parentId) return toast('대분류를 선택하세요.','warn');
-  // 자식 있는 대분류면 소분류 필수
-  const hasChildren=(expCategories||[]).some(c=>c.parent_id===parentId && c.is_active!==false);
-  if(hasChildren && !childId) return toast('소분류를 선택하세요.','warn');
-  const category_id=childId||parentId;
+  // 취급품목 체크 수집 (leaf id 배열)
+  const handledIds=Array.from(document.querySelectorAll('#vendorHandledCats .vhc:checked')).map(c=>c.value);
+  if(!handledIds.length) return toast('취급품목을 1개 이상 골라주세요.','warn');
+  // 주 분류(category_id) = 첫 번째 = fallback·기존 집계 호환. category 텍스트 동기화
+  const category_id=handledIds[0];
   const cat=(expCategories||[]).find(c=>c.id===category_id);
-  // category 텍스트 = vendor_category (calcExpense composite filter 호환). 없으면 카테고리 name.
   const categoryText=cat?.vendor_category||cat?.name||'';
   const eid=document.getElementById('editVendorId').value;
   setLoad(true,'저장 중...');
-  const payload={name,category:categoryText,category_id};
+  const payload={name,category:categoryText,category_id,handled_category_ids:handledIds};
   const{error}=eid
     ? await sb.from('vendors').update(payload).eq('id',eid)
     : await sb.from('vendors').insert({...payload,store_id:currentStore.id});
@@ -2686,7 +2688,6 @@ async function loadExpCategories(force){
   expCategories=data||[];
   // 카테고리 변경 즉시 거래처 필터·편집창 셀렉트도 갱신 (헌법 10조 2번)
   if(typeof refreshVendorListFilter==='function') refreshVendorListFilter();
-  if(typeof refreshVendorCategoryParents==='function') refreshVendorCategoryParents();
   renderExpCatList();
   // hub 카드에서 진입한 경우 해당 카테고리로 스크롤 + 하이라이트
   if(window._expcatPreselect){
