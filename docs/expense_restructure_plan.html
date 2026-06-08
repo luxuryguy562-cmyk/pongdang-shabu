@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>지출 입력 재설계 — 단계별 상세 계획서</title>
+<style>
+  :root{
+    --blue:#3182F6; --blue-light:#EBF3FF; --green:#16A34A; --green-light:#DCFCE7;
+    --amber:#D97706; --amber-light:#FEF3C7; --red:#DC2626; --red-light:#FEE2E2;
+    --gray-900:#191F28; --gray-700:#4E5968; --gray-500:#8B95A1; --gray-200:#E5E8EB;
+    --gray-100:#F2F4F6; --gray-50:#F9FAFB;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+       background:var(--gray-50); color:var(--gray-900); line-height:1.7; padding:16px; max-width:780px; margin:0 auto;}
+  h1{font-size:23px; font-weight:800; margin-bottom:4px;}
+  .sub{color:var(--gray-500); font-size:13px; margin-bottom:18px;}
+  .card{background:#fff; border-radius:16px; padding:18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+  .card h2{font-size:17px; font-weight:800; margin-bottom:12px;}
+  .step-card{border-left:5px solid var(--gray-200);}
+  .step-card.s1{border-color:var(--green);}
+  .step-card.s2{border-color:var(--blue);}
+  .step-card.s3{border-color:var(--amber);}
+  .step-card.s4{border-color:var(--red);}
+  .risk{display:inline-block; font-size:11px; font-weight:800; padding:3px 10px; border-radius:20px;}
+  .risk.low{background:var(--green-light); color:var(--green);}
+  .risk.mid{background:var(--blue-light); color:var(--blue);}
+  .risk.midhi{background:var(--amber-light); color:var(--amber);}
+  .risk.high{background:var(--red-light); color:var(--red);}
+  table{width:100%; border-collapse:collapse; margin:10px 0; font-size:13px;}
+  th,td{border:1px solid var(--gray-200); padding:9px; text-align:left; vertical-align:top;}
+  th{background:var(--gray-100); font-weight:800; font-size:12px;}
+  td.c{text-align:center; white-space:nowrap;}
+  ul{padding-left:20px; margin:8px 0;} li{margin-bottom:5px;}
+  .en{color:var(--gray-500); font-size:12px;}
+  code{background:var(--gray-100); padding:1px 6px; border-radius:5px; font-size:12px;}
+  .warn-box{background:var(--amber-light); border-left:4px solid var(--amber); border-radius:8px; padding:13px; margin:10px 0;}
+  .warn-box .t{font-weight:800; color:var(--amber); margin-bottom:5px;}
+  .ok-box{background:var(--green-light); border-left:4px solid var(--green); border-radius:8px; padding:13px; margin:10px 0;}
+  .ok-box .t{font-weight:800; color:var(--green); margin-bottom:5px;}
+  .db-box{background:var(--red-light); border-left:4px solid var(--red); border-radius:8px; padding:13px; margin:10px 0;}
+  .db-box .t{font-weight:800; color:var(--red); margin-bottom:5px;}
+  .pill{display:inline-block; background:var(--gray-100); border-radius:8px; padding:3px 10px; font-size:12px; font-weight:700; margin:2px;}
+  .small{font-size:12px; color:var(--gray-500);}
+  .h-num{display:inline-block; width:26px; height:26px; background:var(--gray-900); color:#fff; border-radius:8px; font-size:13px; font-weight:800; text-align:center; line-height:26px; margin-right:8px;}
+</style>
+</head>
+<body>
+
+<h1>🧾 지출 입력 재설계 — 단계별 상세 계획서</h1>
+<div class="sub">거래처/온라인/마트·시장 3분할 + 카테고리 품목별 전환 · 코드 정밀 조사 완료 · 2026-06-10</div>
+
+<div class="card">
+  <h2>📊 조사 결과 한눈에</h2>
+  <p>코드를 4개 영역으로 정밀 조사했습니다. 결론부터 — <b>쉬운 것과 어려운 것이 확실히 갈립니다.</b></p>
+  <table>
+    <tr><th>단계</th><th>내용</th><th>건드릴 곳</th><th>DB 변경</th><th>위험도</th></tr>
+    <tr><td class="c">1</td><td>"직구"→"마트·시장" 이름</td><td class="c">8곳</td><td class="c">없음</td><td class="c"><span class="risk low">낮음</span></td></tr>
+    <tr><td class="c">2</td><td>거래처 카테고리 고정 풀기 (영수증)</td><td class="c">2곳</td><td class="c">없음</td><td class="c"><span class="risk mid">중간</span></td></tr>
+    <tr><td class="c">3</td><td>🌐온라인 신설 + 쿠팡 스샷분석 정리</td><td class="c">13곳+6함수</td><td class="c">1개(선택)</td><td class="c"><span class="risk midhi">중상</span></td></tr>
+    <tr><td class="c">4</td><td>주문내역 품목별 카테고리 (집계)</td><td class="c">7곳 동시</td><td class="c"><b>필수</b></td><td class="c"><span class="risk high">높음</span></td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>🔑 가장 중요한 발견</h2>
+  <div class="ok-box">
+    <div class="t">✅ 영수증(receipts)은 이미 품목별 칸이 있습니다</div>
+    <p>영수증은 줄마다 카테고리 칸(<code>category_id</code>)이 있습니다. 지금은 거래처 모드일 때만
+       이걸 무시하고 거래처 카테고리로 덮어씁니다(<span class="en">receipt.js:1485</span>).
+       그 <b>덮어쓰는 코드 2줄만 풀면</b> 끝 — 사장님 말씀대로입니다.</p>
+  </div>
+  <div class="warn-box">
+    <div class="t">⚠️ 거래처 주문내역(vendor_orders)은 품목별 칸이 아예 없습니다</div>
+    <p>거래처 주문은 거래처 단위 카테고리(<code>vendors.category_id</code>)로만 집계됩니다. 줄마다 카테고리를 넣으려면
+       <b>새 칸을 만들고, 집계 7곳을 동시에 바꿔야</b> 합니다. 한 곳만 빠뜨려도 합계가 틀어집니다.
+       이게 4단계가 위험한 이유입니다.</p>
+  </div>
+</div>
+
+<!-- 1단계 -->
+<div class="card step-card s1">
+  <h2><span class="h-num">1</span>"직구" → "마트·시장" 이름 변경 <span class="risk low">낮음</span></h2>
+  <p><b>무엇:</b> 화면에 보이는 "직구" 글자만 "마트·시장"으로. 동작은 100% 그대로.</p>
+  <p><b>건드릴 곳 (8곳):</b></p>
+  <ul>
+    <li>화면 글자 <span class="en">index.html: 모드 선택 버튼, 카테고리 카드, 목록 헤더</span></li>
+    <li>배지·제목 <span class="en">receipt.js:148,346 / 토스트 안내</span></li>
+  </ul>
+  <p><b>DB 변경:</b> 없음. <b>충돌 방지:</b> 글자만 바꿔서 가장 안전 — 이걸 먼저 합쳐서 본가 동기화 흐름 점검.</p>
+</div>
+
+<!-- 2단계 -->
+<div class="card step-card s2">
+  <h2><span class="h-num">2</span>거래처 카테고리 고정 풀기 (영수증) <span class="risk mid">중간</span></h2>
+  <p><b>무엇:</b> 거래처 영수증도 품목별로 카테고리를 정하게. 웰스토리에서 육류 사면 육류로 잡히게.</p>
+  <div class="ok-box">
+    <div class="t">핵심 — 딱 2줄</div>
+    <p><span class="en">receipt.js:1485, 1490</span> 의 "거래처 모드면 거래처 카테고리로 강제" 로직을
+       "항상 줄별 선택값 사용"으로. 품목별 분류 화면(picker)은 <b>이미 만들어져 있어서</b> 켜기만 하면 됩니다.</p>
+  </div>
+  <div class="warn-box">
+    <div class="t">⚠️ 주의 — 이건 영수증(receipts)만</div>
+    <p>거래처 주문내역(vendor_orders)은 4단계에서 따로. 기존 거래처 카테고리 데이터(<code>vendors.category_id</code>)는
+       <b>지우지 않고 남깁니다</b> — 지금 집계가 안 깨지게(사장님: "바꿀 일 없다").</p>
+  </div>
+  <p><b>DB 변경:</b> 없음.</p>
+</div>
+
+<!-- 3단계 -->
+<div class="card step-card s3">
+  <h2><span class="h-num">3</span>🌐온라인 신설 + 쿠팡 스샷분석 정리 <span class="risk midhi">중상</span></h2>
+  <p><b>무엇:</b> 영수증 종류에 "온라인" 추가(쿠팡·네이버·옥션 등). 거래처→쿠팡에 있던 스샷 분석은 제거(중복).</p>
+
+  <p><b>① 온라인 모드 추가 (13곳):</b> 대부분 기존 "마트·시장(직구)" 흐름을 그대로 재사용. 차이는
+     상호=플랫폼 이름, 실제 판매자는 품목명에, 배송비 별도 — 이미 AI 규칙으로 넣어둔 부분 활용.</p>
+
+  <p><b>② 기존 쿠팡 스샷분석 제거 (함수 6개, 81줄 + 화면 2개):</b></p>
+  <div class="ok-box">
+    <div class="t">✅ 살리는 것 / 죽이는 것 (사장님 지시대로)</div>
+    <ul>
+      <li><b>죽임:</b> 거래처→쿠팡 "스샷 AI 분석" 버튼·시트 <span class="en">analyzeCoupangShots 등</span></li>
+      <li><b>살림:</b> 북마클릿 자동 동기화, 분류 대기함, 학습 규칙 — 나중에 쓰실 기능 그대로</li>
+    </ul>
+  </div>
+
+  <div class="warn-box">
+    <div class="t">⚠️ 발견된 한계 — 쿠팡 이름이 코드에 박혀있음</div>
+    <p>지금 <code>vendor.name === '쿠팡'</code>으로 3곳에 하드코딩(코드에 직접 박음)돼서, 네이버·옥션은
+       자동 동기화가 안 됩니다. 온라인을 제대로 하려면 거래처에 <b>"온라인 종류" 표시 칸</b>을 두는 게 맞습니다.
+       <span class="small">→ 이게 아래 선택 DB 변경입니다.</span></p>
+  </div>
+
+  <div class="db-box">
+    <div class="t">🗄️ DB 변경 (선택) — 거래처에 "온라인 여부" 칸</div>
+    <p><code>vendors</code> 표에 <code>integration_type</code>(연동 종류) 칸 추가. 쿠팡·네이버·옥션을
+       이름 하드코딩 없이 구분. 기존 데이터 영향 없음(새 칸, 기본값 비움).</p>
+    <p class="small">실행 SQL / 롤백 SQL은 승인 시 별도 제시 (헌법 8조).</p>
+  </div>
+</div>
+
+<!-- 4단계 -->
+<div class="card step-card s4">
+  <h2><span class="h-num">4</span>주문내역 품목별 카테고리 (집계) <span class="risk high">높음</span></h2>
+  <p><b>무엇:</b> 거래처 주문내역도 줄별로 카테고리. 가장 큰 공사 — 맨 나중에 충분히 준비해서.</p>
+
+  <div class="db-box">
+    <div class="t">🗄️ DB 변경 (필수) — 주문내역에 카테고리 칸 추가</div>
+    <p><code>vendor_orders</code> 표에 <code>category_id</code> 칸 신설. 기존 주문은 거래처 카테고리를
+       복사해 채움(데이터 안 깨짐). 이후 새 주문부터 품목별.</p>
+  </div>
+
+  <div class="warn-box">
+    <div class="t">⚠️ 집계 7곳을 동시에 바꿔야 함 (한 곳만 빠져도 합계 틀어짐)</div>
+    <table>
+      <tr><th>집계 함수</th><th>위치</th><th>영향</th></tr>
+      <tr><td>지출 카테고리 합계</td><td class="en">sidemenu calcExpenseByCategories ×3</td><td>대시보드·정산 전체</td></tr>
+      <tr><td>홈 일별 카드 분배</td><td class="en">dashboard ×2</td><td>홈 화면·월 요약</td></tr>
+      <tr><td>지출 허브 카드</td><td class="en">sidemenu loadExpHubData ×2</td><td>지출관리 입구</td></tr>
+    </table>
+    <p class="small">전부 <code>vendors.category_id</code> → <code>주문.category_id</code>로 한 번에 전환 + 검증 필수.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>🛡️ 충돌·사고 방지 (전 단계 공통)</h2>
+  <ul>
+    <li><b>각 단계 = 따로 합치기(PR) 1개</b> — 한 단계 끝낼 때마다 본가에 합치고 사장님이 앱에서 확인</li>
+    <li><b>단계 시작 전 본가 동기화</b> — 코드 겹침 충돌 예방 (교훈 #137)</li>
+    <li><b>단계마다 백업 커밋 + 문법 검사 + 잔재 검색</b> (헌법 11조)</li>
+    <li><b>DB 변경은 실행 SQL + 롤백 SQL 같이</b>, 사장님 "실행 승인" 4글자 후만 (헌법 8조)</li>
+    <li><b>기존 데이터 보존</b> — 거래처 카테고리 안 지움, 주문내역 칸은 복사로 채움</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>👉 제안 순서 & 사장님 결정</h2>
+  <p><b>안전한 순서:</b> 1단계(이름) → 2단계(영수증 고정 풀기) → 3단계(온라인+쿠팡정리) → 4단계(주문내역, 신중)</p>
+  <div class="warn-box">
+    <div class="t">결정 포인트 — 온라인을 어디에 저장할까</div>
+    <ul>
+      <li><b>방법 가 (추천):</b> 온라인도 <b>영수증(receipts)</b>에 저장. 그러면 4단계(주문내역 대공사) 없이도
+          쿠팡·네이버를 품목별로 바로 쓸 수 있음. <b>3단계까지만 해도 사장님 쿠팡 문제 해결.</b></li>
+      <li><b>방법 나:</b> 온라인을 주문내역(vendor_orders)에. 기존 쿠팡 자동동기화와 한 곳에 모이지만,
+          4단계 대공사를 먼저 해야 함.</li>
+    </ul>
+  </div>
+  <p>→ <b>방법 가로 가면</b> 1·2·3단계만으로 사장님 쿠팡·웰스토리 문제가 다 풀립니다. 4단계는
+     자동동기화를 본격적으로 쓸 때 천천히. <b>이렇게 진행할까요?</b></p>
+</div>
+
+</body>
+</html>
