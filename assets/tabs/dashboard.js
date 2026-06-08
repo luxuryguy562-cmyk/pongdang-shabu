@@ -128,35 +128,40 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
         +`<span class="vname">${esc(it.name)}</span>`
         +`<span class="vamt">${fmt(it.amt)}원</span></div>`;
     }).join('');
-    // 스크롤이 실제로 더 있을 때만 하단 흐리기 적용 (2026-06-08)
-    requestAnimationFrame(()=>{
-      const hasMore=listEl.scrollHeight>listEl.clientHeight+2;
-      const msk=hasMore?'linear-gradient(to bottom,black 55%,rgba(0,0,0,.15) 82%,transparent 100%)':'';
+    // 하단 흐리기: 스크롤 더 있을 때만 + 끝까지 내리면 제거 (2026-06-08)
+    const _applyVeMask=()=>{
+      const atBottom=listEl.scrollTop+listEl.clientHeight>=listEl.scrollHeight-4;
+      const msk=(!atBottom && listEl.scrollHeight>listEl.clientHeight+2)
+        ?'linear-gradient(to bottom,black 55%,rgba(0,0,0,.15) 82%,transparent 100%)':'';
       listEl.style.webkitMaskImage=msk;
       listEl.style.maskImage=msk;
-    });
+    };
+    listEl.onscroll=_applyVeMask;
+    requestAnimationFrame(_applyVeMask);
   }
   card.style.display='';
 }
-// ─── 어디에 썼나 바텀시트 열기 (거래처별 순차 나열) ───
+// ─── 지출 상세 바텀시트 열기 (거래처명 + 카테고리 태그, 이전 버전 복원 2026-06-08) ───
 function openTodayVendorSheet(){
   const d = _todayVendorDataCache;
   if(!d){ toast('지출 데이터가 없습니다.'); return; }
   const {veMap, dayExp} = d;
-  // 거래처별 flat 리스트 — 금액 큰 순
   const rows = Object.values(veMap)
-    .map(o=>({name:o.name, amt:o.amt}))
+    .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
     .sort((a,b)=>b.amt-a.amt);
   const total = dayExp || rows.reduce((s,r)=>s+r.amt, 0);
 
   const listEl = document.getElementById('vendorExpSheetList');
   const totalEl = document.getElementById('vendorExpSheetTotal');
+  const titleEl = document.querySelector('#vendorExpSheet .sheet-title');
+  if(titleEl) titleEl.textContent = '💸 지출 내역';
   if(listEl){
     const html = rows.map(r=>{
       const pct = total>0 ? Math.round(r.amt/total*100) : 0;
       return `<div class="ve-row" style="padding:12px 0;border-bottom:1px solid #F2F4F6;display:flex;align-items:center;gap:10px;">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;font-weight:800;color:#191F28;">${esc(r.name)}</div>
+          <div style="font-size:14px;font-weight:800;color:#191F28;margin-bottom:3px;">${esc(r.name)}</div>
+          <span style="font-size:11px;font-weight:700;color:#8B95A1;background:#F2F4F6;border-radius:6px;padding:2px 7px;">${esc(r.cat)}</span>
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-size:15px;font-weight:900;color:#191F28;">${fmt(r.amt)}원</div>
@@ -869,8 +874,9 @@ async function loadDashboard(force){
     const _addVE=(d,name,amt,catName,isVar=false)=>{
       if(!amt||amt<=0||!d)return;
       if(!dailyVendorExp[d])dailyVendorExp[d]={};
-      const nm=name||'기타';
-      if(!dailyVendorExp[d][nm])dailyVendorExp[d][nm]={name:nm,amt:0,isVar:false};
+      const nm=name||'기타', ct=catName||'기타';
+      // cat은 처음 등록된 카테고리 유지 (지출 시트 카테고리 태그용)
+      if(!dailyVendorExp[d][nm])dailyVendorExp[d][nm]={name:nm,cat:ct,amt:0,isVar:false};
       dailyVendorExp[d][nm].amt+=amt;
       if(isVar)dailyVendorExp[d][nm].isVar=true;
     };
