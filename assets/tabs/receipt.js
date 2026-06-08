@@ -1398,7 +1398,7 @@ function _checkRcpDateWarn(dateStr){
   warn.style.display=bad?'inline':'none';
 }
 // in-page 초기화 (2026-05-19 사장님 호소 "취소하면 PWA 재실행" 해결)
-// 옛 동작: location.reload() — saveReceipt rcpEntryReturn 분기에서 별도 처리
+// 저장·취소 모두 reload 없이 in-page 전환 (2026-06-08 reload 잔재 전면 제거, 교훈 #141)
 function resetReceipt(){
   const resTable=document.getElementById('resTable');
   if(resTable) resTable.innerHTML='';
@@ -1549,12 +1549,31 @@ async function saveReceipt(){
   if(error) return errToast('저장', error);
   // 영수증 품목 자동 학습 폐기 (2026-06-04) — 짧은 키워드 오염 방지. 분류·품목명은 AI가 직접 판단.
   const successMsg='저장됐어요';
-  // 진입 컨텍스트 따라 흐름 분기 (2026-05-19 사장님 결정 A안)
+  // 진입 컨텍스트 따라 흐름 분기 — 새로고침 없이 in-page로 그 화면 복귀 (2026-06-08 홈 깜빡임 제거)
   if(rcpEntryReturn){
-    // 거래처(vendors:<id>) 또는 카테고리(catReceipt:<mode>) 진입 = 기존 reload + 자동 복귀
-    try{ localStorage.setItem('pd_rcp_return', rcpEntryReturn); }catch(e){}
+    const _ret = rcpEntryReturn;
     toast(successMsg,'success');
-    location.reload();
+    // form 초기화 (resTable 비우고 모드 선택 화면 복귀)
+    const resTable=document.getElementById('resTable');
+    if(resTable) resTable.innerHTML='';
+    rowCount=0;
+    resetRcpMode();
+    rcpEntryReturn=null;
+    _refreshAfterExpenseChange(); // 홈·지출관리 캐시 무효화
+    if(_ret.startsWith('catReceipt:')){
+      // 직구/식자재/기타 카드 진입 → 그 카테고리 화면으로 바로 복귀
+      catReceiptMode = _ret.slice('catReceipt:'.length);
+      nav('catReceipt');
+    } else if(_ret.startsWith('vendors:')){
+      // 거래처 진입 → 거래처 탭 + 상세 자동 열기
+      const vid = _ret.slice('vendors:'.length);
+      nav('vendors');
+      if(vid && vid !== 'null') setTimeout(()=>openVendorDetail(vid), 300);
+    } else {
+      // 알 수 없는 복귀값 fallback → 기록 내역
+      rcpTab('list');
+      await loadReceiptList();
+    }
   } else {
     // 모드 선택 화면에서 시작한 케이스 = in-page로 기록 내역 자동 이동
     // (reload·로그인 깜빡 X, 방금 저장한 그룹 카드 바로 확인)

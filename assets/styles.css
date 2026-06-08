@@ -993,7 +993,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .m6-mr .v.green{color:#0CAB6C;}
 .m6-mr .v.red{color:#EF4444;}
 /* 예상마감 문장형 배너 — "이대로 가면 이번달 ○○ 매출에 ○○ 이득/손해예요" (2026-06-05 A안) */
-.m6-fc{display:flex;align-items:center;gap:7px;margin-top:6px;padding:8px 13px;background:#F0FDF7;border:1.5px solid #BBF7D0;border-radius:11px;cursor:pointer;transition:filter .15s;}
+.m6-fc{display:flex;align-items:center;gap:7px;margin-bottom:11px;padding:8px 13px;background:#F0FDF7;border:1.5px solid #BBF7D0;border-radius:11px;cursor:pointer;transition:filter .15s;}
 .m6-fc:active{filter:brightness(.96);}
 .m6-fc.neg{background:#FEF2F2;border-color:#FECACA;}
 .m6-fc .fc-tx{font-size:12px;font-weight:700;color:#4B5563;letter-spacing:-0.3px;line-height:1.45;}

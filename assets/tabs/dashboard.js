@@ -649,11 +649,14 @@ async function loadDashboard(force){
     // 예비비 / 실수익 폐기 (2026-05-22)
 
     // 마감예상 계산
+    // 매출 분모 = 매출이 실제 입력된 마지막 날 (오늘 매출 0인데 지출만 있으면 오늘까지로 나누는 버그 방지, 2026-06-08)
+    const _saleLastDay=Object.entries(dailySalesMap).reduce((mx,[k,v])=>((+v)>0?Math.max(mx,parseInt(k,10)):mx),0);
+    const _saleDiv=(isCurrent && _saleLastDay>0)?_saleLastDay:passedDays;
     const variableCost=totalCost-fixedProrated;
-    const estRevenue=isCurrent&&passedDays>0?Math.round(totalRevenue/passedDays*lastDay):totalRevenue;
+    const estRevenue=isCurrent&&_saleDiv>0?Math.round(totalRevenue/_saleDiv*lastDay):totalRevenue;
     const estVariableCost=isCurrent&&passedDays>0?Math.round(variableCost/passedDays*lastDay):variableCost;
     const estTotalCost=fixedMonthly+estVariableCost;
-    const estCardSales=isCurrent&&passedDays>0?Math.round(cardSales/passedDays*lastDay):cardSales;
+    const estCardSales=isCurrent&&_saleDiv>0?Math.round(cardSales/_saleDiv*lastDay):cardSales;
     const estRoyalty=Math.round(estRevenue*royaltyRate);
     const estCardFee=Math.round(estCardSales*cardFeeRate);
     const estTotalCostFull=estTotalCost+estRoyalty+estCardFee;
@@ -1558,6 +1561,9 @@ function v17BuildAccountingWeeks(year, monthIdx){
 function v17SumMonth(ctx, targetM, maxDay){
   const DAYS = ctx.DAYS;
   let s=0,e=0,vendor=0,att=0,fixed=0,receipt=0,royalty=0,lastDay=0;
+  // 예상마감 분모용 — 매출/지출이 실제로 발생한 마지막 날 따로 (2026-06-08)
+  // 8일에 매출 0인데 지출만 있으면 → saleLastDay=7, expLastDay=8 로 각각 정확히 일평균
+  let saleLastDay=0, expLastDay=0;
   const byCat = {};
   (ctx.cats||[]).forEach(c=>{ byCat[c.key]=0; });
   Object.entries(DAYS).forEach(([key,d])=>{
@@ -1570,9 +1576,11 @@ function v17SumMonth(ctx, targetM, maxDay){
       fixed+=d.fixed||0; receipt+=d.receipt||0; royalty+=d.royalty||0;
       (ctx.cats||[]).forEach(c=>{ byCat[c.key] += (d.byCat?.[c.key])||0; });
       if(day>lastDay) lastDay=day;
+      if((d.sale||0)>0 && day>saleLastDay) saleLastDay=day;
+      if((d.exp||0)>0  && day>expLastDay)  expLastDay=day;
     }
   });
-  return {s,e,vendor,att,fixed,receipt,royalty,lastDay,byCat};
+  return {s,e,vendor,att,fixed,receipt,royalty,lastDay,saleLastDay,expLastDay,byCat};
 }
 
 // 색상 차별 momTag (sale/profit ↑=good / expense/category ↑=bad)
@@ -1699,17 +1707,23 @@ function toggleMonthCatChildren(key){
 // ─── 월 통계 계산 (요약 카드 + 세부 화면 공용, 2026-06-03 분리) ───
 function _v17MonthStats(ctx){
   const cur = v17SumMonth(ctx, ctx.TARGET_MONTH, 31);
-  const prev = v17SumMonth(ctx, ctx.TARGET_MONTH-1, cur.lastDay);
+  // 전월 비교: 이달 매출 있는 마지막 날 기준 (매출 0인 날이 분모 부풀리지 않게)
+  const _cmpDay = cur.saleLastDay || cur.lastDay;
+  const prev = v17SumMonth(ctx, ctx.TARGET_MONTH-1, _cmpDay);
   const profit = cur.s - cur.e;
   const expPctNum = cur.s>0 ? Math.round(cur.e/cur.s*100) : 0;
   const monthLastDay = new Date(ctx.YEAR, ctx.TARGET_MONTH, 0).getDate();
   const progressDays = cur.lastDay;
   const progressPct = monthLastDay>0 ? Math.round(progressDays/monthLastDay*100) : 0;
+  // 예상마감: 매출·지출 각각 실제 입력된 마지막 날로 일평균 → 월말 추정 (2026-06-08)
+  // 매출 0인 날(지출만 있는 날)이 매출 분모를 부풀리지 않게 saleLastDay/expLastDay 분리
   let fcSale = null, fcProfit = null;
-  if(progressDays > 0 && progressDays < monthLastDay){
-    const ratio = monthLastDay / progressDays;
-    fcSale = Math.round(cur.s * ratio);
-    fcProfit = fcSale - Math.round(cur.e * ratio);
+  const _saleDays = cur.saleLastDay || cur.lastDay;
+  const _expDays  = cur.expLastDay  || cur.lastDay;
+  if(_saleDays > 0 && _saleDays < monthLastDay){
+    fcSale = Math.round(cur.s * (monthLastDay / _saleDays));
+    const fcExp = Math.round(cur.e * (monthLastDay / (_expDays||_saleDays)));
+    fcProfit = fcSale - fcExp;
   }
   const profitPctSale = cur.s>0 ? (profit/cur.s*100) : 0;
   const expPctSale = cur.s>0 ? (cur.e/cur.s*100) : 0;
@@ -1757,6 +1771,7 @@ function v17RenderMonthCard(){
 
   el.innerHTML = `
     <div class="v17-card-v6">
+      ${fcHtml}
       <div class="v6-ttl-row">
         <div class="v6-ttl"><b>${ctx.TARGET_MONTH}월</b>${progressDays}일 진행</div>
         <span class="v6-progress-tag">${progressPct}%</span>
@@ -1772,7 +1787,6 @@ function v17RenderMonthCard(){
           <div class="m6-mr"><span class="k">수익</span><span class="v ${profit>=0?'green':'red'}">${v17FmtNoWonSigned(profit)}원</span></div>
         </div>
       </div>
-      ${fcHtml}
     </div>`;
 }
 
@@ -1862,7 +1876,7 @@ function v17RenderMonthDetail(){
   if(prev.s>0){
     const sI = v17MomTag(cur.s, prev.s, 'sale');
     const eI = v17MomTag(cur.e, prev.e, 'expense');
-    const compareLabel = `${ctx.TARGET_MONTH-1}/${cur.lastDay}`;
+    const compareLabel = `${ctx.TARGET_MONTH-1}/${cur.saleLastDay || cur.lastDay}`;
     const dS = prev.s>0 ? Math.round((cur.s-prev.s)/prev.s*100) : 0;
     const dE = prev.e>0 ? Math.round((cur.e-prev.e)/prev.e*100) : 0;
     const comment = v17MomComment(dS, dE);

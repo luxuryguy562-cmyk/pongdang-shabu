@@ -5388,32 +5388,11 @@ function completeLogin(emp){
   // ─── VIEWAS-START ───
   updateViewAsUI();
   // ─── VIEWAS-END ───
-  // 영수증 저장 후 진입 화면 자동 복귀 (사장님 결정: 홈으로 가지 않게)
-  const rcpRet = (()=>{try{return localStorage.getItem('pd_rcp_return');}catch(e){return null;}})();
-  if(rcpRet){
-    try{ localStorage.removeItem('pd_rcp_return'); }catch(e){}
-  }
+  // 옛 영수증 복귀값 잔재 제거 (저장이 더는 reload 안 함 — 2026-06-08 in-page 전환으로 폐기)
+  try{ localStorage.removeItem('pd_rcp_return'); }catch(e){}
   // 로그인 후 첫 화면: 본사→본사 홈, 관리자→대시보드, 직원→근태
   if(authLevel==='franchise_admin') nav('franchiseHome');
-  else if(rcpRet && isManager){
-    // 데이터 로드 끝나야 catReceipt에서 etcAllIds 계산 가능 → 백그라운드 로드 완료 후 nav
-    Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>{
-      recalcSettle2();
-      if(rcpRet.startsWith('catReceipt:')){
-        // catReceiptMode가 'direct' 또는 'cat:<uuid>' 형태 → 콜론 2개 가능, slice로 받음
-        catReceiptMode = rcpRet.slice('catReceipt:'.length);
-        nav('catReceipt');
-        toast('영수증 저장 완료','success');
-      } else if(rcpRet.startsWith('vendors:')){
-        const vid = rcpRet.slice('vendors:'.length);
-        nav('vendors');
-        if(vid && vid !== 'null') setTimeout(()=>openVendorDetail(vid), 300);
-        toast('영수증 저장 완료','success');
-      } else {
-        nav('dashboard');
-      }
-    });
-  } else {
+  else {
     nav(isManager?'dashboard':'attendance');
     // 나머지 데이터 백그라운드 로드 (화면 차단 없이)
     Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
