@@ -143,6 +143,11 @@ function renderRcpModeBadge(){
     if(guide) guide.innerHTML = rcpVendorName
       ? `🤖 AI가 품목별로 분류해드려요. 한 거래처라도 식자재·비품 섞이면 따로 잡아드려요.`
       : `🏠 거래처를 먼저 골라주세요.`;
+  } else if(rcpMode === 'online'){
+    icon.textContent = '🌐';
+    value.textContent = '온라인 영수증';
+    label.textContent = '쿠팡 · 네이버 · 옥션 등';
+    if(guide) guide.innerHTML = `🤖 쿠팡·네이버 주문 화면을 찍으면 상호를 플랫폼(쿠팡 등)으로, 품목별로 분류해드려요. 카드·통장 내역의 "쿠팡"과 자동으로 묶여요.`;
   } else if(rcpMode === 'direct'){
     icon.textContent = '🛒';
     value.textContent = '마트·시장 영수증';
@@ -1003,7 +1008,8 @@ async function runAI() {
       }
     }
     // 프롬프트 = common.js 공통 함수 (측정실과 100% 동일 — 검증=실제 보장)
-    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, vendorName:rcpVendorName, catList, pageCount });
+    const isOnlineAI = rcpMode === 'online';
+    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, isOnline:isOnlineAI, vendorName:rcpVendorName, catList, pageCount });
     // AI 단독 (2026-05-19 (4)): OCR 제거 — Gemini Flash 단독 (3차 best ~95%+) + High demand 시 GPT-4o fallback
     const aiModel = isVendorModeAI ? 'gemini-2.5-flash' : 'gemini-2.5-flash-lite';
     // 모든 페이지를 parts에 박음 (Gemini multi-image 지원)
