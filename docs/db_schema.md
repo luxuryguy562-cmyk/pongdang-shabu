@@ -73,6 +73,17 @@ franchises (프랜차이즈/브랜드)
 - RLS ENABLE, **정책 0개**(service_role만). 앱은 향후 Edge Function 경유.
 - `employees.person_id` FK로 연결. 현재 13명 1:1(투잡 시 1:N). 권한·고용정보는 후속 단계에서 membership으로 분리 예정.
 
+### otp_codes (2026-06-09 신설 — 문자 인증번호 / 3단계)
+직원 가입 문자 인증. 전화번호당 1개(재발송 시 덮어씀).
+| 컬럼 | 용도 |
+|------|------|
+| phone (text, PK) | 전화번호(숫자만) |
+| code | 6자리 인증번호 |
+| expires_at (5분) | 만료 |
+| attempts (최대 5) | 시도 횟수 |
+| created_at | 재발송 30초 제한용 |
+- RLS 차단(service_role만). `send-otp`/`verify-otp` Edge Function 경유.
+
 ### employee_private (2026-06-09 신설 — 민감정보 금고)
 직원 민감정보 격리. RLS 차단(service_role만), `emp-login`/`emp-session` Edge Function만 접근.
 | 컬럼 | 용도 |
