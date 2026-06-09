@@ -1034,7 +1034,8 @@ async function runAI() {
     // 프롬프트 = common.js 공통 함수 (측정실과 100% 동일 — 검증=실제 보장)
     const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, isOnlineMode:isOnlineModeAI, vendorName:rcpVendorName, catList, pageCount });
     // AI 단독 (2026-05-19 (4)): OCR 제거 — Gemini Flash 단독 (3차 best ~95%+) + High demand 시 GPT-4o fallback
-    const aiModel = isVendorModeAI ? 'gemini-2.5-flash' : 'gemini-2.5-flash-lite';
+    // 2026-06-09: 전 채널 flash 통일 (측정실 5/5 1등 + 규격 분리 정밀도). 옛 직구·온라인 flash-lite 폐기.
+    const aiModel = 'gemini-2.5-flash';
     // 모든 페이지를 parts에 박음 (Gemini multi-image 지원)
     const parts = [{text:prompt}];
     b64Pages.forEach(b64Part=>{
@@ -1354,14 +1355,13 @@ function buildReceiptRow(i={}) {
   const autoTag = i._autoFilled
     ? `<span class="rcp-auto-tag">✅ 단가 자동채움</span>`
     : (i._nameCandidates?.length ? `<span class="rcp-guess-tag" data-action="openRcpPastSheet|${idx}">🟡 후보 ${i._nameCandidates.length}개</span>` : '');
-  // 규격·원산지 칸 (거래처 모드에서만 표시 — 2026-06-08)
-  const isVendorRow = rcpMode === 'vendor';
-  const specRow = isVendorRow ? `
+  // 규격·원산지 칸 (전 채널 통일 — 2026-06-09. 거래처·온라인·직구 모두 표시. 기록편집 화면과 일관)
+  const specRow = `
     <div class="ric-spec">
       <span class="ric-spec-lbl">규격</span>
       <input type="text" class="c-spec" value="${esc(i.spec||'')}" placeholder="규격 없음">
-    </div>` : '';
-  const ogChip = isVendorRow ? `<span class="ric-meta">🌍 <input type="text" class="c-og" value="${esc(i.origin||'')}" placeholder="원산지"></span>` : '';
+    </div>`;
+  const ogChip = `<span class="ric-meta">🌍 <input type="text" class="c-og" value="${esc(i.origin||'')}" placeholder="원산지"></span>`;
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
       ${nameSuspectMark}
