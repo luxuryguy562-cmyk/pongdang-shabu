@@ -996,6 +996,8 @@ async function runAI() {
     const isVendorModeAI = rcpMode === 'vendor';
     const isOnlineModeAI = rcpMode === 'online';
     const isLiquorModeAI = rcpVendorKind === 'liquor'; // 주류 채널 판정
+    // 복잡한 거래명세서(주류·거래처)는 AI 추론(thinking) 켜기 — 여러 칸 얽힌 표 정확도↑ (2026-06-09). 직구·온라인(단순)은 OFF로 비용 절감
+    const _useThinking = isLiquorModeAI || (isVendorModeAI && !isOnlineModeAI);
     // 거래처 모드(온라인·주류 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
     // 온라인·마트(직구)·주류는 전체 자율(getCatListForPrompt 그대로)
     if(isVendorModeAI && !isOnlineModeAI && !isLiquorModeAI && rcpVendorId){
@@ -1052,7 +1054,7 @@ async function runAI() {
     const timeoutSec = 30 + (pageCount-1)*5;
     let raw, usedFallback = false;
     try {
-      raw = await callGemini(parts, timeoutSec, 'receipt_ocr', aiModel, 'gemini');
+      raw = await callGemini(parts, timeoutSec, 'receipt_ocr', aiModel, 'gemini', _useThinking);
     } catch(geminiErr){
       const m = String(geminiErr?.message || '').toLowerCase();
       const isOverloadLike = /high demand|overload|currently|503|429|시간 초과|비어있|json|응답 오류/i.test(m);
@@ -1123,7 +1125,7 @@ async function runAI() {
         setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`);
         try{
           const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u) 오류를 찾아 수정된 JSON만 반환.`},...parts.slice(1)];
-          const _fixRaw=await callGemini(_rParts,timeoutSec+10,'receipt_reflection',aiModel,'gemini');
+          const _fixRaw=await callGemini(_rParts,timeoutSec+10,'receipt_reflection',aiModel,'gemini',_useThinking);
           const _fixItems=Array.isArray(_fixRaw)?_fixRaw:(_fixRaw?.items||[]);
           if(!_fixItems.length) break;
           raw=_fixRaw;

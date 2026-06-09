@@ -72,7 +72,7 @@ function _logAIUsage(feature, usage, durationMs, success, errorMsg, modelUsed, c
     }).then(({error})=>{ if(error) console.warn('[ai_usage_logs] insert failed:', error.message); });
   }catch(e){ console.warn('[ai_usage_logs] exception:', e); }
 }
-async function callGemini(parts, timeoutSec=30, feature='unknown', model, provider){
+async function callGemini(parts, timeoutSec=30, feature='unknown', model, provider, thinking=false){
   // 503(구글 서버 과부하) 스파이크는 보통 10~30초 지속 → 재시도 4번, 백오프 2·4·8초로 강화 (2026-06-08)
   // 짧은 1·2·4초로는 16:34 503이 20초간 다 실패. 총 ~14초 버티며 스파이크 통과 노림. 그래도 실패 시 호출부에서 GPT 백업.
   const MAX_RETRY = 4;
@@ -91,7 +91,7 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
       const res=await fetch(GEMINI_URL,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({contents:[{parts}],generationConfig:{response_mime_type:'application/json'},_model:requestModel,_provider:requestProvider}),
+        body:JSON.stringify({contents:[{parts}],generationConfig:{response_mime_type:'application/json'},_model:requestModel,_provider:requestProvider,_thinking:!!thinking}),
         signal:ctrl.signal
       });
       if(!res.ok){
