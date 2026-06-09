@@ -4293,6 +4293,147 @@ function showLoginScreen(){
 // ═══════════════════════════════════════════════════════════════
 let signupState = { step:0, type:'personal' };
 
+// ─── 새 기능: 통합 가입 (전화 인증 → 역할 선택 → 직원 합류) 2026-06-09 ───
+// 사장 선택 = 기존 openSignup(이메일/비번) 그대로 호출. 직원 길만 여기서 처리.
+let joinState = { step:0, phone:'', token:'', pin:'', role:'', timerId:null, isNew:false, hasName:false };
+
+function openJoin(){
+  joinState = { step:0, phone:'', token:'', pin:'', role:'', timerId:null, isNew:false, hasName:false };
+  ['joinPhone','joinName','joinCode','joinOtp'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['joinPhoneMsg','joinOtpMsg','joinNameMsg','joinCodeMsg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerText=''; });
+  _renderJoinPinDots(); _renderOtpBoxes('');
+  document.getElementById('joinOverlay').style.display='block';
+  document.body.style.overflow='hidden';
+  showJoinStep(0);
+}
+function closeJoin(){
+  if(joinState.timerId){ clearInterval(joinState.timerId); joinState.timerId=null; }
+  document.getElementById('joinOverlay').style.display='none';
+  document.body.style.overflow='';
+}
+function showJoinStep(step){
+  joinState.step=step;
+  document.querySelectorAll('.join-step').forEach(el=>{
+    el.style.display = (parseInt(el.dataset.jstep)===step) ? 'block' : 'none';
+  });
+  // 진행바: 0~2 공통(전화/인증/역할), 직원 3~5는 꽉 채움
+  const pct = step<=2 ? ((step+1)/3*100) : 100;
+  const pe=document.getElementById('joinProgress'); if(pe) pe.style.width=pct+'%';
+}
+function joinPrev(){
+  const s=joinState.step;
+  if(s===0){ closeJoin(); return; }
+  if(s===3||s===4){ showJoinStep(2); return; }   // 직원 단계 → 역할 선택으로
+  if(s===5){ return; }                            // 완료 화면은 이전 없음
+  showJoinStep(s-1);
+}
+function _joinNormPhone(p){ return (p||'').replace(/[^0-9]/g,''); }
+function _joinMsgEl(){ return document.getElementById(joinState.step===0?'joinPhoneMsg':'joinOtpMsg'); }
+
+async function joinSendOtp(){
+  const phoneRaw=document.getElementById('joinPhone').value;
+  const phone=_joinNormPhone(phoneRaw);
+  const tgt=_joinMsgEl(); if(tgt) tgt.innerText='';
+  if(phone.length<10){ const t=document.getElementById('joinPhoneMsg'); if(t) t.innerText='전화번호를 확인해주세요'; return; }
+  joinState.phone=phone;
+  const btn=document.getElementById('joinSendBtn'); if(btn){ btn.disabled=true; btn.innerText='보내는 중...'; }
+  try{
+    const{data,error}=await sb.functions.invoke('send-otp',{body:{phone}});
+    if(error||!data?.ok){
+      const m = data?.need_setup ? '문자 서비스 준비 중이에요. 잠시 후 다시 시도해주세요.' : (data?.error||'발송 실패');
+      const t=_joinMsgEl(); if(t) t.innerText=m; return;
+    }
+    document.getElementById('joinPhoneEcho').innerText=phoneRaw;
+    document.getElementById('joinOtp').value=''; _renderOtpBoxes('');
+    showJoinStep(1);
+    setTimeout(()=>{ const o=document.getElementById('joinOtp'); if(o) o.focus(); },120);
+    _startOtpTimer(300);
+  }catch(_e){ const t=_joinMsgEl(); if(t) t.innerText='네트워크 오류 — 다시 시도해주세요'; }
+  finally{ if(btn){ btn.disabled=false; btn.innerText='인증번호 받기'; } }
+}
+function _startOtpTimer(sec){
+  if(joinState.timerId) clearInterval(joinState.timerId);
+  let left=sec; const el=document.getElementById('joinOtpTimer');
+  const tick=()=>{
+    if(left<=0){ clearInterval(joinState.timerId); joinState.timerId=null; if(el) el.innerText='시간 만료 — 다시 받아주세요'; return; }
+    const m=Math.floor(left/60), s=left%60;
+    if(el) el.innerText=`남은 시간 ${m}:${String(s).padStart(2,'0')}`;
+    left--;
+  };
+  tick(); joinState.timerId=setInterval(tick,1000);
+}
+function _renderOtpBoxes(val){
+  val=val||'';
+  document.querySelectorAll('#joinOtpBoxes .otp-cell').forEach((b,i)=>{
+    b.innerText=val[i]||''; b.classList.toggle('on', i<val.length);
+  });
+}
+function joinOtpInput(el){
+  const v=(el.value||'').replace(/[^0-9]/g,'').slice(0,6);
+  el.value=v; _renderOtpBoxes(v);
+  if(v.length===6) joinVerifyOtp(v);
+}
+async function joinVerifyOtp(code){
+  const msgEl=document.getElementById('joinOtpMsg'); if(msgEl) msgEl.innerText='';
+  try{
+    const{data,error}=await sb.functions.invoke('verify-otp',{body:{phone:joinState.phone, code}});
+    if(error||!data?.ok){ if(msgEl) msgEl.innerText=data?.error||'인증 실패'; document.getElementById('joinOtp').value=''; _renderOtpBoxes(''); return; }
+    joinState.token=data.token; joinState.isNew=data.is_new; joinState.hasName=data.has_name;
+    if(joinState.timerId){ clearInterval(joinState.timerId); joinState.timerId=null; }
+    showJoinStep(2);
+  }catch(_e){ if(msgEl) msgEl.innerText='네트워크 오류 — 다시 시도해주세요'; }
+}
+function joinSelectRole(role){
+  joinState.role=role;
+  if(role==='owner'){
+    // 사장 = 기존 가입 흐름 그대로. 검증된 전화는 넘겨서 나중에 person 연결 (현 흐름 무변경).
+    window._verifiedSignupPhone = joinState.phone;
+    closeJoin(); openSignup();
+  } else {
+    if(joinState.hasName){ showJoinStep(4); setTimeout(()=>{ const c=document.getElementById('joinCode'); if(c) c.focus(); },120); }
+    else showJoinStep(3);
+  }
+}
+function joinPinPress(n){
+  if(joinState.pin.length>=4) return;
+  joinState.pin+=String(n); _renderJoinPinDots();
+  if(joinState.pin.length===4) joinSetNamePin();
+}
+function joinPinDelete(){ joinState.pin=joinState.pin.slice(0,-1); _renderJoinPinDots(); }
+function _renderJoinPinDots(){
+  document.querySelectorAll('#joinPinDots .pin-dot').forEach((d,i)=>d.classList.toggle('filled', i<joinState.pin.length));
+}
+async function joinSetNamePin(){
+  const name=document.getElementById('joinName').value.trim();
+  const msgEl=document.getElementById('joinNameMsg'); if(msgEl) msgEl.innerText='';
+  if(!name){ if(msgEl) msgEl.innerText='이름을 입력해주세요'; joinState.pin=''; _renderJoinPinDots(); return; }
+  if(joinState.pin.length!==4){ if(msgEl) msgEl.innerText='비밀번호 4자리를 눌러주세요'; return; }
+  try{
+    const{data,error}=await sb.functions.invoke('complete-signup',{body:{token:joinState.token, name, pin:joinState.pin}});
+    if(error||!data?.ok){ if(msgEl) msgEl.innerText=data?.error||'저장 실패'; joinState.pin=''; _renderJoinPinDots(); return; }
+    joinState.hasName=true;
+    showJoinStep(4); setTimeout(()=>{ const c=document.getElementById('joinCode'); if(c) c.focus(); },120);
+  }catch(_e){ if(msgEl) msgEl.innerText='네트워크 오류 — 다시 시도해주세요'; joinState.pin=''; _renderJoinPinDots(); }
+}
+function joinCodeInput(el){
+  const v=(el.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
+  el.value=v;
+  if(v.length===6) joinEnterCode();
+}
+async function joinEnterCode(){
+  const code=(document.getElementById('joinCode').value||'').toUpperCase().trim();
+  const msgEl=document.getElementById('joinCodeMsg'); if(msgEl) msgEl.innerText='';
+  if(code.length<6){ if(msgEl) msgEl.innerText='6자리 코드를 입력해주세요'; return; }
+  const btn=document.getElementById('joinCodeBtn'); if(btn) btn.disabled=true;
+  try{
+    const{data,error}=await sb.functions.invoke('join-store',{body:{token:joinState.token, code}});
+    if(error||!data?.ok){ if(msgEl) msgEl.innerText=data?.error||'합류 실패'; return; }
+    const ds=document.getElementById('joinDoneStore'); if(ds) ds.innerText=data.store_name||'매장';
+    showJoinStep(5);
+  }catch(_e){ if(msgEl) msgEl.innerText='네트워크 오류 — 다시 시도해주세요'; }
+  finally{ if(btn) btn.disabled=false; }
+}
+
 function openSignup(){
   signupState = { step:0, type:'personal' };
   document.getElementById('signupOverlay').style.display='block';
