@@ -172,15 +172,20 @@ async function accCompareAnalyze(){
       // 비교 세션 식별 — 같은 [비교 분석] 1회 = 같은 batch (DB에서 묶어 분석용)
       const batchId = shot.name + '|' + Date.now();
       shot._batch = batchId;
-      // 이 사진에 대해 선택 모델 순차 호출 (병렬이면 lastAIUsage 비용 섞임 → 순차)
-      for(const id of _accSelectedEngines){
-        shot.models[id]={pending:true};
-        if(btn) btn.textContent=`사진 ${fi+1}/${_accFileBuf.length} · ${ACC_MODEL_MAP[id]?.name||id} 분석 중…`;
+      // 한 사진의 선택 모델들을 동시(병렬) 호출 → 5분 대기 단축 (2026-06-09).
+      //  ⚠️비용(cost_won 화면값)은 lastAIUsage 전역이라 병렬 시 섞일 수 있음(대략치).
+      //   정확 비용은 ai_usage_logs에 각 호출이 정확히 기록됨(_logAIUsage) → CTO는 그걸로 분석.
+      //  사진은 순차(동시 호출 폭주 시 503 ↑ 방지).
+      _accSelectedEngines.forEach(id=>{ shot.models[id]={pending:true}; });
+      if(btn) btn.textContent=`사진 ${fi+1}/${_accFileBuf.length} 분석 중… (${_accSelectedEngines.length}개 모델 동시)`;
+      _accRenderCompare();
+      await Promise.all(_accSelectedEngines.map(async id=>{
+        const res = await _accRunOneModel([b64], id);
+        shot.models[id]=res;
         _accRenderCompare();
-        shot.models[id]=await _accRunOneModel([b64], id);
-        _accRenderCompare();
-        await _accSaveShotResult(shot, id); // ★ 모델별 결과(품목·금액·합계)를 DB 저장 → CTO가 정확도 비교분석
-      }
+        await _accSaveShotResult(shot, id); // 모델별 결과(품목·금액·합계) DB 저장 → CTO 정확도 분석
+      }));
+      _accRenderCompare();
     }
   }catch(e){
     console.warn('[acc compare]', e);
