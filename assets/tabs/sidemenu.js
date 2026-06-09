@@ -1141,7 +1141,12 @@ async function loadVendorOrders(){
   const ms=document.getElementById('vOrderMonth')?.innerText;
   const monthStr=(ms==='-'||!ms)?new Date().toISOString().slice(0,7):ms;
   if(document.getElementById('vOrderMonth'))document.getElementById('vOrderMonth').innerText=monthStr;
-  const vendorId=document.getElementById('orderVendorFilter')?.value||'';
+  // 거래처 상세 진입(currentVendorDetailId) 시 그 거래처로 필터.
+  // ⚠️온라인 거래처(쿠팡)는 orderVendorFilter 드롭다운 옵션에 없어 sel.value가 빈 채로 남음 →
+  //   전체 영수증이 다 보이던 버그 우회. 상세 진입이면 currentVendorDetailId 우선 (2026-06-09)
+  const vendorId = (typeof currentVendorDetailId!=='undefined' && currentVendorDetailId)
+    ? currentVendorDetailId
+    : (document.getElementById('orderVendorFilter')?.value||'');
   const listEl=document.getElementById('orderListData');
   if(listEl) listEl.innerHTML='<div class="empty-state"><p style="color:var(--gray-400);">조회 중...</p></div>';
   // 2026-05-25 갈아엎기 (D안): 영수증분도 같이 표시 (사장님 호소 — 거래처 화면에 영수증이 안 보여서 또 입력하게 됨)
@@ -1447,6 +1452,12 @@ function _refreshAfterExpenseChange(){
   const expHubCont = document.getElementById('expHubCont');
   if(expHubCont && expHubCont.classList.contains('active')){
     if(typeof loadExpHubData === 'function') loadExpHubData(true).catch(_=>{});
+  }
+  // 거래처 화면(상세 포함)이 활성이면 거래처 목록도 즉시 갱신 —
+  //  영수증 그룹/행 편집·삭제(날짜·금액 수정 등) 후 거래처 상세가 옛 값 그대로 보이던 버그 (2026-06-09)
+  const vendorsCont = document.getElementById('vendorsCont');
+  if(vendorsCont && vendorsCont.classList.contains('active') && typeof loadVendorOrders === 'function'){
+    loadVendorOrders();
   }
 }
 async function openEditOrderSheet(id){
