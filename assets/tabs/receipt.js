@@ -370,7 +370,7 @@ async function loadCatReceiptData(){
   //  · 직구 모드 = receipts only (vendor_orders는 항상 vendor_id 있음 — 매칭 X)
   //  · 카테고리 모드 = receipts(category_id IN ids) + vendor_orders(vendors.category_id IN ids)
   let rq = sb.from('receipts')
-    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty')
+    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty,seq,spec,origin')
     .eq('store_id', currentStore.id)
     .gte('receipt_date', start).lte('receipt_date', end)
     .order('receipt_date', {ascending:false});
@@ -1558,6 +1558,7 @@ async function saveReceipt(){
       _idx:idx+1, _cat:cat, _origItem: origItem, // 학습용 메타 (DB 저장 X)
       store_id:currentStore.id,receipt_date:tr.querySelector('.c-d').value,
       vendor:vendorText,item:itemText,
+      seq:idx, // 품목 순서(분석 순서) 고정 — 기록 표시 시 이 번호로 정렬 (2026-06-09)
       spec:specText, origin:originText,
       vendor_id: (isVendorMode || isOnlineMode) ? rcpVendorId : null,
       unit_price: unitRaw ? parseInt(unitRaw,10) : null,
@@ -1684,7 +1685,7 @@ async function loadReceiptList(){
   const lastDay=new Date(y,m,0).getDate();
   const start=rcpListMonth+'-01', end=rcpListMonth+'-'+String(lastDay).padStart(2,'0');
   const {data,error}=await sb.from('receipts')
-    .select('id,receipt_date,vendor,item,unit_price,qty,total_price,category,category_id,note,receipt_group_id,input_method,vendor_id,created_at')
+    .select('id,receipt_date,vendor,item,unit_price,qty,total_price,category,category_id,note,receipt_group_id,input_method,vendor_id,created_at,seq,spec,origin')
     .eq('store_id',currentStore.id)
     .gte('receipt_date',start).lte('receipt_date',end)
     .order('receipt_date',{ascending:false})
@@ -1766,6 +1767,7 @@ function _normalizeExpenseRow(row, source){
     input_method:row.input_method||null,
     note:row.note||'정상',
     memo:'',
+    seq:(row.seq!=null)?row.seq:null, // 품목 순서(분석 순서). 옛 영수증은 null
     category:row.category||null // 품목별 분류 (2026-06-10 기록 표시용)
   };
 }
@@ -1801,6 +1803,16 @@ function _groupExpenseRows(normRows){
     if(r.note==='정상') g.total+=(r.amount||0);
     if(r.note!=='정상') g.hasErr=true;
   });
+  // 그룹 내 품목을 seq(분석 순서)로 고정 정렬 — 매번 순서 섞이던 버그 해결 (2026-06-09)
+  // seq 없는 옛 영수증(null)은 뒤로, 원래 순서 유지(안정 정렬)
+  groups.forEach(g=>{
+    g.rows.forEach((r,i)=>{ r._origIdx=i; });
+    g.rows.sort((a,b)=>{
+      const sa=(a.seq!=null)?a.seq:Number.MAX_SAFE_INTEGER;
+      const sb2=(b.seq!=null)?b.seq:Number.MAX_SAFE_INTEGER;
+      return sa!==sb2 ? sa-sb2 : a._origIdx-b._origIdx;
+    });
+  });
   return groups;
 }
 
@@ -1824,6 +1836,15 @@ function _groupReceipts(records){
       const g={groupKey:'s:'+r.id, groupId:null, recId:r.id, date:r.receipt_date, vendor:r.vendor||'', rows:[r], total:r.note==='정상'?(r.total_price||0):0, hasErr:r.note!=='정상', inputMethod:r.input_method||null};
       groups.push(g);
     }
+  });
+  // 그룹 내 품목을 seq(분석 순서)로 고정 정렬 (2026-06-09). seq 없는 옛 영수증은 원래 순서 유지
+  groups.forEach(g=>{
+    g.rows.forEach((r,i)=>{ r._origIdx=i; });
+    g.rows.sort((a,b)=>{
+      const sa=(a.seq!=null)?a.seq:Number.MAX_SAFE_INTEGER;
+      const sb2=(b.seq!=null)?b.seq:Number.MAX_SAFE_INTEGER;
+      return sa!==sb2 ? sa-sb2 : a._origIdx-b._origIdx;
+    });
   });
   return groups;
 }
@@ -2007,11 +2028,18 @@ function _parseEditKey(editKey){
   return null;
 }
 function _rgeRowsFromRecords(records){
-  return records.map(r=>({
+  // seq(분석 순서)로 정렬 후 행 구성 — 편집 시트도 순서대로 열림 (2026-06-09)
+  const sorted=[...records].map((r,i)=>({_r:r,_i:i})).sort((a,b)=>{
+    const sa=(a._r.seq!=null)?a._r.seq:Number.MAX_SAFE_INTEGER;
+    const sb=(b._r.seq!=null)?b._r.seq:Number.MAX_SAFE_INTEGER;
+    return sa!==sb ? sa-sb : a._i-b._i;
+  }).map(x=>x._r);
+  return sorted.map(r=>({
     id:r.id, vendor:r.vendor||'', item:r.item||'',
     unitPrice:r.unit_price||null, qty:r.qty||null,
     amount:r.total_price||0,
     cat:r.category||'', catId:r.category_id||null, note:r.note||'정상',
+    spec:r.spec||null, origin:r.origin||null,
     _isNew:false, _deleted:false, _origItem:r.item||''
   }));
 }
@@ -2142,6 +2170,9 @@ async function saveReceiptGroupEdit(){
   const invalid=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&(!r.amount||r.amount<=0));
   if(invalid.length) return toast('정상 행은 금액이 필요해요','warn');
   setLoad(true,'저장 중...');
+  // 화면에 보이는 순서대로 seq 재부여 — 편집 후에도 품목 순서 고정 (2026-06-09)
+  let _seqCounter=0;
+  rgeRows.forEach(r=>{ if(!r._deleted) r._seq=_seqCounter++; });
   // 1) 기존 행 UPDATE
   const updates=rgeRows.filter(r=>r.id&&!r._isNew&&!r._deleted);
   for(const r of updates){
@@ -2149,7 +2180,7 @@ async function saveReceiptGroupEdit(){
       receipt_date:date, vendor, item:r.item,
       unit_price:r.unitPrice||null, qty:r.qty||null, total_price:r.amount,
       category:r.cat||null, category_id:r.catId||null, note:r.note,
-      spec:r.spec||null, origin:r.origin||null
+      spec:r.spec||null, origin:r.origin||null, seq:r._seq
     }).eq('id',r.id).eq('store_id',currentStore.id);
     if(error){ setLoad(false); return errToast('저장(수정)', error); }
   }
@@ -2161,7 +2192,7 @@ async function saveReceiptGroupEdit(){
       unit_price:r.unitPrice||null, qty:r.qty||null,
       total_price:r.amount, category:r.cat||null, category_id:r.catId||null,
       note:r.note, receipt_group_id:groupId,
-      spec:r.spec||null, origin:r.origin||null
+      spec:r.spec||null, origin:r.origin||null, seq:r._seq
     }));
     const {error}=await sb.from('receipts').insert(payload);
     if(error){ setLoad(false); return errToast('저장(추가)', error); }

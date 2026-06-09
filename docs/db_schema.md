@@ -248,6 +248,7 @@ franchises (프랜차이즈/브랜드)
 | **spec** (text, 2026-06-08) | 규격·포장 규격 (예 "F0용 슬라이스 1Kg/EA", "500g"). 거래처 모드 영수증만 AI가 i에서 분리 추출. 직구·옛 영수증 NULL. 마이그레이션 `add_receipts_spec_origin_20260608` |
 | **origin** (text, 2026-06-08) | 원산지 (예 "외국산", "국내산"). 거래처 모드만 분리 추출. ⚠️쉼표로 품명에 섞인 원산지(고기손만두,돈육:국내산)는 item에 그대로 두고 origin=NULL. 직구·옛 영수증 NULL |
 | note | 정상/오답/반품 등 |
+| **seq** (int, 2026-06-09) | 영수증 내 품목 순서(분석 순서, 0부터). 한 영수증의 created_at은 모두 동일 + id는 uuid라 순서 정보가 없어 기록 표시 시 품목이 매번 섞이던 버그 해결. 저장 시 행 인덱스 박음. 옛 영수증 NULL(원래 순서 유지). 마이그레이션 `ALTER TABLE receipts ADD COLUMN seq INT;` 롤백 `ALTER TABLE receipts DROP COLUMN seq;` |
 | created_at | 등록일시 |
 
 > ⚠️ **2026-06-08 추가 (규격·원산지 분리)**: `spec TEXT`, `origin TEXT` 신설. 거래처 영수증에서 박스입수는 수량(q) 계산에만 내부 사용하고 화면 표시 안 함 — 사장님 "박스입수+EA = 입수 애매" 호소 반영. 규격·원산지만 별도 칸 분리. 마이그레이션: `add_receipts_spec_origin_20260608`. 롤백: `ALTER TABLE receipts DROP COLUMN IF EXISTS spec, DROP COLUMN IF EXISTS origin;`
