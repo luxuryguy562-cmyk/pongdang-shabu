@@ -1504,6 +1504,26 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .exp-channel-card .ec-nm{font-size:13px;font-weight:700;color:var(--toss-text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;letter-spacing:-0.3px;}
 .exp-channel-card .ec-vl{font-size:18px;font-weight:800;color:var(--toss-text-1);text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;letter-spacing:-0.5px;}
 .exp-channel-card .ec-sub{font-size:11px;color:var(--toss-text-4);font-weight:500;margin-top:3px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;letter-spacing:-0.2px;}
+/* 영수증=부모 / 거래채널=자식 위계 묶음 (2026-06-09) */
+.exp-receipt-group{background:var(--white);border-radius:22px;padding:14px;box-shadow:var(--card-shadow);margin-bottom:14px;}
+.exp-hero-ai{width:100%;background:linear-gradient(135deg,#3182F6 0%,#0064FF 100%);border-radius:16px;padding:18px 20px;border:0;cursor:pointer;display:flex;align-items:center;gap:13px;font-family:inherit;text-align:left;box-shadow:0 6px 18px rgba(49,130,246,.28);transition:transform .2s cubic-bezier(.2,.8,.4,1);}
+.exp-hero-ai:active{transform:scale(.985);}
+.exp-hero-ai .eha-ic{width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.exp-hero-ai .eha-ic svg{width:23px;height:23px;stroke:#fff;fill:none;}
+.exp-hero-ai .eha-title{font-size:15.5px;font-weight:800;letter-spacing:-0.4px;color:#fff;}
+.exp-hero-ai .eha-pill{display:inline-block;font-size:10px;font-weight:800;background:rgba(255,255,255,.25);border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:middle;color:#fff;letter-spacing:.3px;}
+.exp-hero-ai .eha-sub{font-size:12px;font-weight:600;color:rgba(255,255,255,.9);margin-top:4px;letter-spacing:-0.2px;}
+.exp-hero-ai .eha-arr{color:rgba(255,255,255,.8);font-size:20px;flex-shrink:0;}
+.exp-sub-label{font-size:11.5px;font-weight:800;color:var(--toss-text-4);margin:14px 6px 9px;display:flex;align-items:center;gap:6px;}
+.exp-sub-label::before{content:'└';color:var(--toss-blue);font-size:14px;font-weight:900;}
+.exp-receipt-group .exp-channel-grid{margin-bottom:0;}
+.exp-receipt-group .exp-channel-card{background:var(--toss-line);box-shadow:none;}
+/* 거래채널 진입화면 — 영수증 사진 버튼 안 AI 배지·보조문구 (2026-06-09) */
+#catRcpAddBtns{align-items:stretch;}
+.catrcp-photo{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+.catrcp-photo .crp-t{font-size:13px;font-weight:800;display:flex;align-items:center;gap:5px;}
+.catrcp-photo .crp-pill{font-size:9.5px;font-weight:800;background:rgba(255,255,255,.28);border-radius:5px;padding:1.5px 5px;letter-spacing:.3px;}
+.catrcp-photo .crp-s{font-size:10px;font-weight:500;color:rgba(255,255,255,.85);letter-spacing:-0.2px;}
 </style>
 </head>
 <body>
