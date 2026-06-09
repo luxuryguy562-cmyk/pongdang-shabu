@@ -1493,8 +1493,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 지출 허브 섹션 헤더 + 거래 채널 카드 */
 .exp-section-ttl{font-size:12px;font-weight:800;color:var(--toss-text-3);margin:18px 4px 8px;letter-spacing:-0.2px;}
 .exp-section-ttl .exp-section-hint{font-weight:500;color:var(--toss-text-5);font-size:11px;margin-left:4px;}
-.exp-channel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px;}
-.exp-channel-card{background:var(--white);border:0;border-radius:18px;padding:16px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;min-width:0;overflow:hidden;box-shadow:var(--card-shadow);transition:transform .2s cubic-bezier(.2,.8,.4,1);font-family:inherit;}
+.exp-channel-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px;}
+.exp-channel-card{background:var(--white);border:0;border-radius:18px;padding:12px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;min-width:0;overflow:hidden;box-shadow:var(--card-shadow);transition:transform .2s cubic-bezier(.2,.8,.4,1);font-family:inherit;}
 .exp-channel-card:active{transform:scale(.97);}
 .exp-channel-card .ec-head{display:flex;align-items:center;width:100%;margin-bottom:10px;min-width:0;gap:8px;}
 .exp-channel-card .ec-icon-wrap{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
