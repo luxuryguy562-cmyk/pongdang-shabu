@@ -1857,10 +1857,26 @@ async function toggleFc(id,active){
 // ══════════════════════════════════════════
 // staffTab: 서브탭 제거됨 — 직원 목록만 표시
 function staffTab(){}
+// ─── 새 기능: 매니저면 직원 민감정보(금고)를 employees에 병합 — 직원관리 화면용 ───
+async function mergeEmployeePrivate(){
+  if(!isManager) return;
+  const token=localStorage.getItem('pd_token');
+  if(!token) return;
+  try{
+    const{data,error}=await sb.functions.invoke('emp-private',{body:{token,action:'list'}});
+    if(error||!data||!data.ok) return;
+    const map=new Map((data.rows||[]).map(r=>[r.employee_id,r]));
+    employees.forEach(e=>{
+      const pv=map.get(e.id);
+      if(pv){ e.pin=pv.pin; e.id_number=pv.id_number; e.bank_name=pv.bank_name; e.account_number=pv.account_number; e.phone=pv.phone; e.address=pv.address; e.birth_date=pv.birth_date; }
+    });
+  }catch(_e){}
+}
 async function loadEmployees(){
   if(!currentStore)return;
   const{data}=await sb.from('employees').select('*').eq('store_id',currentStore.id).order('name');
   employees=data||[];
+  await mergeEmployeePrivate();
   await loadRoles(false);renderEmpList();
   // 근태 전체조회 필터 채우기
   const attFilter=document.getElementById('attEmpFilter');
@@ -2100,19 +2116,14 @@ async function saveEmployee(){
   let birthDate=null;
   if(idNumRaw){const digits=idNumRaw.replace(/[^\d]/g,'');if(digits.length>=6){const yy=digits.slice(0,2);const mm=parseInt(digits.slice(2,4));const dd=parseInt(digits.slice(4,6));if(mm>=1&&mm<=12&&dd>=1&&dd<=31){const g=digits.length>=7?parseInt(digits[6]):1;const century=(g<=2)?'19':'20';birthDate=century+yy+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');}}}
   const isForeign=document.getElementById('empForeignCheck').checked;
+  // 비민감 정보 (employees 표)
   const payload={
     store_id:currentStore.id,name,
-    id_number:idNumRaw,birth_date:birthDate,
     is_foreign:isForeign,
     report_status:document.getElementById('empReportStatus').value||'미신고',
-    phone:document.getElementById('empPhoneInput').value.trim()||null,
-    address:document.getElementById('empAddressInput').value.trim()||null,
-    bank_name:document.getElementById('empBankInput').value.trim()||null,
-    account_number:document.getElementById('empAccountInput').value.trim()||null,
     base_wage:baseWage,
     wage_type:wageType,
     monthly_wage:wageType==='monthly'?monthlyWageManwon:null,
-    pin:pinVal,
     caps_id:document.getElementById('empCapsIdInput').value.trim()||null,
     hire_date:document.getElementById('empHireDateInput').value.trim()||null,
     role:document.getElementById('empRoleSelect').value||null,
@@ -2122,9 +2133,34 @@ async function saveEmployee(){
   };
   // 권한은 관리자만 변경 가능
   if(isManager){const selAuth=document.getElementById('empAuthLevel').value||'staff';payload.auth_level=selAuth;payload.is_manager=selAuth!=='staff';}
-  setLoad(true,'저장 중...');const eid=document.getElementById('editEmpId').value;
-  const{error}=eid?await sb.from('employees').update(payload).eq('id',eid).eq('store_id',currentStore.id):await sb.from('employees').insert(payload);
-  setLoad(false);if(error)return errToast('저장', error);closeAllSheets();await loadEmployees();
+  // 민감 정보 (금고 employee_private — Edge Function 경유, 휴대폰/직원 표에 안 남김)
+  const privateData={
+    pin:pinVal,
+    id_number:idNumRaw,
+    birth_date:birthDate,
+    phone:document.getElementById('empPhoneInput').value.trim()||null,
+    address:document.getElementById('empAddressInput').value.trim()||null,
+    bank_name:document.getElementById('empBankInput').value.trim()||null,
+    account_number:document.getElementById('empAccountInput').value.trim()||null
+  };
+  setLoad(true,'저장 중...');
+  const eid=document.getElementById('editEmpId').value;
+  let empId=eid;
+  if(eid){
+    const{error}=await sb.from('employees').update(payload).eq('id',eid).eq('store_id',currentStore.id);
+    if(error){setLoad(false);return errToast('저장', error);}
+  }else{
+    const{data:ins,error}=await sb.from('employees').insert(payload).select('id').single();
+    if(error){setLoad(false);return errToast('저장', error);}
+    empId=ins.id;
+  }
+  // 민감정보는 금고에 (매니저 권한 서버 검증 후 저장)
+  const token=localStorage.getItem('pd_token');
+  if(token){
+    const{data:pr,error:pe}=await sb.functions.invoke('emp-private',{body:{token,action:'save',target_employee_id:empId,data:privateData}});
+    if(pe||!pr||!pr.ok){ setLoad(false); return toast('개인정보 저장 실패: '+((pr&&pr.error)||'오류'),'error'); }
+  }
+  setLoad(false);closeAllSheets();await loadEmployees();
 }
 async function toggleEmp(id,active){if(!confirm(active?'복직?':'퇴사?'))return;await sb.from('employees').update({is_active:active,resign_date:active?null:ymdLocal(new Date())}).eq('id',id).eq('store_id',currentStore.id);await loadEmployees();}
 
