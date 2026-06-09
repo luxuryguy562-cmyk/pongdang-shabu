@@ -42,8 +42,12 @@
 > - ✅ 1단계 DB 적용: persons.pin + store_join_codes·signup_tokens·pending_joins
 > - ✅ 2단계 서버 함수 배포: verify-otp(증표저장) / complete-signup / join-store / store-join-admin
 > - 매장코드 = **고정 코드 + 사장 승인** (사장님 결정). join-store는 pending_joins 등록만, store-join-admin approve가 employees 생성.
-> - ⏳ 남음: 3단계 가입 화면 UI(로그인 화면 '직원 가입' 버튼) + 4단계 사장 승인 화면(직원관리 '가입 대기').
+> - ✅ 3단계 가입 화면 UI: 로그인 '가입하기' 1개 → joinOverlay(전화→인증→역할선택→직원 이름·PIN→매장코드→완료). 사장 선택=기존 openSignup 그대로.
+> - ✅ 4단계 사장 화면: 직원관리에 '직원 초대'(코드+공유/복사) + '가입 대기'(승인/거절). loadJoinAdmin, store-join-admin 연동.
 > - ⚠️ 설계 원안의 issue-store-code는 store-join-admin으로 통합(issue+list_codes+list_pending+approve+reject 한 함수, emp_sessions 매니저 검증).
+> - 🔴 **사장님 결정 — 신분 확인 전화번호 통일**: 사장도 문자 인증. 이메일=사장 선택 입력(복구). 단 사장 가입(완료=completeSignup)은 아직 이메일/비번 그대로(작동 보호). person 연결+이메일 선택화는 Phase B(별도, 백업 커밋 후).
+> - ⏳ **Phase B 남음**: ① 사장 가입에 전화인증 앞에 붙이고 completeSignup에 person_id 연결(window._verifiedSignupPhone 활용) ② 이메일 선택화 ③ person 기반 로그인(전화+PIN→매장 선택) ④ QR 코드 발급/스캔(현재 공유·복사만) ⑤ 승인 시 직원에게 문자 알림.
+> - 🐛 send-otp 문자 본문 오타: `[폁당샤브]` → `[퐁당샤브]` (재배포 시 같이 수정, 🔴 실행승인 필요).
 
 **선행 DB 작업**:
 - `persons`에 `name`, `pin`(본인 로그인 PIN, 민감) 컬럼 추가. pin은 RLS 차단 유지(person 자체가 service_role만).
