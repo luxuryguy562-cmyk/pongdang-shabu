@@ -810,17 +810,19 @@
 
 <!-- ══ [Hub] 지출 허브 (관리자 전용) ══ -->
 <div id="expHubCont" class="container">
-  <button type="button" class="hub-full" data-action="nav|receipt">
-    <span class="hub-full-icon"><svg><use href="#i-receipt"/></svg></span>
-    <div style="flex:1;min-width:0;">
-      <div class="hub-full-title">영수증 등록</div>
-      <div class="hub-full-sub" id="expHeroInfo">사진 한 장이면 카테고리별 자동 분류돼요</div>
-    </div>
-    <span style="color:var(--gray-400);font-size:20px;">›</span>
-  </button>
-  <!-- 거래 채널 (토스 통일 2026-05-22) -->
-  <div class="exp-section-ttl">🚚 거래 채널</div>
-  <div class="exp-channel-grid">
+  <!-- 영수증=부모 / 거래채널=자식 한 묶음 카드 (2026-06-09 위계①) -->
+  <div class="exp-receipt-group">
+    <button type="button" class="exp-hero-ai" data-action="nav|receipt">
+      <span class="eha-ic"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+      <div style="flex:1;min-width:0;">
+        <div class="eha-title">영수증 찍으면 AI가 자동 정리<span class="eha-pill">AI</span></div>
+        <div class="eha-sub" id="expHeroInfo">사진 한 장이면 카테고리별 자동 분류돼요</div>
+      </div>
+      <span class="eha-arr">›</span>
+    </button>
+    <!-- 거래 채널 = 영수증의 하위 (어디 영수증인지) -->
+    <div class="exp-sub-label">어디 영수증인가요?</div>
+    <div class="exp-channel-grid">
     <button type="button" class="exp-channel-card" data-action="openVendorChannel|vendor">
       <div class="ec-head">
         <div class="ec-icon-wrap blue">
@@ -851,6 +853,7 @@
       <div class="ec-vl" id="expMiniDirect">-</div>
       <div class="ec-sub" id="expMiniDirectSub">이번달</div>
     </button>
+    </div>
   </div>
   <!-- 지출 카테고리 (동적 렌더링) — JS renderExpHubCatSkeleton 즉시 + updateExpHubCatAmounts 비동기 -->
   <div class="exp-section-ttl">📦 지출 카테고리 <span class="exp-section-hint">(드래그로 순서 변경)</span></div>
@@ -896,7 +899,10 @@
   </div>
   <!-- 직구 영수증 등록 진입 (📸 사진=AI 분석 / ✏️ 수동 입력). 직구 모드일 때만 표시 (openCatReceipt 토글) -->
   <div id="catRcpAddBtns" style="display:none;gap:8px;margin-bottom:14px;">
-    <button class="btn btn-primary" style="flex:1;padding:12px;font-size:13px;font-weight:700;" data-action="openCatReceiptInput|photo">📸 영수증 사진</button>
+    <button class="btn btn-primary catrcp-photo" style="padding:11px 13px;" data-action="openCatReceiptInput|photo">
+      <span class="crp-t">📸 영수증 사진 <span class="crp-pill">AI</span></span>
+      <span class="crp-s">찍으면 자동 분류</span>
+    </button>
     <button class="btn btn-secondary" style="flex:1;padding:12px;font-size:13px;font-weight:700;" data-action="openCatReceiptInput|manual">✏️ 수동 입력</button>
   </div>
   <!-- 필터 줄 -->

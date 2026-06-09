@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>최종안 — 위계① + 진입화면 버튼 AI배지</title>
+<style>
+  :root{
+    --white:#FFFFFF;
+    --toss-blue:#3182F6;--toss-blue-strong:#0064FF;--toss-blue-light:#EDF4FF;
+    --toss-text-1:#191F28;--toss-text-2:#333D4B;--toss-text-3:#6B7684;--toss-text-4:#8B95A1;--toss-text-5:#B0B8C1;
+    --toss-line:#F2F4F6;--toss-line-2:#E5E8EB;
+    --card-shadow:0 4px 14px rgba(20,40,80,0.07), 0 1px 3px rgba(20,40,80,0.05);
+  }
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard',sans-serif;background:#EBEEF2;margin:0;padding:18px 14px 40px;color:var(--toss-text-1);}
+  .phone{max-width:380px;margin:0 auto;}
+  .screen-tag{font-size:11px;font-weight:800;color:#fff;background:#8B95A1;border-radius:6px;padding:3px 9px;display:inline-block;margin:18px 0 10px;}
+  .opt-desc{font-size:12px;color:var(--toss-text-3);margin:0 0 12px;line-height:1.55;font-weight:600;}
+
+  .heroA{background:linear-gradient(135deg,#3182F6 0%,#0064FF 100%);border-radius:16px;padding:18px 20px;color:#fff;display:flex;align-items:center;gap:13px;}
+  .heroA .ic{width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .heroA .ic svg{width:23px;height:23px;stroke:#fff;fill:none;}
+  .heroA .tt{font-size:15.5px;font-weight:800;letter-spacing:-0.4px;}
+  .heroA .ai-pill{display:inline-block;font-size:10px;font-weight:800;background:rgba(255,255,255,.25);border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:middle;}
+  .heroA .sb{font-size:12px;font-weight:600;color:rgba(255,255,255,.9);margin-top:4px;}
+  .heroA .arr{color:rgba(255,255,255,.8);font-size:20px;}
+
+  /* 위계① 묶음 카드 */
+  .group1{background:#fff;border-radius:22px;padding:14px;box-shadow:var(--card-shadow);}
+  .group1 .sub-label{font-size:11.5px;font-weight:800;color:var(--toss-text-4);margin:14px 6px 9px;display:flex;align-items:center;gap:6px;}
+  .group1 .sub-label::before{content:'└';color:var(--toss-blue);font-size:14px;font-weight:900;}
+  .chrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .chcard{background:var(--toss-line);border-radius:16px;padding:12px;}
+  .chcard .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:16px;}
+  .chcard .ic.b{background:var(--toss-blue-light);}.chcard .ic.g{background:#E8F5E9;}.chcard .ic.a{background:#FFF6E0;}
+  .chcard .nm{font-size:12.5px;font-weight:700;color:var(--toss-text-2);}
+  .chcard .vl{font-size:16px;font-weight:800;margin-top:4px;color:var(--toss-text-1);}
+  .chcard .sub{font-size:10.5px;color:var(--toss-text-4);font-weight:500;margin-top:2px;}
+
+  /* 진입화면 */
+  .scr{background:#fff;border-radius:20px;padding:18px 16px;box-shadow:var(--card-shadow);}
+  .app-back{font-size:13px;color:var(--toss-text-3);font-weight:700;margin-bottom:14px;}
+  .scr-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .scr-head .em{font-size:26px;}
+  .scr-head .ti{font-size:18px;font-weight:900;color:var(--toss-text-1);}
+  .scr-head .to{font-size:12.5px;color:var(--toss-text-3);font-weight:600;margin-top:2px;}
+  /* 버튼 줄 — 영수증 사진 버튼 안에 AI 배지 + 보조 문구 (수동입력과 구분) */
+  .scr-btns{display:flex;gap:8px;margin-bottom:16px;align-items:stretch;}
+  .scr-btns .b1{flex:1;padding:11px 13px;border-radius:12px;background:var(--toss-blue);color:#fff;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+  .scr-btns .b1 .t{font-size:13px;font-weight:800;display:flex;align-items:center;gap:5px;}
+  .scr-btns .b1 .ai-pill{font-size:9.5px;font-weight:800;background:rgba(255,255,255,.28);border-radius:5px;padding:1.5px 5px;letter-spacing:.3px;}
+  .scr-btns .b1 .s{font-size:10px;font-weight:500;color:rgba(255,255,255,.85);letter-spacing:-.2px;}
+  .scr-btns .b2{flex:1;padding:11px 13px;border-radius:12px;background:var(--toss-line);color:var(--toss-text-2);font-size:13px;font-weight:800;text-align:center;display:flex;align-items:center;justify-content:center;}
+  .scr-filter{display:flex;gap:8px;margin-bottom:14px;}
+  .scr-filter .f1{flex:1;padding:10px 12px;border-radius:11px;background:var(--toss-line);font-size:12.5px;font-weight:700;color:var(--toss-text-2);display:flex;justify-content:space-between;}
+  .scr-filter .f2{width:120px;padding:10px;border-radius:11px;background:var(--toss-line);font-size:12.5px;font-weight:700;color:var(--toss-text-2);text-align:center;}
+  .rcp-item{background:var(--toss-line);border-radius:12px;padding:11px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;}
+  .rcp-item .nm{font-size:13px;font-weight:700;}
+  .rcp-item .dt{font-size:11px;color:var(--toss-text-4);margin-top:2px;}
+  .rcp-item .am{font-size:14px;font-weight:800;}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <span class="screen-tag">📱 화면 1 · 지출관리 메인 (위계안 ① 확정)</span>
+  <div class="group1">
+    <div class="heroA">
+      <div class="ic"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+      <div style="flex:1;min-width:0;">
+        <div class="tt">영수증 찍으면 AI가 자동 정리<span class="ai-pill">AI</span></div>
+        <div class="sb">이번달 183건 · 6,875,325원 자동 분류</div>
+      </div>
+      <span class="arr">›</span>
+    </div>
+    <div class="sub-label">어디 영수증인가요?</div>
+    <div class="chrow">
+      <div class="chcard"><div class="ic b">🏠</div><div class="nm">거래처 관리</div><div class="vl">6,438,715</div><div class="sub">10곳</div></div>
+      <div class="chcard"><div class="ic g">🌐</div><div class="nm">온라인</div><div class="vl">0</div><div class="sub">2곳</div></div>
+      <div class="chcard"><div class="ic a">🛒</div><div class="nm">마트·시장</div><div class="vl">561,610</div><div class="sub">37건</div></div>
+    </div>
+  </div>
+
+  <span class="screen-tag">📱 화면 2 · 거래채널 진입 (마트·시장 예시)</span>
+  <p class="opt-desc">상단 배너 없이 깔끔하게. <b>"📸 영수증 사진" 버튼에 AI 배지</b>를 달고, 버튼 바로 <b>아래 회색 작은 글씨</b>로 분석 안내. 위가 안 무거움.</p>
+  <div class="scr">
+    <div class="app-back">‹ 지출관리</div>
+    <div class="scr-head">
+      <span class="em">🛒</span>
+      <div><div class="ti">마트·시장</div><div class="to">이번달 561,610원 · 37건</div></div>
+    </div>
+    <div class="scr-btns">
+      <div class="b1">
+        <div class="t">📸 영수증 사진 <span class="ai-pill">AI</span></div>
+        <div class="s">찍으면 자동 분류</div>
+      </div>
+      <div class="b2">✏️ 수동 입력</div>
+    </div>
+    <div class="scr-filter">
+      <div class="f1"><span>🔍 거래방법: <b>전체</b></span><span>▾</span></div>
+      <div class="f2">2026년 6월</div>
+    </div>
+    <div class="rcp-item"><div><div class="nm">논산농협 마트분사</div><div class="dt">06-08</div></div><div class="am">19,480원</div></div>
+    <div class="rcp-item"><div><div class="nm">하나로마트 분사</div><div class="dt">06-07</div></div><div class="am">23,560원</div></div>
+  </div>
+
+</div>
+</body>
+</html>
