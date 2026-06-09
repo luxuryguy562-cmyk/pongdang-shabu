@@ -29,6 +29,12 @@
    - ✅ **3-① 완료(2026-06-09)**: `otp_codes` 표 + `send-otp`/`verify-otp` Edge Function. 문자인증→person 생성 E2E 테스트 통과(틀린코드 거부·person 생성·토큰 발급). 알리고 연동 완비 — 환경변수 `ALIGO_KEY`/`ALIGO_USER_ID`/`ALIGO_SENDER`만 넣으면 실제 발송. 키 없으면 `need_setup:true` 반환.
    - ⬜ **3-② 남음**: 가입 화면 UI(전화→인증번호→본인PIN→매장코드 합류) + ⚠️**사장님 알리고 가입+발신번호 등록**(이 지점에서만 사장님 손 필요 — CTO 추천 알리고, 건당 ~9원).
 
+### 문자 서비스 = 솔라피(SOLAPI) 확정 (2026-06-09, 6개 심층비교 후)
+- **결정 이유**: ①우리는 Supabase Edge Function(서버리스, IP 변동) → 알리고/뿌리오는 발송 IP 고정등록 강제라 부적합. 솔라피는 HMAC 서명 인증이라 IP 무관. ②근무 30분전 알림 등 예약·자동화 6곳 중 최강. ③진입장벽 최저(최소충전 1,000원, 본인폰이면 서류0).
+- **약점(감안함)**: 단가 출처마다 SMS 8~13원 엇갈림(가입 후 확정), 알림톡 소량단가는 알리고가 쌈. 단 인증문자는 1인 1회라 총액 미미.
+- **send-otp 솔라피용 배포 완료(v2)**: HMAC-SHA256 서명(crypto.subtle), POST api.solapi.com/messages/v4/send. 환경변수 `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER` 넣으면 작동(없으면 need_setup).
+- **사장님 할 일**: solapi.com 가입 → 본인폰 발신번호 등록(서류X) → 1,000원 충전 → API Key/Secret 발급 → CTO가 환경변수 등록(키는 채팅 노출 금지).
+
 ### 현재 Edge Function 목록 (2026-06-09 기준)
 coupang-receiver(기존) / emp-login(로그인+증표) / emp-session(자동로그인 복원) / emp-private(매니저 금고 조회·저장) / send-otp(문자발송) / verify-otp(문자확인+person생성)
 4. **화면 완전 분리**: 사장/직원 경로·화면 갈라짐. 직원에게 사장 기능·타직원 정보 노출 0.
