@@ -912,8 +912,12 @@ function openAddVendorSheet(kind){
   if(kind==='vendor') refreshVendorHandledCategories([]);
   document.getElementById('addVendorTitle').innerText = kind==='online' ? '온라인 플랫폼 추가' : '거래처 추가';
   document.getElementById('vendorNameInput').value='';
-  document.getElementById('vendorNameInput').placeholder = kind==='online' ? '플랫폼명 (예: 쿠팡, 네이버, 옥션) *' : '거래처명 *';
+  document.getElementById('vendorNameInput').placeholder = kind==='online' ? '플랫폼명 (예: 쿠팡, 네이버, 옥션) *' : '거래처명(회사명) *';
   document.getElementById('editVendorId').value='';
+  // 업체정보 초기화 (신규 추가)
+  document.getElementById('vendorBizNoInput').value='';
+  _renderVendorAccountRows([]);
+  _renderVendorContactRows([]);
   const delBtn=document.getElementById('vendorDeleteBtn');
   if(delBtn) delBtn.style.display='none'; // 신규 추가 시 삭제 버튼 숨김
   const togBtn=document.getElementById('vendorToggleBtn');
@@ -933,10 +937,14 @@ function openEditVendorSheet(id){
   const kind=(v.kind==='online') ? 'online' : 'vendor';
   document.getElementById('vendorKindInput').value=kind;
   _applyVendorSheetKind(kind);
-  document.getElementById('vendorNameInput').placeholder = kind==='online' ? '플랫폼명 *' : '거래처명 *';
+  document.getElementById('vendorNameInput').placeholder = kind==='online' ? '플랫폼명 *' : '거래처명(회사명) *';
   document.getElementById('addVendorTitle').innerText = kind==='online' ? '온라인 플랫폼 편집' : '거래처 편집';
   document.getElementById('vendorNameInput').value=v.name;
   document.getElementById('editVendorId').value=v.id;
+  // 업체정보 복원
+  document.getElementById('vendorBizNoInput').value=v.biz_no||'';
+  _renderVendorAccountRows(Array.isArray(v.accounts)?v.accounts:[]);
+  _renderVendorContactRows(Array.isArray(v.contacts)?v.contacts:[]);
   const delBtn=document.getElementById('vendorDeleteBtn');
   if(delBtn) delBtn.style.display=''; // 편집 시 삭제 버튼 노출
   // 거래종료 버튼 라벨/색 (is_active 따라)
@@ -961,16 +969,71 @@ function openEditVendorSheet(id){
   }
   openSheet('addVendorSheet');
 }
+// ─── 업체정보: 계좌·연락처 동적 행 (2026-06-09) ───
+// 계좌 행: [은행][계좌번호][🗑] / 연락처 행: [담당자명][전화][🗑]. 저장 시 DOM에서 일괄 수집.
+function _vendorAccountRowHtml(bank='', number=''){
+  return `<div class="vac-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+    <input class="input-field vac-bank" style="flex:0 0 90px;margin-bottom:0;" type="text" placeholder="은행" value="${esc(bank)}">
+    <input class="input-field vac-num" style="flex:1;margin-bottom:0;" type="text" placeholder="계좌번호" value="${esc(number)}">
+    <button type="button" class="btn btn-secondary" style="flex:0 0 38px;padding:10px 0;" data-action="removeVendorInfoRow|this" title="삭제">🗑</button>
+  </div>`;
+}
+function _vendorContactRowHtml(cname='', phone=''){
+  return `<div class="vct-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+    <input class="input-field vct-name" style="flex:0 0 90px;margin-bottom:0;" type="text" placeholder="담당자명" value="${esc(cname)}">
+    <input class="input-field vct-phone" style="flex:1;margin-bottom:0;" type="text" placeholder="전화" value="${esc(phone)}">
+    <button type="button" class="btn btn-secondary" style="flex:0 0 38px;padding:10px 0;" data-action="removeVendorInfoRow|this" title="삭제">🗑</button>
+  </div>`;
+}
+function _renderVendorAccountRows(accounts){
+  const box=document.getElementById('vendorAccountsList');
+  if(!box) return;
+  box.innerHTML=(accounts||[]).map(a=>_vendorAccountRowHtml(a.bank||'', a.number||'')).join('');
+}
+function _renderVendorContactRows(contacts){
+  const box=document.getElementById('vendorContactsList');
+  if(!box) return;
+  box.innerHTML=(contacts||[]).map(c=>_vendorContactRowHtml(c.name||'', c.phone||'')).join('');
+}
+function addVendorAccountRow(){
+  const box=document.getElementById('vendorAccountsList');
+  if(box) box.insertAdjacentHTML('beforeend', _vendorAccountRowHtml());
+}
+function addVendorContactRow(){
+  const box=document.getElementById('vendorContactsList');
+  if(box) box.insertAdjacentHTML('beforeend', _vendorContactRowHtml());
+}
+function removeVendorInfoRow(btn){
+  const row=btn?.closest('.vac-row, .vct-row');
+  if(row) row.remove();
+}
+// DOM에서 계좌·연락처 수집 (둘 다 빈 행은 버림)
+function _collectVendorAccounts(){
+  return Array.from(document.querySelectorAll('#vendorAccountsList .vac-row')).map(r=>({
+    bank:(r.querySelector('.vac-bank')?.value||'').trim(),
+    number:(r.querySelector('.vac-num')?.value||'').trim()
+  })).filter(a=>a.bank||a.number);
+}
+function _collectVendorContacts(){
+  return Array.from(document.querySelectorAll('#vendorContactsList .vct-row')).map(r=>({
+    name:(r.querySelector('.vct-name')?.value||'').trim(),
+    phone:(r.querySelector('.vct-phone')?.value||'').trim()
+  })).filter(c=>c.name||c.phone);
+}
 async function saveVendor(){
   if(!guardStore()) return;
   const name=document.getElementById('vendorNameInput').value.trim();
   const kind=document.getElementById('vendorKindInput')?.value || 'vendor';
   if(!name) return toast(kind==='online'?'플랫폼명을 입력하세요.':'거래처명을 입력하세요.','warn');
   const eid=document.getElementById('editVendorId').value;
+  // 업체정보 (거래처·온라인 공통)
+  const biz_no=(document.getElementById('vendorBizNoInput')?.value||'').trim()||null;
+  const accounts=_collectVendorAccounts();
+  const contacts=_collectVendorContacts();
   let payload;
   if(kind==='online'){
     // 온라인 플랫폼 = 취급품목 없이 자율. 카테고리는 영수증 품목별로 정해짐
-    payload={name,kind:'online',category:null,category_id:null,handled_category_ids:[]};
+    payload={name,kind:'online',category:null,category_id:null,handled_category_ids:[],biz_no,accounts,contacts};
   } else {
     // 취급품목 체크 수집 (leaf id 배열)
     const handledIds=Array.from(document.querySelectorAll('#vendorHandledCats .vhc:checked')).map(c=>c.value);
@@ -979,7 +1042,7 @@ async function saveVendor(){
     const category_id=handledIds[0];
     const cat=(expCategories||[]).find(c=>c.id===category_id);
     const categoryText=cat?.vendor_category||cat?.name||'';
-    payload={name,kind:'vendor',category:categoryText,category_id,handled_category_ids:handledIds};
+    payload={name,kind:'vendor',category:categoryText,category_id,handled_category_ids:handledIds,biz_no,accounts,contacts};
   }
   setLoad(true,'저장 중...');
   const{error}=eid

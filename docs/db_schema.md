@@ -320,7 +320,7 @@ franchises (프랜차이즈/브랜드)
 ### vendors / vendor_orders
 | vendors | vendor_orders |
 |---------|---------------|
-| id, store_id, name, **category** (text), **category_id** (FK→expense_categories ON DELETE SET NULL), **handled_category_ids** (jsonb), **kind** (text 'vendor'/'online'), is_active | store_id, vendor_id(FK), order_date |
+| id, store_id, name, **category** (text), **category_id** (FK→expense_categories ON DELETE SET NULL), **handled_category_ids** (jsonb), **kind** (text 'vendor'/'online'), **biz_no** (text), **accounts** (jsonb), **contacts** (jsonb), is_active | store_id, vendor_id(FK), order_date |
 | | item, **unit_price** (int, nullable), **quantity** (numeric, nullable), amount, memo, source, **order_group_id** (uuid, nullable) |
 
 > ⚠️ **2026-05-15 추가** (vendor_orders): `unit_price`, `quantity` 컬럼. UI에서 단가×수량 자동 곱셈해서 amount 채우되, 사장님이 amount 직접 수정 가능 (할인/운송비 포함 등).
@@ -330,6 +330,8 @@ franchises (프랜차이즈/브랜드)
 > ⚠️ **2026-05-20 추가** (vendor_orders): `order_group_id UUID` (nullable). 한 영수증/주문건의 멀티 행 묶음 ID. **receipts.receipt_group_id 패턴 동일**. 수동 입력 시트가 멀티행 accordion으로 갈아엎어지면서 1회 [✓ 저장] = 같은 group_id로 N행 INSERT. 옛 데이터·단일 입력 = NULL → (vendor_id+order_date) fallback 그룹핑(loadVendorOrders). 마이그레이션: `add_vendor_orders_order_group_id_20260520`. 인덱스 `idx_vendor_orders_group_id`. 롤백: `DROP INDEX IF EXISTS idx_vendor_orders_group_id; ALTER TABLE vendor_orders DROP COLUMN IF EXISTS order_group_id;`.
 >
 > ⚠️ **2026-06-10 추가** (vendors): `kind TEXT DEFAULT 'vendor'` — 거래처 종류. 'vendor'(정기 거래처, 취급품목 제한) / 'online'(쿠팡·네이버 등 온라인 플랫폼, 취급품목 없이 자율). 거래처 관리 화면=kind='vendor', 온라인 채널=kind='online'. 마이그레이션 `add_vendors_kind_20260610` (기존 쿠팡만 online). 롤백 `ALTER TABLE vendors DROP COLUMN kind;`.
+>
+> ⚠️ **2026-06-09 추가** (vendors): 업체정보 3칸. `biz_no TEXT`(사업자등록번호 1개) + `accounts JSONB DEFAULT '[]'`(계좌 목록 `[{bank,number}]`, 추가/삭제 가능) + `contacts JSONB DEFAULT '[]'`(연락처 목록 `[{name,phone}]`, 담당자명+전화, 추가/삭제 가능). 거래처·온라인 공통. 거래처명=회사명(별칭 X, 정식 상호). 별도 표 대신 JSONB 묶음 = 거래처당 1~3개 소량·독립 조회 불필요·거래처 소유 생명주기 → 단순. 마이그레이션 `add_vendors_company_info_20260609`. 롤백 `ALTER TABLE vendors DROP COLUMN IF EXISTS biz_no, DROP COLUMN IF EXISTS accounts, DROP COLUMN IF EXISTS contacts;`. 화면=거래처 편집 시트(saveVendor 수집, openEditVendorSheet 복원).
 >
 > ⚠️ **2026-06-10 추가** (vendors): `handled_category_ids JSONB` (취급품목 목록 — leaf 카테고리 id 배열). 거래처 영수증 AI 분석 시 이 목록만 카테고리 후보로 전달(후보 좁힘 → 정확도↑·검수↓). 1개면 AI 분류 생략·고정. 마이그레이션: `add_vendors_handled_category_ids_20260610` (ADD COLUMN + 기존 category_id를 `jsonb_build_array(category_id)`로 복사 = 기존 동작 보존). 롤백: `ALTER TABLE vendors DROP COLUMN handled_category_ids;`. 취급품목 후보 필터 = `category_type='expense' AND data_source IN ('composite','vendor_orders','receipts') AND is_active` (인건비·공과금·고정비·세금·마케팅·매출 제외, **비품(receipts) 포함**). 온라인·마트 모드는 미사용(전체 자율).
 >
