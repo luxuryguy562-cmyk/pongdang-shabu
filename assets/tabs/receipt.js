@@ -644,13 +644,18 @@ async function openRcpReceiptFromVendor(vendorId, method){
   if(!vid){ toast('거래처 정보를 찾을 수 없어요','error'); return; }
   const {data, error} = await sb.from('vendors').select('id,name,category,category_id,kind').eq('id', vid).eq('store_id', currentStore.id).maybeSingle();
   if(error || !data){ toast('거래처 정보를 못 가져왔어요','error'); return; }
-  // setRcpMode('vendor')는 picker를 자동으로 열어 우회 — 모드·카테고리 직접 박기
-  rcpMode = 'vendor';
+  // setRcpMode는 picker를 자동으로 열어 우회 — 모드·카테고리 직접 박기
+  rcpVendorKind = data.kind || 'vendor';
+  rcpMode = (rcpVendorKind === 'online') ? 'online' : 'vendor';
   rcpVendorId = data.id;
   rcpVendorName = data.name || '';
-  rcpVendorKind = data.kind || 'vendor';
-  rcpCatId = data.category_id || null;
-  rcpCatName = data.category || '';
+  // 온라인 플랫폼은 카테고리 고정 안 함 (AI 품목별 자율 분류)
+  if(rcpVendorKind === 'online'){
+    rcpCatId = null; rcpCatName = '';
+  } else {
+    rcpCatId = data.category_id || null;
+    rcpCatName = data.category || '';
+  }
   rcpInputMethod = (method === 'manual') ? 'manual' : 'photo';
   rcpEntryReturn = 'vendors:' + vid; // 저장 후 거래처 상세로 복귀
   nav('receipt');
@@ -983,10 +988,10 @@ async function runAI() {
   try {
     let catList = getCatListForPrompt();
     const isVendorModeAI = rcpMode === 'vendor';
-    const isOnlineModeAI = isVendorModeAI && rcpVendorKind === 'online';
+    const isOnlineModeAI = rcpMode === 'online';
     // 거래처 모드(온라인 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
     // 온라인·마트(직구)는 전체 자율(getCatListForPrompt 그대로)
-    if(isVendorModeAI && !isOnlineModeAI && rcpVendorId){
+    if(isVendorModeAI && rcpVendorId){
       const _v = (typeof vendors!=='undefined') ? vendors.find(x=>x.id===rcpVendorId) : null;
       const _handled = _v && Array.isArray(_v.handled_category_ids) ? _v.handled_category_ids : [];
       if(_handled.length){
@@ -1524,8 +1529,8 @@ async function saveReceipt(){
   if(_topVendor) document.querySelectorAll('#resTable .c-v').forEach(c=>c.value=_topVendor);
   // ─── 새 기능: 거래처 모드면 vendor_id + 카테고리 자동 박힘, 직구 모드면 vendor_id NULL + AI 분류 그대로 ───
   const isVendorMode = rcpMode === 'vendor' && rcpVendorId;
-  // 온라인 거래처(쿠팡·네이버)는 AI가 품목별 카테고리 분류 → rcpCatId 덮어쓰기 제외
-  const isOnlineVendor = rcpVendorKind === 'online';
+  // 온라인 = 플랫폼(쿠팡 등) vendor_id·이름 고정. 카테고리는 AI 품목별 자율(거래처와 차이)
+  const isOnlineMode = rcpMode === 'online' && rcpVendorId;
   // 영수증 1장 = 그룹 UUID 1개 (2026-05-19 사장님 호소 "각각 산 것처럼 보임" 해결)
   // 모든 행에 동일 group_id 박음 → 기록내역 그룹 묶음 표시 + 그룹 편집·삭제 가능
   const groupId = (typeof crypto!=='undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
