@@ -1147,6 +1147,17 @@ async function runAI() {
         }catch(e){break;}
       }
     }
+    // ─── 주류 단가 강제 재계산 (2026-06-09) ───
+    // 주류 거래명세서는 "단가" 칸이 따로 없음 (공급가/부가세/용기대/합계만). AI가 공급가 칸(박스 합산)을
+    // 단가로 오인 → 단가×수량 ≠ 공급가 경고 발생. 검산은 세전 공급가 기준이므로 단가=공급가÷수량으로 덮음.
+    if(isLiquorModeAI){
+      list.forEach(it=>{
+        if(it._isDeposit) return;
+        const q = parseFloat(it.qty)||0;
+        const sp = parseInt(it.supplyPrice)||0;
+        if(q>0 && sp>0) it.unitPrice = Math.round(sp/q);
+      });
+    }
     // 임계값 = max(100원, 0.5%) — 2026-05-19 (4) 사장님 호소: 회계 기준 5% 너무 느슨
     // 1원 차이(반올림) = 자동 통과, 100원 이내·0.5% 이내 = 정상, 그 외 = ⚠️ catch
     // 예: 116,000 vs 115,999 (1원) → 통과 / 282,000 vs 28,200 (253,800원) → catch
