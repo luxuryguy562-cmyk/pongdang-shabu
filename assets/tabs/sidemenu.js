@@ -4747,26 +4747,40 @@ async function submitJoinFranchise(){
 //   submitAdminLogin/submitOwnerLogin/openResetPw/loginPanelBack/_currentLoginPanel/_panelMsgEl/
 //   _panelAreaEl + 로고 long-press 시크릿 트리거 = 분기 5개 (김은성 시절 잔재 + 가맹점 분기)
 // - 이후: 본인 폰 가정 → 드롭다운+PIN 1개 화면 + 자동 로그인 모든 권한
-function submitLogin(){
+// ─── 새 기능: 로그인 화면용 직원 목록 (비민감만 — PIN·계좌·주민번호 휴대폰에 안 내림) ───
+async function loadLoginNames(){
+  if(!currentStore)return;
+  const{data}=await sb.from('employees').select('id,name,auth_level,role,is_active').eq('store_id',currentStore.id).eq('is_active',true).order('name');
+  employees=(data||[]);
+}
+// ─── 이름+PIN 로그인 — 2026-06-09 서버 검증으로 전환 (PIN 비교를 휴대폰 → 서버로) ───
+async function submitLogin(){
   const nameVal=(document.getElementById('loginNameInput')?.value||'').trim();
   const pinVal=(document.getElementById('loginPinInput')?.value||'').trim();
   const msgEl=document.getElementById('loginMsg');
   if(!nameVal){msgEl.innerText='직원을 선택하세요';shakeLogin();return;}
   if(!pinVal||pinVal.length!==4){msgEl.innerText='PIN 4자리를 입력하세요';shakeLogin();return;}
   if(!currentStore){msgEl.innerText='매장을 먼저 선택하세요';shakeLogin();return;}
-  // 이름으로 직원 찾기 (PIN까지 같이 매칭 — 동명이인 방어)
-  const sameName=employees.filter(e=>e.is_active&&e.name===nameVal);
-  if(!sameName.length){msgEl.innerText='등록되지 않은 직원입니다';shakeLogin();return;}
-  const emp=sameName.find(e=>e.pin===pinVal) || sameName[0];
-  if(!emp.pin){msgEl.innerText='PIN이 설정되지 않았습니다. 관리자에게 문의하세요.';shakeLogin();return;}
-  if(pinVal!==emp.pin){
-    msgEl.innerText='PIN이 일치하지 않습니다';
-    document.getElementById('loginPinInput').value='';
+  // 서버(emp-login)에서 PIN 검증 — 다른 직원 PIN·개인정보가 휴대폰에 절대 안 내려옴
+  msgEl.innerText='확인 중…';
+  let res;
+  try{
+    const{data,error}=await sb.functions.invoke('emp-login',{body:{store_id:currentStore.id,name:nameVal,pin:pinVal}});
+    if(error) throw error;
+    res=data;
+  }catch(_e){
+    msgEl.innerText='로그인 처리 중 오류가 났어요. 잠시 후 다시 시도해주세요.';
     shakeLogin();return;
   }
-  // 다음 로그인 시 이름 기억
+  if(!res||!res.ok){
+    msgEl.innerText=(res&&res.error)||'로그인에 실패했어요';
+    const pinEl=document.getElementById('loginPinInput'); if(pinEl) pinEl.value='';
+    shakeLogin();return;
+  }
+  // 다음 로그인 시 이름 기억 + 로그인 증표(세션 토큰) 저장 → 자동 로그인용
   localStorage.setItem('pd_last_name',nameVal);
-  completeLogin(emp);
+  if(res.token) localStorage.setItem('pd_token',res.token);
+  completeLogin(res.emp);
 }
 // 로그인 폼 영역 흔들기
 function shakeLogin(){
@@ -5629,8 +5643,8 @@ function completeLogin(emp){
   if(authLevel==='franchise_admin') nav('franchiseHome');
   else {
     nav(isManager?'dashboard':'attendance');
-    // 나머지 데이터 백그라운드 로드 (화면 차단 없이)
-    Promise.all([loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
+    // 나머지 데이터 백그라운드 로드 (화면 차단 없이) — loadEmployees로 직원 전체 복원(로그인 전엔 이름만 로드했으므로)
+    Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
   }
   // 기기 등록 상태 팝업 (staff만 — 관리자는 여러 기기 사용 가능하므로 스킵)
   if(!isManager) setTimeout(()=>showDeviceStatusPopup(emp),400);
@@ -5688,6 +5702,9 @@ function doLogout(){
   recalcPermissions();
   // 2026-05-25 사장님 호소: 직원 전환 시 옛 필터·일자·캐시 잔재 방지
   _resetUserState();
+  // 로그인 증표(세션 토큰) 서버 폐기 + 로컬 삭제
+  const _t=localStorage.getItem('pd_token');
+  if(_t){ try{ sb.functions.invoke('emp-session',{body:{token:_t,action:'logout'}}); }catch(_e){} localStorage.removeItem('pd_token'); }
   localStorage.removeItem('pd_emp');
   // 모든 컨테이너 내용 초기화 (이전 세션 데이터 잔류 방지)
   document.querySelectorAll('.container').forEach(c=>{c.classList.remove('active');});
@@ -8872,16 +8889,17 @@ document.addEventListener('DOMContentLoaded', async()=>{
     });
   });
 
-  // 로그인 복원: 본인 폰 가정 → 모든 권한 자동 로그인
-  // (직원 fingerprint는 출퇴근 시 별도 검증 — dev_lessons #54)
-  const savedEmp=localStorage.getItem('pd_emp');
-  if(savedEmp&&currentStore){
-    const emp=employees.find(e=>e.id===savedEmp&&e.is_active);
-    if(emp){
-      completeLogin(emp);return;
-    }
-    localStorage.removeItem('pd_emp');
+  // 로그인 복원: 저장된 증표(세션 토큰)로 서버에서 본인 확인 → 자동 로그인
+  // (PIN 없이 복원하되, 본인 민감정보는 서버가 증표 확인 후에만 내려줌 — 2026-06-09 서버화)
+  const savedToken=localStorage.getItem('pd_token');
+  if(savedToken&&currentStore){
+    sb.functions.invoke('emp-session',{body:{token:savedToken}}).then(({data,error})=>{
+      if(!error&&data&&data.ok&&data.emp){ completeLogin(data.emp); }
+      else { localStorage.removeItem('pd_token'); localStorage.removeItem('pd_emp'); showLoginScreen(); }
+    }).catch(()=>{ localStorage.removeItem('pd_token'); localStorage.removeItem('pd_emp'); showLoginScreen(); });
+    return;
   }
+  localStorage.removeItem('pd_emp');
   showLoginScreen();
 });
 

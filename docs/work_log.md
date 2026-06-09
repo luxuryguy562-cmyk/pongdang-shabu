@@ -4,6 +4,44 @@
 
 ---
 
+## [2026-06-09] 🔴 직원 민감정보 유출 차단 — 금고 격리 + 로그인 서버 검증 (진행 중)
+
+직원 개인정보 보안 구멍 발견·차단 작업. 사장님 "막어 그냥" → "실행승인".
+
+### 발견한 문제 (코드+DB 확인)
+- 로그인 PIN 검증을 **클라이언트(휴대폰)**가 함 (`submitLogin`, sidemenu.js 4750) → 전 직원 데이터를 휴대폰이 다 받아야 함
+- `employees` RLS = `pd_phase2b_all` (`using=true`) = anon 키로 누구나 전 직원 SELECT 가능
+- 노출 컬럼: pin, id_number(주민번호), account_number, bank_name, phone, address, birth_date, 급여
+
+### 1단계 범위 (급여 제외 — 급여는 계산 로직과 얽혀 2단계로)
+격리 대상 7컬럼: pin, id_number, bank_name, account_number, phone, address, birth_date
+
+### 진행 상태 (체크리스트)
+- [x] **1-A** 백업(`employees_backup_20260609`) + 금고표(`employee_private`) 생성 + 데이터 복사(13명) + RLS 차단(정책0개=service_role만)
+- [x] **1-B** 로그인 Edge Function `emp-login` 배포 + 테스트 통과(맞는PIN/틀린PIN/없는직원). emp 응답에 PIN 빠짐 확인
+- [x] **1-C** `submitLogin` → `emp-login` 서버검증 전환 + 로그인전 `loadLoginNames`(비민감만) + completeLogin에 loadEmployees 보강
+- [x] **1-C+** 자동로그인 유지(사장님 결정) → `emp_sessions` 표 + 증표(세션토큰) 발급/검증. `emp-session` Edge Function. 자동복원·로그아웃 연결. 전 흐름 테스트 통과(로그인/복원/가짜증표거부/로그아웃폐기)
+- [ ] **1-D** 아이폰식 PIN 키패드 UI (사장님 요청: 동그라미 점 + 숫자 키패드)
+- [ ] **1-E** 사장님 직원관리 화면(조회·저장) + 금고 연동 (saveEmployee 분리, renderEmpDetail, 매니저용 금고 조회)
+- [ ] **1-F** `employees` 민감 7컬럼 제거 (= 진짜 차단점) + advisor 점검
+- [ ] 커밋 머지 + 사장님 폰 골든패스 테스트 안내
+
+### 사장님 결정 (2026-06-09)
+- **자동 로그인 유지** (PIN 매번 X) → 세션 토큰 방식으로 안전하게 구현 완료
+- **PIN 입력을 아이폰처럼** (동그라미 점 4개 + 숫자 키패드) → 1-D에서 작업
+
+### 설계 결정
+- 자동로그인: 로그인 성공 시 `emp_sessions`에 증표 발급→localStorage 저장. 앱 재시작 시 증표로 `emp-session` 호출→본인 정보(민감 포함, PIN 제외) 복원. 90일 만료. 로그아웃 시 서버 폐기
+- 완벽한 변조 방지(저장 요청 위조)는 2단계. 1단계는 **유출 차단**에 집중
+- 배포는 아이폰 PIN UI(1-D)까지 완성 후 한 번에 머지 (사장님 "아이폰처럼" 기대 맞춤)
+
+### 핵심 파일/위치
+- `assets/tabs/sidemenu.js`: submitLogin(4750), completeLogin(5604), loadEmployees(1860), renderEmpDetail(~1947), saveEmp(~2089)
+- `assets/common.js`: selectStore(779), sb(7)
+- Edge Function: emp-login (프로젝트 ruytgygjwnbtzmtofopg)
+
+---
+
 ## [2026-06-04] 영수증 세액/공급가/면세 분리 + 세후 통일 + 측정실 DB + 가안 A 화면
 
 거래명세서 양식 다양성(세액 별도·BOX/EA·중량·POS·면세) 대응 + 회계/세무 데이터 기반 마련.
