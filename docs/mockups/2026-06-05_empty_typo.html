@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>빈 상태 타이포그래피</title>
+<link rel="stylesheet" href="../../assets/styles.css">
+<style>
+  body{margin:0;background:#3A4250;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:30px;}
+  .stage{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;}
+  .col{display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:360px;}
+  .col-ttl{color:#fff;font-size:14px;font-weight:800;}
+  .col-sub{color:#C6CDD6;font-size:11.5px;line-height:1.5;}
+  .card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 4px 16px rgba(20,40,80,0.08);}
+
+  /* 공통 카드 구조 재사용 */
+  .t7-head-v2{display:flex;align-items:center;margin-bottom:10px;}
+  .t7-nav{border:none;background:transparent;width:32px;height:36px;font-size:22px;color:#333D4B;font-weight:700;cursor:pointer;border-radius:8px;padding:0;opacity:.2;}
+  .t7-center{flex:1;display:flex;flex-direction:column;gap:2px;}
+  .t7-day-row{display:flex;align-items:center;gap:6px;}
+  .t7-day-main{font-size:20px;font-weight:900;color:#191F28;letter-spacing:-0.7px;}
+  .t7-day-badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:7px;background:#E7F4EE;color:#0CAB6C;}
+  .t7-day-sub{font-size:11.5px;color:#0CAB6C;font-weight:700;display:flex;align-items:center;gap:5px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:#0CAB6C;flex-shrink:0;}
+  .t7-cal{border:none;background:#F2F4F6;width:32px;height:32px;border-radius:10px;font-size:14px;cursor:pointer;margin-left:4px;}
+  .t7-amt-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;border-bottom:1px solid #F2F4F6;padding-bottom:10px;margin-bottom:2px;}
+  .t7-sales-lb{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#B0B8C1;}
+  .t7-sales-lb::before{content:'';width:6px;height:6px;border-radius:50%;background:#3182F6;flex-shrink:0;}
+  .detail-link{border:none;background:transparent;font-size:13px;font-weight:700;color:#3182F6;cursor:pointer;white-space:nowrap;padding:0;}
+  .t7-rows{margin-top:2px;}
+  .t7-row{display:grid;grid-template-columns:1fr 1fr 20px;align-items:center;height:38px;border-bottom:1px solid #F2F4F6;}
+  .t7-row:last-child{border-bottom:none;}
+  .r-lb{display:flex;align-items:center;gap:6px;font-size:13px;color:#8B95A1;font-weight:600;}
+  .dot{width:6px;height:6px;border-radius:50%;}
+  .dot.red{background:#F04452;}
+  .dot.green{background:#0CAB6C;}
+  .r-amt{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;text-align:right;}
+  .r-amt.red{color:#F04452;}
+  .r-go{font-size:15px;font-weight:800;color:#3182F6;text-align:center;}
+
+  /* ── 현재 ── */
+  .cur-sales-empty{font-size:15px;color:#8B95A1;font-weight:600;}
+  .cur-profit-empty{color:#8B95A1;font-weight:700;}
+
+  /* ── 안 A: 토스 스타일 — 숫자 자리 그대로, 크기·색만 다듬기 ── */
+  .a-sales-empty{font-size:28px;font-weight:800;color:#D1D5DB;letter-spacing:-1px;line-height:1.1;}
+  /* 수익: 작은 글자지만 위계 있음 */
+  .a-profit-empty{font-size:13px;font-weight:600;color:#B0B8C1;letter-spacing:-0.2px;}
+
+  /* ── 안 B: 카카오페이 스타일 — 중간 크기, 세련된 색 ── */
+  .b-sales-empty{font-size:19px;font-weight:700;color:#B0B8C1;letter-spacing:-0.5px;}
+  .b-sales-sub{font-size:11px;font-weight:500;color:#C8CDD4;margin-top:1px;}
+  .b-profit-empty{font-size:13px;font-weight:600;color:#B0B8C1;font-style:italic;}
+
+  /* ── 안 C (추천): Stripe 스타일 — 플레이스홀더 일관성 ── */
+  /* 매출: 큰 자리엔 같은 weight·크기에 gray */
+  .c-sales-empty{font-size:28px;font-weight:800;color:#C8CDD4;letter-spacing:-1px;line-height:1.1;font-variant-numeric:tabular-nums;}
+  /* "아직 없음" 설명은 매우 작고 약하게 */
+  .c-sales-hint{font-size:10.5px;font-weight:500;color:#C8CDD4;margin-top:1px;letter-spacing:-0.2px;}
+  /* 수익: 같은 19px 자리인데 — 일관된 gray 처리 */
+  .c-profit-empty{font-size:13px;font-weight:600;color:#B0B8C1;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 현재 -->
+  <div class="col">
+    <div class="col-ttl">현재</div>
+    <div class="col-sub">15px 텍스트가 31px 자리에 — 어색</div>
+    <div class="card">
+      <div class="t7-head-v2">
+        <button class="t7-nav">‹</button>
+        <div class="t7-center">
+          <div class="t7-day-row"><span class="t7-day-main">6월 5일 (금)</span><span class="t7-day-badge">오늘</span></div>
+          <span class="t7-day-sub"><span class="live-dot"></span>영업 중</span>
+        </div>
+        <button class="t7-cal">📅</button>
+        <button class="t7-nav">›</button>
+      </div>
+      <div class="t7-amt-row">
+        <div><span class="t7-sales-lb">매출</span><div class="cur-sales-empty">아직 매출 기록이 없어요</div></div>
+        <button class="detail-link">자세히 ›</button>
+      </div>
+      <div class="t7-rows">
+        <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red" style="text-align:right;">-841,475원</span><span class="r-go">›</span></div>
+        <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div><span class="r-amt cur-profit-empty" style="text-align:right;font-size:17px;">마감 후 확인</span><span class="r-go"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 안 A -->
+  <div class="col">
+    <div class="col-ttl">안 A — 토스 스타일</div>
+    <div class="col-sub">큰 자리엔 큰 회색 숫자감, 수익은 작게</div>
+    <div class="card">
+      <div class="t7-head-v2">
+        <button class="t7-nav">‹</button>
+        <div class="t7-center">
+          <div class="t7-day-row"><span class="t7-day-main">6월 5일 (금)</span><span class="t7-day-badge">오늘</span></div>
+          <span class="t7-day-sub"><span class="live-dot"></span>영업 중</span>
+        </div>
+        <button class="t7-cal">📅</button>
+        <button class="t7-nav">›</button>
+      </div>
+      <div class="t7-amt-row">
+        <div><span class="t7-sales-lb">매출</span><div class="a-sales-empty">0원</div></div>
+        <button class="detail-link">자세히 ›</button>
+      </div>
+      <div class="t7-rows">
+        <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red" style="text-align:right;">-841,475원</span><span class="r-go">›</span></div>
+        <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div><span class="a-profit-empty" style="text-align:right;width:100%;">마감 후 확인</span><span class="r-go"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 안 B -->
+  <div class="col">
+    <div class="col-ttl">안 B — 카카오페이 스타일</div>
+    <div class="col-sub">중간 크기 + 보조 설명 한 줄</div>
+    <div class="card">
+      <div class="t7-head-v2">
+        <button class="t7-nav">‹</button>
+        <div class="t7-center">
+          <div class="t7-day-row"><span class="t7-day-main">6월 5일 (금)</span><span class="t7-day-badge">오늘</span></div>
+          <span class="t7-day-sub"><span class="live-dot"></span>영업 중</span>
+        </div>
+        <button class="t7-cal">📅</button>
+        <button class="t7-nav">›</button>
+      </div>
+      <div class="t7-amt-row">
+        <div><span class="t7-sales-lb">매출</span>
+          <div class="b-sales-empty">아직 없어요</div>
+          <div class="b-sales-sub">오늘 첫 매출을 기다리는 중</div>
+        </div>
+        <button class="detail-link">자세히 ›</button>
+      </div>
+      <div class="t7-rows">
+        <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red" style="text-align:right;">-841,475원</span><span class="r-go">›</span></div>
+        <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div><span class="b-profit-empty" style="text-align:right;width:100%;">마감 후 확인</span><span class="r-go"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 안 C 추천 -->
+  <div class="col">
+    <div class="col-ttl">안 C ⭐ — Stripe 스타일 (추천)</div>
+    <div class="col-sub">같은 자리, 같은 크기, 색만 회색 — 일관성</div>
+    <div class="card">
+      <div class="t7-head-v2">
+        <button class="t7-nav">‹</button>
+        <div class="t7-center">
+          <div class="t7-day-row"><span class="t7-day-main">6월 5일 (금)</span><span class="t7-day-badge">오늘</span></div>
+          <span class="t7-day-sub"><span class="live-dot"></span>영업 중</span>
+        </div>
+        <button class="t7-cal">📅</button>
+        <button class="t7-nav">›</button>
+      </div>
+      <div class="t7-amt-row">
+        <div><span class="t7-sales-lb">매출</span>
+          <div class="c-sales-empty">0원</div>
+          <div class="c-sales-hint">아직 오늘 매출 없음</div>
+        </div>
+        <button class="detail-link">자세히 ›</button>
+      </div>
+      <div class="t7-rows">
+        <div class="t7-row"><div class="r-lb"><span class="dot red"></span>지출</div><span class="r-amt red" style="text-align:right;">-841,475원</span><span class="r-go">›</span></div>
+        <div class="t7-row"><div class="r-lb"><span class="dot green"></span>수익</div><span class="c-profit-empty" style="text-align:right;width:100%;">마감 후 확인</span><span class="r-go"></span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

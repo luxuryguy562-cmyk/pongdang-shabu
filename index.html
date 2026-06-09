@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css">
+<link rel="stylesheet" href="assets/styles.css?v=20260608">
 </head>
 <body>
 
@@ -507,13 +507,23 @@
           </div>
           <div class="arrow">›</div>
         </button>
+        <button class="toss-enter" data-action="setRcpMode|online">
+          <div class="ic-wrap" style="background:#E8F5E9;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          </div>
+          <div class="body-col">
+            <div class="nm">온라인 영수증</div>
+            <div class="sub">쿠팡 · 네이버 · 옥션 등</div>
+          </div>
+          <div class="arrow">›</div>
+        </button>
         <button class="toss-enter" data-action="setRcpMode|direct">
           <div class="ic-wrap amber">
             <svg viewBox="0 0 24 24" fill="none" stroke="#F5A11E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
           </div>
           <div class="body-col">
-            <div class="nm">직구 영수증</div>
-            <div class="sub">마트 · 일반 · 배민 등</div>
+            <div class="nm">마트·시장 영수증</div>
+            <div class="sub">마트 · 시장 · 동네가게</div>
           </div>
           <div class="arrow">›</div>
         </button>
@@ -555,7 +565,8 @@
       <!-- 행 타이틀: 영수증 사진 (모드 선택 후만) -->
       <div id="rcpUploadTitle" class="rcp-row-ttl" style="display:none;">영수증 사진</div>
 
-      <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:10px;max-height:240px;object-fit:contain;background:var(--gray-50);">
+      <img id="imgPreview" style="width:100%;display:none;border-radius:14px;margin-bottom:4px;max-height:220px;object-fit:contain;background:var(--gray-50);cursor:pointer;" data-action="openImgFullPreview">
+      <div id="rcpImgHint" style="display:none;text-align:center;font-size:11.5px;color:#3182F6;font-weight:700;margin-bottom:10px;">🔍 눌러서 크게 확인</div>
       <!-- 멀티페이지 썸네일 영역 (2026-05-19 (4)) — 2~3페이지 거래명세서 대응 -->
       <div id="rcpPagesArea" style="display:none;margin-bottom:14px;background:#F0F9FF;border-radius:10px;padding:10px 12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
@@ -563,6 +574,9 @@
           <div style="font-size:11px;color:#1E40AF;text-align:right;line-height:1.4;">2~3페이지 영수증이면<br>모든 페이지 추가하세요</div>
         </div>
         <div id="rcpPagesList" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px;padding:10px;border-radius:10px;background:#E0F2FE;cursor:pointer;font-size:12.5px;font-weight:700;color:#1E40AF;">
+          ＋ 페이지 추가<input type="file" accept="image/*" style="display:none;" data-change="handleImg|this">
+        </label>
       </div>
       <div id="uploadGroup" style="display:none;margin-top:0;">
         <!-- 사전 안내: 한 거래처 영수증만 (2026-06-04 여러 거래처 섞임 방지) -->
@@ -591,15 +605,13 @@
       <div id="resultArea" style="display:none;">
         <!-- 🏪 거래처 + 📅 날짜 (영수증 1장 = 1거래처·1날짜) — 목업 A안: 맨 위 -->
         <div class="card" style="padding:16px;margin-bottom:14px;">
-          <div style="display:flex;gap:10px;">
-            <div style="flex:1;min-width:0;">
-              <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">🏪 거래처</label>
-              <input type="text" id="rcpReceiptVendor" placeholder="거래처" style="width:100%;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpVendorChange|this">
-            </div>
-            <div style="flex:1;min-width:0;">
-              <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">📅 날짜 <span id="rcpDateWarn" style="color:var(--danger);font-weight:800;display:none;">⚠️</span></label>
-              <input type="date" id="rcpReceiptDate" style="width:100%;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;min-width:0;" data-change="onRcpDateChange|this">
-            </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">🏪 거래처</label>
+            <input type="text" id="rcpReceiptVendor" placeholder="거래처" style="width:100%;box-sizing:border-box;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;" data-change="onRcpVendorChange|this">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--toss-text-4);font-weight:700;display:block;margin-bottom:6px;">📅 날짜 <span id="rcpDateWarn" style="color:var(--danger);font-weight:800;display:none;">⚠️</span></label>
+            <input type="date" id="rcpReceiptDate" style="width:100%;box-sizing:border-box;border:none;background:var(--toss-line);border-radius:14px;padding:13px 14px;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;" data-change="onRcpDateChange|this">
           </div>
         </div>
         <!-- 📄 페이지 감지 (멀티페이지 영수증 시만 노출) -->
@@ -687,37 +699,31 @@
       <div class="sheet-title" id="rgeTitle">영수증 편집</div>
       <button class="sheet-close" data-action="closeSheet|receiptGroupEditSheet">✕</button>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
-      <span style="font-size:12px;color:var(--gray-600);width:56px;">📅 날짜</span>
-      <input type="date" id="rgeDate" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
-      <span style="font-size:12px;color:var(--gray-600);width:56px;">🏪 거래처</span>
-      <input type="text" id="rgeVendor" placeholder="거래처명" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
-    </div>
-    <div style="padding:12px 0;border-bottom:1px solid var(--gray-100);">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px;">📦 품목 (행마다 ⓧ = 정상↔오답 토글, 🏷 = 분류 변경)</div>
-      <div class="table-wrap" style="margin:0;">
-        <table style="font-size:12px;">
-          <thead><tr>
-            <th style="width:24px">X</th>
-            <th>품목</th>
-            <th style="width:54px">단가</th>
-            <th style="width:42px">수량</th>
-            <th style="width:72px">금액</th>
-            <th style="width:74px">분류</th>
-          </tr></thead>
-          <tbody id="rgeTable"></tbody>
-        </table>
+    <!-- 거래처 + 날짜 카드형 (2열) -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="flex:1;background:#F8F9FA;border-radius:12px;padding:10px 12px;">
+        <div style="font-size:10.5px;font-weight:700;color:#B0B8C1;margin-bottom:4px;">🏪 거래처</div>
+        <input type="text" id="rgeVendor" placeholder="거래처명" style="border:none;background:transparent;font-size:14px;font-weight:800;color:#191F28;width:100%;outline:none;font-family:inherit;padding:0;">
       </div>
-      <div class="add-row-btn" data-action="addRgeRow">＋ 행 추가</div>
+      <div style="flex:1;background:#F8F9FA;border-radius:12px;padding:10px 12px;min-width:0;">
+        <div style="font-size:10.5px;font-weight:700;color:#B0B8C1;margin-bottom:4px;">📅 날짜</div>
+        <input type="date" id="rgeDate" style="border:none;background:transparent;font-size:12.5px;font-weight:800;color:#191F28;width:100%;outline:none;font-family:inherit;padding:0;">
+      </div>
     </div>
-    <div style="padding:10px 0;font-size:11px;color:var(--gray-500);line-height:1.5;">
-      💡 정상 행만 합계·집계·학습에 들어가요. ⓧ 누르면 오답 처리(집계 제외).
+    <!-- 합계 바 -->
+    <div style="background:#F2F4F6;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:12px;font-weight:700;color:#8B95A1;">합계</span>
+      <span id="rgeTotalAmt" style="font-size:18px;font-weight:900;color:#191F28;letter-spacing:-0.5px;">0원</span>
     </div>
-    <div class="action-group" style="margin-top:12px;">
-      <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="deleteReceiptGroupFromSheet">🗑 영수증 통째 삭제</button>
-      <button class="btn btn-primary" style="flex:2;padding:14px;" data-action="saveReceiptGroupEdit">💾 저장</button>
+    <div style="font-size:12px;color:#8B95A1;margin-bottom:6px;">📦 품목 — 품목명·금액 탭해서 수정, × = 오답 처리</div>
+    <div id="rgeTable"></div>
+    <div class="add-row-btn" data-action="addRgeRow">＋ 품목 추가</div>
+    <div style="padding:8px 0;font-size:11px;color:var(--gray-500);line-height:1.5;">
+      💡 정상 행만 합계·집계에 들어가요. × 누르면 오답 처리(집계 제외).
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn btn-danger" style="padding:14px 16px;font-size:13px;" data-action="deleteReceiptGroupFromSheet">🗑 삭제</button>
+      <button class="btn btn-primary" style="flex:1;padding:14px;" data-action="saveReceiptGroupEdit">💾 저장</button>
     </div>
   </div>
 </div>
@@ -815,7 +821,7 @@
   <!-- 거래 채널 (토스 통일 2026-05-22) -->
   <div class="exp-section-ttl">🚚 거래 채널</div>
   <div class="exp-channel-grid">
-    <button type="button" class="exp-channel-card" data-action="nav|vendors">
+    <button type="button" class="exp-channel-card" data-action="openVendorChannel|vendor">
       <div class="ec-head">
         <div class="ec-icon-wrap blue">
           <svg viewBox="0 0 24 24" fill="none" stroke="#3182F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
@@ -825,12 +831,22 @@
       <div class="ec-vl" id="expMiniVendor">-</div>
       <div class="ec-sub" id="expMiniVendorSub">이번달</div>
     </button>
+    <button type="button" class="exp-channel-card" data-action="openVendorChannel|online">
+      <div class="ec-head">
+        <div class="ec-icon-wrap" style="background:#E8F5E9;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
+        <div class="ec-nm">온라인</div>
+      </div>
+      <div class="ec-vl" id="expMiniOnline">-</div>
+      <div class="ec-sub" id="expMiniOnlineSub">이번달</div>
+    </button>
     <button type="button" class="exp-channel-card" data-action="openCatReceipt|direct">
       <div class="ec-head">
         <div class="ec-icon-wrap amber">
           <svg viewBox="0 0 24 24" fill="none" stroke="#F5A11E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
         </div>
-        <div class="ec-nm">직구</div>
+        <div class="ec-nm">마트·시장</div>
       </div>
       <div class="ec-vl" id="expMiniDirect">-</div>
       <div class="ec-sub" id="expMiniDirectSub">이번달</div>
@@ -874,7 +890,7 @@
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
     <span id="catReceiptIcon" style="font-size:28px;">🛒</span>
     <div style="flex:1;min-width:0;">
-      <div id="catReceiptTitle" style="font-size:18px;font-weight:900;color:var(--gray-900);">직구</div>
+      <div id="catReceiptTitle" style="font-size:18px;font-weight:900;color:var(--gray-900);">마트·시장</div>
       <div id="catReceiptTotal" style="font-size:13px;color:var(--gray-600);font-weight:600;">이번달 0원 · 0건</div>
     </div>
   </div>
@@ -923,7 +939,7 @@
       <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px;">이번 달 누적 급여</div>
       <div id="myinfoWage" style="font-size:18px;font-weight:800;color:var(--blue);">-</div>
     </div>
-    <button class="btn btn-secondary btn-full" style="margin-top:16px;" data-action="openMyInfoSheet">PIN·기기 변경</button>
+    <button id="myInfoPinBtn" class="btn btn-secondary btn-full" style="margin-top:16px;" data-action="openMyInfoSheet">PIN·기기 변경</button>
     <button class="btn btn-danger btn-full" style="margin-top:8px;" data-action="doLogout">로그아웃</button>
   </div>
 </div>
@@ -1511,7 +1527,7 @@
 
 <!-- ══ [6] 거래처 관리 ══ -->
 <div id="vendorsCont" class="container">
-  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">거래처 관리</span></div>
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl" id="vendorViewTitle">거래처 관리</span></div>
   <!-- 서브탭(파일 업로드·대조&단가) 제거 (2026-06-02 사장님 요청 — 단순화. 대조는 정산 대조에서 별도 관리) -->
 
   <div id="vendorList">
@@ -1520,8 +1536,8 @@
         <!-- 옵션은 refreshVendorListFilter에서 동적 채움 -->
         <option value="">전체 카테고리</option>
       </select>
-      <button class="btn btn-secondary btn-sm" style="flex:0 0 auto;padding:10px 10px;font-size:12px;" data-action="openVendorReclassSheet" title="기존 식자재/직구 거래처를 육류/야채/공산품으로 재지정">🔄 재분류</button>
-      <button class="btn btn-primary btn-sm" data-action="openAddVendorSheet">+ 추가</button>
+      <button id="vendorReclassBtn" class="btn btn-secondary btn-sm" style="flex:0 0 auto;padding:10px 10px;font-size:12px;" data-action="openVendorReclassSheet" title="기존 식자재/직구 거래처를 육류/야채/공산품으로 재지정">🔄 재분류</button>
+      <button id="vendorAddBtn" class="btn btn-primary btn-sm" data-action="openAddVendorSheet|vendor">+ 추가</button>
     </div>
     <div id="vendorListData"><div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div></div>
   </div>
@@ -1651,6 +1667,7 @@
 <!-- ══ [8] 직원관리 ══ -->
 <div id="staffCont" class="container">
   <div class="app-back" data-action="nav|dashboard"><span class="back-btn">‹</span><span class="back-ttl">직원 관리</span></div>
+  <input id="empSearchInput" type="text" class="input-field" placeholder="🔍 이름·전화번호로 검색" style="margin-bottom:10px;" data-input="renderEmpList">
   <div style="display:flex;gap:8px;margin-bottom:12px;">
     <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderEmpList"><option value="">전체 직급</option></select>
     <select id="empFilterStatus" class="input-field" style="margin-bottom:0;width:85px;padding:10px 12px;font-size:13px;" data-change="renderEmpList">
@@ -2513,6 +2530,17 @@
   </div>
 </div>
 
+<!-- 직원 상세 보기 -->
+<div class="sheet-overlay" id="empDetailSheet">
+  <div class="sheet sheet-content" style="max-height:90vh;padding-bottom:80px;">
+    <div class="sheet-header">
+      <div class="sheet-title">직원 상세</div>
+      <button class="sheet-close" data-action="closeSheet|empDetailSheet">✕</button>
+    </div>
+    <div id="empDetailContent"></div>
+  </div>
+</div>
+
 <!-- 직원 추가/편집 -->
 <div class="sheet" id="addEmpSheet">
   <div class="sheet-handle"></div>
@@ -2785,16 +2813,27 @@
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addVendorTitle">거래처 추가</div>
   <input id="vendorNameInput" class="input-field" placeholder="거래처명 *" type="text">
-  <!-- 대분류 + 소분류 2단 select. 자식 없는 대분류는 소분류 disable. (헌법 10조 2번 데이터 기반) -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-    <select id="vendorCatParent" class="input-field" data-change="onVendorCatParentChange|this">
-      <option value="">대분류 선택</option>
-    </select>
-    <select id="vendorCatChild" class="input-field" disabled>
-      <option value="">소분류 (선택)</option>
-    </select>
+  <!-- 취급품목 다중 선택 (2026-06-10) — 거래처(kind=vendor)만. 온라인 플랫폼은 자율이라 숨김.
+       카테고리는 DB 동적(하드코딩 X). 대분류 [전체] + 소분류 개별. 세금·고정비·공과금 등 비구매는 후보 제외. -->
+  <div id="vendorHandledCatsWrap">
+    <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin:4px 0 6px;">취급품목 <span style="font-weight:500;color:var(--gray-500);">(사는 것만 체크 · 여러 개 가능)</span></div>
+    <div id="vendorHandledCats" style="max-height:240px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:10px;margin-bottom:4px;">
+      <!-- refreshVendorHandledCategories()가 동적 생성 -->
+    </div>
   </div>
+  <!-- 온라인 플랫폼 안내 (kind=online일 때만 표시) -->
+  <div id="vendorOnlineHint" style="display:none;font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:10px;padding:12px;margin-bottom:4px;line-height:1.6;">🌐 온라인 플랫폼은 품목이 다양해서 <b>취급품목을 정하지 않습니다</b>. 영수증마다 AI가 품목별로 분류해드려요.</div>
+  <!-- 업체정보 (2026-06-09) — 사업자등록번호 1개 + 계좌·연락처 여러 개(추가/삭제 가능). 거래처·온라인 공통. -->
+  <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin:14px 0 6px;border-top:1px solid var(--gray-100);padding-top:12px;">업체정보 <span style="font-weight:500;color:var(--gray-500);">(선택 — 안 적어도 됨)</span></div>
+  <input id="vendorBizNoInput" class="input-field" placeholder="사업자등록번호 (예: 123-45-67890)" type="text">
+  <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin:8px 0 6px;">💳 계좌</div>
+  <div id="vendorAccountsList"><!-- _renderVendorAccountRows() 동적 생성 --></div>
+  <button type="button" class="btn btn-secondary" style="width:100%;padding:10px;font-size:13px;margin-bottom:6px;" data-action="addVendorAccountRow">+ 계좌 추가</button>
+  <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin:8px 0 6px;">📞 연락처</div>
+  <div id="vendorContactsList"><!-- _renderVendorContactRows() 동적 생성 --></div>
+  <button type="button" class="btn btn-secondary" style="width:100%;padding:10px;font-size:13px;margin-bottom:6px;" data-action="addVendorContactRow">+ 연락처 추가</button>
   <input type="hidden" id="editVendorId">
+  <input type="hidden" id="vendorKindInput" value="vendor">
   <div class="action-group">
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
     <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveVendor">저장</button>
@@ -3264,13 +3303,19 @@
   </div>
 </div>
 
-<script src="assets/common.js"></script>
-<script src="assets/tabs/receipt.js"></script>
-<script src="assets/tabs/attendance.js"></script>
-<script src="assets/tabs/schedule.js"></script>
-<script src="assets/tabs/settlement.js"></script>
-<script src="assets/tabs/dashboard.js"></script>
-<script src="assets/tabs/sidemenu.js"></script>
-<script src="assets/tabs/accuracy_lab.js"></script>
+<script src="assets/common.js?v=20260608"></script>
+<!-- 영수증 사진 전체화면 미리보기 오버레이 -->
+<div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
+  <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>
+  <img id="imgFullSrc" style="max-width:90%;max-height:72vh;object-fit:contain;border-radius:12px;">
+  <button style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:30px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;" data-action="closeImgFullPreview">닫기</button>
+</div>
+<script src="assets/tabs/receipt.js?v=20260608"></script>
+<script src="assets/tabs/attendance.js?v=20260608"></script>
+<script src="assets/tabs/schedule.js?v=20260608"></script>
+<script src="assets/tabs/settlement.js?v=20260608"></script>
+<script src="assets/tabs/dashboard.js?v=20260608"></script>
+<script src="assets/tabs/sidemenu.js?v=20260608"></script>
+<script src="assets/tabs/accuracy_lab.js?v=20260608"></script>
 </body>
 </html>

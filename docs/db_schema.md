@@ -245,8 +245,12 @@ franchises (프랜차이즈/브랜드)
 | **supply_price** (int, 2026-06-04) | 공급가(세전) = total_price − tax_amount. 옛 영수증 NULL |
 | **tax_amount** (int, 2026-06-04) | 행 세액(부가세). 인쇄된 세액만, 없거나 면세면 0. 부가세 역산 안 함 |
 | **is_tax_free** (boolean, 2026-06-04) | 면세 여부. true=면세(육류·야채 등 미가공 농축수산물), false=과세, NULL=옛 영수증. 의제매입세액공제 집계용. 마이그레이션 `add_receipts_is_tax_free_20260604` |
+| **spec** (text, 2026-06-08) | 규격·포장 규격 (예 "F0용 슬라이스 1Kg/EA", "500g"). 거래처 모드 영수증만 AI가 i에서 분리 추출. 직구·옛 영수증 NULL. 마이그레이션 `add_receipts_spec_origin_20260608` |
+| **origin** (text, 2026-06-08) | 원산지 (예 "외국산", "국내산"). 거래처 모드만 분리 추출. ⚠️쉼표로 품명에 섞인 원산지(고기손만두,돈육:국내산)는 item에 그대로 두고 origin=NULL. 직구·옛 영수증 NULL |
 | note | 정상/오답/반품 등 |
 | created_at | 등록일시 |
+
+> ⚠️ **2026-06-08 추가 (규격·원산지 분리)**: `spec TEXT`, `origin TEXT` 신설. 거래처 영수증에서 박스입수는 수량(q) 계산에만 내부 사용하고 화면 표시 안 함 — 사장님 "박스입수+EA = 입수 애매" 호소 반영. 규격·원산지만 별도 칸 분리. 마이그레이션: `add_receipts_spec_origin_20260608`. 롤백: `ALTER TABLE receipts DROP COLUMN IF EXISTS spec, DROP COLUMN IF EXISTS origin;`
 
 > ⚠️ **2026-06-04 추가 (세액 분리 + 세후 통일)**: `supply_price INT`, `tax_amount INT` 신설. 모든 영수증의 `total_price`를 **세후(실제 낸 돈)로 통일** + 공급가·세액 분리 보관(부가세 신고 발판). AI가 행마다 세액(t) 읽음 → supply = total − tax. 부가세 역산(÷1.1) 안 함(면세·과세 섞임 오류 방지). 옛 영수증 117건 = NULL 호환. 마이그레이션: `add_receipts_supply_tax_20260604`. 롤백: `ALTER TABLE receipts DROP COLUMN supply_price, DROP COLUMN tax_amount;`.
 >
@@ -316,7 +320,7 @@ franchises (프랜차이즈/브랜드)
 ### vendors / vendor_orders
 | vendors | vendor_orders |
 |---------|---------------|
-| id, store_id, name, **category** (text), **category_id** (FK→expense_categories ON DELETE SET NULL), is_active | store_id, vendor_id(FK), order_date |
+| id, store_id, name, **category** (text), **category_id** (FK→expense_categories ON DELETE SET NULL), **handled_category_ids** (jsonb), **kind** (text 'vendor'/'online'), **biz_no** (text), **accounts** (jsonb), **contacts** (jsonb), is_active | store_id, vendor_id(FK), order_date |
 | | item, **unit_price** (int, nullable), **quantity** (numeric, nullable), amount, memo, source, **order_group_id** (uuid, nullable) |
 
 > ⚠️ **2026-05-15 추가** (vendor_orders): `unit_price`, `quantity` 컬럼. UI에서 단가×수량 자동 곱셈해서 amount 채우되, 사장님이 amount 직접 수정 가능 (할인/운송비 포함 등).
@@ -324,6 +328,12 @@ franchises (프랜차이즈/브랜드)
 > ⚠️ **2026-05-15 추가** (vendors): `category_id` FK 도입 (PR #119). 거래처 편집창 대분류+소분류 2단 select. category_id = 자식 우선, 없으면 부모. `category` 텍스트는 UI 표시·calcExpense 호환용으로 유지 (saveVendor에서 동기화).
 >
 > ⚠️ **2026-05-20 추가** (vendor_orders): `order_group_id UUID` (nullable). 한 영수증/주문건의 멀티 행 묶음 ID. **receipts.receipt_group_id 패턴 동일**. 수동 입력 시트가 멀티행 accordion으로 갈아엎어지면서 1회 [✓ 저장] = 같은 group_id로 N행 INSERT. 옛 데이터·단일 입력 = NULL → (vendor_id+order_date) fallback 그룹핑(loadVendorOrders). 마이그레이션: `add_vendor_orders_order_group_id_20260520`. 인덱스 `idx_vendor_orders_group_id`. 롤백: `DROP INDEX IF EXISTS idx_vendor_orders_group_id; ALTER TABLE vendor_orders DROP COLUMN IF EXISTS order_group_id;`.
+>
+> ⚠️ **2026-06-10 추가** (vendors): `kind TEXT DEFAULT 'vendor'` — 거래처 종류. 'vendor'(정기 거래처, 취급품목 제한) / 'online'(쿠팡·네이버 등 온라인 플랫폼, 취급품목 없이 자율). 거래처 관리 화면=kind='vendor', 온라인 채널=kind='online'. 마이그레이션 `add_vendors_kind_20260610` (기존 쿠팡만 online). 롤백 `ALTER TABLE vendors DROP COLUMN kind;`.
+>
+> ⚠️ **2026-06-09 추가** (vendors): 업체정보 3칸. `biz_no TEXT`(사업자등록번호 1개) + `accounts JSONB DEFAULT '[]'`(계좌 목록 `[{bank,number}]`, 추가/삭제 가능) + `contacts JSONB DEFAULT '[]'`(연락처 목록 `[{name,phone}]`, 담당자명+전화, 추가/삭제 가능). 거래처·온라인 공통. 거래처명=회사명(별칭 X, 정식 상호). 별도 표 대신 JSONB 묶음 = 거래처당 1~3개 소량·독립 조회 불필요·거래처 소유 생명주기 → 단순. 마이그레이션 `add_vendors_company_info_20260609`. 롤백 `ALTER TABLE vendors DROP COLUMN IF EXISTS biz_no, DROP COLUMN IF EXISTS accounts, DROP COLUMN IF EXISTS contacts;`. 화면=거래처 편집 시트(saveVendor 수집, openEditVendorSheet 복원).
+>
+> ⚠️ **2026-06-10 추가** (vendors): `handled_category_ids JSONB` (취급품목 목록 — leaf 카테고리 id 배열). 거래처 영수증 AI 분석 시 이 목록만 카테고리 후보로 전달(후보 좁힘 → 정확도↑·검수↓). 1개면 AI 분류 생략·고정. 마이그레이션: `add_vendors_handled_category_ids_20260610` (ADD COLUMN + 기존 category_id를 `jsonb_build_array(category_id)`로 복사 = 기존 동작 보존). 롤백: `ALTER TABLE vendors DROP COLUMN handled_category_ids;`. 취급품목 후보 필터 = `category_type='expense' AND data_source IN ('composite','vendor_orders','receipts') AND is_active` (인건비·공과금·고정비·세금·마케팅·매출 제외, **비품(receipts) 포함**). 온라인·마트 모드는 미사용(전체 자율).
 >
 > **calcExpense 매칭 (2026-05-15 PR #120 갈아엎기)**:
 > - `vendor_orders` source 카테고리: `o.vendors?.category_id === cat.id` (FK 직접)

@@ -105,11 +105,14 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   _todayVendorDataCache = (veMap && Object.keys(veMap||{}).length) ? {veMap, dayExp} : null;
   if(!card) return;
   // 영수증·거래처로 등록하는 변동 지출만 (고정비·인건비·로열티 등 고정성 자동 제외), 거래처별로 쭉 나열
-  // isVar로 판정 — 데이터가 영수증·거래처 표에서 왔는지 (카테고리 무관, 2026-06-05 빙산 수정)
-  const items = Object.values(veMap||{})
-    .filter(o=> o.amt>0 && o.isVar)
-    .map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}))
-    .sort((a,b)=>b.amt-a.amt);
+  // veMap 키는 '거래처명|카테고리'라 → 거래처명으로 재합산 (홈은 거래처별, 2026-06-08)
+  const _byVendor={};
+  Object.values(veMap||{}).forEach(o=>{
+    if(!(o.amt>0 && o.isVar)) return;
+    if(!_byVendor[o.name]) _byVendor[o.name]={name:o.name, amt:0};
+    _byVendor[o.name].amt+=o.amt;
+  });
+  const items = Object.values(_byVendor).sort((a,b)=>b.amt-a.amt);
   if(!items.length){
     // 데이터 없어도 섹션은 항상 표시 — height:160px 고정이라 아래 월요약 카드 위치 안 튐 (2026-06-04)
     if(listEl) listEl.innerHTML=`<div class="t7-ve-dash2">`
@@ -123,19 +126,25 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
     return;
   }
   if(listEl){
-    const catColor={}; let ci=0;
     listEl.innerHTML = items.map(it=>{
-      if(!(it.cat in catColor)) catColor[it.cat]=_VE_COLORS[ci++ % _VE_COLORS.length];
-      // 왼쪽 점 제거 → 카테고리 색을 태그에 흡수 (매출·지출·수익 점과 위계 분리, 2026-06-05)
       return `<div class="ve-item">`
         +`<span class="vname">${esc(it.name)}</span>`
-        +`<span class="ve-cat-tag" style="background:${catColor[it.cat]}1A;color:${catColor[it.cat]};">${esc(it.cat)}</span>`
         +`<span class="vamt">${fmt(it.amt)}원</span></div>`;
     }).join('');
+    // 하단 흐리기: 스크롤 더 있을 때만 + 끝까지 내리면 제거 (2026-06-08)
+    const _applyVeMask=()=>{
+      const atBottom=listEl.scrollTop+listEl.clientHeight>=listEl.scrollHeight-4;
+      const msk=(!atBottom && listEl.scrollHeight>listEl.clientHeight+2)
+        ?'linear-gradient(to bottom,black 55%,rgba(0,0,0,.15) 82%,transparent 100%)':'';
+      listEl.style.webkitMaskImage=msk;
+      listEl.style.maskImage=msk;
+    };
+    listEl.onscroll=_applyVeMask;
+    requestAnimationFrame(_applyVeMask);
   }
   card.style.display='';
 }
-// ─── 어디에 썼나 바텀시트 열기 (2026-06-03 카테고리별 그룹핑) ───
+// ─── 지출 상세 바텀시트 열기 (카테고리별 그룹: 카테고리 합계 + 아래 거래처 상세, 2026-06-08 복원) ───
 function openTodayVendorSheet(){
   const d = _todayVendorDataCache;
   if(!d){ toast('지출 데이터가 없습니다.'); return; }
@@ -157,6 +166,8 @@ function openTodayVendorSheet(){
 
   const listEl = document.getElementById('vendorExpSheetList');
   const totalEl = document.getElementById('vendorExpSheetTotal');
+  const titleEl = document.querySelector('#vendorExpSheet .sheet-title');
+  if(titleEl) titleEl.textContent = '💸 지출 내역';
   if(listEl){
     const groupsHtml = groups.map((g,i)=>{
       const color = _VE_COLORS[i % _VE_COLORS.length];
@@ -172,9 +183,8 @@ function openTodayVendorSheet(){
         + itemsHtml
         + `</div>`;
     }).join('');
-    listEl.innerHTML = groupsHtml;
+    listEl.innerHTML = groupsHtml || `<div style="text-align:center;padding:20px 0;color:var(--gray-400);font-size:12px;">내역 없음</div>`;
   }
-  // 전체 합계 — 항상 고정 (스크롤 밖)
   if(totalEl) totalEl.innerHTML = `<span class="ve-total-lb">전체 합계</span><span class="ve-total-vl">${fmt(total)}원</span>`;
   openSheet('vendorExpSheet');
 }
@@ -275,7 +285,11 @@ function renderTopCardForDay(dayStr){
     renderTodayVendorExp(ctx.dailyVendorExp[dayPad], true, dayExp);
   } else {
     topAmtEl.classList.add('empty');
-    topAmtEl.innerText = isTodayShown ? '아직 매출 기록이 없어요' : '아직 입력 안 됨';
+    if(isTodayShown){
+      topAmtEl.innerHTML = '0원<div class="t7-amt-hint">아직 오늘 매출 없음</div>';
+    } else {
+      topAmtEl.innerHTML = '0원<div class="t7-amt-hint">아직 입력 안 됨</div>';
+    }
     topUpdEl.style.display = 'none';
     if(isTodayShown){
       // 오늘 기준: 지출 실시간, 수익 마감 후 확인 (2026-06-04)
@@ -283,7 +297,8 @@ function renderTopCardForDay(dayStr){
       document.getElementById('dashTopExpenseDelta').innerText = '';
       const profitEl = document.getElementById('dashTopProfitAmt');
       profitEl.innerText = '마감 후 확인';
-      profitEl.className = 'r-amt gray';
+      profitEl.className = 'r-amt';
+      profitEl.style.cssText = 'font-size:13px;font-weight:600;color:#B0B8C1;letter-spacing:-0.3px;text-align:right;';
       // 매출 기록 전이어도 수익 점은 초록 유지 — 매출·지출·수익 점 통일 (2026-06-04)
       const _pDot = document.getElementById('dashTopProfitDot');
       if(_pDot){ _pDot.classList.remove('red','gray'); _pDot.classList.add('green'); }
@@ -634,11 +649,14 @@ async function loadDashboard(force){
     // 예비비 / 실수익 폐기 (2026-05-22)
 
     // 마감예상 계산
+    // 매출 분모 = 매출이 실제 입력된 마지막 날 (오늘 매출 0인데 지출만 있으면 오늘까지로 나누는 버그 방지, 2026-06-08)
+    const _saleLastDay=Object.entries(dailySalesMap).reduce((mx,[k,v])=>((+v)>0?Math.max(mx,parseInt(k,10)):mx),0);
+    const _saleDiv=(isCurrent && _saleLastDay>0)?_saleLastDay:passedDays;
     const variableCost=totalCost-fixedProrated;
-    const estRevenue=isCurrent&&passedDays>0?Math.round(totalRevenue/passedDays*lastDay):totalRevenue;
+    const estRevenue=isCurrent&&_saleDiv>0?Math.round(totalRevenue/_saleDiv*lastDay):totalRevenue;
     const estVariableCost=isCurrent&&passedDays>0?Math.round(variableCost/passedDays*lastDay):variableCost;
     const estTotalCost=fixedMonthly+estVariableCost;
-    const estCardSales=isCurrent&&passedDays>0?Math.round(cardSales/passedDays*lastDay):cardSales;
+    const estCardSales=isCurrent&&_saleDiv>0?Math.round(cardSales/_saleDiv*lastDay):cardSales;
     const estRoyalty=Math.round(estRevenue*royaltyRate);
     const estCardFee=Math.round(estCardSales*cardFeeRate);
     const estTotalCostFull=estTotalCost+estRoyalty+estCardFee;
@@ -864,13 +882,12 @@ async function loadDashboard(force){
       // 일별도 같이 박음 (주차별 매트릭스용)
       if(d)_addChildDayNamed(d, m.parentName, m.childName, amt, m.childColor);
     };
-    // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "어디에 썼나", 2026-06-02 / 2026-06-03 카테고리+거래처 분리) ───
+    // ─── 새 기능: 거래처별 일별 지출 집계 (홈 "어디에 썼나", 2026-06-02 / 2026-06-08 거래처+카테고리 키)
     // FK: vendor_id→vendors(name). 직구(vendor_id NULL)·거래처 삭제(ON DELETE SET NULL)는 '직접 구매'
-    // 키 = '거래처명|카테고리' 조합 → 쿠팡(비품)·쿠팡(식자재) 별도 집계 (카테고리 섞임 방지)
-    const dailyVendorExp={}; // { '02': { '쿠팡|비품': {name, cat, amt, isVar}, ... } }
+    // 키 = '거래처명|카테고리' → 지출 시트 카테고리별 그룹핑 정확. 홈 미리보기는 renderTodayVendorExp에서 거래처명으로 재합산
+    const dailyVendorExp={}; // { '02': { '농협|식자재': {name, cat, amt, isVar}, ... } }
     // isVar=true = 영수증·거래처 표에서 온 변동 지출 (어디에 썼나 표시 대상)
     // isVar=false = 고정비·인건비·로열티 등 자동 고정성 (어디에 썼나 제외)
-    // ⚠️ 카테고리 data_source가 아니라 '데이터 출처 표'로 판정 (2026-06-05 빙산 수정 — 기타>간식 누락)
     const _addVE=(d,name,amt,catName,isVar=false)=>{
       if(!amt||amt<=0||!d)return;
       if(!dailyVendorExp[d])dailyVendorExp[d]={};
@@ -1544,6 +1561,9 @@ function v17BuildAccountingWeeks(year, monthIdx){
 function v17SumMonth(ctx, targetM, maxDay){
   const DAYS = ctx.DAYS;
   let s=0,e=0,vendor=0,att=0,fixed=0,receipt=0,royalty=0,lastDay=0;
+  // 예상마감 분모용 — 매출/지출이 실제로 발생한 마지막 날 따로 (2026-06-08)
+  // 8일에 매출 0인데 지출만 있으면 → saleLastDay=7, expLastDay=8 로 각각 정확히 일평균
+  let saleLastDay=0, expLastDay=0;
   const byCat = {};
   (ctx.cats||[]).forEach(c=>{ byCat[c.key]=0; });
   Object.entries(DAYS).forEach(([key,d])=>{
@@ -1556,9 +1576,11 @@ function v17SumMonth(ctx, targetM, maxDay){
       fixed+=d.fixed||0; receipt+=d.receipt||0; royalty+=d.royalty||0;
       (ctx.cats||[]).forEach(c=>{ byCat[c.key] += (d.byCat?.[c.key])||0; });
       if(day>lastDay) lastDay=day;
+      if((d.sale||0)>0 && day>saleLastDay) saleLastDay=day;
+      if((d.exp||0)>0  && day>expLastDay)  expLastDay=day;
     }
   });
-  return {s,e,vendor,att,fixed,receipt,royalty,lastDay,byCat};
+  return {s,e,vendor,att,fixed,receipt,royalty,lastDay,saleLastDay,expLastDay,byCat};
 }
 
 // 색상 차별 momTag (sale/profit ↑=good / expense/category ↑=bad)
@@ -1685,17 +1707,23 @@ function toggleMonthCatChildren(key){
 // ─── 월 통계 계산 (요약 카드 + 세부 화면 공용, 2026-06-03 분리) ───
 function _v17MonthStats(ctx){
   const cur = v17SumMonth(ctx, ctx.TARGET_MONTH, 31);
-  const prev = v17SumMonth(ctx, ctx.TARGET_MONTH-1, cur.lastDay);
+  // 전월 비교: 이달 매출 있는 마지막 날 기준 (매출 0인 날이 분모 부풀리지 않게)
+  const _cmpDay = cur.saleLastDay || cur.lastDay;
+  const prev = v17SumMonth(ctx, ctx.TARGET_MONTH-1, _cmpDay);
   const profit = cur.s - cur.e;
   const expPctNum = cur.s>0 ? Math.round(cur.e/cur.s*100) : 0;
   const monthLastDay = new Date(ctx.YEAR, ctx.TARGET_MONTH, 0).getDate();
   const progressDays = cur.lastDay;
   const progressPct = monthLastDay>0 ? Math.round(progressDays/monthLastDay*100) : 0;
+  // 예상마감: 매출·지출 각각 실제 입력된 마지막 날로 일평균 → 월말 추정 (2026-06-08)
+  // 매출 0인 날(지출만 있는 날)이 매출 분모를 부풀리지 않게 saleLastDay/expLastDay 분리
   let fcSale = null, fcProfit = null;
-  if(progressDays > 0 && progressDays < monthLastDay){
-    const ratio = monthLastDay / progressDays;
-    fcSale = Math.round(cur.s * ratio);
-    fcProfit = fcSale - Math.round(cur.e * ratio);
+  const _saleDays = cur.saleLastDay || cur.lastDay;
+  const _expDays  = cur.expLastDay  || cur.lastDay;
+  if(_saleDays > 0 && _saleDays < monthLastDay){
+    fcSale = Math.round(cur.s * (monthLastDay / _saleDays));
+    const fcExp = Math.round(cur.e * (monthLastDay / (_expDays||_saleDays)));
+    fcProfit = fcSale - fcExp;
   }
   const profitPctSale = cur.s>0 ? (profit/cur.s*100) : 0;
   const expPctSale = cur.s>0 ? (cur.e/cur.s*100) : 0;
@@ -1743,6 +1771,7 @@ function v17RenderMonthCard(){
 
   el.innerHTML = `
     <div class="v17-card-v6">
+      ${fcHtml}
       <div class="v6-ttl-row">
         <div class="v6-ttl"><b>${ctx.TARGET_MONTH}월</b>${progressDays}일 진행</div>
         <span class="v6-progress-tag">${progressPct}%</span>
@@ -1758,7 +1787,6 @@ function v17RenderMonthCard(){
           <div class="m6-mr"><span class="k">수익</span><span class="v ${profit>=0?'green':'red'}">${v17FmtNoWonSigned(profit)}원</span></div>
         </div>
       </div>
-      ${fcHtml}
     </div>`;
 }
 
@@ -1848,7 +1876,7 @@ function v17RenderMonthDetail(){
   if(prev.s>0){
     const sI = v17MomTag(cur.s, prev.s, 'sale');
     const eI = v17MomTag(cur.e, prev.e, 'expense');
-    const compareLabel = `${ctx.TARGET_MONTH-1}/${cur.lastDay}`;
+    const compareLabel = `${ctx.TARGET_MONTH-1}/${cur.saleLastDay || cur.lastDay}`;
     const dS = prev.s>0 ? Math.round((cur.s-prev.s)/prev.s*100) : 0;
     const dE = prev.e>0 ? Math.round((cur.e-prev.e)/prev.e*100) : 0;
     const comment = v17MomComment(dS, dE);

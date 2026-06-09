@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>영수증 편집 시트 — 품목 스타일 비교</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#3A4250;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;padding:26px;}
+  .stage{display:flex;gap:28px;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .col-ttl{color:#fff;font-size:14px;font-weight:800;text-align:center;}
+  .col-sub{color:#C6CDD6;font-size:11.5px;text-align:center;line-height:1.5;}
+  .device{background:#0A0A0A;border-radius:46px;padding:11px;box-shadow:0 16px 44px rgba(0,0,0,.4);}
+  .screen{background:#F2F4F6;border-radius:36px;overflow:hidden;display:flex;flex-direction:column;width:393px;height:852px;position:relative;}
+  .safetop{background:#fff;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;position:relative;flex:none;height:59px;}
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:108px;height:30px;background:#0A0A0A;border-radius:18px;}
+  .safetop .clk{font-size:14px;font-weight:700;color:#191F28;}
+  .apphdr{flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;background:#fff;border-bottom:1px solid #F2F4F6;height:50px;}
+  .apphdr-ttl{font-size:17px;font-weight:800;color:#191F28;}
+  .back{font-size:22px;font-weight:700;color:#191F28;}
+  .tabbar{background:#fff;border-top:1px solid #F2F4F6;display:flex;align-items:center;justify-content:space-around;height:48px;flex:none;}
+  .tb{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9.5px;color:#8B95A1;}
+  .tb.on{color:#0050FF;font-weight:700;}
+  .tb .i{font-size:20px;}
+  .safebottom{background:#fff;flex:none;height:34px;display:flex;align-items:center;justify-content:center;}
+  .safebottom .bar{width:134px;height:5px;border-radius:3px;background:#191F28;}
+
+  /* 공통 바텀시트 */
+  .bsheet{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;padding:0 16px 34px;box-shadow:0 -4px 24px rgba(0,0,0,.12);overflow-y:auto;max-height:92%;}
+  .bsh-handle{width:36px;height:4px;background:#E5E8EB;border-radius:2px;margin:10px auto 0;}
+  .bsh-head{display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;}
+  .bsh-ttl{font-size:17px;font-weight:900;color:#191F28;}
+  .bsh-close{border:none;background:#F2F4F6;border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer;}
+  .meta-row{display:flex;gap:8px;margin-bottom:10px;}
+  .meta-card{flex:1;background:#F8F9FA;border-radius:12px;padding:10px 12px;}
+  .meta-lbl{font-size:10.5px;font-weight:700;color:#B0B8C1;margin-bottom:3px;}
+  .meta-val{font-size:14px;font-weight:800;color:#191F28;}
+  .meta-val.sm{font-size:13px;}
+  .total-bar{background:#F2F4F6;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+  .total-lbl{font-size:12px;font-weight:700;color:#8B95A1;}
+  .total-amt{font-size:18px;font-weight:900;color:#191F28;letter-spacing:-0.5px;}
+  .sec-lbl{font-size:12px;color:#8B95A1;margin-bottom:6px;}
+  .save-bar{display:flex;gap:8px;margin-top:10px;}
+  .btn-del{background:#FEE2E2;color:#DC2626;border:none;border-radius:12px;padding:14px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .btn-save{flex:1;background:#0050FF;color:#fff;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;}
+
+  /* 현재: 테이블형 */
+  .cur-tbl{width:100%;border-collapse:collapse;font-size:11.5px;}
+  .cur-tbl th{text-align:left;color:#8B95A1;font-weight:700;padding:5px 4px;border-bottom:1px solid #F2F4F6;font-size:11px;}
+  .cur-tbl td{padding:8px 4px;border-bottom:1px solid #F9F9F9;vertical-align:middle;}
+  .cur-x{display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:#FEE2E2;border-radius:8px;font-size:12px;font-weight:800;color:#DC2626;cursor:pointer;border:none;}
+  .cur-inp{border:none;background:#F2F4F6;border-radius:6px;padding:4px 6px;font-size:11px;width:100%;font-family:inherit;}
+  .cur-cat{font-size:10px;background:#F2F4F6;border-radius:5px;padding:2px 6px;color:#4E5968;white-space:nowrap;border:none;cursor:pointer;font-family:inherit;}
+
+  /* 개선: 카드형 리스트 */
+  .new-item{padding:11px 0;border-bottom:1px solid #F2F4F6;display:flex;flex-direction:column;gap:5px;}
+  .new-item:last-child{border-bottom:none;}
+  .new-item-top{display:flex;align-items:center;gap:8px;}
+  .new-item-off-btn{width:24px;height:24px;border-radius:8px;border:none;background:#FEE2E2;color:#DC2626;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .new-item-name{flex:1;font-size:13.5px;font-weight:700;color:#191F28;border:none;background:transparent;outline:none;font-family:inherit;min-width:0;}
+  .new-item-amt{font-size:13px;font-weight:800;color:#191F28;white-space:nowrap;}
+  .new-item-bot{display:flex;align-items:center;gap:6px;padding-left:32px;}
+  .new-item-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;border:none;cursor:pointer;font-family:inherit;}
+  .new-item-sub{font-size:11px;color:#B0B8C1;font-weight:500;}
+  .new-item-sub input{border:none;background:transparent;font-size:11px;color:#8B95A1;width:44px;text-align:right;outline:none;font-family:inherit;}
+  .add-btn{text-align:center;padding:10px;font-size:12.5px;font-weight:700;color:#3182F6;cursor:pointer;border-top:1px dashed #E5E8EB;margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 현재 -->
+  <div class="col">
+    <div class="col-ttl">현재 — 테이블형</div>
+    <div class="col-sub">X 버튼 크고 칸이 복잡</div>
+    <div class="device"><div class="screen">
+      <div class="safetop"><div class="island"></div><span class="clk">9:56</span></div>
+      <div class="apphdr"><span class="back">‹</span><div class="apphdr-ttl">프레시원</div></div>
+      <div class="tabbar"><div class="tb on"><span class="i">💳</span>지출관리</div></div>
+      <div class="safebottom"><div class="bar"></div></div>
+      <div class="bsheet">
+        <div class="bsh-handle"></div>
+        <div class="bsh-head"><span class="bsh-ttl">영수증 편집 — 프레시원</span><button class="bsh-close">×</button></div>
+        <div class="meta-row">
+          <div class="meta-card"><div class="meta-lbl">🏪 거래처</div><div class="meta-val">프레시원</div></div>
+          <div class="meta-card"><div class="meta-lbl">📅 날짜</div><div class="meta-val sm">2026. 6. 8.</div></div>
+        </div>
+        <div class="total-bar"><span class="total-lbl">합계</span><span class="total-amt">184,137원</span></div>
+        <div class="sec-lbl">📦 품목 (행마다 ⓧ = 정상↔오답 토글, 🏷 = 분류 변경)</div>
+        <table class="cur-tbl">
+          <thead><tr><th>X</th><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th>분류</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><button class="cur-x">X</button></td>
+              <td><input class="cur-inp" value="이츠웰 매콤한치폴레마스"></td>
+              <td><input class="cur-inp" value="10,530" style="width:52px;"></td>
+              <td><input class="cur-inp" value="2" style="width:32px;"></td>
+              <td><input class="cur-inp" value="23,060" style="width:52px;"></td>
+              <td><button class="cur-cat">식자재 ▸</button></td>
+            </tr>
+            <tr>
+              <td><button class="cur-x">X</button></td>
+              <td><input class="cur-inp" value="프레시원 양념쌈장"></td>
+              <td><input class="cur-inp" value="23,220" style="width:52px;"></td>
+              <td><input class="cur-inp" value="1" style="width:32px;"></td>
+              <td><input class="cur-inp" value="23,220" style="width:52px;"></td>
+              <td><button class="cur-cat">식자재 ▸</button></td>
+            </tr>
+            <tr>
+              <td><button class="cur-x">X</button></td>
+              <td><input class="cur-inp" value="송림푸드 단호박죽"></td>
+              <td><input class="cur-inp" value="6,160" style="width:52px;"></td>
+              <td><input class="cur-inp" value="6" style="width:32px;"></td>
+              <td><input class="cur-inp" value="36,960" style="width:52px;"></td>
+              <td><button class="cur-cat">식자재 ▸</button></td>
+            </tr>
+            <tr>
+              <td><button class="cur-x">X</button></td>
+              <td><input class="cur-inp" value="크린라텍스 니트릴장갑"></td>
+              <td><input class="cur-inp" value="6,210" style="width:52px;"></td>
+              <td><input class="cur-inp" value="2" style="width:32px;"></td>
+              <td><input class="cur-inp" value="12,420" style="width:52px;"></td>
+              <td><button class="cur-cat">기타 ▸</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="save-bar">
+          <button class="btn-del">🗑 삭제</button>
+          <button class="btn-save">💾 저장</button>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- 개선안 -->
+  <div class="col">
+    <div class="col-ttl">개선안 ⭐ — 카드형 리스트</div>
+    <div class="col-sub">품목명·금액 중심, 분류 태그 작게</div>
+    <div class="device"><div class="screen">
+      <div class="safetop"><div class="island"></div><span class="clk">9:56</span></div>
+      <div class="apphdr"><span class="back">‹</span><div class="apphdr-ttl">프레시원</div></div>
+      <div class="tabbar"><div class="tb on"><span class="i">💳</span>지출관리</div></div>
+      <div class="safebottom"><div class="bar"></div></div>
+      <div class="bsheet">
+        <div class="bsh-handle"></div>
+        <div class="bsh-head"><span class="bsh-ttl">영수증 편집 — 프레시원</span><button class="bsh-close">×</button></div>
+        <div class="meta-row">
+          <div class="meta-card"><div class="meta-lbl">🏪 거래처</div><div class="meta-val">프레시원</div></div>
+          <div class="meta-card"><div class="meta-lbl">📅 날짜</div><div class="meta-val sm">2026. 6. 8.</div></div>
+        </div>
+        <div class="total-bar"><span class="total-lbl">합계</span><span class="total-amt">184,137원</span></div>
+        <div class="sec-lbl">📦 품목 — 품목명·금액 탭해서 수정, × = 오답 처리</div>
+
+        <!-- 카드형 품목 리스트 -->
+        <div>
+          <div class="new-item">
+            <div class="new-item-top">
+              <button class="new-item-off-btn">×</button>
+              <input class="new-item-name" value="이츠웰 매콤한치폴레마스터드">
+              <span class="new-item-amt">23,060원</span>
+            </div>
+            <div class="new-item-bot">
+              <button class="new-item-tag" style="background:#E7F4EE;color:#0CAB6C;">식자재 ▸</button>
+              <span class="new-item-sub">단가 <input value="10,530"> × 수량 <input value="2" style="width:28px;"></span>
+            </div>
+          </div>
+          <div class="new-item">
+            <div class="new-item-top">
+              <button class="new-item-off-btn">×</button>
+              <input class="new-item-name" value="프레시원 양념쌈장">
+              <span class="new-item-amt">23,220원</span>
+            </div>
+            <div class="new-item-bot">
+              <button class="new-item-tag" style="background:#E7F4EE;color:#0CAB6C;">식자재 ▸</button>
+              <span class="new-item-sub">단가 <input value="23,220"> × 수량 <input value="1" style="width:28px;"></span>
+            </div>
+          </div>
+          <div class="new-item">
+            <div class="new-item-top">
+              <button class="new-item-off-btn">×</button>
+              <input class="new-item-name" value="송림푸드 단호박죽">
+              <span class="new-item-amt">36,960원</span>
+            </div>
+            <div class="new-item-bot">
+              <button class="new-item-tag" style="background:#E7F4EE;color:#0CAB6C;">식자재 ▸</button>
+              <span class="new-item-sub">단가 <input value="6,160"> × 수량 <input value="6" style="width:28px;"></span>
+            </div>
+          </div>
+          <div class="new-item">
+            <div class="new-item-top">
+              <button class="new-item-off-btn">×</button>
+              <input class="new-item-name" value="크린라텍스 니트릴장갑">
+              <span class="new-item-amt">12,420원</span>
+            </div>
+            <div class="new-item-bot">
+              <button class="new-item-tag" style="background:#F2F4F6;color:#4E5968;">기타 ▸</button>
+              <span class="new-item-sub">단가 <input value="6,210"> × 수량 <input value="2" style="width:28px;"></span>
+            </div>
+          </div>
+          <div class="add-btn">＋ 품목 추가</div>
+        </div>
+
+        <div class="save-bar">
+          <button class="btn-del">🗑 삭제</button>
+          <button class="btn-save">💾 저장</button>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+</body>
+</html>

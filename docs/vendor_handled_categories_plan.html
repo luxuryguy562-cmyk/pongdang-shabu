@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>거래처 취급품목 — 상세 계획서</title>
+<style>
+  :root{
+    --blue:#3182F6; --blue-light:#EBF3FF; --green:#16A34A; --green-light:#DCFCE7;
+    --amber:#D97706; --amber-light:#FEF3C7; --red:#DC2626; --red-light:#FEE2E2;
+    --gray-900:#191F28; --gray-700:#4E5968; --gray-500:#8B95A1; --gray-200:#E5E8EB;
+    --gray-100:#F2F4F6; --gray-50:#F9FAFB;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+       background:var(--gray-50); color:var(--gray-900); line-height:1.7; padding:16px; max-width:780px; margin:0 auto;}
+  h1{font-size:23px; font-weight:800; margin-bottom:4px;}
+  .sub{color:var(--gray-500); font-size:13px; margin-bottom:18px;}
+  .card{background:#fff; border-radius:16px; padding:18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+  .card h2{font-size:17px; font-weight:800; margin-bottom:12px;}
+  .label{display:inline-block; font-size:12px; font-weight:800; padding:4px 12px; border-radius:20px; margin-bottom:10px; background:var(--green-light); color:var(--green);}
+  table{width:100%; border-collapse:collapse; margin:10px 0; font-size:13px;}
+  th,td{border:1px solid var(--gray-200); padding:9px; text-align:left; vertical-align:top;}
+  th{background:var(--gray-100); font-weight:800; font-size:12px;}
+  td.c{text-align:center; white-space:nowrap;}
+  ul{padding-left:20px; margin:8px 0;} li{margin-bottom:5px;}
+  .en{color:var(--gray-500); font-size:12px;}
+  code{background:var(--gray-100); padding:1px 6px; border-radius:5px; font-size:12px; word-break:break-all;}
+  .ok-box{background:var(--green-light); border-left:4px solid var(--green); border-radius:8px; padding:13px; margin:10px 0;}
+  .ok-box .t{font-weight:800; color:var(--green); margin-bottom:5px;}
+  .warn-box{background:var(--amber-light); border-left:4px solid var(--amber); border-radius:8px; padding:13px; margin:10px 0;}
+  .warn-box .t{font-weight:800; color:var(--amber); margin-bottom:5px;}
+  .db-box{background:var(--red-light); border-left:4px solid var(--red); border-radius:8px; padding:13px; margin:10px 0;}
+  .db-box .t{font-weight:800; color:var(--red); margin-bottom:5px;}
+  .small{font-size:12px; color:var(--gray-500);}
+  .mock{background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; padding:14px; margin:10px 0; font-size:13px;}
+  .chk{display:inline-block; padding:4px 10px; margin:3px; border-radius:8px; border:1px solid var(--gray-200); font-size:12px;}
+  .chk.on{background:var(--blue-light); border-color:var(--blue); color:var(--blue); font-weight:700;}
+</style>
+</head>
+<body>
+
+<h1>🏪 거래처 취급품목 — 상세 계획서</h1>
+<div class="sub">거래처마다 취급품목 정하고 편집 · AI 분석 후보 제한 · 2026-06-10</div>
+
+<div class="card">
+  <span class="label">🟢 루트 안 — 검수 부담↓·정확도↑, 비전 일치</span>
+  <h2>📌 한 줄 요약</h2>
+  <p>거래처마다 <b>취급품목(여러 개 가능)</b>을 정해두면, 그 거래처 영수증은 정한 품목 안에서만 분류됩니다.
+     온라인·마트는 지금처럼 AI 자율. 사장님이 일일이 안 봐도 되고, 성원치킨너겟 같은 오분류가 사라집니다.</p>
+</div>
+
+<div class="card">
+  <h2>🎯 동작 (사장님 확정안)</h2>
+  <table>
+    <tr><th>종류</th><th>카테고리 방식</th></tr>
+    <tr><td class="c">🏪 거래처</td><td><b>취급품목 정함</b>(편집 가능) → 그 안에서만 분류. <b>1개면 고정</b>(AI 분류 생략)</td></tr>
+    <tr><td class="c">🌐 온라인</td><td><b>자율</b> — AI가 전체에서 품목별</td></tr>
+    <tr><td class="c">🛒 마트·시장</td><td><b>자율</b> — AI가 전체에서 품목별</td></tr>
+  </table>
+  <div class="ok-box">
+    <div class="t">✅ 효과</div>
+    <ul>
+      <li><b>정확도</b> — 성원치킨너겟을 육류로 틀릴 일 없음 (취급품목이 공산품이면 그 안에서만)</li>
+      <li><b>검수 부담↓</b> — 2~3개 안에서만 정해지니 안심</li>
+      <li><b>단일 거래처</b>(정육점=육류) — AI 분류 아예 생략, 고정 (비용·부하↓)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <h2>🖥️ 거래처 편집 화면 변경</h2>
+  <p>지금은 대분류·소분류 <b>1개만</b> 고르는 칸입니다. 이걸 <b>취급품목 여러 개 체크</b>로 바꿉니다.</p>
+  <div class="mock">
+    <div style="font-weight:700; margin-bottom:8px;">거래처 편집 — 웰스토리</div>
+    <div class="small" style="margin-bottom:8px;">취급품목 (사장님이 <b>사는 것만</b> · 카테고리는 DB에서 자동 표시):</div>
+    <div style="margin-bottom:8px;">
+      <div style="font-weight:700; font-size:13px; margin-bottom:4px;">📦 식자재 <span class="chk" style="font-size:11px;">대분류 전체</span></div>
+      <div style="padding-left:10px;">
+        <span class="chk on">✓ 육류</span>
+        <span class="chk on">✓ 공산품</span>
+        <span class="chk">야채</span>
+        <span class="chk">수산</span>
+      </div>
+    </div>
+    <div style="margin-bottom:8px;">
+      <div style="font-weight:700; font-size:13px;">🧹 비품 <span class="chk">대분류 전체</span></div>
+    </div>
+    <div class="small" style="margin-top:8px; color:var(--green);">→ 웰스토리 영수증은 육류·공산품 중에서만 분류됩니다</div>
+    <div class="small" style="margin-top:6px; color:var(--gray-500);">※ 세금·고정비·공과금은 "구매"가 아니라 후보에 안 나옴. 카테고리 이름·목록은 사장님 매장 DB 그대로(하드코딩 X)</div>
+  </div>
+  <div class="ok-box">
+    <div class="t">선택 방식 (사장님 지적 반영)</div>
+    <ul>
+      <li><b>대분류 전체</b> — "식자재 전체" 누르면 그 아래 육류·야채·공산품·수산 다 취급</li>
+      <li><b>소분류만</b> — "식자재 > 육류·공산품"처럼 일부만 (야채 빼고)</li>
+      <li>후보 목록 = <b>DB에서 동적</b> — 사장님이 카테고리 추가/이름변경하면 자동 반영</li>
+      <li>지출(구매) 카테고리만 — 세금·고정비·공과금·인건비 자동 제외</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <h2>🗄️ DB(데이터 표) 변경</h2>
+  <div class="db-box">
+    <div class="t">거래처 표에 "취급품목" 칸 1개 추가</div>
+    <p>거래처(vendors) 표에 <code>handled_category_ids</code>(취급품목 목록) 칸 신설. 카테고리 여러 개를 목록으로 저장.</p>
+  </div>
+  <div class="ok-box">
+    <div class="t">✅ 기존 거래처 자동 이전 — 안 깨짐</div>
+    <p>지금 거래처들은 분류가 1개씩 박혀 있습니다(프레시원=식자재 등). 이걸 <b>취급품목 1개로 자동 복사</b>합니다.
+       → 기존 거래처는 그대로 "그 분류로 고정" 상태가 되어 동작이 안 바뀝니다. 사장님이 나중에 품목을 추가하고 싶으면 편집.</p>
+  </div>
+  <p class="small"><b>실행 SQL:</b> <code>ALTER TABLE vendors ADD COLUMN handled_category_ids JSONB;</code> + 기존 <code>category_id</code>를 목록으로 복사<br>
+     <b>롤백 SQL:</b> <code>ALTER TABLE vendors DROP COLUMN handled_category_ids;</code><br>
+     → 사장님 <b>"실행 승인"</b> 4글자 받고 실행 (헌법 8조)</p>
+</div>
+
+<div class="card">
+  <h2>🔧 코드 변경</h2>
+  <table>
+    <tr><th>구분</th><th>내용</th></tr>
+    <tr><td class="c">화면<br><span class="en">index.html</span></td>
+        <td>거래처 편집: 대분류·소분류 select → <b>취급품목 체크박스</b>(여러 개)</td></tr>
+    <tr><td class="c">저장<br><span class="en">sidemenu.js</span></td>
+        <td>saveVendor: 체크한 취급품목 목록 저장 / openEditVendorSheet: 기존 취급품목 복원</td></tr>
+    <tr><td class="c">AI 분석<br><span class="en">receipt.js</span></td>
+        <td>거래처 영수증 분석 시 → 그 거래처 취급품목만 AI 후보로 전달. 1개면 분류 생략·고정</td></tr>
+    <tr><td class="c">집계</td>
+        <td><b>안 건드림</b> — 영수증은 2단계대로 품목별 저장, 집계는 행별 그대로</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>🛡️ 기존 호환·안전</h2>
+  <ul>
+    <li>기존 거래처 분류(<code>category_id</code>) <b>유지</b> — 주 분류 + AI 못 읽은 행 fallback + 옛 집계 호환</li>
+    <li>취급품목 미설정 거래처 → 지금처럼 전체 자율 (강제 안 함)</li>
+    <li>영수증 저장은 2단계대로 <b>품목별</b> — 이 작업으로 안 바뀜</li>
+    <li>규격·원산지·거래처 연결 그대로</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>⚡ 리스크 (변수 — 사장님 지적 반영)</h2>
+  <table>
+    <tr><th>변수</th><th>대응</th></tr>
+    <tr><td>취급품목 밖 품목 구매<br>(정육점서 봉투값)</td><td>취급품목 중 가까운 것으로 → 분류 칩 눌러 수정(드묾)</td></tr>
+    <tr><td>거래처가 새 품목 취급 시작</td><td>거래처 편집에서 취급품목 추가(편집 가능하게 설계)</td></tr>
+    <tr><td>온라인(쿠팡)은 다 팖</td><td>온라인은 취급품목 안 씀 — 자율 품목별 (별도 처리)</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>👉 순서 & 승인</h2>
+  <p><b>제안 순서:</b> 이 작업(거래처 취급품목) → 그 다음 3단계(🌐온라인 신설)</p>
+  <p>이건 <b>DB 표 변경이 있어 대형</b>입니다. 사장님 <b>"실행 승인"</b>으로 표 변경하고, 코드는 단계별로 합쳐서 앱에서 확인하시게 합니다.</p>
+  <p class="small">→ 이 계획 OK면 코딩 들어가고, 표 변경 SQL은 실행 직전 다시 보여드리고 "실행 승인" 받겠습니다.</p>
+</div>
+
+</body>
+</html>
