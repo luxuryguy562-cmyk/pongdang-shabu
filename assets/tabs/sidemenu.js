@@ -1160,7 +1160,7 @@ async function loadVendorOrders(){
   let oq=sb.from('vendor_orders').select('id,order_date,vendor_id,item,amount,unit_price,quantity,memo,order_group_id,vendors(name,category)')
     .eq('store_id',currentStore.id).gte('order_date',start).lte('order_date',end).order('order_date',{ascending:false});
   let rq=sb.from('receipts')
-    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty')
+    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty,seq,spec,origin')
     .eq('store_id',currentStore.id).eq('note','정상').not('vendor_id','is',null)
     .gte('receipt_date',start).lte('receipt_date',end).order('receipt_date',{ascending:false});
   if(vendorId){ oq=oq.eq('vendor_id',vendorId); rq=rq.eq('vendor_id',vendorId); }
