@@ -33,13 +33,11 @@ const ACC_RES_OPTS = [
 ];
 let _accRes=1280;
 let _accSelectedEngines=['gemini','gpt4o-mini','gpt4o']; // 비교할 모델들 (기본 3개)
-let _accVendor='';
 let _accFileBuf=[];
-let _accB64Cache=[];          // 이미지 b64 (재시도 시 재사용 — 다시 안 읽음)
-let _accCompareResults={};    // {engineId: {ok, pending, raw, cost, ms, error}}
-let _accTruthSum=null;        // 사장님이 입력한 실제 영수증 합계 (모델별 오차 계산용)
+// 사진별 분석 결과 누적 — 사진 1장 = 영수증 1개 (2026-06-09 사장님: 거래처 입력 X, 사진별 독립 분석·누적)
+//   [{name, b64, truthSum, models:{engineId:{ok,pending,raw,items,cost,ms,sum,itemCount,error}}}]
+let _accShots=[];
 let _accStyleInjected=false;
-let _accPastItems=[];  // 거래처 과거 품목명 — 품목 칸 자동완성(원터치 수정)용 (2026-06-05, 영수증 탭과 동일 방식)
 
 // ─── 이미지 → base64 (1280px 리사이즈, 우리 앱 동일) ───
 function accFileToB64(file){
@@ -59,54 +57,23 @@ function accFileToB64(file){
   });
 }
 
-// ─── 모델 1개 호출 → 결과/비용/시간/성공여부를 _accCompareResults에 저장 ───
-//   공통 callGemini 재사용(ai_usage_logs 자동 기록). 실패해도 throw 안 하고 결과에 기록 → 한 모델 실패가 비교 전체를 안 막음.
-async function _accRunOneModel(engineId, b64list){
-  const m = ACC_MODEL_MAP[engineId]; if(!m) return;
-  const parts=[{text:accBuildPrompt(_accVendor)}];
+// ─── 모델 1개 호출 → 결과 객체 반환 (호출부가 사진별로 저장) ───
+//   공통 callGemini 재사용(ai_usage_logs 자동 기록). 실패해도 throw 안 하고 결과 객체로 → 한 모델 실패가 전체를 안 막음.
+async function _accRunOneModel(b64list, engineId){
+  const m = ACC_MODEL_MAP[engineId]; if(!m) return {ok:false, error:'알 수 없는 모델'};
+  const parts=[{text:accBuildPrompt('')}]; // 거래처명 없이 분석 (측정실 — 사장님 입력 X)
   b64list.forEach(b=>parts.push({inline_data:{mime_type:'image/jpeg',data:b}}));
   const t0=Date.now();
   try{
     const raw=await callGemini(parts, m.timeout+(b64list.length-1)*5, 'accuracy_test', m.model, m.provider);
-    // lastAIUsage는 직전 호출(이 모델) 비용 — 순차 호출이라 안전
-    const cost=(typeof lastAIUsage!=='undefined'&&lastAIUsage)?lastAIUsage.costWon:null;
+    const cost=(typeof lastAIUsage!=='undefined'&&lastAIUsage)?lastAIUsage.costWon:null; // 순차 호출이라 직전=이 모델
     const items=(raw && Array.isArray(raw.items))?raw.items:[];
-    _accCompareResults[engineId]={ok:true, raw, items, cost, ms:Date.now()-t0,
+    return {ok:true, raw, items, cost, ms:Date.now()-t0,
       sum:(raw&&raw.total_sum!=null)?raw.total_sum:null, itemCount:items.length};
   }catch(e){
-    _accCompareResults[engineId]={ok:false, error:(e&&e.message)||String(e), ms:Date.now()-t0};
+    return {ok:false, error:(e&&e.message)||String(e), ms:Date.now()-t0};
   }
 }
-
-// ─── 거래처 과거 품목 로드 (품목 칸 자동완성용 — 거래처명 텍스트로 매칭) ───
-//   vendors에서 이름 매칭 → vendor_id로 receipts.item 조회. 못 찾으면 vendor 텍스트로 조회.
-//   자동완성은 사장님이 직접 고르는 것 → 잘못 떠도 무해 (자동 덮어쓰기 X)
-async function _accLoadPastItems(){
-  _accPastItems=[];
-  try{
-    if(typeof sb==='undefined' || !sb || typeof currentStore==='undefined' || !currentStore || !_accVendor) return;
-    const {data:vs}=await sb.from('vendors').select('id').eq('store_id',currentStore.id).ilike('name',`%${_accVendor}%`).limit(1);
-    const vid = (vs && vs[0]) ? vs[0].id : null;
-    let q = sb.from('receipts').select('item').eq('store_id',currentStore.id).not('item','is',null).order('created_at',{ascending:false}).limit(300);
-    q = vid ? q.eq('vendor_id',vid) : q.ilike('vendor',`%${_accVendor}%`);
-    const {data}=await q;
-    if(data && data.length) _accPastItems=[...new Set(data.map(r=>(r.item||'').trim()).filter(Boolean))].slice(0,120);
-  }catch(e){ console.warn('[acc past items]', e); }
-}
-function _accDatalistHtml(){
-  if(!_accPastItems || !_accPastItems.length) return '';
-  return `<datalist id="accPastItems">${_accPastItems.map(n=>`<option value="${(n||'').replace(/"/g,'&quot;')}"></option>`).join('')}</datalist>`;
-}
-function accNameNorm(s){return String(s||'').replace(/[\s()\[\]\/·,]/g,'').replace(/\d+(g|kg|L|ml)/gi,'').replace(/[①-⑨]/g,'').replace(/코리아|완자/g,'').slice(0,5);}
-function accNameMatch(a,b){const x=accNameNorm(a),y=accNameNorm(b);if(!x||!y)return false;return x===y||x.includes(y)||y.includes(x);}
-function _accFmt(x){return x==null?'-':Number(x).toLocaleString('ko-KR');}
-
-// ─── localStorage: 최근 거래처 / 답지 / 로그 ───
-function _accGetVendors(){ try{return JSON.parse(localStorage.getItem('accVendors')||'[]');}catch{return[];} }
-function _accSaveVendor(v){ if(!v)return; const list=_accGetVendors().filter(x=>x!==v); list.unshift(v); localStorage.setItem('accVendors',JSON.stringify(list.slice(0,12))); }
-function _accSaveAnswer(vendor,date,cur){ try{const all=JSON.parse(localStorage.getItem('accAnswers')||'{}'); all[vendor+'|'+date]=cur; localStorage.setItem('accAnswers',JSON.stringify(all));}catch{} }
-function _accGetLogs(){ try{return JSON.parse(localStorage.getItem('accLabLogs')||'[]');}catch{return[];} }
-function _accAddLog(o){ const logs=_accGetLogs(); logs.unshift(o); localStorage.setItem('accLabLogs',JSON.stringify(logs.slice(0,50))); }
 
 // ─── 스타일 (1회 주입) ───
 function _accInjectStyle(){
@@ -152,42 +119,23 @@ function renderAccuracyLab(){
   const el=document.getElementById('adminAccuracyPanel'); if(!el) return;
   el.innerHTML=`
     <div class="card acc-sec" style="padding:14px;">
-      <div class="acc-lbl">① 거래처</div>
-      <input class="acc-vinput" id="accVendorInput" placeholder="거래처명 입력 (예: 순창국제)" value="${_accVendor||''}">
-      <div class="acc-chips" id="accVendorChips"></div>
-    </div>
-    <div class="card acc-sec" style="padding:14px;">
-      <div class="acc-lbl">② 비교할 모델 (여러 개 선택 = 한 번에 비교)</div>
+      <div class="acc-lbl">① 비교할 모델 (여러 개 선택 = 한 번에 비교)</div>
       <div class="acc-engines" id="accEngines"></div>
-      <div class="acc-lbl" style="margin-top:10px;">②-2 사진 화질 (높을수록 작은 글자 잘 읽힘 · 비용 소폭 ↑)</div>
+      <div class="acc-lbl" style="margin-top:10px;">①-2 사진 화질 (높을수록 작은 글자 잘 읽힘 · 비용 소폭 ↑)</div>
       <div class="acc-engines" id="accResSel"></div>
-      <div class="acc-lbl" style="margin-top:10px;">③ 명세서 사진 (여러 장 OK)</div>
+      <div class="acc-lbl" style="margin-top:10px;">② 명세서 사진 — 여러 장 = 각각 따로 분석돼 아래에 쌓임</div>
       <label class="acc-flabel" id="accFlabel">📷 사진 고르기<input type="file" accept="image/*" multiple id="accFileInput"></label>
-      <button class="acc-btn" id="accAnalyzeBtn" style="margin-top:10px;">🤖 선택 모델 비교 분석</button>
+      <div class="acc-mini" style="margin-top:6px;">거래처명은 입력 안 해도 됩니다. 사진 1장 = 영수증 1개로 따로 분석합니다.</div>
+      <button class="acc-btn" id="accAnalyzeBtn" style="margin-top:10px;">🤖 사진별 비교 분석</button>
     </div>
-    <div id="accResult"></div>
-    <div class="card acc-sec" style="padding:14px;">
-      <div class="acc-lbl">📜 채점 로그</div>
-      <div id="accLogs"></div>
-    </div>`;
-  _accRenderVendorChips(); _accRenderEngines(); _accRenderRes(); _accRenderCompare(); _accRenderLogs();
-  const vi=document.getElementById('accVendorInput');
-  if(vi) vi.addEventListener('input',()=>{ _accVendor=vi.value.trim(); _accRenderVendorChips(); });
+    <div id="accResult"></div>`;
+  _accRenderEngines(); _accRenderRes(); _accRenderCompare();
   const fi=document.getElementById('accFileInput');
-  if(fi) fi.addEventListener('change',()=>{ _accFileBuf=[...fi.files]; _accB64Cache=[]; const l=document.getElementById('accFlabel'); if(l){l.classList.toggle('has',!!fi.files.length); l.childNodes[0].textContent=fi.files.length?`📷 ${fi.files.length}장 선택됨`:'📷 사진 고르기';} });
+  if(fi) fi.addEventListener('change',()=>{ _accFileBuf=[...fi.files]; const l=document.getElementById('accFlabel'); if(l){l.classList.toggle('has',!!fi.files.length); l.childNodes[0].textContent=fi.files.length?`📷 ${fi.files.length}장 선택됨`:'📷 사진 고르기';} });
   const ab=document.getElementById('accAnalyzeBtn');
   if(ab) ab.addEventListener('click', accCompareAnalyze);
 }
 
-function _accRenderVendorChips(){
-  const box=document.getElementById('accVendorChips'); if(!box) return;
-  const vs=_accGetVendors();
-  box.innerHTML = vs.length ? vs.map(v=>`<span class="acc-chip ${v===_accVendor?'on':''}" data-v="${v}">${v}</span>`).join('')
-    : '<span class="acc-mini">최근 채점한 거래처가 여기 모입니다</span>';
-  box.querySelectorAll('.acc-chip').forEach(c=>c.addEventListener('click',()=>{
-    _accVendor=c.dataset.v; const vi=document.getElementById('accVendorInput'); if(vi)vi.value=_accVendor; _accRenderVendorChips();
-  }));
-}
 function _accRenderEngines(){
   const box=document.getElementById('accEngines'); if(!box) return;
   // 다중 선택 — 체크된 모델들을 한 번에 비교 (2026-06-09)
@@ -209,113 +157,103 @@ function _accRenderRes(){
   box.querySelectorAll('.acc-eng').forEach(d=>d.addEventListener('click',()=>{ _accRes=parseInt(d.dataset.r,10); _accRenderRes(); }));
 }
 
-// ─── 여러 모델 동시(순차) 비교 분석 ───
+// ─── 사진별 비교 분석 (사진 1장 = 영수증 1개, 각각 분석돼 누적) ───
 async function accCompareAnalyze(){
-  _accVendor=(document.getElementById('accVendorInput')?.value||'').trim();
-  if(!_accVendor){ alert('거래처명을 먼저 입력하세요'); return; }
   if(!_accFileBuf.length){ alert('명세서 사진을 먼저 고르세요'); return; }
   if(!_accSelectedEngines.length){ alert('비교할 모델을 1개 이상 선택하세요'); return; }
   const btn=document.getElementById('accAnalyzeBtn');
   if(btn) btn.disabled=true;
-  _accCompareResults={}; _accTruthSum=null;
-  _accSaveVendor(_accVendor);
+  _accShots=[];
   try{
-    // 이미지 b64는 1번만 만들어 모든 모델에 재사용 (재시도 때도 다시 안 읽음)
-    if(!_accB64Cache.length){
-      for(const f of _accFileBuf){ _accB64Cache.push(await accFileToB64(f)); }
-    }
-    // 선택 모델 순차 호출 (병렬이면 lastAIUsage 비용이 섞임 → 순차로 정확하게)
-    for(const id of _accSelectedEngines){
-      _accCompareResults[id]={pending:true};
-      if(btn) btn.textContent=`${ACC_MODEL_MAP[id]?.name||id} 분석 중…`;
-      _accRenderCompare();
-      await _accRunOneModel(id, _accB64Cache);
-      _accRenderCompare();
+    for(let fi=0; fi<_accFileBuf.length; fi++){
+      const b64=await accFileToB64(_accFileBuf[fi]);
+      const shot={name:_accFileBuf[fi].name||`사진 ${fi+1}`, b64, truthSum:null, models:{}};
+      _accShots.push(shot);
+      // 이 사진에 대해 선택 모델 순차 호출 (병렬이면 lastAIUsage 비용 섞임 → 순차)
+      for(const id of _accSelectedEngines){
+        shot.models[id]={pending:true};
+        if(btn) btn.textContent=`사진 ${fi+1}/${_accFileBuf.length} · ${ACC_MODEL_MAP[id]?.name||id} 분석 중…`;
+        _accRenderCompare();
+        shot.models[id]=await _accRunOneModel([b64], id);
+        _accRenderCompare();
+      }
     }
   }catch(e){
     console.warn('[acc compare]', e);
   }finally{
     setLoad(false); // callGemini 재시도 중 켠 전체화면 로딩 끔
-    if(btn){ btn.disabled=false; btn.textContent='🤖 선택 모델 비교 분석'; }
+    if(btn){ btn.disabled=false; btn.textContent='🤖 사진별 비교 분석'; }
   }
 }
 
-// ─── 실패한(또는 특정) 모델 1개만 재시도 ───
-async function accRetryModel(engineId){
-  if(!_accB64Cache.length){ alert('사진을 다시 올린 뒤 분석하세요'); return; }
-  _accCompareResults[engineId]={pending:true};
+// ─── 특정 사진의 특정 모델만 재시도 (호출 실패 시) ───
+async function accRetryShot(si, engineId){
+  const shot=_accShots[si]; if(!shot||!shot.b64){ alert('사진을 다시 올린 뒤 분석하세요'); return; }
+  shot.models[engineId]={pending:true};
   _accRenderCompare();
-  await _accRunOneModel(engineId, _accB64Cache);
+  shot.models[engineId]=await _accRunOneModel([shot.b64], engineId);
   _accRenderCompare();
 }
 
-// ─── 비교 결과 렌더 (요약표 + 모델별 품목 펼침 + 실패 재시도) ───
+// ─── 비교 결과 렌더 (사진별 카드 누적: 사진 미리보기 + 모델 비교표 + 실제합계 + 재시도 + 품목 펼침) ───
 function _accRenderCompare(){
   const box=document.getElementById('accResult'); if(!box) return;
-  const ids=_accSelectedEngines.filter(id=>_accCompareResults[id]);
-  if(!ids.length){ box.innerHTML=''; return; }
+  if(!_accShots.length){ box.innerHTML=''; return; }
   const fmtN=x=>x==null?'-':Number(x).toLocaleString('ko-KR');
-  // 요약 행들
-  const rows=ids.map(id=>{
-    const r=_accCompareResults[id]; const name=ACC_MODEL_MAP[id]?.name||id;
-    if(r.pending) return `<tr><td><b>${name}</b></td><td colspan="4" class="acc-mini">⏳ 분석 중…</td></tr>`;
-    if(!r.ok) return `<tr><td><b>${name}</b></td><td colspan="3" style="color:#EF4444;">❌ 실패: ${(r.error||'').slice(0,40)}</td>
-      <td><button class="acc-retry" data-e="${id}" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--gray-300);background:#fff;cursor:pointer;">🔄 재시도</button></td></tr>`;
-    // 정답 합계 입력됐으면 오차
-    let diffCell='-';
-    if(_accTruthSum!=null && r.sum!=null){
-      const diff=r.sum-_accTruthSum;
-      diffCell = diff===0 ? '<b style="color:#10B981;">정확 ✅</b>' : `<span style="color:#EF4444;">${diff>0?'+':''}${fmtN(diff)}</span>`;
-    }
-    return `<tr>
-      <td><b>${name}</b></td>
-      <td class="num" style="text-align:right;">${fmtN(r.sum)}</td>
-      <td class="num" style="text-align:center;">${r.itemCount}개</td>
-      <td class="num" style="text-align:right;">${r.cost!=null?r.cost.toFixed(1)+'원':'-'}</td>
-      <td class="num" style="text-align:right;">${diffCell!=='-'?diffCell:(r.ms?(r.ms/1000).toFixed(1)+'초':'-')}</td>
-    </tr>`;
+  const cards=_accShots.map((shot,si)=>{
+    const ids=_accSelectedEngines.filter(id=>shot.models[id]);
+    const rows=ids.map(id=>{
+      const r=shot.models[id]; const name=ACC_MODEL_MAP[id]?.name||id;
+      if(r.pending) return `<tr><td><b>${name}</b></td><td colspan="4" class="acc-mini">⏳ 분석 중…</td></tr>`;
+      if(!r.ok) return `<tr><td><b>${name}</b></td><td colspan="3" style="color:#EF4444;">❌ ${(r.error||'').slice(0,30)}</td>
+        <td><button class="acc-retry" data-si="${si}" data-e="${id}" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--gray-300);background:#fff;cursor:pointer;">🔄</button></td></tr>`;
+      let last = r.ms?(r.ms/1000).toFixed(1)+'초':'-';
+      if(shot.truthSum!=null && r.sum!=null){
+        const diff=r.sum-shot.truthSum;
+        last = diff===0 ? '<b style="color:#10B981;">정확 ✅</b>' : `<span style="color:#EF4444;">${diff>0?'+':''}${fmtN(diff)}</span>`;
+      }
+      return `<tr>
+        <td><b>${name}</b></td>
+        <td class="num" style="text-align:right;">${fmtN(r.sum)}</td>
+        <td class="num" style="text-align:center;">${r.itemCount}개</td>
+        <td class="num" style="text-align:right;">${r.cost!=null?r.cost.toFixed(1)+'원':'-'}</td>
+        <td class="num" style="text-align:right;">${last}</td>
+      </tr>`;
+    }).join('');
+    const details=ids.map(id=>{
+      const r=shot.models[id]; if(!r||!r.ok||!r.items) return '';
+      const name=ACC_MODEL_MAP[id]?.name||id;
+      const li=r.items.map((it,i)=>`<tr><td>${i+1}</td><td>${(it.i||'').replace(/</g,'&lt;')}</td><td class="num" style="text-align:right;">${it.q==null?'-':it.q}</td><td class="num" style="text-align:right;">${fmtN(it.p)}</td></tr>`).join('');
+      return `<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--gray-700);">${name} 품목 ${r.items.length}개</summary>
+        <table class="acc-tbl"><tr><th>No</th><th>품목</th><th class="num" style="text-align:right">수량</th><th class="num" style="text-align:right">합계</th></tr>${li}</table></details>`;
+    }).join('');
+    const diffHeader = shot.truthSum!=null ? '오차' : '시간';
+    const truthVal=shot.truthSum==null?'':Number(shot.truthSum).toLocaleString('ko-KR');
+    return `<div class="card acc-sec" style="padding:14px;">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
+        <img src="data:image/jpeg;base64,${shot.b64}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--gray-200);flex-shrink:0;">
+        <div class="acc-lbl" style="margin:0;">영수증 ${si+1} <span class="acc-mini">${(shot.name||'').replace(/</g,'')}</span></div>
+      </div>
+      <table class="acc-tbl">
+        <tr><th>모델</th><th class="num" style="text-align:right">합계</th><th class="num" style="text-align:center">품목수</th><th class="num" style="text-align:right">비용</th><th class="num" style="text-align:right">${diffHeader}</th></tr>
+        ${rows}
+      </table>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+        <span class="acc-mini" style="min-width:96px;">실제 영수증 합계</span>
+        <input class="acc-tin num acc-truth" data-si="${si}" value="${truthVal}" inputmode="numeric" placeholder="입력 → 모델별 오차 자동" style="flex:1;">
+      </div>
+      ${details}
+    </div>`;
   }).join('');
-  // 모델별 품목 펼침
-  const details=ids.map(id=>{
-    const r=_accCompareResults[id]; if(!r||!r.ok||!r.items) return '';
-    const name=ACC_MODEL_MAP[id]?.name||id;
-    const li=r.items.map((it,i)=>`<tr><td>${i+1}</td><td>${(it.i||'').replace(/</g,'&lt;')}</td><td class="num" style="text-align:right;">${it.q==null?'-':it.q}</td><td class="num" style="text-align:right;">${fmtN(it.p)}</td></tr>`).join('');
-    return `<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--gray-700);">${name} — 품목 ${r.items.length}개 펼쳐보기</summary>
-      <table class="acc-tbl"><tr><th>No</th><th>품목</th><th class="num" style="text-align:right">수량</th><th class="num" style="text-align:right">합계</th></tr>${li}</table></details>`;
-  }).join('');
-  const truthVal=_accTruthSum==null?'':Number(_accTruthSum).toLocaleString('ko-KR');
-  const diffHeader = _accTruthSum!=null ? '오차' : '소요시간';
-  box.innerHTML=`<div class="card acc-sec" style="padding:14px;">
-    <div class="acc-lbl">④ 모델 비교 결과</div>
-    <table class="acc-tbl">
-      <tr><th>모델</th><th class="num" style="text-align:right">합계</th><th class="num" style="text-align:center">품목수</th><th class="num" style="text-align:right">비용</th><th class="num" style="text-align:right">${diffHeader}</th></tr>
-      ${rows}
-    </table>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:12px;">
-      <span class="acc-mini" style="min-width:96px;">실제 영수증 합계</span>
-      <input class="acc-tin num" id="accTruthInput" value="${truthVal}" inputmode="numeric" placeholder="영수증 보고 입력 → 모델별 오차 자동" style="flex:1;">
-    </div>
-    <div class="acc-hint">영수증의 <b>실제 결제 합계</b>를 입력하면 위 표 오른쪽에 모델별 오차가 뜹니다. 합계 맞고 품목수 많은 모델이 잘 읽은 거예요. 품목 내용은 아래 펼쳐서 확인하세요.</div>
-    ${details}
-  </div>`;
-  // 재시도 버튼
-  box.querySelectorAll('.acc-retry').forEach(b=>b.addEventListener('click',()=>accRetryModel(b.dataset.e)));
-  // 실제 합계 입력 → 오차 갱신
-  const ti=document.getElementById('accTruthInput');
-  if(ti) ti.addEventListener('input',()=>{
+  box.innerHTML=cards;
+  // 재시도 버튼 (사진+모델 지정)
+  box.querySelectorAll('.acc-retry').forEach(b=>b.addEventListener('click',()=>accRetryShot(+b.dataset.si, b.dataset.e)));
+  // 실제 합계 입력 → 그 사진 오차 갱신
+  box.querySelectorAll('.acc-truth').forEach(ti=>ti.addEventListener('input',()=>{
     if(typeof formatNumberInput==='function') formatNumberInput(ti);
-    _accTruthSum = ti.value===''?null:Number(ti.value.replace(/[^0-9]/g,''));
-    // 표만 다시 그리되 입력 포커스 유지 위해 최소 갱신
+    const si=+ti.dataset.si;
+    _accShots[si].truthSum = ti.value===''?null:Number(ti.value.replace(/[^0-9]/g,''));
     _accRenderCompare();
-    const ti2=document.getElementById('accTruthInput'); if(ti2){ ti2.focus(); const v=ti2.value; ti2.setSelectionRange(v.length,v.length); }
-  });
-}
-
-function _accRenderLogs(){
-  const el=document.getElementById('accLogs'); if(!el) return;
-  const logs=_accGetLogs();
-  if(!logs.length){ el.innerHTML='<div class="acc-mini" style="text-align:center;padding:10px;">아직 채점 기록이 없습니다.</div>'; return; }
-  el.innerHTML=logs.map(l=>`<div class="acc-logrow"><span class="acc-mini">${l.t}</span>
-    <span><b>${l.overall}%</b> <span class="acc-pill">${l.vendor||''} ${l.date||''}</span> <span class="acc-mini">${l.eng} 합${l.sum} 수${l.qty}</span></span>
-    <span class="acc-mini">${l.cost}</span></div>`).join('');
+    const ti2=document.querySelector(`.acc-truth[data-si="${si}"]`); if(ti2){ ti2.focus(); const v=ti2.value; ti2.setSelectionRange(v.length,v.length); }
+  }));
 }
