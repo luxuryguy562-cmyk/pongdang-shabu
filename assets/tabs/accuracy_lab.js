@@ -169,6 +169,9 @@ async function accCompareAnalyze(){
       const b64=await accFileToB64(_accFileBuf[fi]);
       const shot={name:_accFileBuf[fi].name||`사진 ${fi+1}`, b64, truthSum:null, models:{}};
       _accShots.push(shot);
+      // 비교 세션 식별 — 같은 [비교 분석] 1회 = 같은 batch (DB에서 묶어 분석용)
+      const batchId = shot.name + '|' + Date.now();
+      shot._batch = batchId;
       // 이 사진에 대해 선택 모델 순차 호출 (병렬이면 lastAIUsage 비용 섞임 → 순차)
       for(const id of _accSelectedEngines){
         shot.models[id]={pending:true};
@@ -176,6 +179,7 @@ async function accCompareAnalyze(){
         _accRenderCompare();
         shot.models[id]=await _accRunOneModel([b64], id);
         _accRenderCompare();
+        await _accSaveShotResult(shot, id); // ★ 모델별 결과(품목·금액·합계)를 DB 저장 → CTO가 정확도 비교분석
       }
     }
   }catch(e){
@@ -186,6 +190,24 @@ async function accCompareAnalyze(){
   }
 }
 
+// ─── 모델별 분석 결과(품목·금액·합계 전체)를 accuracy_lab_logs에 저장 ───
+//   CTO가 DB에서 vendor(사진)별·engine(모델)별 ai_raw를 꺼내 품목·합계 정확도 비교 (2026-06-09)
+async function _accSaveShotResult(shot, engineId){
+  const r=shot && shot.models ? shot.models[engineId] : null;
+  if(!r || !r.ok || !r.raw) return;
+  try{
+    if(typeof sb==='undefined' || !sb) return;
+    await sb.from('accuracy_lab_logs').insert({
+      store_id: (typeof currentStore!=='undefined' && currentStore) ? currentStore.id : null,
+      vendor: (shot.name||'') + (shot._batch?(' @'+shot._batch):''),
+      receipt_date: (r.raw && r.raw.date) || null,
+      engine: ACC_MODEL_MAP[engineId]?.name || engineId,
+      ai_raw: r.raw,          // {items:[{i,q,p,...}], total_sum, ...} 통째 — 품목·금액·합계 분석용
+      cost_won: r.cost
+    });
+  }catch(e){ console.warn('[accuracy_lab_logs] 저장 실패:', e); }
+}
+
 // ─── 특정 사진의 특정 모델만 재시도 (호출 실패 시) ───
 async function accRetryShot(si, engineId){
   const shot=_accShots[si]; if(!shot||!shot.b64){ alert('사진을 다시 올린 뒤 분석하세요'); return; }
@@ -193,6 +215,7 @@ async function accRetryShot(si, engineId){
   _accRenderCompare();
   try{
     shot.models[engineId]=await _accRunOneModel([shot.b64], engineId);
+    await _accSaveShotResult(shot, engineId); // 재시도 성공분도 DB 저장
   } finally {
     setLoad(false); // callGemini가 재시도("2/4") 중 켠 전체화면 로딩 끔 — 안 끄면 분석 끝나도 화면 가림(무한로딩처럼 보임)
   }
