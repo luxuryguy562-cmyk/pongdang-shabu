@@ -1235,7 +1235,8 @@ async function loadDashboard(force){
         const receipt = prevDailyReceipt[dd] || 0;
         const fixed = Math.round((prevFcMonthly||0)/prevLast); // 일할
         const royalty = Math.round(sale * royaltyRate);
-        const exp = vendor + att + receipt + fixed + royalty;
+        const cardFee = Math.round(sale * cardFeeRate);
+        const exp = vendor + att + receipt + fixed + royalty + cardFee;
         if(sale > 0 || exp > 0){
           // 2026-05-22 byCat 추가 (동적 카테고리 비교용)
           const byCat = {
@@ -1244,9 +1245,9 @@ async function loadDashboard(force){
             '비품': receipt,
             '고정비': fixed,
             '공과금': 0,
-            '로열티/수수료': royalty,
+            '로열티/수수료': royalty + cardFee,
           };
-          prevDailyMap[k] = {sale, vendor, att, fixed, receipt, royalty, exp, profit: sale-exp, byCat};
+          prevDailyMap[k] = {sale, vendor, att, fixed, receipt, royalty, cardFee, exp, profit: sale-exp, byCat};
         }
       }
       // 휴무 일자 set (sales_daily.source='closed')
