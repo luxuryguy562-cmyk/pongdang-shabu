@@ -2324,6 +2324,56 @@
   </div>
 </div>
 
+<!-- ══ [9b] 카드수수료 (관리자 전용) ══ -->
+<div id="cardfeeCont" class="container">
+  <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출관리</span></div>
+  <div class="card">
+    <div class="card-title">💳 카드수수료</div>
+    <div style="font-size:12px;color:var(--gray-600);margin-bottom:12px;">설정의 카드수수료율 기준으로 <b>카드 매출</b>의 일정 비율을 자동 계산합니다.</div>
+    <div id="cardfeeEmpty" style="display:none;padding:20px;text-align:center;color:var(--gray-500);">
+      <p>카드수수료율이 설정되지 않았습니다.</p>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px;" data-action="nav|settings">설정으로 가기</button>
+    </div>
+    <div id="cardfeeMain" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="padding:12px;background:var(--gray-100);border-radius:10px;">
+        <div style="font-size:11px;color:var(--gray-500);">이번달 카드 매출 (<span id="cardfeeMonthLabel">-</span>)</div>
+        <div style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);" id="cardfeeCardSales">-</div>
+      </div>
+      <div style="padding:12px;background:#FEE2E2;border-radius:10px;">
+        <div style="font-size:11px;color:#991B1B;">예상 카드수수료</div>
+        <div style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:#991B1B;" id="cardfeeExpected">-</div>
+      </div>
+      <div style="grid-column:1/-1;padding:12px;background:#FEE2E2;border-radius:10px;">
+        <div style="font-size:11px;color:#991B1B;margin-bottom:6px;">카드수수료율 (카드 매출 대비 %)</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input id="cardfeeRateInput" type="number" min="0" max="100" step="0.1" placeholder="0" style="flex:1;padding:8px 10px;font-size:16px;font-weight:800;color:#991B1B;border:1px solid #FCA5A5;border-radius:8px;background:#fff;text-align:right;">
+          <span style="font-size:16px;font-weight:700;color:#991B1B;">%</span>
+          <button class="btn btn-primary btn-sm" style="padding:8px 14px;font-size:13px;background:#991B1B;border-color:#991B1B;" data-action="saveCardFeeRate">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📅 월별 카드수수료 (최근 12개월)</div>
+    <div style="overflow-x:auto;">
+      <table id="cardfeeMonthTable" style="width:100%;font-size:12px;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--gray-200);text-align:right;">
+            <th style="padding:8px 6px;text-align:left;">월</th>
+            <th style="padding:8px 6px;">카드 매출</th>
+            <th style="padding:8px 6px;">요율</th>
+            <th style="padding:8px 6px;">금액</th>
+          </tr>
+        </thead>
+        <tbody id="cardfeeMonthBody">
+          <tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">로딩 중…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--gray-400);margin-top:10px;">💡 카드 매출 × 요율 = 예상 카드수수료. 실제 출금은 정산 대조에서 확인하세요.</div>
+  </div>
+</div>
+
 <!-- ══ [10a] 지출 카테고리 ══ -->
 <div id="expcatCont" class="container">
   <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">카테고리 관리</span></div>

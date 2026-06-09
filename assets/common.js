@@ -508,7 +508,7 @@ function nav(tab, el) {
     sales:'dashboard',
     receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
     explist:'expHub', recon:'expHub', expcat:'expHub',
-    royalty:'expHub', catReceipt:'expHub', manualCat:'expHub',
+    royalty:'expHub', cardfee:'expHub', catReceipt:'expHub', manualCat:'expHub',
   };
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
@@ -539,6 +539,7 @@ function nav(tab, el) {
     explist: initExplist,
     expcat: loadExpCategories,
     royalty: loadRoyaltyPage,
+    cardfee: loadCardFeePage,
     recon: initRecon,
     sales: loadSalesDaily,
     opening: loadOpeningPage,
