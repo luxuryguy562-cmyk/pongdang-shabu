@@ -22,6 +22,9 @@ const _DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
 const _GEMINI_PRICING = {
   'gemini-2.5-flash':       { in:  420, out: 3500 },
   'gemini-2.5-flash-lite':  { in:  140, out:  560 },
+  // 2.5 Pro 단가 추가 (2026-06-09) — 누락 시 flash-lite 단가로 과소계산(측정실 Pro 1.1원 버그).
+  // 2026-01 지식 기준 추정: 입력 $1.25 / 출력 $10 per 1M, 환율 1400원. 실제는 Worker _costWon 우선.
+  'gemini-2.5-pro':         { in: 1750, out:14000 },
   'gemini-2.0-flash':       { in:  140, out:  560 },
   'gemini-2.0-flash-lite':  { in:  105, out:  420 },
   'gemini-1.5-flash':       { in:  105, out:  420 },

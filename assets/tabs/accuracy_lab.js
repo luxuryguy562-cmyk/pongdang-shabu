@@ -191,7 +191,11 @@ async function accRetryShot(si, engineId){
   const shot=_accShots[si]; if(!shot||!shot.b64){ alert('사진을 다시 올린 뒤 분석하세요'); return; }
   shot.models[engineId]={pending:true};
   _accRenderCompare();
-  shot.models[engineId]=await _accRunOneModel([shot.b64], engineId);
+  try{
+    shot.models[engineId]=await _accRunOneModel([shot.b64], engineId);
+  } finally {
+    setLoad(false); // callGemini가 재시도("2/4") 중 켠 전체화면 로딩 끔 — 안 끄면 분석 끝나도 화면 가림(무한로딩처럼 보임)
+  }
   _accRenderCompare();
 }
 
