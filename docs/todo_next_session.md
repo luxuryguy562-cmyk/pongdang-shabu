@@ -2,6 +2,99 @@
 
 ---
 
+## 🏗️ [2026-06-09 — 직원 계정 모델 대전환 (비전 4-A 확정) + 로그인 보안 완성]
+
+### 사장님 확정 비전 (vision.md 4-A 박음)
+- **직원도 평생 사용자**: 직원 = 사람 단위 본인 계정, 매장은 고용 관계로 연결. 근무·급여 이력은 직원 계정에 영속(매장 옮겨도 누적). 퇴사 = 고용관계만 종료, 직원 기록 보존. 사장은 퇴사자 조회 가능.
+- **양면 시장**: 사장+직원 둘 다 고객. 하우머치(직원)+캐시노트(사장) 결합 = 6번째 축. 직원이 새 매장에 앱 전파 = 선순환.
+- **가입 루트 2개**: 사장(매장 개설) / 직원(초대 수락+본인 계정).
+
+### 진행 중이던 로그인 보안 작업 (브랜치 claude/gallant-cori-r0gg8q)
+- ✅ 완료: employee_private 금고(RLS차단) + emp-login/emp-session Edge Function(서버 PIN검증+세션토큰 자동로그인) + 아이폰식 PIN 키패드 UI. 전부 테스트 통과. 커밋 2개(d9c4022, efedd74) 푸시됨, **아직 main 머지 안 함**.
+- ⏸️ 보류(계정모델 확정 후): 직원관리 화면 금고연동 + employees 민감7컬럼 제거(진짜 차단). 모델 바뀌면 또 고쳐야 해서 사장님 지시로 멈춤(헌법 1-6).
+- ⚠️ 내 설계 결함 수정 필요: emp-login/session이 is_active=true만 조회 → 퇴사자 사장 조회 불가. 사장 조회는 퇴사자 포함으로.
+
+### 사장님 결정 (2026-06-09 확정)
+- **모델 먼저** (배포 보류). 이유: 직원 계정 모델이 로그인·가입 또 바꿈 → 지금 배포하면 직원 PIN 두 번 입력 + 반쪽 보안. 한 번에 완성해서 배포.
+- **직원 본인 확인 = 전화번호 + 문자 인증번호** (하우머치 방식, 사람 고유 식별, 이직해도 유지).
+
+### 직원 계정 모델 — 4단계 로드맵 (사장님 합의)
+1. **구조 분리** 🔄 진행중: `person`(사람) 표 신설 + 기존 `employees`를 고용(employment)으로 재해석(person_id FK 추가). 기존 13명 이전. 근무·급여 FK(attendance_logs/work_schedules/special_wages 등 employee_id)는 고용 단위 유지. 앱 동작 그대로.
+   - ✅ **1-① 완료(2026-06-09 실행승인)**: `persons` 표 신설(phone 식별자, RLS 차단) + `employees.person_id` 칸 추가 + 13명 연결(전화11→사람11, 무전화2→개별2, 총 13명). db_schema 동기화. 추가만 = 앱 안 깨짐. 롤백=person_id DROP+persons DROP.
+   - ⬜ 1-② 남음: 권한(auth_level)을 membership(사람–매장 관계)으로 분리, 고용정보(시급·역할) 정리. 코드는 아직 employees 그대로 사용(person 활용은 3단계 가입 때).
+2. **보안 완성**: 멈췄던 1-D/1-E — 직원관리 화면 금고연동(saveEmployee 분리, renderEmpDetail, 매니저 금고 조회) + employees 민감7컬럼 제거. **진짜 차단**. emp-login/session 퇴사자 조회 결함도 이때 수정(사장은 퇴사자 포함, 직원 본인은 활성만).
+3. **직원 가입·문자 인증** (사장님 2026-06-09 흐름 확정): ①직원이 문자 인증으로 본인 계정 먼저 가입(전화+인증번호+본인PIN+본인정보, 이 시점 매장 무관) → ②사장이 직원관리에서 "매장 코드" 발급 + 시급·역할 설정 → ③직원이 코드 입력 → 그 매장 고용 연결. 투잡이면 다른 사장 코드 추가 입력. SMS 발송 인프라 필요(국내 알리고/NHN SENS 등 저렴, 사장님 가입·결제 1회 — GCP처럼 셋업 안내). vision 7-3 자동온보딩 정신 주의.
+   - **입력 주체 분리**: 본인정보(전화·계좌·주민번호)=직원 본인 입력 / 고용조건(시급·역할·입사일)=사장 입력. → 사장이 직원 민감정보 직접 보관 부담 ↓.
+   - **코드 방식 미정**: 매장 고정코드 vs 1회용 초대코드 — 설계 시 결정(유출 시 사장 승인 게이트 고려).
+   - ✅ **3-① 완료+실작동(2026-06-09)**: `otp_codes` 표 + `send-otp`/`verify-otp` Edge Function. 문자인증→person 생성 E2E 테스트 통과(틀린코드 거부·person 생성·토큰 발급). 알리고 연동 완비 — 환경변수 `ALIGO_KEY`/`ALIGO_USER_ID`/`ALIGO_SENDER`만 넣으면 실제 발송. 키 없으면 `need_setup:true` 반환.
+   - ⬜ **3-② 남음**: 가입 화면 UI(전화→인증번호→본인PIN→매장코드 합류) + ⚠️**사장님 알리고 가입+발신번호 등록**(이 지점에서만 사장님 손 필요 — CTO 추천 알리고, 건당 ~9원).
+
+### 문자 서비스 = 솔라피(SOLAPI) 확정 (2026-06-09, 6개 심층비교 후)
+- **결정 이유**: ①우리는 Supabase Edge Function(서버리스, IP 변동) → 알리고/뿌리오는 발송 IP 고정등록 강제라 부적합. 솔라피는 HMAC 서명 인증이라 IP 무관. ②근무 30분전 알림 등 예약·자동화 6곳 중 최강. ③진입장벽 최저(최소충전 1,000원, 본인폰이면 서류0).
+- **약점(감안함)**: 단가 출처마다 SMS 8~13원 엇갈림(가입 후 확정), 알림톡 소량단가는 알리고가 쌈. 단 인증문자는 1인 1회라 총액 미미.
+- **send-otp 솔라피용 배포 완료(v2)**: HMAC-SHA256 서명(crypto.subtle), POST api.solapi.com/messages/v4/send. 환경변수 `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER` 넣으면 작동(없으면 need_setup).
+- **사장님 할 일**: solapi.com 가입 → 본인폰 발신번호 등록(서류X) → 1,000원 충전 → API Key/Secret 발급 → CTO가 환경변수 등록(키는 채팅 노출 금지).
+
+### 🔜 다음 작업: 직원 가입 화면 + 매장 코드 (3-② 상세 설계)
+문자 인증 인프라(send-otp/verify-otp)는 실작동 검증 끝. 이제 가입 UI + 매장 합류.
+
+> **진행 (2026-06-09, 가지 claude/wizardly-einstein-gizfxw)**:
+> - ✅ 1단계 DB 적용: persons.pin + store_join_codes·signup_tokens·pending_joins
+> - ✅ 2단계 서버 함수 배포: verify-otp(증표저장) / complete-signup / join-store / store-join-admin
+> - 매장코드 = **고정 코드 + 사장 승인** (사장님 결정). join-store는 pending_joins 등록만, store-join-admin approve가 employees 생성.
+> - ✅ 3단계 가입 화면 UI: 로그인 '가입하기' 1개 → joinOverlay(전화→인증→역할선택→직원 이름·PIN→매장코드→완료). 사장 선택=기존 openSignup 그대로.
+> - ✅ 4단계 사장 화면: 직원관리에 '직원 초대'(코드+공유/복사) + '가입 대기'(승인/거절). loadJoinAdmin, store-join-admin 연동.
+> - ⚠️ 설계 원안의 issue-store-code는 store-join-admin으로 통합(issue+list_codes+list_pending+approve+reject 한 함수, emp_sessions 매니저 검증).
+> - 🔴 **사장님 결정 — 신분 확인 전화번호 통일**: 사장도 문자 인증. 이메일=사장 선택 입력(복구). 단 사장 가입(완료=completeSignup)은 아직 이메일/비번 그대로(작동 보호). person 연결+이메일 선택화는 Phase B(별도, 백업 커밋 후).
+> - ⏳ **Phase B 남음**: ① 사장 가입에 전화인증 앞에 붙이고 completeSignup에 person_id 연결(window._verifiedSignupPhone 활용) ② 이메일 선택화 ③ person 기반 로그인(전화+PIN→매장 선택) ④ QR 코드 발급/스캔(현재 공유·복사만) ⑤ 승인 시 직원에게 문자 알림.
+> - 🐛 send-otp 문자 본문 오타: `[폁당샤브]` → `[퐁당샤브]` (재배포 시 같이 수정, 🔴 실행승인 필요).
+
+**선행 DB 작업**:
+- `persons`에 `name`, `pin`(본인 로그인 PIN, 민감) 컬럼 추가. pin은 RLS 차단 유지(person 자체가 service_role만).
+- `store_join_codes` 표 신설(매장 코드): store_id, code(고유), created_by, expires_at, is_active. 사장이 발급, 직원이 입력.
+- `verify-otp`가 발급하는 가입토큰을 저장할 표(`signup_tokens`: token, person_id, expires) — 지금은 반환만 하고 저장 안 함 → complete-signup 검증 위해 저장 필요.
+
+**Edge Function 추가**:
+- `complete-signup`: 가입토큰 검증 → person.name/pin 저장(본인 PIN 설정).
+- `join-store`: 직원이 매장코드 입력 → 코드 검증 → employees(고용) 행 생성(person_id 연결, store_id, 기본 staff 권한). 사장 승인 게이트 고려.
+- 매니저용 `issue-store-code`: 사장이 매장 코드 발급(emp-private처럼 매니저 토큰 검증).
+
+**가입 화면 UI(로그인 화면에 '직원 가입' 진입 추가, 기존 로그인 안 건드림)**:
+1. 전화번호 입력 → [인증번호 받기](send-otp)
+2. 인증번호 입력 → [확인](verify-otp) → person + 가입토큰
+3. (새 계정) 이름 + 본인 PIN 설정(complete-signup)
+4. 매장 코드 입력 → 합류(join-store). 투잡이면 코드 더 입력.
+
+**person 기반 로그인 통합(4단계와 연결)**: 가입 직원이 '전화번호+PIN'으로 로그인 → 본인 employment(매장) 목록 → 매장 선택. 현 '매장→이름→PIN'과 통합/전환 설계 필요.
+
+**주의**: 사장님 매일 쓰는 로그인 충돌 절대 금지. 가입은 별도 경로로 추가 후, 로그인 통합은 신중히. 매장코드 방식(고정 vs 1회용) 사장님 확인.
+
+### 현재 Edge Function 목록 (2026-06-09 기준)
+coupang-receiver(기존) / emp-login(로그인+증표) / emp-session(자동로그인 복원) / emp-private(매니저 금고 조회·저장) / send-otp(문자발송) / verify-otp(문자확인+person생성+증표저장) / complete-signup(이름·PIN 저장) / join-store(매장코드→가입대기) / store-join-admin(매니저: 코드발급·대기목록·승인·거절)
+4. **화면 완전 분리**: 사장/직원 경로·화면 갈라짐. 직원에게 사장 기능·타직원 정보 노출 0.
+
+### 🔑 핵심 설계 원칙 — "사장/직원은 신분 아니라 관계" (2026-06-09 사장님 확정)
+- **역할은 사람에 고정되지 않고, 사람–매장 관계(membership)에 붙는다.** 권한(owner/manager/staff)을 person이 아니라 membership에 둠.
+- **직원 → 사장 전환**: 직원이던 사람이 매장 차리면 = 새 계정 X, 본인 person에 "소유" 관계만 추가. 직원 시절 근무·급여 기록 그대로 보존.
+- **동시 다역할**: 같은 사람이 A매장 사장 + B매장 직원 동시 가능. 본인 카페 사장이면서 주말 알바도 OK.
+- **함의**: 현재 auth_level이 employees(고용)에 박혀 있음 → 새 구조에서 membership(사람–매장 관계)에 권한 부여. 매장마다 다른 권한 가능.
+
+### 투잡·다매장 (2026-06-09 사장님 추가) — person 1:N membership로 자연 지원
+- **직원 투잡·쓰리잡**: 한 사람(person)이 여러 매장에 동시 고용(employment 여러 행, 동시 활성). 각 매장 근무·급여는 따로 쌓이되 본인 계정 하나로 모임.
+- **사장 다매장**: 사장도 동일. 한 사람이 여러 매장 **소유** 관계(직원은 고용 관계). 기존 가입 유형 4가지 그대로 활용 — index.html signup `selectSignupType`: personal(🏪개인/단일점포) / multi(🏢다매장) / franchise_hq(🏯프랜차이즈 본부) / franchisee(🔗가맹점). 새 모델에서 사장 person : store 소유로 통합.
+- **로그인 UX 전환**: 현 "매장 먼저 → 이름 → PIN" → 새 "본인 인증 먼저 → 내 매장(고용·소유) 중 선택". 투잡이면 매장 여러 개 노출.
+- ⚠️ 함의: 매장 선택을 로그인 뒤로 이동. currentStore 전환 UI 필요. 직원/사장 공통.
+
+### 핵심 설계 사실 (db_schema 확인)
+- employees.id(uuid)가 FK로 쓰이는 곳: attendance_logs.employee_id, work_schedules.employee_id, special_wages(추정), settlement_amounts.sub_key 등. → 구조 분리 시 employees.id(=employment) 유지가 FK 안전.
+- employees.phone 이미 존재 → person 전화번호 식별자로 이전 가능. ⚠️ 단 투잡이면 같은 전화번호가 여러 employees 행에 → person 1개로 합치는 마이그레이션 주의(중복 전화번호 그룹핑).
+- 현 보안 인프라(브랜치 claude/gallant-cori-r0gg8q): employee_private 금고 + emp-login/emp-session + emp_sessions + 아이폰 PIN. 4단계에서 재사용.
+
+### 다음 세션 시작점
+→ **1단계(구조 분리) 상세 계획서**(헌법 9조 양식 + 마이그레이션 SQL/롤백 SQL)부터. 사장님 "실행 승인" 후 진행.
+
+---
+
 ## 🛡️ [2026-06-08 — AI 호출 안정성 (503 과부하) 전략 — 사장님 합의]
 
 ### 배경

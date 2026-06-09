@@ -825,9 +825,9 @@ async function selectStore(id, name) {
   document.getElementById('headerStore').innerText = name;
   localStorage.setItem('pd_store', JSON.stringify({id,name}));
   closeAllSheets();
-  // 로그인 전이면 직원만 로드, 로그인 후면 전부 로드
+  // 로그인 전이면 이름·직급만(비민감) 로드 — PIN·계좌·주민번호는 휴대폰에 안 내림. 로그인 후면 전부 로드
   if(document.getElementById('loginOverlay').style.display!=='none'){
-    await loadEmployees();
+    await loadLoginNames();
     showLoginScreen();
   } else {
     await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories(), loadPaymentMethods(), loadExtraItems()]);

@@ -62,6 +62,89 @@ franchises (프랜차이즈/브랜드)
 
 > ⚠️ **2026-05-13**: 위 `business_day_start_hour` 컬럼 추가 시 `attendance_logs_backup_20260513` 백업 테이블 함께 생성됨. 다음 단계 (work_date 영업일 기준 재계산 마이그레이션) 시 롤백용.
 
+### persons (2026-06-09 신설 — 직원 계정 모델 1단계)
+사람(직원·사장 공통) 계정. 매장과 독립, 전화번호 = 식별자. 직원→사장 전환·투잡 대비.
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | 사람 ID |
+| phone (text, partial unique WHERE NOT NULL) | 전화번호(식별자). NULL 허용(아직 미가입 직원) |
+| name | 이름 |
+| pin (text, nullable) | 본인 로그인 PIN (2026-06-09 추가 — 직원 가입 3-②). 가입 직원이 설정. 기존 13명 NULL |
+| created_at | |
+- RLS ENABLE, **정책 0개**(service_role만). 앱은 향후 Edge Function 경유.
+- `employees.person_id` FK로 연결. 현재 13명 1:1(투잡 시 1:N). 권한·고용정보는 후속 단계에서 membership으로 분리 예정.
+
+### otp_codes (2026-06-09 신설 — 문자 인증번호 / 3단계)
+직원 가입 문자 인증. 전화번호당 1개(재발송 시 덮어씀).
+| 컬럼 | 용도 |
+|------|------|
+| phone (text, PK) | 전화번호(숫자만) |
+| code | 6자리 인증번호 |
+| expires_at (5분) | 만료 |
+| attempts (최대 5) | 시도 횟수 |
+| created_at | 재발송 30초 제한용 |
+- RLS 차단(service_role만). `send-otp`/`verify-otp` Edge Function 경유.
+
+### store_join_codes (2026-06-09 신설 — 매장 합류 코드 / 직원 가입 3-②)
+사장이 발급, 직원이 가입 시 입력. 방식 = 고정 코드 + 사장 승인(사장님 결정 2026-06-09).
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | |
+| store_id (uuid, FK→stores CASCADE) | 어느 매장 코드 |
+| code (text, UNIQUE) | 매장 코드(고유). 직원이 입력 |
+| created_by (uuid, nullable) | 발급한 사람/직원 |
+| is_active (bool, default true) | 사용 가능 여부 |
+| expires_at (timestamptz, nullable) | 만료. 고정코드 = NULL(무기한) |
+| created_at | |
+- RLS 차단(service_role만). `issue-store-code`/`join-store` Edge Function 경유.
+
+### signup_tokens (2026-06-09 신설 — 가입 증표 / 직원 가입 3-②)
+문자 인증 통과 시 발급, 가입 완료(`complete-signup`) 검증용. 1회용.
+| 컬럼 | 용도 |
+|------|------|
+| token (text, PK) | 가입 증표 |
+| person_id (uuid, FK→persons CASCADE) | 인증된 사람 |
+| expires_at (timestamptz) | 만료 |
+| used (bool, default false) | 사용됨 표시(재사용 차단) |
+| created_at | |
+- RLS 차단(service_role만). `verify-otp`/`complete-signup` Edge Function 경유.
+
+### pending_joins (2026-06-09 신설 — 가입 대기 / 직원 가입 3-②)
+직원이 매장코드 입력 → 사장 승인 대기. 승인 시 `employees` 행 생성. 미승인 = 급여·근태 미반영(데이터 무결성).
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | |
+| person_id (uuid, FK→persons CASCADE) | 신청한 사람 |
+| store_id (uuid, FK→stores CASCADE) | 합류 신청 매장 |
+| join_code_id (uuid, FK→store_join_codes SET NULL) | 입력한 코드 |
+| status (text, default 'pending') | pending / approved / rejected |
+| decided_by (uuid, nullable) | 승인·거절한 사장 |
+| decided_at (timestamptz, nullable) | 결정 시각 |
+| created_at | |
+| UNIQUE(person_id, store_id) | 같은 매장 중복 신청 방지 |
+- RLS 차단(service_role만). `join-store` Edge Function + 매니저 승인 경유.
+
+### employee_private (2026-06-09 신설 — 민감정보 금고)
+직원 민감정보 격리. RLS 차단(service_role만), `emp-login`/`emp-session` Edge Function만 접근.
+| 컬럼 | 용도 |
+|------|------|
+| employee_id (uuid PK, FK→employees CASCADE) | |
+| store_id | |
+| pin, id_number, bank_name, account_number, phone, address, birth_date | 민감 7종 |
+| updated_at | |
+- ⚠️ 원본이 아직 `employees`에도 있음. **2단계에서 employees 7컬럼 제거 = 진짜 차단**.
+
+### emp_sessions (2026-06-09 신설 — 자동로그인 증표)
+| 컬럼 | 용도 |
+|------|------|
+| token (text PK) | 세션 토큰 |
+| employee_id (FK→employees CASCADE), store_id | |
+| created_at, last_used_at, expires_at (90일) | |
+- RLS 차단(service_role만). `emp-session` Edge Function이 검증.
+
+### employees_backup_20260609
+2026-06-09 보안작업 직전 `employees` 전체 스냅샷 (롤백용).
+
 ### employees
 | 컬럼 | 용도 |
 |------|------|
@@ -90,6 +173,7 @@ franchises (프랜차이즈/브랜드)
 | doc_health_expires (date, nullable) | 보건증 만료일 |
 | doc_minor_consent (text, nullable) | 법대동의서 파일 URL (미성년자) |
 | doc_foreigner_id (text, nullable) | 외국인등록증 파일 URL |
+| person_id (uuid, FK→persons) | 사람 계정 연결 (2026-06-09 추가 — 직원 계정 모델 1단계). 같은 사람이 여러 매장이면 여러 employees 행이 같은 person_id |
 
 ### roles
 | 컬럼 | 용도 |

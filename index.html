@@ -174,16 +174,34 @@
 
   <!-- 이름(드롭다운) + PIN 입력 — 매장 선택 후 활성 -->
   <div id="loginFormArea" style="width:100%;max-width:320px;opacity:0.4;pointer-events:none;">
-    <select id="loginNameInput" class="input-field"
-      style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;appearance:auto;">
+    <select id="loginNameInput" class="input-field" data-change="onLoginNameChange"
+      style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:10px;appearance:auto;">
       <option value="">직원 선택</option>
     </select>
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <input id="loginPinInput" class="input-field" placeholder="PIN 4자리" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
-        style="flex:1;text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;letter-spacing:8px;margin-bottom:0;">
+    <div style="text-align:center;font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:18px;">비밀번호 4자리를 눌러주세요</div>
+    <!-- PIN 점 4개 (아이폰식) -->
+    <div id="pinDots" style="display:flex;justify-content:center;gap:20px;margin-bottom:26px;">
+      <span class="pin-dot"></span>
+      <span class="pin-dot"></span>
+      <span class="pin-dot"></span>
+      <span class="pin-dot"></span>
     </div>
-    <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="submitLogin">로그인</button>
-    <div id="loginMsg" style="margin-top:12px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+    <!-- 숫자 키패드 (아이폰식) -->
+    <div id="pinPad">
+      <button type="button" class="pin-key" data-action="pinPress|1">1</button>
+      <button type="button" class="pin-key" data-action="pinPress|2">2</button>
+      <button type="button" class="pin-key" data-action="pinPress|3">3</button>
+      <button type="button" class="pin-key" data-action="pinPress|4">4</button>
+      <button type="button" class="pin-key" data-action="pinPress|5">5</button>
+      <button type="button" class="pin-key" data-action="pinPress|6">6</button>
+      <button type="button" class="pin-key" data-action="pinPress|7">7</button>
+      <button type="button" class="pin-key" data-action="pinPress|8">8</button>
+      <button type="button" class="pin-key" data-action="pinPress|9">9</button>
+      <span></span>
+      <button type="button" class="pin-key" data-action="pinPress|0">0</button>
+      <button type="button" class="pin-key pin-del" data-action="pinDelete">⌫</button>
+    </div>
+    <div id="loginMsg" style="margin-top:18px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
   </div>
   <!-- 매장 변경 (매장 선택 후 작게 표시) -->
   <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
@@ -191,8 +209,8 @@
   </div>
   <!-- 신규 가입 안내 -->
   <div style="margin-top:28px;text-align:center;">
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">처음이신가요?</div>
-    <button class="btn btn-primary" style="padding:12px 20px;font-size:13px;font-weight:800;border-radius:12px;" data-action="openSignup">🏪 매장 시작하기 →</button>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">아직 계정이 없으신가요?</div>
+    <button class="btn btn-primary" style="padding:12px 24px;font-size:14px;font-weight:800;border-radius:12px;" data-action="openJoin">가입하기</button>
   </div>
 </div>
 
@@ -315,6 +333,113 @@
     </div>
 
     <div id="suErrorMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ══ 통합 가입 화면 (2026-06-09) — 전화 인증(공통) → 역할 선택 → 직원 길 ══ -->
+<!-- 사장 선택 시 = 기존 signupOverlay(이메일/비번) 그대로 호출. 직원 길만 여기서 처리. -->
+<div id="joinOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:5600;overflow-y:auto;padding:24px 20px 40px;">
+  <div style="max-width:420px;margin:0 auto;">
+    <!-- 상단: 이전 + 진행바 + 닫기 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <button class="btn btn-secondary" style="padding:8px 10px;font-size:12px;color:var(--gray-500);" data-action="joinPrev">‹ 이전</button>
+      <div style="flex:1;margin:0 12px;">
+        <div style="height:6px;background:var(--gray-200);border-radius:3px;overflow:hidden;">
+          <div id="joinProgress" style="height:100%;background:var(--blue);width:33%;transition:width .25s;"></div>
+        </div>
+      </div>
+      <button class="btn btn-secondary" style="padding:8px 10px;font-size:14px;color:var(--gray-500);" data-action="closeJoin">✕</button>
+    </div>
+
+    <!-- 0단계: 전화번호 -->
+    <div class="join-step" data-jstep="0">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">전화번호를<br>입력해주세요</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">문자로 인증번호를 보내드려요. (가입할 때 딱 한 번)</div>
+      <input id="joinPhone" class="input-field" type="tel" inputmode="numeric" autocomplete="tel" placeholder="010-1234-5678"
+        style="padding:16px;font-size:16px;font-weight:700;border-radius:14px;margin-bottom:16px;text-align:center;">
+      <button id="joinSendBtn" class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="joinSendOtp">인증번호 받기</button>
+      <div id="joinPhoneMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+    </div>
+
+    <!-- 1단계: 인증번호 -->
+    <div class="join-step" data-jstep="1" style="display:none;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">인증번호 6자리</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;"><span id="joinPhoneEcho"></span> 로 보낸 번호예요.</div>
+      <!-- 6칸 표시 + 투명 입력 겹침 -->
+      <div style="position:relative;max-width:280px;margin:0 auto 10px;">
+        <div style="display:flex;gap:8px;justify-content:center;" id="joinOtpBoxes">
+          <span class="otp-cell"></span><span class="otp-cell"></span><span class="otp-cell"></span>
+          <span class="otp-cell"></span><span class="otp-cell"></span><span class="otp-cell"></span>
+        </div>
+        <input id="joinOtp" type="tel" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
+          style="position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;font-size:1px;" data-input="joinOtpInput|this">
+      </div>
+      <div id="joinOtpTimer" style="text-align:center;font-size:12px;color:var(--danger);font-weight:700;margin-bottom:6px;min-height:16px;"></div>
+      <div style="text-align:center;"><button class="btn btn-secondary" style="padding:8px 14px;font-size:12px;color:var(--gray-500);" data-action="joinSendOtp">인증번호 다시 받기</button></div>
+      <div id="joinOtpMsg" style="margin-top:12px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+    </div>
+
+    <!-- 2단계: 역할 선택 -->
+    <div class="join-step" data-jstep="2" style="display:none;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;text-align:center;">어떻게 시작할까요?</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:24px;text-align:center;">맞는 쪽을 골라주세요.</div>
+      <div class="join-role" data-action="joinSelectRole|owner" style="display:flex;align-items:center;gap:14px;padding:18px 16px;background:var(--gray-100);border:1.5px solid var(--gray-200);border-radius:16px;margin-bottom:12px;cursor:pointer;">
+        <div style="width:46px;height:46px;border-radius:12px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:24px;">🏪</div>
+        <div><div style="font-size:16px;font-weight:900;">사장님으로</div><div style="font-size:12px;color:var(--gray-600);margin-top:3px;">내 매장을 새로 만들어요</div></div>
+      </div>
+      <div class="join-role" data-action="joinSelectRole|staff" style="display:flex;align-items:center;gap:14px;padding:18px 16px;background:var(--gray-100);border:1.5px solid var(--gray-200);border-radius:16px;cursor:pointer;">
+        <div style="width:46px;height:46px;border-radius:12px;background:var(--success-light);display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>
+        <div><div style="font-size:16px;font-weight:900;">직원으로</div><div style="font-size:12px;color:var(--gray-600);margin-top:3px;">일하는 매장에 합류해요</div></div>
+      </div>
+    </div>
+
+    <!-- 3단계 (직원): 이름 + PIN -->
+    <div class="join-step" data-jstep="3" style="display:none;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:16px;">이름과 비밀번호</div>
+      <input id="joinName" class="input-field" type="text" placeholder="이름"
+        style="padding:16px;font-size:16px;font-weight:700;border-radius:14px;margin-bottom:16px;text-align:center;">
+      <div style="text-align:center;font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:8px;">로그인 비밀번호 4자리</div>
+      <div id="joinPinDots" style="display:flex;justify-content:center;gap:18px;margin-bottom:22px;">
+        <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <div id="pinPad">
+        <button type="button" class="pin-key" data-action="joinPinPress|1">1</button>
+        <button type="button" class="pin-key" data-action="joinPinPress|2">2</button>
+        <button type="button" class="pin-key" data-action="joinPinPress|3">3</button>
+        <button type="button" class="pin-key" data-action="joinPinPress|4">4</button>
+        <button type="button" class="pin-key" data-action="joinPinPress|5">5</button>
+        <button type="button" class="pin-key" data-action="joinPinPress|6">6</button>
+        <button type="button" class="pin-key" data-action="joinPinPress|7">7</button>
+        <button type="button" class="pin-key" data-action="joinPinPress|8">8</button>
+        <button type="button" class="pin-key" data-action="joinPinPress|9">9</button>
+        <span></span>
+        <button type="button" class="pin-key" data-action="joinPinPress|0">0</button>
+        <button type="button" class="pin-key pin-del" data-action="joinPinDelete">⌫</button>
+      </div>
+      <div id="joinNameMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+    </div>
+
+    <!-- 4단계 (직원): 매장 코드 -->
+    <div class="join-step" data-jstep="4" style="display:none;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">매장 코드 입력</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">사장님께 받은 6자리 코드를 넣어주세요.</div>
+      <input id="joinCode" class="input-field" type="text" inputmode="latin" maxlength="6" autocapitalize="characters" placeholder="예: AK7P9M"
+        style="padding:16px;font-size:24px;font-weight:900;border-radius:14px;margin-bottom:16px;text-align:center;letter-spacing:8px;text-transform:uppercase;" data-input="joinCodeInput|this">
+      <button id="joinCodeBtn" class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;" data-action="joinEnterCode">이 매장에 합류 신청</button>
+      <div style="font-size:12px;color:var(--gray-600);text-align:center;margin-top:14px;">투잡이면 가입 후 코드를 더 넣을 수 있어요.</div>
+      <div id="joinCodeMsg" style="margin-top:12px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+    </div>
+
+    <!-- 5단계 (직원): 완료 -->
+    <div class="join-step" data-jstep="5" style="display:none;text-align:center;">
+      <div style="width:80px;height:80px;border-radius:50%;background:var(--warn);margin:30px auto 22px;display:flex;align-items:center;justify-content:center;font-size:40px;">⏳</div>
+      <div style="font-size:22px;font-weight:900;margin-bottom:10px;">신청했어요!</div>
+      <div style="font-size:14px;color:var(--gray-600);line-height:1.6;margin-bottom:8px;"><b id="joinDoneStore" style="color:var(--text);">매장</b>에<br>합류 신청이 들어갔어요.</div>
+      <div style="display:inline-block;background:var(--warn);color:#fff;font-size:12px;font-weight:800;padding:6px 14px;border-radius:20px;">사장님 승인 대기 중</div>
+      <div style="font-size:12px;color:var(--gray-600);margin-top:22px;line-height:1.6;">사장님이 승인하면 바로 출근부에 나타나요.<br>승인되면 문자로 알려드려요.</div>
+      <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;margin-top:28px;max-width:320px;" data-action="closeJoin">로그인 화면으로</button>
+    </div>
+
   </div>
 </div>
 
@@ -1676,6 +1801,36 @@
 <!-- ══ [8] 직원관리 ══ -->
 <div id="staffCont" class="container">
   <div class="app-back" data-action="nav|dashboard"><span class="back-btn">‹</span><span class="back-ttl">직원 관리</span></div>
+
+  <!-- ── 직원 초대 + 가입 대기 (매니저만, 2026-06-09) ── -->
+  <div id="joinAdminBox" class="manager-only" style="margin-bottom:14px;">
+    <!-- 가입 대기 목록 (있을 때만 표시) -->
+    <div id="pendingJoinsCard" style="display:none;background:var(--warn-light);border:1px solid var(--warn);border-radius:14px;padding:14px;margin-bottom:10px;">
+      <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">⏳ 가입 대기 <span id="pendingCount" style="color:var(--warn);"></span></div>
+      <div id="pendingJoinsList"></div>
+    </div>
+    <!-- 직원 초대 카드 -->
+    <div style="background:var(--gray-100);border-radius:14px;padding:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" data-action="toggleInviteCard">
+        <span style="font-size:14px;font-weight:800;">👥 직원 초대하기</span>
+        <span id="inviteToggleArrow" style="color:var(--gray-400);font-size:13px;">펼치기 ▾</span>
+      </div>
+      <div id="inviteCardBody" style="display:none;margin-top:14px;">
+        <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:16px;padding:20px 16px;text-align:center;margin-bottom:12px;">
+          <div style="font-size:12px;color:#CFE0FF;font-weight:700;margin-bottom:8px;">우리 매장 가입 코드</div>
+          <div id="inviteCodeText" style="font-size:34px;font-weight:900;color:#fff;letter-spacing:6px;">······</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" style="flex:1;padding:13px;font-size:14px;font-weight:800;" data-action="shareInviteCode">💬 공유하기</button>
+          <button class="btn btn-secondary" style="flex:1;padding:13px;font-size:14px;font-weight:800;" data-action="copyInviteCode">📋 복사</button>
+        </div>
+        <div style="font-size:12px;color:var(--gray-600);line-height:1.6;margin-top:12px;">
+          이 코드를 직원에게 알려주세요. 직원이 <b>가입 → 코드 입력</b>하면 위 <b>가입 대기</b>에 떠요. 승인하면 출근부에 등록돼요.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <input id="empSearchInput" type="text" class="input-field" placeholder="🔍 이름·전화번호로 검색" style="margin-bottom:10px;" data-input="renderEmpList">
   <div style="display:flex;gap:8px;margin-bottom:12px;">
     <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderEmpList"><option value="">전체 직급</option></select>
