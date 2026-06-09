@@ -14,9 +14,23 @@
 - ⏸️ 보류(계정모델 확정 후): 직원관리 화면 금고연동 + employees 민감7컬럼 제거(진짜 차단). 모델 바뀌면 또 고쳐야 해서 사장님 지시로 멈춤(헌법 1-6).
 - ⚠️ 내 설계 결함 수정 필요: emp-login/session이 is_active=true만 조회 → 퇴사자 사장 조회 불가. 사장 조회는 퇴사자 포함으로.
 
-### 다음 결정 대기 (사장님께 물어봄)
-- 지금 만든 로그인+아이폰PIN 먼저 배포(써보기) vs 직원 계정 모델 설계 먼저 — 사장님 답 대기 중.
-- 직원 계정 모델 = 대형 작업 → 별도 계획서(헌법 9조) 필요.
+### 사장님 결정 (2026-06-09 확정)
+- **모델 먼저** (배포 보류). 이유: 직원 계정 모델이 로그인·가입 또 바꿈 → 지금 배포하면 직원 PIN 두 번 입력 + 반쪽 보안. 한 번에 완성해서 배포.
+- **직원 본인 확인 = 전화번호 + 문자 인증번호** (하우머치 방식, 사람 고유 식별, 이직해도 유지).
+
+### 직원 계정 모델 — 4단계 로드맵 (사장님 합의)
+1. **구조 분리**: `person`(사람) 표 신설 + 기존 `employees`를 고용(employment)으로 재해석(person_id FK 추가). 기존 13명 이전. 근무·급여 FK(attendance_logs/work_schedules/special_wages 등 employee_id)는 고용 단위 유지. 앱 동작 그대로.
+2. **보안 완성**: 멈췄던 1-D/1-E — 직원관리 화면 금고연동(saveEmployee 분리, renderEmpDetail, 매니저 금고 조회) + employees 민감7컬럼 제거. **진짜 차단**. emp-login/session 퇴사자 조회 결함도 이때 수정(사장은 퇴사자 포함, 직원 본인은 활성만).
+3. **직원 가입·문자 인증**: 사장 초대(전화번호 입력) → 직원 폰 문자 인증 → person 활성화 + 본인 PIN. SMS 발송 인프라 필요(국내 알리고/NHN SENS 등 저렴, 사장님 가입·결제 1회 — GCP처럼 셋업 안내 필요). vision 7-3 자동온보딩 정신 주의.
+4. **화면 완전 분리**: 사장/직원 경로·화면 갈라짐. 직원에게 사장 기능·타직원 정보 노출 0.
+
+### 핵심 설계 사실 (db_schema 확인)
+- employees.id(uuid)가 FK로 쓰이는 곳: attendance_logs.employee_id, work_schedules.employee_id, special_wages(추정), settlement_amounts.sub_key 등. → 구조 분리 시 employees.id(=employment) 유지가 FK 안전.
+- employees.phone 이미 존재 → person 전화번호 식별자로 이전 가능.
+- 현 보안 인프라(브랜치 claude/gallant-cori-r0gg8q): employee_private 금고 + emp-login/emp-session + emp_sessions + 아이폰 PIN. 4단계에서 재사용.
+
+### 다음 세션 시작점
+→ **1단계(구조 분리) 상세 계획서**(헌법 9조 양식 + 마이그레이션 SQL/롤백 SQL)부터. 사장님 "실행 승인" 후 진행.
 
 ---
 
