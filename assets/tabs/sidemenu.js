@@ -5221,6 +5221,7 @@ function renderExpHubCatSkeleton(){
     html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, '-', cat.color);
   });
   html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', '-', '#F04452');
+  html += _expHubMkCard('cardfee', 'nav|royalty', 'i-card', '카드수수료', '-', '#DC2626');
   grid.innerHTML = html;
   applyExpHubCardOrder();
   grid._sortableInited = false;
@@ -5240,6 +5241,8 @@ function updateExpHubCatAmounts(catSums){
     });
     const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
     html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt?fmt(royaltyAmt):'0', '#F04452');
+    const cardFeeAmt0 = (catSums && catSums._cardfee) ? catSums._cardfee.amount : 0;
+    html += _expHubMkCard('cardfee', 'nav|royalty', 'i-card', '카드수수료', cardFeeAmt0?fmt(cardFeeAmt0):'0', '#DC2626');
     grid.innerHTML = html;
     applyExpHubCardOrder();
     grid._sortableInited = false;
@@ -5262,6 +5265,13 @@ function updateExpHubCatAmounts(catSums){
     const rt = royaltyAmt ? fmt(royaltyAmt) : '0';
     royaltyCell.textContent = rt;
     royaltyCell.className = 'hub-mini-amt' + _expAmtClass(rt);
+  }
+  const cardFeeCell = grid.querySelector('[data-amt-cell="cardfee"]');
+  if(cardFeeCell){
+    const cardFeeAmt = (catSums && catSums._cardfee) ? catSums._cardfee.amount : 0;
+    const ct = cardFeeAmt ? fmt(cardFeeAmt) : '0';
+    cardFeeCell.textContent = ct;
+    cardFeeCell.className = 'hub-mini-amt' + _expAmtClass(ct);
   }
 }
 async function saveExpHubCardOrder(){
@@ -5331,7 +5341,7 @@ async function loadExpHubData(force){
       sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
       sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
       sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
-      sb.from('store_settings').select('royalty_rate').eq('store_id',sid).maybeSingle(),
+      sb.from('store_settings').select('royalty_rate,card_fee_rate').eq('store_id',sid).maybeSingle(),
       sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym),
       sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
       sb.from('mydata_transactions').select('category_id,amount').eq('store_id',sid).gte('tx_date',start).lte('tx_date',end),
@@ -5456,7 +5466,16 @@ async function loadExpHubData(force){
     catSums._royalty = {amount: Math.round(totalRev*rate), rate: rate};
   }catch(e){ catSums._royalty = {amount:0, rate:0}; }
 
-  // ── 카드 동적 생성 (활성 expense parent + 로열티) ──
+  // 카드수수료 (카테고리 X — 카드 매출 × 요율)
+  try{
+    const sd=sdRes.data||[];
+    const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
+    const cardSales=sd.reduce((a,r)=>a+(typeof getMethodAmount==='function'&&cardMethod?getMethodAmount(r,cardMethod):(r.card||0)),0);
+    const cardFeeRt=parseFloat(ssRes.data?.card_fee_rate||0)/100;
+    catSums._cardfee={amount:Math.round(cardSales*cardFeeRt),rate:cardFeeRt};
+  }catch(e){catSums._cardfee={amount:0,rate:0};}
+
+  // ── 카드 동적 생성 (활성 expense parent + 로열티 + 카드수수료) ──
   updateExpHubCatAmounts(catSums);
 
   // ── 카테고리 활성 개수 (도구 영역 분류 관리 부제) ──
