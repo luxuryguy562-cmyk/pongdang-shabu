@@ -24,9 +24,15 @@
 3. **직원 가입·문자 인증**: 사장 초대(전화번호 입력) → 직원 폰 문자 인증 → person 활성화 + 본인 PIN. SMS 발송 인프라 필요(국내 알리고/NHN SENS 등 저렴, 사장님 가입·결제 1회 — GCP처럼 셋업 안내 필요). vision 7-3 자동온보딩 정신 주의.
 4. **화면 완전 분리**: 사장/직원 경로·화면 갈라짐. 직원에게 사장 기능·타직원 정보 노출 0.
 
+### 투잡·다매장 (2026-06-09 사장님 추가) — person 1:N employment로 자연 지원
+- **직원 투잡·쓰리잡**: 한 사람(person)이 여러 매장에 동시 고용(employment 여러 행, 동시 활성). 각 매장 근무·급여는 따로 쌓이되 본인 계정 하나로 모임.
+- **사장 다매장**: 사장도 동일. 한 사람이 여러 매장 소유(이미 franchise/다매장 그룹핑 존재 — work_log 참조).
+- **로그인 UX 전환**: 현 "매장 먼저 → 이름 → PIN" → 새 "본인 인증 먼저 → 내 매장(고용·소유) 중 선택". 투잡이면 매장 여러 개 노출.
+- ⚠️ 함의: 매장 선택을 로그인 뒤로 이동. currentStore 전환 UI 필요. 직원/사장 공통.
+
 ### 핵심 설계 사실 (db_schema 확인)
 - employees.id(uuid)가 FK로 쓰이는 곳: attendance_logs.employee_id, work_schedules.employee_id, special_wages(추정), settlement_amounts.sub_key 등. → 구조 분리 시 employees.id(=employment) 유지가 FK 안전.
-- employees.phone 이미 존재 → person 전화번호 식별자로 이전 가능.
+- employees.phone 이미 존재 → person 전화번호 식별자로 이전 가능. ⚠️ 단 투잡이면 같은 전화번호가 여러 employees 행에 → person 1개로 합치는 마이그레이션 주의(중복 전화번호 그룹핑).
 - 현 보안 인프라(브랜치 claude/gallant-cori-r0gg8q): employee_private 금고 + emp-login/emp-session + emp_sessions + 아이폰 PIN. 4단계에서 재사용.
 
 ### 다음 세션 시작점
