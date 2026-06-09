@@ -1584,8 +1584,11 @@
     </div>
     <!-- 거래처 영수증 등록 진입 (📸 사진=AI 분석 / ✏️ 수동=행 추가 멀티품목)
          vendorId는 빈 값으로 넘겨 openRcpReceiptFromVendor가 currentVendorDetailId로 자동 인식 -->
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button class="btn btn-primary" style="flex:1;padding:12px;font-size:13px;font-weight:700;" data-action="openRcpReceiptFromVendor||photo">📸 영수증 사진</button>
+    <div style="display:flex;gap:8px;margin-bottom:14px;align-items:stretch;">
+      <button class="btn btn-primary catrcp-photo" style="padding:11px 13px;" data-action="openRcpReceiptFromVendor||photo">
+        <span class="crp-t">📸 영수증 사진 <span class="crp-pill">AI</span></span>
+        <span class="crp-s">찍으면 자동 분류</span>
+      </button>
       <button class="btn btn-secondary" style="flex:1;padding:12px;font-size:13px;font-weight:700;" data-action="openAddOrderSheet">✏️ 수동 입력</button>
     </div>
     <!-- 거래처 선택 드롭다운은 헤더(vdName)에 고정된 거래처와 짬뽕되는 UX라서 숨김.
