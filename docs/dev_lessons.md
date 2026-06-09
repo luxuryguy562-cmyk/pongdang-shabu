@@ -4,6 +4,23 @@
 
 ---
 
+## [2026-06-09] #201 Gemini thinking(추론) = 한국 location 차단 + worker placement 복원 불가
+
+**배경**: 주류 거래명세서 정확도 위해 worker `thinkingBudget: 0` → `body._thinking ? -1 : 0`으로 추론 켜기 시도(주류·거래처만).
+
+**사고 1 — thinking 한국 차단**: 추론 켠 요청이 `400 "User location is not supported for the API use." FAILED_PRECONDITION` 에러. **Gemini 2.5 thinking 기능은 한국(사장님 지역)에서 막힘.** placement를 smart로 바꿔도 동일 → 위치 문제 아니라 thinking 자체가 지역 차단. → **결론: 한국에선 Gemini thinking 못 씀. 켜지 마라.**
+
+**사고 2 — worker placement targeted 복원 불가**: gemini-proxy worker가 원래 `placement {"mode":"targeted","target":[94]}`였는데, 배포(PUT) 시 metadata에 placement 누락 → `{}`로 날아감. 복원하려 했으나 `targeted` target 형식이 `expected object, got float64`로 거부됨(레거시, API PUT 불가). → **smart placement로 대체.** 다른 워커(ureem-sales 등)는 placement `{}`여도 정상(Gemini 미호출이라 무관).
+
+**worker 배포 방법 (이 환경)**: Cloudflare API 토큰 env에 있음(`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). `curl PUT .../workers/scripts/gemini-proxy` multipart(metadata + worker.js). **secret 보존**: metadata에 `"keep_bindings":["secret_text","plain_text"]` 필수(누락 시 GEM_ES_KEY 등 secret 날아감). `main_module:"worker.js"` + 업로드 part filename도 `worker.js` 일치 필수. **이 샌드박스에선 workers.dev 직접 호출 차단**(allowlist) → 배포 후 작동은 사장님이 앱에서 확인.
+
+**교훈**:
+1. **외부 API 지역 제한 = 기능 도입 전 확인.** thinking 같은 신기능은 사장님 지역(한국) 지원 여부 먼저 검증.
+2. **worker 배포 시 기존 settings(placement·bindings) 전부 보존.** GET settings로 먼저 확인 후 metadata에 반영.
+3. **주류 정확도는 thinking 말고 다른 방법** (self-consistency 2회 분석, GPT-4o, 프롬프트+검산).
+
+---
+
 ## [2026-06-09] #200 경고 하나 없애려다 금액·보증금 다 망침 — 작은 문제에 큰 손 (빙산 14회)
 
 **사장님 호소**: "아직도 금액 문제, 보증금 사라짐, 품목명도 잘못 읽고... 처음이 제일 나은 거 아니야? 거기서 다시 시작해봐 왜그래"
