@@ -996,6 +996,8 @@ async function runAI() {
     const isVendorModeAI = rcpMode === 'vendor';
     const isOnlineModeAI = rcpMode === 'online';
     const isLiquorModeAI = rcpVendorKind === 'liquor'; // 주류 채널 판정
+    // 복잡한 거래명세서(주류·거래처)는 AI 추론(thinking) 켜기 — 여러 칸 얽힌 표 정확도↑ (2026-06-09). 직구·온라인(단순)은 OFF로 비용 절감
+    const _useThinking = isLiquorModeAI || (isVendorModeAI && !isOnlineModeAI);
     // 거래처 모드(온라인·주류 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
     // 온라인·마트(직구)·주류는 전체 자율(getCatListForPrompt 그대로)
     if(isVendorModeAI && !isOnlineModeAI && !isLiquorModeAI && rcpVendorId){
@@ -1052,7 +1054,7 @@ async function runAI() {
     const timeoutSec = 30 + (pageCount-1)*5;
     let raw, usedFallback = false;
     try {
-      raw = await callGemini(parts, timeoutSec, 'receipt_ocr', aiModel, 'gemini');
+      raw = await callGemini(parts, timeoutSec, 'receipt_ocr', aiModel, 'gemini', _useThinking);
     } catch(geminiErr){
       const m = String(geminiErr?.message || '').toLowerCase();
       const isOverloadLike = /high demand|overload|currently|503|429|시간 초과|비어있|json|응답 오류/i.test(m);
@@ -1122,18 +1124,11 @@ async function runAI() {
         if(_diff<=Math.max(500, receiptTotalSum*0.005)) break; // 0.5% 또는 500원 이내 = 통과
         setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`);
         try{
-          // 주류 재검산: 용기대(보증금) p 혼입·보증금 분리 누락이 가장 흔한 오류 → 힌트로 명시 (2026-06-09)
-          const _liquorFixHint = isLiquorModeAI
-            ? '\n⚠️[주류 필수] 각 품목 p는 공급가+부가세만. "용기대"(보증금) 칸을 p에 절대 포함 X. "용기보증금" 소계→deposit_in, "빈용기보증금"→deposit_out으로 분리. 검산식: 품목 p 합계 + deposit_in − deposit_out = 거래대금합계.'
-            : '';
-          const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u) 오류를 찾아 수정된 JSON만 반환.${_liquorFixHint}`},...parts.slice(1)];
-          const _fixRaw=await callGemini(_rParts,timeoutSec+10,'receipt_reflection',aiModel,'gemini');
+          const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u) 오류를 찾아 수정된 JSON만 반환.`},...parts.slice(1)];
+          const _fixRaw=await callGemini(_rParts,timeoutSec+10,'receipt_reflection',aiModel,'gemini',_useThinking);
           const _fixItems=Array.isArray(_fixRaw)?_fixRaw:(_fixRaw?.items||[]);
           if(!_fixItems.length) break;
           raw=_fixRaw;
-          // 주류: 재검산 응답에서 보증금 소계 재추출 (첫 파싱과 동일 — 누락 시 보증금 행 사라짐)
-          const _depIn2  = isLiquorModeAI ? (parseInt(_fixRaw?.deposit_in)||0)  : 0;
-          const _depOut2 = isLiquorModeAI ? (parseInt(_fixRaw?.deposit_out)||0) : 0;
           list=_fixItems.map(x=>({
             date:x.d||x.date||respDate||ymdLocal(new Date()),
             vendor:x.v??x.vendor??respVendor??'',
@@ -1147,29 +1142,12 @@ async function runAI() {
             isTaxFree:(x.f===true||x.f==='true'||x.isTaxFree===true),
             category:x.c||x.category||defaultCat
           }));
-          // 주류: 보증금 입금(+)/회수(−) 행 재추가 (재검산 후에도 유지)
-          if(isLiquorModeAI){
-            const _dd = respDate || ymdLocal(new Date());
-            if(_depIn2 > 0)  list.push({ date:_dd, vendor:rcpVendorName, item:'보증금 입금', spec:null, origin:null, unitPrice:null, qty:1, totalPrice:_depIn2,   taxAmount:0, isTaxFree:true, category:rcpCatName||'주류', _isDeposit:true, _depositLabel:'입금' });
-            if(_depOut2 > 0) list.push({ date:_dd, vendor:rcpVendorName, item:'빈병 회수',  spec:null, origin:null, unitPrice:null, qty:1, totalPrice:-_depOut2, taxAmount:0, isTaxFree:true, category:rcpCatName||'주류', _isDeposit:true, _depositLabel:'회수' });
-          }
           list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
           const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
           list.forEach(it=>it._taxFormat=_ht2);
           list=await applyRulesToReceipt(list);
         }catch(e){break;}
       }
-    }
-    // ─── 주류 단가 강제 재계산 (2026-06-09) ───
-    // 주류 거래명세서는 "단가" 칸이 따로 없음 (공급가/부가세/용기대/합계만). AI가 공급가 칸(박스 합산)을
-    // 단가로 오인 → 단가×수량 ≠ 공급가 경고 발생. 검산은 세전 공급가 기준이므로 단가=공급가÷수량으로 덮음.
-    if(isLiquorModeAI){
-      list.forEach(it=>{
-        if(it._isDeposit) return;
-        const q = parseFloat(it.qty)||0;
-        const sp = parseInt(it.supplyPrice)||0;
-        if(q>0 && sp>0) it.unitPrice = Math.round(sp/q);
-      });
     }
     // 임계값 = max(100원, 0.5%) — 2026-05-19 (4) 사장님 호소: 회계 기준 5% 너무 느슨
     // 1원 차이(반올림) = 자동 통과, 100원 이내·0.5% 이내 = 정상, 그 외 = ⚠️ catch
