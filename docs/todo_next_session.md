@@ -38,6 +38,13 @@
 ### 🔜 다음 작업: 직원 가입 화면 + 매장 코드 (3-② 상세 설계)
 문자 인증 인프라(send-otp/verify-otp)는 실작동 검증 끝. 이제 가입 UI + 매장 합류.
 
+> **진행 (2026-06-09, 가지 claude/wizardly-einstein-gizfxw)**:
+> - ✅ 1단계 DB 적용: persons.pin + store_join_codes·signup_tokens·pending_joins
+> - ✅ 2단계 서버 함수 배포: verify-otp(증표저장) / complete-signup / join-store / store-join-admin
+> - 매장코드 = **고정 코드 + 사장 승인** (사장님 결정). join-store는 pending_joins 등록만, store-join-admin approve가 employees 생성.
+> - ⏳ 남음: 3단계 가입 화면 UI(로그인 화면 '직원 가입' 버튼) + 4단계 사장 승인 화면(직원관리 '가입 대기').
+> - ⚠️ 설계 원안의 issue-store-code는 store-join-admin으로 통합(issue+list_codes+list_pending+approve+reject 한 함수, emp_sessions 매니저 검증).
+
 **선행 DB 작업**:
 - `persons`에 `name`, `pin`(본인 로그인 PIN, 민감) 컬럼 추가. pin은 RLS 차단 유지(person 자체가 service_role만).
 - `store_join_codes` 표 신설(매장 코드): store_id, code(고유), created_by, expires_at, is_active. 사장이 발급, 직원이 입력.
@@ -59,7 +66,7 @@
 **주의**: 사장님 매일 쓰는 로그인 충돌 절대 금지. 가입은 별도 경로로 추가 후, 로그인 통합은 신중히. 매장코드 방식(고정 vs 1회용) 사장님 확인.
 
 ### 현재 Edge Function 목록 (2026-06-09 기준)
-coupang-receiver(기존) / emp-login(로그인+증표) / emp-session(자동로그인 복원) / emp-private(매니저 금고 조회·저장) / send-otp(문자발송) / verify-otp(문자확인+person생성)
+coupang-receiver(기존) / emp-login(로그인+증표) / emp-session(자동로그인 복원) / emp-private(매니저 금고 조회·저장) / send-otp(문자발송) / verify-otp(문자확인+person생성+증표저장) / complete-signup(이름·PIN 저장) / join-store(매장코드→가입대기) / store-join-admin(매니저: 코드발급·대기목록·승인·거절)
 4. **화면 완전 분리**: 사장/직원 경로·화면 갈라짐. 직원에게 사장 기능·타직원 정보 노출 0.
 
 ### 🔑 핵심 설계 원칙 — "사장/직원은 신분 아니라 관계" (2026-06-09 사장님 확정)
