@@ -35,6 +35,29 @@
 - **send-otp 솔라피용 배포 완료(v2)**: HMAC-SHA256 서명(crypto.subtle), POST api.solapi.com/messages/v4/send. 환경변수 `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER` 넣으면 작동(없으면 need_setup).
 - **사장님 할 일**: solapi.com 가입 → 본인폰 발신번호 등록(서류X) → 1,000원 충전 → API Key/Secret 발급 → CTO가 환경변수 등록(키는 채팅 노출 금지).
 
+### 🔜 다음 작업: 직원 가입 화면 + 매장 코드 (3-② 상세 설계)
+문자 인증 인프라(send-otp/verify-otp)는 실작동 검증 끝. 이제 가입 UI + 매장 합류.
+
+**선행 DB 작업**:
+- `persons`에 `name`, `pin`(본인 로그인 PIN, 민감) 컬럼 추가. pin은 RLS 차단 유지(person 자체가 service_role만).
+- `store_join_codes` 표 신설(매장 코드): store_id, code(고유), created_by, expires_at, is_active. 사장이 발급, 직원이 입력.
+- `verify-otp`가 발급하는 가입토큰을 저장할 표(`signup_tokens`: token, person_id, expires) — 지금은 반환만 하고 저장 안 함 → complete-signup 검증 위해 저장 필요.
+
+**Edge Function 추가**:
+- `complete-signup`: 가입토큰 검증 → person.name/pin 저장(본인 PIN 설정).
+- `join-store`: 직원이 매장코드 입력 → 코드 검증 → employees(고용) 행 생성(person_id 연결, store_id, 기본 staff 권한). 사장 승인 게이트 고려.
+- 매니저용 `issue-store-code`: 사장이 매장 코드 발급(emp-private처럼 매니저 토큰 검증).
+
+**가입 화면 UI(로그인 화면에 '직원 가입' 진입 추가, 기존 로그인 안 건드림)**:
+1. 전화번호 입력 → [인증번호 받기](send-otp)
+2. 인증번호 입력 → [확인](verify-otp) → person + 가입토큰
+3. (새 계정) 이름 + 본인 PIN 설정(complete-signup)
+4. 매장 코드 입력 → 합류(join-store). 투잡이면 코드 더 입력.
+
+**person 기반 로그인 통합(4단계와 연결)**: 가입 직원이 '전화번호+PIN'으로 로그인 → 본인 employment(매장) 목록 → 매장 선택. 현 '매장→이름→PIN'과 통합/전환 설계 필요.
+
+**주의**: 사장님 매일 쓰는 로그인 충돌 절대 금지. 가입은 별도 경로로 추가 후, 로그인 통합은 신중히. 매장코드 방식(고정 vs 1회용) 사장님 확인.
+
 ### 현재 Edge Function 목록 (2026-06-09 기준)
 coupang-receiver(기존) / emp-login(로그인+증표) / emp-session(자동로그인 복원) / emp-private(매니저 금고 조회·저장) / send-otp(문자발송) / verify-otp(문자확인+person생성)
 4. **화면 완전 분리**: 사장/직원 경로·화면 갈라짐. 직원에게 사장 기능·타직원 정보 노출 0.
