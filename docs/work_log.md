@@ -21,7 +21,7 @@
 - [x] **1-B** 로그인 Edge Function `emp-login` 배포 + 테스트 통과(맞는PIN/틀린PIN/없는직원). emp 응답에 PIN 빠짐 확인
 - [x] **1-C** `submitLogin` → `emp-login` 서버검증 전환 + 로그인전 `loadLoginNames`(비민감만) + completeLogin에 loadEmployees 보강
 - [x] **1-C+** 자동로그인 유지(사장님 결정) → `emp_sessions` 표 + 증표(세션토큰) 발급/검증. `emp-session` Edge Function. 자동복원·로그아웃 연결. 전 흐름 테스트 통과(로그인/복원/가짜증표거부/로그아웃폐기)
-- [ ] **1-D** 아이폰식 PIN 키패드 UI (사장님 요청: 동그라미 점 + 숫자 키패드)
+- [x] **1-D** 아이폰식 PIN 키패드 UI (동그라미 점4 + 숫자 키패드 + ⌫). index.html 로그인폼 교체, sidemenu.js pinPress/pinDelete/renderPinDots, styles.css. Playwright 렌더+클릭 검증 통과(점 채움/지움/JS오류0). 옛 loginPinInput 잔재 0건
 - [ ] **1-E** 사장님 직원관리 화면(조회·저장) + 금고 연동 (saveEmployee 분리, renderEmpDetail, 매니저용 금고 조회)
 - [ ] **1-F** `employees` 민감 7컬럼 제거 (= 진짜 차단점) + advisor 점검
 - [ ] 커밋 머지 + 사장님 폰 골든패스 테스트 안내

@@ -4194,7 +4194,7 @@ async function syncCardData(){toast('동기화 기능은 Codef API 연결 후 �
 // ══════════════════════════════════════════
 // PIN 로그인
 // ══════════════════════════════════════════
-let loginSelectedEmp=null, pinBuffer='';
+let loginSelectedEmp=null, pinBuffer='', _loginBusy=false;
 
 // ─── 로그인 화면 ───
 // 단일 진입 경로: 매장 선택 → 직원 드롭다운 → PIN → 자동 로그인 (헌법 1-6에 따라 2026-05-05 갈아엎음)
@@ -4206,7 +4206,6 @@ function showLoginScreen(){
   // 드롭박스 직원 목록 채우기 (모든 활성 직원 — owner도 포함)
   // 정렬: 사장(owner) > 팀장 > 점장 > 매니저 > 아르바이트 + 기타, 같은 직급 내 가나다
   const nameSelect=document.getElementById('loginNameInput');
-  const pinInput=document.getElementById('loginPinInput');
   const lastLoginName=localStorage.getItem('pd_last_name')||'';
   if(nameSelect){
     const sortKey=(e)=>{
@@ -4234,7 +4233,7 @@ function showLoginScreen(){
       return `<option value="${e.name}"${e.name===lastLoginName?' selected':''}>${badge?badge+' ':''}${e.name}${role}</option>`;
     }).join('');
   }
-  if(pinInput) pinInput.value='';
+  resetPinPad();
   document.getElementById('loginMsg').innerText='';
   if(currentStore){
     document.getElementById('loginStoreName').innerText=currentStore.name;
@@ -4252,8 +4251,6 @@ function showLoginScreen(){
   }
   document.getElementById('loginStoreBigBtn').style.display = needStore ? 'block' : 'none';
   document.getElementById('loginStoreBtn').style.display = needStore ? 'none' : 'inline-block';
-  // PIN에 포커스 (이름 이미 선택됐으면, 매장 선택된 상태에서만)
-  setTimeout(()=>{if(!needStore&&lastLoginName&&pinInput)pinInput.focus();},300);
 }
 // ═══════════════════════════════════════════════════════════════
 // Phase 1-A1: 신규 매장 가입 플로우 (2026-04-24)
@@ -4753,15 +4750,36 @@ async function loadLoginNames(){
   const{data}=await sb.from('employees').select('id,name,auth_level,role,is_active').eq('store_id',currentStore.id).eq('is_active',true).order('name');
   employees=(data||[]);
 }
+// ─── 아이폰식 PIN 키패드 (동그라미 점 + 숫자 키패드) ───
+function renderPinDots(){
+  const dots=document.querySelectorAll('#pinDots .pin-dot');
+  dots.forEach((d,i)=>d.classList.toggle('filled',i<pinBuffer.length));
+}
+function resetPinPad(){ pinBuffer=''; renderPinDots(); }
+function pinPress(n){
+  if(_loginBusy||pinBuffer.length>=4) return;
+  pinBuffer+=String(n);
+  renderPinDots();
+  const msgEl=document.getElementById('loginMsg'); if(msgEl) msgEl.innerText='';
+  if(pinBuffer.length===4) submitLogin();
+}
+function pinDelete(){
+  if(_loginBusy) return;
+  pinBuffer=pinBuffer.slice(0,-1);
+  renderPinDots();
+}
+function onLoginNameChange(){ resetPinPad(); const m=document.getElementById('loginMsg'); if(m) m.innerText=''; }
+
 // ─── 이름+PIN 로그인 — 2026-06-09 서버 검증으로 전환 (PIN 비교를 휴대폰 → 서버로) ───
 async function submitLogin(){
   const nameVal=(document.getElementById('loginNameInput')?.value||'').trim();
-  const pinVal=(document.getElementById('loginPinInput')?.value||'').trim();
+  const pinVal=pinBuffer;
   const msgEl=document.getElementById('loginMsg');
-  if(!nameVal){msgEl.innerText='직원을 선택하세요';shakeLogin();return;}
+  if(!nameVal){msgEl.innerText='직원을 선택하세요';resetPinPad();shakeLogin();return;}
   if(!pinVal||pinVal.length!==4){msgEl.innerText='PIN 4자리를 입력하세요';shakeLogin();return;}
-  if(!currentStore){msgEl.innerText='매장을 먼저 선택하세요';shakeLogin();return;}
+  if(!currentStore){msgEl.innerText='매장을 먼저 선택하세요';resetPinPad();shakeLogin();return;}
   // 서버(emp-login)에서 PIN 검증 — 다른 직원 PIN·개인정보가 휴대폰에 절대 안 내려옴
+  _loginBusy=true;
   msgEl.innerText='확인 중…';
   let res;
   try{
@@ -4769,17 +4787,20 @@ async function submitLogin(){
     if(error) throw error;
     res=data;
   }catch(_e){
+    _loginBusy=false;
     msgEl.innerText='로그인 처리 중 오류가 났어요. 잠시 후 다시 시도해주세요.';
-    shakeLogin();return;
+    resetPinPad();shakeLogin();return;
   }
   if(!res||!res.ok){
+    _loginBusy=false;
     msgEl.innerText=(res&&res.error)||'로그인에 실패했어요';
-    const pinEl=document.getElementById('loginPinInput'); if(pinEl) pinEl.value='';
-    shakeLogin();return;
+    resetPinPad();shakeLogin();return;
   }
   // 다음 로그인 시 이름 기억 + 로그인 증표(세션 토큰) 저장 → 자동 로그인용
+  _loginBusy=false;
   localStorage.setItem('pd_last_name',nameVal);
   if(res.token) localStorage.setItem('pd_token',res.token);
+  resetPinPad();
   completeLogin(res.emp);
 }
 // 로그인 폼 영역 흔들기
@@ -4789,11 +4810,11 @@ function shakeLogin(){
   el.style.animation='shake 0.3s';
   setTimeout(()=>el.style.animation='',300);
 }
-// 엔터키 → 로그인
+// 물리 키보드 숫자 입력 → PIN 키패드 (PC 테스트용)
 document.addEventListener('keydown',e=>{
-  if(e.key!=='Enter') return;
   if(document.getElementById('loginOverlay').style.display==='none') return;
-  submitLogin();
+  if(e.key>='0'&&e.key<='9'){ pinPress(parseInt(e.key,10)); }
+  else if(e.key==='Backspace'){ pinDelete(); }
 });
 // devLogin 제거됨 — UI 버튼 삭제, 함수는 안전장치로 잔류
 function devLogin(){ toast('개발모드가 비활성화됐어요.','warn'); }
