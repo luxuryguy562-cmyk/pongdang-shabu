@@ -991,7 +991,7 @@ async function runAI() {
     const isOnlineModeAI = rcpMode === 'online';
     // 거래처 모드(온라인 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
     // 온라인·마트(직구)는 전체 자율(getCatListForPrompt 그대로)
-    if(isVendorModeAI && rcpVendorId){
+    if(isVendorModeAI && !isOnlineModeAI && rcpVendorId){
       const _v = (typeof vendors!=='undefined') ? vendors.find(x=>x.id===rcpVendorId) : null;
       const _handled = _v && Array.isArray(_v.handled_category_ids) ? _v.handled_category_ids : [];
       if(_handled.length){
