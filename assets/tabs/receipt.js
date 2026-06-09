@@ -1609,7 +1609,15 @@ async function saveReceipt(){
       if(typeof vendorListKind!=='undefined') vendorListKind = (_v && _v.kind==='online') ? 'online' : 'vendor';
       nav('vendors');
       if(typeof _applyVendorViewKind==='function') _applyVendorViewKind();
-      if(vid && vid !== 'null') setTimeout(()=>openVendorDetail(vid), 300);
+      if(vid && vid !== 'null'){
+        // 목록 깜빡임 제거 (2026-06-09): 300ms 지연 점프(목록 보였다 상세로) 대신
+        // 상세 패널을 먼저 켜고 바로 데이터 로드 — 목록 화면 안 거침.
+        // 필터값을 먼저 vid로 맞춰 vendorTab('orders')의 자동 로드가 올바른 거래처를 읽게 함.
+        if(typeof currentVendorDetailId!=='undefined') currentVendorDetailId = vid;
+        const _ovf=document.getElementById('orderVendorFilter'); if(_ovf) _ovf.value=vid;
+        if(typeof vendorTab==='function') vendorTab('orders');
+        await openVendorDetail(vid);
+      }
     } else {
       // 알 수 없는 복귀값 fallback → 기록 내역
       rcpTab('list');
