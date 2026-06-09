@@ -163,17 +163,31 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
 
 // ─── 영수증/거래명세서 분석 프롬프트 (영수증 탭 + 측정실 공통 — 2026-06-04 통일) ───
 //   isVendorMode=true(거래처): vendor·category 출력 X / false(직구): vendor·category 출력
+//   isOnlineMode=true(온라인주문): vendor 출력 X, category 출력, 쿠팡 특수규칙 적용
 //   ⚠️ 영수증 탭(receipt.js)·측정실(accuracy_lab.js) 둘 다 이 함수만 호출 → 검증=실제 동일 보장
-function buildReceiptPrompt({isVendorMode=true, vendorName='', catList='', pageCount=1}={}){
-  const modeHint = isVendorMode
-    ? `[모드:거래처] vendor="${vendorName}" 이미 선택. v·c·d 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
+function buildReceiptPrompt({isVendorMode=true, isOnlineMode=false, vendorName='', catList='', pageCount=1}={}){
+  // isOnlineMode가 true이면 거래처 모드이되 카테고리 분류 + 쿠팡 특수규칙 적용
+  const needsCat = !isVendorMode || isOnlineMode; // 직구 or 온라인주문 = c 필드 출력
+  let modeHint;
+  if(isOnlineMode){
+    modeHint = `[모드:온라인주문] vendor="${vendorName}" 이미 선택. v 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
+품목별 c를 [${catList}]에서 선택.
+[온라인주문 특징 — 쿠팡·네이버쇼핑 등]
+① 할인 제외: 상품 가격은 이미 할인 적용된 금액. "할인"·"쿠폰"·"적립금" 등 별도 할인/음수 행 = items 완전 제외.
+② 분리배송 중복 제거: 배송그룹이 여러 개면 같은 상품명+금액이 반복 표시됨. 동일 상품명+금액 조합은 1번만.
+③ 소계·배송비 제외: "소계"·"합계"·"배송비"·"배송지"·"쿠팡 직접판매" 등 집계/구분 행 = items 제외.
+④ total_sum = 페이지 하단 "결제금액"/"총 결제금액" 최종값만. 배송그룹별 소계 X.`;
+  } else if(isVendorMode){
+    modeHint = `[모드:거래처] vendor="${vendorName}" 이미 선택. v·c·d 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
 [BOX/EA] q=(BOX×단위)+EA. ⚠️ BOX=0이면 단위 무시, EA가 q.
   · 단위20·BOX1·EA10→q=30
   · 단위8·BOX1·EA0→q=8
   · 단위40·BOX0·EA5→q=5  ← BOX 0
-  · 단위12·BOX0·EA5→q=5  ← BOX 0`
-    : `[모드:직구] 마트·배민. d 출력 X. vendor 최상위 1번. 영수증 1장 = 같은 날짜·매장.
+  · 단위12·BOX0·EA5→q=5  ← BOX 0`;
+  } else {
+    modeHint = `[모드:직구] 마트·배민. d 출력 X. vendor 최상위 1번. 영수증 1장 = 같은 날짜·매장.
 품목별 c를 [${catList}]에서 선택.`;
+  }
   const multiPageHint = pageCount>1
     ? `\n[멀티페이지] 사진 ${pageCount}장 = 같은 영수증의 다른 페이지. 모든 페이지 행을 items에 통합. date·vendor·total_sum은 1번만.`
     : '';
@@ -181,10 +195,10 @@ function buildReceiptPrompt({isVendorMode=true, vendorName='', catList='', pageC
 ${modeHint}${multiPageHint}
 
 [응답]
-{${isVendorMode ? '' : `
-  "vendor": "상호명",`}
+{${(!isVendorMode && !isOnlineMode) ? `
+  "vendor": "상호명",` : ''}
   "date": "영수증 발행일 YYYY-MM-DD (영수증에 연도가 명확히 안 보이면 ${new Date().getFullYear()}년으로)",
-  "items": [ ${isVendorMode ? '{i,u,q,p,t,f}' : '{i,u,q,p,t,f,c}'} 행 배열 ],
+  "items": [ ${needsCat ? '{i,u,q,p,t,f,c}' : '{i,u,q,p,t,f}'} 행 배열 ],
   "total_supply": 세전 공급가액 소계(정수). 행마다 세액 칸이 별도인 양식만, 아니면 null,
   "total_tax": 세액 소계(정수). 없으면 null,
   "total_sum": 이번 거래 결제합(세후,정수,없으면 null) — 금일합계>합계액>총합계액>결제금액. ⚠️전미수·전잔액·당일입금·현잔액·누계·채권 = 무시(이번 거래분 아님),
@@ -196,11 +210,11 @@ ${modeHint}${multiPageHint}
 [필드]
 - i:품목명+규격 (포장·원산지 꼬리표 제외 — 규칙 참조)
 - u:단가 (없으면 null)
-- q:수량 (없으면 1) ${isVendorMode ? '— BOX/EA 정확히 적용. BOX 0 = EA만. 중량거래(kg·g)면 q=중량값(소수점 허용).' : ''}
+- q:수량 (없으면 1) ${(isVendorMode && !isOnlineMode) ? '— BOX/EA 정확히 적용. BOX 0 = EA만. 중량거래(kg·g)면 q=중량값(소수점 허용).' : ''}
 - p:행 [합계/금액] 칸 인쇄값 그대로 정수(세후=실제 낸 돈). 행마다 [공급가·세액·합계] 칸 따로면 [합계] 칸. u×q 계산 X — 1~2원 차이도 인쇄 우선
 - t:행 [세액] 칸 값(정수). 세액 칸이 따로 있으면 그 값, 없거나 면세면 0
-- f:면세 여부(true/false). t>0이면 false. 면세표시(*)·면세 칸·미가공 농축수산물(육류·생선·야채·과일·쌀)이면 true${isVendorMode ? '' : `
-- c:카테고리 [${catList}]`}
+- f:면세 여부(true/false). t>0이면 false. 면세표시(*)·면세 칸·미가공 농축수산물(육류·생선·야채·과일·쌀)이면 true${needsCat ? `
+- c:카테고리 [${catList}]` : ''}
 
 [규칙]
 - [회계 검산] 두 등식이 반드시 맞아야 함: ①단가(u)×수량(q)=공급가(p−t) ②공급가+세액(t)=합계(p). 안 맞으면 u·q·t·p를 다시 읽어라 — 특히 공급가를 단가나 합계 칸에 잘못 넣는 실수 주의. 박스+EA는 q=(박스×단위)+EA, 중량거래(kg·g)는 q=중량값(소수점)으로 재시도.

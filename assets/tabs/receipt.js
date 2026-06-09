@@ -8,6 +8,7 @@
 let rcpMode = '';        // 'vendor' | 'direct' | 'manual' | ''
 let rcpVendorId = null;  // 거래처 모드일 때 vendor id
 let rcpVendorName = '';  // 거래처 표시명
+let rcpVendorKind = '';  // 거래처 종류 'vendor' | 'online' (온라인주문 프롬프트 분기용)
 let rcpCatId = null;     // 거래처 자동 박힌 category_id
 let rcpCatName = '';     // 거래처 자동 박힌 category 텍스트
 let rcpInputMethod = null; // 'photo' | 'manual' — 영수증 단위 입력 방식 (📸/✏️ 이모지 표시용)
@@ -22,7 +23,7 @@ function setRcpMode(mode){
   rcpInputMethod = null;
   _clearRcpData(); // 새 진입 = 이전 분석(사진·결과·행) 비우기 (사장님 호소 2026-06-02)
   // 모드 바꿀 때 vendor 정보 초기화 (거래처는 행에서 다시 선택)
-  rcpVendorId = null; rcpVendorName = ''; rcpCatId = null; rcpCatName = '';
+  rcpVendorId = null; rcpVendorName = ''; rcpVendorKind = ''; rcpCatId = null; rcpCatName = '';
   document.getElementById('rcpModeSelect').style.display = 'none';
   const modeTtl = document.getElementById('rcpModeTitle'); if(modeTtl) modeTtl.style.display = 'block';
   document.getElementById('rcpModeBadge').style.display = 'flex';
@@ -98,7 +99,7 @@ function _clearRcpData(){
 
 function resetRcpMode(){
   rcpMode = '';
-  rcpVendorId = null; rcpVendorName = ''; rcpCatId = null; rcpCatName = '';
+  rcpVendorId = null; rcpVendorName = ''; rcpVendorKind = ''; rcpCatId = null; rcpCatName = '';
   rcpInputMethod = null;
   document.getElementById('rcpModeSelect').style.display = 'block';
   const modeTtl = document.getElementById('rcpModeTitle'); if(modeTtl) modeTtl.style.display = 'none';
@@ -633,12 +634,13 @@ async function openRcpReceiptFromVendor(vendorId, method){
   // vendor-card 미니 진입 = vendorId 직접 전달 / 거래처 상세 헤더 = '' → currentVendorDetailId fallback
   const vid = (vendorId && vendorId !== '') ? vendorId : (typeof currentVendorDetailId !== 'undefined' ? currentVendorDetailId : null);
   if(!vid){ toast('거래처 정보를 찾을 수 없어요','error'); return; }
-  const {data, error} = await sb.from('vendors').select('id,name,category,category_id').eq('id', vid).eq('store_id', currentStore.id).maybeSingle();
+  const {data, error} = await sb.from('vendors').select('id,name,category,category_id,kind').eq('id', vid).eq('store_id', currentStore.id).maybeSingle();
   if(error || !data){ toast('거래처 정보를 못 가져왔어요','error'); return; }
   // setRcpMode('vendor')는 picker를 자동으로 열어 우회 — 모드·카테고리 직접 박기
   rcpMode = 'vendor';
   rcpVendorId = data.id;
   rcpVendorName = data.name || '';
+  rcpVendorKind = data.kind || 'vendor';
   rcpCatId = data.category_id || null;
   rcpCatName = data.category || '';
   rcpInputMethod = (method === 'manual') ? 'manual' : 'photo';
@@ -722,10 +724,11 @@ async function openRcpVendorPicker(){
 
 async function pickRcpVendor(vendorId){
   if(!currentStore) return;
-  const {data, error} = await sb.from('vendors').select('id,name,category,category_id').eq('id', vendorId).eq('store_id', currentStore.id).maybeSingle();
+  const {data, error} = await sb.from('vendors').select('id,name,category,category_id,kind').eq('id', vendorId).eq('store_id', currentStore.id).maybeSingle();
   if(error || !data) return toast('거래처 정보를 못 가져왔어요', 'error');
   rcpVendorId = data.id;
   rcpVendorName = data.name || '';
+  rcpVendorKind = data.kind || 'vendor';
   rcpCatId = data.category_id || null;
   rcpCatName = data.category || '';
   closeSheet('rcpVendorPickSheet');
@@ -942,6 +945,7 @@ async function runAI() {
   try {
     const catList = getCatListForPrompt();
     const isVendorModeAI = rcpMode === 'vendor';
+    const isOnlineModeAI = isVendorModeAI && rcpVendorKind === 'online';
     // ─── 통합 개선 (2026-05-19 (4)) ───
     //  · 프롬프트 다이어트 (11규칙→핵심만, 예시 단축) → 입력 토큰 ~30% ↓
     //  · p = 영수증 [합계] 컬럼 인쇄값 그대로 (사장님 호소 ② 116,000 vs 115,999 catch)
@@ -975,7 +979,7 @@ async function runAI() {
       }
     }
     // 프롬프트 = common.js 공통 함수 (측정실과 100% 동일 — 검증=실제 보장)
-    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, vendorName:rcpVendorName, catList, pageCount });
+    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, isOnlineMode:isOnlineModeAI, vendorName:rcpVendorName, catList, pageCount });
     // AI 단독 (2026-05-19 (4)): OCR 제거 — Gemini Flash 단독 (3차 best ~95%+) + High demand 시 GPT-4o fallback
     const aiModel = isVendorModeAI ? 'gemini-2.5-flash' : 'gemini-2.5-flash-lite';
     // 모든 페이지를 parts에 박음 (Gemini multi-image 지원)
@@ -1430,16 +1434,18 @@ async function saveReceipt(){
   if(_topVendor) document.querySelectorAll('#resTable .c-v').forEach(c=>c.value=_topVendor);
   // ─── 새 기능: 거래처 모드면 vendor_id + 카테고리 자동 박힘, 직구 모드면 vendor_id NULL + AI 분류 그대로 ───
   const isVendorMode = rcpMode === 'vendor' && rcpVendorId;
+  // 온라인 거래처(쿠팡·네이버)는 AI가 품목별 카테고리 분류 → rcpCatId 덮어쓰기 제외
+  const isOnlineVendor = rcpVendorKind === 'online';
   // 영수증 1장 = 그룹 UUID 1개 (2026-05-19 사장님 호소 "각각 산 것처럼 보임" 해결)
   // 모든 행에 동일 group_id 박음 → 기록내역 그룹 묶음 표시 + 그룹 편집·삭제 가능
   const groupId = (typeof crypto!=='undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
   const rows=Array.from(document.querySelectorAll('#resTable .rcp-item-card')).map((tr,idx)=>{
-    // 거래처 모드: 사용자가 사전 선택한 카테고리 강제 사용 (AI 분류 무시)
-    const cat = isVendorMode
+    // 거래처 모드: 사용자가 사전 선택한 카테고리 강제 사용 (AI 분류 무시) — 단, 온라인 거래처는 AI 분류 사용
+    const cat = (isVendorMode && !isOnlineVendor)
       ? (rcpCatName || (tr.dataset.cat||'').trim())
       : (tr.dataset.cat||'').trim();
-    // dataset.catId가 비어있으면 picker가 안 거쳐진 케이스 → 재계산. 거래처 모드면 rcpCatId 우선
-    const category_id = isVendorMode
+    // dataset.catId가 비어있으면 picker가 안 거쳐진 케이스 → 재계산. 거래처 모드(비온라인)면 rcpCatId 우선
+    const category_id = (isVendorMode && !isOnlineVendor)
       ? (rcpCatId || tr.dataset.catId || resolveReceiptCatId(cat) || null)
       : (tr.dataset.catId ? tr.dataset.catId : (resolveReceiptCatId(cat) || null));
     const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,'');
