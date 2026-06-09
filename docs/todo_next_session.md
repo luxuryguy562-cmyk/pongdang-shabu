@@ -19,7 +19,9 @@
 - **직원 본인 확인 = 전화번호 + 문자 인증번호** (하우머치 방식, 사람 고유 식별, 이직해도 유지).
 
 ### 직원 계정 모델 — 4단계 로드맵 (사장님 합의)
-1. **구조 분리**: `person`(사람) 표 신설 + 기존 `employees`를 고용(employment)으로 재해석(person_id FK 추가). 기존 13명 이전. 근무·급여 FK(attendance_logs/work_schedules/special_wages 등 employee_id)는 고용 단위 유지. 앱 동작 그대로.
+1. **구조 분리** 🔄 진행중: `person`(사람) 표 신설 + 기존 `employees`를 고용(employment)으로 재해석(person_id FK 추가). 기존 13명 이전. 근무·급여 FK(attendance_logs/work_schedules/special_wages 등 employee_id)는 고용 단위 유지. 앱 동작 그대로.
+   - ✅ **1-① 완료(2026-06-09 실행승인)**: `persons` 표 신설(phone 식별자, RLS 차단) + `employees.person_id` 칸 추가 + 13명 연결(전화11→사람11, 무전화2→개별2, 총 13명). db_schema 동기화. 추가만 = 앱 안 깨짐. 롤백=person_id DROP+persons DROP.
+   - ⬜ 1-② 남음: 권한(auth_level)을 membership(사람–매장 관계)으로 분리, 고용정보(시급·역할) 정리. 코드는 아직 employees 그대로 사용(person 활용은 3단계 가입 때).
 2. **보안 완성**: 멈췄던 1-D/1-E — 직원관리 화면 금고연동(saveEmployee 분리, renderEmpDetail, 매니저 금고 조회) + employees 민감7컬럼 제거. **진짜 차단**. emp-login/session 퇴사자 조회 결함도 이때 수정(사장은 퇴사자 포함, 직원 본인은 활성만).
 3. **직원 가입·문자 인증** (사장님 2026-06-09 흐름 확정): ①직원이 문자 인증으로 본인 계정 먼저 가입(전화+인증번호+본인PIN+본인정보, 이 시점 매장 무관) → ②사장이 직원관리에서 "매장 코드" 발급 + 시급·역할 설정 → ③직원이 코드 입력 → 그 매장 고용 연결. 투잡이면 다른 사장 코드 추가 입력. SMS 발송 인프라 필요(국내 알리고/NHN SENS 등 저렴, 사장님 가입·결제 1회 — GCP처럼 셋업 안내). vision 7-3 자동온보딩 정신 주의.
    - **입력 주체 분리**: 본인정보(전화·계좌·주민번호)=직원 본인 입력 / 고용조건(시급·역할·입사일)=사장 입력. → 사장이 직원 민감정보 직접 보관 부담 ↓.

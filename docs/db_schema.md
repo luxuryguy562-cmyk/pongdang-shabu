@@ -62,6 +62,38 @@ franchises (프랜차이즈/브랜드)
 
 > ⚠️ **2026-05-13**: 위 `business_day_start_hour` 컬럼 추가 시 `attendance_logs_backup_20260513` 백업 테이블 함께 생성됨. 다음 단계 (work_date 영업일 기준 재계산 마이그레이션) 시 롤백용.
 
+### persons (2026-06-09 신설 — 직원 계정 모델 1단계)
+사람(직원·사장 공통) 계정. 매장과 독립, 전화번호 = 식별자. 직원→사장 전환·투잡 대비.
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | 사람 ID |
+| phone (text, partial unique WHERE NOT NULL) | 전화번호(식별자). NULL 허용(아직 미가입 직원) |
+| name | 이름 |
+| created_at | |
+- RLS ENABLE, **정책 0개**(service_role만). 앱은 향후 Edge Function 경유.
+- `employees.person_id` FK로 연결. 현재 13명 1:1(투잡 시 1:N). 권한·고용정보는 후속 단계에서 membership으로 분리 예정.
+
+### employee_private (2026-06-09 신설 — 민감정보 금고)
+직원 민감정보 격리. RLS 차단(service_role만), `emp-login`/`emp-session` Edge Function만 접근.
+| 컬럼 | 용도 |
+|------|------|
+| employee_id (uuid PK, FK→employees CASCADE) | |
+| store_id | |
+| pin, id_number, bank_name, account_number, phone, address, birth_date | 민감 7종 |
+| updated_at | |
+- ⚠️ 원본이 아직 `employees`에도 있음. **2단계에서 employees 7컬럼 제거 = 진짜 차단**.
+
+### emp_sessions (2026-06-09 신설 — 자동로그인 증표)
+| 컬럼 | 용도 |
+|------|------|
+| token (text PK) | 세션 토큰 |
+| employee_id (FK→employees CASCADE), store_id | |
+| created_at, last_used_at, expires_at (90일) | |
+- RLS 차단(service_role만). `emp-session` Edge Function이 검증.
+
+### employees_backup_20260609
+2026-06-09 보안작업 직전 `employees` 전체 스냅샷 (롤백용).
+
 ### employees
 | 컬럼 | 용도 |
 |------|------|
@@ -90,6 +122,7 @@ franchises (프랜차이즈/브랜드)
 | doc_health_expires (date, nullable) | 보건증 만료일 |
 | doc_minor_consent (text, nullable) | 법대동의서 파일 URL (미성년자) |
 | doc_foreigner_id (text, nullable) | 외국인등록증 파일 URL |
+| person_id (uuid, FK→persons) | 사람 계정 연결 (2026-06-09 추가 — 직원 계정 모델 1단계). 같은 사람이 여러 매장이면 여러 employees 행이 같은 person_id |
 
 ### roles
 | 컬럼 | 용도 |
