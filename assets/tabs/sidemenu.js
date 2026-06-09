@@ -331,6 +331,8 @@ function initVendorSortable(){
 // 거래처 취급품목 라벨 (2026-06-10) — handled_category_ids 이름들. maxShow 초과 시 "외 N개"
 //   카드(좁음)=2개까지, 상세 헤더(넓음)=전체(99)
 function _vendorCatLabel(v, maxShow=2){
+  // 온라인 플랫폼(kind='online')은 카테고리 자율 → 분류 대신 🌐 온라인
+  if(v.kind==='online') return '🌐 온라인';
   const ids=Array.isArray(v.handled_category_ids)?v.handled_category_ids:[];
   if(!ids.length) return v.category||'기타';
   const names=ids.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean);
