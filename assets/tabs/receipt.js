@@ -645,13 +645,19 @@ async function openRcpReceiptFromVendor(vendorId, method){
   const {data, error} = await sb.from('vendors').select('id,name,category,category_id,kind').eq('id', vid).eq('store_id', currentStore.id).maybeSingle();
   if(error || !data){ toast('거래처 정보를 못 가져왔어요','error'); return; }
   // setRcpMode는 picker를 자동으로 열어 우회 — 모드·카테고리 직접 박기
-  rcpVendorKind = data.kind || 'vendor';
+  // 주류 거래처 자동 인식 — 카테고리에 "주류" 포함이면 liquor 모드 (음료 겸업 등 변수 대응)
+  const _isLiquorVendor = (data.category || '').includes('주류');
+  rcpVendorKind = _isLiquorVendor ? 'liquor' : (data.kind || 'vendor');
   rcpMode = (rcpVendorKind === 'online') ? 'online' : 'vendor';
   rcpVendorId = data.id;
   rcpVendorName = data.name || '';
-  // 온라인 플랫폼은 카테고리 고정 안 함 (AI 품목별 자율 분류)
+  // 온라인·주류 = AI 품목별 자율 분류 (카테고리 고정 X)
   if(rcpVendorKind === 'online'){
     rcpCatId = null; rcpCatName = '';
+  } else if(rcpVendorKind === 'liquor'){
+    // 주류는 카테고리 기본값 "주류"로 박음 (AI 분류 대부분 주류이므로 — 품목별 override 허용)
+    rcpCatId = data.category_id || null;
+    rcpCatName = data.category || '';
   } else {
     rcpCatId = data.category_id || null;
     rcpCatName = data.category || '';
@@ -989,9 +995,10 @@ async function runAI() {
     let catList = getCatListForPrompt();
     const isVendorModeAI = rcpMode === 'vendor';
     const isOnlineModeAI = rcpMode === 'online';
-    // 거래처 모드(온라인 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
-    // 온라인·마트(직구)는 전체 자율(getCatListForPrompt 그대로)
-    if(isVendorModeAI && !isOnlineModeAI && rcpVendorId){
+    const isLiquorModeAI = rcpVendorKind === 'liquor'; // 주류 채널 판정
+    // 거래처 모드(온라인·주류 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
+    // 온라인·마트(직구)·주류는 전체 자율(getCatListForPrompt 그대로)
+    if(isVendorModeAI && !isOnlineModeAI && !isLiquorModeAI && rcpVendorId){
       const _v = (typeof vendors!=='undefined') ? vendors.find(x=>x.id===rcpVendorId) : null;
       const _handled = _v && Array.isArray(_v.handled_category_ids) ? _v.handled_category_ids : [];
       if(_handled.length){
@@ -1032,7 +1039,7 @@ async function runAI() {
       }
     }
     // 프롬프트 = common.js 공통 함수 (측정실과 100% 동일 — 검증=실제 보장)
-    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, isOnlineMode:isOnlineModeAI, vendorName:rcpVendorName, catList, pageCount });
+    const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, isOnlineMode:isOnlineModeAI, isLiquorMode:isLiquorModeAI, vendorName:rcpVendorName, catList, pageCount });
     // AI 단독 (2026-05-19 (4)): OCR 제거 — Gemini Flash 단독 (3차 best ~95%+) + High demand 시 GPT-4o fallback
     // 2026-06-09: 전 채널 flash 통일 (측정실 5/5 1등 + 규격 분리 정밀도). 옛 직구·온라인 flash-lite 폐기.
     const aiModel = 'gemini-2.5-flash';
@@ -1077,6 +1084,9 @@ async function runAI() {
     const pageInfo = (raw && raw.page_info && typeof raw.page_info.total==='number') ? raw.page_info : null;
     const respDate = (!Array.isArray(raw) && raw?.date) ? raw.date : null;
     const respVendor = (!Array.isArray(raw) && raw?.vendor) ? raw.vendor : '';
+    // 주류 채널: 보증금 입금/회수 추출
+    const depositIn  = isLiquorModeAI ? (parseInt(raw?.deposit_in)||0)  : 0;
+    const depositOut = isLiquorModeAI ? (parseInt(raw?.deposit_out)||0) : 0;
     const defaultCat = isVendorModeAI ? (rcpCatName || '식자재') : '';
     let list = itemsRaw.map(x => ({
       date: x.d || x.date || respDate || ymdLocal(new Date()),
@@ -1091,6 +1101,12 @@ async function runAI() {
       isTaxFree: (x.f===true || x.f==='true' || x.isTaxFree===true), // 면세 여부 (의제매입세액공제용)
       category: x.c || x.category || defaultCat
     }));
+    // 주류 채널: 보증금 입금(+) / 회수(−) 행 추가
+    if(isLiquorModeAI){
+      const _depDate = respDate || ymdLocal(new Date());
+      if(depositIn > 0)  list.push({ date:_depDate, vendor:rcpVendorName, item:'보증금 입금', spec:null, origin:null, unitPrice:null, qty:1, totalPrice:depositIn,   taxAmount:0, isTaxFree:true,  category:rcpCatName||'주류', _isDeposit:true, _depositLabel:'입금' });
+      if(depositOut > 0) list.push({ date:_depDate, vendor:rcpVendorName, item:'빈병 회수',  spec:null, origin:null, unitPrice:null, qty:1, totalPrice:-depositOut, taxAmount:0, isTaxFree:true,  category:rcpCatName||'주류', _isDeposit:true, _depositLabel:'회수' });
+    }
     // 공급가(세전) = 합계(세후) − 세액. 세후 통일(2026-06-04) 후 검산·저장용
     list.forEach(it=>{ it.supplyPrice = (parseInt(it.totalPrice)||0) - (parseInt(it.taxAmount)||0); });
     // 영수증에 세액이 하나라도 있으면 = 세액 별도 양식 → 행마다 공급가·부가세 줄 표시 (세액 0 행은 면세)
@@ -1137,6 +1153,7 @@ async function runAI() {
     // 2026-05-19 (4)+ 시각화: 의심행을 it._suspect에 박아 표 행 자체에 ⚠️ 표시 (토스트 사라져도 영구)
     const suspectRows = [];
     list.forEach((it,idx)=>{
+      if(it._isDeposit) return; // 보증금 행은 검산 제외
       const u = parseFloat(it.unitPrice)||0;
       const q = parseFloat(it.qty)||0;
       // 검산은 공급가(세전=합계−세액) 기준 — u×q는 공급가와 맞음 (세후 합계와는 부가세만큼 차이날 수 있음)
@@ -1328,6 +1345,25 @@ function _rcpNameSuspect(name){
 }
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
+  // 보증금 행 — 별도 카드로 렌더링 (색상 구분, 분류·규격·원산지 칸 없음)
+  if(i._isDeposit){
+    const depCls = i._depositLabel === '회수' ? ' deposit-row deposit-out' : ' deposit-row deposit-in';
+    const depAmt = i.totalPrice < 0 ? `-${fmt(Math.abs(i.totalPrice))}` : `+${fmt(i.totalPrice)}`;
+    return `<div class="rcp-item-card${depCls}" id="row-${idx}" data-cat="${esc(i.category||'')}" data-cat-id="${resolveReceiptCatId(i.category)||''}" data-orig-item="${esc(i.item||'')}">
+      <div class="ric-l1">
+        <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="보증금" style="flex:1">
+        <input type="text" class="c-p" inputmode="numeric" value="${depAmt}" data-input="onReceiptAmountInput|this" style="width:90px">
+        <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
+      </div>
+      <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
+      <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
+      <input type="hidden" class="c-t" value="0">
+      <input type="hidden" class="c-f" value="1">
+      <input type="hidden" class="c-spec" value="">
+      <input type="hidden" class="c-og" value="">
+      <input type="hidden" class="c-is-deposit" value="1">
+    </div>`;
+  }
   const cat=String(i.category||'').trim();
   const catId=resolveReceiptCatId(cat)||'';
   const label=formatRcpCatLabel(cat);
@@ -1384,6 +1420,7 @@ function buildReceiptRow(i={}) {
     <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
     <input type="hidden" class="c-t" value="${parseInt(i.taxAmount)||0}">
     <input type="hidden" class="c-f" value="${(i.isTaxFree || (i._taxFormat && (parseInt(i.taxAmount)||0)===0))?'1':'0'}">
+    <input type="hidden" class="c-is-deposit" value="0">
   </div>`;
 }
 // 단가/수량 입력 시 자동 금액 계산 (사용자 편의 — 2026-05-19)
@@ -1567,6 +1604,7 @@ async function saveReceipt(){
       tax_amount: parseInt(taxRaw,10)||0,
       supply_price: (parseInt(amtRaw,10)||0) - (parseInt(taxRaw,10)||0), // 공급가(세전)
       is_tax_free: isFree, // 면세 여부 (의제매입세액공제용)
+      is_deposit: (tr.querySelector('.c-is-deposit')?.value || '0') === '1', // 보증금 행 여부 (주류)
       category:cat||null,category_id:category_id||null,
       input_method: rcpInputMethod || null,
       receipt_group_id: groupId,
