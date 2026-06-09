@@ -1244,8 +1244,15 @@ function resolveReceiptCatId(cat){
     if(sub) return sub.id;
   }
   if(mainCat){
+    // 1) 대분류(최상위) 이름 매칭
     const main=(expCategories||[]).find(c=>c.name===mainCat&&!c.parent_id);
     if(main) return main.id;
+    // 2) 폴백: 소분류(자식) 이름으로도 매칭 (2026-06-09)
+    //    취급품목이 leaf(말단) 이름 "야채"만 AI 후보로 줄 때, AI가 "식자재 >" 접두 없이 "야채"만 반환 → 자식에서 찾음.
+    //    활성 우선, 동명 자식 여럿이면 첫 번째.
+    const child=(expCategories||[]).find(c=>c.name===mainCat&&c.parent_id&&c.is_active!==false)
+             || (expCategories||[]).find(c=>c.name===mainCat&&c.parent_id);
+    if(child) return child.id;
   }
   return null;
 }
