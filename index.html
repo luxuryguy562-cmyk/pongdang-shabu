@@ -1801,6 +1801,36 @@
 <!-- ══ [8] 직원관리 ══ -->
 <div id="staffCont" class="container">
   <div class="app-back" data-action="nav|dashboard"><span class="back-btn">‹</span><span class="back-ttl">직원 관리</span></div>
+
+  <!-- ── 직원 초대 + 가입 대기 (매니저만, 2026-06-09) ── -->
+  <div id="joinAdminBox" class="manager-only" style="margin-bottom:14px;">
+    <!-- 가입 대기 목록 (있을 때만 표시) -->
+    <div id="pendingJoinsCard" style="display:none;background:var(--warn-light);border:1px solid var(--warn);border-radius:14px;padding:14px;margin-bottom:10px;">
+      <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">⏳ 가입 대기 <span id="pendingCount" style="color:var(--warn);"></span></div>
+      <div id="pendingJoinsList"></div>
+    </div>
+    <!-- 직원 초대 카드 -->
+    <div style="background:var(--gray-100);border-radius:14px;padding:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" data-action="toggleInviteCard">
+        <span style="font-size:14px;font-weight:800;">👥 직원 초대하기</span>
+        <span id="inviteToggleArrow" style="color:var(--gray-400);font-size:13px;">펼치기 ▾</span>
+      </div>
+      <div id="inviteCardBody" style="display:none;margin-top:14px;">
+        <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:16px;padding:20px 16px;text-align:center;margin-bottom:12px;">
+          <div style="font-size:12px;color:#CFE0FF;font-weight:700;margin-bottom:8px;">우리 매장 가입 코드</div>
+          <div id="inviteCodeText" style="font-size:34px;font-weight:900;color:#fff;letter-spacing:6px;">······</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" style="flex:1;padding:13px;font-size:14px;font-weight:800;" data-action="shareInviteCode">💬 공유하기</button>
+          <button class="btn btn-secondary" style="flex:1;padding:13px;font-size:14px;font-weight:800;" data-action="copyInviteCode">📋 복사</button>
+        </div>
+        <div style="font-size:12px;color:var(--gray-600);line-height:1.6;margin-top:12px;">
+          이 코드를 직원에게 알려주세요. 직원이 <b>가입 → 코드 입력</b>하면 위 <b>가입 대기</b>에 떠요. 승인하면 출근부에 등록돼요.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <input id="empSearchInput" type="text" class="input-field" placeholder="🔍 이름·전화번호로 검색" style="margin-bottom:10px;" data-input="renderEmpList">
   <div style="display:flex;gap:8px;margin-bottom:12px;">
     <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderEmpList"><option value="">전체 직급</option></select>

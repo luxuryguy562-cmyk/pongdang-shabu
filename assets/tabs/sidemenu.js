@@ -1872,12 +1872,95 @@ async function mergeEmployeePrivate(){
     });
   }catch(_e){}
 }
+
+// ─── 새 기능: 직원 초대(매장 코드) + 가입 대기 승인 — 직원관리 화면 (2026-06-09) ───
+let _inviteCode='';
+async function loadJoinAdmin(){
+  if(!isManager) return;
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  try{
+    // 1) 매장 코드 발급/조회 (고정 — 이미 있으면 그대로)
+    const{data:cd}=await sb.functions.invoke('store-join-admin',{body:{token,action:'issue'}});
+    if(cd?.ok&&cd.code){ _inviteCode=cd.code; const el=document.getElementById('inviteCodeText'); if(el) el.innerText=cd.code; }
+    // 2) 가입 대기 목록
+    const{data:pj}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}});
+    renderPendingJoins(pj?.ok ? (pj.rows||[]) : []);
+  }catch(_e){}
+}
+function renderPendingJoins(rows){
+  const card=document.getElementById('pendingJoinsCard');
+  const list=document.getElementById('pendingJoinsList');
+  const cnt=document.getElementById('pendingCount');
+  if(!card||!list) return;
+  if(!rows.length){ card.style.display='none'; list.innerHTML=''; return; }
+  card.style.display='block';
+  if(cnt) cnt.innerText='('+rows.length+'명)';
+  list.innerHTML=rows.map(r=>{
+    const nm=r.persons?.name||'(이름 미설정)';
+    const ph=r.persons?.phone||'';
+    const phFmt=ph.replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid rgba(0,0,0,.06);">
+      <div style="flex:1;"><div style="font-size:14px;font-weight:800;color:var(--text);">${nm}</div><div style="font-size:12px;color:var(--gray-600);">${phFmt}</div></div>
+      <button class="btn btn-primary btn-sm" style="padding:8px 12px;font-size:13px;" data-action="approveJoin|${r.id}">승인</button>
+      <button class="btn btn-secondary btn-sm" style="padding:8px 12px;font-size:13px;color:var(--gray-500);" data-action="rejectJoin|${r.id}">거절</button>
+    </div>`;
+  }).join('');
+}
+function toggleInviteCard(){
+  const body=document.getElementById('inviteCardBody');
+  const arr=document.getElementById('inviteToggleArrow');
+  if(!body) return;
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  if(arr) arr.innerText=open?'펼치기 ▾':'접기 ▴';
+}
+function _inviteShareText(){
+  const store=currentStore?.name||'우리 매장';
+  return `[${store}] 직원 가입 안내\n1. 아래 앱에서 '가입하기'\n2. 매장 코드 입력: ${_inviteCode}\n👉 https://pongdang-shabu.pages.dev`;
+}
+async function shareInviteCode(){
+  if(!_inviteCode){ alert('코드를 불러오는 중이에요. 잠시 후 다시 시도해주세요.'); return; }
+  const text=_inviteShareText();
+  if(navigator.share){
+    try{ await navigator.share({title:'직원 가입 코드', text}); return; }catch(_e){ /* 취소 시 무시 */ return; }
+  }
+  // 공유 미지원(PC 등) → 복사로 대체
+  try{ await navigator.clipboard.writeText(text); alert('가입 안내 문구를 복사했어요. 카톡·문자에 붙여넣어 보내세요.'); }
+  catch(_e){ alert(text); }
+}
+async function copyInviteCode(){
+  if(!_inviteCode){ alert('코드를 불러오는 중이에요.'); return; }
+  try{ await navigator.clipboard.writeText(_inviteCode); alert('코드 '+_inviteCode+' 복사했어요.'); }
+  catch(_e){ alert('코드: '+_inviteCode); }
+}
+async function approveJoin(pendingId){
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'승인 중...');
+  try{
+    const{data,error}=await sb.functions.invoke('store-join-admin',{body:{token,action:'approve',pending_id:pendingId}});
+    if(error||!data?.ok){ alert(data?.error||'승인 실패'); return; }
+    await loadEmployees(); // 직원 목록 + 대기 목록 새로고침
+  }catch(_e){ alert('네트워크 오류'); }
+  finally{ setLoad(false); }
+}
+async function rejectJoin(pendingId){
+  if(!confirm('이 가입 신청을 거절할까요?')) return;
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'처리 중...');
+  try{
+    const{data,error}=await sb.functions.invoke('store-join-admin',{body:{token,action:'reject',pending_id:pendingId}});
+    if(error||!data?.ok){ alert(data?.error||'거절 실패'); return; }
+    await loadJoinAdmin();
+  }catch(_e){ alert('네트워크 오류'); }
+  finally{ setLoad(false); }
+}
 async function loadEmployees(){
   if(!currentStore)return;
   const{data}=await sb.from('employees').select('*').eq('store_id',currentStore.id).order('name');
   employees=data||[];
   await mergeEmployeePrivate();
   await loadRoles(false);renderEmpList();
+  if(isManager) loadJoinAdmin();   // 직원 초대 코드 + 가입 대기 (매니저만)
   // 근태 전체조회 필터 채우기
   const attFilter=document.getElementById('attEmpFilter');
   if(attFilter)attFilter.innerHTML='<option value="">전체</option>'+employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
