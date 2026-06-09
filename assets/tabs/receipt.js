@@ -1122,11 +1122,18 @@ async function runAI() {
         if(_diff<=Math.max(500, receiptTotalSum*0.005)) break; // 0.5% 또는 500원 이내 = 통과
         setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`);
         try{
-          const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u) 오류를 찾아 수정된 JSON만 반환.`},...parts.slice(1)];
+          // 주류 재검산: 용기대(보증금) p 혼입·보증금 분리 누락이 가장 흔한 오류 → 힌트로 명시 (2026-06-09)
+          const _liquorFixHint = isLiquorModeAI
+            ? '\n⚠️[주류 필수] 각 품목 p는 공급가+부가세만. "용기대"(보증금) 칸을 p에 절대 포함 X. "용기보증금" 소계→deposit_in, "빈용기보증금"→deposit_out으로 분리. 검산식: 품목 p 합계 + deposit_in − deposit_out = 거래대금합계.'
+            : '';
+          const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u) 오류를 찾아 수정된 JSON만 반환.${_liquorFixHint}`},...parts.slice(1)];
           const _fixRaw=await callGemini(_rParts,timeoutSec+10,'receipt_reflection',aiModel,'gemini');
           const _fixItems=Array.isArray(_fixRaw)?_fixRaw:(_fixRaw?.items||[]);
           if(!_fixItems.length) break;
           raw=_fixRaw;
+          // 주류: 재검산 응답에서 보증금 소계 재추출 (첫 파싱과 동일 — 누락 시 보증금 행 사라짐)
+          const _depIn2  = isLiquorModeAI ? (parseInt(_fixRaw?.deposit_in)||0)  : 0;
+          const _depOut2 = isLiquorModeAI ? (parseInt(_fixRaw?.deposit_out)||0) : 0;
           list=_fixItems.map(x=>({
             date:x.d||x.date||respDate||ymdLocal(new Date()),
             vendor:x.v??x.vendor??respVendor??'',
@@ -1140,6 +1147,12 @@ async function runAI() {
             isTaxFree:(x.f===true||x.f==='true'||x.isTaxFree===true),
             category:x.c||x.category||defaultCat
           }));
+          // 주류: 보증금 입금(+)/회수(−) 행 재추가 (재검산 후에도 유지)
+          if(isLiquorModeAI){
+            const _dd = respDate || ymdLocal(new Date());
+            if(_depIn2 > 0)  list.push({ date:_dd, vendor:rcpVendorName, item:'보증금 입금', spec:null, origin:null, unitPrice:null, qty:1, totalPrice:_depIn2,   taxAmount:0, isTaxFree:true, category:rcpCatName||'주류', _isDeposit:true, _depositLabel:'입금' });
+            if(_depOut2 > 0) list.push({ date:_dd, vendor:rcpVendorName, item:'빈병 회수',  spec:null, origin:null, unitPrice:null, qty:1, totalPrice:-_depOut2, taxAmount:0, isTaxFree:true, category:rcpCatName||'주류', _isDeposit:true, _depositLabel:'회수' });
+          }
           list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
           const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
           list.forEach(it=>it._taxFormat=_ht2);
