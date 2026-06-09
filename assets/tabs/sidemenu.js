@@ -5095,6 +5095,79 @@ async function saveRoyaltyRate(){
   loadRoyaltyPage();
 }
 
+// ─── 카드수수료 화면 (로열티와 동일 구조, 단 카드 매출 기준) ───
+// 로열티 = 전체 매출 × 요율 / 카드수수료 = 카드 결제분 매출 × 요율
+async function loadCardFeePage(){
+  if(!currentStore) return;
+  const sid=currentStore.id;
+  // 1) 요율 (store_settings) — 화면 내 input에도 채움
+  const{data:ss}=await sb.from('store_settings').select('card_fee_rate').eq('store_id',sid).maybeSingle();
+  const ratePct=parseFloat(ss?.card_fee_rate||0);
+  const rate=ratePct/100;
+  const rateInput=document.getElementById('cardfeeRateInput');
+  if(rateInput) rateInput.value=ratePct>0?ratePct:'';
+
+  // 2) 12개월 범위
+  const now=new Date();
+  const months=[];
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push(d.toISOString().slice(0,7));
+  }
+  const oldestStart=months[11]+'-01';
+  const newest=new Date(now.getFullYear(),now.getMonth()+1,0);
+  const newestEnd=newest.toISOString().slice(0,10);
+
+  // 3) sales_daily 12개월 — 카드 결제분만 합산 (legacy_key='card' 결제수단)
+  const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',oldestStart).lte('date',newestEnd);
+  const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
+  const cardByMonth={};
+  (sd||[]).forEach(s=>{
+    const ym=(s.date||'').slice(0,7);
+    if(!ym) return;
+    const c=(typeof getMethodAmount==='function'&&cardMethod)?getMethodAmount(s,cardMethod):(Number(s.card)||0);
+    cardByMonth[ym]=(cardByMonth[ym]||0)+c;
+  });
+
+  // 4) 월별 표 렌더 (최신순) — 카드 매출 / 요율 / 금액
+  let html='';
+  months.forEach(ym=>{
+    const cardRev=cardByMonth[ym]||0;
+    const amt=Math.round(cardRev*rate);
+    html+=`<tr style="border-bottom:1px solid var(--gray-100);text-align:right;font-variant-numeric:tabular-nums;">
+      <td style="padding:8px 6px;text-align:left;font-weight:600;">${ym}</td>
+      <td style="padding:8px 6px;">${cardRev?fmt(cardRev):'-'}</td>
+      <td style="padding:8px 6px;color:var(--gray-500);">${(rate*100).toFixed(1)}%</td>
+      <td style="padding:8px 6px;color:#991B1B;font-weight:700;">${amt?fmt(amt):'-'}</td>
+    </tr>`;
+  });
+  const body=document.getElementById('cardfeeMonthBody');
+  if(body)body.innerHTML=html||'<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">데이터 없음</td></tr>';
+
+  // 5) 상단 요약 (이번달)
+  const curYm=now.toISOString().slice(0,7);
+  const curRev=cardByMonth[curYm]||0;
+  const curExp=Math.round(curRev*rate);
+  const setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setT('cardfeeMonthLabel',curYm);
+  setT('cardfeeCardSales',curRev?fmt(curRev)+'원':'-');
+  setT('cardfeeExpected',rate>0?(curExp?fmt(curExp)+'원':'0원'):'요율 설정 필요');
+}
+
+// 카드수수료율 즉시 저장 (카드수수료 화면 내)
+async function saveCardFeeRate(){
+  if(!guardStore())return;
+  const el=document.getElementById('cardfeeRateInput');
+  const v=parseFloat(el?.value||'0')||0;
+  if(v<0||v>100){toast('요율은 0~100 사이로 입력하세요','warn');return;}
+  setLoad(true,'요율 저장 중...');
+  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,card_fee_rate:v},{onConflict:'store_id'});
+  setLoad(false);if(error)return errToast('요율 저장',error);
+  toast(`카드수수료율 ${v}% 저장됐어요`,'success');
+  if(typeof settings==='object'&&settings) settings.card_fee_rate=v;
+  loadCardFeePage();
+}
+
 // ─── 지출 hub 카드 드래그 순서 (store_settings.exp_hub_order에 JSON 배열 저장) ───
 function getExpHubCardOrder(){
   try{
@@ -5221,7 +5294,7 @@ function renderExpHubCatSkeleton(){
     html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, '-', cat.color);
   });
   html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', '-', '#F04452');
-  html += _expHubMkCard('cardfee', 'nav|royalty', 'i-card', '카드수수료', '-', '#DC2626');
+  html += _expHubMkCard('cardfee', 'nav|cardfee', 'i-card', '카드수수료', '-', '#DC2626');
   grid.innerHTML = html;
   applyExpHubCardOrder();
   grid._sortableInited = false;
@@ -5242,7 +5315,7 @@ function updateExpHubCatAmounts(catSums){
     const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
     html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt?fmt(royaltyAmt):'0', '#F04452');
     const cardFeeAmt0 = (catSums && catSums._cardfee) ? catSums._cardfee.amount : 0;
-    html += _expHubMkCard('cardfee', 'nav|royalty', 'i-card', '카드수수료', cardFeeAmt0?fmt(cardFeeAmt0):'0', '#DC2626');
+    html += _expHubMkCard('cardfee', 'nav|cardfee', 'i-card', '카드수수료', cardFeeAmt0?fmt(cardFeeAmt0):'0', '#DC2626');
     grid.innerHTML = html;
     applyExpHubCardOrder();
     grid._sortableInited = false;
