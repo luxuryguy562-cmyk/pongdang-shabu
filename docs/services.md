@@ -9,6 +9,7 @@
 
 | 서비스 | URL / 값 | 위치 (index.html 변수) | 비고 |
 |--------|----------|----------------------|------|
+| **SOLAPI(문자)** | `https://api.solapi.com/messages/v4/send` | Edge Function 환경변수 `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER` | 직원 문자 인증(OTP). 계정명 '김은성님의 계정', 발신번호 010-5242-1260(인증완료, 만료 2026-12-09). HMAC-SHA256 인증. 2026-06-09 실발송 테스트 성공. 키는 Supabase Edge Function Secrets에 저장(레포 커밋 X) |
 | **Supabase** | `https://ruytgygjwnbtzmtofopg.supabase.co` | `SUPABASE_URL` | DB + REST API |
 | **Supabase Key** | `sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe` | `SUPABASE_ANON_KEY` | anon key (RLS 1차 활성 — Phase 2b 2026-04-17, USING true + WITH CHECK store_id) |
 | **AI 프록시** (구 Gemini) | `https://gemini-proxy.luxuryguy562.workers.dev` | `GEMINI_URL` | **2026-05-19부터 Multi-Provider** (Clova+GPT / GPT / Gemini). 이름은 호환 유지. body._provider로 분기. |
