@@ -24,6 +24,54 @@ function initAttDate(){
   startAttClock();
   // 오늘 출퇴근 상태 로드
   if(currentStore) loadTodayRecord();
+  // 직원 홈 요약 (이번 달 번 돈 + 다음 근무 + 이번 주)
+  renderEmpHome();
+}
+
+// ─── 새 기능: 직원 홈 요약 (2026-06-09, staff-only) ───
+async function renderEmpHome(){
+  const box=document.getElementById('empHomeSummary');
+  if(!box) return;
+  if(isManager || !currentEmp || !currentStore){ box.style.display='none'; return; }
+  box.style.display='block';
+  const empId=currentEmp.id, now=new Date();
+  const monthStart=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+  const dow=(now.getDay()+6)%7;                       // 월=0
+  const ws=new Date(now); ws.setDate(now.getDate()-dow);
+  const weekStartStr=ymdLocal(ws);
+  const today=ymdLocal(now);
+  // 이번 달 출퇴근 → 급여·시간
+  const { data: logs } = await sb.from('attendance_logs')
+    .select('work_date,total_work_min,calculated_wage')
+    .eq('store_id',currentStore.id).eq('employee_id',empId)
+    .gte('work_date',monthStart);
+  let monthWage=0, weekMin=0, weekDays=0;
+  (logs||[]).forEach(r=>{
+    monthWage += r.calculated_wage||0;
+    if(r.work_date>=weekStartStr){ weekMin += r.total_work_min||0; if((r.total_work_min||0)>0) weekDays++; }
+  });
+  const amtEl=document.getElementById('empHomeMonthAmt'); if(amtEl) amtEl.innerText=_empWon(monthWage);
+  const subEl=document.getElementById('empHomeMonthSub'); if(subEl) subEl.innerText=`${now.getMonth()+1}월 · 지금까지`;
+  const wd=document.getElementById('empHomeWeekDays'); if(wd) wd.innerText=weekDays+'일';
+  const wh=document.getElementById('empHomeWeekHours'); if(wh) wh.innerText=fmtHourDecimal(weekMin);
+  // 다음 근무 (work_schedules)
+  const { data: sched } = await sb.from('work_schedules')
+    .select('work_date,wish_start,wish_end,is_off,memo')
+    .eq('store_id',currentStore.id).eq('employee_id',empId)
+    .gte('work_date',today).eq('is_off',false)
+    .order('work_date').limit(1);
+  const nextEl=document.getElementById('empHomeNext');
+  if(nextEl){
+    const s=(sched&&sched.length)?sched[0]:null;
+    if(s && s.wish_start){
+      const tmr=ymdLocal(new Date(now.getTime()+86400000));
+      const dlabel = s.work_date===today?'오늘':s.work_date===tmr?'내일':s.work_date.slice(5).replace('-','.');
+      const st=(s.wish_start||'').slice(0,5), en=(s.wish_end||'').slice(0,5);
+      nextEl.innerHTML=`<span style="font-size:15px;font-weight:900;color:var(--text);">${dlabel} · ${st}${en?' ~ '+en:''}</span>${s.memo?`<span style="font-size:12px;color:var(--gray-600);"> · ${s.memo}</span>`:''}`;
+    } else {
+      nextEl.innerHTML=`<span style="font-size:14px;color:var(--gray-400);">예정된 근무가 없어요</span>`;
+    }
+  }
 }
 let attClockTimer=null;
 function startAttClock(){
