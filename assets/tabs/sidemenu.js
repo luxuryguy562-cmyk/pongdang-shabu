@@ -6265,8 +6265,11 @@ async function loadClassificationRules(){
   if(!currentStore) return;
   const{data}=await sb.from('classification_rules').select('*').eq('store_id',currentStore.id).order('priority');
   storeClassRules=data||[];
-  // 규칙이 0개면 시드 마이그레이션 실행
-  if(storeClassRules.length===0) await seedDefaultRules();
+  // 규칙이 0개면 시드 마이그레이션 실행 — ⚠️ 퐁당샤브 논산점 전용(레거시 시드).
+  //   다른 매장은 빈 규칙으로 시작 → 사용하며 자동 학습으로 규칙 축적(하드코딩 오염 방지, 2026-06-10).
+  //   퐁당샤브는 이미 규칙 보유(0 아님)라 어차피 안 돔 — 이 게이트는 새 매장 오염만 차단.
+  const SEED_LEGACY_STORE_ID='4ae03341-e5dc-4933-b746-29728cbc685f'; // 퐁당샤브 논산점
+  if(storeClassRules.length===0 && currentStore.id===SEED_LEGACY_STORE_ID) await seedDefaultRules();
   // 세금 키워드 부족분 보충 (옛 매장은 세금 시드 없을 수 있음 — 2026-05-20)
   await seedTaxRulesIfMissing();
 }
