@@ -1114,6 +1114,8 @@ async function runAI() {
     // 주류: 단가 = 공급가 ÷ 수량(병). 영수증엔 1병 단가 없고 공급가 합계만 찍힘 → 나눠서 1병 단가 표시 (사장님 방식 2026-06-10).
     //   단가×수량=공급가 맞아떨어져 ⚠️ 경고도 자동 사라짐. AI 분석·저장 금액은 안 건드림(단가 표시값만 계산).
     if(isLiquorModeAI) _rcpLiquorUnitPrice(list);
+    // 거래처(비주류): 수량 = 공급가 ÷ 단가. AI가 BOX수만 읽고 BOX×단위 못 곱할 때 역산 교정 (2026-06-10).
+    if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list);
     // 영수증에 세액이 하나라도 있으면 = 세액 별도 양식 → 행마다 공급가·부가세 줄 표시 (세액 0 행은 면세)
     const _hasAnyTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
     list.forEach(it=> it._taxFormat = _hasAnyTax);
@@ -1147,6 +1149,7 @@ async function runAI() {
           }));
           list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
           if(isLiquorModeAI) _rcpLiquorUnitPrice(list); // 재검산 후에도 주류 단가=공급가÷수량 재계산
+          if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list); // 재검산 후에도 거래처 수량 역산
           const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
           list.forEach(it=>it._taxFormat=_ht2);
           list=await applyRulesToReceipt(list);
@@ -1357,6 +1360,24 @@ function _rcpLiquorUnitPrice(list){
     const sp=parseInt(it.supplyPrice)||0;
     const q=parseFloat(it.qty)||0;
     if(sp>0 && q>0) it.unitPrice = Math.round(sp/q);
+  });
+}
+// 거래처 수량 역산 — 수량 = 공급가 ÷ 단가. AI가 BOX수만 읽고 BOX×단위를 못 곱하는 경우 교정 (2026-06-10).
+//   단가·공급가는 정확히 읽히는데 수량만 틀린 케이스(BOX표기 명세서). 이미 맞으면 변경 없음.
+//   역산값이 0.05 오차 이내 정수/0.5단위일 때만 적용 (비정상 역산 방지).
+function _rcpVendorQtyFix(list){
+  (list||[]).forEach(it=>{
+    if(it._isDeposit) return;
+    const u=parseInt(it.unitPrice)||0;
+    const sp=parseInt(it.supplyPrice)||0;
+    if(u<=0 || sp<=0) return;
+    const existingQ=parseFloat(it.qty)||0;
+    const existingDiff=Math.abs(u*existingQ-sp);
+    const threshold=Math.max(100, sp*0.005);
+    if(existingDiff<=threshold) return; // 이미 맞음 — 건드리지 않음
+    const newQ=sp/u;
+    const rounded=Math.round(newQ*2)/2; // 0.5 단위 반올림
+    if(rounded>0 && Math.abs(rounded-newQ)<=0.05) it.qty=rounded;
   });
 }
 function buildReceiptRow(i={}) {
