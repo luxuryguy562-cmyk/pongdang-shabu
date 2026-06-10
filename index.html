@@ -590,7 +590,7 @@
   <div class="nav-item manager-only" data-tab="expHub" data-action="nav|expHub|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>지출관리</div>
   <div class="nav-item manager-only" data-action="toggleSideMenu" style="display:none;"><span class="ni"><svg><use href="#i-grid"/></svg></span>더보기</div>
   <!-- 직원 nav: 근태관리/급여/개시·마감/영수증/내 정보 -->
-  <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태관리</div>
+  <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-home"/></svg></span>홈</div>
   <div class="nav-item staff-only" data-tab="empPay" data-action="nav|empPay|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>급여</div>
   <div class="nav-item staff-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>개시·마감</div>
   <div class="nav-item staff-only" data-tab="receipt" data-action="nav|receipt|this" style="display:none;"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
@@ -1078,8 +1078,27 @@
 
 <!-- ══ [2] 근태관리 ══ -->
 <div id="attendanceCont" class="container">
+  <!-- ── 직원 홈 요약 (2026-06-09, staff-only): 이번 달 번 돈 + 다음 근무 + 이번 주 ── -->
+  <div id="empHomeSummary" style="display:none;margin-bottom:14px;">
+    <div style="font-size:12px;color:var(--gray-400);font-weight:800;margin:2px 2px 8px;">이번 달 번 돈</div>
+    <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:18px;padding:18px;color:#fff;">
+      <div id="empHomeMonthSub" style="font-size:12px;color:#CFE0FF;font-weight:700;">이번 달</div>
+      <div id="empHomeMonthAmt" style="font-size:30px;font-weight:900;letter-spacing:-1px;margin-top:4px;">0원</div>
+    </div>
+    <div style="background:var(--gray-100);border-radius:14px;padding:13px 15px;margin-top:10px;display:flex;align-items:center;gap:11px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;">🗓</div>
+      <div style="flex:1;">
+        <div style="font-size:11px;color:var(--gray-600);font-weight:700;">다음 근무</div>
+        <div id="empHomeNext" style="margin-top:1px;"><span style="font-size:14px;color:var(--gray-400);">불러오는 중…</span></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:10px;">
+      <div style="flex:1;background:var(--gray-100);border-radius:13px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--gray-600);font-weight:700;">이번 주 근무</div><div id="empHomeWeekDays" style="font-size:17px;font-weight:900;margin-top:3px;">0일</div></div>
+      <div style="flex:1;background:var(--gray-100);border-radius:13px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--gray-600);font-weight:700;">이번 주 시간</div><div id="empHomeWeekHours" style="font-size:17px;font-weight:900;margin-top:3px;">0h</div></div>
+    </div>
+  </div>
   <div class="card">
-    <div class="card-title">근태</div>
+    <div class="card-title" id="attCardTitle">근태</div>
     <div class="sub-tabs">
       <button class="sub-tab active" data-action="attTab|manual|this">⏰ 출퇴근</button>
       <button class="sub-tab" data-action="attTab|caps|this" style="display:none !important;">캡스 업로드</button>
