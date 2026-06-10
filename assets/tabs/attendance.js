@@ -1105,6 +1105,7 @@ let _empPayCalMonth = null;
 let _empPaySelDay = null;
 function _empWon(n){ return (Math.round(n||0)).toLocaleString('ko-KR')+'원'; }
 function _empMonthKey(d){ return (d||'').slice(0,7); }
+function _empHm(t){ return t?new Date(t).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):null; }
 
 async function loadEmpPay(){
   if(!currentStore || !currentEmp) return;
@@ -1137,7 +1138,7 @@ function renderEmpPayCalendar(){
   const d=_empPayCalMonth, y=d.getFullYear(), mo=d.getMonth();
   const mk=`${y}-${String(mo+1).padStart(2,'0')}`;
   const dayMap={};
-  _empPayLogs.forEach(r=>{ if(_empMonthKey(r.work_date)===mk) dayMap[r.work_date]={min:r.total_work_min||0,wage:r.calculated_wage||0}; });
+  _empPayLogs.forEach(r=>{ if(_empMonthKey(r.work_date)===mk) dayMap[r.work_date]={min:r.total_work_min||0,wage:r.calculated_wage||0,in:r.app_in,out:r.app_out}; });
   const startDow=new Date(y,mo,1).getDay(), daysIn=new Date(y,mo+1,0).getDate();
   const todayStr=new Date().toISOString().slice(0,10);
   let html='<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><tr>';
@@ -1151,11 +1152,13 @@ function renderEmpPayCalendar(){
     const dcol=dow===0?'var(--danger)':dow===6?'#1E88E5':'var(--text)';
     const dStyle = (isToday||isSel)?`background:var(--blue);color:#fff;border-radius:50%;padding:1px 5px;`:`color:${dcol};`;
     const cellBg = isSel?'background:var(--blue-light);border-radius:8px;':'';
-    html+=`<td style="vertical-align:top;height:52px;border-top:1px solid var(--gray-100);padding:4px 2px 0;${cellBg}cursor:${rec?'pointer':'default'};" ${rec?`data-action="empPayDay|${ds}"`:''}>`;
+    html+=`<td style="vertical-align:top;height:62px;border-top:1px solid var(--gray-100);padding:4px 2px 0;${cellBg}cursor:${rec?'pointer':'default'};" ${rec?`data-action="empPayDay|${ds}"`:''}>`;
     html+=`<span style="font-size:12px;font-weight:800;${dStyle}display:inline-block;">${day}</span>`;
     if(rec){
-      html+=`<div style="background:${isSel?'#fff':'var(--blue-light)'};color:var(--blue);font-size:9px;font-weight:800;border-radius:4px;padding:1px;text-align:center;margin-top:2px;">${fmtHourDecimal(rec.min)}</div>`;
-      html+=`<div style="font-size:9px;color:var(--gray-600);text-align:right;font-weight:700;">${(rec.wage||0).toLocaleString('ko-KR')}</div>`;
+      const ti=_empHm(rec.in), to=_empHm(rec.out);
+      const timeHtml = ti ? `${ti}<br>${to?'~'+to:'~근무중'}` : fmtHourDecimal(rec.min);
+      html+=`<div style="background:${isSel?'#fff':'var(--blue-light)'};color:var(--blue);font-size:8.5px;font-weight:800;border-radius:4px;padding:1px;text-align:center;margin-top:2px;line-height:1.25;">${timeHtml}</div>`;
+      html+=`<div style="font-size:9px;color:var(--gray-600);text-align:right;font-weight:700;margin-top:1px;">${(rec.wage||0).toLocaleString('ko-KR')}</div>`;
     }
     html+='</td>';
     if(dow===6 && day<daysIn) html+='</tr><tr>';
