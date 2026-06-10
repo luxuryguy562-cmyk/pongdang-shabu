@@ -397,14 +397,12 @@ function empColor(empId){
   return EMP_COLORS[Math.abs(h)%EMP_COLORS.length];
 }
 function fmtHourDecimal(min){
-  if(min==null||min<=0) return '0h';
-  // 2026-05-25 사장님 호소: 0.5h 단위 반올림 부정확 → 소수점 한 자리 정확 표시
-  //             + 천 단위 콤마 (1234.5h → 1,234.5h, 큰 매장 대응)
-  const h = min/60;
-  const v = Number.isInteger(h) ? h.toFixed(0) : h.toFixed(1);
+  // 항상 소수점 한 자리 (0.0h / 8.0h / 5.6h) — 직원·사장 화면 통일 (2026-06-10 사장님)
+  const h = (min==null||min<=0) ? 0 : min/60;
+  const v = h.toFixed(1);
   const [intP, decP] = v.split('.');
   const intFormatted = Number(intP).toLocaleString('ko-KR');
-  return (decP ? intFormatted + '.' + decP : intFormatted) + 'h';
+  return intFormatted + '.' + decP + 'h';
 }
 // ─── 월급제 직원 일할 계산 헬퍼 (2026-05-25 신설) ─────────────────────
 //  · 3개 화면 공통 사용: 근태기록 KPI / 지출관리 인건비 카드 / 급여 집계
@@ -1152,13 +1150,14 @@ function renderEmpPayCalendar(){
     const dcol=dow===0?'var(--danger)':dow===6?'#1E88E5':'var(--text)';
     const dStyle = (isToday||isSel)?`background:var(--blue);color:#fff;border-radius:50%;padding:1px 5px;`:`color:${dcol};`;
     const cellBg = isSel?'background:var(--blue-light);border-radius:8px;':'';
-    html+=`<td style="vertical-align:top;height:62px;border-top:1px solid var(--gray-100);padding:4px 2px 0;${cellBg}cursor:${rec?'pointer':'default'};" ${rec?`data-action="empPayDay|${ds}"`:''}>`;
+    html+=`<td style="vertical-align:top;height:74px;border-top:1px solid var(--gray-100);padding:4px 2px 0;${cellBg}cursor:${rec?'pointer':'default'};" ${rec?`data-action="empPayDay|${ds}"`:''}>`;
     html+=`<span style="font-size:12px;font-weight:800;${dStyle}display:inline-block;">${day}</span>`;
     if(rec){
       const ti=_empHm(rec.in), to=_empHm(rec.out);
       const timeHtml = ti ? `${ti}<br>${to?'~'+to:'~근무중'}` : fmtHourDecimal(rec.min);
       html+=`<div style="background:${isSel?'#fff':'var(--blue-light)'};color:var(--blue);font-size:8.5px;font-weight:800;border-radius:4px;padding:1px;text-align:center;margin-top:2px;line-height:1.25;">${timeHtml}</div>`;
-      html+=`<div style="font-size:9px;color:var(--gray-600);text-align:right;font-weight:700;margin-top:1px;">${(rec.wage||0).toLocaleString('ko-KR')}</div>`;
+      html+=`<div style="font-size:8.5px;color:var(--gray-400);text-align:center;font-weight:700;margin-top:1px;">${fmtHourDecimal(rec.min)}</div>`;
+      html+=`<div style="font-size:9px;color:var(--gray-600);text-align:right;font-weight:700;">${(rec.wage||0).toLocaleString('ko-KR')}</div>`;
     }
     html+='</td>';
     if(dow===6 && day<daysIn) html+='</tr><tr>';
