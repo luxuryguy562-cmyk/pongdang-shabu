@@ -1206,7 +1206,12 @@ async function runAI() {
     }
     // ⚠️ 품목명 의심 감지 (2026-06-05) — AI needs_review 자가판단 대신 출력값 패턴 검사 (100% 결정적)
     // 한자 칸을 못 읽으면 옆 글자(주소·전화·사업자번호)를 끌어다 채우는 환각 → 코드가 무조건 잡아 빨간 강조
-    list.forEach(it=>{ const r=_rcpNameSuspect(it.item); if(r) it._nameSuspect=r; });
+    list.forEach(it=>{
+      const r=_rcpNameSuspect(it.item);
+      if(r) it._nameSuspect=r;
+      // 규격(spec)으로 한자가 이사하는 케이스도 잡음 (2026-06-10 본앱 실측 — "魚子福袋(날치알)" 규격 잔재)
+      else if(/[一-鿿]/.test(String(it.spec||''))) it._nameSuspect='규격에 한자가 남아 있어요 — 확인 필요';
+    });
     // ─── 단가 매칭 자동채움 (2026-06-05) ───
     // 과거 영수증 단가가 등록된 거래처에서: 이번 행 단가 → 과거 단가 목록 대조 → 품목명 자동채움
     // 🟢 정확 일치 + 후보 1개 → 자동 채움 (빨간불 해제)
