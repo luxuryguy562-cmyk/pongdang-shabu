@@ -1043,3 +1043,114 @@ async function commitCaps(){
   }catch(e){setLoad(false);toast('반영 실패: '+e.message,'error');}
 }
 
+// ─── 새 기능: 직원 본인 급여 탭 (2026-06-09) — attendance_logs.calculated_wage 기반 ───
+let _empPayLogs = [];
+let _empPayView = 'summary';
+let _empPayCalMonth = null;
+function _empWon(n){ return (Math.round(n||0)).toLocaleString('ko-KR')+'원'; }
+function _empMonthKey(d){ return (d||'').slice(0,7); }
+
+async function loadEmpPay(){
+  if(!currentStore || !currentEmp) return;
+  const chip=document.getElementById('empPayStoreChip');
+  if(chip){ chip.innerText=(currentStore.name||'매장')+' ›'; chip.style.display='inline-flex'; }
+  const yearStart = new Date().getFullYear()+'-01-01';
+  const { data } = await sb.from('attendance_logs')
+    .select('work_date,total_work_min,calculated_wage,app_in,app_out')
+    .eq('store_id',currentStore.id).eq('employee_id',currentEmp.id)
+    .gte('work_date', yearStart).order('work_date');
+  _empPayLogs = data||[];
+  if(!_empPayCalMonth){ const t=new Date(); _empPayCalMonth=new Date(t.getFullYear(),t.getMonth(),1); }
+  empPaySwitch(_empPayView);
+  renderEmpPay();
+}
+
+function renderEmpPay(){
+  const nowMonth = new Date().toISOString().slice(0,7);
+  const byMonth = {}; let cum = 0;
+  _empPayLogs.forEach(r=>{
+    const mk=_empMonthKey(r.work_date);
+    if(!byMonth[mk]) byMonth[mk]={wage:0,min:0,days:0};
+    byMonth[mk].wage += r.calculated_wage||0;
+    byMonth[mk].min += r.total_work_min||0;
+    if((r.total_work_min||0)>0||(r.calculated_wage||0)>0) byMonth[mk].days++;
+    cum += r.calculated_wage||0;
+  });
+  const cur = byMonth[nowMonth]||{wage:0,min:0,days:0};
+  const m = parseInt(nowMonth.split('-')[1]);
+  document.getElementById('empPayHeroLabel').innerText = `${m}월 (지금까지)`;
+  document.getElementById('empPayHeroAmt').innerText = _empWon(cur.wage);
+  document.getElementById('empPayHeroSub').innerText = `${fmtHourDecimal(cur.min)} 일했어요 · ${cur.days}일 근무`;
+  const pastMonths = Object.keys(byMonth).filter(k=>k<nowMonth).sort().reverse();
+  const histEl = document.getElementById('empPayHistory');
+  if(pastMonths.length===0){
+    histEl.innerHTML = '<div style="text-align:center;color:var(--gray-400);font-size:13px;padding:24px 0;">아직 받은 급여 내역이 없어요.</div>';
+  } else {
+    histEl.innerHTML = pastMonths.map(k=>{
+      const v=byMonth[k]; const mm=parseInt(k.split('-')[1]);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 2px;border-bottom:1px solid var(--gray-100);">
+        <span style="font-size:14px;font-weight:800;">${mm}월</span>
+        <span><b style="font-size:15px;">${_empWon(v.wage)}</b><span style="font-size:10px;background:var(--success);color:#fff;padding:2px 7px;border-radius:10px;font-weight:800;margin-left:7px;">받음</span></span>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('empPayCumAmt').innerText = _empWon(cum);
+  renderEmpPayCalendar();
+}
+
+function renderEmpPayCalendar(){
+  const d=_empPayCalMonth, y=d.getFullYear(), mo=d.getMonth();
+  document.getElementById('empPayCalMonth').innerText = `${y}.${mo+1}`;
+  const mk=`${y}-${String(mo+1).padStart(2,'0')}`;
+  const dayMap={}; let monthTotal=0;
+  _empPayLogs.forEach(r=>{
+    if(_empMonthKey(r.work_date)===mk){ dayMap[r.work_date]={min:r.total_work_min||0,wage:r.calculated_wage||0}; monthTotal += r.calculated_wage||0; }
+  });
+  document.getElementById('empPayCalTotal').innerText = _empWon(monthTotal);
+  const startDow=new Date(y,mo,1).getDay(), daysIn=new Date(y,mo+1,0).getDate();
+  const todayStr=new Date().toISOString().slice(0,10);
+  let html='<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><tr>';
+  ['일','월','화','수','목','금','토'].forEach((w,i)=>{ const c=i===0?'var(--danger)':i===6?'#1E88E5':'var(--gray-400)'; html+=`<th style="font-size:11px;color:${c};font-weight:700;padding-bottom:6px;">${w}</th>`; });
+  html+='</tr><tr>';
+  for(let i=0;i<startDow;i++) html+='<td></td>';
+  for(let day=1;day<=daysIn;day++){
+    const dow=(startDow+day-1)%7;
+    const ds=`${mk}-${String(day).padStart(2,'0')}`;
+    const rec=dayMap[ds]; const isToday=ds===todayStr;
+    const dcol=dow===0?'var(--danger)':dow===6?'#1E88E5':'var(--text)';
+    const dStyle = isToday?`background:var(--blue);color:#fff;border-radius:50%;padding:1px 5px;`:`color:${dcol};`;
+    html+=`<td style="vertical-align:top;height:54px;border-top:1px solid var(--gray-100);padding:4px 2px 0;cursor:${rec?'pointer':'default'};" ${rec?`data-action="empPayDay|${ds}"`:''}>`;
+    html+=`<span style="font-size:12px;font-weight:800;${dStyle}display:inline-block;">${day}</span>`;
+    if(rec){
+      html+=`<div style="background:var(--blue-light);color:var(--blue);font-size:9px;font-weight:800;border-radius:4px;padding:1px;text-align:center;margin-top:2px;">${fmtHourDecimal(rec.min)}</div>`;
+      html+=`<div style="font-size:9px;color:var(--gray-600);text-align:right;font-weight:700;">${(rec.wage||0).toLocaleString('ko-KR')}</div>`;
+    }
+    html+='</td>';
+    if(dow===6 && day<daysIn) html+='</tr><tr>';
+  }
+  html+='</tr></table>';
+  document.getElementById('empPayCalGrid').innerHTML=html;
+}
+
+function empPaySwitch(view){
+  _empPayView=view;
+  const sV=document.getElementById('empPaySummaryView'), cV=document.getElementById('empPayCalView');
+  const sT=document.getElementById('empPayTabSummary'), cT=document.getElementById('empPayTabCal');
+  if(!sV||!cV) return;
+  if(view==='calendar'){ sV.style.display='none'; cV.style.display=''; if(cT){cT.style.color='var(--text)';cT.style.background='#fff';} if(sT){sT.style.color='var(--gray-400)';sT.style.background='';} }
+  else { sV.style.display=''; cV.style.display='none'; if(sT){sT.style.color='var(--text)';sT.style.background='#fff';} if(cT){cT.style.color='var(--gray-400)';cT.style.background='';} }
+}
+
+function empPayCalNav(delta){
+  _empPayCalMonth = new Date(_empPayCalMonth.getFullYear(), _empPayCalMonth.getMonth()+parseInt(delta), 1);
+  renderEmpPayCalendar();
+}
+
+function empPayDay(ds){
+  const r=_empPayLogs.find(x=>x.work_date===ds);
+  if(!r) return;
+  const inT=r.app_in?new Date(r.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'-';
+  const outT=r.app_out?new Date(r.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'-';
+  toast(`${ds} · 출근 ${inT} ~ 퇴근 ${outT} · ${fmtHourDecimal(r.total_work_min||0)} · ${_empWon(r.calculated_wage||0)}`,'success',5000);
+}
+
