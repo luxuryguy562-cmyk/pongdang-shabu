@@ -589,8 +589,9 @@
   <div class="nav-item manager-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>개시·마감</div>
   <div class="nav-item manager-only" data-tab="expHub" data-action="nav|expHub|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>지출관리</div>
   <div class="nav-item manager-only" data-action="toggleSideMenu" style="display:none;"><span class="ni"><svg><use href="#i-grid"/></svg></span>더보기</div>
-  <!-- 직원 nav: 근태관리/개시·마감/영수증/내 정보 -->
+  <!-- 직원 nav: 근태관리/급여/개시·마감/영수증/내 정보 -->
   <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-clock"/></svg></span>근태관리</div>
+  <div class="nav-item staff-only" data-tab="empPay" data-action="nav|empPay|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>급여</div>
   <div class="nav-item staff-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>개시·마감</div>
   <div class="nav-item staff-only" data-tab="receipt" data-action="nav|receipt|this" style="display:none;"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
   <div class="nav-item staff-only" data-tab="myinfo" data-action="nav|myinfo|this" style="display:none;"><span class="ni"><svg><use href="#i-card"/></svg></span>내 정보</div>
@@ -1840,6 +1841,47 @@
     <button class="btn btn-primary btn-sm manager-only" style="padding:10px 12px;" data-action="openAddEmpSheet">+ 추가</button>
   </div>
   <div id="empList"><div class="empty-state"><div class="empty-icon">👥</div><p>등록된 직원이 없습니다</p></div></div>
+</div>
+
+<!-- ══ 직원 급여 탭 (2026-06-09) — 직원 본인 급여·달력 ══ -->
+<div id="empPayCont" class="container">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <div style="font-size:20px;font-weight:900;color:var(--text);">급여</div>
+    <div id="empPayStoreChip" style="display:none;align-items:center;gap:5px;background:var(--blue);color:#fff;font-size:12px;font-weight:800;padding:6px 11px;border-radius:18px;cursor:pointer;" data-action="openStoreSheet"></div>
+  </div>
+  <!-- 이번 달 hero -->
+  <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:20px;padding:20px;color:#fff;margin-top:10px;">
+    <div id="empPayHeroLabel" style="font-size:13px;color:#CFE0FF;font-weight:700;">이번 달</div>
+    <div id="empPayHeroAmt" style="font-size:32px;font-weight:900;letter-spacing:-1px;margin:6px 0 2px;">0원</div>
+    <div id="empPayHeroSub" style="font-size:12px;color:#CFE0FF;">0시간</div>
+  </div>
+  <!-- 요약/달력 토글 -->
+  <div style="display:flex;background:var(--gray-100);border-radius:11px;padding:3px;margin:14px 0;">
+    <div id="empPayTabSummary" style="flex:1;text-align:center;padding:7px;font-size:13px;font-weight:800;border-radius:9px;cursor:pointer;" data-action="empPaySwitch|summary">요약</div>
+    <div id="empPayTabCal" style="flex:1;text-align:center;padding:7px;font-size:13px;font-weight:800;border-radius:9px;cursor:pointer;color:var(--gray-400);" data-action="empPaySwitch|calendar">달력</div>
+  </div>
+  <!-- 요약 뷰 -->
+  <div id="empPaySummaryView">
+    <div style="font-size:12px;color:var(--gray-400);font-weight:800;margin:4px 2px 4px;">받은 급여 내역</div>
+    <div id="empPayHistory"></div>
+    <div style="background:var(--gray-100);border-radius:14px;padding:14px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;font-weight:800;color:var(--text);">올해 누적 급여</span>
+      <b id="empPayCumAmt" style="font-size:17px;color:var(--blue);">0원</b>
+    </div>
+  </div>
+  <!-- 달력 뷰 -->
+  <div id="empPayCalView" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:10px;font-size:16px;font-weight:900;">
+        <span style="color:var(--gray-400);cursor:pointer;" data-action="empPayCalNav|-1">‹</span>
+        <span id="empPayCalMonth">2026.6</span>
+        <span style="color:var(--gray-400);cursor:pointer;" data-action="empPayCalNav|1">›</span>
+      </div>
+      <div style="font-size:15px;font-weight:900;">합계 <span id="empPayCalTotal">0원</span></div>
+    </div>
+    <div id="empPayCalGrid"></div>
+    <div style="text-align:center;font-size:11px;color:var(--gray-400);margin-top:10px;">날짜를 누르면 그날 출퇴근 시간이 보여요.</div>
+  </div>
 </div>
 
 <!-- ══ [9] 급여 집계 ══ -->

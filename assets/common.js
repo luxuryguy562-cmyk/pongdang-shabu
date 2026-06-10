@@ -559,6 +559,7 @@ function nav(tab, el) {
     sales: loadSalesDaily,
     opening: loadOpeningPage,
     myinfo: loadMyInfo,
+    empPay: loadEmpPay,
     busHub: loadBusHubData,
     expHub: loadExpHubData,
     catReceipt: loadCatReceiptData,
