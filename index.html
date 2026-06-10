@@ -1085,12 +1085,13 @@
       <div id="empHomeMonthSub" style="font-size:12px;color:#CFE0FF;font-weight:700;">이번 달</div>
       <div id="empHomeMonthAmt" style="font-size:30px;font-weight:900;letter-spacing:-1px;margin-top:4px;">0원</div>
     </div>
-    <div style="background:var(--gray-100);border-radius:14px;padding:13px 15px;margin-top:10px;display:flex;align-items:center;gap:11px;">
+    <div style="background:var(--gray-100);border-radius:14px;padding:13px 15px;margin-top:10px;display:flex;align-items:center;gap:11px;cursor:pointer;" data-action="nav|empSched">
       <div style="width:38px;height:38px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;">🗓</div>
       <div style="flex:1;">
-        <div style="font-size:11px;color:var(--gray-600);font-weight:700;">다음 근무</div>
+        <div style="font-size:11px;color:var(--gray-600);font-weight:700;">다음 근무 · 내 근무표 보기</div>
         <div id="empHomeNext" style="margin-top:1px;"><span style="font-size:14px;color:var(--gray-400);">불러오는 중…</span></div>
       </div>
+      <span style="color:var(--gray-400);font-size:18px;">›</span>
     </div>
     <div style="display:flex;gap:10px;margin-top:10px;">
       <div style="flex:1;background:var(--gray-100);border-radius:13px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--gray-600);font-weight:700;">이번 주 근무</div><div id="empHomeWeekDays" style="font-size:17px;font-weight:900;margin-top:3px;">0일</div></div>
@@ -1901,6 +1902,18 @@
     <div id="empPayCalGrid"></div>
     <div style="text-align:center;font-size:11px;color:var(--gray-400);margin-top:10px;">날짜를 누르면 그날 출퇴근 시간이 보여요.</div>
   </div>
+</div>
+
+<!-- ══ 직원 근무표 탭 (2026-06-09) — 본인 주간 스케줄 ══ -->
+<div id="empSchedCont" class="container">
+  <div class="app-back" data-action="nav|attendance"><span class="back-btn">‹</span><span class="back-ttl">내 근무표</span></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 0 14px;">
+    <button class="btn btn-secondary btn-sm" data-action="empSchedWeek|-1">‹ 이전주</button>
+    <div id="empSchedWeekLabel" style="font-size:15px;font-weight:800;">-</div>
+    <button class="btn btn-secondary btn-sm" data-action="empSchedWeek|1">다음주 ›</button>
+  </div>
+  <div id="empSchedList"></div>
+  <div style="text-align:center;font-size:11px;color:var(--gray-400);margin-top:14px;">근무표는 사장님이 짜요. 바뀌면 여기서 보여요.</div>
 </div>
 
 <!-- ══ [9] 급여 집계 ══ -->

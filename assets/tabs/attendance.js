@@ -28,6 +28,43 @@ function initAttDate(){
   renderEmpHome();
 }
 
+// ─── 새 기능: 직원 근무표 탭 (2026-06-09) — work_schedules 주간 ───
+let _empSchedWeekStart = null;
+async function loadEmpSched(){
+  if(!currentStore || !currentEmp) return;
+  if(!_empSchedWeekStart){ const n=new Date(); const dow=(n.getDay()+6)%7; const ws=new Date(n.getFullYear(),n.getMonth(),n.getDate()-dow); _empSchedWeekStart=ws; }
+  await renderEmpSched();
+}
+async function renderEmpSched(){
+  const ws=_empSchedWeekStart, we=new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()+6);
+  const wsStr=ymdLocal(ws), weStr=ymdLocal(we);
+  document.getElementById('empSchedWeekLabel').innerText=`${ws.getMonth()+1}/${ws.getDate()} ~ ${we.getMonth()+1}/${we.getDate()}`;
+  const { data } = await sb.from('work_schedules')
+    .select('work_date,wish_start,wish_end,is_off,memo')
+    .eq('store_id',currentStore.id).eq('employee_id',currentEmp.id)
+    .gte('work_date',wsStr).lte('work_date',weStr);
+  const map={}; (data||[]).forEach(r=>map[r.work_date]=r);
+  const today=ymdLocal(new Date()), days=['월','화','수','목','금','토','일'];
+  let html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()+i), ds=ymdLocal(d), r=map[ds], isToday=ds===today;
+    let val;
+    if(r && !r.is_off && r.wish_start){ val=`<b style="color:var(--blue);">${r.wish_start.slice(0,5)} ~ ${(r.wish_end||'').slice(0,5)}</b>${r.memo?`<span style="color:var(--gray-600);font-weight:600;"> · ${r.memo}</span>`:''}`; }
+    else if(r && r.is_off){ val=`<span style="color:var(--gray-400);font-weight:700;">휴무</span>`; }
+    else { val=`<span style="color:var(--gray-300);">-</span>`; }
+    const dowCol=i===5?'#1E88E5':i===6?'var(--danger)':'var(--text)';
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:13px 12px;border-radius:11px;margin-bottom:2px;${isToday?'background:var(--blue-light);':'border-bottom:1px solid var(--gray-100);border-radius:0;'}">
+      <span style="font-size:13px;font-weight:800;color:${isToday?'var(--blue)':dowCol};">${days[i]} ${d.getMonth()+1}/${d.getDate()}${isToday?' · 오늘':''}</span>
+      <span style="font-size:13px;">${val}</span></div>`;
+  }
+  document.getElementById('empSchedList').innerHTML=html;
+}
+function empSchedWeek(delta){
+  const w=_empSchedWeekStart;
+  _empSchedWeekStart=new Date(w.getFullYear(),w.getMonth(),w.getDate()+parseInt(delta)*7);
+  renderEmpSched();
+}
+
 // ─── 새 기능: 직원 홈 요약 (2026-06-09, staff-only) ───
 async function renderEmpHome(){
   const box=document.getElementById('empHomeSummary');

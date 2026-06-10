@@ -563,6 +563,8 @@ function nav(tab, el) {
   // 하단 탭 active 표시 (허브 카드에서 진입한 경우 부모 탭이 active 유지)
   const parentTabMap = {
     opening:'busHub', settle:'busHub',
+    empSched:'attendance',   // 직원 근무표 → 홈(근태) 탭 active 유지
+    empPay:'empPay',
     // sales는 홈 매출 행에서만 진입 (영업 탭 카드는 제거됨) → 홈 탭 active 유지
     sales:'dashboard',
     receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
@@ -604,6 +606,7 @@ function nav(tab, el) {
     opening: loadOpeningPage,
     myinfo: loadMyInfo,
     empPay: loadEmpPay,
+    empSched: loadEmpSched,
     busHub: loadBusHubData,
     expHub: loadExpHubData,
     catReceipt: loadCatReceiptData,
