@@ -1459,6 +1459,8 @@ function _refreshAfterExpenseChange(){
   if(vendorsCont && vendorsCont.classList.contains('active') && typeof loadVendorOrders === 'function'){
     loadVendorOrders();
   }
+  // 다른 기기도 실시간 갱신 (누가 지출 넣으면 사장님 화면 자동 갱신)
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('expense');
 }
 async function openEditOrderSheet(id){
   if(!guardStore())return;

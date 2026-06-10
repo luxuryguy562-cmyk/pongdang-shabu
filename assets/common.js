@@ -855,6 +855,22 @@ function subscribeStoreRealtime(storeId){
 function broadcastStoreChange(kind, extra){
   try{ if(_storeChannel) _storeChannel.send({ type:'broadcast', event:'change', payload:Object.assign({kind:kind}, extra||{}) }); }catch(e){}
 }
+// 운영 데이터 변경 시 자동 갱신할 화면 → 로더 (시트 안 떠있을 때만)
+const _RT_REFRESH = { dashboard:'loadDashboard', explist:'initExplist', sales:'loadSalesDaily', recon:'initRecon', vendors:'loadVendors' };
+function _rtSheetOpen(){
+  if([...document.querySelectorAll('.sheet-overlay')].some(s=>s.style.display && s.style.display!=='none')) return true;
+  for(const id of ['signupOverlay','joinOverlay']){ const el=document.getElementById(id); if(el && el.style.display==='block') return true; }
+  return false;
+}
+let _rtRefreshTimer=null;
+function _rtRefreshActive(){
+  if(_rtSheetOpen()) return;   // 사장님이 입력 중(시트 열림)이면 방해 안 함
+  const active=document.querySelector('.container.active'); if(!active) return;
+  const tab=active.id.replace(/Cont$/,'');
+  const fn=window[_RT_REFRESH[tab]]; if(typeof fn!=='function') return;
+  clearTimeout(_rtRefreshTimer);
+  _rtRefreshTimer=setTimeout(()=>{ try{ if(typeof cacheInvalidate==='function') cacheInvalidate(''); fn(true); }catch(e){} }, 600); // 캐시 비우고 최신 로드, 디바운스
+}
 function onStoreRealtime(payload){
   const k=payload&&payload.kind;
   // 가입 신청/승인/거절 → 종 배지 + 직원관리 목록 갱신
@@ -862,7 +878,10 @@ function onStoreRealtime(payload){
     if(typeof refreshJoinBadge==='function') refreshJoinBadge();
     const staffCont=document.getElementById('staffCont');
     if(staffCont&&staffCont.classList.contains('active')&&typeof loadJoinAdmin==='function') loadJoinAdmin();
+    return;
   }
+  // 운영 데이터(지출·매출·정산·거래처) 변경 → 보던 화면 자동 갱신
+  _rtRefreshActive();
 }
 function initRealtimeAndBadge(){
   if(!currentStore) return;

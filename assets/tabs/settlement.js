@@ -819,6 +819,8 @@ async function finishSettlement2(){
     toast('매출 관리 동기화 실패: '+e.message+' — 매출 관리 탭에서 수동 확인하세요','warn',4000);
   }
   setLoad(false);
+  // 다른 기기 실시간 갱신 (마감·매출 변경)
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('settle');
   if(syncResult.skipped){
     toast('마감이 저장됐어요 (해당 날짜는 수동 수정본이라 매출 관리는 건너뜀)','info',4000);
   } else {
