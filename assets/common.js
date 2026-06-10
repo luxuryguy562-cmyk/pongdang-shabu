@@ -841,3 +841,34 @@ async function selectStore(id, name) {
   }
 }
 
+// ─── 실시간 (Supabase Realtime broadcast) + 가입 알림 종 배지 (2026-06-09) ───
+let _storeChannel = null;
+function subscribeStoreRealtime(storeId){
+  if(!storeId || !sb || typeof sb.channel!=='function') return;
+  try{
+    if(_storeChannel){ sb.removeChannel(_storeChannel); _storeChannel=null; }
+    _storeChannel = sb.channel('store-'+storeId, { config:{ broadcast:{ self:false } } })
+      .on('broadcast', { event:'change' }, (msg)=>{ try{ onStoreRealtime(msg.payload||{}); }catch(e){} })
+      .subscribe();
+  }catch(e){ console.warn('[realtime] subscribe 실패', e); }
+}
+function broadcastStoreChange(kind, extra){
+  try{ if(_storeChannel) _storeChannel.send({ type:'broadcast', event:'change', payload:Object.assign({kind:kind}, extra||{}) }); }catch(e){}
+}
+function onStoreRealtime(payload){
+  const k=payload&&payload.kind;
+  // 가입 신청/승인/거절 → 종 배지 + 직원관리 목록 갱신
+  if(k==='join'||k==='approve'||k==='reject'){
+    if(typeof refreshJoinBadge==='function') refreshJoinBadge();
+    const staffCont=document.getElementById('staffCont');
+    if(staffCont&&staffCont.classList.contains('active')&&typeof loadJoinAdmin==='function') loadJoinAdmin();
+  }
+}
+function initRealtimeAndBadge(){
+  if(!currentStore) return;
+  subscribeStoreRealtime(currentStore.id);
+  if(typeof refreshJoinBadge==='function') refreshJoinBadge();
+}
+// 앱이 다시 보일 때(다른 화면/앱 갔다 옴) 배지 갱신 — 실시간 폴백
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof refreshJoinBadge==='function') refreshJoinBadge(); });
+
