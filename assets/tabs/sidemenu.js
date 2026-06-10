@@ -1884,7 +1884,11 @@ async function loadJoinAdmin(){
     if(cd?.ok&&cd.code){ _inviteCode=cd.code; const el=document.getElementById('inviteCodeText'); if(el) el.innerText=cd.code; }
     // 2) 가입 대기 목록
     const{data:pj}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}});
-    renderPendingJoins(pj?.ok ? (pj.rows||[]) : []);
+    const rows = pj?.ok ? (pj.rows||[]) : [];
+    renderPendingJoins(rows);
+    // 종 배지 동기화
+    const badge=document.getElementById('headerBellBadge');
+    if(badge){ if(rows.length>0){ badge.innerText=rows.length>9?'9+':String(rows.length); badge.style.display='block'; } else badge.style.display='none'; }
   }catch(_e){}
 }
 function renderPendingJoins(rows){
@@ -1940,6 +1944,8 @@ async function approveJoin(pendingId){
     const{data,error}=await sb.functions.invoke('store-join-admin',{body:{token,action:'approve',pending_id:pendingId}});
     if(error||!data?.ok){ alert(data?.error||'승인 실패'); return; }
     await loadEmployees(); // 직원 목록 + 대기 목록 새로고침
+    if(typeof refreshJoinBadge==='function') refreshJoinBadge();
+    if(typeof broadcastStoreChange==='function') broadcastStoreChange('approve'); // 다른 기기도 갱신
   }catch(_e){ alert('네트워크 오류'); }
   finally{ setLoad(false); }
 }
@@ -1951,6 +1957,8 @@ async function rejectJoin(pendingId){
     const{data,error}=await sb.functions.invoke('store-join-admin',{body:{token,action:'reject',pending_id:pendingId}});
     if(error||!data?.ok){ alert(data?.error||'거절 실패'); return; }
     await loadJoinAdmin();
+    if(typeof refreshJoinBadge==='function') refreshJoinBadge();
+    if(typeof broadcastStoreChange==='function') broadcastStoreChange('reject');
   }catch(_e){ alert('네트워크 오류'); }
   finally{ setLoad(false); }
 }
@@ -5929,6 +5937,22 @@ function completeLogin(emp){
   }
   // 기기 등록 상태 팝업 (staff만 — 관리자는 여러 기기 사용 가능하므로 스킵)
   if(!isManager) setTimeout(()=>showDeviceStatusPopup(emp),400);
+  // 실시간 구독 + 가입 알림 종 배지 (매니저만 배지)
+  if(typeof initRealtimeAndBadge==='function') initRealtimeAndBadge();
+}
+
+// ─── 새 기능: 가입 알림 종 배지 갱신 (2026-06-09) ───
+async function refreshJoinBadge(){
+  const badge=document.getElementById('headerBellBadge');
+  if(!badge) return;
+  if(!isManager || !currentStore){ badge.style.display='none'; return; }
+  const token=localStorage.getItem('pd_token'); if(!token){ badge.style.display='none'; return; }
+  try{
+    const{data}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}});
+    const n=(data&&data.ok&&Array.isArray(data.rows))?data.rows.length:0;
+    if(n>0){ badge.innerText=n>9?'9+':String(n); badge.style.display='block'; }
+    else { badge.style.display='none'; }
+  }catch(e){}
 }
 // 2026-05-25 신설: 사용자 전환 시 옛 필터·일자·캐시 잔재 일괄 제거
 //  · 사장님 호소: 문보영으로 로그인 후 이송은으로 다시 로그인했더니 직원 필터·KPI가 문보영 그대로
