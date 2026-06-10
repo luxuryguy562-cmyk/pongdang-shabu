@@ -4,6 +4,27 @@
 
 ---
 
+
+## [2026-06-10] #202 worker 롤백으로 Gemini 한국 location 차단 복구 + 측정실 프롬프트 변형 비교
+**사건**: 6/9 15:25 "생각기능(thinking) 켜기" worker 배포 후부터 Gemini 전체가 `User location is not supported` 400 → 영수증 분석 완전 다운. 사장님 "그전으로 돌려봐".
+
+**진단 (DB ai_usage_logs)**: 15:05 마지막 성공 → 15:32~ 전부 location 400. worker 코드는 thinkingBudget:0(정상)인데도 차단. 즉 thinking 코드가 아니라 **그 배포 행위 자체가 환경을 깨뜨림**(compatibility_date·bindings 소실 추정).
+
+**복구**: 5/19 정상 version(eeebdb0a)으로 deployment 롤백. `POST .../deployments {"strategy":"percentage","versions":[{"version_id","percentage":100}]}`. 사장님 앱 테스트 → 정상 확인.
+
+**교훈**:
+1. **worker 장애는 코드 재배포보다 "마지막 정상 version 롤백"이 빠르고 안전.** Cloudflare는 version별 환경(코드+compat+bindings) 통째 보존 → 롤백 시 전부 복원.
+2. **`api.cloudflare.com`은 이 샌드박스에서 통과**(worker 코드 GET·deployment 롤백 가능). 차단되는 건 `*.workers.dev` 실행 엔드포인트뿐 — "worker 못 만진다" 단정 금지(헌법 1-7-B).
+3. **외부 AI 신기능(thinking 등)은 사장님 지역 지원 먼저 검증.** 한국은 Gemini thinking 차단(#201). 켜지 마라.
+
+## [2026-06-10] #203 측정실 프롬프트 변형(A/B/C) 비교로 영수증 정확도 검증
+**배경**: 순창국제(거래처)·대명주류(주류) 명세서 함정 2개 — 거래처 "총합계(전미수 포함)" 오인, 주류 "비주류(탄산가스) 용기대를 술값에" 오류.
+
+**방법**: 측정실을 모델비교 → **프롬프트 변형(A/B/C) 비교**로 개조(모델 Gemini Flash 고정). 채널(거래처/주류)별 base(buildReceiptPrompt) + 추가강화분. 결과를 accuracy_lab_logs.ai_raw에 변형별 저장 → CTO가 SQL로 품목·금액·보증금 검수.
+
+**결과 (4장)**: A(현재)는 순창 4,456,049·대명 탄산가스 90,000 오류 / B(강화)는 둘 다 정답(662,900·탄산가스 0). → 변형B를 _rcpPromptVendor·_rcpPromptLiquor에 반영(PR #570).
+
+**교훈**: **프롬프트 개선은 정답 아는 실제 영수증으로 변형 A/B 측정 후 채택.** 측정실 base=실제 프롬프트 호출이라 검증=실제 동일. 채널별 독립 함수(dev_lessons #142)라 한 채널 수정이 타 채널 영향 없음.
 ## [2026-06-09] #201 Gemini thinking(추론) = 한국 location 차단 + worker placement 복원 불가
 
 **배경**: 주류 거래명세서 정확도 위해 worker `thinkingBudget: 0` → `body._thinking ? -1 : 0`으로 추론 켜기 시도(주류·거래처만).
