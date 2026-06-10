@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>주류 영수증 분석 흐름 — CTO 이해 확인</title>
+<style>
+  :root{
+    --primary:#6D28D9; --primary-light:#EDE9FE;
+    --blue:#4A90D9; --blue-light:#E8F0FB;
+    --green:#10B981; --green-light:#E7F7F0;
+    --amber:#F59E0B; --amber-light:#FEF3C7;
+    --gray-50:#F9FAFB; --gray-100:#F1F3F6; --gray-200:#E5E8EC;
+    --gray-500:#6B7280; --gray-700:#374151; --gray-900:#111827;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#F4F5F7; color:var(--gray-900); padding:18px; line-height:1.5;}
+  .wrap{max-width:760px; margin:0 auto;}
+  h1{font-size:20px; font-weight:800; margin-bottom:4px;}
+  .sub{font-size:13px; color:var(--gray-500); margin-bottom:18px;}
+  .step{background:#fff; border-radius:14px; padding:16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,.05);}
+  .step-tag{display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--primary); border-radius:8px; padding:3px 10px; margin-bottom:10px;}
+  .step-title{font-size:15px; font-weight:800; margin-bottom:10px;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  th,td{padding:7px 6px; border-bottom:1px solid var(--gray-100); text-align:right; font-variant-numeric:tabular-nums;}
+  th{font-size:10.5px; color:var(--gray-500); font-weight:700; background:var(--gray-50);}
+  td.name,th.name{text-align:left; font-weight:700;}
+  .col-dep{background:var(--blue-light);}
+  .col-skip{color:#C0392B; text-decoration:line-through; opacity:.6;}
+  .arrow{text-align:center; font-size:22px; color:var(--primary); margin:2px 0 8px;}
+  .arrow small{display:block; font-size:12px; color:var(--gray-500); font-weight:600; text-decoration:none;}
+  .formula{background:var(--gray-50); border-radius:10px; padding:10px 12px; font-size:13px; margin-top:8px; font-variant-numeric:tabular-nums;}
+  .formula b{color:var(--primary);}
+  .calc-row{display:flex; justify-content:space-between; padding:6px 2px; font-size:13.5px; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--gray-100);}
+  .calc-row.dep-in{color:#2563EB;}
+  .calc-row.dep-out{color:var(--blue);}
+  .calc-row.total{font-weight:800; font-size:16px; border-bottom:none; border-top:2px solid var(--gray-200); margin-top:4px; padding-top:10px; color:var(--green);}
+  .pill{display:inline-block; font-size:10px; font-weight:700; border-radius:6px; padding:2px 7px; margin-left:4px;}
+  .pill-dep{background:var(--blue-light); color:var(--blue);}
+  .pill-skip{background:#FBE9E7; color:#C0392B;}
+  .note{font-size:12px; color:var(--gray-700); background:var(--amber-light); border-radius:8px; padding:9px 11px; margin-top:9px; line-height:1.6;}
+  .hl{background:#FFF3BF; padding:0 3px; border-radius:3px; font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🍶 주류 영수증, 이렇게 읽으면 된다 (사장님 방식)</h1>
+  <div class="sub">대명주류 2026-06-09 예시 · CTO가 이해한 흐름</div>
+
+  <!-- STEP 1 : 영수증 원본 -->
+  <div class="step">
+    <span class="step-tag">① 영수증 원본 그대로</span>
+    <div class="step-title">칸을 보이는 대로 읽는다</div>
+    <table>
+      <tr><th class="name">상품명</th><th>공급가</th><th>부가세</th><th class="col-dep">용기대(보증금)</th><th>병</th><th>합계</th></tr>
+      <tr><td class="name">참이슬(유)</td><td>81,273</td><td>8,127</td><td class="col-dep">11,000</td><td>2</td><td>100,400</td></tr>
+      <tr><td class="name">맑은린(유)</td><td>121,909</td><td>12,191</td><td class="col-dep">16,500</td><td>3</td><td>150,600</td></tr>
+      <tr><td class="name">필후생</td><td>74,545</td><td>7,455</td><td class="col-dep">60,000</td><td>2</td><td>142,000</td></tr>
+      <tr><td class="name">키스유흥중(유)</td><td>70,000</td><td>7,000</td><td class="col-dep">9,200</td><td>2</td><td>86,200</td></tr>
+      <tr><td class="name">처음처럼(유)</td><td>40,636</td><td>4,064</td><td class="col-dep">5,000</td><td>1</td><td>49,700</td></tr>
+      <tr><td class="name">탄산가스</td><td>0</td><td>0</td><td class="col-dep">90,000</td><td>1</td><td>90,000</td></tr>
+    </table>
+    <div class="note">파란 칸 <span class="pill pill-dep">용기대</span> = 보증금. 품목 값이 아니라 따로 뺀다.</div>
+  </div>
+
+  <div class="arrow">↓<small>단가는 공급가 ÷ 병 수로 나눈다</small></div>
+
+  <!-- STEP 2 : 품목 (단가 = 공급가 ÷ 병) -->
+  <div class="step">
+    <span class="step-tag">② 품목 — 단가는 나눠서 구한다</span>
+    <div class="step-title">금액 = 공급가 + 부가세 · 단가 = 공급가 ÷ 병</div>
+    <table>
+      <tr><th class="name">품목</th><th>단가 (=공급가÷병)</th><th>수량(병)</th><th>금액 (공급가+부가세)</th></tr>
+      <tr><td class="name">참이슬</td><td><span class="hl">40,637</span> <small>=81,273÷2</small></td><td>2</td><td>89,400</td></tr>
+      <tr><td class="name">맑은린</td><td><span class="hl">40,636</span> <small>=121,909÷3</small></td><td>3</td><td>134,100</td></tr>
+      <tr><td class="name">필후생</td><td><span class="hl">37,273</span> <small>=74,545÷2</small></td><td>2</td><td>82,000</td></tr>
+      <tr><td class="name">키스유흥중</td><td><span class="hl">35,000</span> <small>=70,000÷2</small></td><td>2</td><td>77,000</td></tr>
+      <tr><td class="name">처음처럼</td><td><span class="hl">40,636</span> <small>=40,636÷1</small></td><td>1</td><td>44,700</td></tr>
+      <tr><td class="name">탄산가스 <span class="pill pill-skip">비주류</span></td><td>—</td><td>1</td><td>0</td></tr>
+    </table>
+    <div class="formula"><b>단가 × 수량 = 공급가</b> 가 맞아떨어짐 → ⚠️ 경고 사라짐<br>40,637 × 2 = 81,274 ≈ 공급가 81,273 (반올림 1원 오차는 통과)</div>
+    <div class="note">탄산가스는 술이 아니라 보증금만 있는 항목 → 금액 0, 용기대 90,000은 아래 보증금으로.</div>
+  </div>
+
+  <div class="arrow">↓<small>용기대는 전부 모아서 따로 본다</small></div>
+
+  <!-- STEP 3 : 용기대 따로 합산 / 차액 -->
+  <div class="step">
+    <span class="step-tag">③ 용기대(보증금) — 따로 합산 / 회수 차액</span>
+    <div class="step-title">품목엔 안 섞고, 보증금으로 묶는다</div>
+    <div class="calc-row dep-in"><span>보증금 입금 (용기대 다 합: 11,000+16,500+60,000+9,200+5,000+90,000)</span><b>+191,700</b></div>
+    <div class="calc-row dep-out"><span>빈병 회수 (빈 병 돌려주고 돌려받는 보증금)</span><b>−155,800</b></div>
+    <div class="note">보증금은 술값(매출)이 아니라 <span class="hl">돈 주고받는 항목</span> → 지출 집계에서 빠짐. 입금(+)·회수(−) 따로 표시.</div>
+  </div>
+
+  <div class="arrow">↓<small>다 더하면 실제 낸 돈</small></div>
+
+  <!-- STEP 4 : 거래대금합계 -->
+  <div class="step">
+    <span class="step-tag">④ 거래대금합계 — 실제 외상 단 돈</span>
+    <div class="step-title">품목 합 + 보증금 입금 − 빈병 회수</div>
+    <div class="calc-row"><span>품목 금액 합 (술값, 공급가+부가세)</span><span>427,200</span></div>
+    <div class="calc-row dep-in"><span>+ 보증금 입금</span><span>+191,700</span></div>
+    <div class="calc-row dep-out"><span>− 빈병 회수</span><span>−155,800</span></div>
+    <div class="calc-row total"><span>거래대금합계 (영수증과 일치) ✅</span><span>463,100</span></div>
+  </div>
+
+  <div class="note" style="background:var(--green-light); color:#0F5132; font-size:13px;">
+    <b>요약 — 사장님 방식 그대로:</b><br>
+    1. 보이는 대로 공급가·부가세·용기대를 읽는다<br>
+    2. 단가는 <span class="hl">공급가 ÷ 병 수</span>로 나눠서 구한다 → 단가도 맞고 경고도 사라짐<br>
+    3. 용기대(보증금)는 품목에 안 섞고 <span class="hl">따로 합(입금) / 차액(회수)</span>으로 본다<br>
+    4. 다 더하면 거래대금합계 = 실제 낸 돈
+  </div>
+</div>
+</body>
+</html>
