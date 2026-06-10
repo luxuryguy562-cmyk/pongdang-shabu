@@ -57,12 +57,25 @@ function _accVendorC(v){
 - 수량 q: BOX 칸이 0이면 EA 칸이 곧 수량. BOX≥1이면 q=BOX×단위. (예 단위20·BOX0·EA15 → q=15 / 단위20·BOX1·EA0 → q=20)
 - 검산: 단가 × q = 합계 칸과 맞아야 함.`;
 }
+// 거래처 변형 D — 품목명(한자무시·추측금지)·규격(행 고정)·가로선 행 묶기 강화 (2026-06-10 사장님 3개 지시)
+//   순창국제처럼 한자 섞이고 가로선에 인쇄가 어긋난 명세서 대응. C(합계+수량)에 품목명·규격·행정렬 3개 추가.
+function _accVendorD(v){
+  return _accBaseVendor(v) + `
+
+[변형D 추가 강화 — 품목명·규격·행 정렬]
+- total_sum = "금일합계" 칸. "총합계"(전미수 포함) 금지.
+- [품목명] 한자는 무시(생략)하고 한글만 보이는 그대로 옮겨라. 읽기 어려운 글자를 비슷한 한국어 음식 이름으로 추측·창작하지 마라. 안 보이면 안 보이는 부분만 비우고 보이는 한글은 그대로.
+- [규격] 각 행의 규격(중량·용량)은 그 행 안에서만 읽어라. 윗줄·아랫줄 규격을 끌어오지 마라.
+- [가로선] 표는 가로선으로 행이 나뉜다. 한 품목의 품목명·규격·단가·수량·금액은 같은 가로줄 안에 있다. 인쇄가 선에 딱 안 맞아도 같은 행끼리 묶어 읽고, 윗줄/아랫줄 값을 섞지 마라.
+- [수량] BOX 칸이 0이면 EA 칸이 곧 수량. BOX≥1이면 q=BOX×단위. 검산: 단가×q = 합계 칸.`;
+}
 
 const ACC_VARIANTS = {
   vendor: {
     A: {name:'A 현재(기준)',     build:_accBaseVendor},
     B: {name:'B 금일합계강화',   build:_accVendorB},
     C: {name:'C 합계+수량강화',  build:_accVendorC},
+    D: {name:'D 품목명·규격·행', build:_accVendorD},
   },
   liquor: {
     A: {name:'A 현재(기준)',     build:_accBaseLiquor},
@@ -70,7 +83,7 @@ const ACC_VARIANTS = {
     C: {name:'C 칸위치명시',     build:_accLiquorC},
   },
 };
-let _accSelectedVariants=['A','B','C']; // 비교할 변형들 (기본 3개)
+let _accSelectedVariants=['A','D']; // 비교할 변형들 (기본 = 현재기준 A vs 개선후보 D 맞대결)
 
 // 모델 = Gemini Flash 고정 (변형 비교가 목적 — 사장님: 모델 안 바꿈)
 const ACC_FIXED_MODEL = {model:'gemini-2.5-flash', provider:'gemini', name:'Gemini Flash', timeout:35};
@@ -309,10 +322,10 @@ function _accRenderCompare(){
     const details=ids.map(id=>{
       const r=shot.results[id]; if(!r||!r.ok||!r.items) return '';
       const name=(vdefs[id]&&vdefs[id].name)||id;
-      const li=r.items.map((it,i)=>`<tr><td>${i+1}</td><td>${(it.i||'').replace(/</g,'&lt;')}</td><td class="num" style="text-align:right;">${it.q==null?'-':it.q}</td><td class="num" style="text-align:right;">${fmtN(it.p)}</td></tr>`).join('');
+      const li=r.items.map((it,i)=>`<tr><td>${i+1}</td><td>${(it.i||'').replace(/</g,'&lt;')}</td><td class="acc-mini">${(it.spec||'').replace(/</g,'&lt;')||'-'}</td><td class="num" style="text-align:right;">${it.q==null?'-':it.q}</td><td class="num" style="text-align:right;">${fmtN(it.p)}</td></tr>`).join('');
       const depLine = isLiquor ? `<div class="acc-mini" style="margin-top:4px;">보증금 입금 ${fmtN(r.depIn)} · 빈병 회수 ${fmtN(r.depOut)}</div>` : '';
       return `<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--gray-700);">${name} 품목 ${r.items.length}개</summary>
-        <table class="acc-tbl"><tr><th>No</th><th>품목</th><th class="num" style="text-align:right">수량</th><th class="num" style="text-align:right">합계</th></tr>${li}</table>${depLine}</details>`;
+        <table class="acc-tbl"><tr><th>No</th><th>품목</th><th>규격</th><th class="num" style="text-align:right">수량</th><th class="num" style="text-align:right">합계</th></tr>${li}</table>${depLine}</details>`;
     }).join('');
     const diffHeader = shot.truthSum!=null ? '오차' : '시간';
     const depHeader = isLiquor ? `<th class="num" style="text-align:right">입금/회수</th>` : '';
