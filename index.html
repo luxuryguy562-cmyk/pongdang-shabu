@@ -1872,22 +1872,19 @@
 <!-- ══ 직원 급여 탭 (2026-06-09) — 직원 본인 급여·달력 ══ -->
 <div id="empPayCont" class="container">
   <div class="app-back" data-action="nav|attendance"><span class="back-btn">‹</span><span class="back-ttl">내 급여</span></div>
-  <!-- 월 네비 -->
-  <div style="display:flex;align-items:center;justify-content:center;gap:16px;font-size:18px;font-weight:900;color:var(--text);margin:6px 0 14px;">
-    <span style="color:var(--gray-400);cursor:pointer;font-size:22px;" data-action="empPayCalNav|-1">‹</span>
-    <span id="empPayCalMonth">2026년 6월</span>
-    <span style="color:var(--gray-400);cursor:pointer;font-size:22px;" data-action="empPayCalNav|1">›</span>
+  <!-- 월 네비 + 합계 (압축: 한 카드에) -->
+  <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:18px;padding:14px 16px;color:#fff;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <span style="color:#CFE0FF;cursor:pointer;font-size:20px;font-weight:900;" data-action="empPayCalNav|-1">‹</span>
+      <span id="empPayCalMonth" style="font-size:15px;font-weight:800;color:#fff;">2026년 6월</span>
+      <span style="color:#CFE0FF;cursor:pointer;font-size:20px;font-weight:900;" data-action="empPayCalNav|1">›</span>
+    </div>
+    <div id="empPayHeroAmt" style="font-size:28px;font-weight:900;letter-spacing:-1px;text-align:center;">0원</div>
+    <div id="empPayHeroSub" style="font-size:12px;color:#CFE0FF;text-align:center;margin-top:2px;">0시간</div>
+    <span id="empPayHeroLabel" style="display:none;"></span>
   </div>
-  <!-- 그 달 합계 hero -->
-  <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:20px;padding:18px;color:#fff;">
-    <div id="empPayHeroLabel" style="font-size:13px;color:#CFE0FF;font-weight:700;">이번 달</div>
-    <div id="empPayHeroAmt" style="font-size:30px;font-weight:900;letter-spacing:-1px;margin:6px 0 2px;">0원</div>
-    <div id="empPayHeroSub" style="font-size:12px;color:#CFE0FF;">0시간</div>
-  </div>
-  <!-- 날짜별 달력 -->
-  <div style="font-size:12px;color:var(--gray-400);font-weight:800;margin:16px 2px 6px;">날짜별 — 누르면 그날 상세</div>
-  <div id="empPayCalGrid"></div>
-  <!-- 날짜 누르면 그날 상세 -->
+  <!-- 날짜별 달력 (누르면 아래 상세) -->
+  <div id="empPayCalGrid" style="margin-top:12px;"></div>
   <div id="empPayDayDetail"></div>
 </div>
 
