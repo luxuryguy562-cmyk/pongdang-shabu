@@ -1111,6 +1111,9 @@ async function runAI() {
     }
     // 공급가(세전) = 합계(세후) − 세액. 세후 통일(2026-06-04) 후 검산·저장용
     list.forEach(it=>{ it.supplyPrice = (parseInt(it.totalPrice)||0) - (parseInt(it.taxAmount)||0); });
+    // 주류: 단가 = 공급가 ÷ 수량(병). 영수증엔 1병 단가 없고 공급가 합계만 찍힘 → 나눠서 1병 단가 표시 (사장님 방식 2026-06-10).
+    //   단가×수량=공급가 맞아떨어져 ⚠️ 경고도 자동 사라짐. AI 분석·저장 금액은 안 건드림(단가 표시값만 계산).
+    if(isLiquorModeAI) _rcpLiquorUnitPrice(list);
     // 영수증에 세액이 하나라도 있으면 = 세액 별도 양식 → 행마다 공급가·부가세 줄 표시 (세액 0 행은 면세)
     const _hasAnyTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
     list.forEach(it=> it._taxFormat = _hasAnyTax);
@@ -1143,6 +1146,7 @@ async function runAI() {
             category:x.c||x.category||defaultCat
           }));
           list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
+          if(isLiquorModeAI) _rcpLiquorUnitPrice(list); // 재검산 후에도 주류 단가=공급가÷수량 재계산
           const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
           list.forEach(it=>it._taxFormat=_ht2);
           list=await applyRulesToReceipt(list);
@@ -1345,6 +1349,16 @@ function _rcpNameSuspect(name){
   // 길이 규칙 없음 — 프레시원 등 거래명세서 품목명 원래 40-50자, 길이로 잡으면 오탐 남발. 주소·전화 패턴으로 충분.
   return '';
 }
+// 주류 단가 재계산 — 단가 = 공급가 ÷ 수량(병). 영수증에 1병 단가가 없어 공급가 합계만 찍히는 주류 명세서용.
+//   비주류(공급가 0=탄산가스 등)·보증금 행은 제외. 반올림 1원 오차는 ⚠️ 검산 threshold(100원) 안이라 통과.
+function _rcpLiquorUnitPrice(list){
+  (list||[]).forEach(it=>{
+    if(it._isDeposit) return;
+    const sp=parseInt(it.supplyPrice)||0;
+    const q=parseFloat(it.qty)||0;
+    if(sp>0 && q>0) it.unitPrice = Math.round(sp/q);
+  });
+}
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
   // 보증금 행 — 별도 카드로 렌더링 (색상 구분, 분류·규격·원산지 칸 없음)
@@ -1413,6 +1427,7 @@ function buildReceiptRow(i={}) {
       ${suspectMark}
       <span class="ric-mini">단가 <input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></span>
       <span class="ric-mini">수량 <input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></span>
+      ${(i._taxFormat && _tax>0) ? `<span class="ric-mini ric-tax">부가세 <b>${fmt(_tax)}</b></span>` : ''}
       ${ogChip}
       ${autoTag}
       ${learnBadge}
