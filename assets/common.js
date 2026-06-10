@@ -741,6 +741,11 @@ function daysInMonth(ym) { const [y,m]=ym.split('-').map(Number); return new Dat
 // ══════════════════════════════════════════
 // 내 정보
 // ══════════════════════════════════════════
+// 헤더 이름 배지 탭: 직원이면 내 정보 화면(myinfo), 매니저면 기존 시트
+function openMyInfoHub() {
+  if (currentEmp && !isManager) { nav('myinfo'); return; }
+  openMyInfoSheet();
+}
 function openMyInfoSheet() {
   const emp = currentEmp;
   let html = '';
