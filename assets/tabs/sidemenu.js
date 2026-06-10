@@ -5873,37 +5873,24 @@ async function loadExpHubData(force){
 }
 
 // ─── 내 정보 탭 로드 (직원용) ───
-async function loadMyInfo(){
+function loadMyInfo(){
   if(!currentEmp) return;
-  const nm=document.getElementById('myinfoName');
-  const role=document.getElementById('myinfoRole');
-  const wage=document.getElementById('myinfoWage');
-  if(nm) nm.textContent=currentEmp.name||'-';
-  if(role){
-    const labelMap={owner:'사장',franchise_admin:'본사 관리자',store_manager:'점장',staff:'직원'};
-    role.textContent=labelMap[currentEmp.auth_level]||currentEmp.role||'-';
-  }
-  // 미리보기 모드에서는 PIN·기기 변경 버튼 숨김 (직원이 PIN 변경하면 안 됨)
+  const e=currentEmp;
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  const labelMap={owner:'사장',franchise_admin:'본사 관리자',store_manager:'점장',staff:'직원'};
+  const roleLabel=labelMap[e.auth_level]||e.role||'직원';
+  set('myinfoName', e.name||'-');
+  set('myinfoSub', `${currentStore?.name||''} · ${roleLabel}${e.hire_date?' · '+e.hire_date+' 입사':''}`);
+  // 전화번호 포맷
+  const ph=(e.phone||'').replace(/[^0-9]/g,'');
+  set('myinfoPhone', ph?ph.replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3'):'-');
+  set('myinfoHourly', e.base_wage?fmt(e.base_wage)+'원':'-');
+  const acct = e.account_number ? `${e.bank_name?e.bank_name+' ':''}${String(e.account_number).slice(0,6)}···` : '-';
+  set('myinfoAccount', acct);
+  set('myinfoBirth', e.birth_date||'-');
+  // 미리보기 모드에선 비밀번호 변경 숨김 (직원이 PIN 변경하면 안 됨)
   const pinBtn=document.getElementById('myInfoPinBtn');
-  if(pinBtn) pinBtn.style.display=viewAsLevel?'none':'block';
-  if(wage){
-    wage.textContent='계산 중...';
-    try{
-      const ym=new Date().toISOString().slice(0,7);
-      const [y,m]=ym.split('-').map(Number);
-      const last=new Date(y,m,0).getDate();
-      const start=ym+'-01', end=ym+'-'+String(last).padStart(2,'0');
-      const {data}=await sb.from('attendance_logs')
-        .select('calculated_wage')
-        .eq('store_id',currentStore.id)
-        .eq('employee_id',currentEmp.id)
-        .gte('work_date',start).lte('work_date',end);
-      const total=(data||[]).reduce((a,r)=>a+(r.calculated_wage||0),0);
-      wage.textContent=fmt(total)+'원';
-    }catch(e){
-      wage.textContent='-';
-    }
-  }
+  if(pinBtn) pinBtn.style.display=viewAsLevel?'none':'flex';
 }
 
 function completeLogin(emp){
