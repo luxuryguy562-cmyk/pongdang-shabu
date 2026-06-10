@@ -70,7 +70,15 @@ function renderEmpHome(){
   // 직원 홈 = 행동 허브. 근태 카드의 서브탭(출퇴근/기록)·제목 숨기고 출퇴근(클락)만. 매니저는 기존 근태관리 그대로.
   const box=document.getElementById('empHomeSummary');
   const staff = !isManager && !!currentEmp && !!currentStore;
-  if(box) box.style.display = staff ? 'block' : 'none';
+  if(box) box.style.display = staff ? 'flex' : 'none';
+  if(staff){
+    // 인사말 + 날짜·시간 (사장 홈과 같은 형식)
+    const nm=document.getElementById('empHomeName'); if(nm) nm.innerText=currentEmp.name||'';
+    const dt=document.getElementById('empHomeDate');
+    if(dt){ const t=new Date(); const dow=['일','월','화','수','목','금','토'][t.getDay()];
+      const ampm=t.getHours()<12?'오전':'오후'; const h12=t.getHours()%12||12; const mm=String(t.getMinutes()).padStart(2,'0');
+      dt.innerText=`${t.getMonth()+1}월 ${t.getDate()}일 (${dow}) · ${ampm} ${h12}:${mm}`; }
+  }
   const subtabs=document.querySelector('#attendanceCont .sub-tabs');
   if(subtabs) subtabs.style.display = staff ? 'none' : '';
   const title=document.getElementById('attCardTitle');
@@ -80,6 +88,8 @@ function renderEmpHome(){
     ['Caps','All'].forEach(t=>{const d=document.getElementById('att'+t);if(d)d.style.display='none';});
     const m=document.getElementById('attManual'); if(m) m.style.display='block';
   }
+  // 출퇴근 카드 중복 정리: 인사말에 이름·날짜 있으니 클락카드에선 아바타·이름·날짜 숨김(직원만). 매니저는 복원.
+  ['attStatusAvatar','attStatusName','attTodayDate'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.display = staff ? 'none' : '';});
 }
 let attClockTimer=null;
 function startAttClock(){
