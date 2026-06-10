@@ -4,6 +4,45 @@
 
 ---
 
+## [2026-06-09] #201 Gemini thinking(추론) = 한국 location 차단 + worker placement 복원 불가
+
+**배경**: 주류 거래명세서 정확도 위해 worker `thinkingBudget: 0` → `body._thinking ? -1 : 0`으로 추론 켜기 시도(주류·거래처만).
+
+**사고 1 — thinking 한국 차단**: 추론 켠 요청이 `400 "User location is not supported for the API use." FAILED_PRECONDITION` 에러. **Gemini 2.5 thinking 기능은 한국(사장님 지역)에서 막힘.** placement를 smart로 바꿔도 동일 → 위치 문제 아니라 thinking 자체가 지역 차단. → **결론: 한국에선 Gemini thinking 못 씀. 켜지 마라.**
+
+**사고 2 — worker placement targeted 복원 불가**: gemini-proxy worker가 원래 `placement {"mode":"targeted","target":[94]}`였는데, 배포(PUT) 시 metadata에 placement 누락 → `{}`로 날아감. 복원하려 했으나 `targeted` target 형식이 `expected object, got float64`로 거부됨(레거시, API PUT 불가). → **smart placement로 대체.** 다른 워커(ureem-sales 등)는 placement `{}`여도 정상(Gemini 미호출이라 무관).
+
+**worker 배포 방법 (이 환경)**: Cloudflare API 토큰 env에 있음(`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). `curl PUT .../workers/scripts/gemini-proxy` multipart(metadata + worker.js). **secret 보존**: metadata에 `"keep_bindings":["secret_text","plain_text"]` 필수(누락 시 GEM_ES_KEY 등 secret 날아감). `main_module:"worker.js"` + 업로드 part filename도 `worker.js` 일치 필수. **이 샌드박스에선 workers.dev 직접 호출 차단**(allowlist) → 배포 후 작동은 사장님이 앱에서 확인.
+
+**교훈**:
+1. **외부 API 지역 제한 = 기능 도입 전 확인.** thinking 같은 신기능은 사장님 지역(한국) 지원 여부 먼저 검증.
+2. **worker 배포 시 기존 settings(placement·bindings) 전부 보존.** GET settings로 먼저 확인 후 metadata에 반영.
+3. **주류 정확도는 thinking 말고 다른 방법** (self-consistency 2회 분석, GPT-4o, 프롬프트+검산).
+
+---
+
+## [2026-06-09] #200 경고 하나 없애려다 금액·보증금 다 망침 — 작은 문제에 큰 손 (빙산 14회)
+
+**사장님 호소**: "아직도 금액 문제, 보증금 사라짐, 품목명도 잘못 읽고... 처음이 제일 나은 거 아니야? 거기서 다시 시작해봐 왜그래"
+
+**상황**: 주류 영수증 첫 분석(PR #555)은 금액·보증금 다 정확했고 ⚠️ 경고(단가×수량≠합계)만 떴음. 단가 표시 차이일 뿐 저장값은 맞았는데, CTO가 경고를 없애려고:
+- PR #557: 프롬프트 u=p÷q 규칙
+- PR #558: 단가 코드 강제 재계산
+- PR #559: 재검산 보증금 힌트
+
+→ 세 번 손대는 동안 AI 출력이 흔들려 금액 부풀음(655,200≠463,100)·보증금 행 사라짐·품목명 오류까지 **처음보다 더 나빠짐**.
+
+**근본 원인**: ⚠️ 경고는 "단가 표시"만의 문제(저장 금액은 정확)였는데, CTO가 그걸 "고쳐야 할 버그"로 오판하고 핵심(금액·보증금)을 건드림. **작은 표시 문제에 큰 손을 댄 것.**
+
+**교훈**:
+1. **경고 ≠ 데이터 오류**. 저장값이 맞으면 경고는 표시 개선으로 분류. 핵심 로직 건드리지 말 것.
+2. **"처음이 나았다" = 즉시 롤백** (헌법 1-6). 여러 번 손대 나빠지면 미련 없이 첫 정상 상태로.
+3. **AI 비결정성**: 같은 영수증도 매번 다르게 읽음. 프롬프트 미세 변경이 다른 필드(보증금) 출력을 흔들 수 있음.
+
+**조치**: common.js·receipt.js를 PR #555 직후(f9f8f34)로 복원. 단가 경고는 다시 보이지만 금액·보증금 정확한 상태 우선.
+
+---
+
 ## [2026-06-08] #199 할인 행이 합계에 더해짐 — 저장 시 마이너스(-) 삭제 버그
 
 **사장님 호소(긴급)**: "오늘 농협꺼 19,480인데(할인 500) 그걸 더해버림." → 20,480 저장.

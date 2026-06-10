@@ -3426,7 +3426,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
         ? (pf.vendor_orders||sb.from('vendor_orders').select('amount,vendors(category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end))
         : Promise.resolve({data:[]}),
       needRc
-        ? (pf.receipts||sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end))
+        ? (pf.receipts||sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end))
         : Promise.resolve({data:[]}),
       needFc
         ? (pf.fixed_costs||sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid))
@@ -5706,7 +5706,7 @@ async function loadExpHubData(force){
     ({rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes} = _expPack);
   } else {
     [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes] = await Promise.all([
-      sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+      sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
       sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
       sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
       sb.from('store_settings').select('royalty_rate,card_fee_rate').eq('store_id',sid).maybeSingle(),
@@ -7208,7 +7208,7 @@ async function loadReconciliation(){
     const [catRes,voRes,rcpRes,attRes,swRes,fcRes,txRes,salesRes,settingsRes,matchRes,salesDailyRes]=await Promise.all([
       sb.from('expense_categories').select('*').eq('store_id',sid).order('sort_order'),
       sb.from('vendor_orders').select('amount,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-      sb.from('receipts').select('id,vendor,total_price,category').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
+      sb.from('receipts').select('id,vendor,total_price,category').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
       sb.from('attendance_logs').select('employee_id,calculated_wage,employees(name)').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
       sb.from('special_wages').select('extra_amount').eq('store_id',sid).gte('target_date',start).lte('target_date',end),
       sb.from('fixed_costs').select('id,name,estimated_monthly,is_active').eq('store_id',sid),

@@ -72,7 +72,7 @@ function _logAIUsage(feature, usage, durationMs, success, errorMsg, modelUsed, c
     }).then(({error})=>{ if(error) console.warn('[ai_usage_logs] insert failed:', error.message); });
   }catch(e){ console.warn('[ai_usage_logs] exception:', e); }
 }
-async function callGemini(parts, timeoutSec=30, feature='unknown', model, provider){
+async function callGemini(parts, timeoutSec=30, feature='unknown', model, provider, thinking=false){
   // 503(구글 서버 과부하) 스파이크는 보통 10~30초 지속 → 재시도 4번, 백오프 2·4·8초로 강화 (2026-06-08)
   // 짧은 1·2·4초로는 16:34 503이 20초간 다 실패. 총 ~14초 버티며 스파이크 통과 노림. 그래도 실패 시 호출부에서 GPT 백업.
   const MAX_RETRY = 4;
@@ -91,7 +91,7 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
       const res=await fetch(GEMINI_URL,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({contents:[{parts}],generationConfig:{response_mime_type:'application/json'},_model:requestModel,_provider:requestProvider}),
+        body:JSON.stringify({contents:[{parts}],generationConfig:{response_mime_type:'application/json'},_model:requestModel,_provider:requestProvider,_thinking:!!thinking}),
         signal:ctrl.signal
       });
       if(!res.ok){
@@ -171,17 +171,19 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
 //   사장님 결정: "충돌 안 나게 거래채널마다 프롬프트를 따로 놓자"
 //   한 채널 수정해도 다른 채널 프롬프트는 안 건드림 → 동시 작업 충돌·회귀 차단.
 //   ┌ buildReceiptPrompt  ← 입구(채널 판정 → 채널 빌더로 분배). 호출 인터페이스 불변.
+//   ├ _rcpPromptLiquor    ← 주류(공병 보증금 분리 — deposit_in/out 추출) 전용
 //   ├ _rcpPromptVendor    ← 거래처(정기 거래명세서) 전용
 //   ├ _rcpPromptOnline    ← 온라인(쿠팡·네이버 등 웹 주문) 전용
 //   ├ _rcpPromptDirect    ← 직구(마트·시장 영수증) 전용
 //   └ _rcpCommonRules / _rcpCommonRespTail  ← 채널 무관 공통(검산·세액별도·함정 등)
 //   ⚠️ 영수증 탭(receipt.js)·측정실(accuracy_lab.js) 둘 다 buildReceiptPrompt만 호출 → 검증=실제 동일 보장
 // ═══════════════════════════════════════════════════════════════
-function buildReceiptPrompt({isVendorMode=true, isOnlineMode=false, vendorName='', catList='', pageCount=1}={}){
+function buildReceiptPrompt({isVendorMode=true, isOnlineMode=false, isLiquorMode=false, vendorName='', catList='', pageCount=1}={}){
   const multiPageHint = pageCount>1
     ? `\n[멀티페이지] 사진 ${pageCount}장 = 같은 영수증의 다른 페이지. 모든 페이지 행을 items에 통합. date·vendor·total_sum은 1번만.`
     : '';
-  // 채널 판정: 온라인 > 거래처 > 직구
+  // 채널 판정: 주류 > 온라인 > 거래처 > 직구
+  if(isLiquorMode) return _rcpPromptLiquor({vendorName, catList, multiPageHint});
   if(isOnlineMode) return _rcpPromptOnline({vendorName, catList, multiPageHint});
   if(isVendorMode) return _rcpPromptVendor({vendorName, catList, multiPageHint});
   return _rcpPromptDirect({catList, multiPageHint});
@@ -213,7 +215,49 @@ function _rcpDateField(){
   return `"date": "영수증 발행일 YYYY-MM-DD (영수증에 연도가 명확히 안 보이면 ${new Date().getFullYear()}년으로)"`;
 }
 
-// ═══ 채널 1: 거래처 (정기 거래처 거래명세서 — spec·og 분리, BOX/EA, 품목별 카테고리) ═══
+// ═══ 채널 1: 주류 (공병 보증금 분리 — deposit_in/out 추출, 술값만 items.p) ═══
+function _rcpPromptLiquor({vendorName, catList, multiPageHint}){
+  return `한국 주류 거래명세서를 JSON으로만 응답. 설명·주석 X.
+[모드:주류] vendor="${vendorName}" 이미 선택. v·d 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
+[주류 핵심 규칙 — 반드시 지켜라]
+① 각 품목 p = 공급가+부가세만. ⚠️ 용기대(보증금) 칸은 p에 절대 포함 X. 합계 칸(공급가+부가세+용기대)을 쓰면 안 됨.
+② 소계에서 "용기보증금" → deposit_in(양수). "빈용기보증금"·"회수보증금" → deposit_out(양수). 없으면 null.
+③ total_sum = 거래대금합계 (실제 외상 단 돈). 매출합계·공급가액 소계 X.
+[수량 칸 우선] 수량 칸 있으면 q=그 값. "수량C/S"·"수량EA" 둘 다 있으면 q=수량C/S(케이스 수). 수량EA(낱개수) q 금지.
+  · 수량C/S=4·수량EA=96·출고가=19,000·금액=76,000 → q=4. 19,000×4=76,000 ✅
+[BOX/EA] 수량 칸 없고 BOX·EA만 있으면 q=(BOX×단위)+EA. BOX=0이면 EA만.${multiPageHint}
+
+[응답]
+{
+  ${_rcpDateField()},
+  "items": [ {i,spec,og,u,q,p,t,f,c} 행 배열 ],
+  "deposit_in": 용기보증금 소계(정수,양수). 없으면 null,
+  "deposit_out": 빈용기보증금 회수(정수,양수). 없으면 null,
+${_rcpCommonRespTail()}
+}
+
+[필드]
+- i:품목명만 (규격→spec, 원산지→og 분리)
+- spec:규격 (예 "(유)", "355ml캔 24CSR", "500ml"). 없으면 null
+- og:원산지. 없으면 null
+- u:단가(출고가). 없으면 null
+- q:수량 — 위 [수량 칸 우선] 적용
+- p:공급가+부가세만 (용기대 제외). u×q 계산 X — 인쇄된 공급가+부가세 합산값 우선
+- t:행 세액. 세액 칸 있으면 그 값, 없으면 0
+- f:면세 여부(true/false). 주류는 보통 false
+- c:카테고리 [${catList}] — 주류·음료 등 품목 성격대로
+
+[규칙]
+${_rcpCommonRules()}
+- i:품목명만. 규격(괄호 포함)→spec, 원산지→og 분리. "박스입수:N"·"입수:N" → 버림.
+- 합계행·소계(매출합계·공급가액·부가세 소계 등)·용기보증금행·빈용기보증금행 = items 제외 (deposit_in·deposit_out·total_sum으로만)
+
+[예시 — 대명주류 형태]
+{"date":"2026-06-09","items":[{"i":"참이슬","spec":"(유)","og":null,"u":81273,"q":2,"p":89400,"t":8127,"f":false,"c":"주류"},{"i":"맑은란","spec":"(유)","og":null,"u":121909,"q":3,"p":134100,"t":12191,"f":false,"c":"주류"},{"i":"탄산가스","spec":null,"og":null,"u":null,"q":1,"p":0,"t":0,"f":true,"c":"주류"}],"deposit_in":191700,"deposit_out":155800,"total_supply":388363,"total_tax":38837,"total_sum":463100}
+(참이슬 p=81273+8127=89400. 용기대 11,000 제외. deposit_in=용기보증금 소계 191,700. deposit_out=빈용기보증금 155,800. total_sum=거래대금합계 463,100)`;
+}
+
+// ═══ 채널 2: 거래처 (정기 거래처 거래명세서 — spec·og 분리, BOX/EA, 품목별 카테고리) ═══
 function _rcpPromptVendor({vendorName, catList, multiPageHint}){
   return `한국 영수증을 JSON으로만 응답. 설명·주석 X.
 [모드:거래처] vendor="${vendorName}" 이미 선택. v·d 출력 X. 품목별 c를 [${catList}]에서 선택 — 한 거래처라도 품목마다 분류가 다를 수 있다(예: 육류·공산품 섞임). 영수증 1장 = 같은 날짜 (date 최상위 1번).
@@ -270,7 +314,7 @@ ${_rcpCommonRules()}
 (수량C/S=4·수량EA=96·출고가=19,000·금액=76,000 → q=4. 19,000×4=76,000 ✅. EA=96은 24본×4케이스=낱개수이므로 q 절대 X)`;
 }
 
-// ═══ 채널 2: 온라인 (쿠팡·네이버 등 웹 주문 — 할인 이미 반영·분리배송 중복 주의) ═══
+// ═══ 채널 3: 온라인 (쿠팡·네이버 등 웹 주문 — 할인 이미 반영·분리배송 중복 주의) ═══
 function _rcpPromptOnline({vendorName, catList, multiPageHint}){
   return `한국 영수증을 JSON으로만 응답. 설명·주석 X.
 [모드:온라인주문] vendor="${vendorName}" 이미 선택. v 출력 X. 영수증 1장 = 같은 날짜 (date 최상위 1번).
@@ -315,7 +359,7 @@ ${_rcpCommonRules()}
 (상품명 중간 "3단 35폭 200mm"→spec, 나머지는 i. 상품 18,650 + 배송비 3,000 = 21,650. ⚠️배송비 빠뜨리면 합 안 맞음)`;
 }
 
-// ═══ 채널 3: 직구 (마트·시장 영수증 — vendor 추출, 품목별 카테고리) ═══
+// ═══ 채널 4: 직구 (마트·시장 영수증 — vendor 추출, 품목별 카테고리) ═══
 function _rcpPromptDirect({catList, multiPageHint}){
   return `한국 영수증을 JSON으로만 응답. 설명·주석 X.
 [모드:직구] 마트·시장. d 출력 X. vendor 최상위 1번(영수증에 찍힌 가게명). 영수증 1장 = 같은 날짜·매장.

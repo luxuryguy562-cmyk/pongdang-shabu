@@ -329,6 +329,7 @@ franchises (프랜차이즈/브랜드)
 | **supply_price** (int, 2026-06-04) | 공급가(세전) = total_price − tax_amount. 옛 영수증 NULL |
 | **tax_amount** (int, 2026-06-04) | 행 세액(부가세). 인쇄된 세액만, 없거나 면세면 0. 부가세 역산 안 함 |
 | **is_tax_free** (boolean, 2026-06-04) | 면세 여부. true=면세(육류·야채 등 미가공 농축수산물), false=과세, NULL=옛 영수증. 의제매입세액공제 집계용. 마이그레이션 `add_receipts_is_tax_free_20260604` |
+| **is_deposit** (boolean, 2026-06-09) | 보증금 행 여부. true=보증금 입금/회수 행(매입비 집계 제외), false=일반 품목. 주류 영수증 용기보증금 분리용. 기본값 false. 마이그레이션 `add_is_deposit_to_receipts` |
 | **spec** (text, 2026-06-08) | 규격·포장 규격 (예 "F0용 슬라이스 1Kg/EA", "500g"). 거래처 모드 영수증만 AI가 i에서 분리 추출. 직구·옛 영수증 NULL. 마이그레이션 `add_receipts_spec_origin_20260608` |
 | **origin** (text, 2026-06-08) | 원산지 (예 "외국산", "국내산"). 거래처 모드만 분리 추출. ⚠️쉼표로 품명에 섞인 원산지(고기손만두,돈육:국내산)는 item에 그대로 두고 origin=NULL. 직구·옛 영수증 NULL |
 | note | 정상/오답/반품 등 |
