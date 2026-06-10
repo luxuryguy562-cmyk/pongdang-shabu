@@ -72,7 +72,8 @@ function _logAIUsage(feature, usage, durationMs, success, errorMsg, modelUsed, c
     }).then(({error})=>{ if(error) console.warn('[ai_usage_logs] insert failed:', error.message); });
   }catch(e){ console.warn('[ai_usage_logs] exception:', e); }
 }
-async function callGemini(parts, timeoutSec=30, feature='unknown', model, provider, thinking=false){
+async function callGemini(parts, timeoutSec=30, feature='unknown', model, provider){
+  // (옛 6번째 인자 thinking 제거 2026-06-10 — Gemini thinking은 한국 차단(dev_lessons #201), worker도 무시. 켜지 마라.)
   // 503(구글 서버 과부하) 스파이크는 보통 10~30초 지속 → 재시도 4번, 백오프 2·4·8초로 강화 (2026-06-08)
   // 짧은 1·2·4초로는 16:34 503이 20초간 다 실패. 총 ~14초 버티며 스파이크 통과 노림. 그래도 실패 시 호출부에서 GPT 백업.
   const MAX_RETRY = 4;
@@ -91,7 +92,7 @@ async function callGemini(parts, timeoutSec=30, feature='unknown', model, provid
       const res=await fetch(GEMINI_URL,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({contents:[{parts}],generationConfig:{response_mime_type:'application/json'},_model:requestModel,_provider:requestProvider,_thinking:!!thinking}),
+        body:JSON.stringify({contents:[{parts}],generationConfig:{response_mime_type:'application/json'},_model:requestModel,_provider:requestProvider}),
         signal:ctrl.signal
       });
       if(!res.ok){
@@ -253,9 +254,9 @@ ${_rcpCommonRules()}
 - i:품목명만. 규격(괄호 포함)→spec, 원산지→og 분리. "박스입수:N"·"입수:N" → 버림.
 - 합계행·소계(매출합계·공급가액·부가세 소계 등)·용기보증금행·빈용기보증금행 = items 제외 (deposit_in·deposit_out·total_sum으로만)
 
-[예시 — 대명주류 형태]
-{"date":"2026-06-09","items":[{"i":"참이슬","spec":"(유)","og":null,"u":81273,"q":2,"p":89400,"t":8127,"f":false,"c":"주류"},{"i":"맑은란","spec":"(유)","og":null,"u":121909,"q":3,"p":134100,"t":12191,"f":false,"c":"주류"},{"i":"탄산가스","spec":null,"og":null,"u":null,"q":1,"p":0,"t":0,"f":true,"c":"주류"}],"deposit_in":191700,"deposit_out":155800,"total_supply":388363,"total_tax":38837,"total_sum":463100}
-(참이슬 p=81273+8127=89400. 용기대 11,000 제외. deposit_in=용기보증금 소계 191,700. deposit_out=빈용기보증금 155,800. total_sum=거래대금합계 463,100)`;
+[예시 — 주류 거래명세서 형태 (가공 숫자)]
+{"date":"2026-06-09","items":[{"i":"참이슬","spec":"(유)","og":null,"u":72000,"q":2,"p":79200,"t":7200,"f":false,"c":"주류"},{"i":"카스","spec":"(유)","og":null,"u":110000,"q":3,"p":121000,"t":11000,"f":false,"c":"주류"},{"i":"탄산가스","spec":null,"og":null,"u":null,"q":1,"p":0,"t":0,"f":true,"c":"주류"}],"deposit_in":150000,"deposit_out":120000,"total_supply":182000,"total_tax":18200,"total_sum":230200}
+(참이슬 p=72000+7200=79200. 용기대 칸 제외. deposit_in=용기보증금 소계 150,000. deposit_out=빈용기보증금 120,000. total_sum=거래대금합계 230,200 = 매출합계 350,200 − 빈용기 120,000)`;
 }
 
 // ═══ 채널 2: 거래처 (정기 거래처 거래명세서 — spec·og 분리, BOX/EA, 품목별 카테고리) ═══
@@ -301,9 +302,9 @@ ${_rcpCommonRules()}
 - p·u·q는 양수만 — 할인 행 제외
 - [할인 행] 할인·쿠폰·에누리 라인(예: "500원할인@비엔나", "[카드쿠폰] 시금치")은 items에 별도 행으로. ⚠️인쇄된 마이너스(-) 부호 그대로 — p·u 음수 그대로(예 -500). i=원문, q=인쇄 수량(없으면 1), t=0, f=false, c=바로 위 품목과 동일. "할인전소계"·"총할인액" 요약행은 제외(이중차감 방지).
 
-[예시 — 거래명세서 (BOX/EA + spec/og 분리)]
-{"date":"2026-04-09","items":[{"i":"위즈복대-날치알","spec":"500g","og":null,"u":9400,"q":30,"p":282000,"c":"식자재"},{"i":"넙적분모자","spec":"250g","og":null,"u":1100,"q":5,"p":5500,"c":"식자재"},{"i":"이츠웰 유부","spec":"F0용 슬라이스 1Kg/EA","og":"외국산","u":9400,"q":8,"p":75200,"c":"식자재"}],"total_sum":1416049,"page_info":{"current":1,"total":2}}
-(규격→spec 분리, 원산지→og 분리. 쉼표 원산지는 i 그대로: {"i":"고기손만두,돈육:국내산","spec":null,"og":null,...}. 넙적분모자 = 단위40·BOX0·EA5 → q=5)
+[예시 — 거래명세서 (BOX/EA + spec/og 분리, 가공 숫자)]
+{"date":"2026-04-09","items":[{"i":"새우볼(완자)","spec":"500g","og":null,"u":8200,"q":30,"p":246000,"c":"식자재"},{"i":"납작당면","spec":"250g","og":null,"u":1200,"q":5,"p":6000,"c":"식자재"},{"i":"이츠웰 유부","spec":"F0용 슬라이스 1Kg/EA","og":"외국산","u":9000,"q":8,"p":72000,"c":"식자재"}],"total_sum":324000,"page_info":{"current":1,"total":2}}
+(규격→spec 분리, 원산지→og 분리. 쉼표 원산지는 i 그대로: {"i":"고기손만두,돈육:국내산","spec":null,"og":null,...}. 납작당면 = 단위40·BOX0·EA5 → q=5)
 
 [예시 — 세액 별도 거래명세서 (공급가·세액·합계 칸이 따로)]
 {"items":[{"i":"가위바위보뉴진면","u":3800,"q":6,"p":25080,"t":2280,"c":"식자재"},{"i":"투명뉴진면","u":3750,"q":6,"p":24750,"t":2250,"c":"식자재"}],"total_supply":212840,"total_tax":20000,"total_sum":232840}
