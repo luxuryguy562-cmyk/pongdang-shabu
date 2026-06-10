@@ -21,6 +21,7 @@ function genCode() {
   for (let i = 0; i < 6; i++) s += alphabet[buf[i] % alphabet.length];
   return s;
 }
+function normPhone(p: string) { return (p || "").replace(/[^0-9]/g, ""); }
 // 실시간 신호 발사 (store-{id} 채널) — 실패해도 본 작업엔 영향 없음
 async function broadcast(storeId: string, kind: string) {
   try {
@@ -30,6 +31,29 @@ async function broadcast(storeId: string, kind: string) {
       body: JSON.stringify({ messages: [{ topic: `store-${storeId}`, event: "change", payload: { kind } }] }),
     });
   } catch (_e) { /* 실시간 실패 무시 */ }
+}
+// 솔라피 문자 발송 (승인/거절 알림) — 키 없거나 실패해도 본 작업엔 영향 없음
+async function sendSms(phone: string, text: string) {
+  try {
+    const ph = normPhone(phone);
+    if (ph.length < 10) return;
+    const apiKey = Deno.env.get("SOLAPI_API_KEY");
+    const apiSecret = Deno.env.get("SOLAPI_API_SECRET");
+    const sender = Deno.env.get("SOLAPI_SENDER");
+    if (!apiKey || !apiSecret || !sender) return;
+    const date = new Date().toISOString();
+    const salt = crypto.randomUUID().replaceAll("-", "");
+    const enc = new TextEncoder();
+    const keyObj = await crypto.subtle.importKey("raw", enc.encode(apiSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const sigBuf = await crypto.subtle.sign("HMAC", keyObj, enc.encode(date + salt));
+    const signature = [...new Uint8Array(sigBuf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const authHeader = `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`;
+    await fetch("https://api.solapi.com/messages/v4/send", {
+      method: "POST",
+      headers: { "Authorization": authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: { to: ph, from: normPhone(sender), text } }),
+    });
+  } catch (_e) { /* 문자 실패 무시 */ }
 }
 
 Deno.serve(async (req: Request) => {
@@ -105,16 +129,27 @@ Deno.serve(async (req: Request) => {
         status: "approved", decided_by: requester.id, decided_at: new Date().toISOString(),
       }).eq("id", pending_id);
       await broadcast(storeId, "approve");
+      // 직원에게 승인 문자
+      const { data: store } = await admin.from("stores").select("name").eq("id", storeId).maybeSingle();
+      if (person?.phone) await sendSms(person.phone, `[${store?.name || "매장"}] 가입이 승인됐어요! 이제 앱에서 전화번호+비밀번호로 로그인하세요.`);
       return json({ ok: true });
     }
 
     if (action === "reject") {
       if (!pending_id) return json({ ok: false, error: "대상 없음" }, 400);
+      const { data: pj } = await admin.from("pending_joins")
+        .select("person_id").eq("id", pending_id).eq("store_id", storeId).eq("status", "pending").maybeSingle();
       const { error: re } = await admin.from("pending_joins").update({
         status: "rejected", decided_by: requester.id, decided_at: new Date().toISOString(),
       }).eq("id", pending_id).eq("store_id", storeId).eq("status", "pending");
       if (re) throw re;
       await broadcast(storeId, "reject");
+      // 직원에게 거절 문자
+      if (pj?.person_id) {
+        const { data: person } = await admin.from("persons").select("phone").eq("id", pj.person_id).maybeSingle();
+        const { data: store } = await admin.from("stores").select("name").eq("id", storeId).maybeSingle();
+        if (person?.phone) await sendSms(person.phone, `[${store?.name || "매장"}] 죄송해요, 가입 신청이 거절됐어요. 사장님께 문의해주세요.`);
+      }
       return json({ ok: true });
     }
 
