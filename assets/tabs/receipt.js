@@ -996,8 +996,7 @@ async function runAI() {
     const isVendorModeAI = rcpMode === 'vendor';
     const isOnlineModeAI = rcpMode === 'online';
     const isLiquorModeAI = rcpVendorKind === 'liquor'; // 주류 채널 판정
-    // 복잡한 거래명세서(주류·거래처)는 AI 추론(thinking) 켜기 — 여러 칸 얽힌 표 정확도↑ (2026-06-09). 직구·온라인(단순)은 OFF로 비용 절감
-    const _useThinking = isLiquorModeAI || (isVendorModeAI && !isOnlineModeAI);
+    // (옛 thinking 플래그 제거 2026-06-10 — Gemini thinking은 한국 차단(dev_lessons #201), worker도 무시. 죽은 코드 정리)
     // 거래처 모드(온라인·주류 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
     // 온라인·마트(직구)·주류는 전체 자율(getCatListForPrompt 그대로)
     if(isVendorModeAI && !isOnlineModeAI && !isLiquorModeAI && rcpVendorId){
@@ -1052,19 +1051,27 @@ async function runAI() {
     });
     // 타임아웃 = 기본 30초 + 페이지당 +5초
     const timeoutSec = 30 + (pageCount-1)*5;
-    let raw, usedFallback = false;
+    // 백업 사슬 (2026-06-10 사장님 승인 — 13:03 GPT-4o 오독 사고 재발 방지):
+    //   Flash 과부하(503) → ①Gemini 2.0 Flash(같은 회사·세대 다른 모델 = 혼잡 회선 분리) → ②GPT-4o(최후 — 한국어 명세서 약함 #97).
+    //   gemini-2.5-pro는 worker(중계 서버) 허용 목록 밖이라 조용히 lite로 강등됨 → 못 씀 (worker 수정 = 전체 장애 전력, 보류).
+    //   백업 결과엔 빨간 고정 경고 + 재검산(Self-Reflection)도 그 모델로 적용.
+    let raw, usedFallback = false, fallbackModel = '', fallbackProvider = '';
     try {
-      raw = await callGemini(parts, timeoutSec, 'receipt_ocr', aiModel, 'gemini', _useThinking);
+      raw = await callGemini(parts, timeoutSec, 'receipt_ocr', aiModel, 'gemini');
     } catch(geminiErr){
       const m = String(geminiErr?.message || '').toLowerCase();
       const isOverloadLike = /high demand|overload|currently|503|429|시간 초과|비어있|json|응답 오류/i.test(m);
-      if(isOverloadLike){
-        setLoad(true, 'Gemini 과부하 → GPT-4o로 재시도 중...');
-        toast('⚠️ Gemini 과부하 감지 — GPT-4o로 재시도', 'warn', 2500);
+      if(!isOverloadLike) throw geminiErr;
+      try {
+        setLoad(true, 'Gemini Flash 혼잡 → Gemini 2.0으로 재시도 중...');
+        raw = await callGemini(parts, timeoutSec+10, 'receipt_ocr', 'gemini-2.0-flash', 'gemini');
+        usedFallback = true; fallbackProvider = 'gemini';
+        fallbackModel = _shortModelName(lastAIUsage?.model) || 'Gemini 2.0'; // worker가 강등시켜도 실제 쓴 모델 정직 표시
+      } catch(e2){
+        setLoad(true, 'Gemini 전체 혼잡 → GPT-4o로 재시도 중...');
+        toast('⚠️ Gemini 혼잡 — GPT-4o 백업 분석', 'warn', 2500);
         raw = await callGemini(parts, 60+(pageCount-1)*5, 'receipt_ocr', 'gpt-4o', 'gpt'); // GPT-4o 느림 → 60초 (2026-06-08 실측)
-        usedFallback = true;
-      } else {
-        throw geminiErr;
+        usedFallback = true; fallbackProvider = 'gpt'; fallbackModel = 'GPT-4o';
       }
     }
     // 여러 장인데 서로 다른 거래처 영수증이 섞임 감지 → 중단 + 안내 (2026-06-04)
@@ -1122,7 +1129,12 @@ async function runAI() {
     // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
     list=await applyRulesToReceipt(list);
     // ─── Self-Reflection: 합계 불일치 시 AI 재검산 최대 2회 (2026-06-05) ───
-    if(receiptTotalSum && !usedFallback){
+    //   2026-06-10: 백업 모델 결과에도 적용 (옛 !usedFallback 제외 → GPT 오독이 교정 기회 0인 채 통과하던 구멍).
+    //   재검산은 분석에 실제 쓴 모델로 — Gemini 죽어서 백업 간 건데 재검산을 Gemini로 보내면 또 죽음.
+    if(receiptTotalSum){
+      const _refModel = usedFallback ? (fallbackProvider==='gpt' ? 'gpt-4o' : 'gemini-2.0-flash') : aiModel;
+      const _refProvider = usedFallback ? fallbackProvider : 'gemini';
+      const _refTimeout = _refProvider==='gpt' ? 60+(pageCount-1)*5 : timeoutSec+10;
       for(let _ref=0; _ref<2; _ref++){
         const _rowSum=list.reduce((s,it)=>s+(parseInt(it.totalPrice)||0),0);
         const _diff=Math.abs(_rowSum-receiptTotalSum);
@@ -1130,7 +1142,7 @@ async function runAI() {
         setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`);
         try{
           const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u) 오류를 찾아 수정된 JSON만 반환.`},...parts.slice(1)];
-          const _fixRaw=await callGemini(_rParts,timeoutSec+10,'receipt_reflection',aiModel,'gemini',_useThinking);
+          const _fixRaw=await callGemini(_rParts,_refTimeout,'receipt_reflection',_refModel,_refProvider);
           const _fixItems=Array.isArray(_fixRaw)?_fixRaw:(_fixRaw?.items||[]);
           if(!_fixItems.length) break;
           raw=_fixRaw;
@@ -1147,6 +1159,15 @@ async function runAI() {
             isTaxFree:(x.f===true||x.f==='true'||x.isTaxFree===true),
             category:x.c||x.category||defaultCat
           }));
+          // 주류 보증금 행 복원 — 재검산 rebuild가 보증금 입금/빈병 회수 행을 날려먹던 버그 수정 (2026-06-10)
+          //   재검산 응답에 갱신된 보증금 있으면 그 값, 없으면 1차 분석 값 유지.
+          if(isLiquorModeAI){
+            const _dIn  = parseInt(_fixRaw?.deposit_in)||depositIn;
+            const _dOut = parseInt(_fixRaw?.deposit_out)||depositOut;
+            const _dd = respDate || ymdLocal(new Date());
+            if(_dIn > 0)  list.push({ date:_dd, vendor:rcpVendorName, item:'보증금 입금', spec:null, origin:null, unitPrice:null, qty:1, totalPrice:_dIn,   taxAmount:0, isTaxFree:true, category:rcpCatName||'주류', _isDeposit:true, _depositLabel:'입금' });
+            if(_dOut > 0) list.push({ date:_dd, vendor:rcpVendorName, item:'빈병 회수',  spec:null, origin:null, unitPrice:null, qty:1, totalPrice:-_dOut, taxAmount:0, isTaxFree:true, category:rcpCatName||'주류', _isDeposit:true, _depositLabel:'회수' });
+          }
           list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
           if(isLiquorModeAI) _rcpLiquorUnitPrice(list); // 재검산 후에도 주류 단가=공급가÷수량 재계산
           if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list); // 재검산 후에도 거래처 수량 역산
@@ -1193,28 +1214,43 @@ async function runAI() {
     // 🔴 일치 없음 → 기존 nameSuspect 유지
     if(isVendorModeAI && rcpPastPriceMap.size){
       list.forEach(it => {
-        // 품목명을 또렷이 읽은 행은 건드리지 않음 (후보 N개 과다 잡음 제거, 2026-06-08)
-        // 단가 매칭(자동채움·후보 추천)은 품목명 의심(🔴) 행에만 작동
-        if(!it._nameSuspect) return;
+        if(it._isDeposit) return;
         const u = parseInt(it.unitPrice)||0;
         if(!u) return;
-        if(rcpPastPriceMap.has(u)){
-          const candidates = [...rcpPastPriceMap.get(u)];
-          if(candidates.length === 1){
-            it.item = candidates[0];
+        const nm = String(it.item||'').trim();
+        const exact = rcpPastPriceMap.has(u) ? [...rcpPastPriceMap.get(u)] : [];
+        if(nm && exact.includes(nm)) return; // 과거와 단가·이름 모두 일치 = 확정, 통과
+        if(it._nameSuspect){
+          // 🔴 의심 행(주소·전화·한자 등): 단가 정확 일치 후보로 자동채움/추천 (기존 2026-06-08 동작)
+          if(exact.length === 1){
+            it.item = exact[0];
             it._nameSuspect = null;
             it._autoFilled = true;
-          } else {
-            it._nameCandidates = candidates;
+          } else if(exact.length > 1){
+            it._nameCandidates = exact;
             it._nameSuspect = null;
+          } else {
+            // ±15% 근접 후보 탐색 (정확 일치 없을 때만)
+            const nearby = [];
+            rcpPastPriceMap.forEach((names, pastPrice) => {
+              if(Math.abs(pastPrice - u) / u <= 0.15) nearby.push(...names);
+            });
+            if(nearby.length) it._nameCandidates = [...new Set(nearby)];
           }
-        } else {
-          // ±15% 근접 후보 탐색 (정확 일치 없을 때만)
-          const nearby = [];
-          rcpPastPriceMap.forEach((names, pastPrice) => {
-            if(Math.abs(pastPrice - u) / u <= 0.15) nearby.push(...names);
-          });
-          if(nearby.length) it._nameCandidates = [...new Set(nearby)];
+        } else if(nm && exact.length){
+          // 🟡 멀쩡해 보이는 행도: 같은 단가의 과거 품목명과 글자 1~2개만 다르면 = 오독 의심 → 과거 이름으로 자동 교정 (2026-06-10)
+          //   예: "(유자)" ↔ 과거 "(완자)" 단가 동일·한 글자 차이. AI한테 안 보내고 코드가 결정적 대조 — 환각 위험 0 (#454 프롬프트 주입과 다름).
+          //   거래할수록 과거 데이터가 쌓여 정확도 누적 — 어느 가게·거래처든 그 집 데이터로 작동 (하드코딩 아님).
+          const scored = exact.map(c=>({c, d:_levDist(nm, c)})).sort((a,b)=>a.d-b.d);
+          const best = scored[0];
+          const maxD = nm.length >= 8 ? 2 : 1; // 짧은 이름은 1글자 차이까지만 (과교정 방지)
+          if(best.d > 0 && best.d <= maxD && (scored.length < 2 || scored[1].d > best.d)){
+            it._origBeforeFix = nm; // AI 원본 보존 (검수용)
+            it.item = best.c;
+            it._autoFilled = true;
+          } else if(best.d > 0 && best.d <= 3){
+            it._nameCandidates = exact; // 차이 큼 — 자동 변경 X, 원터치 후보로만 추천
+          }
         }
       });
     }
@@ -1253,11 +1289,21 @@ async function runAI() {
     if(_rcpVenEl){ _rcpVenEl.value=(list[0]&&list[0].vendor)||rcpVendorName||''; }
     // 📊 합계 + 📄 페이지 박스 (pageInfo + photoCount 함께 전달)
     _renderRcpSumCheck(receiptTotalSum, list, pageInfo, pageCount, receiptSupplySum, receiptTaxSum);
+    // 🔄 백업 모델 고정 경고 — 토스트는 사라지니 결과 맨 위에 빨간 띠로 박음 (2026-06-10 GPT 오독 사고)
+    const _fbWarn=document.getElementById('rcpFallbackWarn');
+    if(_fbWarn){
+      if(usedFallback){
+        _fbWarn.innerHTML=`🔄 <b>${fallbackModel} 백업 분석 결과</b> — 평소 모델(Gemini Flash)이 혼잡해 대체 분석했어요.<br>정확도가 낮을 수 있으니 <b>품목·수량·합계를 꼭 확인</b> 후 저장하세요.`;
+        _fbWarn.style.display='block';
+      } else {
+        _fbWarn.style.display='none';
+      }
+    }
     const resultArea=document.getElementById('resultArea');
     resultArea.style.display='block';
-    // 분석 완료 알림 (토큰·비용 표시는 제거 — 사장님 2026-06-02). GPT-4o 백업 전환 시만 추가 안내.
+    // 분석 완료 알림 (토큰·비용 표시는 제거 — 사장님 2026-06-02). 백업 모델 전환 시만 추가 안내.
     const pageMark = pageCount>1 ? ` (${pageCount}장 통합)` : '';
-    toast(`✨ 분석 완료${pageMark}${usedFallback ? ' · 🔄 GPT-4o 백업' : ''}`, 'success', 2500);
+    toast(`✨ 분석 완료${pageMark}${usedFallback ? ` · 🔄 ${fallbackModel} 백업` : ''}`, 'success', 2500);
   } catch(e){toast('분석 실패: '+e.message,'error');}
   finally{setLoad(false);}
 }
@@ -1349,8 +1395,28 @@ function _rcpNameSuspect(name){
   if(/[가-힣]{2,}(시|도)\s*[가-힣]{2,}(시|군|구)/.test(s)) return '주소가 들어간 것 같아요'; // 안산시 단원구
   if(/\d{2,4}-\d{3,4}-\d{4}/.test(s)) return '전화번호가 들어간 것 같아요';
   if(/\d{3}-\d{2}-\d{5}/.test(s)) return '사업자번호가 들어간 것 같아요';
+  // 한자 잔재 (2026-06-10) — 프롬프트가 "한자 빼라"인데 남았다 = AI가 지시 어김 → 기계적으로 잡힘
+  if(/[一-鿿]/.test(s)) return '한자가 남아 있어요 — 품목명 확인 필요';
   // 길이 규칙 없음 — 프레시원 등 거래명세서 품목명 원래 40-50자, 길이로 잡으면 오탐 남발. 주소·전화 패턴으로 충분.
   return '';
+}
+// 편집 거리(Levenshtein) — 두 문자열이 몇 글자 다른지(삽입·삭제·교체 각 1). 품목명 오독 대조용 (2026-06-10)
+function _levDist(a, b){
+  a=String(a); b=String(b);
+  if(a===b) return 0;
+  const la=a.length, lb=b.length;
+  if(!la) return lb;
+  if(!lb) return la;
+  if(Math.abs(la-lb) > 3) return 99; // 길이 차 크면 다른 품목 — 비교 생략 (과교정·성능 방지)
+  let prev = Array.from({length: lb+1}, (_,j)=>j);
+  for(let i=1; i<=la; i++){
+    const cur=[i];
+    for(let j=1; j<=lb; j++){
+      cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1]===b[j-1]?0:1));
+    }
+    prev=cur;
+  }
+  return prev[lb];
 }
 // 주류 단가 재계산 — 단가 = 공급가 ÷ 수량(병). 영수증에 1병 단가가 없어 공급가 합계만 찍히는 주류 명세서용.
 //   비주류(공급가 0=탄산가스 등)·보증금 행은 제외. 반올림 1원 오차는 ⚠️ 검산 threshold(100원) 안이라 통과.

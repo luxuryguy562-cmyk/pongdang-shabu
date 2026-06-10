@@ -727,6 +727,8 @@
         <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="resetReceipt">취소</button>
       </div>
       <div id="resultArea" style="display:none;">
+        <!-- 🔄 백업 모델 경고 (Gemini 혼잡으로 대체 모델 분석 시만 노출 — 2026-06-10) -->
+        <div id="rcpFallbackWarn" style="display:none;background:#FEF2F2;border:1.5px solid #EF4444;border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#991B1B;line-height:1.6;"></div>
         <!-- 🏪 거래처 + 📅 날짜 (영수증 1장 = 1거래처·1날짜) — 목업 A안: 맨 위 -->
         <div class="card" style="padding:16px;margin-bottom:14px;">
           <div style="margin-bottom:10px;">
