@@ -83,7 +83,8 @@
 |------|-----|------|------|
 | **Gemini 프록시** | `gemini-proxy.luxuryguy562.workers.dev` | Gemini API 중계 | (별도 레포) |
 
-> **gemini-proxy worker 상태 (2026-06-09)**: `thinkingBudget: 0` (한국 location 차단으로 thinking OFF — dev_lessons #201). placement: `smart` (원래 targeted[94]였으나 배포 중 날아가 복원 불가). secret 4개: CLOVA_SECRET·CLOVA_URL·GEM_ES_KEY·OPENAI_KEY. 배포: Cloudflare API 토큰(env) + `curl PUT` multipart + `keep_bindings:["secret_text","plain_text"]`. 현재 배포 코드 백업: 다음 세션 위해 worker 별도 레포 또는 docs/worker_v6_snippet.js 참조.
+> **gemini-proxy worker 상태 (2026-06-10 롤백)**: 6/9 15:25 "생각기능(thinking) 켜기" 배포 후부터 Gemini 전체가 `User location is not supported`(한국 위치 차단) 400 오류 → 영수증 분석 전체 다운. **5/19 정상 버전(version_id `eeebdb0a-301e-45f4-880b-28d6b7079543`)으로 롤백**(deployment 5f3ec012)해서 복구. 롤백 방법: `POST .../workers/scripts/gemini-proxy/deployments` body `{"strategy":"percentage","versions":[{"version_id":"...","percentage":100}]}` (CLOUDFLARE_API_TOKEN env). thinkingBudget:0 (thinking 영구 OFF — 한국 차단). 코드 GET은 `api.cloudflare.com` 통과(workers.dev 실행 엔드포인트만 샌드박스 차단).
+> **옛 상태 (2026-06-09, 무효)**: `thinkingBudget: 0` (한국 location 차단으로 thinking OFF — dev_lessons #201). placement: `smart` (원래 targeted[94]였으나 배포 중 날아가 복원 불가). secret 4개: CLOVA_SECRET·CLOVA_URL·GEM_ES_KEY·OPENAI_KEY. 배포: Cloudflare API 토큰(env) + `curl PUT` multipart + `keep_bindings:["secret_text","plain_text"]`. 현재 배포 코드 백업: 다음 세션 위해 worker 별도 레포 또는 docs/worker_v6_snippet.js 참조.
 | **업솔루션 크롤러** | — | 매출 자동 수집 | `upsolution-crawler.js` |
 
 ## 매장 정보
