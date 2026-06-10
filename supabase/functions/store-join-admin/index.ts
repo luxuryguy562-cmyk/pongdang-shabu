@@ -1,6 +1,5 @@
 // 매장 합류 관리 (사장/매니저용) — 로그인 증표(emp_sessions)로 매니저 권한 확인 후:
-//   issue: 매장 코드 발급(고정 — 이미 있으면 그대로 반환) / list_codes: 코드 목록
-//   list_pending: 가입 대기 목록 / approve: 승인(employees 생성) / reject: 거절
+//   issue / list_codes / list_pending / approve / reject. verify_jwt=false — 자체 세션토큰 검증.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -10,10 +9,10 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const MANAGER_LEVELS = ["owner", "franchise_admin", "store_manager"];
+const PUBLIC_KEY = "sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe";
 function json(b: unknown, s = 200) {
   return new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 }
-// 헷갈리는 글자(0/O/1/I) 뺀 6자리 코드
 function genCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let s = "";
@@ -21,6 +20,16 @@ function genCode() {
   crypto.getRandomValues(buf);
   for (let i = 0; i < 6; i++) s += alphabet[buf[i] % alphabet.length];
   return s;
+}
+// 실시간 신호 발사 (store-{id} 채널) — 실패해도 본 작업엔 영향 없음
+async function broadcast(storeId: string, kind: string) {
+  try {
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/realtime/v1/api/broadcast`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": PUBLIC_KEY, "Authorization": `Bearer ${PUBLIC_KEY}` },
+      body: JSON.stringify({ messages: [{ topic: `store-${storeId}`, event: "change", payload: { kind } }] }),
+    });
+  } catch (_e) { /* 실시간 실패 무시 */ }
 }
 
 Deno.serve(async (req: Request) => {
@@ -31,7 +40,6 @@ Deno.serve(async (req: Request) => {
     if (!token) return json({ ok: false, error: "증표 없음" }, 400);
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // 1) 증표으로 요청자 확인
     const { data: sess } = await admin.from("emp_sessions").select("*").eq("token", token).maybeSingle();
     if (!sess) return json({ ok: false, error: "세션 없음" });
     if (new Date(sess.expires_at) < new Date()) return json({ ok: false, error: "세션 만료" });
@@ -39,18 +47,14 @@ Deno.serve(async (req: Request) => {
       .select("id, store_id, auth_level, is_manager").eq("id", sess.employee_id).maybeSingle();
     if (!requester) return json({ ok: false, error: "요청자 없음" });
 
-    // 2) 매니저 권한 확인
     const isManager = MANAGER_LEVELS.includes(requester.auth_level) || requester.is_manager === true;
     if (!isManager) return json({ ok: false, error: "권한 없음" });
     const storeId = requester.store_id;
 
-    // 3) action
     if (action === "issue") {
-      // 고정 코드 — 이미 활성 코드 있으면 그대로 반환
       const { data: existing } = await admin.from("store_join_codes")
         .select("code").eq("store_id", storeId).eq("is_active", true).limit(1).maybeSingle();
       if (existing) return json({ ok: true, code: existing.code });
-      // 없으면 새로 발급 (충돌 시 재시도)
       for (let i = 0; i < 5; i++) {
         const code = genCode();
         const { error } = await admin.from("store_join_codes")
@@ -83,7 +87,6 @@ Deno.serve(async (req: Request) => {
 
       const { data: person } = await admin.from("persons").select("name, phone").eq("id", pj.person_id).maybeSingle();
 
-      // 이미 직원이면 중복 생성 안 함
       const { data: existEmp } = await admin.from("employees")
         .select("id").eq("store_id", storeId).eq("person_id", pj.person_id).maybeSingle();
       if (!existEmp) {
@@ -101,6 +104,7 @@ Deno.serve(async (req: Request) => {
       await admin.from("pending_joins").update({
         status: "approved", decided_by: requester.id, decided_at: new Date().toISOString(),
       }).eq("id", pending_id);
+      await broadcast(storeId, "approve");
       return json({ ok: true });
     }
 
@@ -110,6 +114,7 @@ Deno.serve(async (req: Request) => {
         status: "rejected", decided_by: requester.id, decided_at: new Date().toISOString(),
       }).eq("id", pending_id).eq("store_id", storeId).eq("status", "pending");
       if (re) throw re;
+      await broadcast(storeId, "reject");
       return json({ ok: true });
     }
 
