@@ -57,26 +57,14 @@ function _accVendorC(v){
 - 수량 q: BOX 칸이 0이면 EA 칸이 곧 수량. BOX≥1이면 q=BOX×단위. (예 단위20·BOX0·EA15 → q=15 / 단위20·BOX1·EA0 → q=20)
 - 검산: 단가 × q = 합계 칸과 맞아야 함.`;
 }
-// 거래처 변형 D — 품목명 한자 제거 강화 (구체 예시). 2026-06-10 측정 결과 규격·가로선은 base(common.js)에 승격 반영됨.
-//   이번 D는 "한자 빼고 한글만" 지시를 구체 예시로 강하게 박아 품목명 한자 잔재(魚子福袋 등) 제거 효과만 측정.
-function _accVendorD(v){
-  return _accBaseVendor(v) + `
-
-[변형D 추가 강화 — 품목명 한자 제거]
-- 품목명에 한자(漢字)가 섞여 있으면 그 한자 글자는 모두 빼고 한글만 남겨라.
-  예: "위즈복대-魚子福袋" → "위즈복대"
-  예: "흑목이버섯 1kg-黑木耳" → "흑목이버섯 1kg"
-  예: "호스 쌀국수-春絲 米線" → "호스 쌀국수"
-  예: "행사/가재완자/홍샤쥬/龍蝦球" → "행사/가재완자/홍샤쥬"
-- 읽기 어려운 글자를 비슷한 한국어 음식 이름으로 추측·창작하지 마라. 안 보이면 보이는 한글만 남겨라.`;
-}
+// ⚠️ 옛 변형 D(품목명 한자 제거)는 2026-06-10 측정에서 한자 7/7 제거 완승 → base(common.js _rcpPromptVendor)에 승격 반영됨.
+//    base = 현재기준 A 가 이미 한자 제거를 포함하므로 D는 A와 동일해져 제거함. 다음 개선 후보 나오면 여기에 새 변형 추가.
 
 const ACC_VARIANTS = {
   vendor: {
     A: {name:'A 현재(기준)',     build:_accBaseVendor},
     B: {name:'B 금일합계강화',   build:_accVendorB},
     C: {name:'C 합계+수량강화',  build:_accVendorC},
-    D: {name:'D 품목명·규격·행', build:_accVendorD},
   },
   liquor: {
     A: {name:'A 현재(기준)',     build:_accBaseLiquor},
@@ -84,7 +72,7 @@ const ACC_VARIANTS = {
     C: {name:'C 칸위치명시',     build:_accLiquorC},
   },
 };
-let _accSelectedVariants=['A','D']; // 비교할 변형들 (기본 = 현재기준 A vs 개선후보 D 맞대결)
+let _accSelectedVariants=['A']; // 비교할 변형들 (기본 = 현재기준 A. 새 개선 후보 나오면 추가해 맞대결)
 
 // 모델 = Gemini Flash 고정 (변형 비교가 목적 — 사장님: 모델 안 바꿈)
 const ACC_FIXED_MODEL = {model:'gemini-2.5-flash', provider:'gemini', name:'Gemini Flash', timeout:35};
