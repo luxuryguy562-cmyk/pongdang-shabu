@@ -273,7 +273,8 @@ function _rcpPromptVendor({vendorName, catList, multiPageHint}){
   · 단위20·BOX1·EA10→q=30
   · 단위8·BOX1·EA0→q=8
   · 단위40·BOX0·EA5→q=5  ← BOX 0
-  · 단위12·BOX0·EA5→q=5  ← BOX 0${multiPageHint}
+  · 단위12·BOX0·EA5→q=5  ← BOX 0
+[행 정렬 — 가로선] 표는 가로선으로 행이 나뉜다. 한 품목의 품목명·규격·단가·수량·금액은 같은 가로줄 안에 있다. 인쇄가 선에 딱 안 맞아도 같은 행끼리 묶어 읽고, 윗줄/아랫줄 값을 섞지 마라. ⚠️특히 규격(spec, 중량·용량)은 그 행 안에서만 읽어라 — 윗줄·아랫줄 규격을 끌어오지 마라.${multiPageHint}
 
 [응답]
 {
