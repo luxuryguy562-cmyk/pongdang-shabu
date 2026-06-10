@@ -590,11 +590,8 @@
   <div class="nav-item manager-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>개시·마감</div>
   <div class="nav-item manager-only" data-tab="expHub" data-action="nav|expHub|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>지출관리</div>
   <div class="nav-item manager-only" data-action="toggleSideMenu" style="display:none;"><span class="ni"><svg><use href="#i-grid"/></svg></span>더보기</div>
-  <!-- 직원 nav: 근태관리/급여/개시·마감/영수증/내 정보 -->
+  <!-- 직원 nav: 홈 / 내 정보 (급여·개시마감·영수증은 홈 행동허브 버튼으로) -->
   <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-home"/></svg></span>홈</div>
-  <div class="nav-item staff-only" data-tab="empPay" data-action="nav|empPay|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>급여</div>
-  <div class="nav-item staff-only" data-tab="busHub" data-action="nav|busHub|this" style="display:none;"><span class="ni"><svg><use href="#i-piggy"/></svg></span>개시·마감</div>
-  <div class="nav-item staff-only" data-tab="receipt" data-action="nav|receipt|this" style="display:none;"><span class="ni"><svg><use href="#i-receipt"/></svg></span>영수증</div>
   <div class="nav-item staff-only" data-tab="myinfo" data-action="nav|myinfo|this" style="display:none;"><span class="ni"><svg><use href="#i-card"/></svg></span>내 정보</div>
 </div>
 
@@ -1058,45 +1055,41 @@
 
 <!-- ══ [Hub] 내 정보 (직원 전용) ══ -->
 <div id="myinfoCont" class="container">
-  <div class="card">
-    <div class="card-title">내 정보</div>
-    <div style="padding:14px 0;border-bottom:1px solid var(--gray-100);">
-      <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px;">이름</div>
-      <div id="myinfoName" style="font-size:16px;font-weight:800;">-</div>
-    </div>
-    <div style="padding:14px 0;border-bottom:1px solid var(--gray-100);">
-      <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px;">직급</div>
-      <div id="myinfoRole" style="font-size:14px;">-</div>
-    </div>
-    <div style="padding:14px 0;border-bottom:1px solid var(--gray-100);">
-      <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px;">이번 달 누적 급여</div>
-      <div id="myinfoWage" style="font-size:18px;font-weight:800;color:var(--blue);">-</div>
-    </div>
-    <button id="myInfoPinBtn" class="btn btn-secondary btn-full" style="margin-top:16px;" data-action="openMyInfoSheet">PIN·기기 변경</button>
-    <button class="btn btn-danger btn-full" style="margin-top:8px;" data-action="doLogout">로그아웃</button>
+  <!-- 프로필 -->
+  <div style="text-align:center;padding:10px 0 18px;">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 10px;">👤</div>
+    <div id="myinfoName" style="font-size:19px;font-weight:900;color:var(--text);">-</div>
+    <div id="myinfoSub" style="font-size:12px;color:var(--gray-600);margin-top:3px;">-</div>
   </div>
+  <!-- 본인 정보 -->
+  <div style="background:var(--gray-100);border-radius:16px;padding:6px 16px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--gray-200);"><span style="font-size:13px;color:var(--gray-600);font-weight:700;">전화번호</span><span id="myinfoPhone" style="font-size:14px;font-weight:800;">-</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--gray-200);"><span style="font-size:13px;color:var(--gray-600);font-weight:700;">시급</span><span id="myinfoHourly" style="font-size:14px;font-weight:800;">-</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--gray-200);"><span style="font-size:13px;color:var(--gray-600);font-weight:700;">급여 계좌</span><span id="myinfoAccount" style="font-size:14px;font-weight:800;">-</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;"><span style="font-size:13px;color:var(--gray-600);font-weight:700;">생년월일</span><span id="myinfoBirth" style="font-size:14px;font-weight:800;">-</span></div>
+  </div>
+  <!-- 메뉴 -->
+  <div style="display:flex;align-items:center;gap:12px;background:var(--gray-100);border-radius:14px;padding:15px;margin-bottom:9px;cursor:pointer;" data-action="nav|empSched">
+    <div style="width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;">🗓</div>
+    <div style="flex:1;font-size:14px;font-weight:800;">내 근무표 보기</div><span style="color:var(--gray-400);font-size:18px;">›</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;background:var(--gray-100);border-radius:14px;padding:15px;margin-bottom:9px;cursor:pointer;" data-action="openStoreSheet">
+    <div style="width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;">🏪</div>
+    <div style="flex:1;font-size:14px;font-weight:800;">매장 변경 / 추가</div><span style="color:var(--gray-400);font-size:18px;">›</span>
+  </div>
+  <div id="myInfoPinBtn" style="display:flex;align-items:center;gap:12px;background:var(--gray-100);border-radius:14px;padding:15px;margin-bottom:9px;cursor:pointer;" data-action="openMyInfoSheet">
+    <div style="width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;">🔒</div>
+    <div style="flex:1;font-size:14px;font-weight:800;">비밀번호 변경</div><span style="color:var(--gray-400);font-size:18px;">›</span>
+  </div>
+  <button class="btn btn-full" style="margin-top:6px;padding:14px;border:1px solid var(--gray-200);background:#fff;color:var(--danger);font-size:14px;font-weight:800;border-radius:13px;" data-action="doLogout">로그아웃</button>
 </div>
 
 <!-- ══ [2] 근태관리 ══ -->
 <div id="attendanceCont" class="container">
-  <!-- ── 직원 홈 요약 (2026-06-09, staff-only): 이번 달 번 돈 + 다음 근무 + 이번 주 ── -->
-  <div id="empHomeSummary" style="display:none;margin-bottom:14px;">
-    <div style="font-size:12px;color:var(--gray-400);font-weight:800;margin:2px 2px 8px;">이번 달 번 돈</div>
-    <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:18px;padding:18px;color:#fff;">
-      <div id="empHomeMonthSub" style="font-size:12px;color:#CFE0FF;font-weight:700;">이번 달</div>
-      <div id="empHomeMonthAmt" style="font-size:30px;font-weight:900;letter-spacing:-1px;margin-top:4px;">0원</div>
-    </div>
-    <div style="background:var(--gray-100);border-radius:14px;padding:13px 15px;margin-top:10px;display:flex;align-items:center;gap:11px;cursor:pointer;" data-action="nav|empSched">
-      <div style="width:38px;height:38px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;">🗓</div>
-      <div style="flex:1;">
-        <div style="font-size:11px;color:var(--gray-600);font-weight:700;">다음 근무 · 내 근무표 보기</div>
-        <div id="empHomeNext" style="margin-top:1px;"><span style="font-size:14px;color:var(--gray-400);">불러오는 중…</span></div>
-      </div>
-      <span style="color:var(--gray-400);font-size:18px;">›</span>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:10px;">
-      <div style="flex:1;background:var(--gray-100);border-radius:13px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--gray-600);font-weight:700;">이번 주 근무</div><div id="empHomeWeekDays" style="font-size:17px;font-weight:900;margin-top:3px;">0일</div></div>
-      <div style="flex:1;background:var(--gray-100);border-radius:13px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--gray-600);font-weight:700;">이번 주 시간</div><div id="empHomeWeekHours" style="font-size:17px;font-weight:900;margin-top:3px;">0h</div></div>
+  <!-- ── 직원 홈 = 행동 허브 (staff-only): 우상단 내 급여 버튼 ── -->
+  <div id="empHomeSummary" style="display:none;margin-bottom:4px;">
+    <div style="display:flex;justify-content:flex-end;">
+      <div data-action="nav|empPay" style="display:flex;align-items:center;gap:4px;background:var(--blue-light);color:var(--blue);font-size:13px;font-weight:800;padding:9px 14px;border-radius:20px;cursor:pointer;">💰 내 급여 ›</div>
     </div>
   </div>
   <div class="card">
@@ -1168,6 +1161,18 @@
   </div>
   <!-- 옛 근무계획 카드(schedCard) 폐기 — 2026-05-21 근태 📋 기록 통합 (계획+실제 한 화면).
        단일 일정 등록·편집은 openSchedSheet 시트 재사용, 주단위 일괄 입력은 weeklyPlanSheet 신설. -->
+  <!-- ── 직원 행동허브 버튼 (staff-only): 개시·마감 / 영수증 = 사장님 앱과 같은 DB ── -->
+  <div id="empHomeActions" class="staff-only" style="display:none;margin-top:6px;">
+    <div style="font-size:11px;color:var(--gray-400);font-weight:800;margin:0 2px 8px;">오늘 할 일 (사장님 앱과 연결)</div>
+    <div style="display:flex;gap:12px;">
+      <div data-action="nav|busHub" style="flex:1;border:1.5px solid var(--blue);background:#fff;border-radius:16px;padding:20px 10px;text-align:center;cursor:pointer;">
+        <div style="font-size:30px;">📋</div><div style="font-size:14px;font-weight:900;color:var(--blue);margin-top:7px;">개시·마감</div><div style="font-size:10px;color:var(--gray-600);margin-top:2px;">영업 열고 닫기</div>
+      </div>
+      <div data-action="nav|receipt" style="flex:1;border:1.5px solid var(--blue);background:#fff;border-radius:16px;padding:20px 10px;text-align:center;cursor:pointer;">
+        <div style="font-size:30px;">🧾</div><div style="font-size:14px;font-weight:900;color:var(--blue);margin-top:7px;">영수증</div><div style="font-size:10px;color:var(--gray-600);margin-top:2px;">지출 등록</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══ [3.5] 영업개시 보고 ══ -->
@@ -1866,43 +1871,24 @@
 
 <!-- ══ 직원 급여 탭 (2026-06-09) — 직원 본인 급여·달력 ══ -->
 <div id="empPayCont" class="container">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-    <div style="font-size:20px;font-weight:900;color:var(--text);">급여</div>
-    <div id="empPayStoreChip" style="display:none;align-items:center;gap:5px;background:var(--blue);color:#fff;font-size:12px;font-weight:800;padding:6px 11px;border-radius:18px;cursor:pointer;" data-action="openStoreSheet"></div>
+  <div class="app-back" data-action="nav|attendance"><span class="back-btn">‹</span><span class="back-ttl">내 급여</span></div>
+  <!-- 월 네비 -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:16px;font-size:18px;font-weight:900;color:var(--text);margin:6px 0 14px;">
+    <span style="color:var(--gray-400);cursor:pointer;font-size:22px;" data-action="empPayCalNav|-1">‹</span>
+    <span id="empPayCalMonth">2026년 6월</span>
+    <span style="color:var(--gray-400);cursor:pointer;font-size:22px;" data-action="empPayCalNav|1">›</span>
   </div>
-  <!-- 이번 달 hero -->
-  <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:20px;padding:20px;color:#fff;margin-top:10px;">
+  <!-- 그 달 합계 hero -->
+  <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:20px;padding:18px;color:#fff;">
     <div id="empPayHeroLabel" style="font-size:13px;color:#CFE0FF;font-weight:700;">이번 달</div>
-    <div id="empPayHeroAmt" style="font-size:32px;font-weight:900;letter-spacing:-1px;margin:6px 0 2px;">0원</div>
+    <div id="empPayHeroAmt" style="font-size:30px;font-weight:900;letter-spacing:-1px;margin:6px 0 2px;">0원</div>
     <div id="empPayHeroSub" style="font-size:12px;color:#CFE0FF;">0시간</div>
   </div>
-  <!-- 요약/달력 토글 -->
-  <div style="display:flex;background:var(--gray-100);border-radius:11px;padding:3px;margin:14px 0;">
-    <div id="empPayTabSummary" style="flex:1;text-align:center;padding:7px;font-size:13px;font-weight:800;border-radius:9px;cursor:pointer;" data-action="empPaySwitch|summary">요약</div>
-    <div id="empPayTabCal" style="flex:1;text-align:center;padding:7px;font-size:13px;font-weight:800;border-radius:9px;cursor:pointer;color:var(--gray-400);" data-action="empPaySwitch|calendar">달력</div>
-  </div>
-  <!-- 요약 뷰 -->
-  <div id="empPaySummaryView">
-    <div style="font-size:12px;color:var(--gray-400);font-weight:800;margin:4px 2px 4px;">받은 급여 내역</div>
-    <div id="empPayHistory"></div>
-    <div style="background:var(--gray-100);border-radius:14px;padding:14px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:13px;font-weight:800;color:var(--text);">올해 누적 급여</span>
-      <b id="empPayCumAmt" style="font-size:17px;color:var(--blue);">0원</b>
-    </div>
-  </div>
-  <!-- 달력 뷰 -->
-  <div id="empPayCalView" style="display:none;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:10px;font-size:16px;font-weight:900;">
-        <span style="color:var(--gray-400);cursor:pointer;" data-action="empPayCalNav|-1">‹</span>
-        <span id="empPayCalMonth">2026.6</span>
-        <span style="color:var(--gray-400);cursor:pointer;" data-action="empPayCalNav|1">›</span>
-      </div>
-      <div style="font-size:15px;font-weight:900;">합계 <span id="empPayCalTotal">0원</span></div>
-    </div>
-    <div id="empPayCalGrid"></div>
-    <div style="text-align:center;font-size:11px;color:var(--gray-400);margin-top:10px;">날짜를 누르면 그날 출퇴근 시간이 보여요.</div>
-  </div>
+  <!-- 날짜별 달력 -->
+  <div style="font-size:12px;color:var(--gray-400);font-weight:800;margin:16px 2px 6px;">날짜별 — 누르면 그날 상세</div>
+  <div id="empPayCalGrid"></div>
+  <!-- 날짜 누르면 그날 상세 -->
+  <div id="empPayDayDetail"></div>
 </div>
 
 <!-- ══ 직원 근무표 탭 (2026-06-09) — 본인 주간 스케줄 ══ -->

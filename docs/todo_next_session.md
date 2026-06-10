@@ -2,6 +2,35 @@
 
 ---
 
+## ⚡ 세션 압축 요약 (2026-06-10) — 여기부터 읽으면 됨
+
+### 이번 세션 완료 (전부 main 반영·검증)
+1. **직원 가입 기능** — 로그인 '가입하기' → 전화인증(send-otp/verify-otp) → 역할선택 → [직원: 이름·PIN(complete-signup) → 매장코드(join-store) → 사장승인] / [사장: 기존 openSignup 그대로]. 직원·사장 둘 다 end-to-end 검증.
+   - 매장코드 = **고정 + 사장 승인** (사장님 결정). 직원관리에 '직원 초대'(코드 공유) + '가입 대기'(승인/거절).
+   - DB: persons.pin, store_join_codes, signup_tokens, pending_joins (적용됨).
+2. **로그인 복구 (긴급)** — Edge Function 8개 `verify_jwt=false` 재배포 (로그인류는 로그인 전 호출 → true면 401). dev_lessons #144.
+3. **직원 화면 4탭** — 홈(출퇴근+번돈+다음근무) / 급여(요약+달력) / 근무표 / 내정보. attendance_logs.calculated_wage 기반(매니저와 동일). 코드: attendance.js(loadEmpPay/renderEmpHome/loadEmpSched), index.html(empPayCont/empSchedCont/empHomeSummary), common.js(nav actions).
+4. **실시간 (Supabase Realtime broadcast)** — 헤더 🔔종 배지(가입 신청 즉시) + 지출·마감 시 보던 화면 자동 갱신. common.js(_storeChannel/subscribeStoreRealtime/broadcastStoreChange/onStoreRealtime/_rtRefreshActive), 채널 `store-{id}` event `change` payload `{kind}`. 왕복 검증 완료.
+
+### ⛔ 지금 막힌 것 = 직원 화면 "정리(갈아엎기)" 사장님 승인 대기
+사장님 호소(2026-06-10): *"직원화면 조잡, 번돈이 홈·급여 둘 다, 달력 두 개(기록·급여), 개시마감·영수증 난잡, 유저플로우 안 맞음"*. **헌법 1-6 정당한 갈아엎기.**
+- **정리안(사장님께 시안 보냄, 승인 대기)**:
+  - 번 돈 = **급여 탭 한 곳만**. 홈은 "이번 달 OOO원 ›" 한 줄 링크.
+  - 달력 = **급여 달력 하나로** (근태 '기록' 달력 직원에겐 숨김).
+  - 탭 4개: **홈 / 급여 / 개시·마감 / 내정보** (영수증 직원 nav에서 제거).
+- **사장님께 받아야 할 답**: ① 정리안 "좋아"? ② 영수증 직원 화면에서 빼도 되나?
+- 승인 오면 → 위대로 직원 화면 싹 정리(현 조잡 걷어냄).
+
+### 보류 (안 함/나중)
+- 승인/거절 시 직원 문자 = **사장님이 불필요하다 함 → 안 함** (코드 revert됨).
+- 주휴수당 = 현재 급여는 매니저 화면과 동일 기준(calculated_wage). 주휴는 양쪽 같이 바꿔야 → 별도.
+- QR 코드 초대(지금은 카톡공유·복사).
+
+### 작업 가지
+`claude/wizardly-einstein-gizfxw` (main 자동 머지 중). 라이브 Edge Function: emp-login/emp-session/emp-private/send-otp/verify-otp/complete-signup/join-store/store-join-admin (전부 verify_jwt=false). store_id 논산점 `4ae03341-e5dc-4933-b746-29728cbc685f`.
+
+---
+
 ## 🏗️ [2026-06-09 — 직원 계정 모델 대전환 (비전 4-A 확정) + 로그인 보안 완성]
 
 ### 사장님 확정 비전 (vision.md 4-A 박음)
