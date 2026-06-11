@@ -950,26 +950,23 @@
 
 <!-- ══ [Hub] 지출 허브 (관리자 전용) ══ -->
 <div id="expHubCont" class="container">
-  <!-- 지출 등록 버튼 하나 (입력 입구 통합) -->
-  <button type="button" class="exp-hero-ai" data-action="nav|receipt">
-    <span class="eha-ic"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
-    <div style="flex:1;min-width:0;">
-      <div class="eha-title">지출 등록<span class="eha-pill">AI</span></div>
-      <div class="eha-sub" id="expHeroInfo">영수증·명세서 사진 한 장이면 자동 분류</div>
-    </div>
-    <span class="eha-arr">›</span>
-  </button>
-  <!-- 카테고리 섹션 — 📸영수증(토글)/🤖자동/✏️직접입력 -->
-  <!-- 토글은 📸영수증 헤더 안 — 거래처별 선택 시 영수증 그리드만 거래처 목록으로 전환 -->
+  <!-- 카테고리 섹션 — 📸영수증(토글+등록버튼)/🤖자동/✏️직접입력 -->
+  <!-- 지출 등록 버튼은 '영수증으로 채워요' 섹션 안 (영수증 채우는 행위라 영수증 그룹에 소속) -->
   <div id="expHubCatView">
-    <!-- 📸 영수증 섹션 헤더 + 카테고리별/거래처별 토글 통합 -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px;">
+    <!-- 📸 영수증 섹션 헤더 + 카테고리별/거래처별 토글 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 9px;">
       <div class="exp-group-label" style="margin:0;">📸 영수증으로 채워요 <span class="exp-group-hint">사진 찍으면 자동 분류</span></div>
       <div class="exp-hub-view-toggle">
         <button type="button" class="eht-btn active" id="ehtBtnCat" data-action="switchExpHubView|cat">카테고리별</button>
         <button type="button" class="eht-btn" id="ehtBtnVendor" data-action="switchExpHubView|vendor">거래처별</button>
       </div>
     </div>
+    <!-- 지출 등록 버튼 (영수증 섹션 안, 카드 위) -->
+    <button type="button" class="exp-add-btn" data-action="nav|receipt">
+      <span class="eab-ic">📸</span>
+      <span class="eab-txt">영수증·명세서 등록 <span class="eab-pill">AI</span></span>
+      <span class="eab-meta" id="expHeroInfo">사진 자동 분류</span>
+    </button>
     <!-- 카테고리별: 영수증 그리드 (기본 표시) -->
     <div class="hub-grid exp-cat-grid" id="expHubGridReceipt" data-grp="receipt"></div>
     <!-- 거래처별: 거래처 목록 (초기 숨김, switchExpHubView('vendor')로 표시) -->
