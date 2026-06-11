@@ -990,7 +990,7 @@ async function runAI() {
   const pageCount = b64Pages.length;
   // 여러 장이면 AI 호출(비용 발생) 전에 확인 — 다른 거래처 섞임 방지 (2026-06-04, 비용 0으로 차단)
   if(pageCount>1 && !confirm(`사진 ${pageCount}장이 선택됐어요.\n\n같은 영수증의 여러 페이지인가요?\n거래처가 다르면 '취소' 후 한 곳씩 올려주세요.`)) return;
-  setLoad(true, pageCount>1 ? `AI 분석 중... (사진 ${pageCount}장 통합)` : 'AI 분석 중...');
+  setLoad(true, pageCount>1 ? `AI 분석 중... (${pageCount}장 페이지별 동시 분석)` : 'AI 분석 중...');
   try {
     let catList = getCatListForPrompt();
     const isVendorModeAI = rcpMode === 'vendor';
@@ -1056,30 +1056,28 @@ async function runAI() {
     //   gemini-2.5-pro는 worker(중계 서버) 허용 목록 밖이라 조용히 lite로 강등됨 → 못 씀 (worker 수정 = 전체 장애 전력, 보류).
     //   백업 결과엔 빨간 고정 경고 + 재검산(Self-Reflection)도 그 모델로 적용.
     let raw, usedFallback = false, fallbackModel = '', fallbackProvider = '';
-    try {
-      raw = await callGemini(parts, timeoutSec, 'receipt_ocr', aiModel, 'gemini');
-    } catch(geminiErr){
-      const m = String(geminiErr?.message || '').toLowerCase();
-      const isOverloadLike = /high demand|overload|currently|503|429|시간 초과|비어있|json|응답 오류/i.test(m);
-      if(!isOverloadLike) throw geminiErr;
-      try {
-        setLoad(true, 'Gemini Flash 혼잡 → Gemini 2.0으로 재시도 중...');
-        raw = await callGemini(parts, timeoutSec+10, 'receipt_ocr', 'gemini-2.0-flash', 'gemini');
-        usedFallback = true; fallbackProvider = 'gemini';
-        fallbackModel = _shortModelName(lastAIUsage?.model) || 'Gemini 2.0'; // worker가 강등시켜도 실제 쓴 모델 정직 표시
-      } catch(e2){
-        setLoad(true, 'Gemini 전체 혼잡 → GPT-4o로 재시도 중...');
-        toast('⚠️ Gemini 혼잡 — GPT-4o 백업 분석', 'warn', 2500);
-        raw = await callGemini(parts, 60+(pageCount-1)*5, 'receipt_ocr', 'gpt-4o', 'gpt'); // GPT-4o 느림 → 60초 (2026-06-08 실측)
-        usedFallback = true; fallbackProvider = 'gpt'; fallbackModel = 'GPT-4o';
+    if(pageCount > 1){
+      // ─── 페이지별 독립 분석 → 병합 (2026-06-11) ───
+      // 여러 장을 한 호출에 던지면 페이지끼리 섞여 품목명 오독 폭증 (사장님 실측 — 삼성웰스토리 2장).
+      // 페이지마다 따로 분석 = 1장 정확도 그대로. 요약 페이지(품목 0 + 합계만)는 합계 기준으로만 쓰임.
+      setLoad(true, `AI 분석 중... (${pageCount}장 페이지별 동시 분석)`);
+      const singlePrompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, isOnlineMode:isOnlineModeAI, isLiquorMode:isLiquorModeAI, vendorName:rcpVendorName, catList, pageCount:1 });
+      const results = await Promise.all(b64Pages.map(b64 =>
+        _rcpAICallWithFallback([{text:singlePrompt},{inline_data:{mime_type:'image/jpeg',data:b64}}], 30, 1)
+      ));
+      // 한 장 안에 서로 다른 영수증 섞임 감지 → 중단 + 안내 (2026-06-04 유지)
+      if(results.some(r => !Array.isArray(r.raw) && r.raw?.multi_receipt===true)){
+        setLoad(false);
+        toast('📄 서로 다른 거래처 영수증이 섞여 있어요.\n거래처별로 한 번에 한 곳씩 올려주세요.', 'warn', 7000);
+        return;
       }
-    }
-    // 여러 장인데 서로 다른 거래처 영수증이 섞임 감지 → 중단 + 안내 (2026-06-04)
-    //   엉킨 결과를 저장하는 사고 방지. 거래처별로 따로 올리도록 유도.
-    if(pageCount>1 && !Array.isArray(raw) && raw?.multi_receipt===true){
-      setLoad(false);
-      toast('📄 서로 다른 거래처 영수증이 섞여 있어요.\n거래처별로 한 번에 한 곳씩 올려주세요.', 'warn', 7000);
-      return;
+      raw = _rcpMergePages(results.map(r => r.raw));
+      const _fb = results.find(r => r.usedFallback);
+      if(_fb){ usedFallback = true; fallbackModel = _fb.fallbackModel; fallbackProvider = _fb.fallbackProvider; }
+    } else {
+      const _res = await _rcpAICallWithFallback(parts, timeoutSec, pageCount);
+      raw = _res.raw; usedFallback = _res.usedFallback;
+      fallbackModel = _res.fallbackModel; fallbackProvider = _res.fallbackProvider;
     }
     // GPT-4o 자동전환 제거 (2026-06-05) — needs_review 자가판단 못 믿음(오늘 10개 틀렸는데 false) +
     // 한자 품목명은 GPT-4o가 오히려 더 나쁨(#97: GPT 62.5% < 제미나이 95%, '냉동돈육' 환각) + 비용 6배(6→35원).
@@ -1490,6 +1488,64 @@ function _rcpLiquorUnitPrice(list){
     const q=parseFloat(it.qty)||0;
     if(sp>0 && q>0) it.unitPrice = Math.round(sp/q);
   });
+}
+// ─── AI 호출 + 백업 사슬 (Flash → Gemini 2.0 → GPT-4o) — 페이지 단위 재사용 (2026-06-11 분리) ───
+async function _rcpAICallWithFallback(parts, timeoutSec, pageCount){
+  try {
+    const raw = await callGemini(parts, timeoutSec, 'receipt_ocr', 'gemini-2.5-flash', 'gemini');
+    return { raw, usedFallback:false, fallbackModel:'', fallbackProvider:'' };
+  } catch(geminiErr){
+    const m = String(geminiErr?.message || '').toLowerCase();
+    const isOverloadLike = /high demand|overload|currently|503|429|시간 초과|비어있|json|응답 오류/i.test(m);
+    if(!isOverloadLike) throw geminiErr;
+    try {
+      setLoad(true, 'Gemini Flash 혼잡 → Gemini 2.0으로 재시도 중...');
+      const raw = await callGemini(parts, timeoutSec+10, 'receipt_ocr', 'gemini-2.0-flash', 'gemini');
+      return { raw, usedFallback:true, fallbackProvider:'gemini', fallbackModel:(_shortModelName(lastAIUsage?.model) || 'Gemini 2.0') }; // worker가 강등시켜도 실제 쓴 모델 정직 표시
+    } catch(e2){
+      setLoad(true, 'Gemini 전체 혼잡 → GPT-4o로 재시도 중...');
+      toast('⚠️ Gemini 혼잡 — GPT-4o 백업 분석', 'warn', 2500);
+      const raw = await callGemini(parts, 60+(pageCount-1)*5, 'receipt_ocr', 'gpt-4o', 'gpt'); // GPT-4o 느림 → 60초 (2026-06-08 실측)
+      return { raw, usedFallback:true, fallbackProvider:'gpt', fallbackModel:'GPT-4o' };
+    }
+  }
+}
+// ─── 페이지별 응답 병합 (2026-06-11) ───
+// 페이지마다 독립 분석한 응답을 하나로 합침. 요약 페이지(품목 0 + 합계만)가 있으면 그 합계가 기준.
+function _rcpMergePages(raws){
+  const objs = raws.map(r => Array.isArray(r) ? {items:r} : (r||{}));
+  const merged = { items: [] };
+  objs.forEach(o => { (o.items||[]).forEach(it => merged.items.push(it)); });
+  // 요약 페이지 = 품목 행 없이 합계만 있는 페이지 (연속 명세서 마지막 장)
+  const summary = objs.find(o => (!o.items || !o.items.length) && (o.total_sum || o.total_supply || o.total_tax || o.deposit_in || o.deposit_out));
+  const pick = (key) => {
+    if(summary && summary[key]!=null && summary[key]!=='') return summary[key];
+    const vals = objs.map(o => o[key]).filter(v => v!=null && v!=='');
+    if(!vals.length) return null;
+    if(vals.length===1) return vals[0];
+    // 합계가 여러 페이지에 — 페이지 소계 양식(합산=품목합)인지 최종 누계 양식(최대값)인지 품목합으로 판별
+    if(key==='total_sum'){
+      const nums = vals.map(v=>parseInt(v)||0);
+      const itemsSum = merged.items.reduce((a,x)=>a+(parseInt(x.p ?? x.totalPrice)||0),0);
+      const tol = Math.max(500, itemsSum*0.005);
+      const max = Math.max(...nums), sumAll = nums.reduce((a,b)=>a+b,0);
+      if(Math.abs(max-itemsSum)<=tol) return max;
+      if(Math.abs(sumAll-itemsSum)<=tol) return sumAll;
+      return max;
+    }
+    return vals[vals.length-1];
+  };
+  merged.date = objs.map(o=>o.date).find(v=>v) || null;
+  merged.vendor = objs.map(o=>o.vendor).find(v=>v) || '';
+  merged.total_sum = pick('total_sum');
+  merged.total_supply = pick('total_supply');
+  merged.total_tax = pick('total_tax');
+  merged.deposit_in = pick('deposit_in');   // 주류 보증금 (요약 페이지 우선)
+  merged.deposit_out = pick('deposit_out');
+  const _pTotals = objs.map(o=>o.page_info?.total).filter(t=>typeof t==='number');
+  merged.page_info = _pTotals.length ? { current: objs.length, total: Math.max(..._pTotals) } : null;
+  merged.multi_receipt = false;
+  return merged;
 }
 // 거래처 수량 역산 — 수량 = 공급가 ÷ 단가. AI가 BOX수만 읽고 BOX×단위를 못 곱하는 경우 교정 (2026-06-10).
 //   단가·공급가는 정확히 읽히는데 수량만 틀린 케이스(BOX표기 명세서). 이미 맞으면 변경 없음.
