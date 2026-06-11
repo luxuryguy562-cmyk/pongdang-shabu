@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>지출관리 허브 UX 목업</title>
+  <style>
+    :root {
+      --blue:#0050FF; --blue-light:#EEF3FF; --bg:#FFFFFF; --white:#FFFFFF;
+      --gray-100:#F9FAFB; --gray-200:#E5E8EB; --gray-400:#B0B8C1; --gray-600:#4E5968;
+      --text:#191F28; --danger:#F04452; --danger-light:#FFEBEE;
+      --success:#05C072; --success-light:#E8FAF3;
+      --warn:#FF9500; --warn-light:#FFF3E0;
+      --purple:#7C3AED; --purple-light:#EDE9FE;
+      --toss-blue:#3182F6; --toss-blue-strong:#0064FF; --toss-blue-light:#EDF4FF;
+      --toss-green:#0CAB6C; --toss-orange:#F5A11E; --toss-red:#F04452;
+      --toss-text-1:#191F28; --toss-text-2:#333D4B; --toss-text-3:#6B7684; --toss-text-4:#8B95A1;
+      --toss-line:#F2F4F6; --toss-line-2:#E5E8EB;
+      --card-radius:20px;
+      --card-shadow:0 4px 14px rgba(20,40,80,0.07), 0 1px 3px rgba(20,40,80,0.05);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      margin: 0; background: #F2F4F6; color: var(--toss-text-1);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ─── 목업 전환 바 ─── */
+    .mock-switcher {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+      background: #1A1A2E; padding: 8px 12px;
+      display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+    }
+    .mock-switcher::-webkit-scrollbar { display: none; }
+    .mock-btn {
+      flex: 0 0 auto; padding: 6px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; border: none; cursor: pointer;
+      background: rgba(255,255,255,0.15); color: #fff; white-space: nowrap;
+    }
+    .mock-btn.active { background: var(--toss-blue); }
+
+    /* ─── 공통 화면 wrapper ─── */
+    .screen {
+      display: none; max-width: 390px; margin: 0 auto;
+      min-height: 100vh; background: var(--bg);
+      padding-top: 44px; /* 목업 switcher 높이 */
+    }
+    .screen.active { display: block; }
+
+    /* ─── 헤더 ─── */
+    .header {
+      position: sticky; top: 44px; z-index: 100;
+      background: var(--white); border-bottom: 1px solid var(--toss-line);
+      padding: 14px 16px 12px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-title { font-size: 18px; font-weight: 800; color: var(--toss-blue-strong); letter-spacing: -0.5px; }
+    .header-store {
+      font-size: 12px; font-weight: 700; color: var(--toss-text-2);
+      background: var(--toss-line); padding: 7px 13px; border-radius: 99px;
+    }
+
+    /* ─── 뒤로가기 ─── */
+    .app-back {
+      position: sticky; top: 44px; z-index: 100;
+      background: var(--white); border-bottom: 1px solid var(--toss-line);
+      padding: 14px 16px 12px; display: flex; align-items: center; gap: 6px;
+      font-size: 16px; font-weight: 800; color: var(--toss-text-1);
+    }
+    .back-btn { font-size: 22px; color: var(--toss-blue); line-height: 1; cursor: pointer; }
+
+    /* ─── 컨텐츠 패딩 ─── */
+    .content { padding: 14px 14px 90px; }
+
+    /* ─── 메인 등록 버튼 ─── */
+    .entry-btn {
+      width: 100%; background: var(--toss-blue-strong); color: #fff;
+      border: none; border-radius: 18px; padding: 20px 22px;
+      display: flex; align-items: center; gap: 14px;
+      cursor: pointer; margin-bottom: 20px;
+      box-shadow: 0 6px 20px rgba(0,100,255,0.25);
+    }
+    .entry-btn-icon {
+      width: 46px; height: 46px; border-radius: 14px;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .entry-btn-text { flex: 1; text-align: left; }
+    .entry-btn-title { font-size: 16px; font-weight: 800; letter-spacing: -0.4px; }
+    .entry-btn-sub { font-size: 12px; font-weight: 500; opacity: 0.8; margin-top: 2px; }
+    .entry-btn-arrow { font-size: 18px; opacity: 0.7; }
+
+    /* ─── 섹션 타이틀 ─── */
+    .section-ttl {
+      font-size: 13px; font-weight: 800; color: var(--toss-text-3);
+      margin: 0 0 10px; letter-spacing: -0.2px;
+    }
+    .section-ttl .hint {
+      font-size: 11px; font-weight: 500; color: var(--toss-text-4); margin-left: 6px;
+    }
+
+    /* ─── 카테고리 카드 그리드 ─── */
+    .cat-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
+    }
+    .cat-card {
+      background: var(--white); border-radius: 18px;
+      padding: 16px; box-shadow: var(--card-shadow);
+      cursor: pointer; border: none; text-align: left;
+      transition: transform 0.15s;
+    }
+    .cat-card:active { transform: scale(0.97); }
+    .cat-card-icon { font-size: 26px; margin-bottom: 8px; }
+    .cat-card-name { font-size: 14px; font-weight: 800; color: var(--toss-text-1); letter-spacing: -0.3px; }
+    .cat-card-amount { font-size: 16px; font-weight: 900; color: var(--toss-blue); margin-top: 6px; letter-spacing: -0.5px; }
+    .cat-card-sub { font-size: 11px; font-weight: 500; color: var(--toss-text-4); margin-top: 2px; }
+
+    /* ─── 자동 수집 카드 (풀너비) ─── */
+    .auto-card {
+      background: var(--white); border-radius: 16px; padding: 16px 18px;
+      box-shadow: var(--card-shadow); cursor: pointer;
+      display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+      border: none; width: 100%; text-align: left;
+    }
+    .auto-card-icon-wrap {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+    }
+    .auto-card-icon-wrap.green { background: #E8F9F1; }
+    .auto-card-icon-wrap.gray { background: var(--gray-100); }
+    .auto-card-icon-wrap.blue { background: var(--toss-blue-light); }
+    .auto-card-body { flex: 1; min-width: 0; }
+    .auto-card-name { font-size: 14px; font-weight: 700; color: var(--toss-text-1); }
+    .auto-card-sub { font-size: 11px; font-weight: 500; color: var(--toss-text-4); margin-top: 2px; }
+    .auto-card-amount { font-size: 14px; font-weight: 800; color: var(--toss-text-2); white-space: nowrap; }
+    .auto-tag {
+      font-size: 10px; font-weight: 700; color: var(--toss-green);
+      background: #E8F9F1; border-radius: 6px; padding: 3px 7px;
+    }
+
+    /* ─── 영수증 1장 묶음 그룹 카드 ─── */
+    .rcp-group {
+      background: var(--white); border-radius: 18px; padding: 16px 18px;
+      box-shadow: var(--card-shadow); margin-bottom: 10px; cursor: pointer;
+    }
+    .rcp-group-head {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+    .rcp-group-vendor { font-size: 15px; font-weight: 800; color: var(--toss-text-1); flex: 1; letter-spacing: -0.3px; }
+    .rcp-group-date { font-size: 11px; font-weight: 500; color: var(--toss-text-4); }
+    .rcp-group-badge {
+      font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+    }
+    .badge-vendor { background: var(--toss-blue-light); color: var(--toss-blue); }
+    .badge-direct { background: var(--warn-light); color: var(--warn); }
+    .badge-online { background: var(--purple-light); color: var(--purple); }
+
+    .rcp-item-list { border-top: 1px solid var(--toss-line); padding-top: 10px; }
+    .rcp-item-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 0; font-size: 13px;
+    }
+    .rcp-item-name { color: var(--toss-text-2); font-weight: 500; }
+    .rcp-item-price { color: var(--toss-text-3); font-weight: 600; white-space: nowrap; }
+    .rcp-item-more { font-size: 12px; color: var(--toss-text-4); font-weight: 500; padding: 3px 0; }
+
+    .rcp-group-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      border-top: 1px solid var(--toss-line); margin-top: 10px; padding-top: 10px;
+    }
+    .rcp-group-method { font-size: 11px; color: var(--toss-text-4); font-weight: 500; }
+    .rcp-group-total { font-size: 16px; font-weight: 900; color: var(--toss-blue-strong); letter-spacing: -0.5px; }
+
+    /* ─── 채널 그리드 ─── */
+    .channel-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
+    }
+    .channel-card {
+      background: var(--white); border-radius: 18px; padding: 16px;
+      box-shadow: var(--card-shadow); cursor: pointer; border: none; text-align: left;
+    }
+    .channel-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .channel-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;
+    }
+    .channel-icon.blue-bg { background: var(--toss-blue-light); }
+    .channel-icon.amber-bg { background: var(--warn-light); }
+    .channel-nm { font-size: 13px; font-weight: 700; color: var(--toss-text-2); }
+    .channel-vl { font-size: 17px; font-weight: 900; color: var(--toss-blue); letter-spacing: -0.5px; }
+    .channel-sub { font-size: 11px; color: var(--toss-text-4); font-weight: 500; margin-top: 2px; }
+
+    /* ─── 도구 풀너비 버튼 ─── */
+    .tool-btn {
+      background: var(--white); border-radius: 16px; padding: 16px 18px;
+      box-shadow: var(--card-shadow); cursor: pointer;
+      display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+      border: none; width: 100%; text-align: left;
+    }
+    .tool-btn-icon {
+      width: 40px; height: 40px; border-radius: 12px; background: var(--gray-100);
+      display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+    }
+    .tool-btn-text { flex: 1; }
+    .tool-btn-title { font-size: 14px; font-weight: 700; color: var(--toss-text-1); }
+    .tool-btn-sub { font-size: 11px; color: var(--toss-text-4); margin-top: 2px; }
+    .tool-btn-arrow { color: var(--gray-400); font-size: 16px; font-weight: 700; }
+
+    /* ─── 월 선택 바 ─── */
+    .month-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0 14px; margin-bottom: 4px;
+    }
+    .month-label { font-size: 15px; font-weight: 800; color: var(--toss-text-1); letter-spacing: -0.4px; }
+    .month-total { font-size: 14px; font-weight: 700; color: var(--toss-blue); }
+
+    /* ─── 필터 탭 ─── */
+    .filter-tabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+    .filter-tabs::-webkit-scrollbar { display: none; }
+    .filter-tab {
+      flex: 0 0 auto; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700;
+      background: var(--toss-line); color: var(--toss-text-3); border: none; cursor: pointer; white-space: nowrap;
+    }
+    .filter-tab.active { background: var(--toss-blue); color: #fff; }
+
+    /* ─── 거래처 상세 헤더 ─── */
+    .vendor-header {
+      display: flex; align-items: center; gap: 14px; padding: 16px 0 14px;
+      border-bottom: 1px solid var(--toss-line); margin-bottom: 14px;
+    }
+    .vendor-logo {
+      width: 52px; height: 52px; border-radius: 16px;
+      background: linear-gradient(135deg, #3182F6, #0064FF);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; flex-shrink: 0;
+    }
+    .vendor-nm { font-size: 18px; font-weight: 900; color: var(--toss-text-1); letter-spacing: -0.5px; }
+    .vendor-cat { font-size: 12px; font-weight: 500; color: var(--toss-text-4); margin-top: 3px; }
+    .vendor-stat { font-size: 13px; font-weight: 700; color: var(--toss-blue); margin-top: 4px; }
+
+    /* ─── 거래처 내 영수증 등록 버튼 ─── */
+    .vendor-entry-btn {
+      width: 100%; background: var(--toss-blue-light); color: var(--toss-blue-strong);
+      border: none; border-radius: 14px; padding: 14px 18px;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; margin-bottom: 14px;
+    }
+    .vendor-entry-icon { font-size: 20px; }
+    .vendor-entry-text { flex: 1; text-align: left; }
+    .vendor-entry-title { font-size: 14px; font-weight: 800; letter-spacing: -0.3px; }
+    .vendor-entry-sub { font-size: 11px; font-weight: 500; opacity: 0.7; margin-top: 2px; }
+
+    /* ─── 바텀 네비 ─── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; max-width: 390px; margin: 0 auto;
+      height: 64px; background: var(--white); border-top: 1px solid var(--gray-200);
+      display: flex; z-index: 100;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: var(--toss-text-4); cursor: pointer;
+    }
+    .nav-item .nav-icon { font-size: 20px; margin-bottom: 2px; }
+    .nav-item.active { color: var(--toss-blue-strong); }
+
+    /* ─── 변경점 표시 ─── */
+    .change-note {
+      font-size: 11px; font-weight: 700; color: #92400E;
+      background: #FEF3C7; border-radius: 8px; padding: 4px 8px;
+      margin-left: 6px;
+    }
+    .change-note-block {
+      background: #FEF3C7; border-radius: 12px; padding: 10px 14px;
+      margin-bottom: 14px; font-size: 12px; color: #92400E; font-weight: 600; line-height: 1.6;
+    }
+
+    /* ─── 빈 상태 ─── */
+    .empty-state {
+      text-align: center; padding: 40px 20px;
+      color: var(--toss-text-4); font-size: 13px;
+    }
+    .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+    /* ─── 비교 레이블 ─── */
+    .compare-label {
+      font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px;
+      margin-bottom: 10px; display: inline-block;
+    }
+    .label-before { background: #FFEBEE; color: #F04452; }
+    .label-after { background: #E8F9F1; color: #0CAB6C; }
+
+    /* ─── FAB 지출등록 버튼 (화면 2·3에서 우하단) ─── */
+    .fab {
+      position: fixed; bottom: 76px; right: calc(50% - 185px);
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--toss-blue-strong); color: #fff;
+      border: none; cursor: pointer; font-size: 22px;
+      box-shadow: 0 4px 16px rgba(0,100,255,0.3);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+
+    /* ─── 입구 시트 (지출 등록 버튼 클릭 시) ─── */
+    .sheet-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 500;
+      align-items: flex-end;
+    }
+    .sheet-overlay.open { display: flex; }
+    .sheet {
+      background: var(--white); border-radius: 24px 24px 0 0;
+      padding: 20px 18px 40px; width: 100%; max-width: 390px; margin: 0 auto;
+    }
+    .sheet-handle {
+      width: 36px; height: 4px; background: var(--gray-200); border-radius: 99px;
+      margin: 0 auto 18px;
+    }
+    .sheet-title { font-size: 17px; font-weight: 800; color: var(--toss-text-1); margin-bottom: 16px; letter-spacing: -0.4px; }
+    .sheet-option {
+      display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+      background: var(--gray-100); border-radius: 14px; margin-bottom: 8px;
+      border: none; width: 100%; cursor: pointer; text-align: left;
+    }
+    .sheet-option-icon { font-size: 24px; flex-shrink: 0; }
+    .sheet-option-name { font-size: 15px; font-weight: 700; color: var(--toss-text-1); }
+    .sheet-option-sub { font-size: 12px; font-weight: 500; color: var(--toss-text-4); margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ─── 목업 전환 바 ─── -->
+<div class="mock-switcher">
+  <button class="mock-btn active" onclick="showScreen('hub')">① 허브 메인 (새)</button>
+  <button class="mock-btn" onclick="showScreen('hub-before')">② 허브 메인 (현재)</button>
+  <button class="mock-btn" onclick="showScreen('cat')">③ 식자재 내부</button>
+  <button class="mock-btn" onclick="showScreen('vendor')">④ 거래처 상세</button>
+  <button class="mock-btn" onclick="showScreen('entry')">⑤ 지출 등록 입구</button>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ①: 지출관리 허브 메인 (새 설계)
+════════════════════════════════════════ -->
+<div id="screen-hub" class="screen active">
+  <div class="header">
+    <div class="header-title">지출관리</div>
+    <div class="header-store">퐁당샤브</div>
+  </div>
+
+  <div class="content">
+
+    <div class="change-note-block">
+      ✅ 변경 포인트: 영수증 등록 버튼이 여기저기 흩어진 것 → <b>입력 입구 하나</b>로 통합.<br>
+      조회는 "내가 채우는 지출" / "자동으로 잡히는 지출" 두 갈래로 명확히 분리.
+    </div>
+
+    <!-- 입력 입구 하나 (기존엔 여기 + 거래처 안에도 + 직구 안에도 있었음) -->
+    <button class="entry-btn" onclick="showSheet()">
+      <div class="entry-btn-icon">📸</div>
+      <div class="entry-btn-text">
+        <div class="entry-btn-title">지출 등록</div>
+        <div class="entry-btn-sub">영수증·명세서·수동 입력 — 여기서만</div>
+      </div>
+      <div class="entry-btn-arrow">›</div>
+    </button>
+
+    <!-- 내가 채우는 지출 -->
+    <div class="section-ttl">
+      📦 내가 채우는 지출
+      <span class="hint">영수증·명세서로 채워지는 것</span>
+    </div>
+    <div class="cat-grid">
+      <button class="cat-card" onclick="showScreen('cat')">
+        <div class="cat-card-icon">🥩</div>
+        <div class="cat-card-name">식자재</div>
+        <div class="cat-card-amount">243만</div>
+        <div class="cat-card-sub">이번달 · 18건</div>
+      </button>
+      <button class="cat-card" onclick="showScreen('cat')">
+        <div class="cat-card-icon">🍶</div>
+        <div class="cat-card-name">주류</div>
+        <div class="cat-card-amount">87만</div>
+        <div class="cat-card-sub">이번달 · 6건</div>
+      </button>
+      <button class="cat-card" onclick="showScreen('cat')">
+        <div class="cat-card-icon">🧹</div>
+        <div class="cat-card-name">비품·소모품</div>
+        <div class="cat-card-amount">34만</div>
+        <div class="cat-card-sub">이번달 · 4건</div>
+      </button>
+      <button class="cat-card" onclick="showScreen('cat')">
+        <div class="cat-card-icon">📂</div>
+        <div class="cat-card-name">기타</div>
+        <div class="cat-card-amount">12만</div>
+        <div class="cat-card-sub">이번달 · 3건</div>
+      </button>
+    </div>
+
+    <!-- 자동으로 잡히는 지출 -->
+    <div class="section-ttl">
+      🤖 자동으로 잡히는 지출
+      <span class="hint">손 안 대도 됨</span>
+    </div>
+    <button class="auto-card">
+      <div class="auto-card-icon-wrap green">👷</div>
+      <div class="auto-card-body">
+        <div class="auto-card-name">인건비 <span class="auto-tag">자동</span></div>
+        <div class="auto-card-sub">출퇴근 기록 → 급여 자동 계산</div>
+      </div>
+      <div class="auto-card-amount">538만</div>
+    </button>
+    <button class="auto-card">
+      <div class="auto-card-icon-wrap blue">🏦</div>
+      <div class="auto-card-body">
+        <div class="auto-card-name">고정비 <span class="auto-tag">자동</span></div>
+        <div class="auto-card-sub">임대료·통신비·보험 등</div>
+      </div>
+      <div class="auto-card-amount">210만</div>
+    </button>
+    <button class="auto-card" onclick="showScreen('hub')">
+      <div class="auto-card-icon-wrap gray">💳</div>
+      <div class="auto-card-body">
+        <div class="auto-card-name">계좌·카드 내역 <span class="auto-tag">자동</span></div>
+        <div class="auto-card-sub">마이데이터 자동 수집</div>
+      </div>
+      <div class="auto-card-amount">›</div>
+    </button>
+
+    <!-- 도구 -->
+    <div class="section-ttl" style="margin-top:20px;">🔧 도구</div>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">↔️</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">정산 대조</div>
+        <div class="tool-btn-sub">예상 vs 실제 매출·지출 비교</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">🏷️</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">카테고리 관리</div>
+        <div class="tool-btn-sub">분류 추가·수정·삭제</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item"><div class="nav-icon">☰</div>더보기</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ②: 현재 허브 (비교용)
+════════════════════════════════════════ -->
+<div id="screen-hub-before" class="screen">
+  <div class="header">
+    <div class="header-title">지출관리</div>
+    <div class="header-store">퐁당샤브</div>
+  </div>
+
+  <div class="content">
+
+    <div class="change-note-block" style="background:#FFEBEE; color:#C0392B;">
+      ⚠️ 현재 문제: 영수증 등록 버튼이 ① 여기 맨 위, ② 거래처 안, ③ 직구 안, ④ 식자재 안 → 4곳 혼잡.<br>
+      카테고리와 채널이 섞여 있어 어느 걸 먼저 눌러야 할지 헷갈림.
+    </div>
+
+    <!-- 기존: 맨 위 영수증 등록 버튼 -->
+    <span class="compare-label label-before">현재 — 여기도 등록 버튼</span>
+    <button class="entry-btn" style="background: var(--gray-200); color: var(--toss-text-1); box-shadow: none; margin-bottom:6px;">
+      <div class="entry-btn-icon" style="background: rgba(0,0,0,0.06);">🧾</div>
+      <div class="entry-btn-text">
+        <div class="entry-btn-title" style="color:var(--toss-text-1);">영수증 등록</div>
+        <div class="entry-btn-sub" style="color:var(--toss-text-4);">사진 한 장이면 카테고리별 자동 분류돼요</div>
+      </div>
+      <div class="entry-btn-arrow" style="color:var(--gray-400);">›</div>
+    </button>
+
+    <!-- 기존: 거래 채널 -->
+    <div class="section-ttl">🚚 거래 채널</div>
+    <div class="channel-grid">
+      <button class="channel-card">
+        <div class="channel-card-head">
+          <div class="channel-icon blue-bg">🏠</div>
+          <div class="channel-nm">거래처 관리</div>
+        </div>
+        <div class="channel-vl">243만</div>
+        <div class="channel-sub">이번달</div>
+      </button>
+      <button class="channel-card" style="position:relative;">
+        <div class="channel-card-head">
+          <div class="channel-icon amber-bg">🛒</div>
+          <div class="channel-nm">직구</div>
+        </div>
+        <div class="channel-vl">34만</div>
+        <div class="channel-sub">이번달</div>
+        <div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;background:#FFEBEE;color:#F04452;border-radius:6px;padding:2px 6px;">+ 등록 버튼 내부</div>
+      </button>
+    </div>
+
+    <!-- 기존: 지출 카테고리 -->
+    <div class="section-ttl">📦 지출 카테고리</div>
+    <div class="cat-grid">
+      <button class="cat-card" style="position:relative;">
+        <div class="cat-card-icon">🥩</div>
+        <div class="cat-card-name">식자재</div>
+        <div class="cat-card-amount">243만</div>
+        <div class="cat-card-sub">이번달 · 18건</div>
+        <div style="position:absolute;top:8px;right:8px;font-size:10px;font-weight:700;background:#FFEBEE;color:#F04452;border-radius:6px;padding:2px 6px;">+ 등록 버튼 내부</div>
+      </button>
+      <button class="cat-card" style="position:relative;">
+        <div class="cat-card-icon">🍶</div>
+        <div class="cat-card-name">주류</div>
+        <div class="cat-card-amount">87만</div>
+        <div class="cat-card-sub">이번달 · 6건</div>
+        <div style="position:absolute;top:8px;right:8px;font-size:10px;font-weight:700;background:#FFEBEE;color:#F04452;border-radius:6px;padding:2px 6px;">+ 등록 버튼 내부</div>
+      </button>
+      <button class="cat-card">
+        <div class="cat-card-icon">🧹</div>
+        <div class="cat-card-name">비품·소모품</div>
+        <div class="cat-card-amount">34만</div>
+        <div class="cat-card-sub">이번달 · 4건</div>
+      </button>
+      <button class="cat-card">
+        <div class="cat-card-icon">📂</div>
+        <div class="cat-card-name">기타</div>
+        <div class="cat-card-amount">12만</div>
+        <div class="cat-card-sub">이번달 · 3건</div>
+      </button>
+    </div>
+
+    <!-- 기존: 도구 -->
+    <div class="section-ttl" style="margin-top:4px;">🔧 도구</div>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">💳</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">계좌내역·카드내역</div>
+        <div class="tool-btn-sub">자동 수집</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">↔️</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">정산 대조</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item"><div class="nav-icon">☰</div>더보기</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ③: 식자재 카테고리 내부 (새 설계)
+════════════════════════════════════════ -->
+<div id="screen-cat" class="screen">
+  <div class="app-back">
+    <span class="back-btn" onclick="showScreen('hub')">‹</span>
+    <span>지출관리</span>
+  </div>
+
+  <div class="content">
+
+    <div class="change-note-block">
+      ✅ 변경 포인트: 개별 품목 행들이 흩어져 있던 것 →
+      <b>영수증 1장 = 묶음 카드 하나</b>로 표시.<br>
+      거래처별 명세서와 직접구매가 같은 화면에서 날짜순으로 나란히 보임.
+    </div>
+
+    <!-- 헤더 -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+      <span style="font-size:32px;">🥩</span>
+      <div>
+        <div style="font-size:20px;font-weight:900;color:var(--toss-text-1);letter-spacing:-0.5px;">식자재</div>
+        <div style="font-size:13px;color:var(--toss-text-4);font-weight:500;">이번달 243만원 · 18건</div>
+      </div>
+    </div>
+
+    <!-- 월 선택 -->
+    <div class="month-bar">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--gray-400);font-size:18px;cursor:pointer;">‹</span>
+        <div class="month-label">2026년 6월</div>
+        <span style="color:var(--gray-400);font-size:18px;cursor:pointer;">›</span>
+      </div>
+      <div class="month-total">243만원</div>
+    </div>
+
+    <!-- 필터 (거래처별 / 직접구매) -->
+    <div class="filter-tabs">
+      <button class="filter-tab active">전체</button>
+      <button class="filter-tab">🏠 삼성웰스토리</button>
+      <button class="filter-tab">🏠 순창국제</button>
+      <button class="filter-tab">🛒 직접구매</button>
+    </div>
+
+    <!-- 영수증 1장 묶음 카드들 -->
+    <div class="rcp-group">
+      <div class="rcp-group-head">
+        <div style="font-size:20px;">🏠</div>
+        <div style="flex:1;min-width:0;">
+          <div class="rcp-group-vendor">삼성웰스토리</div>
+          <div class="rcp-group-date">2026.06.11 (수)</div>
+        </div>
+        <div class="rcp-group-badge badge-vendor">거래처 명세서</div>
+      </div>
+      <div class="rcp-item-list">
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">쇠고기다시다 200g</div>
+          <div class="rcp-item-price">×2 · 14,600원</div>
+        </div>
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">스위트콘 340g</div>
+          <div class="rcp-item-price">×6 · 13,920원</div>
+        </div>
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">목이버섯(흑목이) 500g</div>
+          <div class="rcp-item-price">×2 · 26,000원</div>
+        </div>
+        <div class="rcp-item-row">
+          <div class="rcp-item-name" style="color:var(--toss-text-4);">고기손만두 350g 외 14개</div>
+          <div class="rcp-item-price" style="color:var(--toss-text-4);">…</div>
+        </div>
+      </div>
+      <div class="rcp-group-footer">
+        <div class="rcp-group-method">세금계산서 발행</div>
+        <div class="rcp-group-total">합계 320,700원</div>
+      </div>
+    </div>
+
+    <div class="rcp-group">
+      <div class="rcp-group-head">
+        <div style="font-size:20px;">🏠</div>
+        <div style="flex:1;min-width:0;">
+          <div class="rcp-group-vendor">순창국제</div>
+          <div class="rcp-group-date">2026.06.11 (수)</div>
+        </div>
+        <div class="rcp-group-badge badge-vendor">거래처 명세서</div>
+      </div>
+      <div class="rcp-item-list">
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">홍고추 1kg</div>
+          <div class="rcp-item-price">×3 · 21,000원</div>
+        </div>
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">생강 1kg</div>
+          <div class="rcp-item-price">×2 · 14,000원</div>
+        </div>
+        <div class="rcp-item-row">
+          <div class="rcp-item-name" style="color:var(--toss-text-4);">대파 1kg 외 3개</div>
+          <div class="rcp-item-price" style="color:var(--toss-text-4);">…</div>
+        </div>
+      </div>
+      <div class="rcp-group-footer">
+        <div class="rcp-group-method">현금 결제</div>
+        <div class="rcp-group-total">합계 87,400원</div>
+      </div>
+    </div>
+
+    <div class="rcp-group">
+      <div class="rcp-group-head">
+        <div style="font-size:20px;">🛒</div>
+        <div style="flex:1;min-width:0;">
+          <div class="rcp-group-vendor">홈플러스 신촌점</div>
+          <div class="rcp-group-date">2026.06.09 (월)</div>
+        </div>
+        <div class="rcp-group-badge badge-direct">직접구매</div>
+      </div>
+      <div class="rcp-item-list">
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">고추장 1kg</div>
+          <div class="rcp-item-price">×2 · 11,800원</div>
+        </div>
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">된장 500g</div>
+          <div class="rcp-item-price">×3 · 10,500원</div>
+        </div>
+      </div>
+      <div class="rcp-group-footer">
+        <div class="rcp-group-method">신용카드</div>
+        <div class="rcp-group-total">합계 22,300원</div>
+      </div>
+    </div>
+
+    <div class="rcp-group">
+      <div class="rcp-group-head">
+        <div style="font-size:20px;">🛒</div>
+        <div style="flex:1;min-width:0;">
+          <div class="rcp-group-vendor">쿠팡</div>
+          <div class="rcp-group-date">2026.06.07 (토)</div>
+        </div>
+        <div class="rcp-group-badge badge-online">온라인</div>
+      </div>
+      <div class="rcp-item-list">
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">들기름 900ml</div>
+          <div class="rcp-item-price">×1 · 18,900원</div>
+        </div>
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">참기름 900ml</div>
+          <div class="rcp-item-price">×1 · 16,500원</div>
+        </div>
+      </div>
+      <div class="rcp-group-footer">
+        <div class="rcp-group-method">로켓배송</div>
+        <div class="rcp-group-total">합계 35,400원</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FAB: 지출 등록 (입구 통일) -->
+  <div class="fab" onclick="showSheet()" title="지출 등록">＋</div>
+
+  <div class="bottom-nav">
+    <div class="nav-item"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item"><div class="nav-icon">☰</div>더보기</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ④: 거래처 상세 (새 설계)
+════════════════════════════════════════ -->
+<div id="screen-vendor" class="screen">
+  <div class="app-back">
+    <span class="back-btn" onclick="showScreen('hub')">‹</span>
+    <span>거래처 관리</span>
+  </div>
+
+  <div class="content">
+
+    <div class="change-note-block">
+      ✅ 변경 포인트: 거래처 상세 안 "영수증 사진 / 수동 입력" 두 버튼 →
+      <b>지출 등록 버튼 하나</b>로 통합 (누르면 동일한 입구 시트 열림, 거래처 자동 선택됨).
+    </div>
+
+    <!-- 거래처 헤더 -->
+    <div class="vendor-header">
+      <div class="vendor-logo">🏠</div>
+      <div style="flex:1;min-width:0;">
+        <div class="vendor-nm">삼성웰스토리</div>
+        <div class="vendor-cat">🥩 식자재</div>
+        <div class="vendor-stat">이번달 320,700원 · 1건</div>
+      </div>
+    </div>
+
+    <!-- 영수증 등록 진입 (거래처 자동 선택됨) -->
+    <button class="vendor-entry-btn" onclick="showSheet()">
+      <div class="vendor-entry-icon">📸</div>
+      <div class="vendor-entry-text">
+        <div class="vendor-entry-title">지출 등록</div>
+        <div class="vendor-entry-sub">삼성웰스토리 자동 선택됨</div>
+      </div>
+      <span style="font-size:14px;font-weight:700;">›</span>
+    </button>
+
+    <!-- 이번달 거래 내역 -->
+    <div class="section-ttl">거래 내역</div>
+    <div class="filter-tabs" style="margin-bottom:12px;">
+      <button class="filter-tab active">2026.06</button>
+      <button class="filter-tab">2026.05</button>
+      <button class="filter-tab">2026.04</button>
+    </div>
+
+    <div class="rcp-group">
+      <div class="rcp-group-head">
+        <div style="flex:1;min-width:0;">
+          <div class="rcp-group-vendor" style="font-size:14px;">2026.06.11 (수)</div>
+          <div class="rcp-group-date">세금계산서 발행</div>
+        </div>
+        <div class="rcp-group-badge badge-vendor">명세서</div>
+      </div>
+      <div class="rcp-item-list">
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">쇠고기다시다 200g</div>
+          <div class="rcp-item-price">×2 · 14,600원</div>
+        </div>
+        <div class="rcp-item-row">
+          <div class="rcp-item-name">스위트콘 340g</div>
+          <div class="rcp-item-price">×6 · 13,920원</div>
+        </div>
+        <div class="rcp-item-row">
+          <div class="rcp-item-name" style="color:var(--toss-text-4);">목이버섯 외 15개</div>
+          <div class="rcp-item-price" style="color:var(--toss-text-4);">…</div>
+        </div>
+      </div>
+      <div class="rcp-group-footer">
+        <div class="rcp-group-method"></div>
+        <div class="rcp-group-total">합계 320,700원</div>
+      </div>
+    </div>
+
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      5월 이전 내역은 더 불러오기를 눌러주세요
+    </div>
+
+  </div>
+
+  <!-- FAB: 지출 등록 -->
+  <div class="fab" onclick="showSheet()" title="지출 등록">＋</div>
+
+  <div class="bottom-nav">
+    <div class="nav-item"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item"><div class="nav-icon">☰</div>더보기</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ⑤: 지출 등록 입구 시트
+════════════════════════════════════════ -->
+<div id="screen-entry" class="screen">
+  <div class="header">
+    <div class="header-title">지출관리</div>
+    <div class="header-store">퐁당샤브</div>
+  </div>
+  <div class="content">
+    <div class="change-note-block">
+      ✅ "지출 등록" 버튼 누르면 이 시트가 올라옴. 어디서 눌러도 동일. 거래처 상세에서 진입 시 거래처 자동 선택됨.
+    </div>
+    <div style="height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--toss-text-4);font-size:14px;">
+      <div style="font-size:36px;">👆</div>
+      "지출 등록" 버튼을 눌러보세요
+      <div style="font-size:12px;">(허브 메인 화면 ① 또는 ③④ 화면 우하단 + 버튼)</div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     지출 등록 입구 시트 (전역 오버레이)
+════════════════════════════════════════ -->
+<div class="sheet-overlay" id="entrySheet" onclick="hideSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">어떤 지출인가요?</div>
+
+    <button class="sheet-option">
+      <div class="sheet-option-icon">🏠</div>
+      <div>
+        <div class="sheet-option-name">거래처 명세서</div>
+        <div class="sheet-option-sub">삼성웰스토리·순창국제 등 거래처 사진 찍기</div>
+      </div>
+    </button>
+    <button class="sheet-option">
+      <div class="sheet-option-icon">🛒</div>
+      <div>
+        <div class="sheet-option-name">직접 구매 영수증</div>
+        <div class="sheet-option-sub">마트·시장·편의점 영수증 사진 찍기</div>
+      </div>
+    </button>
+    <button class="sheet-option">
+      <div class="sheet-option-icon">📦</div>
+      <div>
+        <div class="sheet-option-name">온라인 주문 캡처</div>
+        <div class="sheet-option-sub">쿠팡·네이버 주문내역 화면 캡처</div>
+      </div>
+    </button>
+    <button class="sheet-option">
+      <div class="sheet-option-icon">✏️</div>
+      <div>
+        <div class="sheet-option-name">수동 입력</div>
+        <div class="sheet-option-sub">사진 없이 금액·품목 직접 입력</div>
+      </div>
+    </button>
+
+    <button onclick="hideSheet()" style="width:100%;padding:14px;border-radius:14px;border:none;background:var(--gray-100);font-size:14px;font-weight:700;color:var(--toss-text-3);margin-top:6px;cursor:pointer;">닫기</button>
+  </div>
+</div>
+
+<script>
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.mock-btn').forEach(b => b.classList.remove('active'));
+    const screen = document.getElementById('screen-' + id);
+    if (screen) screen.classList.add('active');
+    const btn = document.querySelector(`.mock-btn[onclick="showScreen('${id}')"]`);
+    if (btn) btn.classList.add('active');
+  }
+
+  function showSheet() {
+    document.getElementById('entrySheet').classList.add('open');
+  }
+
+  function hideSheet(e) {
+    if (!e || e.target === document.getElementById('entrySheet')) {
+      document.getElementById('entrySheet').classList.remove('open');
+    }
+  }
+</script>
+</body>
+</html>
