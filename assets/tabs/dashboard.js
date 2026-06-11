@@ -605,7 +605,8 @@ async function loadDashboard(force){
         const day=s.date?.slice(8);
         const ds=salesRowTotal(s);
         totalRevenue+=ds;dailySalesMap[day]=ds;
-        if(day) dailyCardSalesMap[day]=_cardMethodObj?(getMethodAmount(s,_cardMethodObj)||0):0;
+        // 카드매출: 결제수단 목록 의존 X — 목록 비어있어도 레거시 card 칸 직접 폴백 (2026-06-11 카드수수료 0 실종 보강)
+        if(day) dailyCardSalesMap[day]=(_cardMethodObj?(getMethodAmount(s,_cardMethodObj)||0):0)||Number(s.card)||0;
         (paymentMethods||[]).forEach(m=>{
           const v=getMethodAmount(s,m);
           if(v) salesBreakdown[m.name]=(salesBreakdown[m.name]||0)+v;
@@ -644,7 +645,9 @@ async function loadDashboard(force){
     // Part F Phase 2: 카드 매출은 legacy_key==='card' 결제수단 이름으로 찾기 (이름 변경 내성)
     // 'ups' 경로 호환을 위해 '카드' 폴백 유지
     const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
-    const cardSales=(cardMethod?salesBreakdown[cardMethod.name]:0)||salesBreakdown['신용카드']||salesBreakdown['카드']||0;
+    // 마지막 폴백 = 일별 카드매출 합 (결제수단 목록 로드 전이어도 카드수수료 살아있게 — 2026-06-11)
+    const _dailyCardSum=Object.values(dailyCardSalesMap).reduce((a,v)=>a+(v||0),0);
+    const cardSales=(cardMethod?salesBreakdown[cardMethod.name]:0)||salesBreakdown['신용카드']||salesBreakdown['카드']||_dailyCardSum||0;
 
     // 로열티/카드수수료 (로열티 쿼리는 위 Promise.all에서 병렬 완료)
     let royalty,cardFee;
@@ -1053,7 +1056,8 @@ async function loadDashboard(force){
         const d=s.date?.slice(8);
         const ds=salesRowTotal(s);
         prevTotalRevenue+=ds;if(d)prevDailySalesMap[d]=ds;
-        const cv=_cardMethodObj?(getMethodAmount(s,_cardMethodObj)||0):0;
+        // 결제수단 목록 비어있어도 레거시 card 칸 직접 폴백 (2026-06-11)
+        const cv=((_cardMethodObj?(getMethodAmount(s,_cardMethodObj)||0):0)||Number(s.card)||0);
         prevCardTotal+=cv;if(d)prevDailyCardSalesMap[d]=cv;
       });
     }
