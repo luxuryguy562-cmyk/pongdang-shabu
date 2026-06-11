@@ -5521,39 +5521,29 @@ function _expAmtClass(text){
   if(len>=9) return ' amt-l';
   return '';
 }
+// 2026-06-11 목업 ⑦ 적용: 3열 카드(hub-mini) → 세로 리스트 행(exp-cat-row)
+//   아이콘(왼쪽) + 이름 + 금액·이번달(오른쪽) + › . data-card-id/data-amt-cell/data-action 유지 = 정렬·금액갱신·클릭 그대로
 function _expHubMkCard(cardId, action, iconId, title, amtText, color){
   let iconStyle = '';
   if(color){
     const tint = _hexToRgba(color, 0.18);
     if(tint) iconStyle = `style="background:${tint};color:${color};"`;
   }
-  return `<button type="button" class="hub-mini" data-card-id="${cardId}" data-action="${action}">
-    <div class="hub-mini-top">
-      <span class="hub-mini-icon" ${iconStyle}><svg><use href="#${iconId}"/></svg></span>
-      <span class="hub-mini-title">${esc(title)}</span>
-    </div>
-    <div class="hub-mini-amt${_expAmtClass(amtText)}" data-amt-cell="${cardId}">${amtText}</div>
+  return `<button type="button" class="exp-cat-row" data-card-id="${cardId}" data-action="${action}">
+    <span class="ecr-icon" ${iconStyle}><svg><use href="#${iconId}"/></svg></span>
+    <span class="ecr-body"><span class="ecr-title">${esc(title)}</span></span>
+    <span class="ecr-amtwrap">
+      <span class="ecr-amt${_expAmtClass(amtText)}" data-amt-cell="${cardId}">${amtText}</span>
+      <span class="ecr-amtlbl">이번달</span>
+    </span>
+    <span class="ecr-chev">›</span>
   </button>`;
 }
-// ─── 새 기능: 지출 허브 카테고리별/거래처별 뷰 전환 ───
-function switchExpHubView(mode){
-  const receiptGrid = document.getElementById('expHubGridReceipt');
-  const vendorGrid = document.getElementById('expHubVendorGrid');
-  const btnCat = document.getElementById('ehtBtnCat');
-  const btnVendor = document.getElementById('ehtBtnVendor');
-  if(!receiptGrid || !vendorGrid) return;
-  const isCat = (mode !== 'vendor');
-  receiptGrid.style.display = isCat ? '' : 'none';
-  vendorGrid.style.display = isCat ? 'none' : '';
-  if(btnCat) btnCat.classList.toggle('active', isCat);
-  if(btnVendor) btnVendor.classList.toggle('active', !isCat);
-  if(!isCat) renderExpHubVendorView();
-}
-
-// 거래처별 보기: vendors + vendor_orders + receipts(vendor_id) 이번달 합계
+// 거래처별 보기 (별도 화면 expHubVendorCont): vendors + vendor_orders + receipts(vendor_id) 이번달 합계
+//   nav('expHubVendor') → 이 함수 호출 (common.js actions 매핑). 2026-06-11 목업 ⑦: 3열 카드 → 세로 리스트
 async function renderExpHubVendorView(){
   if(!guardStore()) return;
-  const grid = document.getElementById('expHubVendorGrid');
+  const grid = document.getElementById('expHubVendorList');
   if(!grid) return;
   grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>';
   try {
@@ -5590,24 +5580,23 @@ async function renderExpHubVendorView(){
       grid.innerHTML = '<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;">이번달 거래 없음</div>';
       return;
     }
-    const monthTotal = list.reduce((a,[,v])=>a+v.total, 0);
-    const monthCount = list.reduce((a,[,v])=>a+v.count, 0);
-    let html = `<div style="background:var(--gray-100);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:12px;color:var(--gray-600);">${ym} 거래 합계</span>
-      <span style="font-size:14px;font-weight:800;color:var(--text);">${fmt(monthTotal)}원 · ${monthCount}건</span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">`;
+    let html = '';
     list.forEach(([vid, v])=>{
-      html += `<div class="vendor-card" data-vendor-id="${esc(vid)}" data-action="openCatReceipt|vendor:${esc(vid)}">
-        <div class="vc-head"><span class="vc-cat">${esc(v.category)||'거래처'}</span></div>
-        <div class="vc-name">${esc(v.name)}</div>
-        <div class="vc-month has">
-          <span class="vc-cnt">${v.count}건</span>
-          <span class="vc-amt">${fmt(v.total)}원</span>
-        </div>
-      </div>`;
+      const sub = (v.category||'거래처') + ' · ' + v.count + '건';
+      const amtTxt = fmt(v.total) + '원';
+      html += `<button type="button" class="exp-cat-row" data-vendor-id="${esc(vid)}" data-action="openCatReceipt|vendor:${esc(vid)}">
+        <span class="ecr-icon"><svg><use href="#i-building"/></svg></span>
+        <span class="ecr-body">
+          <span class="ecr-title">${esc(v.name)}</span>
+          <span class="ecr-sub">${esc(sub)}</span>
+        </span>
+        <span class="ecr-amtwrap">
+          <span class="ecr-amt${_expAmtClass(amtTxt)}" style="color:var(--toss-blue);">${amtTxt}</span>
+          <span class="ecr-amtlbl">이번달</span>
+        </span>
+        <span class="ecr-chev">›</span>
+      </button>`;
     });
-    html += `</div>`;
     grid.innerHTML = html;
   } catch(e){
     console.error('[expHubVendorView]', e);
@@ -5658,7 +5647,7 @@ function updateExpHubCatAmounts(catSums){
     if(!cell) return;
     const t = amt ? fmt(amt) : '0';
     cell.textContent = t;
-    cell.className = 'hub-mini-amt' + _expAmtClass(t);
+    cell.className = 'ecr-amt' + _expAmtClass(t);
   };
   _expHubCatParents().forEach(cat=> setAmt(`cat-${cat.id}`, catSums?.[cat.id]?.amount||0));
   setAmt('royalty', (catSums && catSums._royalty) ? catSums._royalty.amount : 0);
@@ -5684,11 +5673,6 @@ async function loadExpHubData(force){
   // 금액은 비동기로 채움 → "없어졌다 생기는 느낌" 해결 (2026-05-19)
   // force(백그라운드 SWR·저장 후 갱신)일 땐 스켈레톤 재생성 금지 — 금액 칸이 '-'로 리셋되며 깜빡임 (2026-05-28 사장님 호소)
   if(!force){
-    // 첫 진입 시 카테고리별 보기로 초기화 (토글 상태 리셋)
-    const _rg=document.getElementById('expHubGridReceipt'), _vg=document.getElementById('expHubVendorGrid');
-    const _bc=document.getElementById('ehtBtnCat'), _bv=document.getElementById('ehtBtnVendor');
-    if(_rg) _rg.style.display=''; if(_vg) _vg.style.display='none';
-    if(_bc) _bc.classList.add('active'); if(_bv) _bv.classList.remove('active');
     renderExpHubCatSkeleton();
   }
   const sid=currentStore.id;

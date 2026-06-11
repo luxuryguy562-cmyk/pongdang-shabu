@@ -1664,22 +1664,28 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .otp-cell.on{border-color:var(--blue);background:#fff;}
 .join-role:active{background:var(--blue-light) !important;border-color:var(--blue) !important;transform:scale(0.99);}
 
-/* ─── 지출 허브 카테고리별/거래처별 뷰 전환 토글 ─── */
-.exp-hub-view-toggle{display:inline-flex;background:var(--toss-line);border-radius:10px;padding:3px;gap:2px;}
-.eht-btn{border:none;background:transparent;cursor:pointer;font-size:11px;font-weight:700;color:var(--toss-text-3);padding:5px 11px;border-radius:8px;font-family:inherit;white-space:nowrap;}
-.eht-btn.active{background:var(--white);color:var(--toss-blue-strong);box-shadow:0 1px 4px rgba(0,0,0,0.10);}
+/* ─── 지출 허브 거래처별 링크 (헤더 오른쪽, 별도 화면 진입) ─── */
+.exp-vendor-link{font-size:12px;font-weight:700;color:var(--toss-blue);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.exp-vendor-link:active{opacity:.6;}
 
-/* ─── 지출 허브 거래처별 뷰 — 거래처 행 ─── */
-.exp-vendor-row{display:flex;align-items:center;gap:12px;background:var(--white);border-radius:16px;padding:14px 16px;margin-bottom:8px;box-shadow:var(--card-shadow);cursor:pointer;border:none;width:100%;text-align:left;}
-.exp-vendor-row:active{transform:scale(.98);}
-.exp-vendor-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
-.exp-vendor-body{flex:1;min-width:0;}
-.exp-vendor-name{font-size:14px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.exp-vendor-sub{font-size:11px;font-weight:500;color:var(--toss-text-4);margin-top:2px;}
-.exp-vendor-amt{font-size:15px;font-weight:900;color:var(--toss-blue);letter-spacing:-0.4px;white-space:nowrap;}
+/* ─── 지출 허브 카테고리/거래처 세로 리스트 (2026-06-11 목업 ⑦ — 3열 카드 → 세로 리스트) ─── */
+.exp-cat-list{background:var(--white);border-radius:16px;overflow:hidden;box-shadow:var(--card-shadow);margin-bottom:8px;}
+.exp-cat-row{width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border:0;border-bottom:1px solid var(--toss-line);background:var(--white);font-family:inherit;text-align:left;outline:none;}
+.exp-cat-row:last-child{border-bottom:0;}
+.exp-cat-row:active{background:var(--gray-100);}
+.ecr-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#EBF3FF;color:var(--blue);}
+.ecr-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;}
+.ecr-body{flex:1;min-width:0;}
+.ecr-title{font-size:14px;font-weight:800;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ecr-sub{font-size:11px;color:var(--toss-text-4);font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ecr-amtwrap{text-align:right;flex-shrink:0;}
+.ecr-amt{font-size:15px;font-weight:900;color:var(--gray-400);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.ecr-amt.amt-l{font-size:13px;}
+.ecr-amt.amt-xl{font-size:11.5px;}
+.ecr-amtlbl{font-size:10.5px;color:var(--toss-text-4);margin-top:1px;}
+.ecr-chev{color:var(--gray-400);font-size:18px;margin-left:2px;flex-shrink:0;}
 
 /* ─── 지출 허브 카테고리 3그룹 라벨 ─── */
 .exp-group-label{font-size:12.5px;font-weight:800;color:var(--toss-text-3);margin:14px 0 8px;letter-spacing:-0.2px;}
 .exp-group-label:first-child{margin-top:0;}
 .exp-group-hint{font-size:11px;font-weight:500;color:var(--toss-text-4);margin-left:4px;}
-.exp-cat-grid{margin-bottom:2px;}
