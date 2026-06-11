@@ -5532,6 +5532,85 @@ function _expHubMkCard(cardId, action, iconId, title, amtText, color){
     <div class="hub-mini-amt${_expAmtClass(amtText)}" data-amt-cell="${cardId}">${amtText}</div>
   </button>`;
 }
+// ─── 새 기능: 지출 허브 카테고리별/거래처별 뷰 전환 ───
+function switchExpHubView(mode){
+  const catGrid = document.getElementById('expHubCatGrid');
+  const vendorGrid = document.getElementById('expHubVendorGrid');
+  const btnCat = document.getElementById('ehtBtnCat');
+  const btnVendor = document.getElementById('ehtBtnVendor');
+  if(!catGrid || !vendorGrid) return;
+  const isCat = (mode !== 'vendor');
+  catGrid.style.display = isCat ? '' : 'none';
+  vendorGrid.style.display = isCat ? 'none' : '';
+  if(btnCat) btnCat.classList.toggle('active', isCat);
+  if(btnVendor) btnVendor.classList.toggle('active', !isCat);
+  if(!isCat) renderExpHubVendorView();
+}
+
+// 거래처별 보기: vendors + vendor_orders + receipts(vendor_id) 이번달 합계
+async function renderExpHubVendorView(){
+  if(!guardStore()) return;
+  const grid = document.getElementById('expHubVendorGrid');
+  if(!grid) return;
+  grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>';
+  try {
+    const ym = new Date().toISOString().slice(0,7); // YYYY-MM
+    const monthStart = ym + '-01';
+    const monthEnd = new Date(ym.slice(0,4), parseInt(ym.slice(5,7)), 0).toISOString().slice(0,10);
+    // vendor_orders 이번달 거래처별 집계
+    const {data:orders} = await sb.from('vendor_orders')
+      .select('vendor_id, amount, vendors(name, category)')
+      .eq('store_id', currentStore.id)
+      .gte('order_date', monthStart).lte('order_date', monthEnd);
+    // receipts(vendor_id 있는 것) 이번달 거래처별 집계
+    const {data:rcpts} = await sb.from('receipts')
+      .select('vendor_id, total_price, vendor')
+      .eq('store_id', currentStore.id)
+      .not('vendor_id', 'is', null)
+      .gte('receipt_date', monthStart).lte('receipt_date', monthEnd);
+    // 거래처별 합산
+    const agg = {}; // {vendor_id: {name, category, total, count}}
+    (orders||[]).forEach(r=>{
+      if(!r.vendor_id) return;
+      if(!agg[r.vendor_id]) agg[r.vendor_id] = {name: r.vendors?.name||'(이름 없음)', category: r.vendors?.category||'', total:0, count:0};
+      agg[r.vendor_id].total += (r.amount||0);
+      agg[r.vendor_id].count++;
+    });
+    (rcpts||[]).forEach(r=>{
+      if(!r.vendor_id) return;
+      if(!agg[r.vendor_id]) agg[r.vendor_id] = {name: r.vendor||'(이름 없음)', category:'', total:0, count:0};
+      agg[r.vendor_id].total += (r.total_price||0);
+      agg[r.vendor_id].count++;
+    });
+    const list = Object.entries(agg).sort((a,b)=>b[1].total-a[1].total);
+    if(!list.length){
+      grid.innerHTML = '<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;">이번달 거래 없음</div>';
+      return;
+    }
+    const catColor = (cat) => {
+      const found = (expCategories||[]).find(c=>c.vendor_category===cat && !c.parent_id);
+      return found?.color || '#3182F6';
+    };
+    let html = '';
+    list.forEach(([vid, v])=>{
+      const col = catColor(v.category);
+      const bg = _hexToRgba(col, 0.15)||'#EDF4FF';
+      html += `<button type="button" class="exp-vendor-row" data-action="nav|vendors" data-vendor-id="${esc(vid)}">
+        <div class="exp-vendor-icon" style="background:${bg};color:${col};">🏠</div>
+        <div class="exp-vendor-body">
+          <div class="exp-vendor-name">${esc(v.name)}</div>
+          <div class="exp-vendor-sub">${v.category||'거래처'} · ${v.count}건</div>
+        </div>
+        <div class="exp-vendor-amt">${fmt(v.total)}</div>
+      </button>`;
+    });
+    grid.innerHTML = html;
+  } catch(e){
+    console.error('[expHubVendorView]', e);
+    grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오기 실패</div>';
+  }
+}
+
 function renderExpHubCatSkeleton(){
   const grid = document.getElementById('expHubCatGrid');
   if(!grid) return;
@@ -5615,7 +5694,14 @@ async function loadExpHubData(force){
   // 진입 즉시 스켈레톤 (캐시 기반 외곽·아이콘·제목 = 0~30ms)
   // 금액은 비동기로 채움 → "없어졌다 생기는 느낌" 해결 (2026-05-19)
   // force(백그라운드 SWR·저장 후 갱신)일 땐 스켈레톤 재생성 금지 — 금액 칸이 '-'로 리셋되며 깜빡임 (2026-05-28 사장님 호소)
-  if(!force) renderExpHubCatSkeleton();
+  if(!force){
+    // 첫 진입 시 카테고리별 보기로 초기화 (토글 상태 리셋)
+    const _cg=document.getElementById('expHubCatGrid'), _vg=document.getElementById('expHubVendorGrid');
+    const _bc=document.getElementById('ehtBtnCat'), _bv=document.getElementById('ehtBtnVendor');
+    if(_cg) _cg.style.display=''; if(_vg) _vg.style.display='none';
+    if(_bc) _bc.classList.add('active'); if(_bv) _bv.classList.remove('active');
+    renderExpHubCatSkeleton();
+  }
   const sid=currentStore.id;
   const ym=new Date().toISOString().slice(0,7);
   const [y,m]=ym.split('-').map(Number);
