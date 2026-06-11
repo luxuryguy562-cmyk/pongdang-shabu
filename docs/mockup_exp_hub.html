@@ -1038,13 +1038,9 @@
 
     <!-- 📸 영수증으로 채워요 -->
     <div style="margin-bottom:6px;">
-      <!-- 섹션 헤더 + 토글 -->
+      <!-- 섹션 헤더 -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="font-size:12.5px;font-weight:800;color:#8B95A1;">📸 영수증으로 채워요 <span style="font-size:11px;font-weight:500;margin-left:3px;">사진 찍으면 자동 분류</span></div>
-        <div style="display:flex;gap:0;background:#F2F4F6;border-radius:8px;padding:3px;">
-          <button id="vt2Cat" onclick="switchVLayout('cat')" style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:#0064FF;">카테고리별</button>
-          <button id="vt2Vendor" onclick="switchVLayout('vendor')" style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:#8B95A1;">거래처별</button>
-        </div>
       </div>
 
       <!-- 지출 등록 버튼 -->
@@ -1120,75 +1116,15 @@
         </div>
       </div>
 
-      <!-- 거래처별 세로 리스트 -->
-      <div id="vLayoutVendor" style="display:none;">
-        <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(20,40,80,.06);">
-          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#E8FAF1;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏪</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:800;color:#191F28;">웰스토리</div>
-              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">식자재 · 88건</div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-size:15px;font-weight:900;color:#0CAB6C;">—</div>
-              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
-            </div>
-            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#EDF4FF;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🥬</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:800;color:#191F28;">대봄야채</div>
-              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">야채 · 61건</div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-size:15px;font-weight:900;color:#3182F6;">—</div>
-              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
-            </div>
-            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏪</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:800;color:#191F28;">프레시원</div>
-              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">식자재 · 54건</div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-size:15px;font-weight:900;color:#7C3AED;">—</div>
-              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
-            </div>
-            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#FFF3E0;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🌐</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:800;color:#191F28;">쿠팡</div>
-              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">공산품·비품 · 30건</div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-size:15px;font-weight:900;color:#F5A11E;">—</div>
-              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
-            </div>
-            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#FFEBEE;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">⚠️</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:800;color:#F04452;">논산농협 <span style="font-size:10px;font-weight:600;color:#F04452;background:#FFEBEE;border-radius:4px;padding:1px 5px;border:1px solid #FFCDD2;">이름 9가지 혼재</span></div>
-              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">야채 · 논산농협/논산 농협/논산농협① 등</div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-size:15px;font-weight:900;color:#F04452;">—</div>
-              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
-            </div>
-            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
-          </div>
-        </div>
-        <!-- 거래처 이름 중복 안내 -->
-        <div style="margin-top:8px;padding:10px 12px;background:#FFF8E1;border-radius:10px;font-size:11.5px;color:#8A6D00;line-height:1.5;">
-          ⚠️ 같은 거래처인데 이름이 다르게 저장된 경우 많음 (35개 거래처명, 등록 거래처 12개). 통합 정리 필요.
-        </div>
-      </div>
+      <!-- 거래처별로 보기 입구 (별도 화면 이동) -->
+      <button onclick="showScreen('hub-vendor-list')" style="width:100%;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #E5E8EB;border-radius:14px;padding:13px 16px;margin-top:10px;font-family:inherit;cursor:pointer;">
+        <span style="font-size:16px;flex-shrink:0;">🏪</span>
+        <span style="flex:1;text-align:left;">
+          <span style="display:block;font-size:13.5px;font-weight:800;color:#191F28;">거래처별로 보기</span>
+          <span style="display:block;font-size:11px;color:#8B95A1;margin-top:1px;">어디서 얼마 샀는지 거래처 단위로</span>
+        </span>
+        <span style="color:#B0B8C1;font-size:18px;">›</span>
+      </button>
     </div>
 
     <!-- 🤖 자동으로 잡혀요 -->
@@ -1337,6 +1273,97 @@
       </div>
     </div>
 
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item"><div class="nav-icon">☰</div>더보기</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ⑦-V: 거래처별 보기 (별도 화면)
+════════════════════════════════════════ -->
+<div id="screen-hub-vendor-list" class="screen">
+  <div class="app-back">
+    <span class="back-btn" onclick="showScreen('hub-vertical')">‹</span>
+    <span>거래처별 보기</span>
+  </div>
+
+  <div class="content" style="padding:16px;">
+    <div style="font-size:12.5px;font-weight:800;color:#8B95A1;margin-bottom:10px;">🏪 거래처별 이번달 지출 <span style="font-size:11px;font-weight:500;margin-left:3px;">많이 쓴 순</span></div>
+
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(20,40,80,.06);">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#E8FAF1;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏪</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#191F28;">웰스토리</div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">식자재 · 88건</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#0CAB6C;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#EDF4FF;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🥬</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#191F28;">대봄야채</div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">야채 · 61건</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#3182F6;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏪</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#191F28;">프레시원</div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">식자재 · 54건</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#7C3AED;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#FFF3E0;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🌐</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#191F28;">쿠팡</div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">공산품·비품 · 30건</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#F5A11E;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#FFEBEE;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">⚠️</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#F04452;">논산농협 <span style="font-size:10px;font-weight:600;color:#F04452;background:#FFEBEE;border-radius:4px;padding:1px 5px;border:1px solid #FFCDD2;">이름 9가지 혼재</span></div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">야채 · 논산농협/논산 농협/논산농협① 등</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#F04452;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+    </div>
+
+    <!-- 거래처 이름 중복 안내 -->
+    <div style="margin-top:10px;padding:10px 12px;background:#FFF8E1;border-radius:10px;font-size:11.5px;color:#8A6D00;line-height:1.5;">
+      ⚠️ 같은 거래처인데 이름이 다르게 저장된 경우 많음 (35개 거래처명, 등록 거래처 12개). 통합 정리 필요.
+    </div>
   </div>
 
   <div class="bottom-nav">
@@ -1505,16 +1532,6 @@
     document.getElementById('expViewVendor').style.display = isCat ? 'none' : 'block';
     document.getElementById('vtCat').classList.toggle('active', isCat);
     document.getElementById('vtVendor').classList.toggle('active', !isCat);
-  }
-
-  function switchVLayout(mode) {
-    const isCat = mode === 'cat';
-    document.getElementById('vLayoutCat').style.display = isCat ? 'block' : 'none';
-    document.getElementById('vLayoutVendor').style.display = isCat ? 'none' : 'block';
-    document.getElementById('vt2Cat').style.background = isCat ? '#fff' : 'transparent';
-    document.getElementById('vt2Cat').style.color = isCat ? '#0064FF' : '#8B95A1';
-    document.getElementById('vt2Vendor').style.background = isCat ? 'transparent' : '#fff';
-    document.getElementById('vt2Vendor').style.color = isCat ? '#8B95A1' : '#0064FF';
   }
 
   function showSheet() {
