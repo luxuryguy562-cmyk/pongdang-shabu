@@ -4,6 +4,24 @@
 
 ---
 
+## [2026-06-11] 지출 허브 — 3열 카드 → 세로 리스트(목업 ⑦) + 거래처별 별도 화면
+
+배경: 사장님이 목업 ⑦(세로 리스트) 승인. 거래처별 보기는 같은 자리 토글(전환 단추) 대신 별도 화면으로 분리 결정 ("거래처보기는 다른화면으로 보는게 낫겠다"). 거래처가 많아져도 메인 화면이 안 복잡해지게.
+
+### 구현 (index.html / styles.css / sidemenu.js / common.js)
+1. **헤더 토글 제거 → 링크** — 카테고리별/거래처별 토글(`exp-hub-view-toggle`/`eht-btn`) 삭제, "📸 영수증으로 채워요" 헤더 오른쪽에 `거래처별 ›` 파란 글자 링크(`.exp-vendor-link`, `data-action="nav|expHubVendor"`)
+2. **3열 카드 → 세로 리스트** — `hub-grid exp-cat-grid` → `exp-cat-list`. `_expHubMkCard`가 `hub-mini` 카드 대신 `exp-cat-row`(아이콘+이름+금액·이번달+›) 생성. `data-card-id`/`data-amt-cell`/`data-action` 유지 = 정렬·금액갱신·클릭 그대로
+3. **거래처별 별도 화면 신설** — `expHubVendorCont` 컨테이너(뒤로가기 → expHub). `renderExpHubVendorView`가 3열 vendor-card → `exp-cat-row` 세로 리스트로 변경, 렌더 대상 `expHubVendorGrid`(catView 내부) → `expHubVendorList`(별도 화면)
+4. **nav 라우팅 추가** (common.js) — `expHubVendor: renderExpHubVendorView` 액션 + `expHubVendor:'expHub'` 부모탭 매핑
+5. **switchExpHubView 제거** — 토글 함수 삭제. loadExpHubData 진입 리셋 블록에서 토글 잔재 제거
+
+### 검증
+- node --check 통과 (sidemenu.js / common.js)
+- 잔재 grep 0건 (switchExpHubView / expHubVendorGrid / ehtBtn / exp-hub-view-toggle / exp-vendor-row)
+- 카테고리 설명 문구는 DB에 칸 없어 미표기 (헌법 1-7 추측 금지). 금액 셀은 기존 비동기 갱신 그대로
+
+---
+
 ## [2026-06-11] 지출 기록 내역 "행형" 레이아웃 통일 (사장님 확정 스펙)
 
 배경: 기록 내역 화면이 진입 경로(영수증 탭 / 카테고리 카드 / 거래처 주문)마다 다르게 생기고, 날짜 정렬 들쭉날쭉 + 분류 배지가 품목명에 붙어 열 정렬 깨짐. 사장님이 행형(2줄 구조) 확정 디자인 스펙 직접 제시 → 한 컴포넌트로 통일.

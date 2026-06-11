@@ -579,6 +579,7 @@ function nav(tab, el) {
     receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
     explist:'expHub', recon:'expHub', expcat:'expHub',
     royalty:'expHub', cardfee:'expHub', catReceipt:'expHub', manualCat:'expHub',
+    expHubVendor:'expHub',
   };
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
@@ -618,6 +619,7 @@ function nav(tab, el) {
     empSched: loadEmpSched,
     busHub: loadBusHubData,
     expHub: loadExpHubData,
+    expHubVendor: renderExpHubVendorView,
     catReceipt: loadCatReceiptData,
     manualCat: loadManualCatView,
   };
