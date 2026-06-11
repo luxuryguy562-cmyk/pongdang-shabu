@@ -1212,12 +1212,57 @@ async function runAI() {
       // 규격(spec)으로 한자가 이사하는 케이스도 잡음 (2026-06-10 본앱 실측 — "魚子福袋(날치알)" 규격 잔재)
       else if(/[一-鿿]/.test(String(it.spec||''))) it._nameSuspect='규격에 한자가 남아 있어요 — 확인 필요';
     });
-    // ─── 단가 매칭 자동채움 (2026-06-05) ───
+    // ─── 단가 재쪼개기 + 단가 매칭 자동채움 (2026-06-05 / 2026-06-11) ───
     // 과거 영수증 단가가 등록된 거래처에서: 이번 행 단가 → 과거 단가 목록 대조 → 품목명 자동채움
     // 🟢 정확 일치 + 후보 1개 → 자동 채움 (빨간불 해제)
     // 🟡 정확 일치 후보 여럿 또는 ±15% 근접 → _nameCandidates 저장 (원터치 선택 추천)
     // 🔴 일치 없음 → 기존 nameSuspect 유지
     if(isVendorModeAI && rcpPastPriceMap.size){
+      // ① 단가 재쪼개기 (2026-06-11): AI가 단가 잘못 읽어 단가×수량≠공급가인 행을 과거 단가 지도로 교정
+      //    금액(totalPrice) 절대 불변 — 단가·수량만 재계산 (순창국제 씨앗 데이터 기반 작동)
+      list.forEach(it => {
+        if(it._isDeposit) return;
+        const sp = parseInt(it.supplyPrice)||parseInt(it.totalPrice)||0;
+        if(!sp) return;
+        const currentU = parseInt(it.unitPrice)||0;
+        const currentQ = parseFloat(it.qty)||0;
+        // 이미 맞으면 패스 (0.5% 이내 또는 100원 이내)
+        if(currentU > 0 && currentQ > 0 && Math.abs(Math.round(currentU*currentQ)-sp) <= Math.max(100,sp*0.005)) return;
+        // Case A: 단가 맞고 수량만 틀린 경우 (과거에 등록된 단가)
+        if(currentU > 0 && rcpPastPriceMap.has(currentU)){
+          const ratio = sp / currentU;
+          const rounded = Math.round(ratio);
+          if(rounded > 0 && rounded <= 200 && Math.abs(ratio-rounded) < 0.01){
+            it._origQty = it.qty;
+            it.qty = rounded;
+            it._unitPriceFixed = true;
+            delete it._suspect;
+            return;
+          }
+        }
+        // Case B: 단가 자체가 틀린 경우 — 과거 단가 중 금액÷단가=깔끔한 정수인 것 탐색
+        let bestFit = null;
+        rcpPastPriceMap.forEach((names, pastU) => {
+          if(pastU === currentU || pastU <= 0) return;
+          const ratio = sp / pastU;
+          const rounded = Math.round(ratio);
+          if(rounded <= 0 || rounded > 200) return;
+          if(Math.abs(ratio-rounded) >= 0.01) return;
+          // 현재 단가에 가장 가까운 후보 우선 (AI가 1자리 오독했을 가능성)
+          if(!bestFit || Math.abs(pastU-currentU) < Math.abs(bestFit.pastU-currentU)){
+            bestFit = { pastU, rounded };
+          }
+        });
+        if(bestFit){
+          it._origUnitPrice = currentU;
+          it._origQty = it.qty;
+          it.unitPrice = bestFit.pastU;
+          it.qty = bestFit.rounded;
+          it._unitPriceFixed = true;
+          delete it._suspect;
+        }
+      });
+      // ② 이름 자동채움 (교정된 단가 포함해 대조)
       list.forEach(it => {
         if(it._isDeposit) return;
         const u = parseInt(it.unitPrice)||0;
@@ -1276,8 +1321,12 @@ async function runAI() {
         }
       });
     }
-    const nameSuspectCnt = list.filter(it => it._nameSuspect).length;
-    const autoFilledCnt  = list.filter(it => it._autoFilled).length;
+    const nameSuspectCnt    = list.filter(it => it._nameSuspect).length;
+    const autoFilledCnt     = list.filter(it => it._autoFilled).length;
+    const unitPriceFixedCnt = list.filter(it => it._unitPriceFixed).length;
+    if(unitPriceFixedCnt){
+      toast(`🔄 단가·수량 재교정 ${unitPriceFixedCnt}건 — 확인 후 저장하세요`, 'warn', 6000);
+    }
     if(autoFilledCnt){
       toast(`✅ 단가로 품목명 ${autoFilledCnt}건 자동 채움 — 맞는지 확인하세요`, 'success', 5000);
     }
@@ -1496,9 +1545,14 @@ function buildReceiptRow(i={}) {
   // 📋 버튼 — 과거 품목 원터치 선택 (거래처 모드 + 과거 품목 있을 때만)
   const pastBtn = rcpPastItems.length ? `<button type="button" class="ric-past-btn" data-action="openRcpPastSheet|${idx}" title="과거 품목 선택">📋</button>` : '';
   // 단가 매칭 뱃지 (2026-06-05)
-  const autoTag = i._autoFilled
-    ? `<span class="rcp-auto-tag">✅ 단가 자동채움</span>`
-    : (i._nameCandidates?.length ? `<span class="rcp-guess-tag" data-action="openRcpPastSheet|${idx}">🟡 후보 ${i._nameCandidates.length}개</span>` : '');
+  const _fixTitle = i._unitPriceFixed
+    ? (i._origUnitPrice ? `단가 ${fmt(i._origUnitPrice)}→${fmt(i.unitPrice)}, 수량 ${i._origQty||'?'}→${i.qty} 교정` : `수량 ${i._origQty||'?'}→${i.qty} 교정`)
+    : '';
+  const autoTag = i._unitPriceFixed
+    ? `<span class="rcp-fix-tag" title="${_fixTitle}">🔄 단가 재교정</span>`
+    : (i._autoFilled
+        ? `<span class="rcp-auto-tag">✅ 단가 자동채움</span>`
+        : (i._nameCandidates?.length ? `<span class="rcp-guess-tag" data-action="openRcpPastSheet|${idx}">🟡 후보 ${i._nameCandidates.length}개</span>` : ''));
   // 규격·원산지 칸 (전 채널 통일 — 2026-06-09. 거래처·온라인·직구 모두 표시. 기록편집 화면과 일관)
   const specRow = `
     <div class="ric-spec">
