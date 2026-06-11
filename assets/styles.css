@@ -1044,7 +1044,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .m6-fc.neg .fc-tx .fc-gl{color:#F04452;}
 .m6-fc .fc-more{margin-left:auto;font-size:12.5px;font-weight:800;color:#3182F6;flex-shrink:0;white-space:nowrap;align-self:center;}
 /* ─── v17 카드 v6 (2026-05-22 사장님 양식 갈아엎기) ─── */
-.v17-card-v6{background:var(--white);border-radius:14px;padding:15px;margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.v17-card-v6{background:var(--white);border-radius:14px;padding:7px 15px 15px;margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
 .v17-card-v6 .v6-ttl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
 .v17-card-v6 .v6-ttl{font-size:12px;font-weight:800;color:var(--gray-700);}
 .v17-card-v6 .v6-ttl b{color:var(--text);font-size:14px;font-weight:900;margin-right:4px;}
@@ -1333,7 +1333,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .dash-today-v7 .t7-ve-list .ghost-dot{width:7px;height:7px;border-radius:50%;background:#D8DDE4;flex-shrink:0;}
 .dash-today-v7 .t7-ve-list .ghost-bar{height:8px;border-radius:4px;background:#E5E9EE;}
 /* 홈 섹션 헤더 (오늘 / 이번 달 구분) */
-.dash-sec{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:#6B7684;margin:14px 2px 8px;}
+.dash-sec{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:#6B7684;margin:14px 2px 4px;}
 .dash-sec .ic{font-size:13px;}
 .dash-sec .dash-sec-more{margin-left:auto;font-size:12px;font-weight:700;color:#3182F6;cursor:pointer;}
 .dash-today-v7 .t7-act{margin-top:16px;display:flex;gap:8px;}
