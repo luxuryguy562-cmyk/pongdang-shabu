@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260611e">
+<link rel="stylesheet" href="assets/styles.css?v=20260611f">
 </head>
 <body>
 
@@ -950,6 +950,8 @@
 
 <!-- ══ [Hub] 지출 허브 (관리자 전용) ══ -->
 <div id="expHubCont" class="container">
+  <!-- 화면 맨 위 몇 월인지 표시 (2026-06-11 사장님 지시 — "이번달" 표기 대신). JS loadExpHubData가 채움 -->
+  <div class="exp-month-ttl" id="expHubMonthTtl">-월 지출</div>
   <!-- 카테고리 섹션 — 📸영수증(토글+등록버튼)/🤖자동/✏️직접입력 -->
   <!-- 지출 등록 버튼은 '영수증으로 채워요' 섹션 안 (영수증 채우는 행위라 영수증 그룹에 소속) -->
   <div id="expHubCatView">
@@ -978,7 +980,7 @@
 <!-- ══ 거래처별 보기 (지출 허브에서 "거래처별 ›" 진입, 별도 화면) ══ -->
 <div id="expHubVendorCont" class="container">
   <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출관리</span></div>
-  <div class="exp-group-label" style="margin-top:0;">🏪 거래처별 이번달 지출 <span class="exp-group-hint">많이 쓴 순</span></div>
+  <div class="exp-group-label" style="margin-top:0;">🏪 <span id="expHubVendorMonthLbl">이번달</span> 거래처별 지출 <span class="exp-group-hint">많이 쓴 순</span></div>
   <div class="exp-cat-list" id="expHubVendorList"></div>
 </div>
 
@@ -3559,7 +3561,7 @@
 <script src="assets/tabs/schedule.js?v=20260608"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
 <script src="assets/tabs/dashboard.js?v=20260611e"></script>
-<script src="assets/tabs/sidemenu.js?v=20260611"></script>
+<script src="assets/tabs/sidemenu.js?v=20260611b"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
 </html>

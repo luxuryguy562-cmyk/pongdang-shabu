@@ -5534,7 +5534,6 @@ function _expHubMkCard(cardId, action, iconId, title, amtText, color){
     <span class="ecr-body"><span class="ecr-title">${esc(title)}</span></span>
     <span class="ecr-amtwrap">
       <span class="ecr-amt${_expAmtClass(amtText)}" data-amt-cell="${cardId}">${amtText}</span>
-      <span class="ecr-amtlbl">이번달</span>
     </span>
     <span class="ecr-chev">›</span>
   </button>`;
@@ -5576,8 +5575,11 @@ async function renderExpHubVendorView(){
       agg[r.vendor_id].count++;
     });
     const list = Object.entries(agg).sort((a,b)=>b[1].total-a[1].total);
+    // 상단 라벨에 몇 월인지 박음 ("이번달" 표기 폐기 — 2026-06-11 사장님 지시)
+    const _moLbl=document.getElementById('expHubVendorMonthLbl');
+    if(_moLbl) _moLbl.textContent=parseInt(ym.slice(5,7),10)+'월';
     if(!list.length){
-      grid.innerHTML = '<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;">이번달 거래 없음</div>';
+      grid.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;">${parseInt(ym.slice(5,7),10)}월 거래 없음</div>`;
       return;
     }
     let html = '';
@@ -5591,8 +5593,7 @@ async function renderExpHubVendorView(){
           <span class="ecr-sub">${esc(sub)}</span>
         </span>
         <span class="ecr-amtwrap">
-          <span class="ecr-amt${_expAmtClass(amtTxt)}" style="color:var(--toss-blue);">${amtTxt}</span>
-          <span class="ecr-amtlbl">이번달</span>
+          <span class="ecr-amt${_expAmtClass(amtTxt)}">${amtTxt}</span>
         </span>
         <span class="ecr-chev">›</span>
       </button>`;
@@ -5681,6 +5682,8 @@ async function loadExpHubData(force){
   const lastDay=new Date(y,m,0).getDate();
   const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
   const setText=(id,v)=>{const el=document.getElementById(id);if(el) el.textContent=v;};
+  // 화면 맨 위 몇 월인지 표시 (2026-06-11 사장님 지시 — "이번달" 표기 대신)
+  setText('expHubMonthTtl', `${m}월 지출`);
 
   // 거래처(kind=vendor) / 온라인(kind=online) 분리 합산 (2026-06-10) — vendorMonthTotals 캐시, DB 호출 X
   try{
@@ -5740,7 +5743,7 @@ async function loadExpHubData(force){
   try{
     const rc=rcRes.data||[];
     const cnt=rc.length, sum=rc.reduce((a,r)=>a+(r.total_price||0),0);
-    setText('expHeroInfo', cnt>0?`이번달 ${cnt}건 · ${fmt(sum)}원`:'사진 자동 분류');
+    setText('expHeroInfo', cnt>0?`${m}월 ${cnt}건 · ${fmt(sum)}원`:'사진 자동 분류');
   }catch(e){setText('expHeroInfo','사진 자동 분류');}
 
   // ── 거래 채널 직구 카드 (vendor_id NULL 영수증) ──
