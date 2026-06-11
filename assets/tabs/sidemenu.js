@@ -5428,31 +5428,34 @@ function getExpHubCardOrder(){
 function applyExpHubCardOrder(){
   const order=getExpHubCardOrder();
   if(!order||!order.length) return;
-  const grid=document.getElementById('expHubCatGrid');
-  if(!grid) return;
+  // 저장된 순서대로 각 카드를 자기 그룹 그리드 안에서 맨 뒤로 보냄 (그룹 내 정렬만, 그룹 간 이동 X)
   order.forEach(cardId=>{
-    const el=grid.querySelector(`[data-card-id="${cardId}"]`);
-    if(el) grid.appendChild(el);
+    const el=document.querySelector(`#expHubCatView [data-card-id="${cardId}"]`);
+    if(el && el.parentElement) el.parentElement.appendChild(el);
   });
 }
 function initExpHubSortable(){
   if(!window.Sortable) return;
-  const grid=document.getElementById('expHubCatGrid');
-  if(!grid||grid._sortableInited) return;
-  grid._sortableInited=true;
-  new Sortable(grid,{
-    animation:150,
-    delay:300,            // long-press 300ms — 일반 탭(카드 진입)과 구분
-    delayOnTouchOnly:true,
-    touchStartThreshold:5,
-    ghostClass:'drag-ghost',
-    // 모바일 터치 자동 스크롤
-    scroll:true,
-    forceAutoScrollFallback:true,
-    scrollSensitivity:80,
-    scrollSpeed:18,
-    bubbleScroll:true,
-    onEnd:saveExpHubCardOrder
+  // 3그룹 그리드 각각 독립 Sortable — group을 다르게 줘서 그룹 간 드래그 이동 차단
+  ['expHubGridReceipt','expHubGridAuto','expHubGridManual'].forEach(gid=>{
+    const grid=document.getElementById(gid);
+    if(!grid||grid._sortableInited) return;
+    grid._sortableInited=true;
+    new Sortable(grid,{
+      animation:150,
+      delay:300,            // long-press 300ms — 일반 탭(카드 진입)과 구분
+      delayOnTouchOnly:true,
+      touchStartThreshold:5,
+      ghostClass:'drag-ghost',
+      group:gid,            // 각 그룹 독립 (그룹 간 이동 금지)
+      // 모바일 터치 자동 스크롤
+      scroll:true,
+      forceAutoScrollFallback:true,
+      scrollSensitivity:80,
+      scrollSpeed:18,
+      bubbleScroll:true,
+      onEnd:saveExpHubCardOrder
+    });
   });
 }
 
@@ -5534,13 +5537,13 @@ function _expHubMkCard(cardId, action, iconId, title, amtText, color){
 }
 // ─── 새 기능: 지출 허브 카테고리별/거래처별 뷰 전환 ───
 function switchExpHubView(mode){
-  const catGrid = document.getElementById('expHubCatGrid');
+  const catView = document.getElementById('expHubCatView');
   const vendorGrid = document.getElementById('expHubVendorGrid');
   const btnCat = document.getElementById('ehtBtnCat');
   const btnVendor = document.getElementById('ehtBtnVendor');
-  if(!catGrid || !vendorGrid) return;
+  if(!catView || !vendorGrid) return;
   const isCat = (mode !== 'vendor');
-  catGrid.style.display = isCat ? '' : 'none';
+  catView.style.display = isCat ? '' : 'none';
   vendorGrid.style.display = isCat ? 'none' : '';
   if(btnCat) btnCat.classList.toggle('active', isCat);
   if(btnVendor) btnVendor.classList.toggle('active', !isCat);
@@ -5611,74 +5614,59 @@ async function renderExpHubVendorView(){
   }
 }
 
+// 카테고리를 채워지는 방식(data_source)으로 3그룹 분류 (2026-06-11 목업 반영)
+//   - receipt(📸 영수증으로 채워요): receipts/composite/vendor_orders
+//   - auto(🤖 자동으로 잡혀요): attendance·고정비 + 로열티·카드수수료(특수)
+//   - manual(✏️ 직접 입력해요): manual
+function _expHubGroupOf(ds){
+  if(['receipts','composite','vendor_orders'].includes(ds)) return 'receipt';
+  if(['attendance','attendance_hourly','attendance_monthly','fixed_costs'].includes(ds)) return 'auto';
+  return 'manual';
+}
 function renderExpHubCatSkeleton(){
-  const grid = document.getElementById('expHubCatGrid');
-  if(!grid) return;
+  const gR=document.getElementById('expHubGridReceipt');
+  const gA=document.getElementById('expHubGridAuto');
+  const gM=document.getElementById('expHubGridManual');
+  if(!gR || !gA || !gM) return;
   const parents = _expHubCatParents();
-  if(!parents.length) return; // 캐시 비면 기존 "불러오는 중..." 유지
-  let html = '';
+  if(!parents.length) return; // 캐시 비면 "불러오는 중..." 유지
+  const buf = {receipt:'', auto:'', manual:''};
   parents.forEach(cat=>{
-    html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, '-', cat.color);
+    const grp = _expHubGroupOf(cat.data_source||'manual');
+    buf[grp] += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, '-', cat.color);
   });
-  html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', '-', '#F04452');
-  html += _expHubMkCard('cardfee', 'nav|cardfee', 'i-card', '카드수수료', '-', '#DC2626');
-  grid.innerHTML = html;
+  // 로열티·카드수수료 = 자동(매출 비율로 자동 계산)
+  buf.auto += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', '-', '#F04452');
+  buf.auto += _expHubMkCard('cardfee', 'nav|cardfee', 'i-card', '카드수수료', '-', '#DC2626');
+  gR.innerHTML = buf.receipt;
+  gA.innerHTML = buf.auto;
+  gM.innerHTML = buf.manual;
+  const loading=document.getElementById('expHubCatLoading'); if(loading) loading.style.display='none';
   applyExpHubCardOrder();
-  grid._sortableInited = false;
+  gR._sortableInited=false; gA._sortableInited=false; gM._sortableInited=false;
   initExpHubSortable();
 }
 // 금액 셀만 in-place 갱신 (DOM 통째 교체 X = 깜빡임 없음)
 function updateExpHubCatAmounts(catSums){
-  const grid = document.getElementById('expHubCatGrid');
-  if(!grid) return;
-  // 스켈레톤이 안 그려졌으면(캐시 미스 fallback) 통째 렌더
-  if(!grid.querySelector('[data-amt-cell]')){
-    const parents = _expHubCatParents();
-    let html = '';
-    parents.forEach(cat=>{
-      const amt = catSums?.[cat.id]?.amount || 0;
-      html += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, amt?fmt(amt):'0', cat.color);
-    });
-    const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
-    html += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', royaltyAmt?fmt(royaltyAmt):'0', '#F04452');
-    const cardFeeAmt0 = (catSums && catSums._cardfee) ? catSums._cardfee.amount : 0;
-    html += _expHubMkCard('cardfee', 'nav|cardfee', 'i-card', '카드수수료', cardFeeAmt0?fmt(cardFeeAmt0):'0', '#DC2626');
-    grid.innerHTML = html;
-    applyExpHubCardOrder();
-    grid._sortableInited = false;
-    initExpHubSortable();
-    return;
+  // 스켈레톤(카드)이 안 그려졌으면 먼저 생성
+  if(!document.querySelector('#expHubCatView [data-amt-cell]')){
+    renderExpHubCatSkeleton();
   }
-  // 스켈레톤 있음 → 금액 셀만 textContent 갱신
-  const parents = _expHubCatParents();
-  parents.forEach(cat=>{
-    const cell = grid.querySelector(`[data-amt-cell="cat-${cat.id}"]`);
+  const setAmt=(cardId, amt)=>{
+    const cell=document.querySelector(`#expHubCatView [data-amt-cell="${cardId}"]`);
     if(!cell) return;
-    const amt = catSums?.[cat.id]?.amount || 0;
     const t = amt ? fmt(amt) : '0';
     cell.textContent = t;
     cell.className = 'hub-mini-amt' + _expAmtClass(t);
-  });
-  const royaltyCell = grid.querySelector('[data-amt-cell="royalty"]');
-  if(royaltyCell){
-    const royaltyAmt = (catSums && catSums._royalty) ? catSums._royalty.amount : 0;
-    const rt = royaltyAmt ? fmt(royaltyAmt) : '0';
-    royaltyCell.textContent = rt;
-    royaltyCell.className = 'hub-mini-amt' + _expAmtClass(rt);
-  }
-  const cardFeeCell = grid.querySelector('[data-amt-cell="cardfee"]');
-  if(cardFeeCell){
-    const cardFeeAmt = (catSums && catSums._cardfee) ? catSums._cardfee.amount : 0;
-    const ct = cardFeeAmt ? fmt(cardFeeAmt) : '0';
-    cardFeeCell.textContent = ct;
-    cardFeeCell.className = 'hub-mini-amt' + _expAmtClass(ct);
-  }
+  };
+  _expHubCatParents().forEach(cat=> setAmt(`cat-${cat.id}`, catSums?.[cat.id]?.amount||0));
+  setAmt('royalty', (catSums && catSums._royalty) ? catSums._royalty.amount : 0);
+  setAmt('cardfee', (catSums && catSums._cardfee) ? catSums._cardfee.amount : 0);
 }
 async function saveExpHubCardOrder(){
   if(!currentStore) return;
-  const grid=document.getElementById('expHubCatGrid');
-  if(!grid) return;
-  const ids=Array.from(grid.querySelectorAll('[data-card-id]')).map(el=>el.getAttribute('data-card-id'));
+  // 3그룹 그리드 카드 id를 순서대로 모음 (그룹 내 정렬만 의미, 그룹 간 이동은 Sortable이 차단)
+  const ids=Array.from(document.querySelectorAll('#expHubCatView [data-card-id]')).map(el=>el.getAttribute('data-card-id'));
   const json=JSON.stringify(ids);
   const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,exp_hub_order:json},{onConflict:'store_id'});
   if(error){console.error('[exp_hub_order]',error);toast('순서 저장 실패','warn');return;}
@@ -5696,9 +5684,9 @@ async function loadExpHubData(force){
   // force(백그라운드 SWR·저장 후 갱신)일 땐 스켈레톤 재생성 금지 — 금액 칸이 '-'로 리셋되며 깜빡임 (2026-05-28 사장님 호소)
   if(!force){
     // 첫 진입 시 카테고리별 보기로 초기화 (토글 상태 리셋)
-    const _cg=document.getElementById('expHubCatGrid'), _vg=document.getElementById('expHubVendorGrid');
+    const _cv=document.getElementById('expHubCatView'), _vg=document.getElementById('expHubVendorGrid');
     const _bc=document.getElementById('ehtBtnCat'), _bv=document.getElementById('ehtBtnVendor');
-    if(_cg) _cg.style.display=''; if(_vg) _vg.style.display='none';
+    if(_cv) _cv.style.display=''; if(_vg) _vg.style.display='none';
     if(_bc) _bc.classList.add('active'); if(_bv) _bv.classList.remove('active');
     renderExpHubCatSkeleton();
   }

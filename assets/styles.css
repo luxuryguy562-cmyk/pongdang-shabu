@@ -1670,3 +1670,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .exp-vendor-name{font-size:14px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .exp-vendor-sub{font-size:11px;font-weight:500;color:var(--toss-text-4);margin-top:2px;}
 .exp-vendor-amt{font-size:15px;font-weight:900;color:var(--toss-blue);letter-spacing:-0.4px;white-space:nowrap;}
+
+/* ─── 지출 허브 카테고리 3그룹 라벨 ─── */
+.exp-group-label{font-size:12.5px;font-weight:800;color:var(--toss-text-3);margin:14px 0 8px;letter-spacing:-0.2px;}
+.exp-group-label:first-child{margin-top:0;}
+.exp-group-hint{font-size:11px;font-weight:500;color:var(--toss-text-4);margin-left:4px;}
+.exp-cat-grid{margin-bottom:2px;}
