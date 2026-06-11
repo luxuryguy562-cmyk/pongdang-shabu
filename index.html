@@ -549,6 +549,17 @@
       </div>
     </div>
 
+    <!-- 지출 도구 -->
+    <div class="side-group">
+      <div class="side-group-header" data-action="toggleSideGroup|this">
+        <span>🔧 지출 도구</span><span class="side-arrow">›</span>
+      </div>
+      <div class="side-group-body">
+        <div class="side-item" data-action="navFromSide|explist">계좌·카드 내역</div>
+        <div class="side-item" data-action="navFromSide|expcat">카테고리 관리</div>
+      </div>
+    </div>
+
     <!-- 직원 -->
     <div class="side-group">
       <div class="side-group-header" data-action="toggleSideGroup|this">
@@ -939,81 +950,34 @@
 
 <!-- ══ [Hub] 지출 허브 (관리자 전용) ══ -->
 <div id="expHubCont" class="container">
-  <!-- 영수증=부모 / 거래채널=자식 한 묶음 카드 (2026-06-09 위계①) -->
-  <div class="exp-receipt-group">
-    <button type="button" class="exp-hero-ai" data-action="nav|receipt">
-      <span class="eha-ic"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
-      <div style="flex:1;min-width:0;">
-        <div class="eha-title">영수증 찍으면 AI가 자동 정리<span class="eha-pill">AI</span></div>
-        <div class="eha-sub" id="expHeroInfo">사진 한 장이면 카테고리별 자동 분류돼요</div>
+  <!-- 카테고리 섹션 — 📸영수증(토글+등록버튼)/🤖자동/✏️직접입력 -->
+  <!-- 지출 등록 버튼은 '영수증으로 채워요' 섹션 안 (영수증 채우는 행위라 영수증 그룹에 소속) -->
+  <div id="expHubCatView">
+    <!-- 📸 영수증 섹션 헤더 + 카테고리별/거래처별 토글 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 9px;">
+      <div class="exp-group-label" style="margin:0;">📸 영수증으로 채워요 <span class="exp-group-hint">사진 찍으면 자동 분류</span></div>
+      <div class="exp-hub-view-toggle">
+        <button type="button" class="eht-btn active" id="ehtBtnCat" data-action="switchExpHubView|cat">카테고리별</button>
+        <button type="button" class="eht-btn" id="ehtBtnVendor" data-action="switchExpHubView|vendor">거래처별</button>
       </div>
-      <span class="eha-arr">›</span>
-    </button>
-    <!-- 거래 채널 = 영수증의 하위 (어디 영수증인지) -->
-    <div class="exp-sub-label">어디 영수증인가요?</div>
-    <div class="exp-channel-grid">
-    <button type="button" class="exp-channel-card" data-action="openVendorChannel|vendor">
-      <div class="ec-head">
-        <div class="ec-icon-wrap blue">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#3182F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
-        </div>
-        <div class="ec-nm">거래처 관리</div>
-      </div>
-      <div class="ec-vl" id="expMiniVendor">-</div>
-      <div class="ec-sub" id="expMiniVendorSub">이번달</div>
-    </button>
-    <button type="button" class="exp-channel-card" data-action="openVendorChannel|online">
-      <div class="ec-head">
-        <div class="ec-icon-wrap" style="background:#E8F5E9;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-        </div>
-        <div class="ec-nm">온라인</div>
-      </div>
-      <div class="ec-vl" id="expMiniOnline">-</div>
-      <div class="ec-sub" id="expMiniOnlineSub">이번달</div>
-    </button>
-    <button type="button" class="exp-channel-card" data-action="openCatReceipt|direct">
-      <div class="ec-head">
-        <div class="ec-icon-wrap amber">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#F5A11E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
-        </div>
-        <div class="ec-nm">마트·시장</div>
-      </div>
-      <div class="ec-vl" id="expMiniDirect">-</div>
-      <div class="ec-sub" id="expMiniDirectSub">이번달</div>
-    </button>
     </div>
+    <!-- 지출 등록 버튼 (영수증 섹션 안, 카드 위) -->
+    <button type="button" class="exp-add-btn" data-action="nav|receipt">
+      <span class="eab-ic">📸</span>
+      <span class="eab-txt">영수증·명세서 등록 <span class="eab-pill">AI</span></span>
+      <span class="eab-meta" id="expHeroInfo">사진 자동 분류</span>
+    </button>
+    <!-- 카테고리별: 영수증 그리드 (기본 표시) -->
+    <div class="hub-grid exp-cat-grid" id="expHubGridReceipt" data-grp="receipt"></div>
+    <!-- 거래처별: 거래처 목록 (초기 숨김, switchExpHubView('vendor')로 표시) -->
+    <div id="expHubVendorGrid" style="display:none;"></div>
+    <!-- 🤖 자동 / ✏️ 직접입력 — 항상 표시 -->
+    <div class="exp-group-label">🤖 자동으로 잡혀요 <span class="exp-group-hint">손 안 대도 됨</span></div>
+    <div class="hub-grid exp-cat-grid" id="expHubGridAuto" data-grp="auto"></div>
+    <div class="exp-group-label">✏️ 직접 입력해요 <span class="exp-group-hint">영수증 없이 금액만</span></div>
+    <div class="hub-grid exp-cat-grid" id="expHubGridManual" data-grp="manual"></div>
+    <div id="expHubCatLoading" style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>
   </div>
-  <!-- 지출 카테고리 (동적 렌더링) — JS renderExpHubCatSkeleton 즉시 + updateExpHubCatAmounts 비동기 -->
-  <div class="exp-section-ttl">📦 지출 카테고리 <span class="exp-section-hint">(드래그로 순서 변경)</span></div>
-  <div class="hub-grid" id="expHubCatGrid">
-    <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>
-  </div>
-  <div class="exp-section-ttl" style="margin-top:18px;">🔧 도구</div>
-  <button type="button" class="hub-full" data-action="nav|explist">
-    <span class="hub-full-icon"><svg><use href="#i-card"/></svg></span>
-    <div style="flex:1;min-width:0;">
-      <div class="hub-full-title">계좌내역·카드내역</div>
-      <div class="hub-full-sub" id="expMiniMydataSub">자동 수집</div>
-    </div>
-    <span style="color:var(--gray-400);font-size:20px;">›</span>
-  </button>
-  <button type="button" class="hub-full" data-action="nav|recon">
-    <span class="hub-full-icon"><svg><use href="#i-arrows-lr"/></svg></span>
-    <div style="flex:1;min-width:0;">
-      <div class="hub-full-title">정산 대조</div>
-      <div class="hub-full-sub" id="expMiniReconSub">예상 vs 실제 매출·지출 대조</div>
-    </div>
-    <span style="color:var(--gray-400);font-size:20px;">›</span>
-  </button>
-  <button type="button" class="hub-full" data-action="nav|expcat">
-    <span class="hub-full-icon"><svg><use href="#i-settings"/></svg></span>
-    <div style="flex:1;min-width:0;">
-      <div class="hub-full-title">수입·지출 카테고리 관리</div>
-      <div class="hub-full-sub" id="expFullCat">분류 추가·수정·삭제</div>
-    </div>
-    <span style="color:var(--gray-400);font-size:20px;">›</span>
-  </button>
 </div>
 
 <!-- ══ 카테고리별 영수증 목록 (직구·식자재·비품·기타 진입 공통) ══ -->

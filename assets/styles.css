@@ -1563,6 +1563,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .exp-hero-ai .eha-arr{color:rgba(255,255,255,.8);font-size:20px;flex-shrink:0;}
 .exp-sub-label{font-size:11.5px;font-weight:800;color:var(--toss-text-4);margin:14px 6px 9px;display:flex;align-items:center;gap:6px;}
 .exp-sub-label::before{content:'└';color:var(--toss-blue);font-size:14px;font-weight:900;}
+/* 지출 등록 버튼 — 영수증 섹션 안 (설명 X, 버튼답게 단단하게) */
+.exp-add-btn{width:100%;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#3182F6 0%,#0064FF 100%);color:#fff;border:0;border-radius:14px;padding:15px 16px;margin-bottom:12px;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px rgba(49,130,246,.3);transition:transform .15s cubic-bezier(.2,.8,.4,1);}
+.exp-add-btn:active{transform:scale(.98);}
+.exp-add-btn .eab-ic{font-size:19px;flex-shrink:0;}
+.exp-add-btn .eab-txt{font-size:15px;font-weight:800;letter-spacing:-0.3px;flex:1;text-align:left;}
+.exp-add-btn .eab-pill{display:inline-block;font-size:10px;font-weight:800;background:rgba(255,255,255,.25);border-radius:6px;padding:2px 6px;margin-left:5px;vertical-align:middle;letter-spacing:.3px;}
+.exp-add-btn .eab-meta{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.92);flex-shrink:0;white-space:nowrap;}
 .exp-receipt-group .exp-channel-grid{margin-bottom:0;}
 .exp-receipt-group .exp-channel-card{background:var(--toss-line);box-shadow:none;}
 /* 거래채널 진입화면 — 영수증 사진 버튼 안 AI 배지·보조문구 (2026-06-09) */
@@ -1656,3 +1663,23 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .otp-cell{width:40px;height:52px;border:1.5px solid var(--gray-200);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--text);background:var(--gray-100);transition:border-color .15s,background .15s;}
 .otp-cell.on{border-color:var(--blue);background:#fff;}
 .join-role:active{background:var(--blue-light) !important;border-color:var(--blue) !important;transform:scale(0.99);}
+
+/* ─── 지출 허브 카테고리별/거래처별 뷰 전환 토글 ─── */
+.exp-hub-view-toggle{display:inline-flex;background:var(--toss-line);border-radius:10px;padding:3px;gap:2px;}
+.eht-btn{border:none;background:transparent;cursor:pointer;font-size:11px;font-weight:700;color:var(--toss-text-3);padding:5px 11px;border-radius:8px;font-family:inherit;white-space:nowrap;}
+.eht-btn.active{background:var(--white);color:var(--toss-blue-strong);box-shadow:0 1px 4px rgba(0,0,0,0.10);}
+
+/* ─── 지출 허브 거래처별 뷰 — 거래처 행 ─── */
+.exp-vendor-row{display:flex;align-items:center;gap:12px;background:var(--white);border-radius:16px;padding:14px 16px;margin-bottom:8px;box-shadow:var(--card-shadow);cursor:pointer;border:none;width:100%;text-align:left;}
+.exp-vendor-row:active{transform:scale(.98);}
+.exp-vendor-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.exp-vendor-body{flex:1;min-width:0;}
+.exp-vendor-name{font-size:14px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.exp-vendor-sub{font-size:11px;font-weight:500;color:var(--toss-text-4);margin-top:2px;}
+.exp-vendor-amt{font-size:15px;font-weight:900;color:var(--toss-blue);letter-spacing:-0.4px;white-space:nowrap;}
+
+/* ─── 지출 허브 카테고리 3그룹 라벨 ─── */
+.exp-group-label{font-size:12.5px;font-weight:800;color:var(--toss-text-3);margin:14px 0 8px;letter-spacing:-0.2px;}
+.exp-group-label:first-child{margin-top:0;}
+.exp-group-hint{font-size:11px;font-weight:500;color:var(--toss-text-4);margin-left:4px;}
+.exp-cat-grid{margin-bottom:2px;}
