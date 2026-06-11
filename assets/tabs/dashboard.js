@@ -552,7 +552,7 @@ async function loadDashboard(force){
           :Promise.resolve({data:null}),
         // ── 전월 매출 ──
         dashSaleSource==='ups'
-          ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
+          ?sb.from('daily_sales').select('sale_date,total_sales,card_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
           :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
         // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
         sb.from('vendor_orders').select('id,order_group_id,amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
@@ -584,6 +584,9 @@ async function loadDashboard(force){
 
     // ══ 1. 일별 매출 맵 + 매출 집계 ══
     let salesBreakdown={},totalRevenue=0,dailySalesMap={},receiptCount=0;
+    // 일별 카드매출 — 카드수수료를 카드매출 기준으로 일별 정확 계산 (2026-06-11 분리·보정)
+    const dailyCardSalesMap={};
+    const _cardMethodObj=(paymentMethods||[]).find(m=>m.legacy_key==='card');
     const settle=settleRes.data||[];
 
     if(dashSaleSource==='ups'){
@@ -591,6 +594,7 @@ async function loadDashboard(force){
         const day=s.sale_date?.slice(8);
         const ds=s.total_sales||0;
         totalRevenue+=ds;dailySalesMap[day]=ds;
+        if(day) dailyCardSalesMap[day]=s.card_sales||0;
       });
       salesBreakdown={'카드':settle.reduce((a,s)=>a+(s.card_sales||0),0),'현금':settle.reduce((a,s)=>a+(s.cash_sales||0),0)};
       salesBreakdown['기타']=totalRevenue-salesBreakdown['카드']-salesBreakdown['현금'];
@@ -601,6 +605,7 @@ async function loadDashboard(force){
         const day=s.date?.slice(8);
         const ds=salesRowTotal(s);
         totalRevenue+=ds;dailySalesMap[day]=ds;
+        if(day) dailyCardSalesMap[day]=_cardMethodObj?(getMethodAmount(s,_cardMethodObj)||0):0;
         (paymentMethods||[]).forEach(m=>{
           const v=getMethodAmount(s,m);
           if(v) salesBreakdown[m.name]=(salesBreakdown[m.name]||0)+v;
@@ -837,10 +842,14 @@ async function loadDashboard(force){
     });
     // fixed_costs source 카테고리 목록 (옛 호환: 고정비 + 공과금 둘 다)
     const fixedCats=_activeExpCats.filter(c=>c.data_source==='fixed_costs');
-    // 로열티/수수료 가상 카테고리 (expense_categories에 없음)
-    catNames.push('로열티/수수료');
-    catColors['로열티/수수료']='#EF4444';
-    shortNames['로열티/수수료']='로열티';
+    // 로열티·카드수수료 가상 카테고리 (expense_categories에 없음)
+    // 2026-06-11 사장님 지시로 분리 — 옛 '로열티/수수료' 합산 폐기 (카드수수료가 로열티 줄에 숨어 보였음)
+    catNames.push('로열티');
+    catColors['로열티']='#EF4444';
+    shortNames['로열티']='로열티';
+    catNames.push('카드수수료');
+    catColors['카드수수료']='#DC2626';
+    shortNames['카드수수료']='수수료';
     // vendor_id → 카테고리명 매핑 (vendors.category_id 기반 — 주류/음료 정확 분리)
     const _vendorIdToCatName={};
     (vendors||[]).forEach(v=>{
@@ -930,16 +939,26 @@ async function loadDashboard(force){
       _addVE(d, r.vendors?.name||r.vendor||'직접 구매', r.total_price, k, true, 'r:'+(r.receipt_group_id||r.id));
       _addChild(r.category_id, r.total_price, d);
     });
-    // 인건비 부모 이름 (srcToCat 기준) — 고정급/시급 하위는 이 부모 아래로 박음
+    // 인건비 부모 이름 (srcToCat 기준) — 월급/시급 하위는 이 부모 아래로 박음
     const _laborParentName = srcToCat['attendance'] || '인건비';
+    // 인건비 자식을 월 집계(monthChildMap)에도 동시 박음 — 월상세 아코디언·주간 표 표시용 (2026-06-11 사장님 호소)
+    // 옛: dailyChildMap에만 박아서 월상세 "카테고리별 지출" 펼침과 주간 표 자식 줄에 인건비가 안 나왔음
+    // 이름은 DB 자식 분류(월급/시급)와 통일 — 홈 월요약 "+상세보기"(calcChildAmounts)와 같은 이름
+    const _addLaborChild=(d, childName, amt, color)=>{
+      if(!amt||amt<=0)return;
+      if(!monthChildMap[_laborParentName])monthChildMap[_laborParentName]={};
+      if(!monthChildMap[_laborParentName][childName])monthChildMap[_laborParentName][childName]={amt:0,color};
+      monthChildMap[_laborParentName][childName].amt+=amt;
+      _addChildDayNamed(d, _laborParentName, childName, amt, color);
+    };
     (attDaily||[]).forEach(a=>{
       if(monthlyEmpIds.has(a.employee_id)) return; // 월급제는 별도 분배
       const d=a.work_date?.slice(8);if(!d)return;
       if(!dailyCatMap[d])dailyCatMap[d]={};
       const k=srcToCat['attendance'];dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(a.calculated_wage||0);
       _addVE(d, '직원 급여', a.calculated_wage, '인건비');
-      // 시급제 → 인건비 하위 '시급' (2026-06-03 주차 매트릭스)
-      _addChildDayNamed(d, _laborParentName, '시급', a.calculated_wage||0, '#60A5FA');
+      // 시급제 → 인건비 하위 '시급' (월 집계 + 일별 둘 다 — 2026-06-11)
+      _addLaborChild(d, '시급', a.calculated_wage||0, '#60A5FA');
     });
     // ─── 마감 차감 일자별 분배 — 카테고리 매칭 → 해당 카테고리 키 (2026-05-18 통일) ───
     // 인건비 부모/자식 → 인건비 키, 식자재 부모/자식 → 식자재 키 등
@@ -984,8 +1003,8 @@ async function loadDashboard(force){
           const k=srcToCat['attendance'];
           dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+dailyWage;
           _addVE(d, '직원 급여', dailyWage, '인건비');
-          // 월급제 → 인건비 하위 '고정급' (2026-06-03 주차 매트릭스)
-          _addChildDayNamed(d, _laborParentName, '고정급', dailyWage, '#3B82F6');
+          // 월급제 → 인건비 하위 '월급' (DB 자식 분류명 통일, 월 집계 + 일별 둘 다 — 2026-06-11)
+          _addLaborChild(d, '월급', dailyWage, '#3B82F6');
         });
       });
     }
@@ -1005,11 +1024,13 @@ async function loadDashboard(force){
       fixedCats.forEach(cat=>{
         if(dailyFixedShareByCat[cat.name]>0){ dailyCatMap[d][cat.name]=dailyFixedShareByCat[cat.name]; _addVE(d, cat.name, dailyFixedShareByCat[cat.name], '고정비'); }
       });
-      // 로열티/수수료: 해당일 매출 기준
+      // 로열티 = 해당일 전체 매출 × 요율 / 카드수수료 = 해당일 카드매출 × 요율 (2026-06-11 분리 + 과대 계상 보정)
+      // 옛: 카드수수료도 전체 매출 기준 → 현금·송금 매출에까지 1.5% 곱해 홈 월요약과 어긋났음
       const daySale=dailySalesMap[d]||0;
       const dayRoyalty=Math.round(daySale*royaltyRate);
-      const dayCardFee=Math.round(daySale*cardFeeRate);
-      if(dayRoyalty+dayCardFee>0){ dailyCatMap[d]['로열티/수수료']=dayRoyalty+dayCardFee; _addVE(d, '로열티·수수료', dayRoyalty+dayCardFee, '로열티/수수료'); }
+      const dayCardFee=Math.round((dailyCardSalesMap[d]||0)*cardFeeRate);
+      if(dayRoyalty>0){ dailyCatMap[d]['로열티']=dayRoyalty; _addVE(d, '로열티', dayRoyalty, '로열티'); }
+      if(dayCardFee>0){ dailyCatMap[d]['카드수수료']=dayCardFee; _addVE(d, '카드수수료', dayCardFee, '카드수수료'); }
       // 일별 지출 합계
       let dayExp=0;
       catNames.forEach(c=>{dayExp+=(dailyCatMap[d]?.[c]||0);});
@@ -1019,14 +1040,21 @@ async function loadDashboard(force){
     // ══ 전월 데이터 처리 (MoM 비교용) ══
     const prevSettle=prevSettleRes.data||[];
     let prevTotalRevenue=0;const prevDailySalesMap={};
+    // 전월 일별 카드매출 (카드수수료 분리 계산용 — 2026-06-11)
+    let prevCardTotal=0;const prevDailyCardSalesMap={};
     if(dashSaleSource==='ups'){
-      prevSettle.forEach(s=>{const d=s.sale_date?.slice(8);prevTotalRevenue+=(s.total_sales||0);if(d)prevDailySalesMap[d]=s.total_sales||0;});
+      prevSettle.forEach(s=>{
+        const d=s.sale_date?.slice(8);prevTotalRevenue+=(s.total_sales||0);if(d)prevDailySalesMap[d]=s.total_sales||0;
+        const cv=s.card_sales||0;prevCardTotal+=cv;if(d)prevDailyCardSalesMap[d]=cv;
+      });
     } else {
       // sales_daily 기준 (본 매출만 — 기타매출 분리)
       prevSettle.forEach(s=>{
         const d=s.date?.slice(8);
         const ds=salesRowTotal(s);
         prevTotalRevenue+=ds;if(d)prevDailySalesMap[d]=ds;
+        const cv=_cardMethodObj?(getMethodAmount(s,_cardMethodObj)||0):0;
+        prevCardTotal+=cv;if(d)prevDailyCardSalesMap[d]=cv;
       });
     }
     // 전월 일별 식자재/인건비/영수증 (월급제 직원은 별도 분배)
@@ -1061,14 +1089,15 @@ async function loadDashboard(force){
     // 전월 고정비/로열티/카드수수료 — 모든 달 동일한 예상 월 금액 사용
     const prevFcMonthly=fixedMonthly;
     const prevRoyalty=Math.round(prevTotalRevenue*royaltyRate);
-    const prevCardFee=Math.round(prevTotalRevenue*cardFeeRate);
+    // 카드수수료 = 카드매출 기준 (2026-06-11 보정 — 옛: 전체매출 기준 과대 계상)
+    const prevCardFee=Math.round(prevCardTotal*cardFeeRate);
     const prevTotalCostFull=prevVendorTotal+prevReceiptTotal+prevAttTotal+prevFcMonthly+prevRoyalty+prevCardFee;
     // 전월 주차별 매출/지출/식자재/인건비
     const prevWeekData=prevWeekGroups.map(wk=>{
-      let wS=0,wV=0,wA=0,wR=0;
-      wk.forEach(d=>{wS+=(prevDailySalesMap[d]||0);wV+=(prevDailyVendor[d]||0);wA+=(prevDailyAtt[d]||0);wR+=(prevDailyReceipt[d]||0);});
+      let wS=0,wV=0,wA=0,wR=0,wCS=0;
+      wk.forEach(d=>{wS+=(prevDailySalesMap[d]||0);wV+=(prevDailyVendor[d]||0);wA+=(prevDailyAtt[d]||0);wR+=(prevDailyReceipt[d]||0);wCS+=(prevDailyCardSalesMap[d]||0);});
       const wFx=Math.round(prevFcMonthly/pLastDay*wk.length);
-      const wRoy=Math.round(wS*royaltyRate),wCf=Math.round(wS*cardFeeRate);
+      const wRoy=Math.round(wS*royaltyRate),wCf=Math.round(wCS*cardFeeRate);
       return{sales:wS,expense:wV+wR+wA+wFx+wRoy+wCf,vendor:wV,att:wA};
     });
     // ── 전월대비 문구 헬퍼 ──
@@ -1245,17 +1274,18 @@ async function loadDashboard(force){
         const receipt = prevDailyReceipt[dd] || 0;
         const fixed = Math.round((prevFcMonthly||0)/prevLast); // 일할
         const royalty = Math.round(sale * royaltyRate);
-        const cardFee = Math.round(sale * cardFeeRate);
+        const cardFee = Math.round((prevDailyCardSalesMap[dd]||0) * cardFeeRate); // 카드매출 기준 (2026-06-11)
         const exp = vendor + att + receipt + fixed + royalty + cardFee;
         if(sale > 0 || exp > 0){
-          // 2026-05-22 byCat 추가 (동적 카테고리 비교용)
+          // 2026-05-22 byCat 추가 (동적 카테고리 비교용) / 2026-06-11 로열티·카드수수료 분리
           const byCat = {
             '식자재': vendor,
             '인건비': att,
             '비품': receipt,
             '고정비': fixed,
             '공과금': 0,
-            '로열티/수수료': royalty + cardFee,
+            '로열티': royalty,
+            '카드수수료': cardFee,
           };
           prevDailyMap[k] = {sale, vendor, att, fixed, receipt, royalty, cardFee, exp, profit: sale-exp, byCat};
         }
@@ -1492,7 +1522,7 @@ async function loadDashboard(force){
 
 // 카테고리 기준값 기본값 (business_rules.md, 매출 대비 %)
 // 사장님이 카테고리 관리에서 store_settings.expense_thresholds로 수정 가능
-const V17_DEFAULT_THRESH = {'식자재':30, '주류':10, '음료':10, '인건비':25, '비품':5, '마케팅':10, '고정비':15, '공과금':15, '세금':10, '기타':10, '로열티/수수료':0};
+const V17_DEFAULT_THRESH = {'식자재':30, '주류':10, '음료':10, '인건비':25, '비품':5, '마케팅':10, '고정비':15, '공과금':15, '세금':10, '기타':10, '로열티':0, '카드수수료':0};
 const V17_COLOR_PALETTE = ['#F59E0B','#8B5CF6','#6B7684','#10B981','#EC4899','#3B82F6','#EF4444','#84CC16','#F97316','#06B6D4','#A855F7','#14B8A6'];
 
 // 옛 srcToCat 매핑 활용 — 옛 한글 카테고리명 ↔ 옛 5키 (호환용, v17SumMonth 옛 키 유지)
@@ -1502,7 +1532,7 @@ function v17MapCatKey(srcToCat){
     att:      srcToCat?.['attendance']    || '인건비',
     fixed:    srcToCat?.['fixed_costs']   || '공과금/고정비',
     receipt:  srcToCat?.['receipts']      || '비품',
-    royalty:  '로열티/수수료',
+    royalty:  '로열티', // 2026-06-11 분리 (카드수수료는 byCat['카드수수료']로 별도)
   };
 }
 
@@ -1646,7 +1676,7 @@ function setV17Context(args){
   const userTh = args.expCatThresholds || {};
   ctx.cats = (args.catNames || []).map((nm,i)=>({
     key: nm,
-    name: (nm === '로열티/수수료') ? '로열티' : nm,
+    name: nm, // 2026-06-11 '로열티/수수료'→'로열티' 개명 폐기 (분리돼서 실명 그대로)
     color: args.catColors?.[nm] || V17_COLOR_PALETTE[i % V17_COLOR_PALETTE.length],
     threshold: userTh[nm] ?? V17_DEFAULT_THRESH[nm] ?? 0,
   }));
