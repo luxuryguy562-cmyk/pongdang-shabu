@@ -1760,14 +1760,16 @@ function _v17MonthStats(ctx){
   const monthLastDay = new Date(ctx.YEAR, ctx.TARGET_MONTH, 0).getDate();
   const progressDays = cur.lastDay;
   const progressPct = monthLastDay>0 ? Math.round(progressDays/monthLastDay*100) : 0;
-  // 예상마감: 매출·지출 각각 실제 입력된 마지막 날로 일평균 → 월말 추정 (2026-06-08)
-  // 매출 0인 날(지출만 있는 날)이 매출 분모를 부풀리지 않게 saleLastDay/expLastDay 분리
+  // 예상마감: 매출·지출 둘 다 '매출 들어온 마지막 완전한 날(saleLastDay)' 기준으로 통일 (2026-06-11 사장님 호소)
+  //  · 옛: 매출은 saleLastDay, 지출은 expLastDay로 각각 나눔 → 오늘(매출 0 + 지출만)이 양쪽을 반대로 흔들어 예상 수익률 왜곡(23%)
+  //  · 새: 매출 있던 마지막 날까지만 매출·지출 같이 합산(matched) → 같은 기간 대응(회계 수익·비용 대응 원칙)
+  //        오늘처럼 매출 0인데 지출만 찍힌 '미마감 날'은 예상 base에서 제외 (마감되면 자동 포함)
   let fcSale = null, fcProfit = null;
   const _saleDays = cur.saleLastDay || cur.lastDay;
-  const _expDays  = cur.expLastDay  || cur.lastDay;
   if(_saleDays > 0 && _saleDays < monthLastDay){
-    fcSale = Math.round(cur.s * (monthLastDay / _saleDays));
-    const fcExp = Math.round(cur.e * (monthLastDay / (_expDays||_saleDays)));
+    const matched = v17SumMonth(ctx, ctx.TARGET_MONTH, _saleDays); // 매출 마지막 날까지만 (지출도 같은 기간)
+    fcSale = Math.round(matched.s * (monthLastDay / _saleDays));
+    const fcExp = Math.round(matched.e * (monthLastDay / _saleDays));
     fcProfit = fcSale - fcExp;
   }
   const profitPctSale = cur.s>0 ? (profit/cur.s*100) : 0;
