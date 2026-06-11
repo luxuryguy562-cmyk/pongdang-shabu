@@ -1179,66 +1179,9 @@ async function loadVendorOrders(){
     document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>이번달 주문·영수증이 없습니다</p></div>';
     return;
   }
-  const groups=_groupExpenseRows(all);
-  groups.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  const showVendor = !vendorId;
-  let html=`<div class="grp-tbl-wrap"><table class="grp-tbl">
-    <colgroup><col/><col style="width:64px"/><col style="width:44px"/><col style="width:76px"/><col style="width:22px"/></colgroup>
-    <thead><tr><th>품목</th><th>단가</th><th>수량</th><th>금액</th><th></th></tr></thead>
-    <tbody>`;
-  let firstGroup=true;
-  groups.forEach(g=>{
-    const isOrder = g.source === 'order';
-    const dateShort=(g.date||'').slice(5).replace('-','/');
-    const headerIcon = isOrder
-      ? '🏪 🧾'
-      : (g.inputMethod==='photo' ? '📸 🧾' : (g.inputMethod==='manual' ? '✏️ 🧾' : '🧾'));
-    const labelName = showVendor ? esc(g.vendor||'(거래처 없음)') : (dateShort||'-');
-    const labelSub = showVendor && dateShort ? ` · ${dateShort}` : '';
-    let actionsHtml='';
-    let rowClickAttr='';
-    if(isOrder){
-      const editId = g.rows[0]?.id || g.recId;
-      const delKey = g.groupId ? ('g:'+g.groupId) : ('s:'+g.recId);
-      actionsHtml = `<div class="grp-hdr-actions">
-          <button type="button" class="btn btn-secondary" data-action="openEditOrderSheet|${editId}">✏</button>
-          <button type="button" class="btn btn-danger" data-action="deleteOrderGroupFromCard|${delKey}">🗑</button>
-        </div>`;
-    } else {
-      const editKey = g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
-      actionsHtml = `<span style="font-size:18px;color:#C8CDD4;font-weight:700;flex-shrink:0;">›</span>`;
-      rowClickAttr = `style="cursor:pointer;" data-action="openReceiptGroupEdit|${editKey}"`;
-    }
-    html+=`<tr class="grp-hdr${firstGroup?' first':''}">
-      <td colspan="5"><div class="grp-hdr-row" ${rowClickAttr}>
-        <div class="grp-hdr-info">
-          <span class="emoji">${headerIcon}</span>
-          <span class="name">${labelName}${labelSub}</span>
-          <span class="sum">· ${fmt(g.total)}원</span>
-        </div>${actionsHtml}
-      </div></td>
-    </tr>`;
-    firstGroup=false;
-    g.rows.forEach(r=>{
-      const itemRaw=r.item||'-';
-      const memoFlag=r.memo?' 💬':'';
-      const itemTxt=esc(itemRaw)+memoFlag;
-      const itemTitle=esc(r.memo?`${itemRaw} · 메모: ${r.memo}`:itemRaw);
-      const unitTxt=r.unit?fmt(r.unit):'-';
-      const qtyTxt=(r.qty!=null&&r.qty!=='')?String(r.qty):'-';
-      const action = r._source==='order' ? `openEditOrderSheet|${r.id}` : `openReceiptEdit|${r.id}`;
-      const catChip = r.category ? `<span class="gb-itemcat">${esc(r.category)}</span>` : '';
-      html+=`<tr class="grp-body" data-action="${action}">`
-        +`<td title="${itemTitle}">${itemTxt}${catChip}</td>`
-        +`<td class="gb-unit">${unitTxt}</td>`
-        +`<td class="gb-qty">${qtyTxt}</td>`
-        +`<td class="gb-amt">${fmt(r.amount||0)}</td>`
-        +`<td class="gb-arrow">›</td>`
-        +`</tr>`;
-    });
-  });
-  html+=`</tbody></table></div>`;
-  document.getElementById('orderListData').innerHTML=html;
+  // 2026-06-11 행형 갈아엎기: 표(grp-tbl) → 행형 2줄 구조 (_rclListHtml 공통 렌더, receipt.js)
+  // 영수증 기록·카테고리 화면과 같은 컴포넌트 — 날짜 구분줄 + 거래처 그룹 카드 + 품목 2줄
+  document.getElementById('orderListData').innerHTML=_rclListHtml(all);
 }
 // 주문 입력/편집 공통 시트 — 멀티행 accordion 패턴 (2026-05-20 사장님 D 패턴)
 //  · _orderDraftRows = [{item,unit_price,qty,amount,memo,_origId?}, ...]  현재 시트 안 입력 행들
