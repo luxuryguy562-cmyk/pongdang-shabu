@@ -5537,13 +5537,13 @@ function _expHubMkCard(cardId, action, iconId, title, amtText, color){
 }
 // ─── 새 기능: 지출 허브 카테고리별/거래처별 뷰 전환 ───
 function switchExpHubView(mode){
-  const catView = document.getElementById('expHubCatView');
+  const receiptGrid = document.getElementById('expHubGridReceipt');
   const vendorGrid = document.getElementById('expHubVendorGrid');
   const btnCat = document.getElementById('ehtBtnCat');
   const btnVendor = document.getElementById('ehtBtnVendor');
-  if(!catView || !vendorGrid) return;
+  if(!receiptGrid || !vendorGrid) return;
   const isCat = (mode !== 'vendor');
-  catView.style.display = isCat ? '' : 'none';
+  receiptGrid.style.display = isCat ? '' : 'none';
   vendorGrid.style.display = isCat ? 'none' : '';
   if(btnCat) btnCat.classList.toggle('active', isCat);
   if(btnVendor) btnVendor.classList.toggle('active', !isCat);
@@ -5590,23 +5590,24 @@ async function renderExpHubVendorView(){
       grid.innerHTML = '<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;">이번달 거래 없음</div>';
       return;
     }
-    const catColor = (cat) => {
-      const found = (expCategories||[]).find(c=>c.vendor_category===cat && !c.parent_id);
-      return found?.color || '#3182F6';
-    };
-    let html = '';
+    const monthTotal = list.reduce((a,[,v])=>a+v.total, 0);
+    const monthCount = list.reduce((a,[,v])=>a+v.count, 0);
+    let html = `<div style="background:var(--gray-100);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:var(--gray-600);">${ym} 거래 합계</span>
+      <span style="font-size:14px;font-weight:800;color:var(--text);">${fmt(monthTotal)}원 · ${monthCount}건</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">`;
     list.forEach(([vid, v])=>{
-      const col = catColor(v.category);
-      const bg = _hexToRgba(col, 0.15)||'#EDF4FF';
-      html += `<button type="button" class="exp-vendor-row" data-action="nav|vendors" data-vendor-id="${esc(vid)}">
-        <div class="exp-vendor-icon" style="background:${bg};color:${col};">🏠</div>
-        <div class="exp-vendor-body">
-          <div class="exp-vendor-name">${esc(v.name)}</div>
-          <div class="exp-vendor-sub">${v.category||'거래처'} · ${v.count}건</div>
+      html += `<div class="vendor-card" data-vendor-id="${esc(vid)}" data-action="openVendorDetail|${esc(vid)}">
+        <div class="vc-head"><span class="vc-cat">${esc(v.category)||'거래처'}</span></div>
+        <div class="vc-name">${esc(v.name)}</div>
+        <div class="vc-month has">
+          <span class="vc-cnt">${v.count}건</span>
+          <span class="vc-amt">${fmt(v.total)}원</span>
         </div>
-        <div class="exp-vendor-amt">${fmt(v.total)}</div>
-      </button>`;
+      </div>`;
     });
+    html += `</div>`;
     grid.innerHTML = html;
   } catch(e){
     console.error('[expHubVendorView]', e);
@@ -5684,9 +5685,9 @@ async function loadExpHubData(force){
   // force(백그라운드 SWR·저장 후 갱신)일 땐 스켈레톤 재생성 금지 — 금액 칸이 '-'로 리셋되며 깜빡임 (2026-05-28 사장님 호소)
   if(!force){
     // 첫 진입 시 카테고리별 보기로 초기화 (토글 상태 리셋)
-    const _cv=document.getElementById('expHubCatView'), _vg=document.getElementById('expHubVendorGrid');
+    const _rg=document.getElementById('expHubGridReceipt'), _vg=document.getElementById('expHubVendorGrid');
     const _bc=document.getElementById('ehtBtnCat'), _bv=document.getElementById('ehtBtnVendor');
-    if(_cv) _cv.style.display=''; if(_vg) _vg.style.display='none';
+    if(_rg) _rg.style.display=''; if(_vg) _vg.style.display='none';
     if(_bc) _bc.classList.add('active'); if(_bv) _bv.classList.remove('active');
     renderExpHubCatSkeleton();
   }

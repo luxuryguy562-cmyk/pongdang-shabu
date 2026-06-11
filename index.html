@@ -959,28 +959,27 @@
     </div>
     <span class="eha-arr">›</span>
   </button>
-  <!-- 카테고리 섹션 타이틀 + 카테고리별/거래처별 토글 -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-    <div class="exp-section-ttl" style="margin:0;">📦 지출 카테고리</div>
-    <div class="exp-hub-view-toggle">
-      <button type="button" class="eht-btn active" id="ehtBtnCat" data-action="switchExpHubView|cat">카테고리별</button>
-      <button type="button" class="eht-btn" id="ehtBtnVendor" data-action="switchExpHubView|vendor">거래처별</button>
-    </div>
-  </div>
-  <!-- 카테고리별 보기 — 채워지는 방식 3그룹 (📸영수증 / 🤖자동 / ✏️직접입력) -->
-  <!-- 각 그룹은 data_source 기준 자동 분류 (renderExpHubCatSkeleton). 그룹 안에서만 드래그 순서변경 -->
+  <!-- 카테고리 섹션 — 📸영수증(토글)/🤖자동/✏️직접입력 -->
+  <!-- 토글은 📸영수증 헤더 안 — 거래처별 선택 시 영수증 그리드만 거래처 목록으로 전환 -->
   <div id="expHubCatView">
-    <div class="exp-group-label">📸 영수증으로 채워요 <span class="exp-group-hint">사진 찍으면 자동 분류</span></div>
+    <!-- 📸 영수증 섹션 헤더 + 카테고리별/거래처별 토글 통합 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px;">
+      <div class="exp-group-label" style="margin:0;">📸 영수증으로 채워요 <span class="exp-group-hint">사진 찍으면 자동 분류</span></div>
+      <div class="exp-hub-view-toggle">
+        <button type="button" class="eht-btn active" id="ehtBtnCat" data-action="switchExpHubView|cat">카테고리별</button>
+        <button type="button" class="eht-btn" id="ehtBtnVendor" data-action="switchExpHubView|vendor">거래처별</button>
+      </div>
+    </div>
+    <!-- 카테고리별: 영수증 그리드 (기본 표시) -->
     <div class="hub-grid exp-cat-grid" id="expHubGridReceipt" data-grp="receipt"></div>
+    <!-- 거래처별: 거래처 목록 (초기 숨김, switchExpHubView('vendor')로 표시) -->
+    <div id="expHubVendorGrid" style="display:none;"></div>
+    <!-- 🤖 자동 / ✏️ 직접입력 — 항상 표시 -->
     <div class="exp-group-label">🤖 자동으로 잡혀요 <span class="exp-group-hint">손 안 대도 됨</span></div>
     <div class="hub-grid exp-cat-grid" id="expHubGridAuto" data-grp="auto"></div>
     <div class="exp-group-label">✏️ 직접 입력해요 <span class="exp-group-hint">영수증 없이 금액만</span></div>
     <div class="hub-grid exp-cat-grid" id="expHubGridManual" data-grp="manual"></div>
     <div id="expHubCatLoading" style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>
-  </div>
-  <!-- 거래처별 리스트 (초기 숨김, switchExpHubView('vendor')로 표시) -->
-  <div id="expHubVendorGrid" style="display:none;">
-    <div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>
   </div>
 </div>
 
