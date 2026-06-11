@@ -1038,9 +1038,10 @@
 
     <!-- 📸 영수증으로 채워요 -->
     <div style="margin-bottom:6px;">
-      <!-- 섹션 헤더 -->
+      <!-- 섹션 헤더 + 거래처별 보기 링크 -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="font-size:12.5px;font-weight:800;color:#8B95A1;">📸 영수증으로 채워요 <span style="font-size:11px;font-weight:500;margin-left:3px;">사진 찍으면 자동 분류</span></div>
+        <span onclick="showScreen('hub-vendor-list')" style="font-size:12px;font-weight:700;color:#3182F6;cursor:pointer;white-space:nowrap;flex-shrink:0;">거래처별 ›</span>
       </div>
 
       <!-- 지출 등록 버튼 -->
@@ -1116,15 +1117,6 @@
         </div>
       </div>
 
-      <!-- 거래처별로 보기 입구 (별도 화면 이동) -->
-      <button onclick="showScreen('hub-vendor-list')" style="width:100%;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #E5E8EB;border-radius:14px;padding:13px 16px;margin-top:10px;font-family:inherit;cursor:pointer;">
-        <span style="font-size:16px;flex-shrink:0;">🏪</span>
-        <span style="flex:1;text-align:left;">
-          <span style="display:block;font-size:13.5px;font-weight:800;color:#191F28;">거래처별로 보기</span>
-          <span style="display:block;font-size:11px;color:#8B95A1;margin-top:1px;">어디서 얼마 샀는지 거래처 단위로</span>
-        </span>
-        <span style="color:#B0B8C1;font-size:18px;">›</span>
-      </button>
     </div>
 
     <!-- 🤖 자동으로 잡혀요 -->
