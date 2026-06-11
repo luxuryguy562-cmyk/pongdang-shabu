@@ -5550,6 +5550,12 @@ function switchExpHubView(mode){
   if(!isCat) renderExpHubVendorView();
 }
 
+// 지출 허브 거래처별 보기에서 거래처 클릭 → 거래처관리 탭으로 화면 전환 후 상세 열기
+// (openVendorDetail은 거래처 탭에 머문 상태 가정이라, 허브에서 바로 부르면 화면 전환이 안 됨)
+function openVendorFromHub(vid){
+  nav('vendors');
+  openVendorDetail(vid);
+}
 // 거래처별 보기: vendors + vendor_orders + receipts(vendor_id) 이번달 합계
 async function renderExpHubVendorView(){
   if(!guardStore()) return;
@@ -5598,7 +5604,7 @@ async function renderExpHubVendorView(){
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">`;
     list.forEach(([vid, v])=>{
-      html += `<div class="vendor-card" data-vendor-id="${esc(vid)}" data-action="openVendorDetail|${esc(vid)}">
+      html += `<div class="vendor-card" data-vendor-id="${esc(vid)}" data-action="openVendorFromHub|${esc(vid)}">
         <div class="vc-head"><span class="vc-cat">${esc(v.category)||'거래처'}</span></div>
         <div class="vc-name">${esc(v.name)}</div>
         <div class="vc-month has">

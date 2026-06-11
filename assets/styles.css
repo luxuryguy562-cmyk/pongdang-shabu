@@ -1563,6 +1563,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .exp-hero-ai .eha-arr{color:rgba(255,255,255,.8);font-size:20px;flex-shrink:0;}
 .exp-sub-label{font-size:11.5px;font-weight:800;color:var(--toss-text-4);margin:14px 6px 9px;display:flex;align-items:center;gap:6px;}
 .exp-sub-label::before{content:'└';color:var(--toss-blue);font-size:14px;font-weight:900;}
+/* 지출 등록 버튼 — 영수증 섹션 안 (설명 X, 버튼답게 단단하게) */
+.exp-add-btn{width:100%;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#3182F6 0%,#0064FF 100%);color:#fff;border:0;border-radius:14px;padding:15px 16px;margin-bottom:12px;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px rgba(49,130,246,.3);transition:transform .15s cubic-bezier(.2,.8,.4,1);}
+.exp-add-btn:active{transform:scale(.98);}
+.exp-add-btn .eab-ic{font-size:19px;flex-shrink:0;}
+.exp-add-btn .eab-txt{font-size:15px;font-weight:800;letter-spacing:-0.3px;flex:1;text-align:left;}
+.exp-add-btn .eab-pill{display:inline-block;font-size:10px;font-weight:800;background:rgba(255,255,255,.25);border-radius:6px;padding:2px 6px;margin-left:5px;vertical-align:middle;letter-spacing:.3px;}
+.exp-add-btn .eab-meta{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.92);flex-shrink:0;white-space:nowrap;}
 .exp-receipt-group .exp-channel-grid{margin-bottom:0;}
 .exp-receipt-group .exp-channel-card{background:var(--toss-line);box-shadow:none;}
 /* 거래채널 진입화면 — 영수증 사진 버튼 안 AI 배지·보조문구 (2026-06-09) */
