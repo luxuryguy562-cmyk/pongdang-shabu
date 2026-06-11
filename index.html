@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260611b">
+<link rel="stylesheet" href="assets/styles.css?v=20260611c">
 </head>
 <body>
 
@@ -1023,7 +1023,8 @@
     <span id="catReceiptIcon" style="font-size:28px;">🛒</span>
     <div style="flex:1;min-width:0;">
       <div id="catReceiptTitle" style="font-size:18px;font-weight:900;color:var(--gray-900);">마트·시장</div>
-      <div id="catReceiptTotal" style="font-size:13px;color:var(--gray-600);font-weight:600;">이번달 0원 · 0건</div>
+      <!-- 이번달 합계 줄 — 사장님 "없애자" (2026-06-11). hide-not-delete: JS가 계속 쓰지만 화면엔 안 보임 -->
+      <div id="catReceiptTotal" style="display:none;font-size:13px;color:var(--gray-600);font-weight:600;">이번달 0원 · 0건</div>
     </div>
     <input type="month" id="catReceiptMonth" class="input-inline" style="width:140px;flex-shrink:0;" data-change="onCatReceiptMonthChange|this">
   </div>
