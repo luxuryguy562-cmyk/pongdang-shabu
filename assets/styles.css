@@ -1669,20 +1669,20 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .exp-vendor-link:active{opacity:.6;}
 
 /* ─── 지출 허브 카테고리/거래처 세로 리스트 (2026-06-11 목업 ⑦ — 3열 카드 → 세로 리스트) ─── */
-.exp-cat-list{background:var(--white);border-radius:16px;overflow:hidden;box-shadow:var(--card-shadow);margin-bottom:8px;}
-.exp-cat-row{width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border:0;border-bottom:1px solid var(--toss-line);background:var(--white);font-family:inherit;text-align:left;outline:none;}
-.exp-cat-row:last-child{border-bottom:0;}
+/* 2026-06-11 사장님 호소 "그냥 나열 느낌" → 칸막이 목록 → 각 줄 독립 카드(그림자+간격)로 '카드 맛' 복원 */
+.exp-cat-list{background:transparent;border-radius:0;overflow:visible;box-shadow:none;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;}
+.exp-cat-row{width:100%;display:flex;align-items:center;gap:13px;padding:14px 15px;cursor:pointer;border:0;border-radius:14px;background:var(--white);box-shadow:0 1px 3px rgba(20,40,80,.06),0 1px 2px rgba(20,40,80,.04);font-family:inherit;text-align:left;outline:none;}
 .exp-cat-row:active{background:var(--gray-100);}
-.ecr-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#EBF3FF;color:var(--blue);}
-.ecr-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;}
+.ecr-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#EBF3FF;color:var(--blue);}
+.ecr-icon svg{width:21px;height:21px;stroke:currentColor;fill:none;}
 .ecr-body{flex:1;min-width:0;}
-.ecr-title{font-size:14px;font-weight:800;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ecr-title{font-size:15px;font-weight:800;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ecr-sub{font-size:11px;color:var(--toss-text-4);font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ecr-amtwrap{text-align:right;flex-shrink:0;}
 /* 금액 = 검은색 + 크기 고정 (2026-06-11 사장님 지시: "검은 글씨, 자릿수 많다고 작아질 필요 없음 — 공간 많음") */
-.ecr-amt{font-size:15px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
-.ecr-amt.amt-l{font-size:15px;}
-.ecr-amt.amt-xl{font-size:15px;}
+.ecr-amt{font-size:16px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.ecr-amt.amt-l{font-size:16px;}
+.ecr-amt.amt-xl{font-size:16px;}
 .ecr-amtlbl{font-size:10.5px;color:var(--toss-text-4);margin-top:1px;}
 .ecr-chev{color:var(--gray-400);font-size:18px;margin-left:2px;flex-shrink:0;}
 /* 화면 상단 월 표시 (지출 허브·거래처별 — 2026-06-11) */
