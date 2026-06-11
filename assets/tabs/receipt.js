@@ -952,6 +952,7 @@ async function runAI() {
         .eq('store_id', currentStore.id)
         .eq('vendor_id', rcpVendorId)
         .not('item','is',null)
+        .or('note.is.null,note.eq.정상') // 오답·삭제 표시 행 제외 — 틀린 이름이 단가 지도(정답) 오염 방지 (2026-06-11)
         .order('created_at',{ascending:false})
         .limit(300);
       if(pData && pData.length){
@@ -1069,7 +1070,7 @@ async function runAI() {
         if(_diff<=Math.max(500, receiptTotalSum*0.005)) break; // 0.5% 또는 500원 이내 = 통과
         setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`);
         try{
-          const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u) 오류를 찾아 수정된 JSON만 반환.`},...parts.slice(1)];
+          const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u)·세액(t) 오류만 찾아 수정된 JSON만 반환.\n⚠️품목명(i)·규격(spec)·원산지(og)는 이전 응답 그대로 복사 — 절대 다시 읽거나 바꾸지 마라(이름 수정은 숫자 검산과 무관).`},...parts.slice(1)];
           const _fixRaw=await callGemini(_rParts,_refTimeout,'receipt_reflection',_refModel,_refProvider);
           const _fixItems=Array.isArray(_fixRaw)?_fixRaw:(_fixRaw?.items||[]);
           if(!_fixItems.length) break;
@@ -1150,7 +1151,8 @@ async function runAI() {
       //    금액(totalPrice) 절대 불변 — 단가·수량만 재계산 (순창국제 씨앗 데이터 기반 작동)
       //    위험 케이스 = 단가·수량 둘 다 일관 오독(16000×2 → 3200×10): 산수가 맞아 검산으로 못 잡음
       //    → 산수 맞아도 단가가 과거에 없고, 과거 단가의 품목명과 이름이 일치할 때만 재쪼개기 (이름 대조 = 안전핀)
-      list.forEach(it => {
+      //    주류 제외 — 주류 단가는 공급가÷병 계산값(_rcpLiquorUnitPrice)이라 재쪼개기 무의미 + 출고가 변동 시 오발동 위험
+      if(!isLiquorModeAI) list.forEach(it => {
         if(it._isDeposit) return;
         const sp = parseInt(it.supplyPrice)||parseInt(it.totalPrice)||0;
         if(!sp) return;
@@ -1443,20 +1445,38 @@ async function _rcpAICallWithFallback(parts, timeoutSec, pageCount){
 // ─── 페이지별 응답 병합 (2026-06-11) ───
 // 페이지마다 독립 분석한 응답을 하나로 합침. 요약 페이지(품목 0 + 합계만)가 있으면 그 합계가 기준.
 function _rcpMergePages(raws){
-  const objs = raws.map(r => Array.isArray(r) ? {items:r} : (r||{}));
+  let objs = raws.map(r => Array.isArray(r) ? {items:r} : (r||{}));
+  // 중복 페이지 감지 — 같은 장을 실수로 2번 올리면 품목이 2배로 들어가는 사고 방지 (2026-06-11)
+  // 품목 시그니처(i|u|q|p 전체)가 똑같은 페이지는 1개만 남김
+  {
+    const seen = new Set();
+    objs = objs.filter(o => {
+      const its = o.items||[];
+      if(!its.length) return true; // 요약 페이지는 중복 검사 제외
+      const sig = its.map(x=>`${x.i??x.item}|${x.u??''}|${x.q??''}|${x.p??x.totalPrice??''}`).join('§');
+      if(seen.has(sig)){ toast('📄 같은 페이지가 2번 올라가 있어 한 장만 반영했어요', 'warn', 5000); return false; }
+      seen.add(sig);
+      return true;
+    });
+  }
   const merged = { items: [] };
   objs.forEach(o => { (o.items||[]).forEach(it => merged.items.push(it)); });
   // 요약 페이지 = 품목 행 없이 합계만 있는 페이지 (연속 명세서 마지막 장)
   const summary = objs.find(o => (!o.items || !o.items.length) && (o.total_sum || o.total_supply || o.total_tax || o.deposit_in || o.deposit_out));
+  // 품목합 기준값 — 여러 페이지에 합계가 찍힐 때 "페이지 소계 양식(합산=품목합)"인지 "최종 누계 양식(최대값)"인지 판별용
+  const _expected = {
+    total_sum:    merged.items.reduce((a,x)=>a+(parseInt(x.p ?? x.totalPrice)||0),0),
+    total_tax:    merged.items.reduce((a,x)=>a+(parseInt(x.t ?? x.taxAmount)||0),0),
+    total_supply: merged.items.reduce((a,x)=>a+((parseInt(x.p ?? x.totalPrice)||0)-(parseInt(x.t ?? x.taxAmount)||0)),0),
+  };
   const pick = (key) => {
     if(summary && summary[key]!=null && summary[key]!=='') return summary[key];
     const vals = objs.map(o => o[key]).filter(v => v!=null && v!=='');
     if(!vals.length) return null;
     if(vals.length===1) return vals[0];
-    // 합계가 여러 페이지에 — 페이지 소계 양식(합산=품목합)인지 최종 누계 양식(최대값)인지 품목합으로 판별
-    if(key==='total_sum'){
+    if(key in _expected){
       const nums = vals.map(v=>parseInt(v)||0);
-      const itemsSum = merged.items.reduce((a,x)=>a+(parseInt(x.p ?? x.totalPrice)||0),0);
+      const itemsSum = _expected[key];
       const tol = Math.max(500, itemsSum*0.005);
       const max = Math.max(...nums), sumAll = nums.reduce((a,b)=>a+b,0);
       if(Math.abs(max-itemsSum)<=tol) return max;

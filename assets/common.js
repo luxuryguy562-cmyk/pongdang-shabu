@@ -196,7 +196,6 @@ function _rcpCommonRespTail(){
   "total_tax": 세액 소계(정수). 없으면 null,
   "total_sum": 이번 거래 결제합(세후,정수,없으면 null) — 금일합계>합계액>총합계액>결제금액. ⚠️전미수·전잔액·당일입금·현잔액·누계·채권 = 무시(이번 거래분 아님),
   "multi_receipt": 사진 여러 장이 서로 다른 거래처·합계의 독립 영수증이면 true (같은 영수증 연속 페이지 Page N/M면 false). 사진 1장이면 false,
-  "needs_review": 품목명을 확실히 못 읽었거나 흐릿·낯선 약어·외국어(한자 음차 등)가 많아 자신 없으면 true (또렷이 읽었으면 false),
   "page_info": {"current":현재페이지,"total":총페이지수} — 영수증에 "Page (N/M)" 인쇄 시. 없으면 {"current":1,"total":1}`;
 }
 
@@ -229,7 +228,8 @@ function _rcpPromptLiquor({vendorName, catList, multiPageHint}){
 ③ total_sum = "거래대금합계" 줄의 값만 (실제 외상 단 돈). ⚠️"매출합계"(=공급가액+부가세+용기보증금)를 total_sum에 쓰지 마라. 거래대금합계 = 매출합계 − 빈용기보증금.
 [수량 칸 우선] 수량 칸 있으면 q=그 값. "수량C/S"·"수량EA" 둘 다 있으면 q=수량C/S(케이스 수). 수량EA(낱개수) q 금지.
   · 수량C/S=4·수량EA=96·출고가=19,000·금액=76,000 → q=4. 19,000×4=76,000 ✅
-[BOX/EA] 수량 칸 없고 BOX·EA만 있으면 q=(BOX×단위)+EA. BOX=0이면 EA만.${multiPageHint}
+[BOX/EA] 수량 칸 없고 BOX·EA만 있으면 q=(BOX×단위)+EA. BOX=0이면 EA만.
+[행 정렬 — 가로선] 표는 가로선으로 행이 나뉜다. 한 품목의 품목명·규격·단가·수량·금액은 같은 가로줄 안에 있다. 인쇄가 선에 딱 안 맞아도 같은 행끼리 묶어 읽고, 윗줄/아랫줄 값을 섞지 마라.${multiPageHint}
 
 [응답]
 {
