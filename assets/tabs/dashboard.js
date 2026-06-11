@@ -127,7 +127,8 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   }
   if(listEl){
     listEl.innerHTML = items.map(it=>{
-      return `<div class="ve-item">`
+      // 거래처 클릭 → 지출 기록 통합 화면 + 그 거래처 칩 필터 (행형 통일 2026-06-11)
+      return `<div class="ve-item" style="cursor:pointer;" data-action="openExpenseRecords|${encodeURIComponent(it.name)}">`
         +`<span class="vname">${esc(it.name)}</span>`
         +`<span class="vamt">${fmt(it.amt)}원</span></div>`;
     }).join('');
@@ -173,7 +174,8 @@ function openTodayVendorSheet(){
       const color = _VE_COLORS[i % _VE_COLORS.length];
       const pct = total>0 ? Math.round(g.sum/total*100) : 0;
       const itemsHtml = g.items.map(it=>
-        `<div class="ve-row"><span class="vname">${esc(it.name)}</span><span class="vamt">${fmt(it.amt)}원</span></div>`
+        // 거래처 클릭 → 지출 기록 통합 화면 + 그 거래처 칩 필터 (openExpenseRecords가 시트 자동 닫음)
+        `<div class="ve-row" style="cursor:pointer;" data-action="openExpenseRecords|${encodeURIComponent(it.name)}"><span class="vname">${esc(it.name)}</span><span class="vamt">${fmt(it.amt)}원</span></div>`
       ).join('');
       return `<div class="ve-group">`
         + `<div class="ve-cat-head"><span class="ve-cat-dot" style="background:${color};"></span>`

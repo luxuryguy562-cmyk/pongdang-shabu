@@ -697,6 +697,46 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 날짜 헤더 행 — 그룹 위에 sticky 라벨 */
 .grp-tbl .grp-date td{background:#fff;font-size:11px;font-weight:700;color:var(--gray-600);padding:10px 8px 4px;border-top:1px solid var(--gray-100);}
 .grp-tbl .grp-date.first td{border-top:none;padding-top:6px;}
+
+/* ─ 행형 지출 기록 내역 (2026-06-11 통일 디자인 — 영수증 기록·카테고리·거래처 주문 공통)
+   날짜 구분줄 + 거래처 그룹 카드 + 품목 1건=2줄 (1줄 품목명+분류 배지 / 2줄 계산식+금액)
+   숫자는 기존 컨벤션 tabular-nums(고정폭 숫자), 새 색은 분류 배지만 (EXP_BADGE_COLORS 설정 객체) */
+.rcl-chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.rcl-chips::-webkit-scrollbar{display:none;}
+.rcl-chips:empty{display:none;}
+.rcl-chip{flex-shrink:0;padding:7px 12px;border-radius:18px;font-size:12px;font-weight:700;background:var(--gray-100);color:var(--gray-600);border:1px solid var(--gray-200);cursor:pointer;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
+.rcl-chip.active{background:var(--blue-light);color:var(--blue);border-color:var(--blue);}
+/* 날짜 구분줄 — 좌측 날짜(굵게) + 가로선 + 우측 그날 합계 (좌측정렬 통일) */
+.rcl-dayhd{display:flex;align-items:center;gap:8px;padding:18px 6px 9px;}
+.rcl-dayhd .d{font-size:13px;font-weight:800;color:var(--text);}
+.rcl-dayhd .line{flex:1;height:1px;background:var(--gray-200);}
+.rcl-dayhd .dsum{font-size:11px;color:var(--gray-600);font-weight:700;font-variant-numeric:tabular-nums;}
+/* 거래처 그룹 카드 */
+.rcl-store{background:#fff;border:1px solid var(--gray-200);border-radius:16px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.rcl-storehd{display:flex;align-items:center;gap:10px;padding:14px 16px;}
+.rcl-storehd.clickable{cursor:pointer;}
+.rcl-storehd.clickable:active{background:var(--gray-100);}
+.rcl-storehd .ic{width:34px;height:34px;border-radius:10px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.rcl-storehd .nm{flex:1;min-width:0;font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rcl-storehd .nm small{display:block;font-size:11px;color:var(--gray-600);font-weight:500;margin-top:2px;}
+.rcl-storehd .amt{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;flex-shrink:0;}
+.rcl-storehd .chev{color:var(--gray-400);font-size:16px;margin-left:2px;flex-shrink:0;}
+.rcl-storehd .acts{display:flex;gap:4px;flex-shrink:0;}
+.rcl-storehd .acts .btn{padding:5px 9px;font-size:11px;font-weight:700;min-width:32px;}
+/* 분류 배지 — 행 오른쪽 고정 (.bw) → 열 정렬 */
+.rcl-badge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:6px;white-space:nowrap;line-height:1.2;}
+/* 품목 1건 = 2줄 */
+.rcl-item{padding:12px 16px;border-top:1px solid var(--gray-100);cursor:pointer;}
+.rcl-item:active{background:var(--gray-100);}
+.rcl-item .r1{display:flex;align-items:center;gap:8px;}
+.rcl-item .r1 .nm{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rcl-item .r1 .bw{flex-shrink:0;min-width:52px;text-align:right;}
+.rcl-item .r2{display:flex;justify-content:space-between;align-items:baseline;margin-top:5px;}
+.rcl-item .r2 .calc{font-size:11.5px;color:var(--gray-400);font-variant-numeric:tabular-nums;}
+.rcl-item .r2 .amt{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;}
+.rcl-item.err .r1,.rcl-item.err .r2{opacity:0.55;text-decoration:line-through;}
+.rcl-item.suspect{background:#FEF9C3;}
+
 /* 주문 멀티행 입력 — 누적된 행 카드 (2026-05-20 사장님 D 패턴 accordion) */
 .ord-draft-card{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;}
 .ord-draft-card .odc-info{flex:1;min-width:0;overflow:hidden;}
