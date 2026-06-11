@@ -335,6 +335,8 @@
   <button class="mock-btn" onclick="showScreen('cat')">③ 식자재 내부</button>
   <button class="mock-btn" onclick="showScreen('vendor')">④ 거래처 상세</button>
   <button class="mock-btn" onclick="showScreen('entry')">⑤ 지출 등록 입구</button>
+  <button class="mock-btn" onclick="showScreen('vendorlist')">⑥ 거래처 목록</button>
+  <button class="mock-btn" onclick="showScreen('more')">⑦ 더보기(도구)</button>
 </div>
 
 
@@ -469,24 +471,21 @@
       <div class="auto-card-amount" style="color:var(--gray-400);font-size:18px;">›</div>
     </button>
 
-    <!-- 도구 -->
-    <div class="section-ttl" style="margin-top:20px;">🔧 도구</div>
-    <button class="tool-btn">
-      <div class="tool-btn-icon">↔️</div>
+    <!-- 거래처별 보기 (다른 축 — 카테고리 아닌 거래처 기준) -->
+    <div class="section-ttl" style="margin-top:20px;">🏠 거래처별로 보기</div>
+    <button class="tool-btn" onclick="showScreen('vendorlist')">
+      <div class="tool-btn-icon">🏠</div>
       <div class="tool-btn-text">
-        <div class="tool-btn-title">정산 대조</div>
-        <div class="tool-btn-sub">예상 vs 실제 매출·지출 비교</div>
+        <div class="tool-btn-title">거래처 목록</div>
+        <div class="tool-btn-sub">거래처별 이번달 거래액 한눈에</div>
       </div>
       <div class="tool-btn-arrow">›</div>
     </button>
-    <button class="tool-btn">
-      <div class="tool-btn-icon">🏷️</div>
-      <div class="tool-btn-text">
-        <div class="tool-btn-title">카테고리 관리</div>
-        <div class="tool-btn-sub">분류 추가·수정·삭제</div>
-      </div>
-      <div class="tool-btn-arrow">›</div>
-    </button>
+
+    <!-- 도구는 더보기로 이동 (스크롤 단축) -->
+    <div style="text-align:center;padding:20px 0 6px;color:var(--toss-text-4);font-size:12px;line-height:1.6;">
+      🔧 정산 대조 · 카테고리 관리는<br><b style="color:var(--toss-text-3);">더보기 ☰ 탭</b>으로 옮겼어요
+    </div>
 
   </div>
 
@@ -495,7 +494,7 @@
     <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
     <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
     <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
-    <div class="nav-item"><div class="nav-icon">☰</div>더보기</div>
+    <div class="nav-item" onclick="showScreen('more')"><div class="nav-icon">☰</div>더보기</div>
   </div>
 </div>
 
@@ -907,6 +906,152 @@
   </div>
   <div class="bottom-nav">
     <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ⑥: 거래처 목록 (거래처별 보기)
+════════════════════════════════════════ -->
+<div id="screen-vendorlist" class="screen">
+  <div class="app-back">
+    <span class="back-btn" onclick="showScreen('hub')">‹</span>
+    <span>거래처 목록</span>
+  </div>
+  <div class="content">
+
+    <div class="change-note-block">
+      ✅ 거래처별로 따로 보는 화면. 카테고리(식자재·주류…)는 "무엇을 샀나" 축,
+      여기는 "<b>누구한테서 샀나</b>" 축. 정산 대조와는 성격이 달라 따로 둠.
+    </div>
+
+    <!-- 월 선택 -->
+    <div class="month-bar">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--gray-400);font-size:18px;">‹</span>
+        <div class="month-label">2026년 6월</div>
+        <span style="color:var(--gray-400);font-size:18px;">›</span>
+      </div>
+      <div class="month-total">합계 361만원</div>
+    </div>
+
+    <!-- 거래처 카드들 (금액순) -->
+    <button class="auto-card" onclick="showScreen('vendor')">
+      <div class="vendor-logo" style="width:44px;height:44px;border-radius:12px;font-size:20px;">🏠</div>
+      <div class="auto-card-body">
+        <div class="auto-card-name">삼성웰스토리</div>
+        <div class="auto-card-sub">🥩 식자재 · 명세서 1건</div>
+      </div>
+      <div class="auto-card-amount" style="color:var(--toss-blue);">243만</div>
+    </button>
+    <button class="auto-card" onclick="showScreen('vendor')">
+      <div class="vendor-logo" style="width:44px;height:44px;border-radius:12px;font-size:20px;background:linear-gradient(135deg,#8B5CF6,#7C3AED);">🏠</div>
+      <div class="auto-card-body">
+        <div class="auto-card-name">순창국제</div>
+        <div class="auto-card-sub">🥩 식자재 · 명세서 3건</div>
+      </div>
+      <div class="auto-card-amount" style="color:var(--toss-blue);">87만</div>
+    </button>
+    <button class="auto-card" onclick="showScreen('vendor')">
+      <div class="vendor-logo" style="width:44px;height:44px;border-radius:12px;font-size:20px;background:linear-gradient(135deg,#06B6D4,#0891B2);">🏠</div>
+      <div class="auto-card-body">
+        <div class="auto-card-name">하이트진로</div>
+        <div class="auto-card-sub">🍶 주류 · 명세서 2건</div>
+      </div>
+      <div class="auto-card-amount" style="color:var(--toss-blue);">31만</div>
+    </button>
+
+    <div class="empty-state" style="padding:24px;">
+      <div class="empty-icon">➕</div>
+      새 거래처는 "지출 등록"에서 명세서 찍으면 자동 추가돼요
+    </div>
+
+  </div>
+  <div class="fab" onclick="showSheet()">＋</div>
+  <div class="bottom-nav">
+    <div class="nav-item"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item" onclick="showScreen('more')"><div class="nav-icon">☰</div>더보기</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ⑦: 더보기 탭 (도구 이동 위치)
+════════════════════════════════════════ -->
+<div id="screen-more" class="screen">
+  <div class="header">
+    <div class="header-title">더보기</div>
+    <div class="header-store">퐁당샤브</div>
+  </div>
+  <div class="content">
+
+    <div class="change-note-block">
+      ✅ 자주 안 쓰는 도구(정산 대조·카테고리 관리·계좌카드 내역)를 여기로 옮김.
+      지출관리 화면 스크롤이 짧아짐.
+    </div>
+
+    <div class="section-ttl">🔧 지출 도구</div>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">↔️</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">정산 대조</div>
+        <div class="tool-btn-sub">예상 vs 실제 매출·지출 비교</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">💳</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">계좌내역·카드내역</div>
+        <div class="tool-btn-sub">마이데이터 자동 수집</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">🏷️</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">수입·지출 카테고리 관리</div>
+        <div class="tool-btn-sub">분류 추가·수정·삭제</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+
+    <div class="section-ttl" style="margin-top:20px;">⚙️ 그 외</div>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">👥</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">직원 관리</div>
+        <div class="tool-btn-sub">직원 추가·급여 설정</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">🏦</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">고정비 관리</div>
+        <div class="tool-btn-sub">임대료·보험 등</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+    <button class="tool-btn">
+      <div class="tool-btn-icon">⚙️</div>
+      <div class="tool-btn-text">
+        <div class="tool-btn-title">설정</div>
+        <div class="tool-btn-sub">매장·계정 설정</div>
+      </div>
+      <div class="tool-btn-arrow">›</div>
+    </button>
+
+  </div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="showScreen('hub')"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item" onclick="showScreen('hub')"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item active"><div class="nav-icon">☰</div>더보기</div>
   </div>
 </div>
 
