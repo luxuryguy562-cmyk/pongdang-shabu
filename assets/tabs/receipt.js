@@ -1218,18 +1218,21 @@ async function runAI() {
     // 🟡 정확 일치 후보 여럿 또는 ±15% 근접 → _nameCandidates 저장 (원터치 선택 추천)
     // 🔴 일치 없음 → 기존 nameSuspect 유지
     if(isVendorModeAI && rcpPastPriceMap.size){
-      // ① 단가 재쪼개기 (2026-06-11): AI가 단가 잘못 읽어 단가×수량≠공급가인 행을 과거 단가 지도로 교정
+      // ① 단가 재쪼개기 (2026-06-11): AI가 단가를 잘못 읽은 행을 과거 단가 지도로 교정
       //    금액(totalPrice) 절대 불변 — 단가·수량만 재계산 (순창국제 씨앗 데이터 기반 작동)
+      //    위험 케이스 = 단가·수량 둘 다 일관 오독(16000×2 → 3200×10): 산수가 맞아 검산으로 못 잡음
+      //    → 산수 맞아도 단가가 과거에 없고, 과거 단가의 품목명과 이름이 일치할 때만 재쪼개기 (이름 대조 = 안전핀)
       list.forEach(it => {
         if(it._isDeposit) return;
         const sp = parseInt(it.supplyPrice)||parseInt(it.totalPrice)||0;
         if(!sp) return;
         const currentU = parseInt(it.unitPrice)||0;
         const currentQ = parseFloat(it.qty)||0;
-        // 이미 맞으면 패스 (0.5% 이내 또는 100원 이내)
-        if(currentU > 0 && currentQ > 0 && Math.abs(Math.round(currentU*currentQ)-sp) <= Math.max(100,sp*0.005)) return;
-        // Case A: 단가 맞고 수량만 틀린 경우 (과거에 등록된 단가)
-        if(currentU > 0 && rcpPastPriceMap.has(currentU)){
+        const mathOk = currentU > 0 && currentQ > 0 && Math.abs(Math.round(currentU*currentQ)-sp) <= Math.max(100,sp*0.005);
+        // 산수 맞고 단가도 과거 등록값 = 신뢰, 통과
+        if(mathOk && rcpPastPriceMap.has(currentU)) return;
+        // Case A: 단가는 과거 등록값인데 산수 틀림 = 수량만 오독 → 수량 역산
+        if(!mathOk && currentU > 0 && rcpPastPriceMap.has(currentU)){
           const ratio = sp / currentU;
           const rounded = Math.round(ratio);
           if(rounded > 0 && rounded <= 200 && Math.abs(ratio-rounded) < 0.01){
@@ -1240,19 +1243,25 @@ async function runAI() {
             return;
           }
         }
-        // Case B: 단가 자체가 틀린 경우 — 과거 단가 중 금액÷단가=깔끔한 정수인 것 탐색
-        let bestFit = null;
+        // Case B: 단가 자체가 틀림 — 과거 단가 중 금액÷단가=깔끔한 정수인 후보 탐색
+        const nm = String(it.item||'').trim();
+        const fits = [];
         rcpPastPriceMap.forEach((names, pastU) => {
           if(pastU === currentU || pastU <= 0) return;
           const ratio = sp / pastU;
           const rounded = Math.round(ratio);
           if(rounded <= 0 || rounded > 200) return;
           if(Math.abs(ratio-rounded) >= 0.01) return;
-          // 현재 단가에 가장 가까운 후보 우선 (AI가 1자리 오독했을 가능성)
-          if(!bestFit || Math.abs(pastU-currentU) < Math.abs(bestFit.pastU-currentU)){
-            bestFit = { pastU, rounded };
-          }
+          // 이름 대조: 그 과거 단가에 등록된 품목명과 정확/퍼지(1~2자) 일치 여부
+          let nameD = 99;
+          if(nm) names.forEach(c => { const d=_levDist(nm,c); if(d<nameD) nameD=d; });
+          fits.push({ pastU, rounded, nameD });
         });
+        if(!fits.length) return;
+        const maxD = nm.length >= 8 ? 2 : 1;
+        // 이름 일치 후보 우선 (일치 중에선 가장 비슷한 이름) → 없으면 산수 깨진 행만 단가 근접 후보 허용
+        const named = fits.filter(f=>f.nameD<=maxD).sort((a,b)=>a.nameD-b.nameD)[0];
+        const bestFit = named || (!mathOk ? fits.sort((a,b)=>Math.abs(a.pastU-currentU)-Math.abs(b.pastU-currentU))[0] : null);
         if(bestFit){
           it._origUnitPrice = currentU;
           it._origQty = it.qty;
@@ -1497,7 +1506,12 @@ function _rcpVendorQtyFix(list){
     if(existingDiff<=threshold) return; // 이미 맞음 — 건드리지 않음
     const newQ=sp/u;
     const rounded=Math.round(newQ*2)/2; // 0.5 단위 반올림
-    if(rounded>0 && Math.abs(rounded-newQ)<=0.05) it.qty=rounded;
+    if(rounded>0 && Math.abs(rounded-newQ)<=0.05){
+      it._origQty=it.qty; // 교정 전 값 보존 (🔄 뱃지 툴팁용, 2026-06-11)
+      it.qty=rounded;
+      it._unitPriceFixed=true;
+      delete it._suspect;
+    }
   });
 }
 function buildReceiptRow(i={}) {
