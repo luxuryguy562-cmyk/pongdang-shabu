@@ -343,6 +343,8 @@
 <div class="mock-switcher">
   <button class="mock-btn active" onclick="showScreen('hub')">① 허브 메인 (새)</button>
   <button class="mock-btn" onclick="showScreen('hub-before')">② 허브 메인 (현재)</button>
+  <button class="mock-btn" onclick="showScreen('hub-vertical')">⑦ 세로 리스트 (안)</button>
+  <button class="mock-btn" onclick="showScreen('hub-3col')">⑧ 가로3칸 (안)</button>
   <button class="mock-btn" onclick="showScreen('cat')">③ 식자재 내부</button>
   <button class="mock-btn" onclick="showScreen('vendor')">④ 거래처 상세</button>
   <button class="mock-btn" onclick="showScreen('entry')">⑤ 지출 등록 입구</button>
@@ -1019,6 +1021,448 @@
     <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
     <div class="nav-item" onclick="showScreen('hub')"><div class="nav-icon">💳</div>지출관리</div>
     <div class="nav-item active"><div class="nav-icon">☰</div>더보기</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ⑦: 세로 레이아웃 (안)
+════════════════════════════════════════ -->
+<div id="screen-hub-vertical" class="screen">
+  <div class="header">
+    <div class="header-title">지출관리</div>
+    <div class="header-store">퐁당샤브</div>
+  </div>
+
+  <div class="content" style="padding:16px;">
+
+    <!-- 📸 영수증으로 채워요 -->
+    <div style="margin-bottom:6px;">
+      <!-- 섹션 헤더 + 거래처별 보기 링크 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:12.5px;font-weight:800;color:#8B95A1;">📸 영수증으로 채워요 <span style="font-size:11px;font-weight:500;margin-left:3px;">사진 찍으면 자동 분류</span></div>
+        <span onclick="showScreen('hub-vendor-list')" style="font-size:12px;font-weight:700;color:#3182F6;cursor:pointer;white-space:nowrap;flex-shrink:0;">거래처별 ›</span>
+      </div>
+
+      <!-- 지출 등록 버튼 -->
+      <button onclick="showSheet()" style="width:100%;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#3182F6 0%,#0064FF 100%);color:#fff;border:0;border-radius:14px;padding:15px 16px;margin-bottom:10px;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px rgba(49,130,246,.3);">
+        <span style="font-size:19px;">📸</span>
+        <span style="font-size:15px;font-weight:800;flex:1;text-align:left;">영수증·명세서 등록 <span style="display:inline-block;font-size:10px;font-weight:800;background:rgba(255,255,255,.25);border-radius:6px;padding:2px 6px;margin-left:5px;vertical-align:middle;">AI</span></span>
+        <span style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,.9);">이번달 38건</span>
+      </button>
+
+      <!-- 카테고리별 세로 리스트 -->
+      <div id="vLayoutCat">
+        <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(20,40,80,.06);">
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#E8FAF1;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🥩</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:800;color:#191F28;">식자재</div>
+              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">야채·육류·공산품</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:15px;font-weight:900;color:#0CAB6C;">—</div>
+              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+            </div>
+            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#EDF4FF;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🥤</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:800;color:#191F28;">음료</div>
+              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">음료·주스·탄산</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:15px;font-weight:900;color:#3182F6;">—</div>
+              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+            </div>
+            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🍶</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:800;color:#191F28;">주류</div>
+              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">소주·맥주·와인</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:15px;font-weight:900;color:#7C3AED;">—</div>
+              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+            </div>
+            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#FFF3E0;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🧻</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:800;color:#191F28;">비품</div>
+              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">소모품·청소용품</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:15px;font-weight:900;color:#F5A11E;">—</div>
+              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+            </div>
+            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🧾</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:800;color:#191F28;">영수증 참조</div>
+              <div style="font-size:11px;color:#8B95A1;margin-top:1px;">기타 영수증</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:15px;font-weight:900;color:#6B7684;">—</div>
+              <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+            </div>
+            <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 🤖 자동으로 잡혀요 -->
+    <div style="margin:18px 0 6px;">
+      <div style="font-size:12.5px;font-weight:800;color:#8B95A1;margin-bottom:10px;">🤖 자동으로 잡혀요 <span style="font-size:11px;font-weight:500;margin-left:3px;">손 안 대도 됨</span></div>
+      <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(20,40,80,.06);">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#FFEBEE;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">👥</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">인건비</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">출퇴근 기록 자동 집계</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#F04452;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">📋</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">고정비</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">임대료·보험·통신</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#7C3AED;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#E8FAF1;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">⚡</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">공과금</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">전기·가스·수도</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#0CAB6C;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#FFF3E0;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏷️</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">로열티</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">브랜드 로열티 자동 계산</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#F5A11E;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">💳</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">카드수수료</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">카드사 결제수수료 자동</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#6B7684;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✏️ 직접 입력해요 -->
+    <div style="margin:18px 0 80px;">
+      <div style="font-size:12.5px;font-weight:800;color:#8B95A1;margin-bottom:10px;">✏️ 직접 입력해요 <span style="font-size:11px;font-weight:500;margin-left:3px;">영수증 없이 금액만</span></div>
+      <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(20,40,80,.06);">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#F9FAFB;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">📦</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">기타</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">간식·기타 잡비</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#6B7280;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#FFF0F6;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">📣</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">마케팅</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">광고·홍보</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#DB2777;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#FFF3E0;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">💸</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">세금</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">부가세·소득세</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#EA580C;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#F0FDF4;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">📦</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">물품대금</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">물품 구매 대금</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#16A34A;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#EDF4FF;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">💰</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">카드대금</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">카드 결제 대금</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#3182F6;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏦</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#191F28;">예비비 사용</div>
+            <div style="font-size:11px;color:#8B95A1;margin-top:1px;">예비비 지출</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:900;color:#6B7684;">—</div>
+            <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+          </div>
+          <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item"><div class="nav-icon">☰</div>더보기</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ⑦-V: 거래처별 보기 (별도 화면)
+════════════════════════════════════════ -->
+<div id="screen-hub-vendor-list" class="screen">
+  <div class="app-back">
+    <span class="back-btn" onclick="showScreen('hub-vertical')">‹</span>
+    <span>거래처별 보기</span>
+  </div>
+
+  <div class="content" style="padding:16px;">
+    <div style="font-size:12.5px;font-weight:800;color:#8B95A1;margin-bottom:10px;">🏪 거래처별 이번달 지출 <span style="font-size:11px;font-weight:500;margin-left:3px;">많이 쓴 순</span></div>
+
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(20,40,80,.06);">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#E8FAF1;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏪</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#191F28;">웰스토리</div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">식자재 · 88건</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#0CAB6C;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#EDF4FF;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🥬</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#191F28;">대봄야채</div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">야채 · 61건</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#3182F6;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏪</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#191F28;">프레시원</div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">식자재 · 54건</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#7C3AED;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #F2F4F6;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#FFF3E0;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🌐</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#191F28;">쿠팡</div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">공산품·비품 · 30건</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#F5A11E;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#FFEBEE;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">⚠️</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;color:#F04452;">논산농협 <span style="font-size:10px;font-weight:600;color:#F04452;background:#FFEBEE;border-radius:4px;padding:1px 5px;border:1px solid #FFCDD2;">이름 9가지 혼재</span></div>
+          <div style="font-size:11px;color:#8B95A1;margin-top:1px;">야채 · 논산농협/논산 농협/논산농협① 등</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:900;color:#F04452;">—</div>
+          <div style="font-size:10.5px;color:#8B95A1;margin-top:1px;">이번달</div>
+        </div>
+        <div style="color:#B0B8C1;font-size:18px;margin-left:4px;">›</div>
+      </div>
+    </div>
+
+    <!-- 거래처 이름 중복 안내 -->
+    <div style="margin-top:10px;padding:10px 12px;background:#FFF8E1;border-radius:10px;font-size:11.5px;color:#8A6D00;line-height:1.5;">
+      ⚠️ 같은 거래처인데 이름이 다르게 저장된 경우 많음 (35개 거래처명, 등록 거래처 12개). 통합 정리 필요.
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item"><div class="nav-icon">☰</div>더보기</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     화면 ⑧: 가로 3칸 (영수증/자동/직접 = 열, 카테고리 = 행)
+════════════════════════════════════════ -->
+<div id="screen-hub-3col" class="screen">
+  <div class="header">
+    <div class="header-title">지출관리</div>
+    <div class="header-store">퐁당샤브</div>
+  </div>
+
+  <div class="content" style="padding:16px;">
+
+    <!-- 지출 등록 버튼 -->
+    <button onclick="showSheet()" style="width:100%;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#3182F6 0%,#0064FF 100%);color:#fff;border:0;border-radius:14px;padding:15px 16px;margin-bottom:16px;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px rgba(49,130,246,.3);">
+      <span style="font-size:19px;">📸</span>
+      <span style="font-size:15px;font-weight:800;flex:1;text-align:left;">영수증·명세서 등록 <span style="display:inline-block;font-size:10px;font-weight:800;background:rgba(255,255,255,.25);border-radius:6px;padding:2px 6px;margin-left:5px;vertical-align:middle;">AI</span></span>
+      <span style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,.9);">이번달 38건</span>
+    </button>
+
+    <!-- 3칸 그룹 헤더 + 카테고리 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+
+      <!-- 📸 영수증 칸 -->
+      <div>
+        <div style="text-align:center;font-size:12px;font-weight:800;color:#3182F6;padding:8px 4px;background:#EDF4FF;border-radius:10px;margin-bottom:8px;">📸 영수증</div>
+        <div onclick="showScreen('cat')" style="background:#fff;border-radius:12px;padding:12px 8px;margin-bottom:8px;box-shadow:0 2px 6px rgba(20,40,80,.05);cursor:pointer;text-align:center;">
+          <div style="font-size:22px;margin-bottom:5px;">🥩</div>
+          <div style="font-size:12.5px;font-weight:800;color:#191F28;">식자재</div>
+          <div style="font-size:12px;font-weight:900;color:#0CAB6C;margin-top:3px;">1,250만</div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:12px 8px;margin-bottom:8px;box-shadow:0 2px 6px rgba(20,40,80,.05);cursor:pointer;text-align:center;">
+          <div style="font-size:22px;margin-bottom:5px;">🧾</div>
+          <div style="font-size:12.5px;font-weight:800;color:#191F28;">비품</div>
+          <div style="font-size:12px;font-weight:900;color:#3182F6;margin-top:3px;">87만</div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:12px 8px;box-shadow:0 2px 6px rgba(20,40,80,.05);cursor:pointer;text-align:center;">
+          <div style="font-size:22px;margin-bottom:5px;">🌐</div>
+          <div style="font-size:12.5px;font-weight:800;color:#191F28;">온라인</div>
+          <div style="font-size:12px;font-weight:900;color:#F5A11E;margin-top:3px;">382만</div>
+        </div>
+      </div>
+
+      <!-- 🤖 자동 칸 -->
+      <div>
+        <div style="text-align:center;font-size:12px;font-weight:800;color:#7C3AED;padding:8px 4px;background:#EDE9FE;border-radius:10px;margin-bottom:8px;">🤖 자동</div>
+        <div style="background:#fff;border-radius:12px;padding:12px 8px;margin-bottom:8px;box-shadow:0 2px 6px rgba(20,40,80,.05);cursor:pointer;text-align:center;">
+          <div style="font-size:22px;margin-bottom:5px;">👥</div>
+          <div style="font-size:12.5px;font-weight:800;color:#191F28;">인건비</div>
+          <div style="font-size:12px;font-weight:900;color:#F04452;margin-top:3px;">3,200만</div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:12px 8px;margin-bottom:8px;box-shadow:0 2px 6px rgba(20,40,80,.05);cursor:pointer;text-align:center;">
+          <div style="font-size:22px;margin-bottom:5px;">📋</div>
+          <div style="font-size:12.5px;font-weight:800;color:#191F28;">고정비</div>
+          <div style="font-size:12px;font-weight:900;color:#7C3AED;margin-top:3px;">420만</div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:12px 8px;box-shadow:0 2px 6px rgba(20,40,80,.05);cursor:pointer;text-align:center;">
+          <div style="font-size:22px;margin-bottom:5px;">⚡</div>
+          <div style="font-size:12.5px;font-weight:800;color:#191F28;">공과금</div>
+          <div style="font-size:12px;font-weight:900;color:#0CAB6C;margin-top:3px;">38만</div>
+        </div>
+      </div>
+
+      <!-- ✏️ 직접 칸 -->
+      <div>
+        <div style="text-align:center;font-size:12px;font-weight:800;color:#6B7280;padding:8px 4px;background:#F2F4F6;border-radius:10px;margin-bottom:8px;">✏️ 직접</div>
+        <div style="background:#fff;border-radius:12px;padding:12px 8px;margin-bottom:8px;box-shadow:0 2px 6px rgba(20,40,80,.05);cursor:pointer;text-align:center;">
+          <div style="font-size:22px;margin-bottom:5px;">📦</div>
+          <div style="font-size:12.5px;font-weight:800;color:#191F28;">기타</div>
+          <div style="font-size:12px;font-weight:900;color:#6B7280;margin-top:3px;">52만</div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:12px 8px;margin-bottom:8px;box-shadow:0 2px 6px rgba(20,40,80,.05);cursor:pointer;text-align:center;">
+          <div style="font-size:22px;margin-bottom:5px;">📣</div>
+          <div style="font-size:12.5px;font-weight:800;color:#191F28;">마케팅</div>
+          <div style="font-size:12px;font-weight:900;color:#DB2777;margin-top:3px;">30만</div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:12px 8px;box-shadow:0 2px 6px rgba(20,40,80,.05);cursor:pointer;text-align:center;">
+          <div style="font-size:22px;margin-bottom:5px;">💸</div>
+          <div style="font-size:12.5px;font-weight:800;color:#191F28;">세금</div>
+          <div style="font-size:12px;font-weight:900;color:#EA580C;margin-top:3px;">0</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:18px;padding:12px 14px;background:#FFF8E1;border-radius:12px;font-size:11.5px;color:#8A6D00;line-height:1.5;">
+      💡 칸별로 카테고리 개수가 다르면 높이가 안 맞아 보일 수 있음. 칸 안에서 위→아래로 쌓임.
+    </div>
+
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item"><div class="nav-icon">🏠</div>홈</div>
+    <div class="nav-item"><div class="nav-icon">⏰</div>근태</div>
+    <div class="nav-item"><div class="nav-icon">💰</div>정산</div>
+    <div class="nav-item active"><div class="nav-icon">💳</div>지출관리</div>
+    <div class="nav-item"><div class="nav-icon">☰</div>더보기</div>
   </div>
 </div>
 
