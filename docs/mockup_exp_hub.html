@@ -350,8 +350,9 @@
   <div class="content">
 
     <div class="change-note-block">
-      ✅ 변경 포인트: 영수증 등록 버튼이 여기저기 흩어진 것 → <b>입력 입구 하나</b>로 통합.<br>
-      조회는 "내가 채우는 지출" / "자동으로 잡히는 지출" 두 갈래로 명확히 분리.
+      ✅ 변경 포인트 1: 영수증 등록 버튼 흩어진 것 → <b>입력 입구 하나</b>로 통합.<br>
+      ✅ 변경 포인트 2: 카테고리를 <b>채워지는 방식 3갈래</b>로 묶음 — 📸영수증 / 🤖자동 / ✏️직접입력.<br>
+      ✅ <b>안 꼬임</b>: 새 카테고리 추가하면 "어디서 채워지는지" 설정값(data_source) 보고 <b>알아서 맞는 칸에 들어감</b>. 코드 손 안 댐.
     </div>
 
     <!-- 입력 입구 하나 (기존엔 여기 + 거래처 안에도 + 직구 안에도 있었음) -->
@@ -364,10 +365,10 @@
       <div class="entry-btn-arrow">›</div>
     </button>
 
-    <!-- 내가 채우는 지출 -->
+    <!-- ① 영수증으로 채우는 지출 (data_source: receipts/composite/vendor_orders) -->
     <div class="section-ttl">
-      📦 내가 채우는 지출
-      <span class="hint">영수증·명세서로 채워지는 것</span>
+      📸 영수증으로 채워요
+      <span class="hint">사진 찍으면 자동 분류</span>
     </div>
     <div class="cat-grid">
       <button class="cat-card" onclick="showScreen('cat')">
@@ -383,28 +384,28 @@
         <div class="cat-card-sub">이번달 · 6건</div>
       </button>
       <button class="cat-card" onclick="showScreen('cat')">
+        <div class="cat-card-icon">🥤</div>
+        <div class="cat-card-name">음료</div>
+        <div class="cat-card-amount">31만</div>
+        <div class="cat-card-sub">이번달 · 5건</div>
+      </button>
+      <button class="cat-card" onclick="showScreen('cat')">
         <div class="cat-card-icon">🧹</div>
-        <div class="cat-card-name">비품·소모품</div>
+        <div class="cat-card-name">비품</div>
         <div class="cat-card-amount">34만</div>
         <div class="cat-card-sub">이번달 · 4건</div>
       </button>
-      <button class="cat-card" onclick="showScreen('cat')">
-        <div class="cat-card-icon">📂</div>
-        <div class="cat-card-name">기타</div>
-        <div class="cat-card-amount">12만</div>
-        <div class="cat-card-sub">이번달 · 3건</div>
-      </button>
     </div>
 
-    <!-- 자동으로 잡히는 지출 -->
+    <!-- ② 자동으로 잡히는 지출 (data_source: attendance/fixed_costs) -->
     <div class="section-ttl">
-      🤖 자동으로 잡히는 지출
+      🤖 자동으로 잡혀요
       <span class="hint">손 안 대도 됨</span>
     </div>
     <button class="auto-card">
       <div class="auto-card-icon-wrap green">👷</div>
       <div class="auto-card-body">
-        <div class="auto-card-name">인건비 <span class="auto-tag">자동</span></div>
+        <div class="auto-card-name">인건비 <span class="auto-tag">근태 자동</span></div>
         <div class="auto-card-sub">출퇴근 기록 → 급여 자동 계산</div>
       </div>
       <div class="auto-card-amount">538만</div>
@@ -412,18 +413,60 @@
     <button class="auto-card">
       <div class="auto-card-icon-wrap blue">🏦</div>
       <div class="auto-card-body">
-        <div class="auto-card-name">고정비 <span class="auto-tag">자동</span></div>
-        <div class="auto-card-sub">임대료·통신비·보험 등</div>
+        <div class="auto-card-name">고정비 <span class="auto-tag">고정비 자동</span></div>
+        <div class="auto-card-sub">임대료·보험 등</div>
       </div>
       <div class="auto-card-amount">210만</div>
     </button>
-    <button class="auto-card" onclick="showScreen('hub')">
+    <button class="auto-card">
+      <div class="auto-card-icon-wrap blue">💡</div>
+      <div class="auto-card-body">
+        <div class="auto-card-name">공과금 <span class="auto-tag">고정비 자동</span></div>
+        <div class="auto-card-sub">전기·가스·수도</div>
+      </div>
+      <div class="auto-card-amount">62만</div>
+    </button>
+
+    <!-- ③ 직접 금액만 입력 (data_source: manual) -->
+    <div class="section-ttl">
+      ✏️ 직접 금액만 입력해요
+      <span class="hint">영수증 없이 숫자만</span>
+    </div>
+    <div class="cat-grid">
+      <button class="cat-card" onclick="showScreen('cat')">
+        <div class="cat-card-icon">📢</div>
+        <div class="cat-card-name">마케팅</div>
+        <div class="cat-card-amount">18만</div>
+        <div class="cat-card-sub">이번달</div>
+      </button>
+      <button class="cat-card" onclick="showScreen('cat')">
+        <div class="cat-card-icon">🧾</div>
+        <div class="cat-card-name">세금</div>
+        <div class="cat-card-amount">95만</div>
+        <div class="cat-card-sub">이번달</div>
+      </button>
+      <button class="cat-card" onclick="showScreen('cat')">
+        <div class="cat-card-icon">📂</div>
+        <div class="cat-card-name">기타</div>
+        <div class="cat-card-amount">12만</div>
+        <div class="cat-card-sub">이번달</div>
+      </button>
+      <button class="cat-card" onclick="showScreen('cat')">
+        <div class="cat-card-icon">💸</div>
+        <div class="cat-card-name">로열티</div>
+        <div class="cat-card-amount">50만</div>
+        <div class="cat-card-sub">이번달</div>
+      </button>
+    </div>
+
+    <!-- 계좌·카드 내역 (도구로 이동) -->
+    <button class="auto-card" style="margin-top:8px;">
       <div class="auto-card-icon-wrap gray">💳</div>
       <div class="auto-card-body">
-        <div class="auto-card-name">계좌·카드 내역 <span class="auto-tag">자동</span></div>
-        <div class="auto-card-sub">마이데이터 자동 수집</div>
+        <div class="auto-card-name">계좌·카드 내역 <span class="auto-tag">자동 수집</span></div>
+        <div class="auto-card-sub">마이데이터 — 위 분류와 대조용</div>
       </div>
-      <div class="auto-card-amount">›</div>
+      <div class="auto-card-amount" style="color:var(--gray-400);font-size:18px;">›</div>
     </button>
 
     <!-- 도구 -->
@@ -524,18 +567,31 @@
         <div style="position:absolute;top:8px;right:8px;font-size:10px;font-weight:700;background:#FFEBEE;color:#F04452;border-radius:6px;padding:2px 6px;">+ 등록 버튼 내부</div>
       </button>
       <button class="cat-card">
+        <div class="cat-card-icon">🥤</div>
+        <div class="cat-card-name">음료</div>
+        <div class="cat-card-amount">31만</div>
+        <div class="cat-card-sub">이번달 · 5건</div>
+      </button>
+      <button class="cat-card">
         <div class="cat-card-icon">🧹</div>
-        <div class="cat-card-name">비품·소모품</div>
+        <div class="cat-card-name">비품</div>
         <div class="cat-card-amount">34만</div>
         <div class="cat-card-sub">이번달 · 4건</div>
       </button>
       <button class="cat-card">
-        <div class="cat-card-icon">📂</div>
-        <div class="cat-card-name">기타</div>
-        <div class="cat-card-amount">12만</div>
-        <div class="cat-card-sub">이번달 · 3건</div>
+        <div class="cat-card-icon">👷</div>
+        <div class="cat-card-name">인건비</div>
+        <div class="cat-card-amount">538만</div>
+        <div class="cat-card-sub">자동</div>
+      </button>
+      <button class="cat-card">
+        <div class="cat-card-icon">🧾</div>
+        <div class="cat-card-name">세금</div>
+        <div class="cat-card-amount">95만</div>
+        <div class="cat-card-sub">직접 입력</div>
       </button>
     </div>
+    <div style="font-size:11px;color:#F04452;font-weight:600;margin:-8px 0 14px;padding-left:2px;">⚠️ 채워지는 방식(영수증·자동·직접)이 다른데 한 줄에 섞여 있음 → 사장님 헷갈림</div>
 
     <!-- 기존: 도구 -->
     <div class="section-ttl" style="margin-top:4px;">🔧 도구</div>
