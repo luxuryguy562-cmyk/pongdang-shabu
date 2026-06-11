@@ -109,8 +109,9 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   const _byVendor={};
   Object.values(veMap||{}).forEach(o=>{
     if(!(o.amt>0 && o.isVar)) return;
-    if(!_byVendor[o.name]) _byVendor[o.name]={name:o.name, amt:0};
+    if(!_byVendor[o.name]) _byVendor[o.name]={name:o.name, amt:0, _g:new Set()};
     _byVendor[o.name].amt+=o.amt;
+    if(o._g) o._g.forEach(k=>_byVendor[o.name]._g.add(k)); // 영수증 묶음 키 합산 → N건
   });
   const items = Object.values(_byVendor).sort((a,b)=>b.amt-a.amt);
   if(!items.length){
@@ -128,8 +129,11 @@ function renderTodayVendorExp(veMap, hasSale, dayExp){
   if(listEl){
     listEl.innerHTML = items.map(it=>{
       // 거래처 클릭 → 지출 기록 통합 화면 + 그 거래처 칩 필터 (행형 통일 2026-06-11)
+      // 줄 모양 = 사장님 목업: 거래처명(굵게) + 아래 "영수증 N건 ›" + 우측 금액 (2026-06-11)
+      const cnt=it._g?it._g.size:0;
+      const sub=cnt>0?`<span class="vsub">영수증 ${cnt}건 ›</span>`:'';
       return `<div class="ve-item" style="cursor:pointer;" data-action="openExpenseRecords|${encodeURIComponent(it.name)}">`
-        +`<span class="vname">${esc(it.name)}</span>`
+        +`<div class="ve-info"><span class="vname">${esc(it.name)}</span>${sub}</div>`
         +`<span class="vamt">${fmt(it.amt)}원</span></div>`;
     }).join('');
     // 하단 흐리기: 스크롤 더 있을 때만 + 끝까지 내리면 제거 (2026-06-08)
@@ -151,7 +155,7 @@ function openTodayVendorSheet(){
   if(!d){ toast('지출 데이터가 없습니다.'); return; }
   const {veMap, dayExp} = d;
   // veMap = { '쿠팡|비품': {name, cat, amt}, ... } → 거래처+카테고리 단위
-  const rows = Object.values(veMap).map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt}));
+  const rows = Object.values(veMap).map(o=>({name:o.name, cat:o.cat||'기타', amt:o.amt, cnt:(o._g?o._g.size:0)}));
   const total = dayExp || rows.reduce((s,r)=>s+r.amt, 0);
 
   // 카테고리별 그룹 묶기
@@ -175,7 +179,9 @@ function openTodayVendorSheet(){
       const pct = total>0 ? Math.round(g.sum/total*100) : 0;
       const itemsHtml = g.items.map(it=>
         // 거래처 클릭 → 지출 기록 통합 화면 + 그 거래처 칩 필터 (openExpenseRecords가 시트 자동 닫음)
-        `<div class="ve-row" style="cursor:pointer;" data-action="openExpenseRecords|${encodeURIComponent(it.name)}"><span class="vname">${esc(it.name)}</span><span class="vamt">${fmt(it.amt)}원</span></div>`
+        `<div class="ve-row" style="cursor:pointer;" data-action="openExpenseRecords|${encodeURIComponent(it.name)}">`
+        +`<div class="ve-info"><span class="vname">${esc(it.name)}</span>${it.cnt>0?`<span class="vsub">영수증 ${it.cnt}건 ›</span>`:''}</div>`
+        +`<span class="vamt">${fmt(it.amt)}원</span></div>`
       ).join('');
       return `<div class="ve-group">`
         + `<div class="ve-cat-head"><span class="ve-cat-dot" style="background:${color};"></span>`
@@ -549,8 +555,8 @@ async function loadDashboard(force){
           ?sb.from('daily_sales').select('sale_date,total_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
           :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
         // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
-        sb.from('vendor_orders').select('amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-        sb.from('receipts').select('total_price,category_id,receipt_date,vendor_id,vendor,vendors(name)').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
+        sb.from('vendor_orders').select('id,order_group_id,amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+        sb.from('receipts').select('id,receipt_group_id,total_price,category_id,receipt_date,vendor_id,vendor,vendors(name)').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
         sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
         // ── 전월 일별 식자재/영수증/인건비 ──
         sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
@@ -890,14 +896,16 @@ async function loadDashboard(force){
     const dailyVendorExp={}; // { '02': { '농협|식자재': {name, cat, amt, isVar}, ... } }
     // isVar=true = 영수증·거래처 표에서 온 변동 지출 (어디에 썼나 표시 대상)
     // isVar=false = 고정비·인건비·로열티 등 자동 고정성 (어디에 썼나 제외)
-    const _addVE=(d,name,amt,catName,isVar=false)=>{
+    const _addVE=(d,name,amt,catName,isVar=false,groupKey=null)=>{
       if(!amt||amt<=0||!d)return;
       if(!dailyVendorExp[d])dailyVendorExp[d]={};
       const nm=name||'기타', ct=catName||'기타';
       const key=nm+'|'+ct;
-      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={name:nm,cat:ct,amt:0,isVar:false};
+      if(!dailyVendorExp[d][key])dailyVendorExp[d][key]={name:nm,cat:ct,amt:0,isVar:false,_g:new Set()};
       dailyVendorExp[d][key].amt+=amt;
       if(isVar)dailyVendorExp[d][key].isVar=true;
+      // 영수증/주문 묶음 키 수집 → "영수증 N건" 표시용 (2026-06-11 사장님 목업)
+      if(groupKey)dailyVendorExp[d][key]._g.add(groupKey);
     };
     // 월급제 직원 ID 셋 (attendance_logs 합산 시 제외 — 월급제는 매일 1/N 분배 별도)
     const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
@@ -908,7 +916,7 @@ async function loadDashboard(force){
         || srcToCat['vendor_orders'] || '식자재';
       if(!dailyCatMap[d])dailyCatMap[d]={};
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(v.amount||0);
-      _addVE(d, v.vendors?.name||'거래처', v.amount, k, true);
+      _addVE(d, v.vendors?.name||'거래처', v.amount, k, true, 'o:'+(v.order_group_id||v.id));
       _addChild(v.vendors?.category_id, v.amount, d);
     });
     (rcDaily||[]).forEach(r=>{
@@ -919,7 +927,7 @@ async function loadDashboard(force){
       dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+(r.total_price||0);
       // 이름 우선순위: 등록 거래처(vendors.name) > 영수증 상호 텍스트(vendor) > '직접 구매'
       // 직구(vendor_id NULL)도 영수증에 찍힌 상호명 그대로 표시 (2026-06-05 '논산농협 하나로마트')
-      _addVE(d, r.vendors?.name||r.vendor||'직접 구매', r.total_price, k, true);
+      _addVE(d, r.vendors?.name||r.vendor||'직접 구매', r.total_price, k, true, 'r:'+(r.receipt_group_id||r.id));
       _addChild(r.category_id, r.total_price, d);
     });
     // 인건비 부모 이름 (srcToCat 기준) — 고정급/시급 하위는 이 부모 아래로 박음
