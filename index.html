@@ -950,8 +950,11 @@
 
 <!-- ══ [Hub] 지출 허브 (관리자 전용) ══ -->
 <div id="expHubCont" class="container">
-  <!-- 화면 맨 위 몇 월인지 표시 (2026-06-11 사장님 지시 — "이번달" 표기 대신). JS loadExpHubData가 채움 -->
-  <div class="exp-month-ttl" id="expHubMonthTtl">-월 지출</div>
+  <!-- 화면 맨 위 몇 월인지 + 전체 기록 바로가기 (2026-06-12 사장님 호소: 기록 보러 가는데 '등록' 버튼 통과 어색) -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:0 2px 10px;">
+    <div class="exp-month-ttl" id="expHubMonthTtl" style="margin:0;">-월 지출</div>
+    <span class="exp-vendor-link" data-action="openExpenseRecords">📋 전체 기록 ›</span>
+  </div>
   <!-- 카테고리 섹션 — 📸영수증(토글+등록버튼)/🤖자동/✏️직접입력 -->
   <!-- 지출 등록 버튼은 '영수증으로 채워요' 섹션 안 (영수증 채우는 행위라 영수증 그룹에 소속) -->
   <div id="expHubCatView">
