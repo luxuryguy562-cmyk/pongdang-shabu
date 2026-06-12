@@ -2295,6 +2295,8 @@ function renderReceiptList(){
     : '<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">조건에 맞는 내역이 없어요.<br>필터를 [전체]로 바꿔보세요.</div>';
 }
 
+// 단가 직접 수정 → 합계 자동계산 차단 플래그 (사장님 직접 입력 합계 보호 — 2026-06-12)
+let _reEditAmountManual=false;
 function openReceiptEdit(id){
   const r=rcpRecords.find(x=>String(x.id)===String(id));
   if(!r){toast('영수증을 찾을 수 없어요','error');return;}
@@ -2303,11 +2305,32 @@ function openReceiptEdit(id){
   document.getElementById('reDate').value=r.receipt_date||ymdLocal(new Date());
   document.getElementById('reVendor').value=r.vendor||'';
   document.getElementById('reItem').value=r.item||'';
+  document.getElementById('reUnitPrice').value=r.unit_price?fmt(r.unit_price):'';
+  document.getElementById('reQty').value=(r.qty!=null&&r.qty!=='')?r.qty:'';
   document.getElementById('reAmount').value=r.total_price?fmt(r.total_price):'';
+  // 단가×수량이 합계와 이미 맞으면 자동계산 허용(수량 수정 편의), 안 맞으면(OCR 오독) 합계 보호 → 단가만 고침
+  const _u=r.unit_price||0, _q=parseFloat(r.qty)||0, _t=r.total_price||0;
+  _reEditAmountManual = _t>0 && !(_u>0 && _q>0 && Math.round(_u*_q)===_t);
   document.getElementById('reCatBtn').innerHTML=(r.category?'🏷️ '+getCatLabel(r.category,''):'미분류 ▸');
   const noteVal=(r.note==='정상')?'정상':'오답';
   document.querySelectorAll('input[name="reNote"]').forEach(i=>{i.checked=(i.value===noteVal);});
   openSheet('receiptEditSheet');
+}
+// 단가·수량 입력 → 합계 자동계산 (합계 직접 입력 전까지만)
+function onReEditUnitQty(el){
+  const pos=el.selectionStart;
+  const raw=String(el.value||'').replace(/[^0-9.]/g,'');
+  el.value = el.id==='reUnitPrice' ? (raw?fmt(parseInt(raw,10)||0):'') : raw;
+  if(el.id==='reUnitPrice' && pos!=null){ try{ el.setSelectionRange(el.value.length, el.value.length); }catch(e){} }
+  if(_reEditAmountManual) return; // 합계 직접 고쳤으면 자동계산 안 함
+  const u=parseInt((document.getElementById('reUnitPrice').value||'').replace(/[^0-9]/g,''),10)||0;
+  const q=parseFloat((document.getElementById('reQty').value||'').replace(/[^0-9.]/g,''))||0;
+  if(u>0&&q>0) document.getElementById('reAmount').value=fmt(Math.round(u*q));
+}
+// 합계 직접 입력 → 이후 단가·수량 변경해도 합계 보호 (지우면 자동계산 재허용)
+function onReEditAmount(el){
+  formatNumberInput(el);
+  _reEditAmountManual=(unFmt(el.value)||0)>0;
 }
 
 function openReceiptEditCat(){
@@ -2325,6 +2348,9 @@ async function saveReceiptEdit(){
   const date=document.getElementById('reDate').value;
   const vendor=document.getElementById('reVendor').value.trim();
   const item=document.getElementById('reItem').value.trim();
+  const unitPrice=parseInt((document.getElementById('reUnitPrice').value||'').replace(/[^0-9]/g,''),10)||null;
+  const qtyRaw=(document.getElementById('reQty').value||'').replace(/[^0-9.]/g,'');
+  const qty=qtyRaw?parseFloat(qtyRaw):null;
   const amount=unFmt(document.getElementById('reAmount').value)||0;
   const note=document.querySelector('input[name="reNote"]:checked')?.value||'정상';
   const cat=rcpEditingCategory||'';
@@ -2344,6 +2370,7 @@ async function saveReceiptEdit(){
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').update({
     receipt_date:date,vendor,item,total_price:amount,
+    unit_price:unitPrice,qty:qty,
     category:cat||null,category_id:resolveRcpCatId(cat),
     note
   }).eq('id',rcpEditingId).eq('store_id',currentStore.id);
