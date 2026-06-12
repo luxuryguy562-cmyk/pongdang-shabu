@@ -538,7 +538,7 @@ async function loadDashboard(force){
     if(_dashPack){
       ({settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2} = _dashPack);
     } else {
-      [settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2]=await Promise.all([
+      const _runDashQueries=()=>Promise.all([
         // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
         // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
         dashSaleSource==='ups'
@@ -564,6 +564,24 @@ async function loadDashboard(force){
         sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
         sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end)
       ]);
+      // ── 자동 재시도 (2026-06-12 사장님 호소: 일시 500/제한시간 초과) ──
+      //   서버가 잠깐 바빠 일부 조회 실패하면 짧게 쉬고 다시 시도 (최대 3번). 사장님 눈엔 안 보이게.
+      let _packArr, _packOk=false;
+      for(let _try=0; _try<3 && !_packOk; _try++){
+        try{
+          _packArr = await _runDashQueries();
+          // 결과 중 하나라도 error 있으면(500/timeout) 재시도. 마지막 시도는 그대로 진행(아래 ||[] 가드가 받음)
+          if(_packArr.some(r=>r && r.error) && _try<2){
+            await new Promise(r=>setTimeout(r, 500*(_try+1)));
+            continue;
+          }
+          _packOk=true;
+        }catch(e){
+          if(_try>=2) throw e;             // 3번째도 실패 = 바깥 catch로
+          await new Promise(r=>setTimeout(r, 500*(_try+1)));
+        }
+      }
+      [settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2] = _packArr;
       cacheSet(_dashKey, {settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2});
     }
     // SWR: 캐시 hit이면 5초 후 백그라운드로 fresh 호출 (force=true → setLoad 무음)
