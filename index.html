@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260612a">
+<link rel="stylesheet" href="assets/styles.css?v=20260612b">
 </head>
 <body>
 
@@ -621,12 +621,8 @@
 
     <!-- 📸 새 영수증 (기본 탭) -->
     <div id="rcpNew">
-      <!-- ─── AI 영수증 강점 카드 (사장님 호소 2026-05-25: 강점 가시화) ─── -->
-      <div style="background:linear-gradient(135deg,#3182F6 0%,#1B64DA 100%);border-radius:14px;padding:14px 16px;margin:6px 0 14px;color:#fff;box-shadow:0 4px 12px rgba(49,130,246,0.25);">
-        <div style="font-size:16px;font-weight:800;letter-spacing:-0.3px;">✨ AI 영수증 1초 분석</div>
-        <div style="font-size:12px;font-weight:600;opacity:0.92;margin-top:4px;">이제 한 번만 찍으세요</div>
-      </div>
-      <div class="card-title" style="margin-top:4px;">영수증 등록</div>
+      <!-- AI 강점 배너 제거 (2026-06-12 ③안 — 촬영 히어로가 그 역할 대신) -->
+      <div class="card-title" style="margin-top:4px;">지출 등록</div>
 
       <!-- ─── 영수증 진입 분기 (토스 통일 2026-05-22) ─── -->
       <div id="rcpModeSelect" style="margin-bottom:14px;">
@@ -713,24 +709,24 @@
           ＋ 페이지 추가<input type="file" accept="image/*" style="display:none;" data-change="handleImg|this">
         </label>
       </div>
+      <!-- 2026-06-12 ③안(촬영 히어로): 큰 촬영 카드 + 올리기/직접입력 2버튼. 기존 핸들러(handleImg/manualReceipt) 그대로 -->
       <div id="uploadGroup" style="display:none;margin-top:0;">
-        <!-- 사전 안내: 한 거래처 영수증만 (2026-06-04 여러 거래처 섞임 방지) -->
-        <div style="font-size:12px;color:#92400E;background:#FEF3C7;border-radius:9px;padding:9px 12px;margin-bottom:10px;line-height:1.55;">
-          📄 <b>한 거래처 영수증만</b> 올려주세요. 거래처가 다르면 <b>따로따로</b> 올려야 정확해요.<br>
-          <span style="font-size:11px;opacity:.85;">같은 영수증이 여러 장(2~3페이지)인 건 함께 올려도 OK 👍</span>
-        </div>
-        <div class="action-group" style="margin-top:0;">
-          <label class="btn btn-primary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-            <span id="rcpUploadLabelCam">📸 촬영</span><input type="file" accept="image/*" capture="environment" style="display:none" data-change="handleImg|this">
+        <label class="rcp-hero">
+          <span class="rh-cam">📸</span>
+          <span class="rh-t1">영수증 찍기</span>
+          <span class="rh-t2">AI 1초 분석 · 여러 장 한 번에 OK</span>
+          <input type="file" accept="image/*" capture="environment" style="display:none" data-change="handleImg|this">
+        </label>
+        <div class="rcp-subs">
+          <label class="rcp-sub">
+            <span class="rs-i">🖼</span><span class="rs-n">사진 올리기</span><span class="rs-s">갤러리에서</span>
+            <input type="file" accept="image/*" style="display:none" data-change="handleImg|this">
           </label>
-          <label class="btn btn-secondary" style="flex:1;padding:16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-            <span id="rcpUploadLabelFile">🖼 업로드</span><input type="file" accept="image/*" style="display:none" data-change="handleImg|this">
-          </label>
+          <button type="button" class="rcp-sub" data-action="manualReceipt">
+            <span class="rs-i">✏️</span><span class="rs-n">직접 입력</span><span class="rs-s">금액만 적기</span>
+          </button>
         </div>
-        <button type="button" class="btn btn-secondary" style="margin-top:8px;width:100%;padding:14px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;" data-action="manualReceipt">
-          ✏️ 수동 입력
-        </button>
-        <div style="text-align:center;font-size:11px;color:var(--gray-500);margin-top:6px;">사진이 안 되거나 한두 줄짜리는 수동이 빨라요</div>
+        <div class="rcp-note">📄 한 거래처 영수증만 한 번에 · 거래처 다르면 따로따로 (같은 영수증 2~3장은 함께 OK)</div>
       </div>
       <div id="actionGroup" style="display:none;" class="action-group">
         <button class="btn btn-primary" style="flex:3;padding:15px;font-size:14px;" data-action="runAI"><span id="rcpAnalyzeLabel">✨ AI 분석</span></button>
