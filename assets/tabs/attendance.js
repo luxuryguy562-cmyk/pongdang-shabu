@@ -693,22 +693,19 @@ function renderAttDayDetail(date, logs, isSingleView){
   const planRowsCheck = (window._attSchedDayMap && window._attSchedDayMap[date]) || [];
   const hasPlanOnly = !((logs||[]).length) && planRowsCheck.some(p=>p.employee_id && !p.is_off);
   if((!logs || !logs.length) && !hasPlanOnly){
-    // 2026-05-25 헤더 갈아엎기 (사장님 호소: 한 줄 안 들어가고 엉망)
-    //  · 1행: 날짜(좌) · "기록 없음"(우)
-    //  · 2행: [주 일정] [+ 실제 입력] 칩 (한 줄 wrap)
+    // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · "기록 없음" · 선 · [근무계획][실제입력]
     const chipBtns = `
-      <span class="att-day-add-btn" data-action="openWeeklyPlanSheet|${date}">📅 주 일정</span>
-      ${isManager ? `<span class="att-day-add-btn" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">＋ 실제 입력</span>` : ''}
+      <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📅 근무계획</span>
+      ${isManager ? `<span class="dh-btn add" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">✏️ 실제입력</span>` : ''}
     `;
     const note = isManager
       ? ''
       : `<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--gray-400);">출퇴근 누락 시 관리자에게 등록을 요청하세요</div>`;
-    target.innerHTML = `<div class="gantt-day-label">
-      <div class="row-top">
-        <span class="ttl">📅 ${date.slice(5)} (${dow})</span>
-        <span style="font-size:10px;color:var(--gray-400);">기록 없음</span>
-      </div>
-      <div class="row-chips">${chipBtns}</div>
+    target.innerHTML = `<div class="att-dayhdr">
+      <span class="dh-date">${date.slice(5)} (${dow})</span>
+      <span class="dh-h empty">기록 없음</span>
+      <span class="dh-line"></span>
+      <span class="dh-btns">${chipBtns}</span>
     </div>${note}`;
     return;
   }
@@ -716,20 +713,17 @@ function renderAttDayDetail(date, logs, isSingleView){
   const totalMin  = safeLogs.reduce((a,r)=>a+(r.total_work_min||0),0);
   const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const allData = window._attListData || [];
-  // 2026-05-25 헤더 갈아엎기 (사장님 호소: 한 줄 안 들어가고 엉망)
-  //  · 1행: 날짜(좌) · 41.4h · 496,600원 (우, nowrap)
-  //  · 2행: [주 일정] [+ 실제 입력] 칩 그룹
+  // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · 시간 · 선 · [근무계획][실제입력] 한 줄
   const chipBtns = `
-    <span class="att-day-add-btn" data-action="openWeeklyPlanSheet|${date}">📅 주 일정</span>
-    ${isManager ? `<span class="att-day-add-btn" data-action="openAttManualSheet|${date}">＋ 실제 입력</span>` : ''}
+    <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📅 근무계획</span>
+    ${isManager ? `<span class="dh-btn add" data-action="openAttManualSheet|${date}">✏️ 실제입력</span>` : ''}
   `;
 
-  let html = `<div class="gantt-day-label">
-    <div class="row-top">
-      <span class="ttl">📅 ${date.slice(5)} (${dow})</span>
-      <span class="sum"><span class="h">${fmtHourDecimal(totalMin)}</span></span>
-    </div>
-    <div class="row-chips">${chipBtns}</div>
+  let html = `<div class="att-dayhdr">
+    <span class="dh-date">${date.slice(5)} (${dow})</span>
+    <span class="dh-h">${fmtHourDecimal(totalMin)}</span>
+    <span class="dh-line"></span>
+    <span class="dh-btns">${chipBtns}</span>
   </div>`;
   html += `<div class="att-axis"><div class="att-row-label" style="visibility:hidden;">x</div><div class="att-axis-ticks">${attAxisTicks()}</div></div>`;
 

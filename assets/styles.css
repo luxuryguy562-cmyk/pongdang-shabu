@@ -437,12 +437,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .gantt-bar.absent{background:repeating-linear-gradient(45deg,rgba(239,68,68,0.85),rgba(239,68,68,0.85) 4px,rgba(254,202,202,0.85) 4px,rgba(254,202,202,0.85) 8px);border:1px solid rgba(239,68,68,0.85);height:18px;top:2px;}
 .gantt-day-section{margin-bottom:10px;}
 .gantt-day-label{font-size:12px;font-weight:700;color:var(--text);padding:6px 4px 4px;display:flex;flex-direction:column;gap:4px;}
-.gantt-day-label .row-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
-.gantt-day-label .row-top .ttl{font-weight:800;font-size:13px;letter-spacing:-0.3px;}
-.gantt-day-label .row-top .sum{display:flex;align-items:baseline;gap:8px;white-space:nowrap;font-variant-numeric:tabular-nums;}
-.gantt-day-label .row-top .sum .h{font-size:11px;color:var(--gray-500);font-weight:600;}
-.gantt-day-label .row-top .sum .w{font-size:13px;color:var(--blue);font-weight:800;}
-.gantt-day-label .row-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+/* ─── 근태 날짜 헤더 B안 (구분선 스타일, 2026-06-12 사장님 선택) ─── */
+.att-dayhdr{display:flex;align-items:center;gap:9px;margin-bottom:8px;padding:0 2px;}
+.att-dayhdr .dh-date{font-size:13px;font-weight:900;color:var(--text);letter-spacing:-0.3px;background:var(--white);border-radius:10px;padding:6px 12px;box-shadow:var(--card-shadow);white-space:nowrap;flex-shrink:0;}
+.att-dayhdr .dh-h{font-size:12px;font-weight:800;color:var(--blue);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;}
+.att-dayhdr .dh-h.empty{color:var(--gray-400);font-weight:600;}
+.att-dayhdr .dh-line{flex:1;height:1px;background:var(--toss-line);min-width:6px;}
+.att-dayhdr .dh-btns{display:flex;gap:5px;flex-shrink:0;}
+.att-dayhdr .dh-btn{display:inline-flex;align-items:center;gap:3px;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;border:none;font-family:inherit;}
+.att-dayhdr .dh-btn.plan{background:var(--white);color:var(--gray-600);box-shadow:var(--card-shadow);}
+.att-dayhdr .dh-btn.add{background:var(--blue-light);color:var(--blue);box-shadow:var(--card-shadow);}
+.att-dayhdr .dh-btn:active{transform:scale(.96);}
 .gantt-day-label .day-date{color:var(--gray-600);font-weight:600;}
 .gantt-day-label .day-count{font-size:10px;color:var(--gray-400);}
 
@@ -506,8 +511,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-cal-empty-add{font-size:14px;color:var(--gray-400);font-weight:700;line-height:1;}
 .att-cal-cell.add-mode{cursor:pointer;}
 .att-cal-cell.add-mode:hover .att-cal-empty-add{color:var(--blue);}
-/* 일별 상세 + 직원 추가 버튼 */
-.att-day-add-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:var(--blue-light);color:var(--blue);border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .att-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;}
 .att-cal-head{font-size:10px;font-weight:700;color:var(--gray-600);text-align:center;padding:4px 0;}
 .att-cal-head.sun{color:var(--danger);}
