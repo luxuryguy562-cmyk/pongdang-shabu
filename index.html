@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260612c">
+<link rel="stylesheet" href="assets/styles.css?v=20260612d">
 </head>
 <body>
 
@@ -711,22 +711,18 @@
       </div>
       <!-- 2026-06-12 ③안(촬영 히어로): 큰 촬영 카드 + 올리기/직접입력 2버튼. 기존 핸들러(handleImg/manualReceipt) 그대로 -->
       <div id="uploadGroup" style="display:none;margin-top:0;">
-        <label class="rcp-hero">
-          <span class="rh-cam">📸</span>
-          <span class="rh-t1">영수증 찍기</span>
-          <span class="rh-t2">AI 1초 분석 · 여러 장 한 번에 OK</span>
-          <input type="file" accept="image/*" capture="environment" style="display:none" data-change="handleImg|this">
-        </label>
-        <div class="rcp-subs">
-          <label class="rcp-sub">
-            <span class="rs-i">🖼</span><span class="rs-n">사진 올리기</span><span class="rs-s">갤러리에서</span>
+        <!-- 2026-06-12 사장님: 촬영/업로드/직접입력 3개 → 사진/직접입력 2개로 이원화.
+             '사진'은 capture 없이 → 아이폰이 촬영/앨범 선택 자동 노출 (찍기·올리기 한 버튼에 통합) -->
+        <div class="rcp-duo">
+          <label class="rcp-big photo">
+            <span class="bi">📸</span><span class="bn">사진</span><span class="bs">찍거나 앨범에서</span>
             <input type="file" accept="image/*" style="display:none" data-change="handleImg|this">
           </label>
-          <button type="button" class="rcp-sub" data-action="manualReceipt">
-            <span class="rs-i">✏️</span><span class="rs-n">직접 입력</span><span class="rs-s">금액만 적기</span>
+          <button type="button" class="rcp-big manual" data-action="manualReceipt">
+            <span class="bi">✏️</span><span class="bn">직접 입력</span><span class="bs">금액만 적기</span>
           </button>
         </div>
-        <div class="rcp-note">📄 한 거래처 영수증만 한 번에 · 거래처 다르면 따로따로 (같은 영수증 2~3장은 함께 OK)</div>
+        <div class="rcp-note">📄 한 거래처 영수증만 한 번에 · 사진은 여러 장 OK</div>
       </div>
       <div id="actionGroup" style="display:none;" class="action-group">
         <button class="btn btn-primary" style="flex:3;padding:15px;font-size:14px;" data-action="runAI"><span id="rcpAnalyzeLabel">✨ AI 분석</span></button>
