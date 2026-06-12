@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260611g">
+<link rel="stylesheet" href="assets/styles.css?v=20260612a">
 </head>
 <body>
 
@@ -955,24 +955,21 @@
   <!-- 카테고리 섹션 — 📸영수증(토글+등록버튼)/🤖자동/✏️직접입력 -->
   <!-- 지출 등록 버튼은 '영수증으로 채워요' 섹션 안 (영수증 채우는 행위라 영수증 그룹에 소속) -->
   <div id="expHubCatView">
-    <!-- 📸 영수증 섹션 헤더 + 거래처별 보기 링크 (별도 화면 이동) -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 9px;">
-      <div class="exp-group-label" style="margin:0;">📸 영수증으로 채워요 <span class="exp-group-hint">사진 찍으면 자동 분류</span></div>
-      <span class="exp-vendor-link" data-action="nav|expHubVendor">거래처별 ›</span>
-    </div>
-    <!-- 지출 등록 버튼 (영수증 섹션 안, 카드 위) -->
+    <!-- 영수증·명세서 등록 (AI 스캔 = 메인 입구) -->
     <button type="button" class="exp-add-btn" data-action="nav|receipt">
       <span class="eab-ic">📸</span>
       <span class="eab-txt">영수증·명세서 등록 <span class="eab-pill">AI</span></span>
       <span class="eab-meta" id="expHeroInfo">사진 자동 분류</span>
     </button>
-    <!-- 카테고리 세로 리스트 (2026-06-11 목업 ⑦ 적용 — 3열 카드 → 세로 리스트) -->
-    <div class="exp-cat-list" id="expHubGridReceipt" data-grp="receipt"></div>
-    <!-- 🤖 자동 / ✏️ 직접입력 -->
+    <!-- 📝 내가 채워요 (영수증 찍든 금액만 적든 = 건별 선택) + 거래처별 링크 (2026-06-12 2그룹 갈아엎기) -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 9px;">
+      <div class="exp-group-label" style="margin:0;">📝 내가 채워요 <span class="exp-group-hint">영수증·직접 입력</span></div>
+      <span class="exp-vendor-link" data-action="nav|expHubVendor">거래처별 ›</span>
+    </div>
+    <div class="exp-grid" id="expHubGridMine"></div>
+    <!-- 🤖 자동으로 잡혀요 (인건비·고정비·공과금·로열티·카드수수료 = 계산으로 자동) -->
     <div class="exp-group-label">🤖 자동으로 잡혀요 <span class="exp-group-hint">손 안 대도 됨</span></div>
-    <div class="exp-cat-list" id="expHubGridAuto" data-grp="auto"></div>
-    <div class="exp-group-label">✏️ 직접 입력해요 <span class="exp-group-hint">영수증 없이 금액만</span></div>
-    <div class="exp-cat-list" id="expHubGridManual" data-grp="manual"></div>
+    <div class="exp-grid" id="expHubGridAuto"></div>
     <div id="expHubCatLoading" style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>
   </div>
 </div>
@@ -3561,7 +3558,7 @@
 <script src="assets/tabs/schedule.js?v=20260608"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
 <script src="assets/tabs/dashboard.js?v=20260611e"></script>
-<script src="assets/tabs/sidemenu.js?v=20260611b"></script>
+<script src="assets/tabs/sidemenu.js?v=20260612a"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
 </html>

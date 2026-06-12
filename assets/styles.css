@@ -1668,7 +1668,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .exp-vendor-link{font-size:12px;font-weight:700;color:var(--toss-blue);cursor:pointer;white-space:nowrap;flex-shrink:0;}
 .exp-vendor-link:active{opacity:.6;}
 
-/* ─── 지출 허브 카테고리/거래처 세로 리스트 (2026-06-11 목업 ⑦ — 3열 카드 → 세로 리스트) ─── */
+/* ─── 지출 허브 카테고리 3열 격자 카드 (2026-06-12 사장님 갈아엎기 — 2그룹 + 격자 복귀) ───
+   금액 원 단위 그대로·검정·13px 고정 (만원 단위 X). 천만 단위까지 안 잘림 (측정 확인) */
+.exp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px;}
+.exp-grid-card{background:var(--white);border:0;border-radius:16px;padding:13px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-width:0;overflow:hidden;cursor:pointer;font-family:inherit;text-align:left;outline:none;box-shadow:0 1px 3px rgba(20,40,80,.06),0 1px 2px rgba(20,40,80,.04);transition:transform .15s;}
+.exp-grid-card:active{transform:scale(.97);background:var(--gray-100);}
+.egc-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#EBF3FF;color:var(--blue);}
+.egc-icon svg{width:19px;height:19px;stroke:currentColor;fill:none;}
+.egc-name{font-size:13px;font-weight:800;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;}
+.egc-amt{font-size:13px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;width:100%;letter-spacing:-0.3px;}
+
+/* ─── 지출 허브 거래처별 세로 리스트 (2026-06-11 목업 ⑦ — 3열 카드 → 세로 리스트) ─── */
 /* 2026-06-11 사장님 호소 "그냥 나열 느낌" → 칸막이 목록 → 각 줄 독립 카드(그림자+간격)로 '카드 맛' 복원 */
 .exp-cat-list{background:transparent;border-radius:0;overflow:visible;box-shadow:none;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;}
 .exp-cat-row{width:100%;display:flex;align-items:center;gap:13px;padding:14px 15px;cursor:pointer;border:0;border-radius:14px;background:var(--white);box-shadow:0 1px 3px rgba(20,40,80,.06),0 1px 2px rgba(20,40,80,.04);font-family:inherit;text-align:left;outline:none;}
