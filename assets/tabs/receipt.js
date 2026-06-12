@@ -2412,7 +2412,8 @@ function _rgeRowsFromRecords(records){
     amount:r.total_price||0,
     cat:r.category||'', catId:r.category_id||null, note:r.note||'정상',
     spec:r.spec||null, origin:r.origin||null,
-    _isNew:false, _deleted:false, _origItem:r.item||''
+    _isNew:false, _deleted:false, _origItem:r.item||'',
+    _amountManual:true // DB에서 불러온 합계는 사용자 직접 입력값 — 단가×수량 자동계산이 덮어쓰지 않음
   }));
 }
 function openReceiptGroupEdit(editKey){
@@ -2474,6 +2475,7 @@ function setRgeRowAmount(idx,el){
   if(!rgeRows[i]) return;
   const raw=String(el.value||'').replace(/[^0-9]/g,'');
   rgeRows[i].amount=parseInt(raw,10)||0;
+  rgeRows[i]._amountManual=rgeRows[i].amount>0; // 금액 입력하면 자동계산 차단, 지우면(0) 다시 허용
   el.value=fmt(rgeRows[i].amount);
 }
 function setRgeRowUnitPrice(idx,el){
@@ -2494,6 +2496,7 @@ function setRgeRowQty(idx,el){
 }
 function _rgeAutoCalcAmount(i){
   const r=rgeRows[i]; if(!r) return;
+  if(r._amountManual) return; // 직접 입력 합계 보호 — 단가·수량 변경해도 덮어쓰기 금지
   if(r.unitPrice>0 && r.qty>0){
     r.amount=Math.round(r.unitPrice*r.qty);
     const rowEl=document.getElementById('rge-row-'+i);
