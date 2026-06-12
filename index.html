@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260612b">
+<link rel="stylesheet" href="assets/styles.css?v=20260612c">
 </head>
 <body>
 
@@ -662,30 +662,30 @@
 
       <!-- 행 타이틀: 영수증 종류 (모드 선택 후만) -->
       <div id="rcpModeTitle" class="rcp-row-ttl" style="display:none;">영수증 종류</div>
-      <!-- 모드 표시 + 다시 고르기 (모드 선택 후만 노출. 상단 ‹ 뒤로가기와 함께 제공) -->
-      <div id="rcpModeBadge" style="display:none;background:var(--toss-blue-light);border-radius:14px;padding:13px 15px;margin-bottom:14px;font-size:13px;align-items:center;justify-content:space-between;gap:10px;">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-          <span id="rcpModeBadgeIcon" style="font-size:22px;flex-shrink:0;">📦</span>
-          <div style="min-width:0;flex:1;">
-            <div style="font-size:14px;font-weight:800;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="rcpModeBadgeValue">선택 안 됨</div>
-            <div style="font-size:11px;color:var(--gray-600);margin-top:2px;" id="rcpModeBadgeLabel">거래처 영수증</div>
+      <!-- 모드 표시 + 다시 고르기 — 2026-06-12 ③안: 큰 박스 → 얇은 줄 (기능·id 그대로) -->
+      <div id="rcpModeBadge" style="display:none;background:var(--gray-100);border-radius:12px;padding:9px 13px;margin-bottom:8px;font-size:13px;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;">
+          <span id="rcpModeBadgeIcon" style="font-size:18px;flex-shrink:0;">📦</span>
+          <div style="min-width:0;flex:1;display:flex;align-items:baseline;gap:6px;overflow:hidden;">
+            <div style="font-size:13.5px;font-weight:800;color:var(--gray-900);white-space:nowrap;" id="rcpModeBadgeValue">선택 안 됨</div>
+            <div style="font-size:11px;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="rcpModeBadgeLabel">거래처 영수증</div>
           </div>
         </div>
-        <button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;flex-shrink:0;font-weight:600;background:rgba(255,255,255,0.75);color:var(--gray-600);" data-action="resetRcpMode">↩ 다시 고르기</button>
+        <button class="btn btn-secondary" style="padding:6px 10px;font-size:11.5px;flex-shrink:0;font-weight:600;background:#fff;color:var(--gray-600);" data-action="resetRcpMode">↩ 다시</button>
       </div>
 
       <!-- 행 타이틀: 거래처 (거래처 모드만) -->
       <div id="rcpVendorRowTitle" class="rcp-row-ttl" style="display:none;">거래처</div>
-      <!-- 거래처 선택 행 (거래처 모드만, 클릭 시 거래처 리스트). 내용은 renderRcpVendorRow로 채움 -->
-      <button type="button" id="rcpVendorRow" style="display:none;width:100%;background:var(--gray-100);border:0;border-radius:14px;padding:15px 16px;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;font-family:inherit;cursor:pointer;" data-action="openRcpVendorPicker">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <span id="rcpVendorRowIcon" style="width:38px;height:38px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏠</span>
+      <!-- 거래처 선택 행 — 2026-06-12 ③안: 큰 박스 → 얇은 줄 (클릭=거래처 리스트, 기능·id 그대로) -->
+      <button type="button" id="rcpVendorRow" style="display:none;width:100%;background:var(--gray-100);border:0;border-radius:12px;padding:9px 13px;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-family:inherit;cursor:pointer;" data-action="openRcpVendorPicker">
+        <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+          <span id="rcpVendorRowIcon" style="width:30px;height:30px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🏠</span>
           <div style="min-width:0;text-align:left;">
-            <div id="rcpVendorRowVal" style="font-size:14px;font-weight:700;color:var(--toss-blue);">거래처를 선택하세요</div>
+            <div id="rcpVendorRowVal" style="font-size:13.5px;font-weight:700;color:var(--toss-blue);">거래처를 선택하세요</div>
             <div id="rcpVendorRowSub" style="font-size:11px;color:var(--gray-500);margin-top:1px;display:none;"></div>
           </div>
         </div>
-        <span id="rcpVendorRowArrow" style="color:var(--gray-400);font-size:14px;font-weight:700;flex-shrink:0;">›</span>
+        <span id="rcpVendorRowArrow" style="color:var(--gray-400);font-size:12.5px;font-weight:700;flex-shrink:0;">›</span>
       </button>
 
       <!-- 안내 박스 (모드 선택 후만 노출) -->
