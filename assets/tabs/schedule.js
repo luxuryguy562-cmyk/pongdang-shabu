@@ -202,7 +202,7 @@ async function saveWeeklyPlan(){
     if(error) lastError = error;
   }
   setLoad(false);
-  if(lastError) return errToast('주 일정 저장', lastError);
+  if(lastError) return errToast('근무계획 저장', lastError);
   closeSheet('weeklyPlanSheet');
   // 휴무(빈 칸)는 7 - validCount. 메시지에 명시
   const offCount = 7 - validCount;
