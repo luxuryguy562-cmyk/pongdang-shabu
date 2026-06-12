@@ -30,16 +30,16 @@ function setRcpMode(mode){
   renderRcpModeBadge();
   const vTtl = document.getElementById('rcpVendorRowTitle');
   const vRow = document.getElementById('rcpVendorRow');
-  if(mode === 'vendor' || mode === 'online'){
-    // 거래처/온라인 = 선택 행 표시(미선택). 사진은 고른 뒤 활성화
-    //  · vendor: 거래처 선택 / online: 플랫폼(쿠팡·네이버) 선택
-    if(vTtl) vTtl.style.display = 'block';
+  // 거래처/온라인/마트 = 선택 행 표시(미선택). 사진은 고른 뒤 활성화
+  //  · vendor: 거래처 선택 / online: 플랫폼(쿠팡·네이버) 선택 / direct: 마트 선택(이름 고정용 — 2026-06-12)
+  if(mode === 'vendor' || mode === 'online' || mode === 'direct'){
+    if(vTtl){ vTtl.style.display = 'block'; vTtl.textContent = mode === 'direct' ? '마트' : (mode === 'online' ? '온라인 플랫폼' : '거래처'); }
     if(vRow) vRow.style.display = 'flex';
     renderRcpVendorRow(false);
     document.getElementById('rcpGuideBox').style.display = 'none';
     _setRcpUploadEnabled(false);
   } else {
-    // 마트·시장(직구): 선택 행 없이 바로 사진
+    // 그 외(수동 등): 선택 행 없이 바로 사진
     if(vTtl) vTtl.style.display = 'none';
     if(vRow) vRow.style.display = 'none';
     document.getElementById('rcpGuideBox').style.display = 'block';
@@ -63,15 +63,17 @@ function renderRcpVendorRow(selected){
   const arrow = document.getElementById('rcpVendorRowArrow');
   if(!val) return;
   const isOnline = rcpMode === 'online';
+  const isMart = rcpMode === 'direct';
+  const selIcon = isMart ? '🛒' : (isOnline ? '🌐' : '🏪');
   if(selected && rcpVendorName){
-    if(icon) icon.textContent = isOnline ? '🌐' : '🏪';
+    if(icon) icon.textContent = selIcon;
     val.textContent = rcpVendorName;
     val.style.color = 'var(--toss-text-1)';
     if(sub){ sub.textContent = 'AI가 품목별 자동 분류'; sub.style.display = 'block'; }
     if(arrow) arrow.textContent = '바꾸기 ›';
   } else {
-    if(icon) icon.textContent = isOnline ? '🌐' : '🏠';
-    val.textContent = isOnline ? '플랫폼을 선택하세요 (쿠팡·네이버 등)' : '거래처를 선택하세요';
+    if(icon) icon.textContent = isMart ? '🛒' : (isOnline ? '🌐' : '🏠');
+    val.textContent = isMart ? '마트를 선택하세요 (농협·탑마트 등)' : (isOnline ? '플랫폼을 선택하세요 (쿠팡·네이버 등)' : '거래처를 선택하세요');
     val.style.color = 'var(--toss-blue)';
     if(sub) sub.style.display = 'none';
     if(arrow) arrow.textContent = '›';
@@ -155,7 +157,9 @@ function renderRcpModeBadge(){
     icon.textContent = '🛒';
     value.textContent = '마트·시장 영수증';
     label.textContent = '마트 · 시장 · 동네가게';
-    if(guide) guide.innerHTML = `🤖 AI가 품목별로 분류해드려요. 한 영수증에 식자재·비품이 섞여도 따로 잡아드려요.`;
+    if(guide) guide.innerHTML = rcpVendorName
+      ? `🤖 AI가 품목별로 분류해드려요. 한 영수증에 식자재·비품이 섞여도 따로 잡아드려요.`
+      : `🛒 어느 마트인지 먼저 골라주세요. (농협·탑마트 등)`;
   } else if(rcpMode === 'manual'){
     icon.textContent = '✏️';
     value.textContent = '수동 입력';
@@ -649,8 +653,9 @@ async function openRcpVendorPicker(){
   openSheet('rcpVendorPickSheet');
   const list = document.getElementById('rcpVendorPickList');
   list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
-  // 온라인 모드면 온라인 플랫폼(kind='online')만, 아니면 거래처(kind='vendor')만
-  const pickKind = rcpMode === 'online' ? 'online' : 'vendor';
+  // 모드별 종류: online=플랫폼 / direct=마트 / 그 외=거래처 (2026-06-12 마트 추가)
+  const pickKind = rcpMode === 'online' ? 'online' : (rcpMode === 'direct' ? 'mart' : 'vendor');
+  const kindLabel = pickKind === 'online' ? '온라인 플랫폼' : (pickKind === 'mart' ? '마트' : '거래처');
   const {data, error} = await sb.from('vendors')
     .select('id,name,category,category_id,kind')
     .eq('store_id', currentStore.id)
@@ -660,23 +665,56 @@ async function openRcpVendorPicker(){
     list.innerHTML = '<div style="text-align:center;padding:24px;color:#EF4444;font-size:13px;">불러오기 실패</div>';
     return;
   }
-  const filtered = (data||[]).filter(v => (v.kind||'vendor') === pickKind);
+  let filtered = (data||[]).filter(v => (v.kind||'vendor') === pickKind);
+  // 마트 = 자주 쓴 순 정렬 (일회성은 아래로 밀려 자연히 사라짐 — 사장님 결정 2026-06-12)
+  if(pickKind === 'mart' && filtered.length){
+    const {data:rc} = await sb.from('receipts').select('vendor_id')
+      .eq('store_id', currentStore.id).not('vendor_id','is',null);
+    const useCnt = {};
+    (rc||[]).forEach(r=>{ useCnt[r.vendor_id]=(useCnt[r.vendor_id]||0)+1; });
+    filtered = [...filtered].sort((a,b)=>(useCnt[b.id]||0)-(useCnt[a.id]||0) || a.name.localeCompare(b.name));
+  }
+  // 즉석 추가 버튼 (마트는 이름만 받는 간편 추가, 거래처·온라인은 정식 시트)
+  const addBtn = pickKind === 'mart'
+    ? `<button type="button" class="btn btn-secondary" style="width:100%;margin-top:8px;color:var(--toss-blue);font-weight:700;" data-action="addMartInline">➕ 새 마트 추가</button>`
+    : `<button type="button" class="btn btn-secondary" style="width:100%;margin-top:8px;color:var(--toss-blue);font-weight:700;" data-action="openAddVendorSheet|${pickKind}">➕ ${kindLabel} 추가</button>`;
   if(!filtered.length){
     const guide = pickKind === 'online'
       ? '등록된 온라인 플랫폼이 없어요.<br>아래 ➕ 버튼으로 쿠팡·네이버 등을 추가해주세요.'
-      : '등록된 거래처가 없어요.<br>사이드 메뉴 → 거래처 관리에서 먼저 등록해주세요.';
-    list.innerHTML = `<div style="text-align:center;padding:24px 16px;color:var(--gray-500);font-size:13px;line-height:1.6;">${guide}</div>
-      <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;" data-action="openAddVendorSheet|${pickKind}">➕ ${pickKind==='online'?'온라인 플랫폼':'거래처'} 추가</button>`;
+      : (pickKind === 'mart'
+        ? '등록된 마트가 없어요.<br>아래 ➕ 버튼으로 농협·탑마트 등을 추가해주세요.'
+        : '등록된 거래처가 없어요.<br>사이드 메뉴 → 거래처 관리에서 먼저 등록해주세요.');
+    list.innerHTML = `<div style="text-align:center;padding:24px 16px;color:var(--gray-500);font-size:13px;line-height:1.6;">${guide}</div>${addBtn}`;
     return;
   }
   const esc = s => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   list.innerHTML = filtered.map(v => `
     <button type="button" class="btn btn-secondary" style="text-align:left;padding:14px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;" data-action="pickRcpVendor|${v.id}">
       <span style="font-size:14px;font-weight:700;">${esc(v.name)}</span>
-      <span style="font-size:11px;color:var(--gray-500);">${pickKind==='online'?'온라인':esc(v.category || '카테고리 미지정')}</span>
+      <span style="font-size:11px;color:var(--gray-500);">${pickKind==='online'?'온라인':(pickKind==='mart'?'마트':esc(v.category || '카테고리 미지정'))}</span>
     </button>
-  `).join('')
-  + `<button type="button" class="btn btn-secondary" style="width:100%;margin-top:8px;color:var(--toss-blue);font-weight:700;" data-action="openAddVendorSheet|${pickKind}">➕ ${pickKind==='online'?'온라인 플랫폼':'거래처'} 추가</button>`;
+  `).join('') + addBtn;
+}
+
+// ─── 새 마트 즉석 추가 (이름만) — 영수증 picker에서 호출 (2026-06-12) ───
+async function addMartInline(){
+  if(!currentStore) return;
+  const name = (prompt('마트 이름을 입력하세요\n(예: 논산농협 하나로마트, 광성탑마트)')||'').trim();
+  if(!name) return;
+  setLoad(true,'마트 추가 중...');
+  // 같은 이름 마트 이미 있으면 그걸 선택 (중복 방지)
+  const {data:exist} = await sb.from('vendors').select('id').eq('store_id',currentStore.id).eq('kind','mart').eq('name',name).maybeSingle();
+  let martId = exist?.id;
+  if(!martId){
+    const {data:ins, error} = await sb.from('vendors')
+      .insert({store_id:currentStore.id, name, kind:'mart', is_active:true})
+      .select('id').single();
+    if(error){ setLoad(false); return toast('마트 추가 실패','error'); }
+    martId = ins.id;
+    if(typeof loadVendors === 'function') await loadVendors(); // 전역 vendors 캐시 갱신
+  }
+  setLoad(false);
+  pickRcpVendor(martId);
 }
 
 async function pickRcpVendor(vendorId){
@@ -686,8 +724,8 @@ async function pickRcpVendor(vendorId){
   rcpVendorId = data.id;
   rcpVendorName = data.name || '';
   rcpVendorKind = data.kind || 'vendor';
-  // 온라인 플랫폼은 취급품목 없이 자율 분류 → 카테고리 고정 안 함
-  if(rcpVendorKind === 'online'){
+  // 온라인·마트는 취급품목 없이 자율 분류 → 카테고리 고정 안 함 (마트 2026-06-12)
+  if(rcpVendorKind === 'online' || rcpVendorKind === 'mart'){
     rcpCatId = null; rcpCatName = '';
   } else {
     rcpCatId = data.category_id || null;
@@ -1751,6 +1789,8 @@ async function saveReceipt(){
   const isVendorMode = rcpMode === 'vendor' && rcpVendorId;
   // 온라인 = 플랫폼(쿠팡 등) vendor_id·이름 고정. 카테고리는 AI 품목별 자율(거래처와 차이)
   const isOnlineMode = rcpMode === 'online' && rcpVendorId;
+  // 마트 = 선택한 마트(농협 등) vendor_id·이름 고정 → OCR 상호 제각각 방지. 카테고리는 AI 자율 (2026-06-12)
+  const isMartMode = rcpMode === 'direct' && rcpVendorId;
   // 영수증 1장 = 그룹 UUID 1개 (2026-05-19 사장님 호소 "각각 산 것처럼 보임" 해결)
   // 모든 행에 동일 group_id 박음 → 기록내역 그룹 묶음 표시 + 그룹 편집·삭제 가능
   const groupId = (typeof crypto!=='undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
@@ -1761,8 +1801,8 @@ async function saveReceipt(){
     const amtRaw=(tr.querySelector('.c-p')?.value||'').replace(/[^0-9-]/g,''); // 마이너스(-) 보존 — 할인 행(-500 등) 음수 유지
     const taxRaw=(tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''); // 행 세액(부가세) — 합계는 세후
     const isFree=(tr.querySelector('.c-f')?.value||'0')==='1'; // 면세 여부
-    // 거래처·온라인 모드면 vendor 텍스트를 선택한 거래처/플랫폼명으로 통일 (AI 추출값 보호)
-    const vendorText = (isVendorMode || isOnlineMode)
+    // 거래처·온라인·마트 모드면 vendor 텍스트를 선택한 이름으로 통일 (AI 추출 상호 제각각 방지)
+    const vendorText = (isVendorMode || isOnlineMode || isMartMode)
       ? (rcpVendorName || tr.querySelector('.c-v').value)
       : (tr.querySelector('.c-v')?.value || '');
     // 단가/수량 추출 (2026-05-19 부활) — 가격 추세 분석 기반
@@ -1780,7 +1820,7 @@ async function saveReceipt(){
       vendor:vendorText,item:itemText,
       seq:idx, // 품목 순서(분석 순서) 고정 — 기록 표시 시 이 번호로 정렬 (2026-06-09)
       spec:specText, origin:originText,
-      vendor_id: (isVendorMode || isOnlineMode) ? rcpVendorId : null,
+      vendor_id: (isVendorMode || isOnlineMode || isMartMode) ? rcpVendorId : null,
       unit_price: unitRaw ? parseInt(unitRaw,10) : null,
       qty: qtyRaw,
       total_price:parseInt(amtRaw,10)||0,
