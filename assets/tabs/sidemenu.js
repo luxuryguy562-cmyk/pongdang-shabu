@@ -5436,8 +5436,8 @@ function applyExpHubCardOrder(){
 }
 function initExpHubSortable(){
   if(!window.Sortable) return;
-  // 3그룹 그리드 각각 독립 Sortable — group을 다르게 줘서 그룹 간 드래그 이동 차단
-  ['expHubGridReceipt','expHubGridAuto','expHubGridManual'].forEach(gid=>{
+  // 2그룹 그리드 각각 독립 Sortable — group을 다르게 줘서 그룹 간 드래그 이동 차단
+  ['expHubGridMine','expHubGridAuto'].forEach(gid=>{
     const grid=document.getElementById(gid);
     if(!grid||grid._sortableInited) return;
     grid._sortableInited=true;
@@ -5521,21 +5521,18 @@ function _expAmtClass(text){
   if(len>=9) return ' amt-l';
   return '';
 }
-// 2026-06-11 목업 ⑦ 적용: 3열 카드(hub-mini) → 세로 리스트 행(exp-cat-row)
-//   아이콘(왼쪽) + 이름 + 금액·이번달(오른쪽) + › . data-card-id/data-amt-cell/data-action 유지 = 정렬·금액갱신·클릭 그대로
+// 2026-06-12 사장님 갈아엎기: 세로 리스트 → 3열 격자 카드 (스크롤 단축 + 카드 맛). 금액 원 단위·검정·13px 고정(만원 단위 X)
+//   아이콘(위) + 이름 + 금액(아래 줄). data-card-id/data-amt-cell/data-action 유지 = 정렬·금액갱신·클릭 그대로
 function _expHubMkCard(cardId, action, iconId, title, amtText, color){
   let iconStyle = '';
   if(color){
     const tint = _hexToRgba(color, 0.18);
     if(tint) iconStyle = `style="background:${tint};color:${color};"`;
   }
-  return `<button type="button" class="exp-cat-row" data-card-id="${cardId}" data-action="${action}">
-    <span class="ecr-icon" ${iconStyle}><svg><use href="#${iconId}"/></svg></span>
-    <span class="ecr-body"><span class="ecr-title">${esc(title)}</span></span>
-    <span class="ecr-amtwrap">
-      <span class="ecr-amt${_expAmtClass(amtText)}" data-amt-cell="${cardId}">${amtText}</span>
-    </span>
-    <span class="ecr-chev">›</span>
+  return `<button type="button" class="exp-grid-card" data-card-id="${cardId}" data-action="${action}">
+    <span class="egc-icon" ${iconStyle}><svg><use href="#${iconId}"/></svg></span>
+    <span class="egc-name">${esc(title)}</span>
+    <span class="egc-amt" data-amt-cell="${cardId}">${amtText}</span>
   </button>`;
 }
 // 거래처별 보기 (별도 화면 expHubVendorCont): vendors + vendor_orders + receipts(vendor_id) 이번달 합계
@@ -5610,18 +5607,19 @@ async function renderExpHubVendorView(){
 //   - auto(🤖 자동으로 잡혀요): attendance·고정비 + 로열티·카드수수료(특수)
 //   - manual(✏️ 직접 입력해요): manual
 function _expHubGroupOf(ds){
-  if(['receipts','composite','vendor_orders'].includes(ds)) return 'receipt';
+  // 2026-06-12 사장님 갈아엎기: 3그룹(영수증/자동/직접) → 2그룹. 분류 방식은 카테고리 속성이 아니라 건별 선택 (기타도 영수증·직접 둘 다)
+  //   · 🤖 자동으로 잡혀요 = 인건비·고정비·공과금 (계산으로 자동)
+  //   · 📝 내가 채워요 = 나머지 전부 (영수증 찍든 금액만 적든)
   if(['attendance','attendance_hourly','attendance_monthly','fixed_costs'].includes(ds)) return 'auto';
-  return 'manual';
+  return 'mine';
 }
 function renderExpHubCatSkeleton(){
-  const gR=document.getElementById('expHubGridReceipt');
+  const gMine=document.getElementById('expHubGridMine');
   const gA=document.getElementById('expHubGridAuto');
-  const gM=document.getElementById('expHubGridManual');
-  if(!gR || !gA || !gM) return;
+  if(!gMine || !gA) return;
   const parents = _expHubCatParents();
   if(!parents.length) return; // 캐시 비면 "불러오는 중..." 유지
-  const buf = {receipt:'', auto:'', manual:''};
+  const buf = {mine:'', auto:''};
   parents.forEach(cat=>{
     const grp = _expHubGroupOf(cat.data_source||'manual');
     buf[grp] += _expHubMkCard(`cat-${cat.id}`, _expCatAction(cat), _expCatIcon(cat.name), cat.name, '-', cat.color);
@@ -5629,12 +5627,11 @@ function renderExpHubCatSkeleton(){
   // 로열티·카드수수료 = 자동(매출 비율로 자동 계산)
   buf.auto += _expHubMkCard('royalty', 'nav|royalty', 'i-coins', '로열티', '-', '#F04452');
   buf.auto += _expHubMkCard('cardfee', 'nav|cardfee', 'i-card', '카드수수료', '-', '#DC2626');
-  gR.innerHTML = buf.receipt;
+  gMine.innerHTML = buf.mine;
   gA.innerHTML = buf.auto;
-  gM.innerHTML = buf.manual;
   const loading=document.getElementById('expHubCatLoading'); if(loading) loading.style.display='none';
   applyExpHubCardOrder();
-  gR._sortableInited=false; gA._sortableInited=false; gM._sortableInited=false;
+  gMine._sortableInited=false; gA._sortableInited=false;
   initExpHubSortable();
 }
 // 금액 셀만 in-place 갱신 (DOM 통째 교체 X = 깜빡임 없음)
@@ -5646,9 +5643,9 @@ function updateExpHubCatAmounts(catSums){
   const setAmt=(cardId, amt)=>{
     const cell=document.querySelector(`#expHubCatView [data-amt-cell="${cardId}"]`);
     if(!cell) return;
-    const t = amt ? fmt(amt) : '0';
-    cell.textContent = t;
-    cell.className = 'ecr-amt' + _expAmtClass(t);
+    // 원 단위 그대로 + 검정 + 13px 고정 (만원 단위 X, 자릿수별 축소 X — 2026-06-12 사장님 지시)
+    cell.textContent = (amt ? fmt(amt) : '0') + '원';
+    cell.className = 'egc-amt';
   };
   _expHubCatParents().forEach(cat=> setAmt(`cat-${cat.id}`, catSums?.[cat.id]?.amount||0));
   setAmt('royalty', (catSums && catSums._royalty) ? catSums._royalty.amount : 0);
