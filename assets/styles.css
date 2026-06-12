@@ -1674,18 +1674,21 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .exp-vendor-link{font-size:12px;font-weight:700;color:var(--toss-blue);cursor:pointer;white-space:nowrap;flex-shrink:0;}
 .exp-vendor-link:active{opacity:.6;}
 
-/* ─── 지출 등록 ③안: 촬영 히어로 + 보조 2버튼 (2026-06-12 사장님 디자이너 ③ 채택) ─── */
-.rcp-hero{width:100%;background:linear-gradient(150deg,#3182F6,#1B64DA);border-radius:20px;padding:28px 20px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(49,130,246,.3);margin-bottom:10px;cursor:pointer;transition:transform .15s;}
-.rcp-hero:active{transform:scale(.985);}
-.rcp-hero .rh-cam{width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:29px;}
-.rcp-hero .rh-t1{font-size:18px;font-weight:900;color:#fff;letter-spacing:-0.4px;}
-.rcp-hero .rh-t2{font-size:12px;color:rgba(255,255,255,.82);font-weight:600;}
-.rcp-subs{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
-.rcp-sub{background:var(--white);border-radius:14px;padding:15px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 1px 3px rgba(20,40,80,.06);cursor:pointer;font-family:inherit;text-align:center;outline:none;border:0;transition:transform .15s;}
-.rcp-sub:active{transform:scale(.97);background:var(--gray-100);}
-.rcp-sub .rs-i{font-size:21px;line-height:1;}
-.rcp-sub .rs-n{font-size:13.5px;font-weight:800;color:var(--text);}
-.rcp-sub .rs-s{font-size:10.5px;color:var(--toss-text-4);font-weight:500;}
+/* ─── 지출 등록: 사진 / 직접 입력 이원화 (2026-06-12 사장님 — 촬영/업로드/직접 3개→2개) ─── */
+.rcp-duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.rcp-big{border:0;border-radius:18px;padding:26px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;font-family:inherit;outline:none;transition:transform .15s;}
+.rcp-big:active{transform:scale(.97);}
+.rcp-big .bi{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:27px;}
+.rcp-big .bn{font-size:16.5px;font-weight:900;letter-spacing:-0.3px;}
+.rcp-big .bs{font-size:11.5px;font-weight:600;}
+.rcp-big.photo{background:linear-gradient(150deg,#3182F6,#1B64DA);box-shadow:0 6px 18px rgba(49,130,246,.3);}
+.rcp-big.photo .bi{background:rgba(255,255,255,.2);}
+.rcp-big.photo .bn{color:#fff;}
+.rcp-big.photo .bs{color:rgba(255,255,255,.82);}
+.rcp-big.manual{background:var(--white);box-shadow:0 1px 3px rgba(20,40,80,.08);border:1.5px solid var(--gray-200);}
+.rcp-big.manual .bi{background:#FFF4E5;}
+.rcp-big.manual .bn{color:var(--text);}
+.rcp-big.manual .bs{color:var(--toss-text-4);}
 .rcp-note{font-size:11.5px;color:var(--toss-text-4);margin:12px 4px 0;line-height:1.6;text-align:center;}
 
 /* ─── 지출 허브 카테고리 3열 격자 카드 (2026-06-12 사장님 갈아엎기 — 2그룹 + 격자 복귀) ───
