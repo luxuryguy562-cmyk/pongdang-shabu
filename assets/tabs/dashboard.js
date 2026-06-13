@@ -557,11 +557,11 @@ async function loadDashboard(force){
         // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
         sb.from('vendor_orders').select('id,order_group_id,amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
         sb.from('receipts').select('id,receipt_group_id,total_price,category_id,receipt_date,vendor_id,vendor,vendors(name)').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
-        sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+        sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
         // ── 전월 일별 식자재/영수증/인건비 ──
         sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
         sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',pStart).lte('receipt_date',pEnd),
-        sb.from('attendance_logs').select('work_date,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
+        sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
         sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end)
       ]);
       // ── 자동 재시도 (2026-06-12 사장님 호소: 일시 500/제한시간 초과) ──
@@ -719,6 +719,27 @@ async function loadDashboard(force){
     });
     if(royalty>0) expByGroup['로열티']=(expByGroup['로열티']||0)+royalty;
     if(cardFee>0) expByGroup['카드수수료']=(expByGroup['카드수수료']||0)+cardFee;
+    // 주휴수당 월 집계 → expByGroup 인건비 항목에 합산 (summHtml 빌드 전이라 표에 반영됨)
+    if(settings.weekly_holiday_pay_enabled){
+      const _hpLaborKey=(expCategories||[]).find(c=>!c.parent_id&&c.data_source==='attendance')?.name||'인건비';
+      const _hpMEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+      const _hpWkMap={};
+      (attRes2.data||[]).forEach(a=>{
+        if(_hpMEmpIds.has(a.employee_id)||!(a.total_work_min>0)) return;
+        const dt=new Date(a.work_date+'T00:00:00');
+        const wsKey=ymdLocal(new Date(dt.getTime()-((dt.getDay()+6)%7)*86400000));
+        const k=a.employee_id+'_'+wsKey;
+        if(!_hpWkMap[k]) _hpWkMap[k]={empId:a.employee_id,min:0};
+        _hpWkMap[k].min+=a.total_work_min;
+      });
+      let _dashHp=0;
+      Object.values(_hpWkMap).forEach(({empId,min})=>{
+        if(min<15*60) return;
+        const emp=(employees||[]).find(e=>e.id===empId);
+        if(emp) _dashHp+=Math.round(Math.min(min/60/5,8)*(emp.base_wage||10030));
+      });
+      if(_dashHp>0) expByGroup[_hpLaborKey]=(expByGroup[_hpLaborKey]||0)+_dashHp;
+    }
 
     const groupMeta={};
     (expCategories||[]).forEach(c=>{
@@ -1027,6 +1048,32 @@ async function loadDashboard(force){
           // 월급제 → 인건비 하위 '월급' (DB 자식 분류명 통일, 월 집계 + 일별 둘 다 — 2026-06-11)
           _addLaborChild(d, '월급', dailyWage, '#3B82F6');
         });
+      });
+    }
+    // 주휴수당 일별 배분 — 해당 주 마지막 근무일에 집중 (시급제만)
+    if(settings.weekly_holiday_pay_enabled){
+      const _hpMEmpIds2=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+      const _hp2Map={};
+      (attDaily||[]).forEach(a=>{
+        if(_hpMEmpIds2.has(a.employee_id)||!(a.total_work_min>0)) return;
+        const dt=new Date(a.work_date+'T00:00:00');
+        const wsKey=ymdLocal(new Date(dt.getTime()-((dt.getDay()+6)%7)*86400000));
+        const k=a.employee_id+'_'+wsKey;
+        if(!_hp2Map[k]) _hp2Map[k]={empId:a.employee_id,min:0,lastDay:null};
+        _hp2Map[k].min+=a.total_work_min;
+        if(!_hp2Map[k].lastDay||a.work_date>_hp2Map[k].lastDay) _hp2Map[k].lastDay=a.work_date;
+      });
+      Object.values(_hp2Map).forEach(({empId,min,lastDay})=>{
+        if(min<15*60||!lastDay||!lastDay.startsWith(ym)) return;
+        const emp=(employees||[]).find(e=>e.id===empId);
+        if(!emp) return;
+        const hp=Math.round(Math.min(min/60/5,8)*(emp.base_wage||10030));
+        const d=lastDay.slice(8);
+        if(!dailyCatMap[d]) dailyCatMap[d]={};
+        const k=srcToCat['attendance']||'인건비';
+        dailyCatMap[d][k]=(dailyCatMap[d][k]||0)+hp;
+        _addVE(d,'주휴수당',hp,'인건비');
+        _addLaborChild(d,'주휴수당',hp,'#34D399');
       });
     }
     // 고정비 카테고리별 일할 (고정비/공과금 분리)
