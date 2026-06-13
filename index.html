@@ -2703,6 +2703,15 @@
     <div class="card-sub-title">특별 수당 <span style="font-weight:400;font-size:11px;">(설날·추석 등 일별)</span></div>
     <div id="specialWageList"></div>
     <div class="add-item-btn" data-action="addSpecialWageRow">＋ 특별 수당 날짜 추가</div>
+    <div class="card-sub-title">주휴수당 <span style="font-weight:400;font-size:11px;">(근로기준법 제55조)</span></div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">주휴수당 자동 계산</div><div class="setting-sub">주 15시간 이상 시 자동 포함</div></div>
+      <label class="toggle-switch"><input type="checkbox" id="si-holiday-pay-enabled" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">결근 시 주휴수당 차감</div><div class="setting-sub">소정근로일 미출근 시 해당 주 미지급</div></div>
+      <label class="toggle-switch"><input type="checkbox" id="si-holiday-pay-deduct"><span class="toggle-slider"></span></label>
+    </div>
     <button class="btn btn-primary btn-full" data-action="saveWageSettings">수당 & 휴게 저장</button>
   </div>
 
