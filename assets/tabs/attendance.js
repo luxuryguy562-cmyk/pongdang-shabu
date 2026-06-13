@@ -451,6 +451,58 @@ function calcMonthlyProratedWages(ym){
   });
   return result;
 }
+// ─── 새 기능: 주휴수당 월별 집계 (2026-06-13) ───
+// 시급제 직원만 대상. 주 15시간 이상 + (결근 차감 설정 ON이면) 소정근로일 개근 시 지급.
+// attData: attendance_logs 배열, schedData: work_schedules 배열 (이미 로드된 것 재사용)
+function calcMonthlyHolidayPay(monthStr, attData, schedData, empFilter){
+  if(!settings.weekly_holiday_pay_enabled) return {};
+  const result={};
+  const [y,m]=monthStr.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+  // 직원별·날짜별 인덱스
+  const attByEmpDate={};
+  (attData||[]).forEach(r=>{ if(!attByEmpDate[r.employee_id]) attByEmpDate[r.employee_id]={}; attByEmpDate[r.employee_id][r.work_date]=r; });
+  const schedByEmpDate={};
+  (schedData||[]).forEach(s=>{ if(!schedByEmpDate[s.employee_id]) schedByEmpDate[s.employee_id]={}; schedByEmpDate[s.employee_id][s.work_date]=s; });
+  const empIds=empFilter?[empFilter]:[...new Set((attData||[]).map(r=>r.employee_id))];
+  empIds.forEach(empId=>{
+    if(monthlyEmpIds.has(empId)) return; // 월급제 제외
+    const emp=(employees||[]).find(e=>e.id===empId);
+    if(!emp) return;
+    const baseWage=emp.base_wage||10030;
+    const empAtt=attByEmpDate[empId]||{};
+    const empSched=schedByEmpDate[empId]||{};
+    let totalHolidayPay=0;
+    const processedWeeks=new Set();
+    for(let d=1;d<=lastDay;d++){
+      const dateStr=`${monthStr}-${String(d).padStart(2,'0')}`;
+      const date=new Date(dateStr+'T00:00:00');
+      const dow=(date.getDay()+6)%7; // 0=월요일
+      const weekStartDate=new Date(date.getTime()-dow*86400000);
+      const wsKey=ymdLocal(weekStartDate);
+      if(processedWeeks.has(wsKey)) continue;
+      processedWeeks.add(wsKey);
+      // 이 주 7일 날짜 목록
+      const weekDays=[];
+      for(let i=0;i<7;i++) weekDays.push(ymdLocal(new Date(weekStartDate.getTime()+i*86400000)));
+      // 주 근무시간 합산
+      let weekMin=0;
+      weekDays.forEach(wd=>{ if(empAtt[wd]) weekMin+=empAtt[wd].total_work_min||0; });
+      if(weekMin<15*60) continue; // 주 15시간 미만 → 주휴수당 없음
+      // 결근 차감 설정 ON이면 소정근로일 개근 여부 확인
+      if(settings.weekly_holiday_pay_deduct_absent){
+        const schedDays=weekDays.filter(wd=>{ const s=empSched[wd]; return s&&!s.is_off; });
+        if(schedDays.length>0 && schedDays.some(wd=>!empAtt[wd])) continue; // 결근 → 주휴수당 없음
+      }
+      // 주휴수당 = min(주근무h ÷ 5, 8h) × 시급
+      const hours=Math.min(weekMin/60/5,8);
+      totalHolidayPay+=Math.round(hours*baseWage);
+    }
+    if(totalHolidayPay>0) result[empId]=totalHolidayPay;
+  });
+  return result;
+}
 // 인건비 컴팩트 표기: 10만 이상이면 만 단위 반올림 "385만", 미만이면 "9,500원"
 function fmtMan(won){
   if(!won) return '0';
@@ -554,8 +606,15 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
       //  · 보조 칸: 📅 출근일 + ⏱ 근무 두 줄 (세로 가운데 정렬 — CSS justify-content:center)
       //  · 인건비 칸: 좌측 정렬 + 큰 숫자 + 시급·월급 분기
       // 2026-06-02 사장님 호소: 만원 압축 → 원 단위 진짜 숫자 (인건비·시급·월급 통일)
+      // 주휴수당 집계 (시급제만 — calcMonthlyHolidayPay는 월급제 자동 제외)
+      const holidayPayMap=calcMonthlyHolidayPay(monthStr,data,schedData,empF);
+      const totalHolidayPay=Object.values(holidayPayMap).reduce((a,b)=>a+b,0);
+      const grandTotal=totalWage+totalHolidayPay;
       const splitHtml = (monthlyWage>0)
         ? `<div class="att-kpi-split"><span class="h">⏰ 시급 ${hourlyWage.toLocaleString('ko-KR')}원</span><span class="m">💼 월급 ${monthlyWage.toLocaleString('ko-KR')}원</span></div>`
+        : '';
+      const holidayHtml=(totalHolidayPay>0)
+        ? `<div class="att-kpi-split"><span class="h">🎁 주휴수당 +${totalHolidayPay.toLocaleString('ko-KR')}원</span></div>`
         : '';
       kpiEl.innerHTML = `
         <div class="att-kpi-cell aux">
@@ -564,8 +623,9 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
         </div>
         <div class="att-kpi-cell wage">
           <div class="att-kpi-lbl">인건비</div>
-          <div class="att-kpi-val">${totalWage.toLocaleString('ko-KR')}원</div>
+          <div class="att-kpi-val">${grandTotal.toLocaleString('ko-KR')}원</div>
           ${splitHtml}
+          ${holidayHtml}
         </div>`;
     } else {
       kpiEl.style.display='none';
@@ -1109,14 +1169,22 @@ function _empWon(n){ return (Math.round(n||0)).toLocaleString('ko-KR')+'원'; }
 function _empMonthKey(d){ return (d||'').slice(0,7); }
 function _empHm(t){ return t?new Date(t).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):null; }
 
+let _empPayScheds = [];
 async function loadEmpPay(){
   if(!currentStore || !currentEmp) return;
   const yearStart = new Date().getFullYear()+'-01-01';
-  const { data } = await sb.from('attendance_logs')
-    .select('work_date,total_work_min,calculated_wage,app_in,app_out,rest_min')
-    .eq('store_id',currentStore.id).eq('employee_id',currentEmp.id)
-    .gte('work_date', yearStart).order('work_date');
+  const [{ data }, { data: schedData }] = await Promise.all([
+    sb.from('attendance_logs')
+      .select('work_date,total_work_min,calculated_wage,app_in,app_out,rest_min')
+      .eq('store_id',currentStore.id).eq('employee_id',currentEmp.id)
+      .gte('work_date', yearStart).order('work_date'),
+    sb.from('work_schedules')
+      .select('work_date,is_off')
+      .eq('store_id',currentStore.id).eq('employee_id',currentEmp.id)
+      .gte('work_date', yearStart)
+  ]);
   _empPayLogs = data||[];
+  _empPayScheds = schedData||[];
   if(!_empPayCalMonth){ const t=new Date(); _empPayCalMonth=new Date(t.getFullYear(),t.getMonth(),1); }
   _empPaySelDay=null;
   renderEmpPay();
@@ -1128,10 +1196,17 @@ function renderEmpPay(){
   const nowMonth=new Date().toISOString().slice(0,7);
   let total=0, min=0, days=0;
   _empPayLogs.forEach(r=>{ if(_empMonthKey(r.work_date)===mk){ total+=r.calculated_wage||0; min+=r.total_work_min||0; if((r.total_work_min||0)>0||(r.calculated_wage||0)>0) days++; } });
+  // 주휴수당 계산 (해당 월 기록+계획 slice해서 calcMonthlyHolidayPay 재사용)
+  const monthAtt=_empPayLogs.filter(r=>r.work_date&&r.work_date.startsWith(mk)).map(r=>({...r,employee_id:currentEmp.id}));
+  const monthSched=_empPayScheds.filter(s=>s.work_date&&s.work_date.startsWith(mk)).map(s=>({...s,employee_id:currentEmp.id}));
+  const hpMap=calcMonthlyHolidayPay(mk,monthAtt,monthSched,currentEmp.id);
+  const holidayPay=hpMap[currentEmp.id]||0;
+  const grandTotal=total+holidayPay;
   document.getElementById('empPayCalMonth').innerText = `${y}년 ${mo+1}월`;
   document.getElementById('empPayHeroLabel').innerText = (mk===nowMonth)?`${mo+1}월 (지금까지)`:`${mo+1}월`;
-  document.getElementById('empPayHeroAmt').innerText = _empWon(total);
-  document.getElementById('empPayHeroSub').innerText = `${fmtHourDecimal(min)} · ${days}일 근무`;
+  document.getElementById('empPayHeroAmt').innerText = _empWon(grandTotal);
+  document.getElementById('empPayHeroSub').innerText = `${fmtHourDecimal(min)} · ${days}일 근무${holidayPay>0?` · 주휴수당 +${holidayPay.toLocaleString('ko-KR')}원`:''}`;
+
   const dd=document.getElementById('empPayDayDetail'); if(dd) dd.innerHTML='';
   renderEmpPayCalendar();
 }

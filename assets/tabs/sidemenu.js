@@ -2300,6 +2300,9 @@ async function loadAllSettings(){
   const nsEl=document.getElementById('si-night-start');if(nsEl)nsEl.value=settings.night_extra_start||'';
   const neEl=document.getElementById('si-night-end');if(neEl)neEl.value=settings.night_extra_end||'';
   const naEl=document.getElementById('si-night-amount');if(naEl)naEl.value=settings.night_extra_amount?fmt(settings.night_extra_amount):'';
+  // 주휴수당
+  const hpEl=document.getElementById('si-holiday-pay-enabled');if(hpEl)hpEl.checked=settings.weekly_holiday_pay_enabled!==false;
+  const hdEl=document.getElementById('si-holiday-pay-deduct');if(hdEl)hdEl.checked=!!settings.weekly_holiday_pay_deduct_absent;
   // 로열티 & 수수료 & 예비비
   const rrEl=document.getElementById('si-royalty-rate');if(rrEl)rrEl.value=settings.royalty_rate||0;
   const cfEl=document.getElementById('si-card-fee-rate');if(cfEl)cfEl.value=settings.card_fee_rate||0;
@@ -2404,8 +2407,10 @@ async function saveWageSettings(){
   const nightAmt=unFmt(document.getElementById('si-night-amount').value)||0;
   const royaltyRate=parseFloat(document.getElementById('si-royalty-rate').value)||0;
   const cardFeeRate=parseFloat(document.getElementById('si-card-fee-rate').value)||0;
+  const holidayPayEnabled=!!document.getElementById('si-holiday-pay-enabled')?.checked;
+  const holidayPayDeduct=!!document.getElementById('si-holiday-pay-deduct')?.checked;
   // reserve_rate / reserve_fixed 폐기 (2026-05-22) — DB 컬럼은 보존 (기존 값 그대로)
-  const payload={store_id:currentStore.id,auto_rest_min:autoRest,weekend_extra:weekendExtra,night_extra_start:nightStart,night_extra_end:nightEnd,night_extra_amount:nightAmt,royalty_rate:royaltyRate,card_fee_rate:cardFeeRate};
+  const payload={store_id:currentStore.id,auto_rest_min:autoRest,weekend_extra:weekendExtra,night_extra_start:nightStart,night_extra_end:nightEnd,night_extra_amount:nightAmt,royalty_rate:royaltyRate,card_fee_rate:cardFeeRate,weekly_holiday_pay_enabled:holidayPayEnabled,weekly_holiday_pay_deduct_absent:holidayPayDeduct};
   const{error}=await sb.from('store_settings').upsert(payload,{onConflict:'store_id'});
   // 특별수당 저장
   await saveSpecialWages();
