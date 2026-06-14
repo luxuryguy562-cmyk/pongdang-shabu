@@ -5,7 +5,7 @@
 // ─── 새 기능: 영수증 진입 분기 (거래처/직구) ───
 // 거래처 모드: 사용자가 거래처 선택 → vendors.category_id 자동 박힘 → AI는 양식·카테고리 알고 시작 (글자 추출만)
 // 직구 모드: 사용자 분기만, 카테고리는 AI가 품목별 분류 (현재 흐름)
-let rcpMode = '';        // 'vendor' | 'direct' | 'manual' | ''
+let rcpMode = '';        // 'vendor' | 'online' | 'direct' | 'etc' | 'manual' | ''
 let rcpVendorId = null;  // 거래처 모드일 때 vendor id
 let rcpVendorName = '';  // 거래처 표시명
 let rcpVendorKind = '';  // 거래처 종류 'vendor' | 'online' (온라인주문 프롬프트 분기용)
@@ -160,6 +160,11 @@ function renderRcpModeBadge(){
     if(guide) guide.innerHTML = rcpVendorName
       ? `🤖 AI가 품목별로 분류해드려요. 한 영수증에 식자재·비품이 섞여도 따로 잡아드려요.`
       : `🛒 어느 마트인지 먼저 골라주세요. (농협·탑마트 등)`;
+  } else if(rcpMode === 'etc'){
+    icon.textContent = '🧾';
+    value.textContent = '기타 지출';
+    label.textContent = '직원 식대·경조사·일회성';
+    if(guide) guide.innerHTML = `🤖 거래처 없이 바로 기록해요. 직원 식대·경조사 같은 일회성 지출을 사진 찍거나 직접 입력하고 분류만 골라주세요.`;
   } else if(rcpMode === 'manual'){
     icon.textContent = '✏️';
     value.textContent = '수동 입력';
