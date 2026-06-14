@@ -1702,12 +1702,8 @@ function renderAiBrief(a){
       <div class="aib-tx"><div class="aib-title">${it.title}</div><div class="aib-desc">${it.desc}</div></div>
     </div>`).join('');
   const today = new Date();
+  // 단추가 이미 "AI 매니저" 제목 역할 → 펼친 카드는 중복 헤더 제거, 인사말부터 (2026-06-14 사장님 호소)
   el.innerHTML = `
-    <div class="aib-head">
-      <div class="aib-avatar">🤖</div>
-      <div class="aib-who"><div class="aib-name">AI 매니저</div><div class="aib-role">24시간 근무 · 무급</div></div>
-      <div class="aib-live"><span class="aib-dot"></span>실시간</div>
-    </div>
     <div class="aib-greet">사장님, <b>${today.getMonth()+1}월 ${today.getDate()}일</b> 꼭 봐야 할 것이에요 👇</div>
     ${rowsHtml}`;
   el.style.display='none'; // 매 로드 시 접힘(단추만)
