@@ -613,9 +613,19 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
       const splitHtml = (monthlyWage>0)
         ? `<div class="att-kpi-split"><span class="h">⏰ 시급 ${hourlyWage.toLocaleString('ko-KR')}원</span><span class="m">💼 월급 ${monthlyWage.toLocaleString('ko-KR')}원</span></div>`
         : '';
-      const holidayHtml=(totalHolidayPay>0)
-        ? `<div class="att-kpi-split"><span class="h">🎁 주휴수당 +${totalHolidayPay.toLocaleString('ko-KR')}원</span></div>`
-        : '';
+      // 주휴수당 표시:
+      //  · 직원별 보기(시급제) → 0원이어도 항상 항목 표시 (사장님: 0원도 보여야 헷갈림 없음)
+      //  · 직원별 보기(월급제) → 숨김 (주휴수당은 월급에 포함이라 별도 표기 X)
+      //  · 전체 보기 → 합계가 있을 때만 표시
+      let holidayHtml='';
+      if(empF){
+        const selEmp=(employees||[]).find(e=>e.id===empF);
+        if(selEmp && selEmp.wage_type!=='monthly'){
+          holidayHtml=`<div class="att-kpi-split"><span class="h">🎁 주휴수당 ${totalHolidayPay>0?'+':''}${totalHolidayPay.toLocaleString('ko-KR')}원</span></div>`;
+        }
+      } else if(totalHolidayPay>0){
+        holidayHtml=`<div class="att-kpi-split"><span class="h">🎁 주휴수당 +${totalHolidayPay.toLocaleString('ko-KR')}원</span></div>`;
+      }
       kpiEl.innerHTML = `
         <div class="att-kpi-cell aux">
           <div class="item"><span class="l">📅 출근일</span><span class="v">${totalDays}일</span></div>
