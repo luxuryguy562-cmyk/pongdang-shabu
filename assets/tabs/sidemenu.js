@@ -1657,10 +1657,30 @@ async function saveVendorUpload(list, vendorId){
 // ══════════════════════════════════════════
 // 고정비 관리
 // ══════════════════════════════════════════
+// ─── 새 기능: 공과금 실제 납부액 (이번 달) — fixed_cost_amounts 재활용 (2026-06-14) ───
+let fcActualMap = {}; // { fixed_cost_id: 실제납부액 } (이번 달, is_confirmed)
+function fcThisYm(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+// 납부 상태: paid(실제액 입력됨) / late(납기+유예 지남, 미입력) / wait(납기 전·유예 내, 미입력) / none(납기일 미설정)
+function fcPayStatus(fc){
+  const actual = fcActualMap[fc.id];
+  if(actual!=null) return {st:'paid', actual};
+  if(!fc.expected_day) return {st:'none'};
+  const day=new Date().getDate();
+  const tol=(fc.tolerance_days!=null)?fc.tolerance_days:3;
+  if(day > fc.expected_day + tol) return {st:'late'};
+  return {st:'wait'};
+}
 async function loadFixedCosts(){
   if(!currentStore)return;
-  const{data}=await sb.from('fixed_costs').select('*').eq('store_id',currentStore.id).order('sort_order');
-  fixedCosts=data||[];renderFcList();
+  const ym=fcThisYm();
+  const [r1, r2] = await Promise.all([
+    sb.from('fixed_costs').select('*').eq('store_id',currentStore.id).order('sort_order'),
+    sb.from('fixed_cost_amounts').select('fixed_cost_id,amount,is_confirmed').eq('store_id',currentStore.id).eq('year_month',ym),
+  ]);
+  fixedCosts=r1.data||[];
+  fcActualMap={};
+  (r2.data||[]).forEach(a=>{ if(a.is_confirmed && a.amount!=null) fcActualMap[a.fixed_cost_id]=a.amount; });
+  renderFcList();
 }
 // fixed_costs.category → 뱃지 CSS 클래스 매핑
 const FC_BADGE_CLASS={'고정비':'fixed','공과금':'utility','마케팅':'marketing','세금':'tax'};
@@ -1697,20 +1717,30 @@ function renderFcList(){
     const est=fc.estimated_monthly||0;
     const cat=fc.category||'고정비';
     const badgeCls=FC_BADGE_CLASS[cat]||'fixed';
-    // 카테고리별 금액 라벨 분기 — 공과금=변동(예상), 고정비=박힘(고정)
-    const amtLabel = cat==='공과금' ? '예상 월 금액' : (cat==='고정비' ? '월 고정 금액' : '예상 월 금액');
+    const ps=fcPayStatus(fc);
+    // 납부 상태 뱃지 (납기일 설정된 항목만)
+    let stBadge='';
+    if(ps.st==='paid') stBadge='<span class="fc-pay-badge paid">✓ 납부완료</span>';
+    else if(ps.st==='late') stBadge='<span class="fc-pay-badge late">⚠️ 미납</span>';
+    else if(ps.st==='wait') stBadge='<span class="fc-pay-badge wait">납부 전</span>';
+    const dueTxt = fc.expected_day ? `매달 ${fc.expected_day}일 납부` : '납기일 미설정';
+    // 실제 납부액 칸 (탭 → 입력 시트)
+    const actTxt = ps.st==='paid' ? fmt(ps.actual)+'원' : (ps.st==='late' ? '납기 지남 · 입력 ›' : '입력하기 ›');
+    const actCls = ps.st==='paid' ? 'paid' : (ps.st==='late' ? 'late' : 'empty');
     return `
-    <div class="fixedcost-item ${fc.is_active?'':'inactive'}" style="display:flex;align-items:center;gap:8px;padding:14px 12px;border-bottom:1px solid var(--gray-100);">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:14px;font-weight:700;">${fc.name}</div>
-        <div style="margin-top:4px;"><span class="fc-badge fc-badge-${badgeCls}">${cat}</span>${!fc.is_active?'<span class="fc-badge fc-badge-hidden">숨김</span>':''}</div>
+    <div class="fixedcost-item ${fc.is_active?'':'inactive'}" style="display:block;background:#fff;border:1px solid var(--toss-line-2);padding:14px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:700;">${fc.name} ${stBadge}</div>
+          <div style="margin-top:3px;font-size:11px;color:var(--gray-500);"><span class="fc-badge fc-badge-${badgeCls}">${cat}</span> · ${dueTxt}${!fc.is_active?' <span class="fc-badge fc-badge-hidden">숨김</span>':''}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" data-action="openEditFcSheet|${fc.id}">편집</button>
+        ${fc.is_active?`<button class="btn btn-danger btn-sm" data-action="toggleFc|${fc.id}|false">숨김</button>`:`<button class="btn btn-success btn-sm" data-action="toggleFc|${fc.id}|true">복원</button>`}
       </div>
-      <div style="text-align:right;font-variant-numeric:tabular-nums;min-width:100px;">
-        <div style="font-size:14px;font-weight:700;color:${est>0?'var(--gray-900)':'var(--gray-400)'};">${est>0?fmt(est)+'원':'미입력'}</div>
-        <div style="font-size:10px;color:var(--gray-500);margin-top:2px;">${amtLabel}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <div class="fc-cell est"><div class="fc-cell-lbl">예상</div><div class="fc-cell-val">${est>0?fmt(est)+'원':'미입력'}</div></div>
+        <div class="fc-cell act ${actCls}" data-action="openFcActualSheet|${fc.id}"><div class="fc-cell-lbl">이번 달 실제 납부액</div><div class="fc-cell-val">${actTxt}</div></div>
       </div>
-      <button class="btn btn-secondary btn-sm" data-action="openEditFcSheet|${fc.id}">편집</button>
-      ${fc.is_active?`<button class="btn btn-danger btn-sm" data-action="toggleFc|${fc.id}|false">숨김</button>`:`<button class="btn btn-success btn-sm" data-action="toggleFc|${fc.id}|true">복원</button>`}
     </div>`;
   }).join(''):`<div class="empty-state"><div class="empty-icon">📋</div><p>등록된 ${emptyLabel}이(가) 없습니다</p></div>`;
 }
@@ -1795,6 +1825,50 @@ async function saveFc(){
 async function toggleFc(id,active){
   if(!confirm(active?'복원하시겠습니까?':'숨김 처리하시겠습니까?\n(과거 데이터는 유지됩니다)'))return;
   await sb.from('fixed_costs').update({is_active:active}).eq('id',id).eq('store_id',currentStore.id);await loadFixedCosts();
+}
+
+// ─── 새 기능: 이번 달 실제 납부액 입력 (2026-06-14) ───
+function openFcActualSheet(id){
+  const fc=fixedCosts.find(x=>x.id===id);
+  if(!fc)return;
+  document.getElementById('fcActualTitle').innerText=fc.name+' · 이번 달 실제 납부액';
+  document.getElementById('fcActualEst').innerText=fc.estimated_monthly?fmt(fc.estimated_monthly)+'원':'-';
+  const cur=fcActualMap[fc.id];
+  document.getElementById('fcActualInput').value=(cur!=null)?fmt(cur):'';
+  document.getElementById('fcActualFcId').value=fc.id;
+  openSheet('fcActualSheet');
+}
+async function saveFcActual(){
+  if(!guardStore())return;
+  const id=document.getElementById('fcActualFcId').value;
+  if(!id)return;
+  const amt=unFmt(document.getElementById('fcActualInput').value);
+  const ym=fcThisYm();
+  setLoad(true,'저장 중...');
+  // 같은 (매장·항목·월) 행 있으면 update, 없으면 insert (unique 제약 의존 X — 안전)
+  const{data:exArr}=await sb.from('fixed_cost_amounts').select('id')
+    .eq('store_id',currentStore.id).eq('fixed_cost_id',id).eq('year_month',ym).limit(1);
+  const ex=exArr&&exArr[0];
+  let error;
+  if(ex){ ({error}=await sb.from('fixed_cost_amounts').update({amount:amt,is_confirmed:true}).eq('id',ex.id)); }
+  else { ({error}=await sb.from('fixed_cost_amounts').insert({store_id:currentStore.id,fixed_cost_id:id,year_month:ym,amount:amt,is_confirmed:true})); }
+  setLoad(false);
+  if(error)return errToast('저장', error);
+  toast('실제 납부액 저장됐어요','success');
+  closeAllSheets();await loadFixedCosts();
+}
+// 실제 납부액 지우기 (잘못 입력 시 = 다시 '납부 전'으로)
+async function clearFcActual(){
+  if(!guardStore())return;
+  const id=document.getElementById('fcActualFcId').value;
+  if(!id)return;
+  const ym=fcThisYm();
+  setLoad(true,'삭제 중...');
+  const{error}=await sb.from('fixed_cost_amounts').delete()
+    .eq('store_id',currentStore.id).eq('fixed_cost_id',id).eq('year_month',ym);
+  setLoad(false);
+  if(error)return errToast('삭제', error);
+  closeAllSheets();await loadFixedCosts();
 }
 
 // ══════════════════════════════════════════
