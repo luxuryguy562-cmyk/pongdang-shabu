@@ -471,6 +471,24 @@ function _dispatchAction(attr, el){
   else console.error('[dispatch]',attr,'→ unknown action:',fnName);
 }
 
+// ─── 새 기능: 공과금/고정비 해당월 실제 납부액 반영 (2026-06-14, 2단계) ───
+// 실제 납부액(fixed_cost_amounts, is_confirmed)이 있으면 그 금액, 없으면 예상(estimated_monthly).
+// 가마감 집계·대시보드·요약이 모두 이 헬퍼를 써서 화면 간 값이 어긋나지 않게 함.
+async function loadFcActualMap(sid, ym){
+  try{
+    const{data}=await sb.from('fixed_cost_amounts').select('fixed_cost_id,amount,is_confirmed')
+      .eq('store_id',sid).eq('year_month',ym);
+    const map={};
+    (data||[]).forEach(a=>{ if(a.is_confirmed && a.amount!=null) map[a.fixed_cost_id]=a.amount; });
+    return map;
+  }catch(_){ return {}; }
+}
+// fixed_costs 한 행 → 유효 월 금액 (실제 납부액 우선, 없으면 예상)
+function fcEffectiveMonthly(fc, actualMap){
+  const a = actualMap && actualMap[fc.id];
+  return (a!=null) ? a : (fc.estimated_monthly||0);
+}
+
 // ─── 인라인 핸들러 대체용 래퍼 ───
 function navFromSide(tab){ closeSideMenu(); nav(tab); }
 function navHome(){ nav(isManager?'dashboard':'attendance'); }

@@ -545,7 +545,7 @@ async function loadDashboard(force){
           ?sb.from('daily_sales').select('sale_date,total_sales,card_sales,cash_sales').eq('store_id',sid).gte('sale_date',start).lte('sale_date',end).order('sale_date')
           :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
         // 고정비 — 항목별 예상 월 금액 1회 입력 (모든 달 동일 적용)
-        sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
+        sb.from('fixed_costs').select('id,estimated_monthly,is_active,category').eq('store_id',sid),
         // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
         dashMode==='final'
           ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
@@ -636,15 +636,17 @@ async function loadDashboard(force){
     // ══ 2. 지출 집계 ══
     const expData=expResults;
     const fcRows=fcRes.data||[];
+    // 2단계: 이번 달 실제 납부액 반영 — 실제액 입력됐으면 예상 대신 실제 (2026-06-14)
+    const _fcActualMap=await loadFcActualMap(sid, ym);
 
-    // 고정비 일할계산 — 항목별 예상 월 금액 합산 (활성 항목만)
-    const fixedMonthly=fcRows.filter(r=>r.is_active!==false).reduce((a,r)=>a+(r.estimated_monthly||0),0);
+    // 고정비 일할계산 — 항목별 유효 월 금액(실제 납부액 우선) 합산 (활성 항목만)
+    const fixedMonthly=fcRows.filter(r=>r.is_active!==false).reduce((a,r)=>a+fcEffectiveMonthly(r,_fcActualMap),0);
     const fixedProrated=Math.round(fixedMonthly/lastDay*passedDays);
     // 카테고리별 일할 (차트 그룹 분리용: 고정비/공과금/마케팅/세금 등)
     const fcByCatMonthly={};
     fcRows.filter(r=>r.is_active!==false).forEach(r=>{
       const c=r.category||'고정비';
-      fcByCatMonthly[c]=(fcByCatMonthly[c]||0)+(r.estimated_monthly||0);
+      fcByCatMonthly[c]=(fcByCatMonthly[c]||0)+fcEffectiveMonthly(r,_fcActualMap);
     });
     const fixedProratedByCat={};
     Object.keys(fcByCatMonthly).forEach(c=>{

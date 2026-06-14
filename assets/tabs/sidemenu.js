@@ -3392,6 +3392,8 @@ async function calcExpenseByCategories(ym, mode, prefetched){
   const start=ym+'-01',end=ym+'-'+lastDay;
   const sid=currentStore.id;
   const isFinal=(mode==='final');
+  // 2단계: 이번 달(ym) 고정비/공과금 실제 납부액 맵 — 가마감 집계에 실제 우선 반영 (2026-06-14)
+  const _fcActualMap=await loadFcActualMap(sid, ym);
 
   // 진마감: mydata 전체 한 번에 조회 후 JS 필터 (카테고리별 N*2회 → 2회로 최적화)
   // 영수증 참조 건은 제외 (실제 집계는 receipts에서 품목별로 처리)
@@ -3460,7 +3462,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
         ? (pf.receipts||sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end))
         : Promise.resolve({data:[]}),
       needFc
-        ? (pf.fixed_costs||sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid))
+        ? (pf.fixed_costs||sb.from('fixed_costs').select('id,estimated_monthly,is_active,category').eq('store_id',sid))
         : Promise.resolve({data:[]}),
       needEca
         ? sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym).in('category_id',ecaCatIds)
@@ -3572,12 +3574,12 @@ async function calcExpenseByCategories(ym, mode, prefetched){
           });
           laborAutoAmount=amount;
         } else if(cat.data_source==='fixed_costs'){
-          // 카테고리별 분기 (고정비/공과금) — cat.name과 fixed_costs.category 매칭
-          amount=fcRows.filter(r=>(r.category||'고정비')===cat.name).reduce((a,r)=>a+(r.estimated_monthly||0),0);
+          // 카테고리별 분기 (고정비/공과금) — cat.name과 fixed_costs.category 매칭. 실제 납부액 우선 (2026-06-14)
+          amount=fcRows.filter(r=>(r.category||'고정비')===cat.name).reduce((a,r)=>a+fcEffectiveMonthly(r,_fcActualMap),0);
           amount+=sumAllSourcesByCatId(cat.id);
         } else if(cat.data_source==='manual'){
-          // fixed_costs에 같은 이름 카테고리(마케팅/세금)로 등록된 항목 + 모든 소스 + 자식 합
-          const fcMatchSum=fcRows.filter(r=>(r.category||'')===cat.name).reduce((a,r)=>a+(r.estimated_monthly||0),0);
+          // fixed_costs에 같은 이름 카테고리(마케팅/세금)로 등록된 항목 + 모든 소스 + 자식 합. 실제 납부액 우선 (2026-06-14)
+          const fcMatchSum=fcRows.filter(r=>(r.category||'')===cat.name).reduce((a,r)=>a+fcEffectiveMonthly(r,_fcActualMap),0);
           amount=fcMatchSum+sumAllSourcesByCatId(cat.id);
           expCategories.filter(c=>c.parent_id===cat.id&&c.is_active!==false).forEach(child=>{
             amount+=(childAmounts[child.id]?.amount)||0;
@@ -5797,7 +5799,7 @@ async function loadExpHubData(force){
   } else {
     [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes] = await Promise.all([
       sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
-      sb.from('fixed_costs').select('estimated_monthly,is_active,category').eq('store_id',sid),
+      sb.from('fixed_costs').select('id,estimated_monthly,is_active,category').eq('store_id',sid),
       sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
       sb.from('store_settings').select('royalty_rate,card_fee_rate').eq('store_id',sid).maybeSingle(),
       sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym),
@@ -5835,9 +5837,10 @@ async function loadExpHubData(force){
   const vendorCatMap = {};
   (vendors||[]).forEach(v=>{ vendorCatMap[v.id]=v.category_id; });
   const fcByCatText = {};
+  const _fcActualMapEH = await loadFcActualMap(sid, ym);
   (fcRes.data||[]).filter(r=>r.is_active!==false).forEach(r=>{
     const c=r.category||'고정비';
-    fcByCatText[c]=(fcByCatText[c]||0)+(r.estimated_monthly||0);
+    fcByCatText[c]=(fcByCatText[c]||0)+fcEffectiveMonthly(r,_fcActualMapEH);
   });
   const ecaByCat = {};
   (ecaRes.data||[]).forEach(r=>{ ecaByCat[r.category_id]=(ecaByCat[r.category_id]||0)+(r.amount||0); });
@@ -5888,7 +5891,7 @@ async function loadExpHubData(force){
         const c=r.category||'고정비';
         // 공과금/고정비 같이 슬래시 포함 경우도 매칭
         if(c===p.name || (p.name.includes('/') && p.name.split('/').includes(c))){
-          amt += r.estimated_monthly||0;
+          amt += fcEffectiveMonthly(r,_fcActualMapEH);
           cnt++;
         }
       });
@@ -7316,6 +7319,8 @@ async function loadReconciliation(){
       // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
       sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end)
     ]);
+    // 2단계: 정산/검수에서도 고정비 '기록'을 실제 납부액 우선으로 (2026-06-14)
+    const _fcActualMapRecon = await loadFcActualMap(sid, ym);
 
     const allCategories=catRes.data||[];
     const vendorOrders=voRes.data||[];
@@ -7463,7 +7468,7 @@ async function loadReconciliation(){
         fixedCosts.forEach(fc=>{
           const fcid=fc.id;
           const fname=fc.name||'미지정';
-          const amt=fc.estimated_monthly||0;
+          const amt=fcEffectiveMonthly(fc,_fcActualMapRecon);
           const s=saved.find(r=>r.sub_key===fcid);
           entry.details.push({subKey:fcid,label:fname,recorded:amt,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''});
           entry.recorded+=amt;entry.actual+=(s?.actual_total||0);

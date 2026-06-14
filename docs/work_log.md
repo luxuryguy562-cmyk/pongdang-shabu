@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-14] 공과금 미납 알림 — 입력(1단계)+정리+정산반영(2단계) (PR #625·626 + 후속)
+
+**배경**: AI 매니저 "변화감지+이상경보" 중 공과금 미납. 사장님 설계: 엑셀/계좌연동 X(어른 못함), **예상→실제 수동 입력**. 납부 전=예상으로 정산, 납부 후=실제액 입력하면 실제로 정산, 납기일 지나도 실제액 없으면 미납 알림.
+
+**1단계 (PR #625)**: 고정비 목록에 납기일+이번달 실제납부액 칸 + 상태 뱃지(✓납부완료/납부전/⚠️미납). `fcActualSheet` 입력 시트 + `fcPayStatus`. `fixed_cost_amounts` 재활용(DB 변경 0). `fcThisYm`/`loadFixedCosts`에 이번달 실제액 로드.
+
+**정리 (PR #626)**: 라벨 '자동이체 예정일'→'납기일', 유예일(tolerance) 칸 제거(사장님 정책=납기일 지나면 바로 미납), 실제액 입력 시 예상금액 미리채움(고정비는 저장만, 공과금은 숫자만 수정).
+
+**2단계 (정산 반영)**: 공통 헬퍼 `common.js` `loadFcActualMap(sid,ym)`+`fcEffectiveMonthly(fc,map)` 신설(실제액 있으면 실제, 없으면 예상). **모든 고정비 합산 지점 통일** → 화면 간 불일치 차단: ① dashboard.js `loadDashboard`(fixedMonthly·fcByCatMonthly) ② sidemenu `calcExpenseByCategories`(가마감) ③ `loadExpHubData`(지출허브) ④ recon(정산검수). **fixed_costs SELECT 4곳에 `id` 추가**(헬퍼가 fc.id로 실제액 조회 — 빠지면 작동 X). 입력 전엔 effective=estimated라 기존 동작 동일(안전).
+
+**다음 (3단계)**: AI 매니저 미리알림(납기 전날~당일) + 미납경보(납기 지남, 계속).
+
 ## [2026-06-14] AI 인사이트 직원 1단계 — 홈 자동 브리핑 (PR #620, main 머지)
 
 **배경**: 사장님 "AI 기능 더 없나" 검토 요청 → CTO(실리콘밸리 회장 관점) 진단: 현 AI는 전부 OCR(입력 받아적기)뿐, 비전 7-4 "자동 인사이트(AI 직원)"가 미구현 = 가장 큰 차별화 기회. 사장님 목업(insight/flow.png) 보고 "1단계부터" 승인.
