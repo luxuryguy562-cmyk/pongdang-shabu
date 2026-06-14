@@ -1194,20 +1194,8 @@ async function loadDashboard(force){
       }
     }
 
-    // ── 새 기능: AI 인사이트 직원 자동 브리핑 (홈 맨 위, AI 비용 0) ──
-    try {
-      const _briefMomRev = (prevTotalRevenue>0 && totalRevenue>0) ? momTxt(totalRevenue, prevTotalRevenue, true) : null;
-      renderAiBrief({
-        totalRevenue,
-        currAtt:   expByGroup['인건비'] || 0,
-        currVendor:expByGroup['식자재'] || 0,
-        netProfit,        // 지금까지 실제 순익
-        estNetProfit,     // 월말 예상 순익
-        isCurrent,
-        thresholds: settings.expense_thresholds || {},
-        momRev: _briefMomRev,
-      });
-    } catch(e){ console.warn('[aiBrief]', e.message); }
+    // ── AI 인사이트 직원 자동 브리핑은 아래(홈 월요약 계산 후)로 이동 ──
+    //    월요약(_v17MonthStats fcProfit)과 동일 계산으로 통일 위해 setV17Context 이후에 호출
 
     // ── 전월대비 문구 (월 요약) — DOM 삽입 ──
     // 당월 매출 0이면 비교 의미 없음 → 숨김 (사장님 요청 2026-05-06)
@@ -1546,21 +1534,25 @@ async function loadDashboard(force){
             _mMom.style.display='';
           } else { _mMom.style.display='none'; }
         }
-        // ─── 새 기능: 예상마감 (이대로 가면 월말 예상) — 2026-06-02 ───
-        // estRevenue/estNetProfit = loadDashboard 399~406줄 기계산값 (변동비만 일할 추정)
+        // ─── 예상마감 (이대로 가면 월말 예상) — 2026-06-02 / 2026-06-14 월요약과 계산 통일 ───
+        // ⚠️ 옛 estRevenue/estNetProfit(변동비만 일할)은 월요약 fcProfit과 446만 어긋남(사장님 호소).
+        //    이번달 요약과 100% 동일하게 _v17MonthStats(fcSale/fcProfit) 사용.
         const _fcBlock=document.getElementById('dashHomeFcBlock');
         if(_fcBlock){
-          if(isCurMonth && passedDays>0 && passedDays<lastDay){
+          const _ms = _v17Ctx ? _v17MonthStats(_v17Ctx) : null;
+          const _fcSale   = (_ms && _ms.fcSale!=null)   ? _ms.fcSale   : estRevenue;
+          const _fcProfit = (_ms && _ms.fcProfit!=null) ? _ms.fcProfit : estNetProfit;
+          if(isCurMonth && passedDays>0 && passedDays<lastDay && _ms && _ms.fcProfit!=null){
             const _fcSaleEl=document.getElementById('dashHomeFcSale');
             const _fcProfitEl=document.getElementById('dashHomeFcProfit');
             const _fcSaleMom=document.getElementById('dashHomeFcSaleMom');
             const _fcProfitMom=document.getElementById('dashHomeFcProfitMom');
             // 예상 매출
-            if(_fcSaleEl) _fcSaleEl.innerText=fmt(estRevenue)+'원';
+            if(_fcSaleEl) _fcSaleEl.innerText=fmt(_fcSale)+'원';
             // 예상 수익 (라벨 '예상 수익' 고정, 음수는 -, 색상 동적)
-            const _isFcP=estNetProfit>=0;
+            const _isFcP=_fcProfit>=0;
             if(_fcProfitEl){
-              _fcProfitEl.innerText=(_isFcP?'':'-')+fmt(Math.abs(estNetProfit))+'원';
+              _fcProfitEl.innerText=(_isFcP?'':'-')+fmt(Math.abs(_fcProfit))+'원';
               _fcProfitEl.classList.toggle('red',!_isFcP);
               _fcProfitEl.classList.toggle('green',_isFcP);
             }
@@ -1568,7 +1560,7 @@ async function loadDashboard(force){
             const _prevNet=prevTotalRevenue-prevTotalCostFull;
             if(_fcSaleMom){
               if(prevTotalRevenue>0){
-                const _d=Math.round((estRevenue-prevTotalRevenue)/prevTotalRevenue*100);
+                const _d=Math.round((_fcSale-prevTotalRevenue)/prevTotalRevenue*100);
                 _fcSaleMom.innerText=(_d>=0?'▲':'▼')+Math.abs(_d)+'%';
                 _fcSaleMom.classList.remove('red','green');
                 _fcSaleMom.classList.add(_d>=0?'green':'red');
@@ -1578,7 +1570,7 @@ async function loadDashboard(force){
             if(_fcProfitMom){
               // 수익은 늘면 좋음(초록▲) / 줄면 나쁨(빨강▼). 분모는 절대값
               if(prevTotalRevenue>0 && _prevNet!==0){
-                const _d=Math.round((estNetProfit-_prevNet)/Math.abs(_prevNet)*100);
+                const _d=Math.round((_fcProfit-_prevNet)/Math.abs(_prevNet)*100);
                 _fcProfitMom.innerText=(_d>=0?'▲':'▼')+Math.abs(_d)+'%';
                 _fcProfitMom.classList.remove('red','green');
                 _fcProfitMom.classList.add(_d>=0?'green':'red');
@@ -1590,6 +1582,23 @@ async function loadDashboard(force){
         }
       }
     } catch(e){ console.warn('[dashHomeMonth]', e.message); }
+
+    // ── 새 기능: AI 인사이트 자동 브리핑 (월요약과 동일 계산 — fcProfit 통일) ──
+    // 순이익 = 이번달 요약과 똑같은 _v17MonthStats 사용 (옛 estNetProfit 폐기, 2026-06-14 사장님 호소)
+    try {
+      const _aiMs = _v17Ctx ? _v17MonthStats(_v17Ctx) : null;
+      const _briefMomRev = (prevTotalRevenue>0 && totalRevenue>0) ? momTxt(totalRevenue, prevTotalRevenue, true) : null;
+      renderAiBrief({
+        totalRevenue,
+        currAtt:   expByGroup['인건비'] || 0,
+        currVendor:expByGroup['식자재'] || 0,
+        netProfit:    _aiMs ? _aiMs.profit : netProfit,                                  // 지금까지 실제 (월요약 동일)
+        estNetProfit: (_aiMs && _aiMs.fcProfit!=null) ? _aiMs.fcProfit : estNetProfit,    // 월말 예상 (월요약 동일)
+        isCurrent: isCurrent && !!(_aiMs && _aiMs.fcProfit!=null),
+        thresholds: settings.expense_thresholds || {},
+        momRev: _briefMomRev,
+      });
+    } catch(e){ console.warn('[aiBrief]', e.message); }
 
   }catch(e){console.error('대시보드 오류:',e);}finally{if(!force) setLoad(false);}
 }
