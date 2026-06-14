@@ -1590,6 +1590,16 @@ async function loadDashboard(force){
     try {
       const _aiMs = _v17Ctx ? _v17MonthStats(_v17Ctx) : null;
       const _briefMomRev = (prevTotalRevenue>0 && totalRevenue>0) ? momTxt(totalRevenue, prevTotalRevenue, true) : null;
+      // 3단계: 공과금 미납(late)·납기 임박(due) — 이번 달, 실제액 미입력 + 납기일 기준 (2026-06-14)
+      const _fcLate=[], _fcDue=[];
+      if(isCurMonth){
+        const _dToday=new Date().getDate();
+        (fcRows||[]).filter(r=>r.is_active!==false && r.expected_day).forEach(r=>{
+          if(_fcActualMap[r.id]!=null) return;             // 이미 납부(실제액 입력됨)
+          if(_dToday > r.expected_day) _fcLate.push(r.name);          // 납기일 지남 = 미납
+          else if(_dToday >= r.expected_day-1) _fcDue.push(r.name);   // 전날·당일 = 임박
+        });
+      }
       renderAiBrief({
         totalRevenue,
         currAtt:   expByGroup['인건비'] || 0,
@@ -1599,6 +1609,7 @@ async function loadDashboard(force){
         isCurrent: isCurrent && !!(_aiMs && _aiMs.fcProfit!=null),
         thresholds: settings.expense_thresholds || {},
         momRev: _briefMomRev,
+        fcLate: _fcLate, fcDue: _fcDue,
       });
     } catch(e){ console.warn('[aiBrief]', e.message); }
 
@@ -1644,6 +1655,18 @@ function renderAiBrief(a){
   const signMan = n => (n<0?'-':'+')+man(n);                  // 부호 포함
   const th = a.thresholds||{};
   const thOf = name => (th[name]!=null ? th[name] : (V17_DEFAULT_THRESH[name]||0));
+
+  // 🚨 공과금 미납 (최우선) / 📅 납기 임박 (미리알림) — 2026-06-14 3단계
+  if(a.fcLate && a.fcLate.length){
+    const head=a.fcLate[0]+(a.fcLate.length>1?` 외 ${a.fcLate.length-1}건`:'');
+    items.push({ sev:0, ic:'🚨', title:`${head} 낼 날이 지났어요`,
+      desc:'납기일이 지났는데 실제 납부액이 비어 있어요. 냈으면 고정비에서 금액을 적어주세요.' });
+  }
+  if(a.fcDue && a.fcDue.length){
+    const head=a.fcDue[0]+(a.fcDue.length>1?` 외 ${a.fcDue.length-1}건`:'');
+    items.push({ sev:1, ic:'📅', title:`곧 ${head} 내는 날이에요`,
+      desc:'납기일이 가까워요. 납부하면 실제 금액을 적어주세요.' });
+  }
 
   // 매출이 있어야 비율 판단 의미 있음 (지금까지 누적 기준 — 라벨 명시)
   if(rev>0){

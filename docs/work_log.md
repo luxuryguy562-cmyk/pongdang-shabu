@@ -14,7 +14,7 @@
 
 **2단계 (정산 반영)**: 공통 헬퍼 `common.js` `loadFcActualMap(sid,ym)`+`fcEffectiveMonthly(fc,map)` 신설(실제액 있으면 실제, 없으면 예상). **모든 고정비 합산 지점 통일** → 화면 간 불일치 차단: ① dashboard.js `loadDashboard`(fixedMonthly·fcByCatMonthly) ② sidemenu `calcExpenseByCategories`(가마감) ③ `loadExpHubData`(지출허브) ④ recon(정산검수). **fixed_costs SELECT 4곳에 `id` 추가**(헬퍼가 fc.id로 실제액 조회 — 빠지면 작동 X). 입력 전엔 effective=estimated라 기존 동작 동일(안전).
 
-**다음 (3단계)**: AI 매니저 미리알림(납기 전날~당일) + 미납경보(납기 지남, 계속).
+**3단계 (AI 알림 — 완료)**: `renderAiBrief`에 공과금 항목 추가. loadDashboard 호출부에서 이번달 미납(late: 납기일 지남+실제액 없음)·임박(due: 전날~당일) 목록 계산(fcRows+_fcActualMap 재사용) → AI 매니저에 🚨미납(sev0 최우선)·📅임박(sev1). 여러 건이면 "○○ 외 N건". 공과금 미납 알림 기능 완성(입력→정산반영→알림).
 
 ## [2026-06-14] AI 인사이트 직원 1단계 — 홈 자동 브리핑 (PR #620, main 머지)
 
