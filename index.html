@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260612d">
+<link rel="stylesheet" href="assets/styles.css?v=20260614a">
 </head>
 <body>
 
@@ -1412,6 +1412,9 @@
 
     <!-- 할 일 알림 배너 (카드 밖 위) — 마감 안 한 날 있으면 표시, 탭 → 마감정산 -->
     <div id="dashTodoAlert" class="todo-banner" data-action="nav|settle" data-stop="1" style="display:none;"></div>
+
+    <!-- ─── 새 기능: AI 인사이트 직원 (자동 브리핑, AI 비용 0 — 규칙 기반) ─── -->
+    <div id="dashAiBrief" class="ai-brief" style="display:none;"></div>
 
     <!-- 오늘 매출 풀카드 v7 (탭 → today-detail) -->
     <div class="dash-today-v7" id="dashTopSalesCard" style="display:none;">
@@ -3578,7 +3581,7 @@
 <script src="assets/tabs/attendance.js?v=20260614a"></script>
 <script src="assets/tabs/schedule.js?v=20260608"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
-<script src="assets/tabs/dashboard.js?v=20260614"></script>
+<script src="assets/tabs/dashboard.js?v=20260614a"></script>
 <script src="assets/tabs/sidemenu.js?v=20260613"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
