@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260614c">
+<link rel="stylesheet" href="assets/styles.css?v=20260614d">
 </head>
 <body>
 
@@ -3270,6 +3270,21 @@
   </div>
 </div>
 
+<!-- 새 기능: 이번 달 실제 납부액 입력 (공과금 미납 알림용, 2026-06-14) -->
+<div class="sheet" id="fcActualSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="fcActualTitle">실제 납부액</div>
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;">예상 금액: <b id="fcActualEst">-</b> · 실제 낸 금액을 적으면 그 금액으로 정산돼요.</div>
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">이번 달 실제 납부액</div>
+  <input id="fcActualInput" class="input-field" type="text" inputmode="numeric" placeholder="예: 840,000" data-input="formatNumberInput|this">
+  <input type="hidden" id="fcActualFcId">
+  <div class="action-group">
+    <button class="btn btn-danger" style="flex:1;padding:15px;" data-action="clearFcActual">지우기</button>
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveFcActual">저장</button>
+  </div>
+</div>
+
 <!-- 날짜 피커 -->
 <div class="sheet" id="dateSheet">
   <div class="sheet-handle"></div>
@@ -3583,7 +3598,7 @@
 <script src="assets/tabs/schedule.js?v=20260608"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
 <script src="assets/tabs/dashboard.js?v=20260614d"></script>
-<script src="assets/tabs/sidemenu.js?v=20260613"></script>
+<script src="assets/tabs/sidemenu.js?v=20260614a"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
 </html>

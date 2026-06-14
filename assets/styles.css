@@ -1762,3 +1762,18 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .aib-row.green .aib-title{color:#048A52;}
 .aib-desc{font-size:11.5px;font-weight:500;color:var(--toss-text-3);margin-top:4px;line-height:1.5;}
 .aib-desc b{color:var(--toss-text-1);font-weight:800;}
+
+/* ─── 새 기능: 공과금 실제 납부액 (납부 상태 뱃지 + 예상·실제 칸) ─── */
+.fc-pay-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;margin-left:4px;vertical-align:middle;white-space:nowrap;}
+.fc-pay-badge.paid{background:var(--success-light);color:#048A52;}
+.fc-pay-badge.late{background:var(--danger-light);color:#C92A36;}
+.fc-pay-badge.wait{background:var(--toss-line);color:var(--toss-text-3);}
+.fc-cell{flex:1;background:var(--toss-line);border-radius:10px;padding:9px 11px;}
+.fc-cell-lbl{font-size:10px;font-weight:700;color:var(--toss-text-4);}
+.fc-cell-val{font-size:14px;font-weight:800;color:var(--toss-text-1);margin-top:2px;}
+.fc-cell.est .fc-cell-val{color:var(--toss-text-3);}
+.fc-cell.act{background:var(--toss-blue-light);cursor:pointer;}
+.fc-cell.act .fc-cell-val{color:var(--toss-blue-strong);}
+.fc-cell.act.empty .fc-cell-val{color:var(--toss-text-4);font-weight:600;}
+.fc-cell.act.late{background:var(--danger-light);}
+.fc-cell.act.late .fc-cell-val{color:#C92A36;font-weight:600;}
