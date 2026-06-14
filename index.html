@@ -3253,16 +3253,8 @@
   </select>
   <div id="fcAmtLabel" style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">월 고정 금액 (가마감 자동 집계)</div>
   <input id="fcEstimatedMonthly" class="input-field" type="text" inputmode="numeric" placeholder="예: 2,000,000 (월세)" data-input="formatNumberInput|this">
-  <div style="display:flex;gap:8px;align-items:center;">
-    <div style="flex:1;">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">자동이체 예정일</div>
-      <input id="fcExpectedDay" class="input-field" type="number" min="1" max="31" placeholder="예: 25 (매월 25일)" style="margin-bottom:0;">
-    </div>
-    <div style="flex:1;">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">유예일수</div>
-      <input id="fcToleranceDays" class="input-field" type="number" min="0" max="15" placeholder="3" value="3" style="margin-bottom:0;">
-    </div>
-  </div>
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">납기일 (매달 며칠 내는지)</div>
+  <input id="fcExpectedDay" class="input-field" type="number" min="1" max="31" placeholder="예: 25 (매월 25일)" style="margin-bottom:0;">
   <input type="hidden" id="editFcId">
   <div class="action-group">
     <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">취소</button>
@@ -3598,7 +3590,7 @@
 <script src="assets/tabs/schedule.js?v=20260608"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
 <script src="assets/tabs/dashboard.js?v=20260614d"></script>
-<script src="assets/tabs/sidemenu.js?v=20260614a"></script>
+<script src="assets/tabs/sidemenu.js?v=20260614b"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
 </html>
