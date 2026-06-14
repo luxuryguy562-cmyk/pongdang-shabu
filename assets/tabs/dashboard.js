@@ -1201,7 +1201,8 @@ async function loadDashboard(force){
         totalRevenue,
         currAtt:   expByGroup['인건비'] || 0,
         currVendor:expByGroup['식자재'] || 0,
-        estNetProfit,
+        netProfit,        // 지금까지 실제 순익
+        estNetProfit,     // 월말 예상 순익
         isCurrent,
         thresholds: settings.expense_thresholds || {},
         momRev: _briefMomRev,
@@ -1620,44 +1621,44 @@ function v17MapCatKey(srcToCat){
 }
 
 // ─── 새 기능: AI 인사이트 직원 (자동 브리핑) ───
-// 홈이 이미 계산한 숫자(매출·인건비·식자재·예상순익)로 "오늘 볼 것"을 규칙으로 판단.
-// AI 호출 0 = 비용 0. 띄울 게 없으면 카드 숨김(잔소리 방지).
+// 홈이 이미 계산한 숫자(매출·인건비·식자재·순익)로 "오늘 볼 것"을 규칙으로 판단.
+// AI 호출 0 = 비용 0. 홈엔 단추만(매출 정보 안 밀리게), 누르면 펼침. 없으면 단추도 숨김.
 function renderAiBrief(a){
   const el = document.getElementById('dashAiBrief');
-  if(!el) return;
+  const btn = document.getElementById('dashAiBriefBtn');
+  if(!el || !btn) return;
   const rev = a.totalRevenue||0;
   const items = [];
   const man = n => fmt(Math.round(Math.abs(n)/10000))+'만원'; // 만원 단위 압축 표기
+  const signMan = n => (n<0?'-':'+')+man(n);                  // 부호 포함
   const th = a.thresholds||{};
   const thOf = name => (th[name]!=null ? th[name] : (V17_DEFAULT_THRESH[name]||0));
 
-  // 매출이 있어야 비율 판단 의미 있음
+  // 매출이 있어야 비율 판단 의미 있음 (지금까지 누적 기준 — 라벨 명시)
   if(rev>0){
     // 🔴/🟡 인건비 비율
     const attR = Math.round((a.currAtt||0)/rev*100);
     const attTh = thOf('인건비');
     if(attTh>0 && attR > attTh){
       items.push({ sev: attR>=attTh+5?0:1, ic:'🚨', title:'인건비가 기준보다 높아요',
-        desc:`이번 달 인건비가 매출의 <b>${attR}%</b>예요. 기준(${attTh}%)보다 높아요.` });
+        desc:`이번 달 <b>지금까지</b> 인건비가 매출의 <b>${attR}%</b>예요. 기준(${attTh}%)보다 높아요.` });
     }
     // 🔴/🟡 식자재 비율
     const venR = Math.round((a.currVendor||0)/rev*100);
     const venTh = thOf('식자재');
     if(venTh>0 && venR > venTh){
       items.push({ sev: venR>=venTh+5?0:1, ic:'📈', title:'식자재 비중이 높아요',
-        desc:`이번 달 식자재가 매출의 <b>${venR}%</b>예요. 기준(${venTh}%)보다 높아요.` });
+        desc:`이번 달 <b>지금까지</b> 식자재가 매출의 <b>${venR}%</b>예요. 기준(${venTh}%)보다 높아요.` });
     }
   }
 
-  // 🔴/🟢 이번 달 예상 순익 (진행 중인 달에만 — 끝난 달은 예상 의미 없음)
+  // 🔴/🟢 순이익 — 지금까지(실제) + 월말(예상) 둘 다 (사장님 결정 2026-06-14)
   if(a.isCurrent && rev>0){
-    if(a.estNetProfit < 0){
-      items.push({ sev:0, ic:'⚠️', title:'이대로면 이번 달 적자 예상',
-        desc:`지금 흐름으로 월말까지 가면 <b>-${man(a.estNetProfit)}</b> 예상이에요. 지출을 점검해 보세요.` });
-    } else if(a.estNetProfit > 0){
-      items.push({ sev:2, ic:'✅', title:'이대로면 흑자예요',
-        desc:`지금 흐름으로 월말 예상 순이익 <b>+${man(a.estNetProfit)}</b>. 잘하고 계세요 👏` });
-    }
+    const now = a.netProfit||0, est = a.estNetProfit||0;
+    const bad = est < 0;
+    items.push({ sev: bad?0:2, ic: bad?'⚠️':'✅',
+      title: bad?'이대로면 이번 달 적자 예상':'이대로면 흑자예요',
+      desc:`지금까지 <b>${signMan(now)}</b> · 이대로면 월말 <b>${signMan(est)}</b> 예상이에요.` });
   }
 
   // 🟢 매출이 전월보다 뚜렷이 늘었을 때 (칭찬)
@@ -1670,15 +1671,27 @@ function renderAiBrief(a){
   items.sort((x,y)=>x.sev-y.sev);
   const top = items.slice(0,3);
 
-  if(top.length===0){ el.style.display='none'; el.innerHTML=''; return; }
+  // 띄울 게 없으면 단추·카드 모두 숨김
+  if(top.length===0){ el.style.display='none'; el.innerHTML=''; btn.style.display='none'; return; }
 
+  // ── 홈 단추 (접힌 상태로 항상 노출, 누르면 펼침) ──
   const sevCls = s => s===0?'red':(s===1?'warn':'green');
+  const worst = sevCls(top[0].sev);
+  const isOpen = el.style.display==='block';
+  btn.className = 'aib-btn '+worst;
+  btn.innerHTML = `
+    <span class="aib-btn-ic">🤖</span>
+    <span class="aib-btn-tx"><b>AI 매니저</b><span class="aib-btn-sub">오늘 볼 것 ${top.length}건</span></span>
+    <span class="aib-btn-dot ${worst}"></span>
+    <span class="aib-btn-arr">${isOpen?'⌄':'›'}</span>`;
+  btn.style.display='flex';
+
+  // ── 펼침 카드 내용 (표시 여부는 toggleAiBrief가 제어) ──
   const rowsHtml = top.map(it=>`
     <div class="aib-row ${sevCls(it.sev)}">
       <div class="aib-ic">${it.ic}</div>
       <div class="aib-tx"><div class="aib-title">${it.title}</div><div class="aib-desc">${it.desc}</div></div>
     </div>`).join('');
-
   const today = new Date();
   el.innerHTML = `
     <div class="aib-head">
@@ -1688,7 +1701,18 @@ function renderAiBrief(a){
     </div>
     <div class="aib-greet">사장님, <b>${today.getMonth()+1}월 ${today.getDate()}일</b> 꼭 봐야 할 것이에요 👇</div>
     ${rowsHtml}`;
-  el.style.display='block';
+  el.style.display='none'; // 매 로드 시 접힘(단추만)
+}
+
+// AI 매니저 단추 ↔ 카드 펼침/접힘
+function toggleAiBrief(){
+  const el=document.getElementById('dashAiBrief');
+  const btn=document.getElementById('dashAiBriefBtn');
+  if(!el) return;
+  const willOpen = el.style.display!=='block';
+  el.style.display = willOpen?'block':'none';
+  const arr = btn && btn.querySelector('.aib-btn-arr');
+  if(arr) arr.textContent = willOpen?'⌄':'›';
 }
 
 // v17 데이터 컨텍스트 (loadDashboard에서 setV17Context로 채움)
