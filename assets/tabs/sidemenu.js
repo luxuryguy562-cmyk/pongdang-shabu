@@ -1660,14 +1660,14 @@ async function saveVendorUpload(list, vendorId){
 // ─── 새 기능: 공과금 실제 납부액 (이번 달) — fixed_cost_amounts 재활용 (2026-06-14) ───
 let fcActualMap = {}; // { fixed_cost_id: 실제납부액 } (이번 달, is_confirmed)
 function fcThisYm(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-// 납부 상태: paid(실제액 입력됨) / late(납기+유예 지남, 미입력) / wait(납기 전·유예 내, 미입력) / none(납기일 미설정)
+// 납부 상태: paid(실제액 입력됨) / late(납기일 지남, 미입력) / wait(납기일 전·당일, 미입력) / none(납기일 미설정)
+// 사장님 정책(2026-06-14): 유예 없음 — 납기일 지나면 바로 미납
 function fcPayStatus(fc){
   const actual = fcActualMap[fc.id];
   if(actual!=null) return {st:'paid', actual};
   if(!fc.expected_day) return {st:'none'};
   const day=new Date().getDate();
-  const tol=(fc.tolerance_days!=null)?fc.tolerance_days:3;
-  if(day > fc.expected_day + tol) return {st:'late'};
+  if(day > fc.expected_day) return {st:'late'};
   return {st:'wait'};
 }
 async function loadFixedCosts(){
@@ -1790,7 +1790,6 @@ function openAddFcSheet(){
   document.getElementById('editFcId').value='';
   document.getElementById('fcEstimatedMonthly').value='';
   document.getElementById('fcExpectedDay').value='';
-  document.getElementById('fcToleranceDays').value='3';
   updateFcSheetLabels(catSel.value);
   openSheet('addFcSheet');
 }
@@ -1807,7 +1806,6 @@ function openEditFcSheet(id){
   document.getElementById('editFcId').value=fc.id;
   document.getElementById('fcEstimatedMonthly').value=fc.estimated_monthly?fmt(fc.estimated_monthly):'';
   document.getElementById('fcExpectedDay').value=fc.expected_day||'';
-  document.getElementById('fcToleranceDays').value=fc.tolerance_days||3;
   updateFcSheetLabels(cat);
   openSheet('addFcSheet');
 }
@@ -1816,9 +1814,8 @@ async function saveFc(){
   const cat=document.getElementById('fcCatInput').value;const eid=document.getElementById('editFcId').value;
   const estimatedMonthly=unFmt(document.getElementById('fcEstimatedMonthly').value);
   const expectedDay=parseInt(document.getElementById('fcExpectedDay').value)||null;
-  const toleranceDays=parseInt(document.getElementById('fcToleranceDays').value)||3;
   setLoad(true,'저장 중...');
-  const payload={name,category:cat,estimated_monthly:estimatedMonthly,expected_day:expectedDay,tolerance_days:toleranceDays};
+  const payload={name,category:cat,estimated_monthly:estimatedMonthly,expected_day:expectedDay};
   const{error}=eid?await sb.from('fixed_costs').update(payload).eq('id',eid):await sb.from('fixed_costs').insert({...payload,store_id:currentStore.id,sort_order:fixedCosts.length});
   setLoad(false);if(error)return errToast('저장', error);closeAllSheets();await loadFixedCosts();
 }
@@ -1833,8 +1830,10 @@ function openFcActualSheet(id){
   if(!fc)return;
   document.getElementById('fcActualTitle').innerText=fc.name+' · 이번 달 실제 납부액';
   document.getElementById('fcActualEst').innerText=fc.estimated_monthly?fmt(fc.estimated_monthly)+'원':'-';
+  // 실제액 미입력이면 예상 금액을 미리 채워줌 → 고정비는 '저장'만, 공과금은 숫자만 수정 (2026-06-14)
   const cur=fcActualMap[fc.id];
-  document.getElementById('fcActualInput').value=(cur!=null)?fmt(cur):'';
+  const preset=(cur!=null)?cur:(fc.estimated_monthly||null);
+  document.getElementById('fcActualInput').value=(preset!=null)?fmt(preset):'';
   document.getElementById('fcActualFcId').value=fc.id;
   openSheet('fcActualSheet');
 }
