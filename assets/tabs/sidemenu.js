@@ -2227,7 +2227,6 @@ async function openAddEmpSheet(){
   onEmpWageTypeChange();
   document.getElementById('empRoleSelect').value='';
   document.getElementById('editEmpId').value='';
-  document.getElementById('empAuthLevel').value='staff';
   document.getElementById('empForeignCheck').checked=false;
   document.getElementById('empIdNumLabel').innerText='주민등록번호';
   document.getElementById('empIdNumInput').placeholder='960315-1234567';
@@ -2267,7 +2266,6 @@ async function openEditEmpSheet(id){
   document.getElementById('empPinInput').value=e.pin||'';
   document.getElementById('empCapsIdInput').value=e.caps_id||'';
   document.getElementById('empHireDateInput').value=e.hire_date||'';
-  document.getElementById('empAuthLevel').value=e.auth_level||'staff';
   // 직급: 4개 옵션 외 값이면 빈값으로 (예: 옛 '시급제' — 마이그레이션에서 '아르바이트'로 통일됨)
   const roleOpts=['점장','팀장','매니저','아르바이트'];
   document.getElementById('empRoleSelect').value=roleOpts.includes(e.role)?e.role:'';
@@ -2327,7 +2325,8 @@ async function saveEmployee(){
     visa_expires_at:isForeign?(document.getElementById('empVisaExpires').value||null):null
   };
   // 권한은 관리자만 변경 가능
-  if(isManager){const selAuth=document.getElementById('empAuthLevel').value||'staff';payload.auth_level=selAuth;payload.is_manager=selAuth!=='staff';}
+  // 권한 = 직급 기반 자동 (점장/팀장/매니저=관리자, 그 외=일반직원). 사장님: 직급=권한 통합 (2026-06-15)
+  if(isManager){const selRole=document.getElementById('empRoleSelect').value||'';const isMgrRole=['점장','팀장','매니저'].includes(selRole);payload.auth_level=isMgrRole?'store_manager':'staff';payload.is_manager=isMgrRole;}
   // 민감 정보 (금고 employee_private — Edge Function 경유, 휴대폰/직원 표에 안 남김)
   const privateData={
     pin:pinVal,

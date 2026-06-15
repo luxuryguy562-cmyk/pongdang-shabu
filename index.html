@@ -2894,13 +2894,7 @@
     <option value="매니저">매니저</option>
     <option value="아르바이트">아르바이트</option>
   </select>
-  <div id="empAuthLevelWrap" class="manager-only">
-    <label class="emp-label">권한</label>
-    <select id="empAuthLevel" class="input-field" style="appearance:auto;">
-      <option value="staff">일반 직원</option>
-      <option value="store_manager">매장 관리자 (점장/팀장)</option>
-    </select>
-  </div>
+  <div class="emp-label" style="font-size:11px;color:var(--gray-600);margin-bottom:9px;">점장·팀장·매니저 = 관리자 권한 / 아르바이트 = 일반 직원 (직급이 곧 권한)</div>
   <label class="emp-label">PIN (4자리) *</label>
   <input id="empPinInput" class="input-field" placeholder="••••" type="password" inputmode="numeric" maxlength="4">
   <label class="emp-label">캡스 사용자ID</label>
@@ -3629,7 +3623,7 @@
 <script src="assets/tabs/schedule.js?v=20260615c"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
 <script src="assets/tabs/dashboard.js?v=20260615d"></script>
-<script src="assets/tabs/sidemenu.js?v=20260615k"></script>
+<script src="assets/tabs/sidemenu.js?v=20260615m"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
 </html>
