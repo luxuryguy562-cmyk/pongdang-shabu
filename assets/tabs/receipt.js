@@ -1617,13 +1617,35 @@ function buildReceiptRow(i={}) {
     : (i._autoFilled
         ? `<span class="rcp-auto-tag">✅ 단가 자동채움</span>`
         : (i._nameCandidates?.length ? `<span class="rcp-guess-tag" data-action="openRcpPastSheet|${idx}">🟡 후보 ${i._nameCandidates.length}개</span>` : ''));
-  // 규격·원산지 칸 (전 채널 통일 — 2026-06-09. 거래처·온라인·직구 모두 표시. 기록편집 화면과 일관)
-  const specRow = `
-    <div class="ric-spec">
-      <span class="ric-spec-lbl">규격</span>
-      <input type="text" class="c-spec" value="${esc(i.spec||'')}" placeholder="규격 없음">
+  // 규격·원산지·단가·수량·부가세 = 세부(접기) 영역. 평소엔 품목·금액·분류만 보임 (2026-06-15 통일·정리)
+  //   AI가 읽은 값(spec·u·q·tax)은 input에 채워두고 접음 → 저장 시 querySelector로 다 읽힘(회귀 없음, display:none이어도 값 보존)
+  //   전 채널(거래처·온라인·마트·기타·직접입력) 동일 카드 구조 — 사장님 "싹 다 통일" (2026-06-15)
+  const _total = parseInt(i.totalPrice)||0;
+  const _supply = _total - _tax;        // 공급가(세전)
+  const _vatOn = _tax>0;                 // AI가 세액 읽었으면 토글 켜진 상태로 시작
+  const vatSplitTxt = _vatOn ? `공급가 ${fmt(_supply)} + 부가세 ${fmt(_tax)} = ${fmt(_total)}` : '';
+  const detailWrap = `
+    <div class="rcp-detail" id="detail-${idx}" style="display:none;">
+      <div class="det-row">
+        <span class="det-lbl">규격</span>
+        <input type="text" class="c-spec det-field txt" value="${esc(i.spec||'')}" placeholder="규격 없음 (예: 500g)">
+      </div>
+      <div class="det-row">
+        <span class="det-lbl">원산지</span>
+        <input type="text" class="c-og det-field txt" value="${esc(i.origin||'')}" placeholder="원산지 없음">
+      </div>
+      <div class="det-row">
+        <div class="det-half">
+          <div class="det-cell"><span>단가</span><input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></div>
+          <div class="det-cell"><span>수량</span><input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></div>
+        </div>
+      </div>
+      <div class="vat-row">
+        <button type="button" class="vat-toggle" data-action="onRcpVatToggle|${idx}"><span class="sw${_vatOn?'':' off'}"></span> 부가세 포함</button>
+        <span class="vat-amt">부가세 <input type="text" class="c-t" inputmode="numeric" value="${_tax||0}" data-input="onRcpVatInput|this|${idx}"></span>
+      </div>
+      <div class="vat-split" id="vatsplit-${idx}">${vatSplitTxt}</div>
     </div>`;
-  const ogChip = `<span class="ric-meta">🌍 <input type="text" class="c-og" value="${esc(i.origin||'')}" placeholder="원산지"></span>`;
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
       ${nameSuspectMark}
@@ -1632,23 +1654,69 @@ function buildReceiptRow(i={}) {
       <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
       ${pastBtn}
       <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
-    </div>${specRow}
+    </div>
     <div class="ric-l2">
       ${suspectMark}
-      <span class="ric-mini">단가 <input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></span>
-      <span class="ric-mini">수량 <input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></span>
-      ${(i._taxFormat && _tax>0) ? `<span class="ric-mini ric-tax">부가세 <b>${fmt(_tax)}</b></span>` : ''}
-      ${ogChip}
+      <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
       ${autoTag}
       ${learnBadge}
-      <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
+      <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▾</button>
     </div>
+    ${detailWrap}
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
     <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
-    <input type="hidden" class="c-t" value="${parseInt(i.taxAmount)||0}">
     <input type="hidden" class="c-f" value="${(i.isTaxFree || (i._taxFormat && (parseInt(i.taxAmount)||0)===0))?'1':'0'}">
     <input type="hidden" class="c-is-deposit" value="0">
   </div>`;
+}
+// ─── 세부 펼침/접힘 토글 (2026-06-15 통일·정리) ───
+function toggleRcpDetail(idx){
+  const d=document.getElementById('detail-'+idx);
+  const btn=document.getElementById('morebtn-'+idx);
+  if(!d) return;
+  const open=d.style.display==='none';
+  d.style.display=open?'block':'none';
+  if(btn) btn.textContent=open?'세부 ▴':'세부 ▾';
+}
+// ─── 부가세 "포함" 토글 — 합계에서 부가세 자동 역산(합계÷11) 또는 0 (2026-06-15) ───
+function onRcpVatToggle(idx){
+  const tr=document.getElementById('row-'+idx); if(!tr) return;
+  const tEl=tr.querySelector('.c-t');
+  const fEl=tr.querySelector('.c-f');
+  const sw=tr.querySelector('.vat-toggle .sw');
+  const total=parseInt(String(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,''),10)||0;
+  const curTax=parseInt(String(tEl?.value||'0').replace(/[^0-9]/g,''),10)||0;
+  if(curTax>0){
+    // 켜져 있던 것 끄기 → 부가세 0
+    if(tEl) tEl.value='0';
+    if(sw) sw.classList.add('off');
+  } else {
+    // 끄여 있던 것 켜기 → 합계에서 부가세 역산 (부가세 = 합계 ÷ 11)
+    const vat=Math.round(total/11);
+    if(tEl) tEl.value=String(vat);
+    if(fEl) fEl.value='0'; // 부가세 있으면 면세 해제
+    if(sw) sw.classList.remove('off');
+  }
+  _rcpUpdateVatSplit(tr, idx);
+}
+// ─── 부가세 직접 입력 (천단위 콤마) + 분리표시 갱신 (2026-06-15) ───
+function onRcpVatInput(el, idx){
+  const digits=String(el.value||'').replace(/[^0-9]/g,'');
+  el.value=digits?fmt(parseInt(digits,10)):'0';
+  const tr=document.getElementById('row-'+idx); if(!tr) return;
+  // 직접 입력으로 부가세 생기면 토글도 켜진 상태로 맞춤
+  const sw=tr.querySelector('.vat-toggle .sw');
+  const tax=parseInt(digits||'0',10)||0;
+  if(sw){ if(tax>0) sw.classList.remove('off'); else sw.classList.add('off'); }
+  _rcpUpdateVatSplit(tr, idx);
+}
+// ─── 공급가/부가세/합계 분리표시 갱신 ───
+function _rcpUpdateVatSplit(tr, idx){
+  const total=parseInt(String(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,''),10)||0;
+  const tax=parseInt(String(tr.querySelector('.c-t')?.value||'0').replace(/[^0-9]/g,''),10)||0;
+  const supply=total-tax;
+  const splitEl=document.getElementById('vatsplit-'+idx);
+  if(splitEl) splitEl.textContent = tax>0 ? `공급가 ${fmt(supply)} + 부가세 ${fmt(tax)} = ${fmt(total)}` : '';
 }
 // 단가/수량 입력 시 자동 금액 계산 (사용자 편의 — 2026-05-19)
 function onRcpUnitPriceInput(el, idx){
