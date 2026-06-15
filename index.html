@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260615h">
+<link rel="stylesheet" href="assets/styles.css?v=20260615i">
 </head>
 <body>
 
@@ -1812,6 +1812,9 @@
     </div>
   </div>
 
+  <!-- 직급별 화면 권한 설정 (사장만, 2026-06-15) -->
+  <button class="btn btn-secondary owner-only" style="width:100%;margin-bottom:14px;padding:13px;font-size:14px;font-weight:700;border-radius:12px;" data-action="openRolePermSheet">🔐 직급별 화면 권한 설정</button>
+
   <input id="empSearchInput" type="text" class="input-field" placeholder="🔍 이름·전화번호로 검색" style="margin-bottom:10px;" data-input="renderEmpList">
   <div style="display:flex;gap:8px;margin-bottom:12px;">
     <select id="empFilterRole" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderEmpList"><option value="">전체 직급</option></select>
@@ -3278,6 +3281,17 @@
   <button class="btn btn-secondary btn-full" style="margin-top:14px;" data-action="closeAllSheets">닫기</button>
 </div>
 
+<!-- 직급별 화면 권한 설정 (사장만, 2026-06-15) -->
+<div class="sheet" id="rolePermSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">🔐 직급별 화면 권한</div>
+  <div class="rp-seg" id="rolePermSeg"></div>
+  <div id="rolePermHint" style="font-size:12px;color:var(--gray-600);margin:12px 0 4px;"></div>
+  <div id="rolePermList"></div>
+  <button class="btn btn-primary btn-full" style="margin-top:16px;padding:14px;" data-action="saveRolePerm">저장</button>
+  <div style="font-size:11px;color:var(--gray-400);text-align:center;margin-top:10px;">👑 사장 = 항상 전체 · 🧑‍🍳 아르바이트 = 본인 근태만</div>
+</div>
+
 <!-- 새 기능: 근무 등록 선택 메뉴 (버튼 정리, 2026-06-15) -->
 <div class="sheet" id="schedAddMenuSheet">
   <div class="sheet-handle"></div>
@@ -3598,7 +3612,7 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260615g"></script>
+<script src="assets/common.js?v=20260615i"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
   <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>
@@ -3610,7 +3624,7 @@
 <script src="assets/tabs/schedule.js?v=20260615c"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
 <script src="assets/tabs/dashboard.js?v=20260615"></script>
-<script src="assets/tabs/sidemenu.js?v=20260615g"></script>
+<script src="assets/tabs/sidemenu.js?v=20260615i"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
 </html>

@@ -2444,6 +2444,8 @@ async function loadAllSettings(){
   if(!currentStore)return;
   const{data}=await sb.from('store_settings').select('*').eq('store_id',currentStore.id).maybeSingle();
   settings=data||{};
+  // 직급별 화면 권한 재적용 (settings 로드 후 — 로그인 직후 settings 비어있던 타이밍 보정, 2026-06-15)
+  if(typeof applyPermissionUI==='function') applyPermissionUI();
   if(data?.settle_items_json)settleItems=data.settle_items_json;
   // 매장 기본정보
   const snEl=document.getElementById('sv-store-name');if(snEl)snEl.innerText=settings.store_name||'미설정';
@@ -6076,6 +6078,64 @@ async function refreshJoinBadge(){
   const total=joinN+schedN+billN;
   if(total>0){ badge.innerText=total>9?'9+':String(total); badge.style.display='block'; }
   else badge.style.display='none';
+}
+// ─── 새 기능: 직급별 화면 권한 설정 (사장만, 2026-06-15) ───
+const ROLE_PERM_TABS=[
+  {key:'dashboard', ic:'🏠', label:'홈'},
+  {key:'attendance', ic:'⏰', label:'근태관리'},
+  {key:'busHub', ic:'🍳', label:'개시·마감'},
+  {key:'expHub', ic:'💳', label:'지출관리'},
+  {key:'more', ic:'⋯', label:'더보기'}
+];
+const ROLE_PERM_ROLES=['점장','팀장','매니저']; // 사장(전체)·아르바이트(본인근태) 제외
+let _rolePermRole='점장';
+let _rolePermSel=[]; // 현재 편집 중인 허용 탭 (임시, 저장 전)
+function openRolePermSheet(){
+  if(!isOwner){ toast('사장님만 설정할 수 있어요.','warn'); return; }
+  if(!guardStore()) return;
+  _rolePermRole=ROLE_PERM_ROLES[0];
+  renderRolePermSeg();
+  loadRolePerm(_rolePermRole);
+  openSheet('rolePermSheet');
+}
+function renderRolePermSeg(){
+  const el=document.getElementById('rolePermSeg'); if(!el) return;
+  el.innerHTML=ROLE_PERM_ROLES.map(r=>`<button class="rp-seg-btn${r===_rolePermRole?' on':''}" data-action="switchRolePerm|${r}">${r}</button>`).join('');
+}
+function switchRolePerm(role){ _rolePermRole=role; renderRolePermSeg(); loadRolePerm(role); }
+// 저장값 → 편집 상태 초기화 (시트 열거나 직급 바꿀 때만). 없으면 기본=전체 허용(기존 동작 유지)
+function loadRolePerm(role){
+  const saved=(settings.role_permissions||{})[role];
+  _rolePermSel = Array.isArray(saved) ? saved.slice() : ROLE_PERM_TABS.map(t=>t.key);
+  drawRolePerm(role);
+}
+// 편집 상태(_rolePermSel) 기반 스위치 그리기 (토글 후엔 이것만)
+function drawRolePerm(role){
+  const hint=document.getElementById('rolePermHint');
+  if(hint) hint.innerHTML=`<b>${role}</b>이(가) 볼 수 있는 화면을 켜고 끄세요`;
+  const el=document.getElementById('rolePermList'); if(!el) return;
+  el.innerHTML=ROLE_PERM_TABS.map(t=>{
+    const on=_rolePermSel.includes(t.key);
+    return `<div class="rp-row"><span class="rp-lb"><span class="rp-ic">${t.ic}</span>${t.label}</span><span class="rp-chk ${on?'on':'off'}" data-action="toggleRolePermTab|${t.key}"></span></div>`;
+  }).join('');
+}
+function toggleRolePermTab(key){
+  const i=_rolePermSel.indexOf(key);
+  if(i>=0) _rolePermSel.splice(i,1); else _rolePermSel.push(key);
+  drawRolePerm(_rolePermRole);
+}
+async function saveRolePerm(){
+  if(!isOwner||!currentStore) return;
+  const rp=Object.assign({}, settings.role_permissions||{});
+  rp[_rolePermRole]=_rolePermSel.slice();
+  setLoad(true,'저장 중...');
+  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id, role_permissions:rp},{onConflict:'store_id'});
+  setLoad(false);
+  if(error) return errToast('저장',error);
+  settings.role_permissions=rp;
+  toast(`${_rolePermRole} 권한 저장됐어요`,'success');
+  if(typeof applyPermissionUI==='function') applyPermissionUI();
+  closeAllSheets();
 }
 // 2026-05-25 신설: 사용자 전환 시 옛 필터·일자·캐시 잔재 일괄 제거
 //  · 사장님 호소: 문보영으로 로그인 후 이송은으로 다시 로그인했더니 직원 필터·KPI가 문보영 그대로

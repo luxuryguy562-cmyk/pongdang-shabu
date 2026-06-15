@@ -520,6 +520,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-cal-dot{width:6px;height:6px;border-radius:50%;}
 .att-cal-more{font-size:8px;color:var(--gray-400);font-weight:700;line-height:6px;margin-left:1px;}
 .att-cal-sum{font-size:9px;color:var(--blue);font-weight:700;margin-top:auto;line-height:1;}
+/* 직급별 화면 권한 설정 (2026-06-15) */
+.rp-seg{display:flex;gap:6px;background:var(--gray-100);padding:4px;border-radius:12px;}
+.rp-seg-btn{flex:1;padding:9px 0;border:none;border-radius:9px;font-size:13px;font-weight:700;background:transparent;color:var(--gray-600);cursor:pointer;}
+.rp-seg-btn.on{background:#fff;color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.rp-row{display:flex;align-items:center;justify-content:space-between;padding:13px 4px;border-bottom:1px solid var(--gray-100);}
+.rp-lb{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;color:var(--text);}
+.rp-ic{font-size:17px;}
+.rp-chk{width:46px;height:26px;border-radius:20px;position:relative;flex-shrink:0;cursor:pointer;transition:.2s;}
+.rp-chk.on{background:#22a06b;}
+.rp-chk.off{background:#d4d8dd;}
+.rp-chk::after{content:'';position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;}
+.rp-chk.on::after{right:3px;}
+.rp-chk.off::after{left:3px;}
 /* 승인 대기(직원 '희망' 신청) 미래 날 — 연핑크 강조 (2026-06-15 사장님: 주의 환기) */
 .att-cal-cell.pend{background:#ffe3ec;}
 .att-cal-cell.pend .att-cal-day{color:#e5397d;font-weight:800;}

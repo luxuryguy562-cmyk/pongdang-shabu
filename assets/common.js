@@ -763,6 +763,31 @@ function applyPermissionUI() {
   const badge=isOwner?'👑 사장':isManager?'🔑 관리자':'';
   const badgeEl=document.getElementById('authBadge');
   if(badgeEl) badgeEl.innerHTML=badge?`<span class="badge badge-warn">${badge}</span>`:'';
+  // 직급별 화면 권한 (2026-06-15): 사장 제외 관리자 직급에 store_settings.role_permissions 적용
+  applyRoleTabLimit();
+}
+// ─── 새 기능: 직급별 화면(하단 탭) 권한 (2026-06-15) ───
+// 사장(owner)=전체 / 직원(staff)=기존 staff-only / 그 외 관리자 직급(점장·팀장 등)=role_permissions 제한
+// role_permissions[직급명] = 허용 탭키 배열. 키: dashboard/attendance/busHub/expHub/more. 설정 없으면 기존대로 전체.
+function applyRoleTabLimit(){
+  if(!isManager || isOwner || !currentEmp) return;
+  const role = currentEmp.role;
+  if(!role) return;
+  const perms = (settings && settings.role_permissions) ? settings.role_permissions[role] : null;
+  if(!Array.isArray(perms)) return; // 설정 없으면 기존 동작(관리자 전체)
+  document.querySelectorAll('.bottom-nav .nav-item.manager-only').forEach(el=>{
+    let key = el.getAttribute('data-tab');
+    if(!key && el.getAttribute('data-action')==='toggleSideMenu') key='more';
+    if(!key) return;
+    el.style.display = perms.includes(key) ? '' : 'none';
+  });
+  // 현재 보고 있는 탭이 숨겨졌으면 허용된 첫 탭으로 이동 (빈 화면 방지)
+  const activeNav = document.querySelector('.bottom-nav .nav-item.active');
+  if(activeNav && activeNav.style.display==='none'){
+    const order=['dashboard','attendance','busHub','expHub'];
+    const first = order.find(t=>perms.includes(t));
+    if(first){ const el=document.querySelector(`.bottom-nav .nav-item[data-tab="${first}"]`); if(el && typeof nav==='function') nav(first, el); }
+  }
 }
 function daysInMonth(ym) { const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
 
