@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>달력 승인대기 — 점 없는 세련된 안</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-100:#f0f1f3; --gray-400:#9aa0a6;
+    --gray-600:#5f6368; --blue:#2563eb; --blue-light:#e8f0fe; --danger:#e5484d;
+    --warn:#f2b705; --amber:#e8970a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:16px;}
+  .wrap{max-width:430px; margin:0 auto;}
+
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:14px; margin-bottom:16px;}
+  .ctitle{font-size:14px; font-weight:800; margin-bottom:2px; display:flex; align-items:center; gap:7px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; background:var(--blue); padding:2px 9px; border-radius:20px;}
+  .cdesc{font-size:12px; color:var(--gray-600); margin-bottom:12px;}
+
+  .att-cal{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
+  .att-cal-head{font-size:10px; font-weight:700; color:var(--gray-600); text-align:center; padding:2px 0;}
+  .att-cal-head.sun{color:var(--danger);} .att-cal-head.sat{color:var(--blue);}
+  .att-cal-cell{position:relative; aspect-ratio:1/1.15; background:var(--gray-100); border-radius:8px; padding:3px 2px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; border:1.5px solid transparent; overflow:hidden;}
+  .att-cal-cell.empty{background:transparent;}
+  .att-cal-cell.today{background:var(--blue-light);}
+  .att-cal-day{font-size:11px; font-weight:700; line-height:1.2; margin-top:1px;}
+  .att-cal-cell.sun .att-cal-day{color:var(--danger);} .att-cal-cell.sat .att-cal-day{color:var(--blue);}
+  .att-cal-dot{width:6px; height:6px; border-radius:50%; margin-top:3px;}
+  .att-cal-sum{font-size:9px; color:var(--blue); font-weight:700; margin-top:auto; line-height:1;}
+
+  /* A안: 은은한 노란 배경 + 날짜만 진하게 (테두리·점 없음) */
+  .A .att-cal-cell.pend{background:#fff4d6;}
+  .A .att-cal-cell.pend .att-cal-day{color:var(--amber); font-weight:800;}
+
+  /* B안: 흰 배경 + 노란 테두리 (선만) */
+  .B .att-cal-cell.pend{background:#fff; border-color:var(--warn);}
+  .B .att-cal-cell.pend .att-cal-day{color:var(--amber); font-weight:800;}
+
+  /* C안: 칸 아래 노란 굵은 밑줄 */
+  .C .att-cal-cell.pend{background:var(--gray-100);}
+  .C .att-cal-cell.pend .att-cal-day{color:var(--amber); font-weight:800;}
+  .C .att-cal-cell.pend::after{content:''; position:absolute; left:20%; right:20%; bottom:4px; height:3px; border-radius:3px; background:var(--warn);}
+
+  .note{font-size:11px; color:var(--gray-400); text-align:center; margin-top:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>승인 대기 날 — 점 빼고 세련되게</h1>
+  <div class="sub">18 · 20 · 22일이 "승인 대기" 날. 셋 중 어느 게 깔끔한가요?</div>
+
+  <!-- A안 -->
+  <div class="card A">
+    <div class="ctitle"><span class="tag">A안</span> 은은한 노란 배경</div>
+    <div class="cdesc">칸을 부드러운 노랑으로 칠하고 날짜를 진하게. 가장 차분.</div>
+    <div class="att-cal" id="calA"></div>
+  </div>
+
+  <!-- B안 -->
+  <div class="card B">
+    <div class="ctitle"><span class="tag" style="background:#7c3aed;">B안</span> 노란 테두리만</div>
+    <div class="cdesc">배경은 흰색, 테두리(선)만 노랑. 깔끔·미니멀.</div>
+    <div class="att-cal" id="calB"></div>
+  </div>
+
+  <!-- C안 -->
+  <div class="card C">
+    <div class="ctitle"><span class="tag" style="background:#0891b2;">C안</span> 노란 밑줄</div>
+    <div class="cdesc">칸 아래 짧은 노란 줄. 담백하고 모던.</div>
+    <div class="att-cal" id="calC"></div>
+  </div>
+
+  <div class="note">A 차분 / B 미니멀 / C 모던 — 한 글자로 골라주세요</div>
+</div>
+
+<script>
+  // 6월 달력 데이터. pend=승인대기(18,20,22), today=15, 실제근무 색점
+  const days = [];
+  // 6/1 = 월요일 → 앞에 일요일 빈칸 1개
+  const blanks = 1;
+  const sat=[6,13,20,27], sun=[7,14,21,28];
+  const pend=[18,20,22], today=15;
+  const actual={4:'#2563eb',5:'#2563eb',8:'#22a06b',10:'#2563eb',12:'#22a06b',15:'#2563eb'};
+  const sums={4:'8.0',5:'7.5',8:'9.0',10:'8.0',12:'6.0',15:'4.0'};
+
+  function build(id){
+    const el=document.getElementById(id);
+    let h='';
+    ['일','월','화','수','목','금','토'].forEach((d,i)=>{
+      h+=`<div class="att-cal-head ${i===0?'sun':i===6?'sat':''}">${d}</div>`;
+    });
+    for(let i=0;i<blanks;i++) h+='<div class="att-cal-cell empty"></div>';
+    for(let d=1; d<=30; d++){
+      const cls=[];
+      if(sun.includes(d)) cls.push('sun');
+      if(sat.includes(d)) cls.push('sat');
+      if(d===today) cls.push('today');
+      if(pend.includes(d)) cls.push('pend');
+      const dot = actual[d] ? `<span class="att-cal-dot" style="background:${actual[d]}"></span>` : '';
+      const sum = sums[d] ? `<div class="att-cal-sum">${sums[d]}</div>` : '';
+      h+=`<div class="att-cal-cell ${cls.join(' ')}"><div class="att-cal-day">${d}</div>${dot}${sum}</div>`;
+    }
+    el.innerHTML=h;
+  }
+  build('calA'); build('calB'); build('calC');
+</script>
+</body>
+</html>

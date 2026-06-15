@@ -38,22 +38,10 @@ function renderSchedApproveBanner(schedData){
   if(!el) return;
   const pend=(schedData||[]).filter(s=>s.status==='희망');
   if(!isManager || pend.length===0){ el.style.display='none'; el.innerHTML=''; return; }
+  // 간트로보기 버튼 폐기 (2026-06-15 사장님: 달력에 분홍 표시된 날 직접 눌러 승인) → 안내 문구만
   el.innerHTML=`<span class="sab-ic">🔔</span>`
-    +`<span class="sab-tx">직원 근무 신청 <b>${pend.length}건</b> 대기 중</span>`
-    +`<button class="sab-btn" data-action="goSchedApprove">간트로 보기</button>`;
+    +`<span class="sab-tx">직원 근무 신청 <b>${pend.length}건</b> 대기 — 달력의 <b>분홍 날짜</b>를 눌러 승인하세요</span>`;
   el.style.display='flex';
-}
-// 배너 → 대기('희망') 있는 첫 날의 일별 간트로 이동 (사장님: 작은 그리드 말고 큰 간트로 승인, 2026-06-15)
-async function goSchedApprove(){
-  if(!isManager||!currentStore) return;
-  setLoad(true,'불러오는 중...');
-  const{data}=await sb.from('work_schedules').select('work_date').eq('store_id',currentStore.id).eq('status','희망').order('work_date').limit(1);
-  setLoad(false);
-  const d=(data&&data[0]&&data[0].work_date)?data[0].work_date:ymdLocal(new Date());
-  attAllMonth=d.slice(0,7);
-  attAllSelectedDate=d;
-  const b=document.querySelector('#attendanceCont .sub-tab[data-sub="all"]'); if(b) attTab('all',b);
-  toast('노란 점선 막대가 신청이에요. 눌러서 승인하세요','info');
 }
 // 이 날 신청('희망') 여러 명 한 번에 승인 (2026-06-15)
 async function approveDaySched(date){
@@ -831,6 +819,11 @@ function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
     if(dow===6) cls.push('sat');
     if(dateStr===todayStr) cls.push('today');
     if(dateStr===selectedDate) cls.push('active');
+    // 승인 대기(직원 '희망' 신청) 있는 오늘 이후 날 = 분홍 강조 (2026-06-15 사장님: 주의 환기)
+    if(isManager){
+      const _pendRows=(window._attSchedDayMap && window._attSchedDayMap[dateStr])||[];
+      if(dateStr>=todayStr && _pendRows.some(s=>s.employee_id && !s.is_off && s.status==='희망')) cls.push('pend');
+    }
     let dotsHtml = '<div class="att-cal-dots"></div>';
     // 1인 모드: 색점 숨기고 시간을 크게 / 다인 모드: 실제 색점 + 계획 점(연한)
     if(isSingleView){

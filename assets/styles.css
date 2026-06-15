@@ -526,6 +526,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-cal-dot{width:6px;height:6px;border-radius:50%;}
 .att-cal-more{font-size:8px;color:var(--gray-400);font-weight:700;line-height:6px;margin-left:1px;}
 .att-cal-sum{font-size:9px;color:var(--blue);font-weight:700;margin-top:auto;line-height:1;}
+/* 승인 대기(직원 '희망' 신청) 미래 날 — 연핑크 강조 (2026-06-15 사장님: 주의 환기) */
+.att-cal-cell.pend{background:#ffe3ec;}
+.att-cal-cell.pend .att-cal-day{color:#e5397d;font-weight:800;}
 .att-day-detail{margin-top:10px;border-top:1px solid var(--gray-200);padding-top:10px;}
 .att-day-empty{text-align:center;color:var(--gray-400);font-size:12px;padding:24px 0;}
 .att-row-label{display:flex;align-items:center;gap:4px;min-width:55px;font-size:10px;font-weight:700;color:var(--text);padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
