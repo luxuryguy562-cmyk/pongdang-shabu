@@ -14,10 +14,11 @@ function openSchedSheet(date, schedId){
   if(schedId){
     // 2026-05-21: schedDayMap 폐기, 통합 화면의 window._attSchedDayMap 사용
     const dayPlans = (window._attSchedDayMap && window._attSchedDayMap[date]) || [];
-    const s = dayPlans.find(x=>String(x.id)===String(schedId));
+    let s = dayPlans.find(x=>String(x.id)===String(schedId));
+    if(!s && window._schedGridRows) s = window._schedGridRows.find(x=>String(x.id)===String(schedId)); // 주간 그리드에서 진입
     if(s){
       document.getElementById('addSchedTitle').innerText='희망근무 편집';
-      document.getElementById('vSchedEmp').innerText=s.employees?.name||'-';
+      document.getElementById('vSchedEmp').innerText=s.employees?.name||((typeof employees!=='undefined'&&employees)?(employees.find(e=>e.id===s.employee_id)?.name||'-'):'-');
       schedEmpId=s.employee_id;
       document.getElementById('vSchedStart').innerText=s.wish_start?s.wish_start.slice(0,5):'-';
       document.getElementById('vSchedEnd').innerText=s.wish_end?s.wish_end.slice(0,5):'-';
