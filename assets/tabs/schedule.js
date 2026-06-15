@@ -24,6 +24,10 @@ function openSchedSheet(date, schedId){
       document.getElementById('vSchedMemo').value=s.memo||'';
     }
     if(delBtn){ delBtn.style.display='block'; delBtn.dataset.schedId=schedId; }
+    // 직원 신청('희망')이면 사장에게 승인/거절 버튼 노출 (2026-06-15)
+    const apvBtns=document.getElementById('schedApproveBtns');
+    if(apvBtns) apvBtns.style.display=(s && s.status==='희망' && isManager)?'block':'none';
+    window._editingSchedId=schedId;
   } else {
     document.getElementById('addSchedTitle').innerText='희망근무 등록';
     if(!isManager && currentEmp){
@@ -37,6 +41,9 @@ function openSchedSheet(date, schedId){
     document.getElementById('vSchedEnd').innerText='-';
     document.getElementById('vSchedMemo').value='';
     if(delBtn){ delBtn.style.display='none'; delBtn.dataset.schedId=''; }
+    const apvBtns2=document.getElementById('schedApproveBtns');
+    if(apvBtns2) apvBtns2.style.display='none';
+    window._editingSchedId=null;
   }
   openSheet('addSchedSheet');
 }

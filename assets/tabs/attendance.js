@@ -62,28 +62,33 @@ async function openSchedApproveSheet(){
     const dow=DOW[new Date(r.work_date+'T00:00:00').getDay()];
     const time=r.is_off?'휴무':`${(r.wish_start||'').slice(0,5)} ~ ${(r.wish_end||'').slice(0,5)}`;
     return `<div class="apv-row"><div class="apv-info"><b>${nm}</b><span>${dt}(${dow}) · ${time}</span></div>`
-      +`<div class="apv-acts"><button class="apv-ok" data-action="approveSched|${r.id}">승인</button>`
-      +`<button class="apv-no" data-action="rejectSched|${r.id}">거절</button></div></div>`;
+      +`<div class="apv-acts"><button class="apv-ok" data-action="approveSched|${r.id}|sheet">승인</button>`
+      +`<button class="apv-no" data-action="rejectSched|${r.id}|sheet">거절</button></div></div>`;
   }).join('');
   openSheet('schedApproveSheet');
 }
-async function approveSched(id){
+async function approveSched(id, ctx){
   if(!isManager) return;
   setLoad(true,'승인 중...');
   const{error}=await sb.from('work_schedules').update({status:'확정'}).eq('id',id).eq('store_id',currentStore.id);
   setLoad(false); if(error) return errToast('승인',error);
   toast('승인했어요','success');
-  await openSchedApproveSheet(); loadAttList();
+  if(ctx==='sheet'){ await openSchedApproveSheet(); } else { closeAllSheets(); }
+  loadAttList();
 }
-async function rejectSched(id){
+async function rejectSched(id, ctx){
   if(!isManager) return;
   if(!confirm('이 신청을 거절(삭제)할까요?')) return;
   setLoad(true,'처리 중...');
   const{error}=await sb.from('work_schedules').delete().eq('id',id).eq('store_id',currentStore.id);
   setLoad(false); if(error) return errToast('거절',error);
   toast('거절했어요','info');
-  await openSchedApproveSheet(); loadAttList();
+  if(ctx==='sheet'){ await openSchedApproveSheet(); } else { closeAllSheets(); }
+  loadAttList();
 }
+// 간트 막대 클릭 → 편집 시트에서 승인/거절 (사장님: 달력·간트 보면서 승인, 2026-06-15)
+function approveSchedFromEdit(){ if(window._editingSchedId) approveSched(window._editingSchedId); }
+function rejectSchedFromEdit(){ if(window._editingSchedId) rejectSched(window._editingSchedId); }
 async function approveAllSched(){
   if(!isManager) return;
   if(!confirm('대기 중인 근무 신청을 모두 승인할까요?')) return;
