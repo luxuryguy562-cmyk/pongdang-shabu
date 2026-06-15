@@ -807,7 +807,8 @@ function renderAttDayDetail(date, logs, isSingleView){
   if((!logs || !logs.length) && !hasPlanOnly){
     // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · "기록 없음" · 선 · [근무계획][실제입력]
     const chipBtns = `
-      <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📅 근무계획</span>
+      <span class="dh-btn plan" data-action="openSchedSheet|${date}">📅 이 날만</span>
+      <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📋 주간</span>
       ${isManager ? `<span class="dh-btn add" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">✏️ 실제입력</span>` : ''}
     `;
     const note = isManager
@@ -827,7 +828,8 @@ function renderAttDayDetail(date, logs, isSingleView){
   const allData = window._attListData || [];
   // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · 시간 · 선 · [근무계획][실제입력] 한 줄
   const chipBtns = `
-    <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📅 근무계획</span>
+    <span class="dh-btn plan" data-action="openSchedSheet|${date}">📅 이 날만</span>
+    <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📋 주간</span>
     ${isManager ? `<span class="dh-btn add" data-action="openAttManualSheet|${date}">✏️ 실제입력</span>` : ''}
   `;
 
