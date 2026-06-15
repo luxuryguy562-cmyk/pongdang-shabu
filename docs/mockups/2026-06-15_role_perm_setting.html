@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>직급별 권한 설정 화면</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; --blue:#2563eb; --ok:#22a06b; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.55;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .phone{background:var(--card); border-radius:18px; box-shadow:0 4px 18px rgba(0,0,0,.08); overflow:hidden; border:1px solid #e6e8eb;}
+  .phead{padding:13px 16px; border-bottom:1px solid #e6e8eb; font-size:14px; font-weight:800;}
+  .pbody{padding:16px;}
+
+  .seg{display:flex; gap:6px; background:#f0f1f3; padding:4px; border-radius:12px; margin-bottom:16px;}
+  .seg button{flex:1; padding:9px 0; border:none; border-radius:9px; font-size:13px; font-weight:700; background:transparent; color:var(--gray-600); cursor:pointer;}
+  .seg button.on{background:#fff; color:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.1);}
+
+  .hint{font-size:12px; color:var(--gray-600); margin-bottom:10px;}
+  .hint b{color:var(--blue);}
+  .row{display:flex; align-items:center; justify-content:space-between; padding:13px 4px; border-bottom:1px solid #eef0f2;}
+  .row .lb{display:flex; align-items:center; gap:9px; font-size:14px; font-weight:700;}
+  .row .lb .ic{font-size:17px;}
+  .chk{width:46px; height:26px; border-radius:20px; position:relative; flex-shrink:0; cursor:pointer; transition:.2s;}
+  .chk.on{background:var(--ok);} .chk.off{background:#d4d8dd;}
+  .chk::after{content:''; position:absolute; top:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:.2s;}
+  .chk.on::after{right:3px;} .chk.off::after{left:3px;}
+
+  .save{width:100%; margin-top:18px; padding:14px; border:none; border-radius:12px; background:var(--blue); color:#fff; font-size:15px; font-weight:800; cursor:pointer;}
+  .note{font-size:11px; color:var(--gray-400); text-align:center; margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>직급별 권한 설정 (방식 1)</h1>
+  <div class="sub">🏪 사이드메뉴 › 직원관리 안에 들어갈 화면</div>
+
+  <div class="phone">
+    <div class="phead">🔐 직급별 화면 권한</div>
+    <div class="pbody">
+      <!-- 직급 선택 -->
+      <div class="seg">
+        <button class="on">점장</button>
+        <button>팀장</button>
+        <button>매니저</button>
+      </div>
+
+      <div class="hint"><b>점장</b>이 볼 수 있는 화면을 켜고 끄세요</div>
+
+      <div class="row"><span class="lb"><span class="ic">🏠</span>홈</span><span class="chk off" onclick="this.classList.toggle('off');this.classList.toggle('on')"></span></div>
+      <div class="row"><span class="lb"><span class="ic">⏰</span>근태관리</span><span class="chk on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></span></div>
+      <div class="row"><span class="lb"><span class="ic">🍳</span>개시·마감</span><span class="chk on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></span></div>
+      <div class="row"><span class="lb"><span class="ic">💳</span>지출관리</span><span class="chk off" onclick="this.classList.toggle('off');this.classList.toggle('on')"></span></div>
+      <div class="row"><span class="lb"><span class="ic">⋯</span>더보기</span><span class="chk off" onclick="this.classList.toggle('off');this.classList.toggle('on')"></span></div>
+
+      <button class="save">저장</button>
+      <div class="note">👑 사장 = 항상 전체 · 🧑‍🍳 아르바이트 = 본인 근태만 (설정 불필요)</div>
+    </div>
+  </div>
+
+  <div class="sub" style="margin-top:18px;">위에서 직급(점장/팀장/매니저) 고르고 → 화면 스위치 켜고 끄고 → 저장.<br>스위치 직접 눌러보세요. 이대로 만들까요?</div>
+</div>
+</body>
+</html>
