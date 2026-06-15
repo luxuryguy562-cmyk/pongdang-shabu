@@ -1958,6 +1958,11 @@ async function openNotifSheet(){
     billN=(r1.data||[]).filter(r=>r.is_active!==false&&r.expected_day&&!paid[r.id]&&day>((r.expected_day>=99||r.expected_day>lastDay)?lastDay:r.expected_day)).length;
   }catch(_){}
   setLoad(false);
+  // 권한 있는 알림만 (2026-06-15 사장님): 근무신청=근태 권한, 가입·공과금=더보기 권한
+  if(typeof hasTabPerm==='function'){
+    if(!hasTabPerm('attendance')) schedN=0;
+    if(!hasTabPerm('more')){ joinN=0; billN=0; }
+  }
   let html='';
   if(joinN) html+=`<div class="notif-item" data-action="goNotif|staff"><span class="ni-ic">👥</span><div class="ni-tx"><b>직원 가입 신청 ${joinN}건</b><span>승인해 주세요</span></div><span class="ni-arr">›</span></div>`;
   if(schedN) html+=`<div class="notif-item" data-action="goNotif|sched"><span class="ni-ic">📅</span><div class="ni-tx"><b>직원 근무 신청 ${schedN}건</b><span>승인 대기 중</span></div><span class="ni-arr">›</span></div>`;
@@ -6075,6 +6080,11 @@ async function refreshJoinBadge(){
     const today=new Date(), day=today.getDate(), lastDay=new Date(today.getFullYear(),today.getMonth()+1,0).getDate();
     billN=(r1.data||[]).filter(r=>r.is_active!==false&&r.expected_day&&!paid[r.id]&&day>((r.expected_day>=99||r.expected_day>lastDay)?lastDay:r.expected_day)).length;
   }catch(_){}
+  // 권한 있는 알림만 (2026-06-15 사장님): 근무신청=근태 권한, 가입·공과금=더보기 권한
+  if(typeof hasTabPerm==='function'){
+    if(!hasTabPerm('attendance')) schedN=0;
+    if(!hasTabPerm('more')){ joinN=0; billN=0; }
+  }
   const total=joinN+schedN+billN;
   if(total>0){ badge.innerText=total>9?'9+':String(total); badge.style.display='block'; }
   else badge.style.display='none';

@@ -789,6 +789,14 @@ function applyRoleTabLimit(){
     if(first){ const el=document.querySelector(`.bottom-nav .nav-item[data-tab="${first}"]`); if(el && typeof nav==='function') nav(first, el); }
   }
 }
+// 현재 직원이 특정 화면(탭) 권한 있는지 (2026-06-15): 사장·설정없음=전체허용, 그 외=role_permissions
+function hasTabPerm(tabKey){
+  if(isOwner) return true;
+  if(!currentEmp || !currentEmp.role) return true;
+  const perms=(settings && settings.role_permissions) ? settings.role_permissions[currentEmp.role] : null;
+  if(!Array.isArray(perms)) return true; // 설정 없으면 기존대로 전체 허용
+  return perms.includes(tabKey);
+}
 function daysInMonth(ym) { const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
 
 // ══════════════════════════════════════════
