@@ -444,7 +444,15 @@ function setMyWorkMode(on){
   _myWorkMode = !!on;
   recalcPermissions();
   applyPermissionUI();
-  if(typeof nav==='function') nav(_myWorkMode ? 'attendance' : (isManager?'dashboard':'attendance'));
+  // 이동 탭: 내 근무=출퇴근 / 관리 복귀=권한 있는 첫 탭 (홈 권한 없으면 홈으로 안 감 — 2026-06-15)
+  let target='attendance';
+  if(!on && isManager){
+    const order=['dashboard','attendance','busHub','expHub'];
+    const perms=(settings && settings.role_permissions) ? settings.role_permissions[(currentEmp&&currentEmp.role)] : null;
+    target = Array.isArray(perms) ? (order.find(t=>perms.includes(t))||'attendance') : 'dashboard';
+  }
+  const el=document.querySelector(`.bottom-nav .nav-item[data-tab="${target}"]`);
+  if(typeof nav==='function') nav(target, el||undefined);
 }
 function enterMyWork(){ setMyWorkMode(true); }   // 내 근무 모드
 function exitMyWork(){ setMyWorkMode(false); }   // 관리 모드 복귀

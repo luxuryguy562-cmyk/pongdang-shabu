@@ -26,7 +26,7 @@ input,select,textarea,button{font-family:inherit;}
 /* ─ 헤더 */
 .header{position:fixed;top:0;width:100%;height:calc(60px + env(safe-area-inset-top,0));padding:env(safe-area-inset-top,0) 16px 0;background:var(--white);border-bottom:1px solid var(--toss-line);display:flex;align-items:center;justify-content:space-between;z-index:100;gap:8px;box-sizing:border-box;}
 .header-title{font-size:18px;font-weight:800;color:var(--toss-blue-strong);flex-shrink:0;letter-spacing:-0.5px;}
-.header-store{font-size:12px;font-weight:700;color:var(--toss-text-2);background:var(--toss-line);padding:7px 13px;border-radius:99px;cursor:pointer;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.2px;}
+.header-store{font-size:12px;font-weight:700;color:var(--toss-text-2);background:var(--toss-line);padding:7px 11px;border-radius:99px;cursor:pointer;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.2px;}
 .header-user{font-size:12px;font-weight:700;color:var(--toss-text-3);cursor:pointer;padding:7px 11px;background:var(--toss-line);border-radius:99px;white-space:nowrap;flex-shrink:0;letter-spacing:-0.2px;}
 
 /* ─ 네비 */
@@ -521,8 +521,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-cal-more{font-size:8px;color:var(--gray-400);font-weight:700;line-height:6px;margin-left:1px;}
 .att-cal-sum{font-size:9px;color:var(--blue);font-weight:700;margin-top:auto;line-height:1;}
 /* 역할 전환 토글 (관리 ↔ 내 근무, 2026-06-15) */
-.role-switch{display:inline-flex;background:#eef0f3;border-radius:16px;padding:2px;flex-shrink:0;}
-.rs-btn{border:none;background:transparent;font-size:11px;font-weight:700;padding:4px 9px;border-radius:14px;color:var(--gray-600);cursor:pointer;white-space:nowrap;}
+.role-switch{display:inline-flex;background:#eef0f3;border-radius:14px;padding:2px;flex-shrink:0;}
+.rs-btn{border:none;background:transparent;font-size:10px;font-weight:700;padding:3px 7px;border-radius:12px;color:var(--gray-600);cursor:pointer;white-space:nowrap;}
 .rs-btn.on{background:#fff;color:var(--blue);box-shadow:0 1px 2px rgba(0,0,0,.12);}
 /* 직급별 화면 권한 설정 (2026-06-15) */
 .rp-seg{display:flex;gap:6px;background:var(--gray-100);padding:4px;border-radius:12px;}
