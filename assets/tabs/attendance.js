@@ -28,7 +28,14 @@ function initAttDate(){
   renderEmpHome();
 }
 
-// ─── 새 기능: 직원 근무표 탭 (2026-06-09) — work_schedules 주간 ───
+// 직원 '내 근무표' → 사장과 같은 📋 기록(월 캘린더+간트) 화면으로 통일 (2026-06-15)
+// 옛 주간 리스트(empSchedCont/renderEmpSched)는 폐기 — 사장 화면과 따로 놀던 것
+function goEmpSched(){
+  nav('attendance');
+  setTimeout(()=>{ const b=document.querySelector('#attendanceCont .sub-tab[data-sub="all"]'); if(b) attTab('all', b); }, 30);
+}
+
+// ─── (구) 직원 근무표 주간 리스트 (2026-06-09) — 2026-06-15 goEmpSched로 대체, 코드 보존만 ───
 let _empSchedWeekStart = null;
 async function loadEmpSched(){
   if(!currentStore || !currentEmp) return;
