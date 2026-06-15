@@ -55,6 +55,19 @@ async function goSchedApprove(){
   const b=document.querySelector('#attendanceCont .sub-tab[data-sub="all"]'); if(b) attTab('all',b);
   toast('노란 점선 막대가 신청이에요. 눌러서 승인하세요','info');
 }
+// 이 날 신청('희망') 여러 명 한 번에 승인 (2026-06-15)
+async function approveDaySched(date){
+  if(!isManager) return;
+  const plans=((window._attSchedDayMap&&window._attSchedDayMap[date])||[]).filter(p=>p.employee_id&&p.status==='희망');
+  if(!plans.length) return;
+  if(!confirm(`${date.slice(5)} 신청 ${plans.length}건을 모두 승인할까요?`)) return;
+  setLoad(true,'승인 중...');
+  const ids=plans.map(p=>p.id);
+  const{error}=await sb.from('work_schedules').update({status:'확정'}).in('id',ids).eq('store_id',currentStore.id);
+  setLoad(false); if(error) return errToast('승인',error);
+  toast(`${ids.length}건 승인 완료!`,'success');
+  loadAttList();
+}
 // 근무 신청 승인 — 주간 현황 그리드 (직원×요일 한눈에, 2026-06-15 재설계)
 let _schedGridWeek=null;
 async function openSchedApproveSheet(){
@@ -892,6 +905,9 @@ function renderAttDayDetail(date, logs, isSingleView){
   // 계획만 있고 실제 없는 경우는 아래 통합 렌더 로직에서 처리하도록 logs 비어도 계획 있으면 계속 진행
   const planRowsCheck = (window._attSchedDayMap && window._attSchedDayMap[date]) || [];
   const hasPlanOnly = !((logs||[]).length) && planRowsCheck.some(p=>p.employee_id && !p.is_off);
+  // 그날 직원 신청('희망') 건수 → 사장에게 '이 날 모두 승인' 버튼 (2026-06-15)
+  const _dayPend = planRowsCheck.filter(p=>p.employee_id && p.status==='희망').length;
+  const dayApproveBtn = (isManager && _dayPend>0) ? `<div class="day-approve-bar" data-action="approveDaySched|${date}">✅ 이 날 신청 ${_dayPend}건 모두 승인</div>` : '';
   if((!logs || !logs.length) && !hasPlanOnly){
     // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · "기록 없음" · 선 · [근무계획][실제입력]
     const chipBtns = `<span class="dh-btn plan" data-action="openSchedAddMenu|${date}">＋ 근무 ${isManager?'등록':'신청'}</span>`;
@@ -913,7 +929,7 @@ function renderAttDayDetail(date, logs, isSingleView){
   // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · 시간 · 선 · [근무계획][실제입력] 한 줄
   const chipBtns = `<span class="dh-btn plan" data-action="openSchedAddMenu|${date}">＋ 근무 ${isManager?'등록':'신청'}</span>`;
 
-  let html = `<div class="att-dayhdr">
+  let html = dayApproveBtn + `<div class="att-dayhdr">
     <span class="dh-date">${date.slice(5)} (${dow})</span>
     <span class="dh-h">${fmtHourDecimal(totalMin)}</span>
     <span class="dh-line"></span>

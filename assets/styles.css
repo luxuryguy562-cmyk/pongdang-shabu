@@ -1833,3 +1833,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .sg-cell.wait{background:var(--warn-light);color:#B26A00;border:1px dashed #E0A040;}
 .sg-cell.ok{background:var(--toss-blue-light);color:var(--toss-blue-strong);}
 .sg-cell.off{background:#FAFAFA;color:var(--toss-text-5);}
+
+/* ─── 새 기능: 일별 간트 '이 날 모두 승인' 바 ─── */
+.day-approve-bar{background:var(--toss-blue);color:#fff;border-radius:12px;padding:13px;text-align:center;font-size:13.5px;font-weight:800;margin-bottom:10px;cursor:pointer;letter-spacing:-0.3px;}
+.day-approve-bar:active{opacity:.85;}
