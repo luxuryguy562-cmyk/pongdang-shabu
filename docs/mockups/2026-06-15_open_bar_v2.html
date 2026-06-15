@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>끝 미정 막대 — 막대답게</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-500:#70757a; --gray-600:#5f6368; --ok:#22a06b; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:16px; margin-bottom:14px;}
+  .ctitle{font-size:14px; font-weight:800; margin-bottom:3px; display:flex; align-items:center; gap:8px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 10px; border-radius:20px;}
+  .cdesc{font-size:12px; color:var(--gray-600); margin-bottom:14px;}
+
+  .axis{display:flex; margin-left:54px; margin-bottom:2px;}
+  .axis span{flex:1; font-size:9px; color:var(--gray-400);}
+  .grow{display:flex; align-items:center; gap:8px;}
+  .rl{width:46px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;}
+  .rl .dot{width:8px; height:8px; border-radius:50%; background:#a855f7;}
+  .track{flex:1; height:24px; background:#f4f5f7; border-radius:6px; position:relative; overflow:hidden;}
+  .meta{font-size:11px; color:var(--gray-600); margin:4px 0 0 54px;}
+
+  /* 공통 막대 베이스 */
+  .bar{position:absolute; top:2px; height:20px;}
+
+  /* 지금(문제) — 좁고 둥글어 동그라미 */
+  .now{left:50%; width:7%; border:1.5px dashed rgba(100,116,139,.7); border-right:none; border-radius:8px; background:linear-gradient(90deg,rgba(148,163,184,.22),rgba(148,163,184,0));}
+
+  /* A: 시작 블록 + 화살표(계속됨) */
+  .A-block{left:50%; width:12%; background:rgba(100,116,139,.85); border-radius:5px 0 0 5px;}
+  .A-tail{left:62%; width:18%; background:linear-gradient(90deg,rgba(100,116,139,.55),rgba(100,116,139,0)); border-radius:0;}
+
+  /* B: 점선 막대(넓게) 오른쪽만 페이드, 왼쪽만 둥글 */
+  .B{left:50%; width:26%; border:1.5px dashed rgba(100,116,139,.7); border-right:none; border-radius:6px 0 0 6px; background:linear-gradient(90deg,rgba(148,163,184,.20),rgba(148,163,184,0));}
+
+  /* C: 실선 시작 막대 + 점선 연장(···) */
+  .C-solid{left:50%; width:13%; background:transparent; border:1.5px solid rgba(100,116,139,.85); border-radius:5px;}
+  .C-dots{left:64%; top:10px; height:4px; width:16%; background-image:radial-gradient(circle, rgba(100,116,139,.7) 1.5px, transparent 1.6px); background-size:8px 4px; background-repeat:repeat-x;}
+
+  .qm{position:absolute; top:3px; font-size:12px; font-weight:800; color:var(--gray-500);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>끝 미정 막대 — 막대답게</h1>
+  <div class="sub">"18:00 ~ ?" 를 동그라미 말고 막대로</div>
+
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:#ef4444;">지금</span> 동그라미처럼 보임 (문제)</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot"></span>정은미</div><div class="track"><div class="bar now"></div><span class="qm" style="left:60%;">?</span></div></div>
+    <div class="meta">18:00 ~ ? — 너무 좁고 둥글어 점처럼 보임</div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:#2563eb;">A</span> 시작 블록 + 꼬리 (계속됨)</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot"></span>정은미</div><div class="track"><div class="bar A-block"></div><div class="bar A-tail"></div></div></div>
+    <div class="meta">시작은 진한 막대, 오른쪽으로 흐려지며 "더 간다" 표현</div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:#7c3aed;">B</span> 넓은 점선 막대 (오른쪽 페이드)</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot"></span>정은미</div><div class="track"><div class="bar B"></div><span class="qm" style="left:77%;">?</span></div></div>
+    <div class="meta">막대 폭을 넓혀 막대답게, 오른쪽 끝만 흐림</div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:#0891b2;">C</span> 시작 막대 + 점선 연장(···)</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot"></span>정은미</div><div class="track"><div class="bar C-solid"></div><div class="bar C-dots"></div></div></div>
+    <div class="meta">시작 막대 + 점선(···)이 이어져 "끝 미정" 표현</div>
+  </div>
+
+  <div class="sub">A / B / C 중 골라주세요 (저는 <b>A</b> 추천 — 막대답고 방향이 보임)</div>
+</div>
+</body>
+</html>
