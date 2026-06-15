@@ -67,6 +67,24 @@ function goEmpSched(el){
   }, 30);
 }
 
+// ─── 근무 등록/신청 선택 메뉴 (버튼 정리 — 이 날/일주일/실제를 한 곳에, 2026-06-15) ───
+function openSchedAddMenu(date){
+  const mgr=(typeof isManager!=='undefined'&&isManager), lbl=mgr?'등록':'신청';
+  let html=`<div class="notif-item" data-action="schedMenuGo|day|${date}"><span class="ni-ic">📅</span><div class="ni-tx"><b>이 날만 ${lbl}</b><span>하루치 근무</span></div><span class="ni-arr">›</span></div>`;
+  html+=`<div class="notif-item" data-action="schedMenuGo|week|${date}"><span class="ni-ic">📋</span><div class="ni-tx"><b>일주일 ${lbl}</b><span>7일 한꺼번에</span></div><span class="ni-arr">›</span></div>`;
+  if(mgr) html+=`<div class="notif-item" data-action="schedMenuGo|real|${date}"><span class="ni-ic">✏️</span><div class="ni-tx"><b>실제 출퇴근 입력</b><span>실제 일한 기록</span></div><span class="ni-arr">›</span></div>`;
+  document.getElementById('schedAddMenuList').innerHTML=html;
+  openSheet('schedAddMenuSheet');
+}
+function schedMenuGo(type,date){
+  closeAllSheets();
+  setTimeout(()=>{
+    if(type==='day') openSchedSheet(date);
+    else if(type==='week') openWeeklyPlanSheet(date);
+    else if(type==='real' && typeof openAttManualSheet==='function') openAttManualSheet(date);
+  },60);
+}
+
 // ─── (구) 직원 근무표 주간 리스트 (2026-06-09) — 2026-06-15 goEmpSched로 대체, 코드 보존만 ───
 let _empSchedWeekStart = null;
 async function loadEmpSched(){
@@ -806,12 +824,7 @@ function renderAttDayDetail(date, logs, isSingleView){
   const hasPlanOnly = !((logs||[]).length) && planRowsCheck.some(p=>p.employee_id && !p.is_off);
   if((!logs || !logs.length) && !hasPlanOnly){
     // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · "기록 없음" · 선 · [근무계획][실제입력]
-    const _pl = isManager ? '등록' : '신청';
-    const chipBtns = `
-      <span class="dh-btn plan" data-action="openSchedSheet|${date}">📅 이 날 ${_pl}</span>
-      <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📋 일주일 ${_pl}</span>
-      ${isManager ? `<span class="dh-btn add" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">✏️ 실제입력</span>` : ''}
-    `;
+    const chipBtns = `<span class="dh-btn plan" data-action="openSchedAddMenu|${date}">＋ 근무 ${isManager?'등록':'신청'}</span>`;
     const note = isManager
       ? ''
       : `<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--gray-400);">출퇴근 누락 시 관리자에게 등록을 요청하세요</div>`;
@@ -828,12 +841,7 @@ function renderAttDayDetail(date, logs, isSingleView){
   const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const allData = window._attListData || [];
   // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · 시간 · 선 · [근무계획][실제입력] 한 줄
-  const _pl = isManager ? '등록' : '신청';
-  const chipBtns = `
-    <span class="dh-btn plan" data-action="openSchedSheet|${date}">📅 이 날 ${_pl}</span>
-    <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📋 일주일 ${_pl}</span>
-    ${isManager ? `<span class="dh-btn add" data-action="openAttManualSheet|${date}">✏️ 실제입력</span>` : ''}
-  `;
+  const chipBtns = `<span class="dh-btn plan" data-action="openSchedAddMenu|${date}">＋ 근무 ${isManager?'등록':'신청'}</span>`;
 
   let html = `<div class="att-dayhdr">
     <span class="dh-date">${date.slice(5)} (${dow})</span>
