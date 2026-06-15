@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>달력 — 승인 대기 색 표시</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-100:#f0f1f3; --gray-400:#9aa0a6;
+    --gray-600:#5f6368; --blue:#2563eb; --blue-light:#e8f0fe; --danger:#e5484d; --warn:#f2b705; --ok:#22a06b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+
+  .phone{background:var(--card); border-radius:18px; box-shadow:0 4px 18px rgba(0,0,0,.08); overflow:hidden; border:1px solid #e6e8eb;}
+  .phead{padding:12px 16px; border-bottom:1px solid #e6e8eb; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px; justify-content:center;}
+  .pbody{padding:14px 12px;}
+
+  /* 배너: 간트로보기 버튼 없앤 모습 */
+  .banner{display:flex; align-items:center; gap:8px; background:#fff8e1; border:1px solid #ffe89e; border-radius:10px; padding:10px 12px; margin-bottom:14px; font-size:13px;}
+  .banner b{color:#b8860b;}
+  .banner .tx{flex:1;}
+
+  .att-cal{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
+  .att-cal-head{font-size:10px; font-weight:700; color:var(--gray-600); text-align:center; padding:4px 0;}
+  .att-cal-head.sun{color:var(--danger);} .att-cal-head.sat{color:var(--blue);}
+  .att-cal-cell{position:relative; aspect-ratio:1/1.2; background:var(--gray-100); border-radius:7px; padding:3px 2px; display:flex; flex-direction:column; align-items:center; border:1.5px solid transparent; overflow:hidden;}
+  .att-cal-cell.empty{background:transparent;}
+  .att-cal-cell.today{background:var(--blue-light);}
+  .att-cal-day{font-size:11px; font-weight:700; line-height:1.1;}
+  .att-cal-cell.sun .att-cal-day{color:var(--danger);} .att-cal-cell.sat .att-cal-day{color:var(--blue);}
+  .att-cal-dots{display:flex; flex-wrap:wrap; gap:1px; justify-content:center; margin-top:2px; min-height:7px;}
+  .att-cal-dot{width:6px; height:6px; border-radius:50%;}
+  .att-cal-sum{font-size:9px; color:var(--blue); font-weight:700; margin-top:auto; line-height:1;}
+
+  /* ★ 핵심: 승인 대기(희망) 있는 미래 날 = 노란 강조 */
+  .att-cal-cell.has-pending{background:#fff8e1; border-color:var(--warn);}
+  .att-cal-cell.has-pending::after{content:''; position:absolute; top:3px; right:3px; width:7px; height:7px; border-radius:50%; background:var(--warn); box-shadow:0 0 0 2px #fff;}
+
+  .legend{display:flex; flex-direction:column; gap:8px; margin-top:18px; font-size:12px; color:var(--gray-600); background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e6e8eb;}
+  .legend .row{display:flex; align-items:center; gap:10px;}
+  .mini{width:34px; height:40px; border-radius:7px; flex-shrink:0; position:relative; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; background:var(--gray-100);}
+  .mini.pend{background:#fff8e1; border:1.5px solid var(--warn);}
+  .mini.pend::after{content:''; position:absolute; top:3px; right:3px; width:7px; height:7px; border-radius:50%; background:var(--warn); box-shadow:0 0 0 2px #fff;}
+  .mini.actual .d{width:6px;height:6px;border-radius:50%;background:#2563eb;position:absolute;bottom:6px;}
+  .mini.tdy{background:var(--blue-light);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>달력 — 승인 대기 색 표시 (1안)</h1>
+  <div class="sub">노란색 칸 = 직원이 신청했는데 아직 승인 안 한 날</div>
+
+  <div class="phone">
+    <div class="phead">⏰ 근태관리 › 기록탭 &nbsp;·&nbsp; 2026-06</div>
+    <div class="pbody">
+
+      <!-- 간트로보기 버튼 없앤 배너 -->
+      <div class="banner">
+        <span>🔔</span>
+        <span class="tx">직원 근무 신청 <b>3건</b> 대기 중 — <b>노란 칸</b>을 눌러 승인하세요</span>
+      </div>
+
+      <div class="att-cal">
+        <div class="att-cal-head sun">일</div><div class="att-cal-head">월</div><div class="att-cal-head">화</div>
+        <div class="att-cal-head">수</div><div class="att-cal-head">목</div><div class="att-cal-head">금</div><div class="att-cal-head sat">토</div>
+
+        <!-- 1일 시작: 6/1 = 월요일 → 일요일칸 1개 비움 -->
+        <div class="att-cal-cell empty"></div>
+        <div class="att-cal-cell"><div class="att-cal-day">1</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">2</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">3</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">4</div><div class="att-cal-dots"><span class="att-cal-dot" style="background:#2563eb"></span></div><div class="att-cal-sum">8.0</div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">5</div><div class="att-cal-dots"><span class="att-cal-dot" style="background:#2563eb"></span></div><div class="att-cal-sum">7.5</div></div>
+        <div class="att-cal-cell sat"><div class="att-cal-day">6</div><div class="att-cal-dots"></div></div>
+
+        <div class="att-cal-cell sun"><div class="att-cal-day">7</div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">8</div><div class="att-cal-dots"><span class="att-cal-dot" style="background:#22a06b"></span></div><div class="att-cal-sum">9.0</div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">9</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">10</div><div class="att-cal-dots"><span class="att-cal-dot" style="background:#2563eb"></span></div><div class="att-cal-sum">8.0</div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">11</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">12</div><div class="att-cal-dots"><span class="att-cal-dot" style="background:#22a06b"></span></div><div class="att-cal-sum">6.0</div></div>
+        <div class="att-cal-cell sat"><div class="att-cal-day">13</div></div>
+
+        <div class="att-cal-cell sun"><div class="att-cal-day">14</div></div>
+        <!-- 오늘 -->
+        <div class="att-cal-cell today"><div class="att-cal-day">15</div><div class="att-cal-dots"><span class="att-cal-dot" style="background:#2563eb"></span></div><div class="att-cal-sum">4.0</div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">16</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">17</div><div class="att-cal-dots"></div></div>
+        <!-- ★ 18일 승인 대기 -->
+        <div class="att-cal-cell has-pending"><div class="att-cal-day">18</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">19</div><div class="att-cal-dots"></div></div>
+        <!-- ★ 20일 승인 대기 -->
+        <div class="att-cal-cell sat has-pending"><div class="att-cal-day">20</div><div class="att-cal-dots"></div></div>
+
+        <div class="att-cal-cell sun"><div class="att-cal-day">21</div></div>
+        <!-- ★ 22일 승인 대기 -->
+        <div class="att-cal-cell has-pending"><div class="att-cal-day">22</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">23</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">24</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">25</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">26</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell sat"><div class="att-cal-day">27</div></div>
+
+        <div class="att-cal-cell sun"><div class="att-cal-day">28</div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">29</div><div class="att-cal-dots"></div></div>
+        <div class="att-cal-cell"><div class="att-cal-day">30</div><div class="att-cal-dots"></div></div>
+      </div>
+
+      <div class="legend">
+        <div class="row"><div class="mini pend">18</div> 노란 칸 = <b>승인 대기</b> (직원 신청, 아직 승인 X) → 눌러서 승인</div>
+        <div class="row"><div class="mini tdy">15</div> 파란 칸 = 오늘</div>
+        <div class="row"><div class="mini actual"><span style="font-size:11px;">10</span><span class="d"></span></div> 색점 = 실제 출퇴근한 날</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub" style="margin-top:18px;">바뀌는 점<br>① 🔔 배너에서 <b>"간트로 보기" 버튼 삭제</b><br>② 승인 안 한 미래 날 = <b>노란 칸 + 노란 점</b>으로 한눈에<br>③ 노란 칸 누르면 → 그 날 상세 → "이 날 모두 승인"</div>
+</div>
+</body>
+</html>
