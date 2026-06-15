@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260615i">
+<link rel="stylesheet" href="assets/styles.css?v=20260615j">
 </head>
 <body>
 
@@ -1383,14 +1383,6 @@
     <div id="dashAiBriefBtn" class="aib-btn" data-action="toggleAiBrief" style="display:none;"></div>
     <div id="dashAiBrief" class="ai-brief" style="display:none;"></div>
 
-    <!-- 월 요약 — 평소 숨김. AI 매니저 '흑자/적자' 누르면 바로 아래 펼침 (2026-06-15 사장님 안) -->
-    <div id="dashMonthSection" style="display:none;">
-      <div class="dash-sec"><span class="ic">📆</span>이번 달 요약</div>
-      <div id="dashSettleCont">
-        <div id="v17MonthCard"></div>
-      </div>
-    </div>
-
     <!-- 오늘 매출 풀카드 v7 (탭 → today-detail) -->
     <div class="dash-today-v7" id="dashTopSalesCard" style="display:none;">
       <div class="t7-head-v2">
@@ -1432,7 +1424,11 @@
       </div>
     </div>
 
-    <!-- 이번 달 요약 = AI 매니저 직하로 이동(2026-06-15). 평소 숨김, 흑자/적자 누르면 펼침 -->
+    <!-- 이번 달 요약 (오늘과 구분) — 항상 노출. 흑자/적자·매출·수익 핵심 (2026-06-15 역할 분리: 숫자=월요약 / 조언=AI매니저) -->
+    <div class="dash-sec"><span class="ic">📆</span>이번 달 요약</div>
+    <div id="dashSettleCont">
+      <div id="v17MonthCard"></div>
+    </div>
 
     <!-- 이번 달 매출 진입 카드 — 홈 직접 노출로 대체됨, DOM ID 유지 (JS 참조) -->
     <div class="dash-enter-v7" data-dash-go="settle" style="display:none;">
@@ -3625,7 +3621,7 @@
 <script src="assets/tabs/attendance.js?v=20260615f"></script>
 <script src="assets/tabs/schedule.js?v=20260615c"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
-<script src="assets/tabs/dashboard.js?v=20260615c"></script>
+<script src="assets/tabs/dashboard.js?v=20260615d"></script>
 <script src="assets/tabs/sidemenu.js?v=20260615i"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
