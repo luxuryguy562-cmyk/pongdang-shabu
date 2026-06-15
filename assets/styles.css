@@ -1753,19 +1753,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .aib-btn-dot.green{background:var(--toss-green);}
 .aib-btn-arr{font-size:18px;font-weight:700;color:var(--toss-text-4);flex-shrink:0;}
 
-/* ─── 월 성적 단추 (흑자/적자 항상 노출, 누르면 월 요약 카드 펼침 — 2026-06-15) ─── */
-.msum-btn{display:flex;align-items:center;gap:11px;width:100%;background:var(--white);border:0;border-radius:16px;padding:13px 16px;margin-bottom:14px;box-shadow:var(--card-shadow);cursor:pointer;transition:transform .15s;font-family:inherit;text-align:left;border-left:4px solid var(--toss-line);}
-.msum-btn:active{transform:scale(.985);}
-.msum-btn.green{border-left-color:var(--toss-green);}
-.msum-btn.red{border-left-color:var(--toss-red);}
-.msum-ic{width:34px;height:34px;border-radius:11px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
-.msum-tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3;}
-.msum-tx b{font-size:14px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.3px;}
-.msum-sub{font-size:12.5px;font-weight:700;margin-top:1px;}
-.msum-btn.green .msum-sub{color:var(--toss-green);}
-.msum-btn.red .msum-sub{color:var(--toss-red);}
-.msum-arr{font-size:18px;font-weight:700;color:var(--toss-text-4);flex-shrink:0;}
-
 /* ─── 새 기능: AI 인사이트 직원 (자동 브리핑 카드) ─── */
 .ai-brief{background:var(--white);border-radius:var(--card-radius);padding:18px 20px;margin-bottom:14px;box-shadow:var(--card-shadow);}
 .aib-head{display:flex;align-items:center;gap:10px;}
@@ -1789,6 +1776,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .aib-row.green .aib-title{color:#048A52;}
 .aib-desc{font-size:11.5px;font-weight:500;color:var(--toss-text-3);margin-top:4px;line-height:1.5;}
 .aib-desc b{color:var(--toss-text-1);font-weight:800;}
+/* 클릭 가능한 항목(흑자/적자 → 월 요약 펼침) — 2026-06-15 */
+.aib-row.aib-clickable{cursor:pointer;transition:transform .12s;}
+.aib-row.aib-clickable:active{transform:scale(.985);}
+.aib-golink{display:inline-block;margin-top:3px;font-size:11px;font-weight:800;color:var(--toss-blue);}
 
 /* ─── 새 기능: 공과금 실제 납부액 (납부 상태 뱃지 + 예상·실제 칸) ─── */
 .fc-pay-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;margin-left:4px;vertical-align:middle;white-space:nowrap;}
