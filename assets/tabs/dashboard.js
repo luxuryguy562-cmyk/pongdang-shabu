@@ -1631,7 +1631,8 @@ async function loadDashboard(force){
 
 // 카테고리 기준값 기본값 (business_rules.md, 매출 대비 %)
 // 사장님이 카테고리 관리에서 store_settings.expense_thresholds로 수정 가능
-const V17_DEFAULT_THRESH = {'식자재':30, '주류':10, '음료':10, '인건비':25, '비품':5, '마케팅':10, '고정비':15, '공과금':15, '세금':10, '기타':10, '로열티':0, '카드수수료':0};
+// 2026-06-15: 식자재 30→40 (공식 통계 농식품부·KREI 외식업체 경영실태조사 식재료비 평균 40.4%, 샤브샤브 업종 35~45%). 인건비 25 유지(적정 목표선, 사장님 결정).
+const V17_DEFAULT_THRESH = {'식자재':40, '주류':10, '음료':10, '인건비':25, '비품':5, '마케팅':10, '고정비':15, '공과금':15, '세금':10, '기타':10, '로열티':0, '카드수수료':0};
 const V17_COLOR_PALETTE = ['#F59E0B','#8B5CF6','#6B7684','#10B981','#EC4899','#3B82F6','#EF4444','#84CC16','#F97316','#06B6D4','#A855F7','#14B8A6'];
 
 // 옛 srcToCat 매핑 활용 — 옛 한글 카테고리명 ↔ 옛 5키 (호환용, v17SumMonth 옛 키 유지)
@@ -1661,6 +1662,9 @@ function renderAiBrief(a){
 
   // 공과금 미납/임박은 🔔 종(알림)으로 일원화 — AI 매니저는 '분석·조언'만 유지 (2026-06-15 사장님 구분: AI=분석 / 종=처리할 일)
 
+  // 기준값 안내 한 줄 — 사장님이 "기준 누가 정했나" 헷갈리지 않게 출처·수정 동선 명시 (2026-06-15)
+  const _thNote = ` 외식업 평균 기준이에요 · <b>가게 관리 > 카테고리</b>에서 바꿀 수 있어요.`;
+
   // 매출이 있어야 비율 판단 의미 있음 (지금까지 누적 기준 — 라벨 명시)
   if(rev>0){
     // 🔴/🟡 인건비 비율
@@ -1668,24 +1672,30 @@ function renderAiBrief(a){
     const attTh = thOf('인건비');
     if(attTh>0 && attR > attTh){
       items.push({ sev: attR>=attTh+5?0:1, ic:'🚨', title:'인건비가 기준보다 높아요',
-        desc:`이번 달 <b>지금까지</b> 인건비가 매출의 <b>${attR}%</b>예요. 기준(${attTh}%)보다 높아요.` });
+        desc:`이번 달 <b>지금까지</b> 인건비가 매출의 <b>${attR}%</b>예요. 기준(${attTh}%)보다 높아요.${_thNote}` });
     }
     // 🔴/🟡 식자재 비율
     const venR = Math.round((a.currVendor||0)/rev*100);
     const venTh = thOf('식자재');
     if(venTh>0 && venR > venTh){
       items.push({ sev: venR>=venTh+5?0:1, ic:'📈', title:'식자재 비중이 높아요',
-        desc:`이번 달 <b>지금까지</b> 식자재가 매출의 <b>${venR}%</b>예요. 기준(${venTh}%)보다 높아요.` });
+        desc:`이번 달 <b>지금까지</b> 식자재가 매출의 <b>${venR}%</b>예요. 기준(${venTh}%)보다 높아요.${_thNote}` });
+    }
+    // 🔴/🟡 프라임코스트 — 식자재+인건비 합 (줄일 수 있는 두 비용. 한국 외식업 평균 70%, 건강 기준 65% — 2026-06-15)
+    const primeR = Math.round(((a.currAtt||0)+(a.currVendor||0))/rev*100);
+    if(primeR > 65){
+      items.push({ sev: primeR>70?0:1, ic:'🔥', title:'식자재+인건비 합이 높아요',
+        desc:`식자재와 인건비를 합치면 매출의 <b>${primeR}%</b>예요. 건강 기준(65%)보다 높아요. (외식업 평균 70%)` });
     }
   }
 
-  // 🔴/🟢 순이익 — 지금까지(실제) + 월말(예상) 둘 다 (사장님 결정 2026-06-14)
+  // ⚠️ 적자 예상일 때만 경고 — 흑자/성적은 아래 '월 성적 단추'가 담당 (중복 제거, AI 매니저=위험 전용. 2026-06-15)
   if(a.isCurrent && rev>0){
-    const now = a.netProfit||0, est = a.estNetProfit||0;
-    const bad = est < 0;
-    items.push({ sev: bad?0:2, ic: bad?'⚠️':'✅',
-      title: bad?'이대로면 이번 달 적자 예상':'이대로면 흑자예요',
-      desc:`지금까지 <b>${signMan(now)}</b> · 이대로면 월말 <b>${signMan(est)}</b> 예상이에요.` });
+    const est = a.estNetProfit||0;
+    if(est < 0){
+      items.push({ sev:0, ic:'⚠️', title:'이대로면 이번 달 적자 예상',
+        desc:`이대로면 월말 <b>${signMan(est)}</b> 예상이에요. 지출을 점검해 보세요.` });
+    }
   }
 
   // 🟢 매출이 전월보다 뚜렷이 늘었을 때 (칭찬)
@@ -2014,25 +2024,49 @@ function v17RenderMonthCard(){
       +`<span class="fc-more">자세히 ›</span></div>`;
   }
 
-  el.innerHTML = `
-    <div class="v17-card-v6">
-      ${fcHtml}
-      <div class="v6-ttl-row">
-        <div class="v6-ttl"><b>${ctx.TARGET_MONTH}월</b>${progressDays}일 진행</div>
-        <span class="v6-progress-tag">${progressPct}%</span>
-      </div>
-      <div class="m6-top">
-        <div class="m6-donut-wrap">
-          <div class="m6-donut" style="background:${donutBg};"></div>
-          <div class="m6-donut-center">${donutCenter}</div>
+  // ── 성적 단추(항상 보임) + 카드 본체(접힘) — 사장님 안 2026-06-15 ──
+  //    흑자/적자 상태는 단추가 늘 보여주고, 도넛·매출·지출 상세는 누르면 펼침 (홈 깔끔 + 흑자/적자 중복 단일화)
+  const _statProfit = (fcSale!==null) ? fcProfit : profit;   // 진행중=월말예상 / 마감월=실제
+  const _isGain = _statProfit>=0;
+  const _statLabel = (fcSale!==null)
+    ? `이대로면 ${_isGain?'흑자':'적자'} ${_isGain?'+':'-'}${v17FmtCompact(Math.abs(_statProfit))}`
+    : `${_isGain?'흑자':'적자'} ${_isGain?'+':'-'}${v17FmtCompact(Math.abs(_statProfit))}`;
+  const msumBtn = `
+    <button type="button" class="msum-btn ${_isGain?'green':'red'}" data-action="toggleMonthCard">
+      <span class="msum-ic">📊</span>
+      <span class="msum-tx"><b>${ctx.TARGET_MONTH}월 성적</b><span class="msum-sub">${_statLabel}</span></span>
+      <span class="msum-arr" id="v17MonthArr">›</span>
+    </button>`;
+  el.innerHTML = msumBtn + `
+    <div id="v17MonthBody" style="display:none;">
+      <div class="v17-card-v6">
+        ${fcHtml}
+        <div class="v6-ttl-row">
+          <div class="v6-ttl"><b>${ctx.TARGET_MONTH}월</b>${progressDays}일 진행</div>
+          <span class="v6-progress-tag">${progressPct}%</span>
         </div>
-        <div class="m6-mrows">
-          <div class="m6-mr"><span class="k">매출</span><span class="v">${v17FmtNoWon(cur.s)}원</span></div>
-          <div class="m6-mr"><span class="k">지출</span><span class="v">${v17FmtNoWon(cur.e)}원</span></div>
-          <div class="m6-mr"><span class="k">수익</span><span class="v ${profit>=0?'green':'red'}">${v17FmtNoWonSigned(profit)}원</span></div>
+        <div class="m6-top">
+          <div class="m6-donut-wrap">
+            <div class="m6-donut" style="background:${donutBg};"></div>
+            <div class="m6-donut-center">${donutCenter}</div>
+          </div>
+          <div class="m6-mrows">
+            <div class="m6-mr"><span class="k">매출</span><span class="v">${v17FmtNoWon(cur.s)}원</span></div>
+            <div class="m6-mr"><span class="k">지출</span><span class="v">${v17FmtNoWon(cur.e)}원</span></div>
+            <div class="m6-mr"><span class="k">수익</span><span class="v ${profit>=0?'green':'red'}">${v17FmtNoWonSigned(profit)}원</span></div>
+          </div>
         </div>
       </div>
     </div>`;
+}
+// ─── 월 성적 단추 ↔ 카드 본체 펼침/접힘 (2026-06-15) ───
+function toggleMonthCard(){
+  const b=document.getElementById('v17MonthBody');
+  const ar=document.getElementById('v17MonthArr');
+  if(!b) return;
+  const open=b.style.display==='none';
+  b.style.display=open?'block':'none';
+  if(ar) ar.textContent=open?'⌄':'›';
 }
 
 // ─── 월 세부 화면 렌더 (요약 카드 탭 진입 — 2026-06-03 신설) ───
