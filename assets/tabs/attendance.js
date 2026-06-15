@@ -40,8 +40,20 @@ function renderSchedApproveBanner(schedData){
   if(!isManager || pend.length===0){ el.style.display='none'; el.innerHTML=''; return; }
   el.innerHTML=`<span class="sab-ic">🔔</span>`
     +`<span class="sab-tx">직원 근무 신청 <b>${pend.length}건</b> 대기 중</span>`
-    +`<button class="sab-btn" data-action="openSchedApproveSheet">확인하기</button>`;
+    +`<button class="sab-btn" data-action="goSchedApprove">간트로 보기</button>`;
   el.style.display='flex';
+}
+// 배너 → 대기('희망') 있는 첫 날의 일별 간트로 이동 (사장님: 작은 그리드 말고 큰 간트로 승인, 2026-06-15)
+async function goSchedApprove(){
+  if(!isManager||!currentStore) return;
+  setLoad(true,'불러오는 중...');
+  const{data}=await sb.from('work_schedules').select('work_date').eq('store_id',currentStore.id).eq('status','희망').order('work_date').limit(1);
+  setLoad(false);
+  const d=(data&&data[0]&&data[0].work_date)?data[0].work_date:ymdLocal(new Date());
+  attAllMonth=d.slice(0,7);
+  attAllSelectedDate=d;
+  const b=document.querySelector('#attendanceCont .sub-tab[data-sub="all"]'); if(b) attTab('all',b);
+  toast('노란 점선 막대가 신청이에요. 눌러서 승인하세요','info');
 }
 // 근무 신청 승인 — 주간 현황 그리드 (직원×요일 한눈에, 2026-06-15 재설계)
 let _schedGridWeek=null;
