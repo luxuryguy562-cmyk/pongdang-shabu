@@ -1819,3 +1819,17 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .apv-acts{display:flex;gap:6px;flex-shrink:0;}
 .apv-ok{background:var(--toss-blue);color:#fff;border:none;border-radius:8px;padding:8px 13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;}
 .apv-no{background:var(--danger-light);color:#C92A36;border:none;border-radius:8px;padding:8px 13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;}
+
+/* ─── 새 기능: 주간 근무 승인 그리드 (직원×요일 한눈에) ─── */
+.sg-week{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.sg-week b{font-size:14px;font-weight:800;color:var(--toss-text-1);}
+.sg-nav{background:var(--toss-line);border:none;border-radius:8px;padding:6px 13px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;}
+.sg-grid{display:grid;grid-template-columns:46px repeat(7,1fr);gap:2px;}
+.sg-gh{font-size:10px;font-weight:800;text-align:center;color:var(--toss-text-4);padding:3px 0;}
+.sg-gh.sat{color:#1E88E5;} .sg-gh.sun{color:var(--toss-red);}
+.sg-name{font-size:10px;font-weight:800;color:var(--toss-text-1);display:flex;align-items:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.sg-cell{height:30px;border-radius:5px;font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.sg-cell.empty{background:var(--toss-line);}
+.sg-cell.wait{background:var(--warn-light);color:#B26A00;border:1px dashed #E0A040;}
+.sg-cell.ok{background:var(--toss-blue-light);color:var(--toss-blue-strong);}
+.sg-cell.off{background:#FAFAFA;color:var(--toss-text-5);}

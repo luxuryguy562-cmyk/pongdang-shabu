@@ -43,29 +43,45 @@ function renderSchedApproveBanner(schedData){
     +`<button class="sab-btn" data-action="openSchedApproveSheet">확인하기</button>`;
   el.style.display='flex';
 }
-// 근무 신청 목록 시트 — 각 신청(직원·날짜·시간) 보고 개별 승인/거절 (2026-06-15)
+// 근무 신청 승인 — 주간 현황 그리드 (직원×요일 한눈에, 2026-06-15 재설계)
+let _schedGridWeek=null;
 async function openSchedApproveSheet(){
   if(!isManager||!currentStore) return;
+  if(!_schedGridWeek){ const n=new Date(); const dow=(n.getDay()+6)%7; const thisMon=new Date(n.getFullYear(),n.getMonth(),n.getDate()-dow); _schedGridWeek=new Date(thisMon.getTime()+7*86400000); } // 기본 다음주
+  await renderSchedGrid();
+  openSheet('schedApproveSheet');
+}
+function moveSchedGridWeek(d){ if(!_schedGridWeek) return; _schedGridWeek=new Date(_schedGridWeek.getTime()+d*7*86400000); renderSchedGrid(); }
+async function renderSchedGrid(){
+  const ws=_schedGridWeek;
+  const days=[]; for(let i=0;i<7;i++) days.push(ymdLocal(new Date(ws.getTime()+i*86400000)));
   setLoad(true,'불러오는 중...');
   const{data}=await sb.from('work_schedules')
-    .select('id,work_date,wish_start,wish_end,is_off,employees(name)')
-    .eq('store_id',currentStore.id).eq('status','희망').order('work_date');
+    .select('id,employee_id,work_date,wish_start,wish_end,is_off,status')
+    .eq('store_id',currentStore.id).gte('work_date',days[0]).lte('work_date',days[6]);
   setLoad(false);
-  const rows=data||[];
-  const cntEl=document.getElementById('schedApproveCount'); if(cntEl) cntEl.innerText=rows.length;
-  const listEl=document.getElementById('schedApproveList');
-  if(!rows.length){ if(listEl) listEl.innerHTML='<div style="text-align:center;color:var(--gray-400);padding:24px 0;font-size:13px;">대기 중인 신청이 없어요 👍</div>'; openSheet('schedApproveSheet'); return; }
-  const DOW=['일','월','화','수','목','금','토'];
-  listEl.innerHTML=rows.map(r=>{
-    const nm=r.employees?.name||'직원';
-    const dt=r.work_date.slice(5).replace('-','/');
-    const dow=DOW[new Date(r.work_date+'T00:00:00').getDay()];
-    const time=r.is_off?'휴무':`${(r.wish_start||'').slice(0,5)} ~ ${(r.wish_end||'').slice(0,5)}`;
-    return `<div class="apv-row"><div class="apv-info"><b>${nm}</b><span>${dt}(${dow}) · ${time}</span></div>`
-      +`<div class="apv-acts"><button class="apv-ok" data-action="approveSched|${r.id}|sheet">승인</button>`
-      +`<button class="apv-no" data-action="rejectSched|${r.id}|sheet">거절</button></div></div>`;
-  }).join('');
-  openSheet('schedApproveSheet');
+  window._schedGridRows=data||[];
+  const map={}; (data||[]).forEach(s=>{ map[s.employee_id+'_'+s.work_date]=s; });
+  const emps=((typeof employees!=='undefined'&&employees)?employees:[]).filter(e=>e.is_active);
+  const DOW=['월','화','수','목','금','토','일'];
+  let pend=0;
+  let html=`<div class="sg-week"><button class="sg-nav" data-action="moveSchedGridWeek|-1">‹</button>`
+    +`<b>${days[0].slice(5).replace('-','/')} ~ ${days[6].slice(5).replace('-','/')}</b>`
+    +`<button class="sg-nav" data-action="moveSchedGridWeek|1">›</button></div>`;
+  html+=`<div class="sg-grid"><div class="sg-gh"></div>${DOW.map((d,i)=>`<div class="sg-gh ${i===5?'sat':i===6?'sun':''}">${d}</div>`).join('')}`;
+  emps.forEach(e=>{
+    html+=`<div class="sg-name">${e.name}</div>`;
+    days.forEach(d=>{
+      const s=map[e.id+'_'+d];
+      if(!s){ html+=`<div class="sg-cell empty" data-action="openSchedSheet|${d}"></div>`; }
+      else if(s.is_off){ html+=`<div class="sg-cell off" data-action="openSchedSheet|${d}|${s.id}">휴</div>`; }
+      else{ const w=(s.status==='희망'); if(w)pend++; html+=`<div class="sg-cell ${w?'wait':'ok'}" data-action="openSchedSheet|${d}|${s.id}">${(s.wish_start||'').slice(0,5)}</div>`; }
+    });
+  });
+  html+=`</div>`;
+  if(!emps.length) html+='<div style="text-align:center;color:var(--gray-400);padding:24px 0;font-size:13px;">활성 직원이 없어요</div>';
+  document.getElementById('schedApproveList').innerHTML=html;
+  const cntEl=document.getElementById('schedApproveCount'); if(cntEl) cntEl.innerText=pend;
 }
 async function approveSched(id, ctx){
   if(!isManager) return;
