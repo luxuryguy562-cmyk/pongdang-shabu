@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>권한 구조 — 지금 vs 원하는 것</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; --blue:#2563eb; --ok:#22a06b; --danger:#e5484d; --warn:#f2b705; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.55;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:460px; margin:0 auto;}
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:14px; margin-bottom:16px;}
+  .ctitle{font-size:14px; font-weight:800; margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 10px; border-radius:20px;}
+
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  th,td{padding:7px 4px; text-align:center; border-bottom:1px solid #eef0f2;}
+  th{font-size:10px; color:var(--gray-600); font-weight:700;}
+  td.role{text-align:left; font-weight:800; font-size:12px; white-space:nowrap;}
+  .y{color:var(--ok); font-weight:800;}
+  .n{color:var(--danger); font-weight:700; opacity:.5;}
+  .p{color:var(--warn); font-weight:800; font-size:10px;}
+  .same{background:#fff5f5;}
+  .note{font-size:11px; color:var(--gray-600); margin-top:10px; background:#f7f8fa; border-radius:8px; padding:9px 11px;}
+  .note.bad{background:#fff0f0; color:var(--danger);}
+  .note.good{background:#eafaf2; color:#157a4f;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>화면 권한 — 지금 어떻게 묶였나</h1>
+  <div class="sub">가로 = 화면(하단 탭) · 세로 = 직급</div>
+
+  <!-- 지금 -->
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:#ef4444;">지금</span> 관리자 = 사장·점장·팀장 한 묶음</div>
+    <table>
+      <tr><th style="text-align:left;">직급</th><th>홈</th><th>근태</th><th>개시·마감</th><th>지출</th><th>더보기</th></tr>
+      <tr><td class="role">👑 사장</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr class="same"><td class="role">🔑 점장</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr class="same"><td class="role">🔑 팀장</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td class="role">🧑‍🍳 아르바이트</td><td class="n">✕</td><td class="y">✓<br><span style="font-size:9px;color:#9aa0a6;">본인만</span></td><td class="n">✕</td><td class="n">✕</td><td class="n">✕</td></tr>
+    </table>
+    <div class="note bad">⚠️ 분홍 줄(점장·팀장)이 <b>사장이랑 똑같이 전부 다 봅니다.</b> 셋 다 "관리자"로 묶여서요. 점장·팀장 구분이 없습니다. (직급 이름표만 다를 뿐 권한은 동일)</div>
+  </div>
+
+  <!-- 원하는 것 (예시) -->
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:#22a06b;">원하는 것</span> 직급마다 보는 화면 다르게 (예시)</div>
+    <table>
+      <tr><th style="text-align:left;">직급</th><th>홈</th><th>근태</th><th>개시·마감</th><th>지출</th><th>더보기</th></tr>
+      <tr><td class="role">👑 사장</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td class="role">🔑 점장</td><td class="n">✕</td><td class="y">✓</td><td class="y">✓</td><td class="n">✕</td><td class="p">일부</td></tr>
+      <tr><td class="role">🔑 팀장</td><td class="y">✓</td><td class="y">✓</td><td class="n">✕</td><td class="n">✕</td><td class="n">✕</td></tr>
+      <tr><td class="role">🧑‍🍳 아르바이트</td><td class="n">✕</td><td class="y">✓<br><span style="font-size:9px;color:#9aa0a6;">본인만</span></td><td class="n">✕</td><td class="n">✕</td><td class="n">✕</td></tr>
+    </table>
+    <div class="note good">✓ 사장님 말처럼 "팀장 = 근태+홈", "점장 = 근태 전체" 식으로 직급마다 다르게. 위 ✓/✕는 예시일 뿐, 사장님이 직접 켜고 끌 수 있게 만들 수 있습니다.</div>
+  </div>
+
+  <div class="sub">지금은 위(전부 같음) → 아래(직급별 다름)로 바꾸는 작업입니다.<br>이제 이해되셨으면 "유연하게" 또는 "정해진 묶음" 중 골라주세요.</div>
+</div>
+</body>
+</html>
