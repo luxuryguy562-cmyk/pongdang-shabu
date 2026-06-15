@@ -1659,28 +1659,7 @@ function renderAiBrief(a){
   const th = a.thresholds||{};
   const thOf = name => (th[name]!=null ? th[name] : (V17_DEFAULT_THRESH[name]||0));
 
-  // 공과금 알림 — 직접 납부(자동이체 X)는 더 세게 (2026-06-15)
-  const _mkHead = arr => arr[0]+(arr.length>1?` 외 ${arr.length-1}건`:'');
-  // 🔴 직접 납부 미납 = 최강조 (사장님이 직접 내야, 깜빡 위험 큼)
-  if(a.fcLateManual && a.fcLateManual.length){
-    items.push({ sev:-1, strong:true, ic:'🔴', title:`${_mkHead(a.fcLateManual)}, 직접 내셔야 해요!`,
-      desc:'자동이체가 안 되는 항목이에요. 납기일이 지났어요. 납부하고 금액을 꼭 적어주세요.' });
-  }
-  // 🚨 자동이체 미납 (보통 빠지지만 안 빠진 경우)
-  if(a.fcLate && a.fcLate.length){
-    items.push({ sev:0, ic:'🚨', title:`${_mkHead(a.fcLate)} 낼 날이 지났어요`,
-      desc:'납기일이 지났는데 실제 납부액이 비어 있어요. 냈으면 고정비에서 금액을 적어주세요.' });
-  }
-  // ⏰ 직접 납부 임박 = 강조
-  if(a.fcDueManual && a.fcDueManual.length){
-    items.push({ sev:0, ic:'⏰', title:`${_mkHead(a.fcDueManual)}, 곧 직접 내셔야 해요`,
-      desc:'자동이체가 안 돼요. 납기일이 가까워요 — 직접 납부 잊지 마세요.' });
-  }
-  // 📅 자동이체 임박 (약하게)
-  if(a.fcDue && a.fcDue.length){
-    items.push({ sev:1, ic:'📅', title:`곧 ${_mkHead(a.fcDue)} 빠지는 날이에요`,
-      desc:'자동이체라 알아서 빠져요. 통장 잔액만 확인하세요.' });
-  }
+  // 공과금 미납/임박은 🔔 종(알림)으로 일원화 — AI 매니저는 '분석·조언'만 유지 (2026-06-15 사장님 구분: AI=분석 / 종=처리할 일)
 
   // 매출이 있어야 비율 판단 의미 있음 (지금까지 누적 기준 — 라벨 명시)
   if(rev>0){
