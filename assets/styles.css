@@ -1801,3 +1801,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .sab-tx b{font-weight:800;}
 .sab-btn{background:var(--toss-blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;}
 .sab-btn:active{opacity:.8;}
+
+/* ─── 새 기능: 알림 시트 항목 (종 🔔) ─── */
+.notif-item{display:flex;align-items:center;gap:12px;padding:14px 12px;border-bottom:1px solid var(--toss-line);cursor:pointer;}
+.notif-item:active{background:var(--toss-line);}
+.ni-ic{font-size:20px;flex-shrink:0;}
+.ni-tx{flex:1;display:flex;flex-direction:column;min-width:0;}
+.ni-tx b{font-size:14px;font-weight:800;color:var(--toss-text-1);}
+.ni-tx span{font-size:11.5px;color:var(--toss-text-3);margin-top:2px;}
+.ni-arr{color:var(--gray-400);font-size:18px;flex-shrink:0;}
