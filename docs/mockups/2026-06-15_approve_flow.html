@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>근무 승인 — 지금 vs 제안</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-500:#70757a;
+    --line:#e6e8eb; --primary:#5b6cff; --warn:#f2b705; --danger:#e5484d; --ok:#22a06b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-500); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+
+  .sect-title{font-size:14px; font-weight:800; margin:18px 0 8px; display:flex; align-items:center; gap:6px;}
+  .badge{font-size:11px; font-weight:800; color:#fff; padding:2px 9px; border-radius:20px;}
+  .b-bad{background:var(--danger);}
+  .b-good{background:var(--ok);}
+
+  .phone{background:var(--card); border-radius:18px; box-shadow:0 4px 18px rgba(0,0,0,.08); overflow:hidden; border:1px solid var(--line);}
+  .phead{padding:12px 16px; border-bottom:1px solid var(--line); font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;}
+  .pbody{padding:14px 16px;}
+
+  /* 지금: 어수선한 5개 입구 */
+  .clutter{display:flex; flex-direction:column; gap:8px;}
+  .clutter .item{border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:13px; display:flex; align-items:center; gap:8px; background:#fafbfc;}
+  .clutter .item .n{width:20px; height:20px; border-radius:50%; background:var(--danger); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .note-bad{margin-top:10px; font-size:12px; color:var(--danger); background:#fff0f0; border-radius:8px; padding:9px 11px;}
+
+  /* 일별 간트 */
+  .dayhdr{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; margin-bottom:12px;}
+  .dayhdr .date{background:#eef0ff; color:var(--primary); padding:3px 10px; border-radius:20px; font-size:12px;}
+  .gantt-row{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .rl{width:42px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px;}
+  .rl .dot{width:8px; height:8px; border-radius:50%; background:var(--primary);}
+  .track{flex:1; height:22px; background:#f4f5f7; border-radius:6px; position:relative; cursor:pointer;}
+  .bar{position:absolute; top:3px; height:16px; border-radius:5px;}
+  /* 승인 전 = 노란 점선 */
+  .bar.wait{left:25%; width:45%; border:2px dashed var(--warn); background:rgba(242,183,5,.12);}
+  /* 승인 후 = 꽉 찬 실선 */
+  .bar.done{left:25%; width:45%; background:var(--ok); border:2px solid var(--ok);}
+  .tip{font-size:11px; color:var(--gray-500); margin-top:4px; text-align:center;}
+
+  /* 승인 시트 */
+  .sheet{margin-top:12px; border-top:2px solid var(--line); padding-top:14px; display:none;}
+  .sheet.show{display:block; animation:fade .25s;}
+  @keyframes fade{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+  .sheet .who{font-size:13px; margin-bottom:4px;}
+  .sheet .time{font-size:13px; color:var(--gray-500); margin-bottom:12px;}
+  .btns{display:flex; gap:8px;}
+  .btn{flex:1; padding:13px; border:none; border-radius:10px; font-size:14px; font-weight:800; cursor:pointer;}
+  .btn-ok{background:var(--ok); color:#fff; flex:2;}
+  .btn-no{background:#fbeaea; color:var(--danger);}
+
+  .done-msg{display:none; margin-top:12px; background:#eafaf2; color:var(--ok); font-size:13px; font-weight:700; text-align:center; padding:11px; border-radius:10px;}
+  .done-msg.show{display:block;}
+
+  .legend{display:flex; gap:16px; justify-content:center; margin-top:14px; font-size:11px; color:var(--gray-500);}
+  .legend span{display:flex; align-items:center; gap:5px;}
+  .swatch{width:22px; height:12px; border-radius:4px;}
+  .sw-wait{border:2px dashed var(--warn); background:rgba(242,183,5,.12);}
+  .sw-done{background:var(--ok);}
+
+  .arrow{text-align:center; font-size:22px; color:var(--gray-400); margin:6px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>근무 신청 승인 — 지금 vs 제안</h1>
+  <div class="sub">사장님: 아래 ② 화면에서 노란 점선 막대를 직접 눌러보세요</div>
+
+  <!-- ① 지금 -->
+  <div class="sect-title"><span class="badge b-bad">① 지금</span> 승인하는 길이 5개 → 헷갈림</div>
+  <div class="phone">
+    <div class="phead">⏰ 근태관리 › 기록탭</div>
+    <div class="pbody">
+      <div class="clutter">
+        <div class="item"><span class="n">1</span>🔔 "신청 3건 대기 중" 배너 → <b>간트로 보기</b> 버튼</div>
+        <div class="item"><span class="n">2</span>주간 표(직원×요일)에서 칸 눌러 승인</div>
+        <div class="item"><span class="n">3</span>"✅ 이 날 3건 모두 승인" 바</div>
+        <div class="item"><span class="n">4</span>점선 막대 눌러 → 시트 안 승인 버튼</div>
+        <div class="item"><span class="n">5</span>"모두 승인" 버튼</div>
+      </div>
+      <div class="note-bad">⚠️ 같은 "승인" 하나에 입구가 5개 → 어디 눌러야 할지 길 잃음.<br>게다가 승인을 눌러도 <b>노란 점선이 그대로</b>라 "하는 척만" 하는 걸로 보임.</div>
+    </div>
+  </div>
+
+  <div class="arrow">▼ 이렇게 바꾸면 ▼</div>
+
+  <!-- ② 제안 -->
+  <div class="sect-title"><span class="badge b-good">② 제안</span> 사장님 말대로 — 점선 누르면 승인 (입구 1개)</div>
+  <div class="phone">
+    <div class="phead">⏰ 근태관리 › 기록탭</div>
+    <div class="pbody">
+      <div class="dayhdr"><span class="date">06-18 (목)</span> 미래 근무 신청</div>
+
+      <div class="gantt-row">
+        <div class="rl"><span class="dot"></span>민지</div>
+        <div class="track" id="track1" onclick="openSheet()">
+          <div class="bar wait" id="bar1"></div>
+        </div>
+      </div>
+      <div class="tip" id="tip1">👆 노란 점선 막대 = 직원이 신청한 근무. 눌러보세요</div>
+
+      <!-- 승인 시트 -->
+      <div class="sheet" id="sheet">
+        <div class="who"><b>민지</b> 님 희망근무</div>
+        <div class="time">10:00 ~ 18:00</div>
+        <div class="btns">
+          <button class="btn btn-ok" onclick="approve()">✅ 승인 (확정)</button>
+          <button class="btn btn-no" onclick="reject()">거절</button>
+        </div>
+      </div>
+
+      <div class="done-msg" id="doneMsg">✅ 승인 완료! 점선 → 초록 실선으로 바뀌었어요</div>
+
+      <div class="legend">
+        <span><span class="swatch sw-wait"></span>승인 전 (점선)</span>
+        <span><span class="swatch sw-done"></span>승인 후 (실선)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub" style="margin-top:18px;">핵심 2가지<br>① 승인 입구 5개 → <b>점선 누르기 1개</b>로<br>② 승인하면 점선이 <b>초록 실선</b>으로 바로 바뀜 (눈으로 확인)</div>
+</div>
+
+<script>
+  function openSheet(){
+    document.getElementById('sheet').classList.add('show');
+    document.getElementById('tip1').innerText = '아래에서 승인 또는 거절을 누르세요';
+  }
+  function approve(){
+    var bar = document.getElementById('bar1');
+    bar.classList.remove('wait'); bar.classList.add('done');
+    document.getElementById('sheet').classList.remove('show');
+    document.getElementById('doneMsg').classList.add('show');
+    document.getElementById('tip1').innerText = '민지 님 근무가 확정됐어요';
+    document.getElementById('track1').onclick = null;
+  }
+  function reject(){
+    document.getElementById('bar1').style.display = 'none';
+    document.getElementById('sheet').classList.remove('show');
+    document.getElementById('tip1').innerText = '신청을 거절(삭제)했어요';
+  }
+</script>
+</body>
+</html>
