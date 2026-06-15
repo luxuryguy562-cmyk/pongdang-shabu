@@ -1776,10 +1776,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .aib-row.green .aib-title{color:#048A52;}
 .aib-desc{font-size:11.5px;font-weight:500;color:var(--toss-text-3);margin-top:4px;line-height:1.5;}
 .aib-desc b{color:var(--toss-text-1);font-weight:800;}
-/* 클릭 가능한 항목(흑자/적자 → 월 요약 펼침) — 2026-06-15 */
-.aib-row.aib-clickable{cursor:pointer;transition:transform .12s;}
-.aib-row.aib-clickable:active{transform:scale(.985);}
-.aib-golink{display:inline-block;margin-top:3px;font-size:11px;font-weight:800;color:var(--toss-blue);}
+/* AI 매니저 단추 — 제목 옆 숫자 배지 + 서브(회색) (2026-06-15 역할 분리) */
+.aib-tt-row{display:flex;align-items:center;gap:6px;}
+.aib-badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;}
+.aib-badge.warn{background:var(--warn);}
+.aib-badge.red{background:var(--toss-red);}
+.aib-badge.green{background:var(--toss-green);}
+.aib-chk{color:var(--toss-green);font-size:15px;font-weight:800;}
 
 /* ─── 새 기능: 공과금 실제 납부액 (납부 상태 뱃지 + 예상·실제 칸) ─── */
 .fc-pay-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;margin-left:4px;vertical-align:middle;white-space:nowrap;}
