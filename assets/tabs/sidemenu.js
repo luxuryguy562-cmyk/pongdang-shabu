@@ -1666,8 +1666,9 @@ function fcPayStatus(fc){
   const actual = fcActualMap[fc.id];
   if(actual!=null) return {st:'paid', actual};
   if(!fc.expected_day) return {st:'none'};
-  const day=new Date().getDate();
-  if(day > fc.expected_day) return {st:'late'};
+  const now=new Date();
+  const due=fcDueDay(fc, now.getFullYear(), now.getMonth()+1); // 말일 보정
+  if(now.getDate() > due) return {st:'late'};
   return {st:'wait'};
 }
 async function loadFixedCosts(){
@@ -1723,7 +1724,9 @@ function renderFcList(){
     if(ps.st==='paid') stBadge='<span class="fc-pay-badge paid">✓ 납부완료</span>';
     else if(ps.st==='late') stBadge='<span class="fc-pay-badge late">⚠️ 미납</span>';
     else if(ps.st==='wait') stBadge='<span class="fc-pay-badge wait">납부 전</span>';
-    const dueTxt = fc.expected_day ? `매달 ${fc.expected_day}일 납부` : '납기일 미설정';
+    const dueLabel = fc.expected_day===99 ? '말일' : (fc.expected_day ? `${fc.expected_day}일` : '');
+    const payTxt = fc.is_auto_pay===false ? '✋ 직접' : '🔄 자동이체';
+    const dueTxt = fc.expected_day ? `${payTxt} · 매달 ${dueLabel}` : `${payTxt} · 납기일 미설정`;
     // 실제 납부액 칸 (탭 → 입력 시트)
     const actTxt = ps.st==='paid' ? fmt(ps.actual)+'원' : (ps.st==='late' ? '납기 지남 · 입력 ›' : '입력하기 ›');
     const actCls = ps.st==='paid' ? 'paid' : (ps.st==='late' ? 'late' : 'empty');
@@ -1789,7 +1792,9 @@ function openAddFcSheet(){
   _setFcCatLockState(catSel, lockedCat);
   document.getElementById('editFcId').value='';
   document.getElementById('fcEstimatedMonthly').value='';
+  fillFcDayOptions();
   document.getElementById('fcExpectedDay').value='';
+  setFcAutoPay(true);
   updateFcSheetLabels(catSel.value);
   openSheet('addFcSheet');
 }
@@ -1805,7 +1810,9 @@ function openEditFcSheet(id){
   _setFcCatLockState(catSel, null);
   document.getElementById('editFcId').value=fc.id;
   document.getElementById('fcEstimatedMonthly').value=fc.estimated_monthly?fmt(fc.estimated_monthly):'';
+  fillFcDayOptions();
   document.getElementById('fcExpectedDay').value=fc.expected_day||'';
+  setFcAutoPay(fc.is_auto_pay!==false);
   updateFcSheetLabels(cat);
   openSheet('addFcSheet');
 }
@@ -1814,14 +1821,31 @@ async function saveFc(){
   const cat=document.getElementById('fcCatInput').value;const eid=document.getElementById('editFcId').value;
   const estimatedMonthly=unFmt(document.getElementById('fcEstimatedMonthly').value);
   const expectedDay=parseInt(document.getElementById('fcExpectedDay').value)||null;
+  const isAutoPay=document.getElementById('fcIsAutoPay').value!=='false';
   setLoad(true,'저장 중...');
-  const payload={name,category:cat,estimated_monthly:estimatedMonthly,expected_day:expectedDay};
+  const payload={name,category:cat,estimated_monthly:estimatedMonthly,expected_day:expectedDay,is_auto_pay:isAutoPay};
   const{error}=eid?await sb.from('fixed_costs').update(payload).eq('id',eid):await sb.from('fixed_costs').insert({...payload,store_id:currentStore.id,sort_order:fixedCosts.length});
   setLoad(false);if(error)return errToast('저장', error);closeAllSheets();await loadFixedCosts();
 }
 async function toggleFc(id,active){
   if(!confirm(active?'복원하시겠습니까?':'숨김 처리하시겠습니까?\n(과거 데이터는 유지됩니다)'))return;
   await sb.from('fixed_costs').update({is_active:active}).eq('id',id).eq('store_id',currentStore.id);await loadFixedCosts();
+}
+
+// ─── 새 기능: 자동이체 여부 선택 + 납기일 드롭다운(말일 포함) (2026-06-15) ───
+function setFcAutoPay(isAuto){
+  const h=document.getElementById('fcIsAutoPay'); if(h) h.value=isAuto?'true':'false';
+  const a=document.getElementById('fcApAuto'), m=document.getElementById('fcApManual');
+  if(a) a.classList.toggle('on', isAuto);
+  if(m) m.classList.toggle('on-manual', !isAuto);
+}
+function fillFcDayOptions(){
+  const sel=document.getElementById('fcExpectedDay');
+  if(!sel || sel.dataset.filled) return;
+  let html='<option value="">선택 안 함</option>';
+  for(let d=1; d<=31; d++) html+=`<option value="${d}">${d}일</option>`;
+  html+='<option value="99">📌 말일</option>';
+  sel.innerHTML=html; sel.dataset.filled='1';
 }
 
 // ─── 새 기능: 이번 달 실제 납부액 입력 (2026-06-14) ───

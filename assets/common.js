@@ -488,6 +488,13 @@ function fcEffectiveMonthly(fc, actualMap){
   const a = actualMap && actualMap[fc.id];
   return (a!=null) ? a : (fc.estimated_monthly||0);
 }
+// 납기일 → 해당 연·월의 실제 납기 '일'. expected_day가 99(말일) 또는 그 달 마지막날보다 크면 말일로 보정 (2026-06-15)
+function fcDueDay(fc, year, month1){ // month1 = 1~12
+  const ed = fc && fc.expected_day;
+  if(!ed) return null;
+  const lastDay = new Date(year, month1, 0).getDate();
+  return (ed>=99 || ed>lastDay) ? lastDay : ed;
+}
 
 // ─── 인라인 핸들러 대체용 래퍼 ───
 function navFromSide(tab){ closeSideMenu(); nav(tab); }

@@ -1591,13 +1591,15 @@ async function loadDashboard(force){
       const _aiMs = _v17Ctx ? _v17MonthStats(_v17Ctx) : null;
       const _briefMomRev = (prevTotalRevenue>0 && totalRevenue>0) ? momTxt(totalRevenue, prevTotalRevenue, true) : null;
       // 3단계: 공과금 미납(late)·납기 임박(due) — 이번 달, 실제액 미입력 + 납기일 기준 (2026-06-14)
-      const _fcLate=[], _fcDue=[];
+      const _fcLate=[], _fcDue=[], _fcLateManual=[], _fcDueManual=[];
       if(isCurMonth){
-        const _dToday=new Date().getDate();
+        const _now=new Date(), _dToday=_now.getDate();
         (fcRows||[]).filter(r=>r.is_active!==false && r.expected_day).forEach(r=>{
           if(_fcActualMap[r.id]!=null) return;             // 이미 납부(실제액 입력됨)
-          if(_dToday > r.expected_day) _fcLate.push(r.name);          // 납기일 지남 = 미납
-          else if(_dToday >= r.expected_day-1) _fcDue.push(r.name);   // 전날·당일 = 임박
+          const _due=fcDueDay(r, _now.getFullYear(), _now.getMonth()+1); // 말일 보정
+          const _manual = r.is_auto_pay===false;           // 직접 납부 = 더 세게
+          if(_dToday > _due) (_manual?_fcLateManual:_fcLate).push(r.name);          // 납기 지남 = 미납
+          else if(_dToday >= _due-1) (_manual?_fcDueManual:_fcDue).push(r.name);    // 전날·당일 = 임박
         });
       }
       renderAiBrief({
@@ -1610,6 +1612,7 @@ async function loadDashboard(force){
         thresholds: settings.expense_thresholds || {},
         momRev: _briefMomRev,
         fcLate: _fcLate, fcDue: _fcDue,
+        fcLateManual: _fcLateManual, fcDueManual: _fcDueManual,
       });
     } catch(e){ console.warn('[aiBrief]', e.message); }
 
@@ -1656,16 +1659,27 @@ function renderAiBrief(a){
   const th = a.thresholds||{};
   const thOf = name => (th[name]!=null ? th[name] : (V17_DEFAULT_THRESH[name]||0));
 
-  // 🚨 공과금 미납 (최우선) / 📅 납기 임박 (미리알림) — 2026-06-14 3단계
+  // 공과금 알림 — 직접 납부(자동이체 X)는 더 세게 (2026-06-15)
+  const _mkHead = arr => arr[0]+(arr.length>1?` 외 ${arr.length-1}건`:'');
+  // 🔴 직접 납부 미납 = 최강조 (사장님이 직접 내야, 깜빡 위험 큼)
+  if(a.fcLateManual && a.fcLateManual.length){
+    items.push({ sev:-1, strong:true, ic:'🔴', title:`${_mkHead(a.fcLateManual)}, 직접 내셔야 해요!`,
+      desc:'자동이체가 안 되는 항목이에요. 납기일이 지났어요. 납부하고 금액을 꼭 적어주세요.' });
+  }
+  // 🚨 자동이체 미납 (보통 빠지지만 안 빠진 경우)
   if(a.fcLate && a.fcLate.length){
-    const head=a.fcLate[0]+(a.fcLate.length>1?` 외 ${a.fcLate.length-1}건`:'');
-    items.push({ sev:0, ic:'🚨', title:`${head} 낼 날이 지났어요`,
+    items.push({ sev:0, ic:'🚨', title:`${_mkHead(a.fcLate)} 낼 날이 지났어요`,
       desc:'납기일이 지났는데 실제 납부액이 비어 있어요. 냈으면 고정비에서 금액을 적어주세요.' });
   }
+  // ⏰ 직접 납부 임박 = 강조
+  if(a.fcDueManual && a.fcDueManual.length){
+    items.push({ sev:0, ic:'⏰', title:`${_mkHead(a.fcDueManual)}, 곧 직접 내셔야 해요`,
+      desc:'자동이체가 안 돼요. 납기일이 가까워요 — 직접 납부 잊지 마세요.' });
+  }
+  // 📅 자동이체 임박 (약하게)
   if(a.fcDue && a.fcDue.length){
-    const head=a.fcDue[0]+(a.fcDue.length>1?` 외 ${a.fcDue.length-1}건`:'');
-    items.push({ sev:1, ic:'📅', title:`곧 ${head} 내는 날이에요`,
-      desc:'납기일이 가까워요. 납부하면 실제 금액을 적어주세요.' });
+    items.push({ sev:1, ic:'📅', title:`곧 ${_mkHead(a.fcDue)} 빠지는 날이에요`,
+      desc:'자동이체라 알아서 빠져요. 통장 잔액만 확인하세요.' });
   }
 
   // 매출이 있어야 비율 판단 의미 있음 (지금까지 누적 기준 — 라벨 명시)
@@ -1710,7 +1724,7 @@ function renderAiBrief(a){
 
   // ── 홈 단추 (접힌 상태로 항상 노출, 누르면 펼침) ──
   const sevCls = s => s===0?'red':(s===1?'warn':'green');
-  const worst = sevCls(top[0].sev);
+  const worst = (top[0].strong || top[0].sev<=0) ? 'red' : sevCls(top[0].sev);
   const isOpen = el.style.display==='block';
   btn.className = 'aib-btn '+worst;
   btn.innerHTML = `
@@ -1722,7 +1736,7 @@ function renderAiBrief(a){
 
   // ── 펼침 카드 내용 (표시 여부는 toggleAiBrief가 제어) ──
   const rowsHtml = top.map(it=>`
-    <div class="aib-row ${sevCls(it.sev)}">
+    <div class="aib-row ${it.strong?'strong':sevCls(it.sev)}">
       <div class="aib-ic">${it.ic}</div>
       <div class="aib-tx"><div class="aib-title">${it.title}</div><div class="aib-desc">${it.desc}</div></div>
     </div>`).join('');
