@@ -3,13 +3,16 @@
 // ══════════════════════════════════════════
 function attTab(tab,el){
   document.querySelectorAll('#attendanceCont .sub-tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
+  if(el&&el.classList) el.classList.add('active');
   // 호환: 'list'(F안 폐기됨) / 'sched'(2026-05-21 통합 폐기됨) → 'all' 통합 매핑
   if(tab==='list' || tab==='sched') tab='all';
   // att 카드 안 패널 토글 (List 패널은 F안에서 폐기됨)
   ['Manual','Caps','All'].forEach(t=>{const d=document.getElementById('att'+t);if(d)d.style.display='none';});
   const panel = document.getElementById('att'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(panel) panel.style.display='block';
+  // 직원: 개시·마감/영수증 버튼(empHomeActions)은 홈(출퇴근)에만, 급여탭(📋기록)에선 숨김 (2026-06-15)
+  const eha=document.getElementById('empHomeActions');
+  if(eha && typeof isManager!=='undefined' && !isManager && currentEmp) eha.style.display=(tab==='manual')?'':'none';
   if(tab==='all'){
     document.getElementById('vAllMonth').innerText = attAllMonth;
     loadAttAll(); // 안에서 본인 모드면 주간 간트도 호출. work_schedules 동시 로드 → 계획+실제 통합 표시
