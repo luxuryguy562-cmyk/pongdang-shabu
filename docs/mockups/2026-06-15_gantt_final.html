@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>간트 막대 최종 정리</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-500:#70757a; --gray-600:#5f6368; --blue:#2563eb; --ok:#22a06b; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:16px; margin-bottom:14px;}
+  .step{font-size:13px; font-weight:800; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .num{width:22px; height:22px; border-radius:50%; color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center;}
+  .axis{display:flex; margin-left:54px; margin-bottom:2px;}
+  .axis span{flex:1; font-size:9px; color:var(--gray-400);}
+  .grow{display:flex; align-items:center; gap:8px;}
+  .rl{width:46px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;}
+  .rl .dot{width:8px; height:8px; border-radius:50%;}
+  .track{flex:1; height:24px; background:#f4f5f7; border-radius:6px; position:relative; overflow:hidden;}
+  .meta{font-size:11px; color:var(--gray-600); margin:5px 0 0 54px;}
+  .bar{position:absolute; top:2px; height:20px;}
+
+  /* ① 신청(승인 전) = 회색 점선 빈 속 */
+  .plan{border:1.5px dashed rgba(100,116,139,.7); border-radius:7px; background:transparent;}
+  /* ② 승인됨(끝 있음) = 회색 꽉 찬 */
+  .confirmed{background:rgba(120,135,155,.6); border-radius:7px;}
+  /* ③ 승인됨(끝 미정) = 회색 꽉 찬 블록 + 흐려지는 꼬리 (A안) */
+  .open-block{background:rgba(120,135,155,.7); border-radius:5px 0 0 5px;}
+  .open-tail{background:linear-gradient(90deg,rgba(120,135,155,.45),rgba(120,135,155,0));}
+  /* ④ 실제 출퇴근 = 직원색 꽉 찬 */
+  .real{opacity:.92; border-radius:7px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>간트 막대 — 최종 4단계</h1>
+  <div class="sub">예정은 회색, 실제는 직원색. 모양·색 통일</div>
+
+  <div class="card">
+    <div class="step"><span class="num" style="background:#94a3b8;">1</span>신청 (승인 전)</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot" style="background:#a855f7;"></span>정은미</div><div class="track"><div class="bar plan" style="left:50%;width:33%;"></div></div></div>
+    <div class="meta">회색 <b>점선</b> = 아직 승인 안 함</div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="num" style="background:#64748b;">2</span>승인됨 (끝 시간 있음)</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot" style="background:#a855f7;"></span>정은미</div><div class="track"><div class="bar confirmed" style="left:50%;width:33%;"></div></div></div>
+    <div class="meta">회색 <b>꽉 참</b> = 확정 (18:00~22:00)</div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="num" style="background:#64748b;">3</span>승인됨 (끝 미정) — A안</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot" style="background:#a855f7;"></span>정은미</div><div class="track"><div class="bar open-block" style="left:50%;width:12%;"></div><div class="bar open-tail" style="left:62%;width:20%;"></div></div></div>
+    <div class="meta">회색 시작 블록 + 흐려지는 꼬리 = <b>18:00 ~ ?</b></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="num" style="background:var(--ok);">4</span>실제 출퇴근함</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot" style="background:var(--blue);"></span>정은미</div><div class="track"><div class="bar real" style="left:42%;width:33%;background:var(--blue);"></div></div></div>
+    <div class="meta">직원 <b>색으로 꽉 참</b> = 실제 일한 시간</div>
+  </div>
+
+  <div class="card">
+    <div class="step">📅 한 화면에서 보면</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot" style="background:var(--blue);"></span>민지</div><div class="track"><div class="bar real" style="left:20%;width:40%;background:var(--blue);"></div></div></div>
+    <div class="grow" style="margin-top:5px;"><div class="rl"><span class="dot" style="background:var(--ok);"></span>현우</div><div class="track"><div class="bar confirmed" style="left:42%;width:33%;"></div></div></div>
+    <div class="grow" style="margin-top:5px;"><div class="rl"><span class="dot" style="background:#a855f7;"></span>지우</div><div class="track"><div class="bar open-block" style="left:50%;width:12%;"></div><div class="bar open-tail" style="left:62%;width:20%;"></div></div></div>
+    <div class="grow" style="margin-top:5px;"><div class="rl"><span class="dot" style="background:#f59e0b;"></span>수빈</div><div class="track"><div class="bar plan" style="left:30%;width:30%;"></div></div></div>
+    <div class="meta">민지=실제출근 · 현우=승인됨 · 지우=끝미정 · 수빈=승인대기</div>
+  </div>
+
+  <div class="sub">이대로 적용할까요? "응" 또는 고칠 점 알려주세요</div>
+</div>
+</body>
+</html>
