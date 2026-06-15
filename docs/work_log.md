@@ -11,7 +11,7 @@
 - '내 근무표 보기'(index.html myinfo) 버튼 **제거**(중복). 옛 급여달력(empPayCont/loadEmpPay)·주간리스트(empSchedCont) 미사용 폐기.
 - 직원 권한분기 기존(attEmpFilter staff 본인 고정) → 본인 것만. attendance.js?v=20260614c.
 - 데이터 확인(DB): 6월 근태 57건, 근무계획 8건, 활성직원 12 → 화면 정상 표시 근거.
-- 남은(다음): 신청→승인 플로우(status 희망→확정 승인+🔔알림, 기존 8건 '희망'→'확정' UPDATE).
+- **신청→승인 완료**: saveSchedule/saveWeeklyPlan status `isManager?'확정':'희망'`(사장 입력=확정, 직원 신청=희망) + toast 분기. 사장 📋기록에 `schedApproveBanner`(직원 '희망' N건 + [모두 승인], manager-only) — renderSchedApproveBanner(loadAttList 595 호출)/approveAllSched(in id UPDATE status='확정'). 사장이 막대 편집·저장해도 자동 확정. 기존 8건 '희망'(사장 옛입력)은 사장이 한 번 '모두 승인' 누르면 정리(별도 UPDATE 안 함). attendance.js?v=20260614d, schedule.js?v=20260615a, styles.css?v=20260614f.
 
 ## (구) [2026-06-15] 직원 근무 화면 — 사장 화면 통일 1단계 (급여탭 통일로 대체됨)
 

@@ -70,7 +70,7 @@ async function saveSchedule(){
     store_id:currentStore.id,employee_id:empId,work_date:date,
     wish_start:(start&&start!=='-'&&start!=='선택')?start+':00':null,
     wish_end:(end&&end!=='-'&&end!=='선택')?end+':00':null,
-    memo:memo||null,status:'희망'
+    memo:memo||null,status:(isManager?'확정':'희망') // 사장 입력=확정, 직원 신청=희망 (2026-06-15)
   };
   const{error}=await sb.from('work_schedules').upsert(payload,{onConflict:'store_id,employee_id,work_date'});
   setLoad(false);
@@ -81,7 +81,7 @@ async function saveSchedule(){
   attAllMonth=date.slice(0,7);
   attAllSelectedDate=date;
   await loadAttList();
-  toast('희망근무가 등록됐습니다!','success');
+  toast(isManager?'근무계획이 등록됐습니다!':'희망근무를 신청했어요! 사장님 승인을 기다려요','success');
 }
 // ─── 새 기능: 주단위 일괄 입력 (사장님 요청 2026-05-21) ───
 // 한 직원의 월~일 7일치 work_schedules를 한 시트에서 일괄 등록.
@@ -178,7 +178,7 @@ async function saveWeeklyPlan(){
     }
     rows.push({
       store_id: currentStore.id, employee_id: wpEmpId, work_date: date,
-      wish_start: startTxt+':00', wish_end: endTxt+':00', is_off: false, status: '희망'
+      wish_start: startTxt+':00', wish_end: endTxt+':00', is_off: false, status: (isManager?'확정':'희망')
     });
     validCount++;
   }
@@ -206,7 +206,7 @@ async function saveWeeklyPlan(){
   closeSheet('weeklyPlanSheet');
   // 휴무(빈 칸)는 7 - validCount. 메시지에 명시
   const offCount = 7 - validCount;
-  toast(`${validCount}일 출근 / ${offCount}일 휴무 저장됐어요`,'success');
+  toast(isManager?`${validCount}일 출근 / ${offCount}일 휴무 저장됐어요`:`${validCount}일 희망근무 신청! 사장님 승인을 기다려요`,'success');
   // 통합 화면 새로고침
   attAllMonth = days[0].date.slice(0,7);
   await loadAttList();

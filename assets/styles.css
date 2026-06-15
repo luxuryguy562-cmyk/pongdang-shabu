@@ -1793,3 +1793,11 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .aib-row.strong .aib-title{color:#fff;}
 .aib-row.strong .aib-desc{color:rgba(255,255,255,.92);}
 .aib-row.strong .aib-desc b{color:#fff;}
+
+/* ─── 새 기능: 직원 근무 신청 승인 배너 (사장 📋기록) ─── */
+.sched-approve-banner{display:flex;align-items:center;gap:9px;background:var(--toss-blue-light);border-radius:12px;padding:11px 14px;margin-bottom:10px;}
+.sab-ic{font-size:16px;flex-shrink:0;}
+.sab-tx{flex:1;font-size:12.5px;font-weight:700;color:var(--toss-blue-strong);letter-spacing:-0.2px;}
+.sab-tx b{font-weight:800;}
+.sab-btn{background:var(--toss-blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;}
+.sab-btn:active{opacity:.8;}
