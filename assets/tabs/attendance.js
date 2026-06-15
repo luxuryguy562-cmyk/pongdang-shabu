@@ -40,21 +40,58 @@ function renderSchedApproveBanner(schedData){
   if(!isManager || pend.length===0){ el.style.display='none'; el.innerHTML=''; return; }
   el.innerHTML=`<span class="sab-ic">🔔</span>`
     +`<span class="sab-tx">직원 근무 신청 <b>${pend.length}건</b> 대기 중</span>`
-    +`<button class="sab-btn" data-action="approveAllSched">모두 승인</button>`;
+    +`<button class="sab-btn" data-action="openSchedApproveSheet">확인하기</button>`;
   el.style.display='flex';
+}
+// 근무 신청 목록 시트 — 각 신청(직원·날짜·시간) 보고 개별 승인/거절 (2026-06-15)
+async function openSchedApproveSheet(){
+  if(!isManager||!currentStore) return;
+  setLoad(true,'불러오는 중...');
+  const{data}=await sb.from('work_schedules')
+    .select('id,work_date,wish_start,wish_end,is_off,employees(name)')
+    .eq('store_id',currentStore.id).eq('status','희망').order('work_date');
+  setLoad(false);
+  const rows=data||[];
+  const cntEl=document.getElementById('schedApproveCount'); if(cntEl) cntEl.innerText=rows.length;
+  const listEl=document.getElementById('schedApproveList');
+  if(!rows.length){ if(listEl) listEl.innerHTML='<div style="text-align:center;color:var(--gray-400);padding:24px 0;font-size:13px;">대기 중인 신청이 없어요 👍</div>'; openSheet('schedApproveSheet'); return; }
+  const DOW=['일','월','화','수','목','금','토'];
+  listEl.innerHTML=rows.map(r=>{
+    const nm=r.employees?.name||'직원';
+    const dt=r.work_date.slice(5).replace('-','/');
+    const dow=DOW[new Date(r.work_date+'T00:00:00').getDay()];
+    const time=r.is_off?'휴무':`${(r.wish_start||'').slice(0,5)} ~ ${(r.wish_end||'').slice(0,5)}`;
+    return `<div class="apv-row"><div class="apv-info"><b>${nm}</b><span>${dt}(${dow}) · ${time}</span></div>`
+      +`<div class="apv-acts"><button class="apv-ok" data-action="approveSched|${r.id}">승인</button>`
+      +`<button class="apv-no" data-action="rejectSched|${r.id}">거절</button></div></div>`;
+  }).join('');
+  openSheet('schedApproveSheet');
+}
+async function approveSched(id){
+  if(!isManager) return;
+  setLoad(true,'승인 중...');
+  const{error}=await sb.from('work_schedules').update({status:'확정'}).eq('id',id).eq('store_id',currentStore.id);
+  setLoad(false); if(error) return errToast('승인',error);
+  toast('승인했어요','success');
+  await openSchedApproveSheet(); loadAttList();
+}
+async function rejectSched(id){
+  if(!isManager) return;
+  if(!confirm('이 신청을 거절(삭제)할까요?')) return;
+  setLoad(true,'처리 중...');
+  const{error}=await sb.from('work_schedules').delete().eq('id',id).eq('store_id',currentStore.id);
+  setLoad(false); if(error) return errToast('거절',error);
+  toast('거절했어요','info');
+  await openSchedApproveSheet(); loadAttList();
 }
 async function approveAllSched(){
   if(!isManager) return;
-  const pend=(window._attSchedListData||[]).filter(s=>s.status==='희망');
-  if(!pend.length) return;
-  if(!confirm(`직원 근무 신청 ${pend.length}건을 모두 승인할까요?`)) return;
+  if(!confirm('대기 중인 근무 신청을 모두 승인할까요?')) return;
   setLoad(true,'승인 중...');
-  const ids=pend.map(s=>s.id);
-  const{error}=await sb.from('work_schedules').update({status:'확정'}).in('id',ids).eq('store_id',currentStore.id);
-  setLoad(false);
-  if(error) return errToast('승인', error);
-  toast(`${ids.length}건 승인 완료!`,'success');
-  await loadAttList();
+  const{error}=await sb.from('work_schedules').update({status:'확정'}).eq('store_id',currentStore.id).eq('status','희망');
+  setLoad(false); if(error) return errToast('승인', error);
+  toast('모두 승인 완료!','success');
+  closeAllSheets(); await loadAttList();
 }
 
 // 직원 '급여' 탭 → 사장과 같은 📋 기록(월 캘린더+KPI 출근/시간/인건비/주휴+일별 간트) 화면으로 통일 (2026-06-15)

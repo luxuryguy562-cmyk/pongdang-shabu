@@ -1810,3 +1810,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .ni-tx b{font-size:14px;font-weight:800;color:var(--toss-text-1);}
 .ni-tx span{font-size:11.5px;color:var(--toss-text-3);margin-top:2px;}
 .ni-arr{color:var(--gray-400);font-size:18px;flex-shrink:0;}
+
+/* ─── 새 기능: 근무 신청 승인 행 (개별 승인/거절) ─── */
+.apv-row{display:flex;align-items:center;gap:10px;padding:13px 4px;border-bottom:1px solid var(--toss-line);}
+.apv-info{flex:1;display:flex;flex-direction:column;min-width:0;}
+.apv-info b{font-size:14px;font-weight:800;color:var(--toss-text-1);}
+.apv-info span{font-size:12px;color:var(--toss-text-3);margin-top:2px;}
+.apv-acts{display:flex;gap:6px;flex-shrink:0;}
+.apv-ok{background:var(--toss-blue);color:#fff;border:none;border-radius:8px;padding:8px 13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;}
+.apv-no{background:var(--danger-light);color:#C92A36;border:none;border-radius:8px;padding:8px 13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;}
