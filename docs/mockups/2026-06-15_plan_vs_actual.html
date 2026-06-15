@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>계획 대비 실제 — 덜함/딱맞음/더함</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; --blue:#2563eb; --ok:#22a06b; --danger:#e5484d; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:16px; margin-bottom:14px;}
+  .step{font-size:13px; font-weight:800; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 10px; border-radius:20px;}
+  .axis{display:flex; margin-left:54px; margin-bottom:2px;}
+  .axis span{flex:1; font-size:9px; color:var(--gray-400);}
+  .grow{display:flex; align-items:center; gap:8px;}
+  .rl{width:46px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;}
+  .rl .dot{width:8px; height:8px; border-radius:50%; background:var(--blue);}
+  .track{flex:1; height:24px; background:#f4f5f7; border-radius:6px; position:relative; overflow:hidden;}
+  .meta{font-size:11px; color:var(--gray-600); margin:5px 0 0 54px;}
+  .bar{position:absolute; top:2px; height:20px; border-radius:7px;}
+  /* 계획 = 회색 꽉 참 (z 아래) */
+  .plan{background:rgba(120,135,155,.55); z-index:0;}
+  /* 실제 = 직원색 꽉 참 (z 위) */
+  .real{background:var(--blue); opacity:.95; z-index:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>계획 대비 실제 — 한눈에</h1>
+  <div class="sub">계획(회색) 위에 실제(파랑)가 덮임. 안 한 만큼 회색이 남음</div>
+
+  <!-- 딱 맞음 -->
+  <div class="card">
+    <div class="step"><span class="tag" style="background:var(--ok);">딱 맞음</span> 계획 18~22, 실제 18~22</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot"></span>민지</div><div class="track">
+      <div class="bar plan" style="left:50%;width:33%;"></div>
+      <div class="bar real" style="left:50%;width:33%;"></div>
+    </div></div>
+    <div class="meta">파랑이 회색을 다 덮음 = 계획대로 일함</div>
+  </div>
+
+  <!-- 덜 함 -->
+  <div class="card">
+    <div class="step"><span class="tag" style="background:var(--danger);">덜 함</span> 계획 18~22, 실제 18~20</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot"></span>민지</div><div class="track">
+      <div class="bar plan" style="left:50%;width:33%;"></div>
+      <div class="bar real" style="left:50%;width:17%;"></div>
+    </div></div>
+    <div class="meta">뒤에 <b>회색이 남음</b> = 20~22 계획했지만 덜 함 (2시간 부족)</div>
+  </div>
+
+  <!-- 더 함 -->
+  <div class="card">
+    <div class="step"><span class="tag" style="background:var(--blue);">더 함</span> 계획 18~22, 실제 17~23</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot"></span>민지</div><div class="track">
+      <div class="bar plan" style="left:50%;width:33%;"></div>
+      <div class="bar real" style="left:42%;width:50%;"></div>
+    </div></div>
+    <div class="meta">파랑이 <b>양쪽으로 삐져나옴</b> = 계획보다 더 일함 (초과 근무)</div>
+  </div>
+
+  <div class="sub">계획(회색)과 실제(파랑) 차이가 색으로 바로 보입니다.<br>이대로 가면 될까요?</div>
+</div>
+</body>
+</html>
