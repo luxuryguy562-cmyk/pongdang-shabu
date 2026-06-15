@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리 / 내 근무 전환</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; --blue:#2563eb; --ok:#22a06b; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.55;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .phone{background:var(--card); border-radius:18px; box-shadow:0 4px 18px rgba(0,0,0,.08); overflow:hidden; border:1px solid #e6e8eb; margin-bottom:18px;}
+  /* 헤더 */
+  .hdr{display:flex; align-items:center; justify-content:space-between; padding:11px 14px; border-bottom:1px solid #eef0f2;}
+  .hdr .logo{font-size:14px; font-weight:900; color:var(--blue); display:flex; align-items:center; gap:5px;}
+  .toggle{display:flex; background:#eef0f3; border-radius:20px; padding:3px;}
+  .toggle button{border:none; background:transparent; font-size:12px; font-weight:700; padding:6px 12px; border-radius:18px; color:var(--gray-600); cursor:pointer;}
+  .toggle button.on{background:#fff; color:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  /* 모드 배지 */
+  .mode{padding:8px 14px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px;}
+  .mode.mgr{background:#eef4ff; color:var(--blue);}
+  .mode.me{background:#eafaf2; color:#157a4f;}
+  .body{padding:16px; min-height:150px;}
+  .scr-title{font-size:15px; font-weight:800; margin-bottom:12px;}
+  .item{background:#f7f8fa; border-radius:10px; padding:12px; margin-bottom:8px; font-size:13px; font-weight:600;}
+  .nav{display:flex; border-top:1px solid #eef0f2;}
+  .nav div{flex:1; text-align:center; padding:9px 0; font-size:10px; color:var(--gray-400);}
+  .nav div.act{color:var(--blue); font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>점장 화면 — 관리 / 내 근무 전환</h1>
+  <div class="sub">위 토글로 두 모드 전환 (점장·팀장만 보임 · 알바는 없음)</div>
+
+  <!-- 관리 모드 -->
+  <div class="phone">
+    <div class="hdr">
+      <span class="logo">₩ 캐쉬플로우</span>
+      <div class="toggle"><button class="on">관리</button><button>내 근무</button></div>
+    </div>
+    <div class="mode mgr">🔑 지금: 관리 모드 (사장님이 준 권한 화면)</div>
+    <div class="body">
+      <div class="scr-title">⏰ 근태관리</div>
+      <div class="item">전체 직원 근무표 · 근무계획 승인</div>
+      <div class="item">개시·마감 (권한 준 화면)</div>
+    </div>
+    <div class="nav"><div>홈</div><div class="act">근태</div><div>개시마감</div><div>더보기</div></div>
+  </div>
+
+  <div class="sub" style="margin:-6px 0 10px;">▼ "내 근무" 누르면 ▼</div>
+
+  <!-- 내 근무 모드 -->
+  <div class="phone">
+    <div class="hdr">
+      <span class="logo">₩ 캐쉬플로우</span>
+      <div class="toggle"><button>관리</button><button class="on">내 근무</button></div>
+    </div>
+    <div class="mode me">👤 지금: 내 근무 모드 (나도 직원이니까)</div>
+    <div class="body">
+      <div class="scr-title">⏰ 내 출퇴근</div>
+      <div class="item">🟢 출근 찍기 / 퇴근 찍기</div>
+      <div class="item">📋 내 급여 · 내 근무계획 신청</div>
+    </div>
+    <div class="nav"><div class="act">출퇴근</div><div>급여</div></div>
+  </div>
+
+  <div class="sub">화면만 바뀌고 권한은 그대로(안전).<br>이 방향으로 만들까요?</div>
+</div>
+</body>
+</html>
