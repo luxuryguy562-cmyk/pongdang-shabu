@@ -28,6 +28,32 @@ function initAttDate(){
   renderEmpHome();
 }
 
+// ─── 새 기능: 직원 근무 신청 승인 (사장만, 2026-06-15) ───
+// 직원이 찍은 status='희망' 근무를 사장이 '확정'으로. 사장이 막대 편집·저장해도 자동 확정(saveSchedule isManager 분기).
+function renderSchedApproveBanner(schedData){
+  const el=document.getElementById('schedApproveBanner');
+  if(!el) return;
+  const pend=(schedData||[]).filter(s=>s.status==='희망');
+  if(!isManager || pend.length===0){ el.style.display='none'; el.innerHTML=''; return; }
+  el.innerHTML=`<span class="sab-ic">🔔</span>`
+    +`<span class="sab-tx">직원 근무 신청 <b>${pend.length}건</b> 대기 중</span>`
+    +`<button class="sab-btn" data-action="approveAllSched">모두 승인</button>`;
+  el.style.display='flex';
+}
+async function approveAllSched(){
+  if(!isManager) return;
+  const pend=(window._attSchedListData||[]).filter(s=>s.status==='희망');
+  if(!pend.length) return;
+  if(!confirm(`직원 근무 신청 ${pend.length}건을 모두 승인할까요?`)) return;
+  setLoad(true,'승인 중...');
+  const ids=pend.map(s=>s.id);
+  const{error}=await sb.from('work_schedules').update({status:'확정'}).in('id',ids).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('승인', error);
+  toast(`${ids.length}건 승인 완료!`,'success');
+  await loadAttList();
+}
+
 // 직원 '급여' 탭 → 사장과 같은 📋 기록(월 캘린더+KPI 출근/시간/인건비/주휴+일별 간트) 화면으로 통일 (2026-06-15)
 // 사장님 지시: 직원 급여탭 = 사장 화면 그대로. 옛 급여달력(empPayCont)·주간리스트(empSchedCont) 폐기.
 function goEmpSched(el){
@@ -593,6 +619,9 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
     (window._attSchedDayMap[s.work_date] = window._attSchedDayMap[s.work_date]||[]).push(s);
   });
   window._attSchedListData = schedData||[];
+
+  // 새 기능: 직원 근무 신청('희망') 승인 배너 (사장만, 2026-06-15)
+  renderSchedApproveBanner(schedData||[]);
 
   // 모드 판정
   const isSingleView = !!empF;
