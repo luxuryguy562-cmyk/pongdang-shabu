@@ -78,7 +78,14 @@
 
 #### 머지 실패 시 (드문 케이스)
 - auto-merge 실패 → 즉시 머지 → 그것도 실패 시 CTO가 원인 분석·해결안 가져옴 (사장님은 응/왜? 판단만)
-- 본가(main)에 직접 push로 우회 절대 금지
+- 본가(main)에 직접 push로 우회 절대 금지 (단 아래 예외)
+
+#### ⚠️ 예외 — GitHub MCP(PR 도구) 자체가 불가할 때 (2026-06-15 신설, dev_lessons #146)
+- GitHub MCP 서버가 disconnected / 재인증 필요로 `create_pull_request`·`merge_pull_request`를 못 쓰는 경우:
+  - **사장님께 OAuth 인증 떠넘기지 말 것** (빙산 "부담 떠넘김" 재발 — git은 살아있음).
+  - 절차: `git fetch origin main` → `git merge origin/main`(충돌 해결) → `git push origin HEAD:main`.
+  - PR 이력은 못 남기지만 **본가 반영(=사장님 테스트 가능)이 우선**. GitHub 복구되면 다음 작업부터 PR 자동화 재개.
+- 위 "직접 push 절대 금지"는 PR 자동화가 **살아있을 때** 전제이다.
 
 ### 1-4. 모듈 분리 구조 (2026-05-25 분리 작업 완료)
 
