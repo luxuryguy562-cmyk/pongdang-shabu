@@ -1689,13 +1689,14 @@ function renderAiBrief(a){
     }
   }
 
-  // ⚠️ 적자 예상일 때만 경고 — 흑자/성적은 아래 '월 성적 단추'가 담당 (중복 제거, AI 매니저=위험 전용. 2026-06-15)
+  // 🟢/🔴 흑자·적자 — 항상 첫 줄 고정(pin). 누르면 월 요약 카드 펼침 (사장님 안 2026-06-15)
   if(a.isCurrent && rev>0){
-    const est = a.estNetProfit||0;
-    if(est < 0){
-      items.push({ sev:0, ic:'⚠️', title:'이대로면 이번 달 적자 예상',
-        desc:`이대로면 월말 <b>${signMan(est)}</b> 예상이에요. 지출을 점검해 보세요.` });
-    }
+    const now = a.netProfit||0, est = a.estNetProfit||0;
+    const bad = est < 0;
+    items.push({ pin:true, sev: bad?0:2, ic: bad?'⚠️':'✅',
+      title: bad?'이대로면 이번 달 적자 예상':'이대로면 흑자예요',
+      desc:`지금까지 <b>${signMan(now)}</b> · 이대로면 월말 <b>${signMan(est)}</b> 예상이에요. <span class="aib-golink">눌러서 월 요약 보기 ›</span>`,
+      action:'toggleMonthCard' });
   }
 
   // 🟢 매출이 전월보다 뚜렷이 늘었을 때 (칭찬)
@@ -1704,16 +1705,19 @@ function renderAiBrief(a){
       desc:`매출이 지난달 같은 기간보다 <span style="color:var(--toss-blue-strong);font-weight:800;">${a.momRev.text}</span> 늘었어요.` });
   }
 
-  // 심각도순 정렬(빨강→노랑→초록) 후 최대 3개
+  // 흑자/적자(pin)는 항상 첫 줄 고정, 나머지 경고는 심각도순(빨강→노랑→초록) 최대 3개 (2026-06-15)
   items.sort((x,y)=>x.sev-y.sev);
-  const top = items.slice(0,3);
+  const pinned = items.filter(it=>it.pin);
+  const rest = items.filter(it=>!it.pin).slice(0, Math.max(0, 3-pinned.length));
+  const top = [...pinned, ...rest];
 
   // 띄울 게 없으면 단추·카드 모두 숨김
   if(top.length===0){ el.style.display='none'; el.innerHTML=''; btn.style.display='none'; return; }
 
-  // ── 홈 단추 (접힌 상태로 항상 노출, 누르면 펼침) ──
+  // ── 홈 단추 (접힌 상태로 항상 노출, 누르면 펼침) ── 단추 색 = 가장 심각한 항목 기준
   const sevCls = s => s===0?'red':(s===1?'warn':'green');
-  const worst = (top[0].strong || top[0].sev<=0) ? 'red' : sevCls(top[0].sev);
+  const minSev = Math.min(...top.map(it=>it.strong?-1:it.sev));
+  const worst = minSev<=0 ? 'red' : sevCls(minSev);
   const isOpen = el.style.display==='block';
   btn.className = 'aib-btn '+worst;
   btn.innerHTML = `
@@ -1723,9 +1727,9 @@ function renderAiBrief(a){
     <span class="aib-btn-arr">${isOpen?'⌄':'›'}</span>`;
   btn.style.display='flex';
 
-  // ── 펼침 카드 내용 (표시 여부는 toggleAiBrief가 제어) ──
+  // ── 펼침 카드 내용 (표시 여부는 toggleAiBrief가 제어) ── action 있으면 클릭 가능
   const rowsHtml = top.map(it=>`
-    <div class="aib-row ${it.strong?'strong':sevCls(it.sev)}">
+    <div class="aib-row ${it.strong?'strong':sevCls(it.sev)}${it.action?' aib-clickable':''}"${it.action?` data-action="${it.action}"`:''}>
       <div class="aib-ic">${it.ic}</div>
       <div class="aib-tx"><div class="aib-title">${it.title}</div><div class="aib-desc">${it.desc}</div></div>
     </div>`).join('');
@@ -2024,20 +2028,9 @@ function v17RenderMonthCard(){
       +`<span class="fc-more">자세히 ›</span></div>`;
   }
 
-  // ── 성적 단추(항상 보임) + 카드 본체(접힘) — 사장님 안 2026-06-15 ──
-  //    흑자/적자 상태는 단추가 늘 보여주고, 도넛·매출·지출 상세는 누르면 펼침 (홈 깔끔 + 흑자/적자 중복 단일화)
-  const _statProfit = (fcSale!==null) ? fcProfit : profit;   // 진행중=월말예상 / 마감월=실제
-  const _isGain = _statProfit>=0;
-  const _statLabel = (fcSale!==null)
-    ? `이대로면 ${_isGain?'흑자':'적자'} ${_isGain?'+':'-'}${v17FmtCompact(Math.abs(_statProfit))}`
-    : `${_isGain?'흑자':'적자'} ${_isGain?'+':'-'}${v17FmtCompact(Math.abs(_statProfit))}`;
-  const msumBtn = `
-    <button type="button" class="msum-btn ${_isGain?'green':'red'}" data-action="toggleMonthCard">
-      <span class="msum-ic">📊</span>
-      <span class="msum-tx"><b>${ctx.TARGET_MONTH}월 성적</b><span class="msum-sub">${_statLabel}</span></span>
-      <span class="msum-arr" id="v17MonthArr">›</span>
-    </button>`;
-  el.innerHTML = msumBtn + `
+  // ── 월 요약 카드 = 평소 접힘. AI 매니저의 '흑자/적자' 항목을 누르면 펼쳐짐 (사장님 안 2026-06-15) ──
+  //    홈 상시 노출 X → AI 매니저 흑자/적자 = 진입 트리거. toggleMonthCard가 펼침 제어.
+  el.innerHTML = `
     <div id="v17MonthBody" style="display:none;">
       <div class="v17-card-v6">
         ${fcHtml}
@@ -2059,14 +2052,13 @@ function v17RenderMonthCard(){
       </div>
     </div>`;
 }
-// ─── 월 성적 단추 ↔ 카드 본체 펼침/접힘 (2026-06-15) ───
+// ─── 월 요약 카드 펼침/접힘 — AI 매니저 '흑자/적자' 누르면 호출 (2026-06-15) ───
 function toggleMonthCard(){
   const b=document.getElementById('v17MonthBody');
-  const ar=document.getElementById('v17MonthArr');
   if(!b) return;
   const open=b.style.display==='none';
   b.style.display=open?'block':'none';
-  if(ar) ar.textContent=open?'⌄':'›';
+  if(open) b.scrollIntoView({behavior:'smooth', block:'center'}); // 펼치면 카드 위치로 부드럽게 이동
 }
 
 // ─── 월 세부 화면 렌더 (요약 카드 탭 진입 — 2026-06-03 신설) ───
