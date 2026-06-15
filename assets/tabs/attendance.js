@@ -806,9 +806,10 @@ function renderAttDayDetail(date, logs, isSingleView){
   const hasPlanOnly = !((logs||[]).length) && planRowsCheck.some(p=>p.employee_id && !p.is_off);
   if((!logs || !logs.length) && !hasPlanOnly){
     // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · "기록 없음" · 선 · [근무계획][실제입력]
+    const _pl = isManager ? '등록' : '신청';
     const chipBtns = `
-      <span class="dh-btn plan" data-action="openSchedSheet|${date}">📅 이 날만</span>
-      <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📋 주간</span>
+      <span class="dh-btn plan" data-action="openSchedSheet|${date}">📅 이 날 ${_pl}</span>
+      <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📋 일주일 ${_pl}</span>
       ${isManager ? `<span class="dh-btn add" data-action="openAttManualSheet|${date}${empF?'|'+empF:''}">✏️ 실제입력</span>` : ''}
     `;
     const note = isManager
@@ -827,9 +828,10 @@ function renderAttDayDetail(date, logs, isSingleView){
   const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
   const allData = window._attListData || [];
   // 2026-06-12 날짜 헤더 B안 (구분선 스타일, 사장님 선택): 날짜 pill · 시간 · 선 · [근무계획][실제입력] 한 줄
+  const _pl = isManager ? '등록' : '신청';
   const chipBtns = `
-    <span class="dh-btn plan" data-action="openSchedSheet|${date}">📅 이 날만</span>
-    <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📋 주간</span>
+    <span class="dh-btn plan" data-action="openSchedSheet|${date}">📅 이 날 ${_pl}</span>
+    <span class="dh-btn plan" data-action="openWeeklyPlanSheet|${date}">📋 일주일 ${_pl}</span>
     ${isManager ? `<span class="dh-btn add" data-action="openAttManualSheet|${date}">✏️ 실제입력</span>` : ''}
   `;
 
