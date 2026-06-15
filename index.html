@@ -603,7 +603,7 @@
   <div class="nav-item manager-only" data-action="toggleSideMenu" style="display:none;"><span class="ni"><svg><use href="#i-grid"/></svg></span>더보기</div>
   <!-- 직원 nav: 홈 / 내 정보 (급여·개시마감·영수증은 홈 행동허브 버튼으로) -->
   <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-home"/></svg></span>홈</div>
-  <div class="nav-item staff-only" data-tab="empPay" data-action="nav|empPay|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>급여</div>
+  <div class="nav-item staff-only" data-tab="empPay" data-action="goEmpSched|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>급여</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -1053,11 +1053,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--gray-200);"><span style="font-size:13px;color:var(--gray-600);font-weight:700;">급여 계좌</span><span id="myinfoAccount" style="font-size:14px;font-weight:800;">-</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;"><span style="font-size:13px;color:var(--gray-600);font-weight:700;">생년월일</span><span id="myinfoBirth" style="font-size:14px;font-weight:800;">-</span></div>
   </div>
-  <!-- 메뉴 -->
-  <div style="display:flex;align-items:center;gap:12px;background:var(--gray-100);border-radius:14px;padding:15px;margin-bottom:9px;cursor:pointer;" data-action="goEmpSched">
-    <div style="width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;">🗓</div>
-    <div style="flex:1;font-size:14px;font-weight:800;">내 근무표 보기</div><span style="color:var(--gray-400);font-size:18px;">›</span>
-  </div>
+  <!-- 메뉴 (내 근무표 보기 제거 — 급여탭이 근무표 겸함, 2026-06-15) -->
   <div style="display:flex;align-items:center;gap:12px;background:var(--gray-100);border-radius:14px;padding:15px;margin-bottom:9px;cursor:pointer;" data-action="openStoreSheet">
     <div style="width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;">🏪</div>
     <div style="flex:1;font-size:14px;font-weight:800;">매장 변경 / 추가</div><span style="color:var(--gray-400);font-size:18px;">›</span>
@@ -3605,7 +3601,7 @@
   <button style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:30px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;" data-action="closeImgFullPreview">닫기</button>
 </div>
 <script src="assets/tabs/receipt.js?v=20260614"></script>
-<script src="assets/tabs/attendance.js?v=20260614b"></script>
+<script src="assets/tabs/attendance.js?v=20260614c"></script>
 <script src="assets/tabs/schedule.js?v=20260608"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
 <script src="assets/tabs/dashboard.js?v=20260614g"></script>
