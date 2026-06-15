@@ -792,8 +792,6 @@ function updateRoleSwitchUI(){
   const mBtn=document.getElementById('rsMgr'), wBtn=document.getElementById('rsMe');
   if(mBtn) mBtn.classList.toggle('on', !_myWorkMode);
   if(wBtn) wBtn.classList.toggle('on', !!_myWorkMode);
-  const banner=document.getElementById('myWorkBanner');
-  if(banner) banner.style.display = (can && _myWorkMode) ? 'block' : 'none';
 }
 // ─── 새 기능: 직급별 화면(하단 탭) 권한 (2026-06-15) ───
 // 사장(owner)=전체 / 직원(staff)=기존 staff-only / 그 외 관리자 직급(점장·팀장 등)=role_permissions 제한
