@@ -1777,3 +1777,19 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .fc-cell.act.empty .fc-cell-val{color:var(--toss-text-4);font-weight:600;}
 .fc-cell.act.late{background:var(--danger-light);}
 .fc-cell.act.late .fc-cell-val{color:#C92A36;font-weight:600;}
+
+/* ─── 새 기능: 자동이체/직접 납부 선택 (편집 시트) ─── */
+.ap-row{display:flex;gap:8px;margin-bottom:11px;}
+.ap-opt{flex:1;border:2px solid var(--toss-line-2);border-radius:12px;padding:11px;text-align:center;cursor:pointer;transition:all .15s;}
+.ap-opt .ap-t{font-size:13px;font-weight:800;color:var(--toss-text-2);}
+.ap-opt .ap-d{font-size:10px;font-weight:500;color:var(--toss-text-4);margin-top:2px;}
+.ap-opt.on{border-color:var(--toss-blue);background:var(--toss-blue-light);}
+.ap-opt.on .ap-t{color:var(--toss-blue-strong);}
+.ap-opt.on-manual{border-color:var(--toss-red);background:var(--danger-light);}
+.ap-opt.on-manual .ap-t{color:#C92A36;}
+
+/* ─── 새 기능: AI 알림 최강조 (직접 납부 미납) ─── */
+.aib-row.strong{background:#C92A36;}
+.aib-row.strong .aib-title{color:#fff;}
+.aib-row.strong .aib-desc{color:rgba(255,255,255,.92);}
+.aib-row.strong .aib-desc b{color:#fff;}
