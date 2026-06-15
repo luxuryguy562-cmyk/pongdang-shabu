@@ -550,10 +550,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-gl.mid{border-left:1.5px dashed rgba(240,68,82,0.55);}
 .att-bar{position:absolute;top:4px;height:16px;border-radius:8px;opacity:.92;z-index:1;min-width:6px;}
 .att-bar.plan{background:transparent;border:1.5px dashed rgba(100,116,139,0.7);top:2px;height:20px;opacity:1;z-index:0;}
-/* 승인됨(확정) = 점선 → 실선 (2026-06-15 사장님: 회색 점선>회색 실선) */
-.att-bar.plan.confirmed{border-style:solid;border-color:rgba(100,116,139,0.9);}
-/* 끝시간 미정 = 시작점부터 오른쪽으로 흐려지는 열린 막대 (2026-06-15 사장님) */
-.att-bar.plan.open{border-right:none;background:linear-gradient(90deg,rgba(148,163,184,0.22),rgba(148,163,184,0));}
+/* 승인됨(확정) = 연한 회색 꽉 참 (2026-06-15 사장님: 연하게, 구분선 비침) */
+.att-bar.plan.confirmed{border:none;background:rgba(120,135,155,0.26);}
+/* 끝시간 미정 = 시작점에서 한 막대로 자연스럽게 흐려짐 (2026-06-15 사장님: 단일 막대) */
+.att-bar.plan.open{border:none;border-radius:7px 0 0 7px;background:linear-gradient(90deg,rgba(120,135,155,0.5) 0%,rgba(120,135,155,0.5) 22%,rgba(120,135,155,0) 100%);}
 .att-bar.absent{top:2px;height:20px;border:1px solid rgba(239,68,68,0.85);background:repeating-linear-gradient(45deg,rgba(239,68,68,0.85),rgba(239,68,68,0.85) 4px,rgba(254,202,202,0.85) 4px,rgba(254,202,202,0.85) 8px);}
 
 /* ─ 대시보드 */
