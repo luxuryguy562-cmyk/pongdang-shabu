@@ -528,13 +528,13 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-row-label{display:flex;align-items:center;gap:4px;min-width:55px;font-size:10px;font-weight:700;color:var(--text);padding:2px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .att-row-label .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .att-row-meta{display:flex;justify-content:flex-start;gap:10px;align-items:baseline;margin:-2px 0 8px 59px;font-size:10px;color:var(--gray-600);font-variant-numeric:tabular-nums;}
-.att-row-meta .time{color:var(--gray-400);font-variant-numeric:tabular-nums;}
+.att-row-meta .time{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;}
 .att-row-meta .hours{color:var(--text);font-weight:700;font-size:11px;font-variant-numeric:tabular-nums;}
 
 /* ─── 근태 일별 간트 — 눈금 시간축 (2026-05-28 사장님: 선=숫자 정중앙, 짝수 실선/홀수 점선, 금액 숨김) ─── */
 .att-axis{display:flex;align-items:flex-end;height:15px;margin-top:8px;}
 .att-axis-ticks{position:relative;flex:1;height:100%;}
-.att-tk{position:absolute;bottom:0;transform:translateX(-50%);font-size:9px;color:var(--gray-400);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.att-tk{position:absolute;bottom:0;transform:translateX(-50%);font-size:9px;color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .att-tk.mid{color:var(--danger);font-weight:700;}
 .att-grow{display:flex;align-items:center;min-height:26px;}
 .att-track{position:relative;flex:1;height:24px;border-top:1px solid var(--gray-100);}

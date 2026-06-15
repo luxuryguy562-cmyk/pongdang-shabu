@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>간트 시간 가독성</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-100:#f0f1f3; --gray-200:#e4e6ea; --gray-400:#9aa0a6; --gray-600:#5f6368; --gray-700:#3c4043; --blue:#2563eb; --danger:#e5484d; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:16px; margin-bottom:16px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 10px; border-radius:20px;}
+  .ctitle{font-size:14px; font-weight:800; margin-bottom:14px; display:flex; align-items:center; gap:8px;}
+
+  /* 축 */
+  .axis{display:flex; align-items:flex-end; height:15px;}
+  .axis-pad{width:60px; flex-shrink:0;}
+  .axis-ticks{position:relative; flex:1; height:100%;}
+  .tk{position:absolute; bottom:0; transform:translateX(-50%); font-size:9px; font-variant-numeric:tabular-nums;}
+  .tk.mid{color:var(--danger); font-weight:700;}
+
+  .grow{display:flex; align-items:center; min-height:26px; margin-top:4px;}
+  .track{position:relative; flex:1; height:24px; border-top:1px solid var(--gray-100);}
+  .gl{position:absolute; top:0; bottom:0; width:0;}
+  .gl.major{border-left:1px solid var(--gray-200);}
+  .gl.minor{border-left:1px dashed var(--gray-200);}
+  .gl.mid{border-left:1.5px dashed rgba(240,68,82,0.55);}
+  .bar{position:absolute; top:2px; height:20px; border-radius:7px;}
+  .bar.open{border:none; border-radius:7px 0 0 7px; background:linear-gradient(90deg,rgba(120,135,155,.5) 0%,rgba(120,135,155,.5) 22%,rgba(120,135,155,0) 100%);}
+  .bar.real{background:var(--blue); opacity:.92;}
+
+  /* 지금: 연회색 눈금 + 연회색 시간 */
+  .now .tk{color:var(--gray-400);}
+  .now .rl{display:flex; align-items:center; gap:4px; min-width:55px; font-size:10px; font-weight:700; color:var(--text);}
+  .now .rl .dot{width:7px; height:7px; border-radius:50%;}
+  .now .meta{display:flex; gap:10px; margin:-2px 0 8px 59px; font-size:10px;}
+  .now .meta .time{color:var(--gray-400);}
+  .now .meta .hours{color:var(--text); font-weight:700; font-size:11px;}
+
+  /* 새: 검정 눈금 + 이름 위/시간 아래 검정 */
+  .new .tk{color:var(--gray-700); font-weight:600;}
+  .new .rl{min-width:60px; flex-shrink:0; display:flex; flex-direction:column; gap:1px; justify-content:center;}
+  .new .rl .nm{display:flex; align-items:center; gap:4px; font-size:11px; font-weight:800; color:var(--text);}
+  .new .rl .nm .dot{width:7px; height:7px; border-radius:50%;}
+  .new .rl .tm{font-size:10px; font-weight:700; color:var(--text); padding-left:11px; font-variant-numeric:tabular-nums;}
+  .new .meta{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>간트 시간 — 잘 보이게</h1>
+
+  <!-- 지금 -->
+  <div class="card now">
+    <div class="ctitle"><span class="tag" style="background:#ef4444;">지금</span> 눈금·시간이 연회색 → 안 보임</div>
+    <div class="axis"><div class="axis-pad"></div><div class="axis-ticks" id="ax1"></div></div>
+    <div class="grow">
+      <div class="rl"><span class="dot" style="background:#a855f7;"></span>정은미</div>
+      <div class="track" id="tk1"><div class="bar open" style="left:50%;width:33%;"></div></div>
+    </div>
+    <div class="meta"><span class="time">18:00 ~ ?</span><span class="hours">0.0h</span></div>
+  </div>
+
+  <!-- 새 -->
+  <div class="card new">
+    <div class="ctitle"><span class="tag" style="background:#22a06b;">새</span> 눈금 검정 + 이름 위·시간 아래</div>
+    <div class="axis"><div class="axis-pad"></div><div class="axis-ticks" id="ax2"></div></div>
+    <div class="grow">
+      <div class="rl"><span class="nm"><span class="dot" style="background:#a855f7;"></span>정은미</span><span class="tm">18:00 ~ ?</span></div>
+      <div class="track" id="tk2"><div class="bar open" style="left:50%;width:33%;"></div></div>
+    </div>
+    <div class="grow">
+      <div class="rl"><span class="nm"><span class="dot" style="background:var(--blue);"></span>민지</span><span class="tm">18:00~23:00</span></div>
+      <div class="track" id="tk3"><div class="bar real" style="left:50%;width:42%;"></div></div>
+    </div>
+  </div>
+
+  <div class="sub">눈금(6 8 10…) 검정 + 이름 아래 시간(18:00~? / 18:00~23:00)<br>이대로 갈까요?</div>
+</div>
+
+<script>
+  // 축 6시~익일4시 (22시간 폭, 2시간 간격)
+  const START=6, END=28, SPAN=END-START;
+  function ticks(el){ let h='';
+    for(let t=START;t<END;t+=2){ const lab=t>=24?t-24:t; const left=(t-START)/SPAN*100;
+      h+=`<span class="tk${t===24?' mid':''}" style="left:${left}%">${lab}</span>`; }
+    el.innerHTML=h;
+  }
+  function lines(el){ let h='';
+    for(let t=START;t<=END;t++){ const cls=t===24?'mid':(t%2===0?'major':'minor'); const left=(t-START)/SPAN*100;
+      h+=`<span class="gl ${cls}" style="left:${left}%"></span>`; }
+    el.insertAdjacentHTML('afterbegin',h);
+  }
+  ticks(document.getElementById('ax1')); ticks(document.getElementById('ax2'));
+  lines(document.getElementById('tk1')); lines(document.getElementById('tk2')); lines(document.getElementById('tk3'));
+</script>
+</body>
+</html>
