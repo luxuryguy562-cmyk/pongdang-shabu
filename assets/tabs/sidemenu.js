@@ -1795,6 +1795,7 @@ function openAddFcSheet(){
   fillFcDayOptions();
   document.getElementById('fcExpectedDay').value='';
   setFcAutoPay(true);
+  setFcVat(true);
   updateFcSheetLabels(catSel.value);
   openSheet('addFcSheet');
 }
@@ -1813,6 +1814,7 @@ function openEditFcSheet(id){
   fillFcDayOptions();
   document.getElementById('fcExpectedDay').value=fc.expected_day||'';
   setFcAutoPay(fc.is_auto_pay!==false);
+  setFcVat(fc.vat_included!==false);
   updateFcSheetLabels(cat);
   openSheet('addFcSheet');
 }
@@ -1822,8 +1824,9 @@ async function saveFc(){
   const estimatedMonthly=unFmt(document.getElementById('fcEstimatedMonthly').value);
   const expectedDay=parseInt(document.getElementById('fcExpectedDay').value)||null;
   const isAutoPay=document.getElementById('fcIsAutoPay').value!=='false';
+  const vatIncluded=document.getElementById('fcVatIncluded').value!=='false';
   setLoad(true,'저장 중...');
-  const payload={name,category:cat,estimated_monthly:estimatedMonthly,expected_day:expectedDay,is_auto_pay:isAutoPay};
+  const payload={name,category:cat,estimated_monthly:estimatedMonthly,expected_day:expectedDay,is_auto_pay:isAutoPay,vat_included:vatIncluded};
   const{error}=eid?await sb.from('fixed_costs').update(payload).eq('id',eid):await sb.from('fixed_costs').insert({...payload,store_id:currentStore.id,sort_order:fixedCosts.length});
   setLoad(false);if(error)return errToast('저장', error);closeAllSheets();await loadFixedCosts();
 }
@@ -1847,6 +1850,26 @@ function fillFcDayOptions(){
   html+='<option value="99">📌 말일</option>';
   sel.innerHTML=html; sel.dataset.filled='1';
 }
+// 부가세 포함/미포함 + 부가세액 자동 표시 (2026-06-15)
+function setFcVat(incl){
+  const h=document.getElementById('fcVatIncluded'); if(h) h.value=incl?'true':'false';
+  const i=document.getElementById('fcVatIncl'), e=document.getElementById('fcVatExcl');
+  if(i) i.classList.toggle('on', incl);
+  if(e) e.classList.toggle('on', !incl);
+  updateFcVatHint();
+}
+function updateFcVatHint(){
+  const hint=document.getElementById('fcVatHint'); if(!hint) return;
+  const incl=document.getElementById('fcVatIncluded').value!=='false';
+  const amt=unFmt(document.getElementById('fcEstimatedMonthly').value)||0;
+  if(incl && amt>0){
+    const vat=Math.round(amt/11); // 부가세 포함액 ÷ 11 = 부가세
+    hint.textContent=`부가세 ${fmt(vat)}원 포함 (공급가 ${fmt(amt-vat)}원)`;
+  } else if(!incl){
+    hint.textContent='부가세 없는 금액이에요';
+  } else { hint.textContent=''; }
+}
+function fcAmtInput(el){ formatNumberInput(el); updateFcVatHint(); }
 
 // ─── 새 기능: 이번 달 실제 납부액 입력 (2026-06-14) ───
 function openFcActualSheet(id){

@@ -544,6 +544,7 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 | **estimated_monthly** (int, default 0) — 항목별 예상 월 금액. 모든 달 가마감 자동 집계 (2026-05-06 신설) | |
 | expected_day, tolerance_days | |
 | **is_auto_pay** (bool, default true, 2026-06-15) — 자동이체 여부. false=직접 납부(월세·관리비) → AI 미납 알림 더 강조 | |
+| **vat_included** (bool, default true, 2026-06-15) — 금액에 부가세 포함 여부. 포함이면 편집에서 부가세=금액÷11 자동 표시 | |
 - upsert onConflict: `fixed_cost_id, year_month`
 - **expected_day=99 = 말일** 약속값 (그 달 마지막날로 계산, `fcDueDay` 헬퍼). 1~31은 그 날, 99/초과는 말일 보정.
 - **공과금 미납 알림 (2026-06-14~15)**: 납기일+이번달 실제납부액(fixed_cost_amounts) 입력 → 정산 반영(`fcEffectiveMonthly`, 실제 우선) + AI 매니저 미납/임박 경보. 자동이체(is_auto_pay)는 약하게, 직접 납부는 강하게.

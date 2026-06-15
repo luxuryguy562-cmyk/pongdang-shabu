@@ -3252,7 +3252,14 @@
     <option value="세금">세금</option>
   </select>
   <div id="fcAmtLabel" style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">월 고정 금액 (가마감 자동 집계)</div>
-  <input id="fcEstimatedMonthly" class="input-field" type="text" inputmode="numeric" placeholder="예: 2,000,000 (월세)" data-input="formatNumberInput|this">
+  <input id="fcEstimatedMonthly" class="input-field" type="text" inputmode="numeric" placeholder="예: 2,000,000 (월세)" data-input="fcAmtInput|this">
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">부가세</div>
+  <div class="ap-row">
+    <div class="ap-opt" id="fcVatIncl" data-action="setFcVat|true"><div class="ap-t">포함</div></div>
+    <div class="ap-opt" id="fcVatExcl" data-action="setFcVat|false"><div class="ap-t">미포함</div></div>
+  </div>
+  <input type="hidden" id="fcVatIncluded" value="true">
+  <div id="fcVatHint" style="font-size:11px;color:var(--toss-blue-strong);font-weight:600;margin:-4px 0 11px 2px;"></div>
   <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px;">납부 방식</div>
   <div class="ap-row">
     <div class="ap-opt" id="fcApAuto" data-action="setFcAutoPay|true">
@@ -3602,7 +3609,7 @@
 <script src="assets/tabs/schedule.js?v=20260608"></script>
 <script src="assets/tabs/settlement.js?v=20260608"></script>
 <script src="assets/tabs/dashboard.js?v=20260614g"></script>
-<script src="assets/tabs/sidemenu.js?v=20260614d"></script>
+<script src="assets/tabs/sidemenu.js?v=20260614e"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
 </html>
