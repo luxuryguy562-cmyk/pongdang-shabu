@@ -2028,10 +2028,8 @@ function v17RenderMonthCard(){
       +`<span class="fc-more">자세히 ›</span></div>`;
   }
 
-  // ── 월 요약 카드 = 평소 접힘. AI 매니저의 '흑자/적자' 항목을 누르면 펼쳐짐 (사장님 안 2026-06-15) ──
-  //    홈 상시 노출 X → AI 매니저 흑자/적자 = 진입 트리거. toggleMonthCard가 펼침 제어.
+  // ── 월 요약 카드 본체. 숨김/펼침은 부모 #dashMonthSection이 담당 (AI 매니저 흑자/적자 트리거 — 2026-06-15) ──
   el.innerHTML = `
-    <div id="v17MonthBody" style="display:none;">
       <div class="v17-card-v6">
         ${fcHtml}
         <div class="v6-ttl-row">
@@ -2049,16 +2047,16 @@ function v17RenderMonthCard(){
             <div class="m6-mr"><span class="k">수익</span><span class="v ${profit>=0?'green':'red'}">${v17FmtNoWonSigned(profit)}원</span></div>
           </div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
 }
-// ─── 월 요약 카드 펼침/접힘 — AI 매니저 '흑자/적자' 누르면 호출 (2026-06-15) ───
+// ─── 월 요약 섹션(타이틀+카드) 펼침/접힘 — AI 매니저 '흑자/적자' 누르면 호출 (2026-06-15) ───
+//     AI 매니저 바로 아래 위치 → 누르면 그 자리에서 자연스럽게 펼쳐짐 (타이틀도 함께 토글)
 function toggleMonthCard(){
-  const b=document.getElementById('v17MonthBody');
+  const b=document.getElementById('dashMonthSection');
   if(!b) return;
   const open=b.style.display==='none';
   b.style.display=open?'block':'none';
-  if(open) b.scrollIntoView({behavior:'smooth', block:'center'}); // 펼치면 카드 위치로 부드럽게 이동
+  if(open) b.scrollIntoView({behavior:'smooth', block:'start'}); // 펼치면 섹션 상단으로 이동
 }
 
 // ─── 월 세부 화면 렌더 (요약 카드 탭 진입 — 2026-06-03 신설) ───
