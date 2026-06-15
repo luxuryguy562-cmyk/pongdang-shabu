@@ -4,7 +4,16 @@
 
 ---
 
-## [2026-06-15] 직원 근무 화면 — 사장 화면 통일 1단계
+## [2026-06-15] 직원 급여탭 = 사장 📋기록 화면 통일 (완료)
+
+**사장님 지시**: 따로 만들지 말고 직원 '급여' 하단탭(empPay)을 사장 '📋 기록' 화면(월 캘린더+KPI 출근일/근무시간/인건비/🎁주휴+일별 간트)으로 교체. 시간·급여 다 그 화면에 나옴.
+- 직원 '급여' 하단탭 data-action `nav|empPay` → `goEmpSched|this` (nav('attendance')+attTab('all')+하단 급여탭 active 보정). attendance.js goEmpSched(el).
+- '내 근무표 보기'(index.html myinfo) 버튼 **제거**(중복). 옛 급여달력(empPayCont/loadEmpPay)·주간리스트(empSchedCont) 미사용 폐기.
+- 직원 권한분기 기존(attEmpFilter staff 본인 고정) → 본인 것만. attendance.js?v=20260614c.
+- 데이터 확인(DB): 6월 근태 57건, 근무계획 8건, 활성직원 12 → 화면 정상 표시 근거.
+- 남은(다음): 신청→승인 플로우(status 희망→확정 승인+🔔알림, 기존 8건 '희망'→'확정' UPDATE).
+
+## (구) [2026-06-15] 직원 근무 화면 — 사장 화면 통일 1단계 (급여탭 통일로 대체됨)
 
 **사장님 "다 해" → 착수.** Explore 조사: 사장 "📋 기록"(#attAll, 월 캘린더 renderAttCalendar:666 + 일별 간트 renderAttDayDetail:753)은 **이미 권한 분기**(attEmpFilter staff 본인 고정 529~, openSchedSheet/weeklyPlan staff 본인 자동) → 직원이 봐도 본인 것만. 근무계획 입력도 직원 가능(saveSchedule status='희망').
 

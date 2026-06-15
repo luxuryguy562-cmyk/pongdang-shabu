@@ -28,11 +28,14 @@ function initAttDate(){
   renderEmpHome();
 }
 
-// 직원 '내 근무표' → 사장과 같은 📋 기록(월 캘린더+간트) 화면으로 통일 (2026-06-15)
-// 옛 주간 리스트(empSchedCont/renderEmpSched)는 폐기 — 사장 화면과 따로 놀던 것
-function goEmpSched(){
+// 직원 '급여' 탭 → 사장과 같은 📋 기록(월 캘린더+KPI 출근/시간/인건비/주휴+일별 간트) 화면으로 통일 (2026-06-15)
+// 사장님 지시: 직원 급여탭 = 사장 화면 그대로. 옛 급여달력(empPayCont)·주간리스트(empSchedCont) 폐기.
+function goEmpSched(el){
   nav('attendance');
-  setTimeout(()=>{ const b=document.querySelector('#attendanceCont .sub-tab[data-sub="all"]'); if(b) attTab('all', b); }, 30);
+  setTimeout(()=>{
+    const b=document.querySelector('#attendanceCont .sub-tab[data-sub="all"]'); if(b) attTab('all', b);
+    if(el&&el.classList){ document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); el.classList.add('active'); }
+  }, 30);
 }
 
 // ─── (구) 직원 근무표 주간 리스트 (2026-06-09) — 2026-06-15 goEmpSched로 대체, 코드 보존만 ───
