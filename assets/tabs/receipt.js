@@ -38,6 +38,7 @@ function setRcpMode(mode){
     renderRcpVendorRow(false);
     document.getElementById('rcpGuideBox').style.display = 'none';
     _setRcpUploadEnabled(false);
+    setTimeout(() => openRcpVendorPicker(), 80); // 종류 선택 즉시 → 선택창 자동 열기
   } else {
     // 그 외(수동 등): 선택 행 없이 바로 사진
     if(vTtl) vTtl.style.display = 'none';
