@@ -1654,89 +1654,84 @@ function renderAiBrief(a){
   const btn = document.getElementById('dashAiBriefBtn');
   if(!el || !btn) return;
   const rev = a.totalRevenue||0;
+  // 매출 없으면(데이터 없음) AI 매니저 숨김
+  if(rev<=0){ el.style.display='none'; el.innerHTML=''; btn.style.display='none'; return; }
   const items = [];
-  const man = n => fmt(Math.round(Math.abs(n)/10000))+'만원'; // 만원 단위 압축 표기
-  const signMan = n => (n<0?'-':'+')+man(n);                  // 부호 포함
   const th = a.thresholds||{};
   const thOf = name => (th[name]!=null ? th[name] : (V17_DEFAULT_THRESH[name]||0));
-
-  // 공과금 미납/임박은 🔔 종(알림)으로 일원화 — AI 매니저는 '분석·조언'만 유지 (2026-06-15 사장님 구분: AI=분석 / 종=처리할 일)
-
   // 기준값 안내 한 줄 — 사장님이 "기준 누가 정했나" 헷갈리지 않게 출처·수정 동선 명시 (2026-06-15)
   const _thNote = ` 외식업 평균 기준이에요 · <b>가게 관리 > 카테고리</b>에서 바꿀 수 있어요.`;
+  // AI 매니저 = '조언'만 (숫자=흑자/적자는 월 요약 카드 담당 — 2026-06-15 역할 분리)
 
-  // 매출이 있어야 비율 판단 의미 있음 (지금까지 누적 기준 — 라벨 명시)
-  if(rev>0){
-    // 🔴/🟡 인건비 비율
-    const attR = Math.round((a.currAtt||0)/rev*100);
-    const attTh = thOf('인건비');
-    if(attTh>0 && attR > attTh){
-      items.push({ sev: attR>=attTh+5?0:1, ic:'🚨', title:'인건비가 기준보다 높아요',
-        desc:`이번 달 <b>지금까지</b> 인건비가 매출의 <b>${attR}%</b>예요. 기준(${attTh}%)보다 높아요.${_thNote}` });
-    }
-    // 🔴/🟡 식자재 비율
-    const venR = Math.round((a.currVendor||0)/rev*100);
-    const venTh = thOf('식자재');
-    if(venTh>0 && venR > venTh){
-      items.push({ sev: venR>=venTh+5?0:1, ic:'📈', title:'식자재 비중이 높아요',
-        desc:`이번 달 <b>지금까지</b> 식자재가 매출의 <b>${venR}%</b>예요. 기준(${venTh}%)보다 높아요.${_thNote}` });
-    }
-    // 🔴/🟡 프라임코스트 — 식자재+인건비 합 (줄일 수 있는 두 비용. 한국 외식업 평균 70%, 건강 기준 65% — 2026-06-15)
-    const primeR = Math.round(((a.currAtt||0)+(a.currVendor||0))/rev*100);
-    if(primeR > 65){
-      items.push({ sev: primeR>70?0:1, ic:'🔥', title:'식자재+인건비 합이 높아요',
-        desc:`식자재와 인건비를 합치면 매출의 <b>${primeR}%</b>예요. 건강 기준(65%)보다 높아요. (외식업 평균 70%)` });
-    }
+  // 🔴/🟡 인건비 비율
+  const attR = Math.round((a.currAtt||0)/rev*100);
+  const attTh = thOf('인건비');
+  if(attTh>0 && attR > attTh){
+    items.push({ sev: attR>=attTh+5?0:1, ic:'🚨', title:'인건비가 기준보다 높아요',
+      desc:`이번 달 <b>지금까지</b> 인건비가 매출의 <b>${attR}%</b>예요. 기준(${attTh}%)보다 높아요.${_thNote}` });
   }
-
-  // 🟢/🔴 흑자·적자 — 항상 첫 줄 고정(pin). 누르면 월 요약 카드 펼침 (사장님 안 2026-06-15)
-  if(a.isCurrent && rev>0){
-    const now = a.netProfit||0, est = a.estNetProfit||0;
-    const bad = est < 0;
-    items.push({ pin:true, sev: bad?0:2, ic: bad?'⚠️':'✅',
-      title: bad?'이대로면 이번 달 적자 예상':'이대로면 흑자예요',
-      desc:`지금까지 <b>${signMan(now)}</b> · 이대로면 월말 <b>${signMan(est)}</b> 예상이에요. <span class="aib-golink">눌러서 월 요약 보기 ›</span>`,
-      action:'toggleMonthCard' });
+  // 🔴/🟡 식자재 비율
+  const venR = Math.round((a.currVendor||0)/rev*100);
+  const venTh = thOf('식자재');
+  if(venTh>0 && venR > venTh){
+    items.push({ sev: venR>=venTh+5?0:1, ic:'📈', title:'식자재 비중이 높아요',
+      desc:`이번 달 <b>지금까지</b> 식자재가 매출의 <b>${venR}%</b>예요. 기준(${venTh}%)보다 높아요.${_thNote}` });
   }
-
-  // 🟢 매출이 전월보다 뚜렷이 늘었을 때 (칭찬)
+  // 🔴/🟡 프라임코스트 — 식자재+인건비 합 (줄일 수 있는 두 비용. 한국 외식업 평균 70%, 건강 기준 65% — 2026-06-15)
+  const primeR = Math.round(((a.currAtt||0)+(a.currVendor||0))/rev*100);
+  if(primeR > 65){
+    items.push({ sev: primeR>70?0:1, ic:'🔥', title:'식자재+인건비 합이 높아요',
+      desc:`식자재와 인건비를 합치면 매출의 <b>${primeR}%</b>예요. 건강 기준(65%)보다 높아요. (외식업 평균 70%)` });
+  }
+  // ⚠️ 적자 위험만 '조언'으로 (흑자/적자 숫자는 월 요약 담당. 2026-06-15)
+  if(a.isCurrent && (a.estNetProfit||0) < 0){
+    items.push({ sev:0, ic:'⚠️', title:'이대로면 이번 달 적자 예상',
+      desc:`이대로면 월말 적자가 예상돼요. 아래 <b>이번 달 요약</b>에서 지출을 점검해 보세요.` });
+  }
+  // 🎉 매출 상승 칭찬 (좋은 소식 — 경고 아님, 배지엔 안 셈)
   if(a.momRev && a.momRev.up && a.momRev.text!=='비슷'){
     items.push({ sev:2, ic:'🎉', title:'매출이 지난달보다 올랐어요',
       desc:`매출이 지난달 같은 기간보다 <span style="color:var(--toss-blue-strong);font-weight:800;">${a.momRev.text}</span> 늘었어요.` });
   }
 
-  // 흑자/적자(pin)는 항상 첫 줄 고정, 나머지 경고는 심각도순(빨강→노랑→초록) 최대 3개 (2026-06-15)
+  // 심각도순 정렬(빨강→노랑→초록) 후 최대 3개
   items.sort((x,y)=>x.sev-y.sev);
-  const pinned = items.filter(it=>it.pin);
-  const rest = items.filter(it=>!it.pin).slice(0, Math.max(0, 3-pinned.length));
-  const top = [...pinned, ...rest];
-
-  // 띄울 게 없으면 단추·카드 모두 숨김
-  if(top.length===0){ el.style.display='none'; el.innerHTML=''; btn.style.display='none'; return; }
-
-  // ── 홈 단추 (접힌 상태로 항상 노출, 누르면 펼침) ── 단추 색 = 가장 심각한 항목 기준
+  const top = items.slice(0,3);
   const sevCls = s => s===0?'red':(s===1?'warn':'green');
-  const minSev = Math.min(...top.map(it=>it.strong?-1:it.sev));
-  const worst = minSev<=0 ? 'red' : sevCls(minSev);
+  // 배지 = '주의 필요'(경고) 건수만 — 칭찬(sev2)은 안 셈 (2026-06-15 사장님 안: 제목 옆 숫자 배지)
+  const warnItems = items.filter(it=>it.sev<=1);
+  const warnCnt = warnItems.length;
+  const worst = warnCnt>0 ? sevCls(Math.min(...warnItems.map(it=>it.sev))) : 'green';
+
+  // ── 홈 단추: 제목 옆 숫자 배지(경고 건수) + 서브(가장 급한 내용 / 양호) ──
   const isOpen = el.style.display==='block';
-  btn.className = 'aib-btn '+worst;
+  const badgeHtml = warnCnt>0
+    ? `<span class="aib-badge ${worst}">${warnCnt}</span>`
+    : `<span class="aib-chk">✓</span>`;
+  const subTx = warnCnt>0
+    ? (warnItems[0].title + (warnCnt>1 ? ` 외 ${warnCnt-1}건` : ''))
+    : '다 잘 가고 있어요 👍';
+  btn.className = 'aib-btn';
   btn.innerHTML = `
     <span class="aib-btn-ic">🤖</span>
-    <span class="aib-btn-tx"><b>AI 매니저</b><span class="aib-btn-sub">오늘 볼 것 ${top.length}건</span></span>
-    <span class="aib-btn-dot ${worst}"></span>
+    <span class="aib-btn-tx"><span class="aib-tt-row"><b>AI 매니저</b>${badgeHtml}</span><span class="aib-btn-sub">${subTx}</span></span>
     <span class="aib-btn-arr">${isOpen?'⌄':'›'}</span>`;
   btn.style.display='flex';
 
-  // ── 펼침 카드 내용 (표시 여부는 toggleAiBrief가 제어) ── action 있으면 클릭 가능
-  const rowsHtml = top.map(it=>`
-    <div class="aib-row ${it.strong?'strong':sevCls(it.sev)}${it.action?' aib-clickable':''}"${it.action?` data-action="${it.action}"`:''}>
-      <div class="aib-ic">${it.ic}</div>
-      <div class="aib-tx"><div class="aib-title">${it.title}</div><div class="aib-desc">${it.desc}</div></div>
-    </div>`).join('');
+  // ── 펼침 카드 내용 (표시 여부는 toggleAiBrief가 제어) — 항목 없으면 양호 메시지 ──
   const today = new Date();
-  // 단추가 이미 "AI 매니저" 제목 역할 → 펼친 카드는 중복 헤더 제거, 인사말부터 (2026-06-14 사장님 호소)
+  const rowsHtml = top.length
+    ? top.map(it=>`
+      <div class="aib-row ${sevCls(it.sev)}">
+        <div class="aib-ic">${it.ic}</div>
+        <div class="aib-tx"><div class="aib-title">${it.title}</div><div class="aib-desc">${it.desc}</div></div>
+      </div>`).join('')
+    : `<div class="aib-row green">
+        <div class="aib-ic">👍</div>
+        <div class="aib-tx"><div class="aib-title">오늘 챙길 거 없어요</div><div class="aib-desc">비용·수익 모두 양호해요. 잘 가고 있어요.</div></div>
+      </div>`;
   el.innerHTML = `
-    <div class="aib-greet">사장님, <b>${today.getMonth()+1}월 ${today.getDate()}일</b> 꼭 봐야 할 것이에요 👇</div>
+    <div class="aib-greet">사장님, <b>${today.getMonth()+1}월 ${today.getDate()}일</b> 알려드릴 것이에요 👇</div>
     ${rowsHtml}`;
   el.style.display='none'; // 매 로드 시 접힘(단추만)
 }
@@ -2028,7 +2023,7 @@ function v17RenderMonthCard(){
       +`<span class="fc-more">자세히 ›</span></div>`;
   }
 
-  // ── 월 요약 카드 본체. 숨김/펼침은 부모 #dashMonthSection이 담당 (AI 매니저 흑자/적자 트리거 — 2026-06-15) ──
+  // ── 월 요약 카드 — 홈 항상 노출. 흑자/적자·매출·수익 핵심 (2026-06-15 역할 분리: 숫자=월요약 / 조언=AI매니저) ──
   el.innerHTML = `
       <div class="v17-card-v6">
         ${fcHtml}
@@ -2048,15 +2043,6 @@ function v17RenderMonthCard(){
           </div>
         </div>
       </div>`;
-}
-// ─── 월 요약 섹션(타이틀+카드) 펼침/접힘 — AI 매니저 '흑자/적자' 누르면 호출 (2026-06-15) ───
-//     AI 매니저 바로 아래 위치 → 누르면 그 자리에서 자연스럽게 펼쳐짐 (타이틀도 함께 토글)
-function toggleMonthCard(){
-  const b=document.getElementById('dashMonthSection');
-  if(!b) return;
-  const open=b.style.display==='none';
-  b.style.display=open?'block':'none';
-  if(open) b.scrollIntoView({behavior:'smooth', block:'start'}); // 펼치면 섹션 상단으로 이동
 }
 
 // ─── 월 세부 화면 렌더 (요약 카드 탭 진입 — 2026-06-03 신설) ───
