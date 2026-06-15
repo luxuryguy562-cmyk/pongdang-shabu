@@ -1153,6 +1153,9 @@ async function editSettlement(dateStr, silent){
     const el=document.getElementById(elId);
     if(el) el.value=items[key]?parseInt(items[key]).toLocaleString():'';
   });
+  // 🔧 개시 금고 최신 반영 (금고 사슬: 마감→개시→마감). 저장 당시 opening 박제 대신 현재 개시/전일마감 다시 읽음
+  //    — 개시 수정이 마감 수정 화면에 반영 안 되던 버그 (2026-06-15 사장님 지적)
+  await applySettleStartVault(dateStr);
   // 지출 행 복원 (deductions 신규 우선, 없으면 옛 deduct_etc/bank+memo 로 변환)
   // 두 컨테이너(통장입금·현금지출) 각각 비우고 type별로 분기 채움
   const bankCont=document.getElementById('settleDeductBankRows');
@@ -1167,6 +1170,8 @@ async function editSettlement(dateStr, silent){
       addSettleDeductRow('etc', items.deduct_etc||0, items.deduct_etc_memo||'', '', '');
       addSettleDeductRow('bank', items.deduct_bank||0, items.deduct_bank_memo||'', '', '');
     }
+    // 🔧 통장입금(시재입금) 행이 없으면 빈 행 보장 — 수정 화면에서 입금 입력 못 하던 버그 (2026-06-15)
+    ensureSettleDeductDefaultRows();
   }
   // 기타매출 입력칸 동적 렌더링 + 기존 logs 채우기
   renderExtraRevenueInputs();
