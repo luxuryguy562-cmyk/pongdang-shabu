@@ -520,6 +520,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-cal-dot{width:6px;height:6px;border-radius:50%;}
 .att-cal-more{font-size:8px;color:var(--gray-400);font-weight:700;line-height:6px;margin-left:1px;}
 .att-cal-sum{font-size:9px;color:var(--blue);font-weight:700;margin-top:auto;line-height:1;}
+/* 역할 전환 토글 (관리 ↔ 내 근무, 2026-06-15) */
+.role-switch{display:inline-flex;background:#eef0f3;border-radius:16px;padding:2px;flex-shrink:0;}
+.rs-btn{border:none;background:transparent;font-size:11px;font-weight:700;padding:4px 9px;border-radius:14px;color:var(--gray-600);cursor:pointer;white-space:nowrap;}
+.rs-btn.on{background:#fff;color:var(--blue);box-shadow:0 1px 2px rgba(0,0,0,.12);}
 /* 직급별 화면 권한 설정 (2026-06-15) */
 .rp-seg{display:flex;gap:6px;background:var(--gray-100);padding:4px;border-radius:12px;}
 .rp-seg-btn{flex:1;padding:9px 0;border:none;border-radius:9px;font-size:13px;font-weight:700;background:transparent;color:var(--gray-600);cursor:pointer;}

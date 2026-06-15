@@ -427,11 +427,24 @@ let cardDateStr = ymdLocal(new Date());
 let currentEmp = null, isManager = false, isOwner = false;
 // auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
 let authLevel = 'staff';       // 화면에 적용되는 권한 (DB 실제 권한)
+let _myWorkMode = false;       // '내 근무' 모드 (관리자가 본인 직원 화면 볼 때, 2026-06-15) — 화면만, DB권한 불변
 // 권한 진입점: authLevel → isManager/isOwner 갱신
 function recalcPermissions(){
+  if(_myWorkMode){ isOwner=false; isManager=false; return; } // 내 근무 모드 = 직원처럼 (화면용, 실제 권한 아님)
   isOwner = (authLevel === 'owner');
   isManager = ['owner','franchise_admin','store_manager'].includes(authLevel);
 }
+// 실제 관리자 권한 여부 (_myWorkMode 무관 — 역할 전환 토글 표시용)
+function isRealManager(){ return ['owner','franchise_admin','store_manager'].includes(authLevel) && !!currentEmp; }
+// 관리 ↔ 내 근무 전환 (화면만 바뀜, 권한 그대로)
+function setMyWorkMode(on){
+  _myWorkMode = !!on;
+  recalcPermissions();
+  applyPermissionUI();
+  if(typeof nav==='function') nav(_myWorkMode ? 'attendance' : (isManager?'dashboard':'attendance'));
+}
+function enterMyWork(){ setMyWorkMode(true); }   // 내 근무 모드
+function exitMyWork(){ setMyWorkMode(false); }   // 관리 모드 복귀
 let dashMonthStr = new Date().toISOString().slice(0,7);
 let schedEmpId = null;
 let chartInstances = {};
@@ -763,8 +776,21 @@ function applyPermissionUI() {
   const badge=isOwner?'👑 사장':isManager?'🔑 관리자':'';
   const badgeEl=document.getElementById('authBadge');
   if(badgeEl) badgeEl.innerHTML=badge?`<span class="badge badge-warn">${badge}</span>`:'';
+  // 역할 전환(관리 ↔ 내 근무) 토글 UI + 모드 배너 (2026-06-15)
+  updateRoleSwitchUI();
   // 직급별 화면 권한 (2026-06-15): 사장 제외 관리자 직급에 store_settings.role_permissions 적용
   applyRoleTabLimit();
+}
+// 역할 전환 토글 표시 + 현재 모드 강조 + '내 근무' 배너 (관리자 직원만)
+function updateRoleSwitchUI(){
+  const can = isRealManager();
+  const tog=document.getElementById('roleSwitchToggle');
+  if(tog) tog.style.display = can ? 'inline-flex' : 'none';
+  const mBtn=document.getElementById('rsMgr'), wBtn=document.getElementById('rsMe');
+  if(mBtn) mBtn.classList.toggle('on', !_myWorkMode);
+  if(wBtn) wBtn.classList.toggle('on', !!_myWorkMode);
+  const banner=document.getElementById('myWorkBanner');
+  if(banner) banner.style.display = (can && _myWorkMode) ? 'block' : 'none';
 }
 // ─── 새 기능: 직급별 화면(하단 탭) 권한 (2026-06-15) ───
 // 사장(owner)=전체 / 직원(staff)=기존 staff-only / 그 외 관리자 직급(점장·팀장 등)=role_permissions 제한
