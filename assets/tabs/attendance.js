@@ -964,7 +964,7 @@ function renderAttDayDetail(date, logs, isSingleView){
           const psLbl  = String(Math.floor(psH)).padStart(2,'0')+':'+(psH%1?'30':'00');
           const pe24   = peH>=24?peH-24:peH;
           const peLbl  = String(Math.floor(pe24)).padStart(2,'0')+':'+(pe24%1?'30':'00')+(peH>=24?'(익)':'');
-          planBar = `<div class="att-bar plan" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
+          planBar = `<div class="att-bar plan${plan.status==='확정'?' confirmed':''}" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
           usedPlanEmpIds.add(r.employee_id);
         }
       }
@@ -1014,7 +1014,7 @@ function renderAttDayDetail(date, logs, isSingleView){
         const psLbl  = String(Math.floor(psH)).padStart(2,'0')+':'+(psH%1?'30':'00');
         const pe24   = peH>=24?peH-24:peH;
         const peLbl  = String(Math.floor(pe24)).padStart(2,'0')+':'+(pe24%1?'30':'00')+(peH>=24?'(익)':'');
-        planBar = `<div class="att-bar plan" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
+        planBar = `<div class="att-bar plan${p.status==='확정'?' confirmed':''}" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
         // 결근: 과거 날짜인 경우만 빗금
         if(isPast){
           absentBar = `<div class="att-bar absent" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
