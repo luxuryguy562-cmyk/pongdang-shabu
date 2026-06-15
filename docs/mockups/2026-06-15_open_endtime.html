@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>끝시간 미정 · 신청≠실제</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-500:#70757a; --gray-600:#5f6368; --blue:#2563eb; --ok:#22a06b; --warn:#f2b705; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:16px; margin-bottom:16px;}
+  .ctitle{font-size:14px; font-weight:800; margin-bottom:3px; display:flex; align-items:center; gap:8px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 10px; border-radius:20px;}
+  .cdesc{font-size:12px; color:var(--gray-600); margin-bottom:14px;}
+
+  /* 시간축 */
+  .axis{display:flex; margin-left:54px; margin-bottom:2px;}
+  .axis span{flex:1; font-size:9px; color:var(--gray-400); text-align:left;}
+  .grow{display:flex; align-items:center; gap:8px; margin-bottom:4px;}
+  .rl{width:46px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;}
+  .rl .dot{width:8px; height:8px; border-radius:50%;}
+  .track{flex:1; height:24px; background:#f4f5f7; border-radius:6px; position:relative; overflow:hidden;}
+  .bar{position:absolute; top:2px; height:20px; border-radius:8px;}
+  .meta{font-size:11px; color:var(--gray-600); margin:0 0 14px 54px;}
+  .meta b{color:var(--text);}
+
+  .bar.plan{background:transparent; border:1.5px dashed rgba(100,116,139,.7);}
+  .bar.confirmed{background:transparent; border:1.5px solid rgba(100,116,139,.9);}
+  .bar.real{opacity:.92;}
+  /* 끝 미정 = 시작점부터 오른쪽으로 페이드되는 열린 막대 */
+  .bar.open{border:1.5px dashed rgba(100,116,139,.7); border-right:none; background:linear-gradient(90deg, rgba(148,163,184,.18), rgba(148,163,184,0));}
+  .qmark{position:absolute; top:3px; font-size:12px; font-weight:800; color:var(--gray-500);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>실무 두 경우 — 어떻게 보일까</h1>
+
+  <!-- 케이스 1: 끝시간 미정 -->
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:var(--warn);">경우 1</span> 끝 시간 모르고 신청</div>
+    <div class="cdesc">"18시부터 나올게요, 끝은 봐서요" — 끝을 안 정한 신청</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow">
+      <div class="rl"><span class="dot" style="background:#a855f7;"></span>정은미</div>
+      <div class="track">
+        <div class="bar open" style="left:50%;width:32%;"></div>
+        <span class="qmark" style="left:calc(50% + 33%);">?</span>
+      </div>
+    </div>
+    <div class="meta"><b>18:00 ~ ?</b> (퇴근 미정) — 시작점부터 흐려지는 막대로 "끝 안 정함" 표시</div>
+    <div class="cdesc" style="margin:0; color:var(--ok);">→ 나중에 실제 퇴근 찍으면 그때 막대가 정확히 채워짐</div>
+  </div>
+
+  <!-- 케이스 2: 신청 ≠ 실제 -->
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:var(--blue);">경우 2</span> 신청 18~22, 실제 17시 출근</div>
+    <div class="cdesc">급해서 1시간 일찍 불렀고, 직원이 17시로 출근 찍음</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow">
+      <div class="rl"><span class="dot" style="background:var(--blue);"></span>정은미</div>
+      <div class="track">
+        <!-- 신청 18~22 (점선) -->
+        <div class="bar plan" style="left:50%;width:33%;"></div>
+        <!-- 실제 17~21 (직원색 채움) -->
+        <div class="bar real" style="left:42%;width:33%;background:var(--blue);"></div>
+      </div>
+    </div>
+    <div class="meta">점선 = <b>신청 18:00~22:00</b> · 파란 채움 = <b>실제 17:00~21:00</b></div>
+    <div class="cdesc" style="margin:0; color:var(--ok);">→ 두 막대가 겹쳐 보여서 "신청보다 1시간 일찍 왔네" 바로 확인 (이미 됨)</div>
+  </div>
+
+  <div class="sub">경우 2는 이미 잘 됩니다. <b>경우 1(끝 미정)</b>만 위처럼 "열린 막대 + ?"로 바꾸면 될까요?</div>
+</div>
+</body>
+</html>

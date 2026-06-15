@@ -1006,20 +1006,30 @@ function renderAttDayDetail(date, logs, isSingleView){
     const psH = parseHour(p.wish_start || p.start_time);
     let peH   = parseHour(p.wish_end   || p.end_time);
     let planBar = '', absentBar = '';
+    const cf = (p.status==='확정')?' confirmed':'';
+    // 시작 시각 라벨 (끝 미정이어도 시작은 항상 표시 — 2026-06-15 사장님)
+    const psLbl = psH!=null ? String(Math.floor(psH)).padStart(2,'0')+':'+(psH%1?'30':'00') : '';
+    let timeLbl = isPast?'결근':'예정';
     if(psH!=null && peH!=null){
       if(peH<psH) peH += 24;
       if(peH>psH){
         const pLeft  = Math.max(0,(psH-GANTT_START)/GANTT_SPAN*100);
         const pWidth = Math.min(100-pLeft,(peH-psH)/GANTT_SPAN*100);
-        const psLbl  = String(Math.floor(psH)).padStart(2,'0')+':'+(psH%1?'30':'00');
         const pe24   = peH>=24?peH-24:peH;
         const peLbl  = String(Math.floor(pe24)).padStart(2,'0')+':'+(pe24%1?'30':'00')+(peH>=24?'(익)':'');
-        planBar = `<div class="att-bar plan${p.status==='확정'?' confirmed':''}" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
+        planBar = `<div class="att-bar plan${cf}" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
+        timeLbl = `${psLbl}~${peLbl}`;
         // 결근: 과거 날짜인 경우만 빗금
         if(isPast){
           absentBar = `<div class="att-bar absent" style="left:${pLeft.toFixed(1)}%;width:${pWidth.toFixed(1)}%;"></div>`;
         }
       }
+    } else if(psH!=null){
+      // 끝시간 미정 — 시작점부터 열린 막대 + "시작~?" (2026-06-15 사장님)
+      const pLeft  = Math.max(0,(psH-GANTT_START)/GANTT_SPAN*100);
+      const oWidth = Math.min(100-pLeft, 1.5/GANTT_SPAN*100);
+      planBar = `<div class="att-bar plan open${cf}" style="left:${pLeft.toFixed(1)}%;width:${oWidth.toFixed(1)}%;"></div>`;
+      timeLbl = `${psLbl} ~ ?`;
     }
     const planClick = isManager ? `data-action="openSchedSheet|${date}|${p.id}" style="cursor:pointer;"` : '';
     html += `<div class="att-grow" ${planClick}>
@@ -1027,8 +1037,8 @@ function renderAttDayDetail(date, logs, isSingleView){
       <div class="att-track">${attGridLines()}${planBar}${absentBar}</div>
     </div>
     <div class="att-row-meta">
-      <span class="time">${isPast?'결근':'예정'}</span>
-      <span class="hours" style="color:${isPast?'var(--danger)':'var(--gray-500)'};">${isPast?'미출근':''}</span>
+      <span class="time">${timeLbl}</span>
+      <span class="hours" style="color:${isPast?'var(--danger)':'var(--gray-500)'};">${isPast&&peH!=null?'미출근':''}</span>
     </div>`;
   });
 
