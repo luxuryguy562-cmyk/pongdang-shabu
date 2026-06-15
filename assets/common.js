@@ -426,15 +426,9 @@ let rowCount = 0, stagingData = [];
 let cardDateStr = ymdLocal(new Date());
 let currentEmp = null, isManager = false, isOwner = false;
 // auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
-// ─── VIEWAS-START — 시점 미리보기 격리 (제거 가이드: dev_lessons.md #46) ───
-let realAuthLevel = 'staff';  // DB에서 받은 실제 권한 (변하지 않음)
-let viewAsLevel = null;       // 미리보기 권한 (null이면 실제 권한 사용)
-// ─── VIEWAS-END ────────────────────────────────────────────
-let authLevel = 'staff';       // 화면에 적용되는 권한 (viewAsLevel 반영)
-// 권한 단일 진입점: realAuthLevel + viewAsLevel → authLevel/isManager/isOwner 갱신
+let authLevel = 'staff';       // 화면에 적용되는 권한 (DB 실제 권한)
+// 권한 진입점: authLevel → isManager/isOwner 갱신
 function recalcPermissions(){
-  // VIEWAS 제거 시 → authLevel = realAuthLevel 한 줄로 단순화
-  authLevel = viewAsLevel || realAuthLevel;
   isOwner = (authLevel === 'owner');
   isManager = ['owner','franchise_admin','store_manager'].includes(authLevel);
 }

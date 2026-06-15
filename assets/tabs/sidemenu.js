@@ -1986,9 +1986,8 @@ async function loadJoinAdmin(){
     const{data:pj}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}});
     const rows = pj?.ok ? (pj.rows||[]) : [];
     renderPendingJoins(rows);
-    // 종 배지 동기화
-    const badge=document.getElementById('headerBellBadge');
-    if(badge){ if(rows.length>0){ badge.innerText=rows.length>9?'9+':String(rows.length); badge.style.display='block'; } else badge.style.display='none'; }
+    // 종 배지 동기화 — 가입만 세지 말고 전체 기준(refreshJoinBadge)으로 통일 (2026-06-15)
+    if(typeof refreshJoinBadge==='function') refreshJoinBadge();
   }catch(_e){}
 }
 function renderPendingJoins(rows){
@@ -5194,41 +5193,6 @@ document.addEventListener('keydown',e=>{
 // devLogin 제거됨 — UI 버튼 삭제, 함수는 안전장치로 잔류
 function devLogin(){ toast('개발모드가 비활성화됐어요.','warn'); }
 
-// ─── VIEWAS-START — 시점 미리보기 함수 (제거 가이드: dev_lessons.md #46) ───
-// 사장(owner) / 본사 관리자(franchise_admin)만 토글 가능. DB 권한은 안 바뀜.
-function setViewAs(level){
-  // 실제 권한이 owner/franchise_admin이 아니면 무시 (직원이 권한 상승 못 함)
-  if(realAuthLevel!=='owner'&&realAuthLevel!=='franchise_admin'){
-    toast('시점 전환 권한이 없어요.','warn');
-    return;
-  }
-  // 빈 문자열/null/'owner' = 사장 시점 복귀
-  viewAsLevel = (level&&level!=='owner') ? level : null;
-  recalcPermissions();
-  applyPermissionUI();
-  updateViewAsUI();
-  closeSheet('viewAsSheet');
-  // 첫 화면 이동 (직원 시점이면 근태로, 사장 복귀면 대시보드로)
-  if(viewAsLevel) nav(isManager?'dashboard':'attendance');
-  else nav('dashboard');
-}
-function updateViewAsUI(){
-  const toggle=document.getElementById('viewAsToggle');
-  const label=document.getElementById('viewAsLabel');
-  const banner=document.getElementById('viewAsBanner');
-  const bLabel=document.getElementById('viewAsBannerLabel');
-  const canToggle=(realAuthLevel==='owner'||realAuthLevel==='franchise_admin');
-  if(toggle) toggle.style.display=canToggle?'flex':'none';
-  const labelMap={owner:'사장',franchise_admin:'본사',store_manager:'점장',staff:'직원'};
-  if(label) label.textContent=labelMap[authLevel]||authLevel;
-  if(banner){
-    banner.style.display=viewAsLevel?'block':'none';
-    if(bLabel) bLabel.textContent='미리보기: '+(labelMap[viewAsLevel]||viewAsLevel)+'이 보는 화면';
-  }
-  document.body.classList.toggle('viewas-on',!!viewAsLevel);
-}
-// ─── VIEWAS-END ────────────────────────────────────────────────────
-
 // ─── 영업 허브: 카드별 동적 정보 ───
 async function loadBusHubData(){
   if(!currentStore) return;
@@ -6055,17 +6019,14 @@ function loadMyInfo(){
   set('myinfoBirth', e.birth_date||'-');
   // 미리보기 모드에선 비밀번호 변경 숨김 (직원이 PIN 변경하면 안 됨)
   const pinBtn=document.getElementById('myInfoPinBtn');
-  if(pinBtn) pinBtn.style.display=viewAsLevel?'none':'flex';
+  if(pinBtn) pinBtn.style.display='flex';
 }
 
 function completeLogin(emp){
   currentEmp=emp;
   // auth_level 기반 권한 (is_manager와 동기화)
-  realAuthLevel=emp.auth_level||'staff';
-  if(realAuthLevel==='staff'&&emp.is_manager) realAuthLevel='store_manager';
-  // ─── VIEWAS-START — 새 로그인 시 미리보기 초기화 ───
-  viewAsLevel=null;
-  // ─── VIEWAS-END ───
+  authLevel=emp.auth_level||'staff';
+  if(authLevel==='staff'&&emp.is_manager) authLevel='store_manager';
   recalcPermissions();
   // 2026-05-25 사장님 호소: 직원 전환 시 옛 필터·일자·캐시 잔재 → 잘못된 직원 데이터 노출
   _resetUserState();
@@ -6077,9 +6038,6 @@ function completeLogin(emp){
   localStorage.setItem('pd_emp',emp.id);
   localStorage.setItem('pd_auth_level',authLevel);
   applyPermissionUI();
-  // ─── VIEWAS-START ───
-  updateViewAsUI();
-  // ─── VIEWAS-END ───
   // 옛 영수증 복귀값 잔재 제거 (저장이 더는 reload 안 함 — 2026-06-08 in-page 전환으로 폐기)
   try{ localStorage.removeItem('pd_rcp_return'); }catch(e){}
   // 로그인 후 첫 화면: 본사→본사 홈, 관리자→대시보드, 직원→근태
@@ -6095,18 +6053,29 @@ function completeLogin(emp){
   if(typeof initRealtimeAndBadge==='function') initRealtimeAndBadge();
 }
 
-// ─── 새 기능: 가입 알림 종 배지 갱신 (2026-06-09) ───
+// ─── 종 배지 갱신 — 가입+근무신청+공과금 미납 전체 카운트 (2026-06-15 단일화) ───
+// 옛 버그: 가입 신청만 세서 근무신청 배지를 덮어 지움 → 확인 안 해도 숫자 사라짐.
+// 처리(승인/납부)하기 전까지 배지 유지되도록 모든 미처리 건 합산. openNotifSheet와 동일 기준.
 async function refreshJoinBadge(){
   const badge=document.getElementById('headerBellBadge');
   if(!badge) return;
   if(!isManager || !currentStore){ badge.style.display='none'; return; }
-  const token=localStorage.getItem('pd_token'); if(!token){ badge.style.display='none'; return; }
+  const sid=currentStore.id, ym=fcThisYm();
+  let joinN=0, schedN=0, billN=0;
+  try{ const token=localStorage.getItem('pd_token'); const{data:pj}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}}); joinN=(pj?.rows||[]).length; }catch(_){}
+  try{ const{data}=await sb.from('work_schedules').select('id').eq('store_id',sid).eq('status','희망'); schedN=(data||[]).length; }catch(_){}
   try{
-    const{data}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}});
-    const n=(data&&data.ok&&Array.isArray(data.rows))?data.rows.length:0;
-    if(n>0){ badge.innerText=n>9?'9+':String(n); badge.style.display='block'; }
-    else { badge.style.display='none'; }
-  }catch(e){}
+    const[r1,r2]=await Promise.all([
+      sb.from('fixed_costs').select('id,expected_day,is_active').eq('store_id',sid),
+      sb.from('fixed_cost_amounts').select('fixed_cost_id,amount,is_confirmed').eq('store_id',sid).eq('year_month',ym)
+    ]);
+    const paid={}; (r2.data||[]).forEach(a=>{ if(a.is_confirmed&&a.amount!=null) paid[a.fixed_cost_id]=1; });
+    const today=new Date(), day=today.getDate(), lastDay=new Date(today.getFullYear(),today.getMonth()+1,0).getDate();
+    billN=(r1.data||[]).filter(r=>r.is_active!==false&&r.expected_day&&!paid[r.id]&&day>((r.expected_day>=99||r.expected_day>lastDay)?lastDay:r.expected_day)).length;
+  }catch(_){}
+  const total=joinN+schedN+billN;
+  if(total>0){ badge.innerText=total>9?'9+':String(total); badge.style.display='block'; }
+  else badge.style.display='none';
 }
 // 2026-05-25 신설: 사용자 전환 시 옛 필터·일자·캐시 잔재 일괄 제거
 //  · 사장님 호소: 문보영으로 로그인 후 이송은으로 다시 로그인했더니 직원 필터·KPI가 문보영 그대로
@@ -6154,10 +6123,7 @@ function doLogout(){
   if(!confirm('로그아웃?')) return;
   closeAllSheets();
   currentEmp=null;
-  realAuthLevel='staff';
-  // ─── VIEWAS-START ───
-  viewAsLevel=null;
-  // ─── VIEWAS-END ───
+  authLevel='staff';
   recalcPermissions();
   // 2026-05-25 사장님 호소: 직원 전환 시 옛 필터·일자·캐시 잔재 방지
   _resetUserState();
@@ -6172,9 +6138,6 @@ function doLogout(){
   const firstNav=document.querySelector('.nav-item[data-tab="attendance"]');
   if(firstNav) firstNav.classList.add('active');
   applyPermissionUI();
-  // ─── VIEWAS-START ───
-  updateViewAsUI();
-  // ─── VIEWAS-END ───
   showLoginScreen();
 }
 
