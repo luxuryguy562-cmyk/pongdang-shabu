@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-15] 직원 근무 화면 — 사장 화면 통일 1단계
+
+**사장님 "다 해" → 착수.** Explore 조사: 사장 "📋 기록"(#attAll, 월 캘린더 renderAttCalendar:666 + 일별 간트 renderAttDayDetail:753)은 **이미 권한 분기**(attEmpFilter staff 본인 고정 529~, openSchedSheet/weeklyPlan staff 본인 자동) → 직원이 봐도 본인 것만. 근무계획 입력도 직원 가능(saveSchedule status='희망').
+
+**1단계 완료**: 직원 '내 근무표 보기'(index.html 1057) → `goEmpSched()`(attendance.js) = nav('attendance')+attTab('all') = 사장과 같은 월 캘린더+간트. 옛 주간 리스트(empSchedCont/renderEmpSched)는 미사용(폐기 방향, 코드 보존). attendance.js?v=20260614b.
+
+**남은(다음, 직원 계정 흐름 확인 후)**:
+- ⚠️ 사장 승인 UI: status '희망'→'확정' + 🔔알림 (신규, 분량 큼). 기존 사장입력 8건 '희망'→'확정' 일괄 UPDATE(실행 승인) 필요.
+- ⚠️ 직원 화면 주휴 0원 표시(empPay) 누락 — 사장 화면(PR #617/#618)은 됨.
+- ⚠️ 직원이 근무표 쉽게 찾게 배치(직원 nav 홈/급여뿐). CTO 직원 로그인 테스트 불가 → 사장님 직원 계정 확인 필요.
+
 ## [2026-06-15] 공과금 — 자동이체 구분 + 말일 납기일 + 부가세 방침
 
 **사장님 요구**: ① 자동이체 되는 것(전기·캡스·인터넷)과 안 되는 것(월세·관리비) 구분 → 직접 납부는 알림 더 세게. ② 납기일에 '말일'(월마다 다름) 선택. ③ 부가세 표시.
