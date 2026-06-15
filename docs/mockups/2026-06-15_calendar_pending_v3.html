@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>달력 승인대기 — 핑크 톤</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-100:#f0f1f3; --gray-400:#9aa0a6;
+    --gray-600:#5f6368; --blue:#2563eb; --blue-light:#e8f0fe; --danger:#e5484d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:16px;}
+  .wrap{max-width:430px; margin:0 auto;}
+
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:14px; margin-bottom:16px;}
+  .ctitle{font-size:14px; font-weight:800; margin-bottom:2px; display:flex; align-items:center; gap:7px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 9px; border-radius:20px;}
+  .cdesc{font-size:12px; color:var(--gray-600); margin-bottom:12px;}
+
+  .att-cal{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
+  .att-cal-head{font-size:10px; font-weight:700; color:var(--gray-600); text-align:center; padding:2px 0;}
+  .att-cal-head.sun{color:var(--danger);} .att-cal-head.sat{color:var(--blue);}
+  .att-cal-cell{position:relative; aspect-ratio:1/1.15; background:var(--gray-100); border-radius:8px; padding:3px 2px; display:flex; flex-direction:column; align-items:center; border:1.5px solid transparent; overflow:hidden;}
+  .att-cal-cell.empty{background:transparent;}
+  .att-cal-cell.today{background:var(--blue-light);}
+  .att-cal-day{font-size:11px; font-weight:700; line-height:1.2; margin-top:1px;}
+  .att-cal-cell.sun .att-cal-day{color:var(--danger);} .att-cal-cell.sat .att-cal-day{color:var(--blue);}
+  .att-cal-dot{width:6px; height:6px; border-radius:50%; margin-top:3px;}
+  .att-cal-sum{font-size:9px; color:var(--blue); font-weight:700; margin-top:auto; line-height:1;}
+
+  /* P1: 연핑크 (부드러운 주의) */
+  .P1 .att-cal-cell.pend{background:#ffe3ec;}
+  .P1 .att-cal-cell.pend .att-cal-day{color:#e5397d; font-weight:800;}
+  /* P2: 로즈 (또렷한 주의 — 추천) */
+  .P2 .att-cal-cell.pend{background:#ffd0de;}
+  .P2 .att-cal-cell.pend .att-cal-day{color:#d6336c; font-weight:800;}
+  /* P3: 코랄핑크 (가장 쨍) */
+  .P3 .att-cal-cell.pend{background:#ffc2cf;}
+  .P3 .att-cal-cell.pend .att-cal-day{color:#c2255c; font-weight:800;}
+
+  .note{font-size:11px; color:var(--gray-400); text-align:center; margin-top:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>승인 대기 날 — 핑크 톤</h1>
+  <div class="sub">"이거 보세요!" 주의 환기. 18·20·22일 비교 · 진하기 순</div>
+
+  <div class="card P1">
+    <div class="ctitle"><span class="tag" style="background:#e5397d;">1</span> 연핑크 (부드러움)</div>
+    <div class="cdesc">은은한 핑크. 주의는 주되 차분.</div>
+    <div class="att-cal" id="c1"></div>
+  </div>
+
+  <div class="card P2">
+    <div class="ctitle"><span class="tag" style="background:#d6336c;">2</span> 로즈 (또렷함 · 추천)</div>
+    <div class="cdesc">딱 봐도 "처리해야 할 날". 과하지 않고 또렷.</div>
+    <div class="att-cal" id="c2"></div>
+  </div>
+
+  <div class="card P3">
+    <div class="ctitle"><span class="tag" style="background:#c2255c;">3</span> 코랄핑크 (가장 쨍)</div>
+    <div class="cdesc">제일 강한 주의. 단 빨강(일요일·결근)과 살짝 비슷.</div>
+    <div class="att-cal" id="c3"></div>
+  </div>
+
+  <div class="note">1·2·3 번호로 골라주세요</div>
+</div>
+
+<script>
+  const blanks=1, sat=[6,13,20,27], sun=[7,14,21,28], pend=[18,20,22], today=15;
+  const actual={4:'#2563eb',5:'#2563eb',8:'#22a06b',10:'#2563eb',12:'#22a06b',15:'#2563eb'};
+  const sums={4:'8.0',5:'7.5',8:'9.0',10:'8.0',12:'6.0',15:'4.0'};
+  function build(id){
+    const el=document.getElementById(id); let h='';
+    ['일','월','화','수','목','금','토'].forEach((d,i)=>{ h+=`<div class="att-cal-head ${i===0?'sun':i===6?'sat':''}">${d}</div>`; });
+    for(let i=0;i<blanks;i++) h+='<div class="att-cal-cell empty"></div>';
+    for(let d=1; d<=30; d++){
+      const cls=[];
+      if(sun.includes(d)) cls.push('sun'); if(sat.includes(d)) cls.push('sat');
+      if(d===today) cls.push('today'); if(pend.includes(d)) cls.push('pend');
+      const dot = actual[d] ? `<span class="att-cal-dot" style="background:${actual[d]}"></span>` : '';
+      const sum = sums[d] ? `<div class="att-cal-sum">${sums[d]}</div>` : '';
+      h+=`<div class="att-cal-cell ${cls.join(' ')}"><div class="att-cal-day">${d}</div>${dot}${sum}</div>`;
+    }
+    el.innerHTML=h;
+  }
+  build('c1'); build('c2'); build('c3');
+</script>
+</body>
+</html>
