@@ -1025,9 +1025,9 @@ function renderAttDayDetail(date, logs, isSingleView){
         }
       }
     } else if(psH!=null){
-      // 끝시간 미정 — 시작점부터 열린 막대 + "시작~?" (2026-06-15 사장님)
+      // 끝시간 미정 — 시작점에서 한 막대로 자연스럽게 흐려짐 (2026-06-15 사장님: 단일 막대, 폭 넉넉히)
       const pLeft  = Math.max(0,(psH-GANTT_START)/GANTT_SPAN*100);
-      const oWidth = Math.min(100-pLeft, 1.5/GANTT_SPAN*100);
+      const oWidth = Math.min(100-pLeft, 4/GANTT_SPAN*100);
       planBar = `<div class="att-bar plan open${cf}" style="left:${pLeft.toFixed(1)}%;width:${oWidth.toFixed(1)}%;"></div>`;
       timeLbl = `${psLbl} ~ ?`;
     }

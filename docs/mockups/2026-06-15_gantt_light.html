@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연한 회색 + 구분선</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; --blue:#2563eb; --ok:#22a06b; --danger:#e5484d; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:16px; margin-bottom:14px;}
+  .step{font-size:13px; font-weight:800; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 10px; border-radius:20px;}
+  .axis{display:flex; margin-left:54px; margin-bottom:2px;}
+  .axis span{flex:1; font-size:9px; color:var(--gray-400);}
+  .grow{display:flex; align-items:center; gap:8px;}
+  .rl{width:46px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;}
+  .rl .dot{width:8px; height:8px; border-radius:50%;}
+  .track{flex:1; height:24px; background:#f4f5f7; border-radius:6px; position:relative; overflow:hidden;}
+  .meta{font-size:11px; color:var(--gray-600); margin:5px 0 0 54px;}
+  /* 시간 구분선 (2시간마다) */
+  .grid{position:absolute; top:0; bottom:0; width:1px; background:rgba(0,0,0,.12); z-index:2;}
+  .bar{position:absolute; top:2px; height:20px; border-radius:7px;}
+  /* 계획 = 연한 회색 반투명 (구분선 비침) */
+  .plan{background:rgba(120,135,155,.26); z-index:0;}
+  .plan-dash{border:1.5px dashed rgba(100,116,139,.6); background:transparent; z-index:0;}
+  .open-block{background:rgba(120,135,155,.3); border-radius:5px 0 0 5px; z-index:0;}
+  .open-tail{background:linear-gradient(90deg,rgba(120,135,155,.22),rgba(120,135,155,0)); z-index:0;}
+  /* 실제 = 직원색 진하게 (또렷) */
+  .real{opacity:.92; z-index:1;}
+
+  .gridset span{}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>연한 회색 + 구분선 보이게</h1>
+  <div class="sub">계획은 연하게(구분선 비침), 실제만 또렷</div>
+
+  <div class="card">
+    <div class="step"><span class="tag" style="background:#94a3b8;">신청</span> 회색 점선 (승인 전)</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot" style="background:#a855f7;"></span>지우</div><div class="track" id="t1"><div class="bar plan-dash" style="left:50%;width:33%;"></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="tag" style="background:#64748b;">승인됨</span> 연한 회색 꽉 참</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot" style="background:#a855f7;"></span>현우</div><div class="track" id="t2"><div class="bar plan" style="left:50%;width:33%;"></div></div></div>
+    <div class="meta">연해서 뒤 구분선이 비쳐 보임</div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="tag" style="background:#64748b;">끝 미정</span> 연한 블록 + 꼬리</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot" style="background:#a855f7;"></span>정은미</div><div class="track" id="t3"><div class="bar open-block" style="left:50%;width:12%;"></div><div class="bar open-tail" style="left:62%;width:20%;"></div></div></div>
+    <div class="meta">18:00 ~ ?</div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="tag" style="background:var(--danger);">덜 함</span> 계획 18~22, 실제 18~20</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot" style="background:var(--blue);"></span>민지</div><div class="track" id="t4">
+      <div class="bar plan" style="left:50%;width:33%;"></div>
+      <div class="bar real" style="left:50%;width:17%;background:var(--blue);"></div>
+    </div></div>
+    <div class="meta">뒤 연한 회색 = 20~22 덜 함</div>
+  </div>
+
+  <div class="sub">이 정도 연하기면 될까요? 더 연하게/진하게 말씀해주세요</div>
+</div>
+
+<script>
+  // 각 트랙에 2시간 간격 구분선 (축 12~24, 12시간 폭) — 막대 위로 보이게
+  document.querySelectorAll('.track').forEach(t=>{
+    for(let h=2; h<12; h+=2){ // 14,16,18,20,22
+      const g=document.createElement('div'); g.className='grid'; g.style.left=(h/12*100)+'%'; t.appendChild(g);
+    }
+  });
+</script>
+</body>
+</html>

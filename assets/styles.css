@@ -550,10 +550,10 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .att-gl.mid{border-left:1.5px dashed rgba(240,68,82,0.55);}
 .att-bar{position:absolute;top:4px;height:16px;border-radius:8px;opacity:.92;z-index:1;min-width:6px;}
 .att-bar.plan{background:transparent;border:1.5px dashed rgba(100,116,139,0.7);top:2px;height:20px;opacity:1;z-index:0;}
-/* 승인됨(확정) = 점선 → 실선 (2026-06-15 사장님: 회색 점선>회색 실선) */
-.att-bar.plan.confirmed{border-style:solid;border-color:rgba(100,116,139,0.9);}
-/* 끝시간 미정 = 시작점부터 오른쪽으로 흐려지는 열린 막대 (2026-06-15 사장님) */
-.att-bar.plan.open{border-right:none;background:linear-gradient(90deg,rgba(148,163,184,0.22),rgba(148,163,184,0));}
+/* 승인됨(확정) = 연한 회색 꽉 참 (2026-06-15 사장님: 연하게, 구분선 비침) */
+.att-bar.plan.confirmed{border:none;background:rgba(120,135,155,0.26);}
+/* 끝시간 미정 = 시작점에서 한 막대로 자연스럽게 흐려짐 (2026-06-15 사장님: 단일 막대) */
+.att-bar.plan.open{border:none;border-radius:7px 0 0 7px;background:linear-gradient(90deg,rgba(120,135,155,0.5) 0%,rgba(120,135,155,0.5) 22%,rgba(120,135,155,0) 100%);}
 .att-bar.absent{top:2px;height:20px;border:1px solid rgba(239,68,68,0.85);background:repeating-linear-gradient(45deg,rgba(239,68,68,0.85),rgba(239,68,68,0.85) 4px,rgba(254,202,202,0.85) 4px,rgba(254,202,202,0.85) 8px);}
 
 /* ─ 대시보드 */
@@ -1657,28 +1657,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 원산지 칩 (점선 — 참고 정보) */
 .ric-meta{background:transparent;border:1px dashed var(--toss-line-2);border-radius:8px;padding:5px 9px;font-size:11px;color:var(--toss-text-4);font-weight:600;display:flex;align-items:center;gap:4px;}
 .ric-meta input{border:none;background:transparent;font-size:12px;font-weight:700;text-align:left;color:var(--toss-text-2);outline:none;font-family:inherit;width:54px;}
-/* ─── 세부 접기/펼치기 통일 구조 (2026-06-15) ─── */
-.rcp-more-btn{margin-left:auto;border:none;background:transparent;color:var(--toss-text-3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;padding:4px 2px;}
-.rcp-detail{margin-top:11px;padding-top:11px;border-top:1px solid var(--toss-line);}
-.rcp-detail .det-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.rcp-detail .det-row:last-child{margin-bottom:0;}
-.rcp-detail .det-lbl{font-size:11px;font-weight:700;color:var(--toss-text-4);width:46px;flex:none;}
-.rcp-detail .det-field{flex:1;background:var(--gray-100);border:none;border-radius:9px;padding:8px 11px;font-size:13px;font-weight:600;color:var(--toss-text-1);outline:none;text-align:right;font-family:inherit;min-width:0;}
-.rcp-detail .det-field.txt{text-align:left;color:var(--toss-text-2);}
-.rcp-detail .det-half{display:flex;gap:8px;flex:1;}
-.rcp-detail .det-half .det-cell{flex:1;display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:9px;padding:8px 11px;}
-.rcp-detail .det-half .det-cell span{font-size:11px;font-weight:700;color:var(--toss-text-4);}
-.rcp-detail .det-half .det-cell input{flex:1;border:none;background:transparent;font-size:13px;font-weight:700;text-align:right;color:var(--toss-text-1);outline:none;font-family:inherit;min-width:0;}
-/* 부가세 줄 */
-.rcp-detail .vat-row{display:flex;align-items:center;gap:8px;margin-top:8px;background:#FFF9EC;border-radius:10px;padding:9px 11px;}
-.rcp-detail .vat-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#92600A;cursor:pointer;border:none;background:transparent;font-family:inherit;padding:0;}
-.rcp-detail .vat-toggle .sw{width:34px;height:20px;background:var(--toss-blue);border-radius:99px;position:relative;flex:none;transition:background .15s;}
-.rcp-detail .vat-toggle .sw::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;right:2px;transition:all .15s;}
-.rcp-detail .vat-toggle .sw.off{background:var(--gray-200);}
-.rcp-detail .vat-toggle .sw.off::after{right:auto;left:2px;}
-.rcp-detail .vat-amt{margin-left:auto;font-size:12px;font-weight:700;color:#92600A;display:flex;align-items:center;gap:4px;}
-.rcp-detail .vat-amt input{width:64px;border:none;background:rgba(255,255,255,0.7);border-radius:6px;padding:4px 7px;font-size:13px;font-weight:800;color:#92600A;text-align:right;outline:none;font-family:inherit;}
-.rcp-detail .vat-split{font-size:10.5px;color:#A87808;margin-top:5px;padding-left:2px;}
 /* 과거 품목 시트 내 행 */
 .past-item-row{padding:11px 14px;border:1px solid var(--toss-line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--toss-text-1);}
 .past-item-row:active{background:var(--toss-blue-light);}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>끝미정 — 단일 막대</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:16px; margin-bottom:14px;}
+  .step{font-size:13px; font-weight:800; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 10px; border-radius:20px;}
+  .axis{display:flex; margin-left:54px; margin-bottom:2px;}
+  .axis span{flex:1; font-size:9px; color:var(--gray-400);}
+  .grow{display:flex; align-items:center; gap:8px;}
+  .rl{width:46px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;}
+  .rl .dot{width:8px; height:8px; border-radius:50%; background:#a855f7;}
+  .track{flex:1; height:24px; background:#f4f5f7; border-radius:6px; position:relative; overflow:hidden;}
+  .meta{font-size:11px; color:var(--gray-600); margin:5px 0 0 54px;}
+  .grid{position:absolute; top:0; bottom:0; width:1px; background:rgba(0,0,0,.12); z-index:2;}
+  .bar{position:absolute; top:2px; height:20px;}
+
+  /* 이전(문제): 블록+꼬리 따로 → 2개로 보임 */
+  .old-block{left:50%; width:12%; background:rgba(120,135,155,.4); border-radius:5px 0 0 5px;}
+  .old-tail{left:62%; width:20%; background:linear-gradient(90deg,rgba(120,135,155,.3),rgba(120,135,155,0));}
+
+  /* 새(단일 막대): 한 덩어리에서 자연스럽게 흐려짐 */
+  .open{left:50%; width:34%; border-radius:6px 0 0 6px;
+        background:linear-gradient(90deg, rgba(120,135,155,.5) 0%, rgba(120,135,155,.5) 22%, rgba(120,135,155,0) 100%);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>끝 미정 막대 — 하나로</h1>
+  <div class="sub">18:00 ~ ? 를 끊김 없이 한 막대로</div>
+
+  <div class="card">
+    <div class="step"><span class="tag" style="background:#ef4444;">이전</span> 블록+꼬리 따로 → 2개처럼 보임</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot"></span>정은미</div><div class="track" id="t1"><div class="bar old-block"></div><div class="bar old-tail"></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="tag" style="background:#22a06b;">새</span> 한 막대에서 자연스럽게 흐려짐</div>
+    <div class="axis"><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div>
+    <div class="grow"><div class="rl"><span class="dot"></span>정은미</div><div class="track" id="t2"><div class="bar open"></div></div></div>
+    <div class="meta">시작은 진하고 오른쪽으로 끊김 없이 사라짐 = 18:00 ~ ?</div>
+  </div>
+
+  <div class="sub">이렇게 하나로 가면 될까요?</div>
+</div>
+<script>
+  document.querySelectorAll('.track').forEach(t=>{
+    for(let h=2; h<12; h+=2){ const g=document.createElement('div'); g.className='grid'; g.style.left=(h/12*100)+'%'; t.appendChild(g);}
+  });
+</script>
+</body>
+</html>
