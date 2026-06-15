@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>간트 막대 — 승인 전 vs 후</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; --blue:#2563eb; --danger:#e5484d; --ok:#22a06b; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .card{background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); border:1px solid #e6e8eb; padding:16px; margin-bottom:16px;}
+  .ctitle{font-size:14px; font-weight:800; margin-bottom:14px; display:flex; align-items:center; gap:8px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 10px; border-radius:20px;}
+
+  /* 간트 한 줄 */
+  .grow{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
+  .rl{width:46px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;}
+  .rl .dot{width:8px; height:8px; border-radius:50%;}
+  .track{flex:1; height:24px; background:#f4f5f7; border-radius:6px; position:relative;}
+  .bar{position:absolute; top:2px; height:20px; border-radius:8px;}
+  .meta{font-size:11px; color:var(--gray-600); margin:0 0 16px 54px;}
+
+  /* 승인 전 = 회색 점선 (현재) */
+  .bar.plan{background:transparent; border:1.5px dashed rgba(100,116,139,.7);}
+  /* 승인 후 = 파란 실선 + 연한 채움 (또렷) */
+  .bar.confirmed{background:#dbeafe; border:1.5px solid var(--blue);}
+  /* 실제 출퇴근 (참고) */
+  .bar.real{background:#2563eb; opacity:.92; top:4px; height:16px;}
+
+  .legend{display:flex; flex-direction:column; gap:10px; font-size:12px; color:var(--gray-600); background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e6e8eb;}
+  .legend .row{display:flex; align-items:center; gap:10px;}
+  .swatch{width:46px; height:18px; border-radius:6px; flex-shrink:0;}
+  .sw-plan{background:transparent; border:1.5px dashed rgba(100,116,139,.7);}
+  .sw-conf{background:#dbeafe; border:1.5px solid var(--blue);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>간트 막대 — 승인 전 vs 후</h1>
+  <div class="sub">막대 모양으로 "승인됐다"가 한눈에 보이게</div>
+
+  <!-- 승인 전 -->
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:#94a3b8;">승인 전</span> 직원이 신청만 한 상태</div>
+    <div class="grow">
+      <div class="rl"><span class="dot" style="background:#2563eb;"></span>민지</div>
+      <div class="track"><div class="bar plan" style="left:25%;width:45%;"></div></div>
+    </div>
+    <div class="meta">회색 <b>점선</b> = 아직 승인 안 함 (대기)</div>
+  </div>
+
+  <!-- 승인 후 -->
+  <div class="card">
+    <div class="ctitle"><span class="tag" style="background:var(--blue);">승인 후</span> 사장님이 확정한 상태</div>
+    <div class="grow">
+      <div class="rl"><span class="dot" style="background:#2563eb;"></span>민지</div>
+      <div class="track"><div class="bar confirmed" style="left:25%;width:45%;"></div></div>
+    </div>
+    <div class="meta">파란 <b>실선 + 채움</b> = 확정됨 ✅ 또렷하게 바뀜</div>
+  </div>
+
+  <!-- 한 화면에서 비교 -->
+  <div class="card">
+    <div class="ctitle">📅 06-18 (목) — 한 화면에서 보면</div>
+    <div class="grow">
+      <div class="rl"><span class="dot" style="background:#2563eb;"></span>민지</div>
+      <div class="track"><div class="bar confirmed" style="left:20%;width:42%;"></div></div>
+    </div>
+    <div class="meta">민지 — 승인 완료 (파란 실선)</div>
+    <div class="grow">
+      <div class="rl"><span class="dot" style="background:#22a06b;"></span>현우</div>
+      <div class="track"><div class="bar plan" style="left:38%;width:40%;"></div></div>
+    </div>
+    <div class="meta">현우 — 아직 승인 대기 (회색 점선) → 누르면 승인</div>
+
+    <div class="legend" style="margin-top:6px;">
+      <div class="row"><span class="swatch sw-plan"></span> 점선 = 승인 대기</div>
+      <div class="row"><span class="swatch sw-conf"></span> 실선+채움 = 승인 완료</div>
+    </div>
+  </div>
+
+  <div class="sub">이렇게 하면 같은 화면에서 "누구는 됐고 누구는 남았는지" 바로 구분됩니다</div>
+</div>
+</body>
+</html>
