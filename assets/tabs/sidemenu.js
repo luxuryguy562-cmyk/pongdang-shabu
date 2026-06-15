@@ -1940,6 +1940,41 @@ async function mergeEmployeePrivate(){
 
 // ─── 새 기능: 직원 초대(매장 코드) + 가입 대기 승인 — 직원관리 화면 (2026-06-09) ───
 let _inviteCode='';
+// ─── 새 기능: 알림 시트 (종 🔔, 2026-06-15) — 가입신청·근무신청·공과금미납 모음 ───
+async function openNotifSheet(){
+  if(!isManager||!currentStore){ return; }
+  const sid=currentStore.id, ym=fcThisYm();
+  setLoad(true,'알림 확인...');
+  let joinN=0, schedN=0, billN=0;
+  try{ const token=localStorage.getItem('pd_token'); const{data:pj}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}}); joinN=(pj?.rows||[]).length; }catch(_){}
+  try{ const{data}=await sb.from('work_schedules').select('id').eq('store_id',sid).eq('status','희망'); schedN=(data||[]).length; }catch(_){}
+  try{
+    const[r1,r2]=await Promise.all([
+      sb.from('fixed_costs').select('id,expected_day,is_active').eq('store_id',sid),
+      sb.from('fixed_cost_amounts').select('fixed_cost_id,amount,is_confirmed').eq('store_id',sid).eq('year_month',ym)
+    ]);
+    const paid={}; (r2.data||[]).forEach(a=>{ if(a.is_confirmed&&a.amount!=null) paid[a.fixed_cost_id]=1; });
+    const today=new Date(), day=today.getDate(), lastDay=new Date(today.getFullYear(),today.getMonth()+1,0).getDate();
+    billN=(r1.data||[]).filter(r=>r.is_active!==false&&r.expected_day&&!paid[r.id]&&day>((r.expected_day>=99||r.expected_day>lastDay)?lastDay:r.expected_day)).length;
+  }catch(_){}
+  setLoad(false);
+  let html='';
+  if(joinN) html+=`<div class="notif-item" data-action="goNotif|staff"><span class="ni-ic">👥</span><div class="ni-tx"><b>직원 가입 신청 ${joinN}건</b><span>승인해 주세요</span></div><span class="ni-arr">›</span></div>`;
+  if(schedN) html+=`<div class="notif-item" data-action="goNotif|sched"><span class="ni-ic">📅</span><div class="ni-tx"><b>직원 근무 신청 ${schedN}건</b><span>승인 대기 중</span></div><span class="ni-arr">›</span></div>`;
+  if(billN) html+=`<div class="notif-item" data-action="goNotif|bill"><span class="ni-ic">🚨</span><div class="ni-tx"><b>공과금 미납 ${billN}건</b><span>납기일 지났어요</span></div><span class="ni-arr">›</span></div>`;
+  if(!html) html='<div style="text-align:center;color:var(--gray-400);padding:30px 0;font-size:13px;">새 알림이 없어요 👍</div>';
+  document.getElementById('notifList').innerHTML=html;
+  const badge=document.getElementById('headerBellBadge'), total=joinN+schedN+billN;
+  if(badge){ if(total>0){ badge.innerText=total>9?'9+':String(total); badge.style.display='block'; } else badge.style.display='none'; }
+  openSheet('notifSheet');
+}
+function goNotif(where){
+  closeAllSheets();
+  if(where==='staff') nav('staff');
+  else if(where==='sched'){ nav('attendance'); setTimeout(()=>{ const b=document.querySelector('#attendanceCont .sub-tab[data-sub="all"]'); if(b&&typeof attTab==='function') attTab('all',b); },40); }
+  else if(where==='bill') nav('fixedcost');
+}
+
 async function loadJoinAdmin(){
   if(!isManager) return;
   const token=localStorage.getItem('pd_token'); if(!token) return;
