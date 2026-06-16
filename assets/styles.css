@@ -26,7 +26,7 @@ input,select,textarea,button{font-family:inherit;}
 /* ─ 헤더 */
 .header{position:fixed;top:0;width:100%;height:calc(60px + env(safe-area-inset-top,0));padding:env(safe-area-inset-top,0) 16px 0;background:var(--white);border-bottom:1px solid var(--toss-line);display:flex;align-items:center;justify-content:space-between;z-index:100;gap:8px;box-sizing:border-box;}
 .header-title{font-size:18px;font-weight:800;color:var(--toss-blue-strong);flex-shrink:0;letter-spacing:-0.5px;}
-.header-store{font-size:12px;font-weight:700;color:var(--toss-text-2);background:var(--toss-line);padding:7px 11px;border-radius:99px;cursor:pointer;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.2px;}
+.header-store{font-size:12px;font-weight:700;color:var(--toss-text-2);background:var(--toss-line);padding:7px 11px;border-radius:99px;cursor:pointer;max-width:135px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.2px;}
 .header-user{font-size:12px;font-weight:700;color:var(--toss-text-3);cursor:pointer;padding:7px 11px;background:var(--toss-line);border-radius:99px;white-space:nowrap;flex-shrink:0;letter-spacing:-0.2px;}
 
 /* ─ 네비 */
