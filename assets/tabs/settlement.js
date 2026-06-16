@@ -3,6 +3,7 @@
 // ══════════════════════════════════════════
 // ── 마감정산 로직 ──
 // ─── 정산 날짜 선택 (관리자용) ───
+let _isEditingSettle=false; // editSettlement(수정) 진입 시 true — 자동날짜가 수정 날짜를 덮는 경쟁 방지 (2026-06-16)
 function initSettleDate(){
   const picker=document.getElementById('settleDatePicker');
   const group=document.getElementById('settleDateGroup');
@@ -28,6 +29,7 @@ async function applySettleAutoDate(picker, bizToday){
   const{data}=await sb.from('settlements').select('settle_date')
     .eq('store_id',currentStore.id).lte('settle_date',bizToday)
     .order('settle_date',{ascending:false}).limit(1);
+  if(_isEditingSettle) return; // 수정 모드면 editSettlement가 picker를 그 날짜로 잡음 — 자동날짜로 덮지 않음
   let target=bizToday;
   if(data&&data[0]){
     const next=ymdAddDays(data[0].settle_date,1); // 마지막 마감 다음날
@@ -761,6 +763,7 @@ function settleTab(tab,el){
 }
 // 마감정산 입력폼 초기화 (탭 진입 시)
 function resetSettleView(){
+  _isEditingSettle=false; // 신규 마감 진입 기준선 — 자동날짜 허용 (수정은 editSettlement가 다시 true)
   ['siPosCash','siPosCashReceipt','siPosCard','siPosEtc','siCashCash','siCashQr','siCashTransfer'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.querySelectorAll('.v-input').forEach(i=>i.value='');
   document.querySelectorAll('.s-extra-input').forEach(i=>i.value='');
@@ -1162,6 +1165,7 @@ async function renderSettleCardExtraSection(data){
 async function editSettlement(dateStr, silent){
   // 기존 정산 데이터를 입력 폼에 로드하고 입력 탭으로 전환
   // silent=true: 날짜 화살표 이동 시 재사용 (안내 토스트 생략)
+  _isEditingSettle=true; // 수정 모드 — 자동날짜가 이 날짜를 덮지 않게 (2026-06-16)
   if(!currentStore){toast('매장이 선택되지 않았어요','warn');return;}
   if(!currentEmp){toast('로그인 정보가 없어요. 다시 로그인 해주세요','warn');return;}
   let data, error;
