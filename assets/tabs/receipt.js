@@ -738,7 +738,10 @@ async function pickRcpVendor(vendorId){
   if(error || !data) return toast('거래처 정보를 못 가져왔어요', 'error');
   rcpVendorId = data.id;
   rcpVendorName = data.name || '';
-  rcpVendorKind = data.kind || 'vendor';
+  // 주류 거래처 자동 인식 — 분류에 "주류" 포함이면 liquor 모드 (openRcpReceiptFromVendor와 동일 로직 — 진입로 일관성 버그 수정 2026-06-16)
+  //   영수증 탭 거래처 목록으로 진입 시 분류를 무시하고 kind만 봐서 주류 프롬프트(빈용기보증금 추출)를 안 타던 버그.
+  const _isLiquorVendor = (data.category || '').includes('주류');
+  rcpVendorKind = _isLiquorVendor ? 'liquor' : (data.kind || 'vendor');
   // 온라인·마트는 취급품목 없이 자율 분류 → 카테고리 고정 안 함 (마트 2026-06-12)
   if(rcpVendorKind === 'online' || rcpVendorKind === 'mart'){
     rcpCatId = null; rcpCatName = '';
