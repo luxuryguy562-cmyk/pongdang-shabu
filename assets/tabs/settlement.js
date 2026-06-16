@@ -419,7 +419,7 @@ function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
     cont.insertAdjacentHTML('beforeend', `
       <div class="st-deduct-row" data-id="${id}" data-type="bank" data-sign="1" data-emp-id="${empId}" data-emp-name="${empName.replace(/"/g,'&quot;')}" style="${cardStyle}">
         <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this" data-change="recalcSettle2">
+          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
           <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="${memoStyle}">
@@ -437,7 +437,7 @@ function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
       <div class="st-deduct-row" data-id="${id}" data-type="etc" data-sign="${sign}" data-cat-id="${catId}" data-cat-name="${catName.replace(/"/g,'&quot;')}" style="${cardStyle}">
         <div style="display:flex;align-items:center;gap:8px;">
           <button class="st-ded-sign" data-action="toggleStDedSign|${id}" title="빠짐/들어옴 토글" style="flex:0 0 26px;height:26px;border-radius:50%;border:none;background:${sign>0?'var(--danger-light)':'#DCFCE7'};color:${sign>0?'var(--danger)':'#15803D'};font-size:15px;font-weight:900;cursor:pointer;padding:0;">${sign>0?'−':'+'}</button>
-          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this" data-change="recalcSettle2">
+          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
           <button class="x-btn" data-action="removeSettleDeductRow|${id}" style="flex:0 0 24px;height:24px;border-radius:50%;border:none;background:#fff;color:var(--gray-400);font-size:14px;cursor:pointer;padding:0;">×</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
@@ -449,30 +449,18 @@ function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
   }
   recalcSettle2();
 }
-// ─── 통장 입금 입금자 선택 (목록에서 고르기 — 2026-06-16 사장님 요청, 순환→드롭박스) ───
+// ─── 통장 입금 입금자 변경 (탭하면 직원 순환, 직원 연결) ───
 function pickDepositor(rowId){
   const row=document.querySelector('.st-deduct-row[data-id="'+rowId+'"]');
   if(!row) return;
   if(!employees || !employees.length){ toast('등록된 직원이 없어요','warn'); return; }
-  const cur=row.dataset.empId;
-  const sheet=document.createElement('div');
-  sheet.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;display:flex;align-items:flex-end;';
-  sheet.innerHTML=`<div style="background:#fff;width:100%;border-radius:18px 18px 0 0;padding:18px 18px 28px;max-height:70vh;overflow:auto;">
-    <div style="font-size:16px;font-weight:800;margin-bottom:14px;">입금자 선택</div>
-    ${employees.map(e=>`<button data-eid="${e.id}" data-en="${(e.name||'').replace(/"/g,'&quot;')}" style="width:100%;text-align:left;padding:14px;margin-bottom:8px;border:1px solid ${e.id===cur?'var(--blue)':'var(--gray-200)'};border-radius:12px;background:${e.id===cur?'var(--blue-light)':'#fff'};font-size:15px;font-weight:${e.id===cur?'800':'600'};color:${e.id===cur?'var(--blue)':'var(--text)'};cursor:pointer;">👤 ${e.name}${e.id===cur?' ✓':''}</button>`).join('')}
-  </div>`;
-  sheet.addEventListener('click',ev=>{
-    if(ev.target===sheet){ sheet.remove(); return; }
-    const btn=ev.target.closest('[data-eid]');
-    if(btn){
-      row.dataset.empId=btn.dataset.eid;
-      row.dataset.empName=btn.dataset.en;
-      const lbl=row.querySelector('.st-ded-emp');
-      if(lbl) lbl.textContent='👤 '+btn.dataset.en;
-      sheet.remove();
-    }
-  });
-  document.body.appendChild(sheet);
+  const curId=row.dataset.empId;
+  const idx=employees.findIndex(e=>e.id===curId);
+  const next=employees[(idx+1)%employees.length];
+  row.dataset.empId=next.id;
+  row.dataset.empName=next.name;
+  const btn=row.querySelector('.st-ded-emp');
+  if(btn) btn.textContent='👤 '+next.name;
 }
 // ─── 부호 토글 (etc 행만, 양방향) ───
 // sign=1: 빠짐 (UI '−'), sign=-1: 들어옴 (UI '+')
