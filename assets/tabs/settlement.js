@@ -411,7 +411,7 @@ function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
   const amtStyle='flex:1;border:none;background:transparent;font-size:20px;font-weight:900;color:var(--text);min-width:0;';
   const memoStyle='flex:1;border:none;background:#fff;border-radius:8px;padding:9px 10px;font-size:12px;min-width:0;';
   if(type==='bank'){
-    // ── 통장 입금: 1줄 고정(삭제 X), 입금자 칩(직원 연결, 기본 현재 로그인) ──
+    // ── 통장 입금: 금액 + 입금자만 (메모 제거 — 2026-06-16 사장님: 현금 이동은 메모 불필요, 헷갈림 유발) ──
     empId = empId || (currentEmp?.id||'');
     if(empId && !empName){ const e=(employees||[]).find(x=>x.id===empId); empName = e?e.name:''; }
     empName = empName || (currentEmp?.name||'');
@@ -419,10 +419,7 @@ function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
     cont.insertAdjacentHTML('beforeend', `
       <div class="st-deduct-row" data-id="${id}" data-type="bank" data-sign="1" data-emp-id="${empId}" data-emp-name="${empName.replace(/"/g,'&quot;')}" style="${cardStyle}">
         <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-          <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="${memoStyle}">
+          <input type="text" class="st-ded-amount" placeholder="입금 금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
           <button class="st-ded-emp" data-action="pickDepositor|${id}" title="입금자 (탭하면 변경)" style="flex:0 0 auto;padding:9px 11px;border:1px solid var(--blue);border-radius:8px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue);cursor:pointer;white-space:nowrap;">${empLabel}</button>
         </div>
       </div>
@@ -541,7 +538,7 @@ function getSettleDeductRows(){
     const sign = parseInt(row.dataset.sign)||1;
     const abs = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
     const amount = (type==='etc') ? sign*abs : abs;
-    const memo = row.querySelector('.st-ded-memo').value || '';
+    const memo = row.querySelector('.st-ded-memo')?.value || ''; // bank 행은 메모칸 없음 → ''
     const category_id = row.dataset.catId || null;
     const category_name = row.dataset.catName || '';
     const employee_id = (type==='bank') ? (row.dataset.empId || null) : null; // 통장입금 입금자
