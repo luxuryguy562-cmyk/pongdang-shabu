@@ -524,6 +524,12 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .role-switch{display:inline-flex;background:#eef0f3;border-radius:14px;padding:2px;flex-shrink:0;}
 .rs-btn{border:none;background:transparent;font-size:10px;font-weight:700;padding:3px 7px;border-radius:12px;color:var(--gray-600);cursor:pointer;white-space:nowrap;}
 .rs-btn.on{background:#fff;color:var(--blue);box-shadow:0 1px 2px rgba(0,0,0,.12);}
+/* 헤더 이름 메뉴 안 토글 (관리 ↔ 내 근무, 2026-06-16) */
+.role-switch-menu{display:flex;background:#eef0f3;border-radius:13px;padding:4px;margin:4px 4px 12px;}
+.rsm-btn{flex:1;border:none;background:transparent;font-size:14px;font-weight:800;padding:11px 0;border-radius:10px;color:var(--gray-600);cursor:pointer;}
+.rsm-btn.on{background:#fff;color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+/* 헤더 이름 옆 ▾ (메뉴 있음 표시) */
+.header-user::after{content:'▾';margin-left:3px;font-size:10px;color:var(--gray-400);}
 /* 직급별 화면 권한 설정 (2026-06-15) */
 .rp-seg{display:flex;gap:6px;background:var(--gray-100);padding:4px;border-radius:12px;}
 .rp-seg-btn{flex:1;padding:9px 0;border:none;border-radius:9px;font-size:13px;font-weight:700;background:transparent;color:var(--gray-600);cursor:pointer;}
