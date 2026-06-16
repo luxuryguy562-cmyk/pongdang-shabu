@@ -5290,15 +5290,23 @@ async function loadDiffTable(){
     const st=stByDate[d];
     const op=opByDate[d];
     const opDiff=(op&&op.actual_total!=null&&op.previous_close_total!=null)?(op.actual_total-op.previous_close_total):null;
-    const stDiff=st.diff_amount||0;
-    const totalDiff=(opDiff!=null?opDiff:0)+stDiff;
-    sumDiff+=totalDiff;
 
     const items=st.items_json||{};
     const bankSum=items.deduct_bank||0;
     const etcSum=items.deduct_etc||0;
     sumBank+=bankSum;
     sumEtc+=etcSum;
+    const cashSales=items.cash_detail_cash||0;
+    // ── 버그1 수정 (2026-06-16): 개시 금고 고치면 차액표도 따라오게 실시간 재계산 ──
+    //   옛: book=st.expected_total(마감 저장 당시 스냅샷) → 개시 고쳐도 옛값 박제
+    //   새: 개시금고(daily_opening 실시간 op 우선, 없으면 저장 opening) + 현금매출 − 현금지출 − 통장
+    //       (마감 저장 공식 settlement.js:780과 동일: book=opening+cash−etc−bank)
+    const openingVault=(op&&op.actual_total!=null)?op.actual_total:(items.opening||0);
+    const book=openingVault+cashSales-etcSum-bankSum;
+    const closeVault=st.actual_total||0;
+    const stDiff=closeVault-book;
+    const totalDiff=(opDiff!=null?opDiff:0)+stDiff;
+    sumDiff+=totalDiff;
 
     const isAlert=Math.abs(totalDiff)>=THRESHOLD;
     const diffColor=isAlert?'#DC2626':(totalDiff===0?'var(--gray-400)':'var(--text)');
@@ -5315,9 +5323,7 @@ async function loadDiffTable(){
     const deds=Array.isArray(items.deductions)?items.deductions:[];
     const bankMemo=deds.filter(x=>x.type==='bank'&&x.memo).map(x=>x.memo).join(', ')||items.deduct_bank_memo||'';
     const etcMemo=deds.filter(x=>x.type==='etc'&&x.memo).map(x=>x.memo).join(', ')||items.deduct_etc_memo||'';
-    const cashSales=items.cash_detail_cash||0;
-    const book=st.expected_total||0;
-    const closeVault=st.actual_total||0;
+    // cashSales·book·closeVault·stDiff는 위에서 실시간 재계산함 (버그1 수정 2026-06-16)
     const fr=(label,val,sub,color)=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:${color||'var(--gray-600)'};"><span>${label}${sub?`<br><span style="font-size:10px;color:var(--gray-400);">↳ ${sub}</span>`:''}</span><b style="font-variant-numeric:tabular-nums;white-space:nowrap;">${val}</b></div>`;
     let flow='';
     if(op){

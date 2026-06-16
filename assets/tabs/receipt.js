@@ -408,7 +408,16 @@ async function loadCatReceiptData(){
   let oq = null;
   let catIdSet = null; // 카테고리 모드일 때 vendor_orders 메모리 필터용 (식자재 + 자식 ids)
   if(catReceiptMode === 'direct'){
-    rq = rq.is('vendor_id', null);
+    // 마트·시장 모드: 직접구매(vendor_id NULL) + 마트(kind='mart') 영수증 둘 다 (2026-06-16 버그수정)
+    //   옛: vendor_id IS NULL만 조회 → 마트 통일 작업으로 vendor_id 박힌 마트 영수증이 빠짐
+    const {data:_martV} = await sb.from('vendors')
+      .select('id').eq('store_id', currentStore.id).eq('kind','mart');
+    const _martIds = (_martV||[]).map(v=>v.id);
+    if(_martIds.length){
+      rq = rq.or(`vendor_id.is.null,vendor_id.in.(${_martIds.join(',')})`);
+    } else {
+      rq = rq.is('vendor_id', null);
+    }
     // vendor_orders 조회 안 함
   } else if(catReceiptMode === 'all'){
     // 'all' 모드: 영수증 전체 + 거래처 주문 전체 (변동 지출 — 고정비·인건비 제외)
