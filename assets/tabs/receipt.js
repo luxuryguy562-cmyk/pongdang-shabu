@@ -1935,11 +1935,13 @@ async function saveReceipt(){
       note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
     };
   });
-  // 사전 가드: 정상 행 중 분류가 expense_categories에 매칭 안 되는 건 안내 (오답은 통과)
-  const missing=rows.filter(r=>r.note==='정상'&&r._cat&&!r.category_id);
+  // 사전 가드: 정상 행에 분류번호(category_id) 없으면 저장 차단 (사장님 명시 2026-06-16: 분류 없거나 번호 안 잡히면 지출 저장 X)
+  //   category 텍스트만 있고 목록 매칭 실패(AI가 목록 밖 분류 생성) + category 자체 빈 행 둘 다 차단 → 집계 누락 원천 차단
+  const missing=rows.filter(r=>r.note==='정상'&&!r.category_id);
   if(missing.length){
-    const detail=missing.map(r=>`${r._idx}행 "${r._cat}"`).join('\n• ');
-    if(!confirm(`아래 분류는 카테고리 목록에 없어요:\n• ${detail}\n\n그래도 저장할까요?\n(분류명은 텍스트로 들어가지만 집계가 안 잡힐 수 있어요)`)) return;
+    const detail=missing.map(r=>`${r._idx}행 "${r.item||r._cat||'품목'}"${r._cat?` (분류 "${r._cat}")`:' (분류 미선택)'}`).join('\n• ');
+    alert(`아래 품목은 분류가 정해지지 않아 저장할 수 없어요:\n• ${detail}\n\n각 품목의 "분류"를 목록에서 골라주신 뒤 다시 저장해주세요.\n분류가 있어야 지출 집계에 정확히 잡혀요.`);
+    return; // 분류번호 없으면 저장 차단 (집계 무결성)
   }
   // 날짜 이상 경고 (2023 등 AI 오인식 방지, 2026-06-02)
   const _today=ymdLocal(new Date());
@@ -2468,6 +2470,11 @@ async function saveReceiptEdit(){
     return catById[target]||catById[parts[0]]||null;
   };
 
+  // 분류번호 없으면 저장 차단 (신규 저장과 동일 — 사장님 명시 2026-06-16, 집계 무결성)
+  if(note==='정상' && !resolveRcpCatId(cat)){
+    alert('분류가 정해지지 않아 저장할 수 없어요.\n"분류"를 목록에서 골라주신 뒤 다시 저장해주세요.');
+    return;
+  }
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').update({
     receipt_date:date,vendor,item,total_price:amount,
@@ -2672,6 +2679,12 @@ async function saveReceiptGroupEdit(){
   const groupId=k.type==='grp'?k.id:null;
   const invalid=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&(!r.amount||r.amount<=0));
   if(invalid.length) return toast('정상 행은 금액이 필요해요','warn');
+  // 분류번호 없으면 저장 차단 (신규·단건편집과 동일 — 사장님 명시 2026-06-16, 집계 무결성)
+  const noCat=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&!r.catId);
+  if(noCat.length){
+    alert('분류가 정해지지 않은 품목이 있어 저장할 수 없어요.\n각 품목의 "분류"를 목록에서 골라주신 뒤 다시 저장해주세요.');
+    return;
+  }
   setLoad(true,'저장 중...');
   // 화면에 보이는 순서대로 seq 재부여 — 편집 후에도 품목 순서 고정 (2026-06-09)
   let _seqCounter=0;
