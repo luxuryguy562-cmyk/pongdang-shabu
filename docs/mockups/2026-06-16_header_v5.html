@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>헤더 v5 — 전환 알약</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; --line:#e6e8eb; --blue:#2563eb; --ok:#22a06b; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:16px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .phone{background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.06); margin-bottom:14px;}
+  .hdr{display:flex; align-items:center; justify-content:space-between; padding:12px 13px; gap:7px;}
+  .logo{display:flex; align-items:center; gap:6px; font-size:15px; font-weight:900; color:var(--blue); flex-shrink:0;}
+  .logo .mk{width:24px; height:24px; border-radius:7px; background:linear-gradient(135deg,#0050FF,#3B82F6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900;}
+  .right{display:flex; align-items:center; gap:6px;}
+  .bell{position:relative; color:var(--gray-600); font-size:18px;}
+  .bell .dot{position:absolute; top:-2px; right:-3px; width:13px; height:13px; background:#e5484d; color:#fff; font-size:8px; font-weight:800; border-radius:50%; display:flex; align-items:center; justify-content:center;}
+  .chip{font-size:12px; font-weight:700; color:var(--gray-600); background:#eef0f3; border-radius:99px; padding:6px 10px; white-space:nowrap; max-width:88px; overflow:hidden; text-overflow:ellipsis;}
+
+  /* 전환 알약 — 버튼처럼 (🔄 + 모드) */
+  .switch-pill{display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:800; border-radius:99px; padding:6px 10px; cursor:pointer; white-space:nowrap; border:1.3px solid; }
+  .switch-pill.mgr{color:var(--blue); background:#eef4ff; border-color:#cfe0ff;}
+  .switch-pill.me{color:var(--ok); background:#eafaf2; border-color:#bfe9d4;}
+  .switch-pill .ic{font-size:12px;}
+
+  .body{padding:16px 14px; min-height:70px; color:var(--gray-400); font-size:13px; text-align:center;}
+  .label{font-size:12px; font-weight:800; color:var(--gray-600); margin:6px 0 8px 4px;}
+  .arrow{text-align:center; font-size:20px; color:var(--gray-400); margin:2px 0 8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>전환 알약 — 버튼처럼 보이게</h1>
+  <div class="sub">🔄 아이콘 = "누르면 바뀐다" · 토글보다 작음</div>
+
+  <div class="label">관리 모드일 때</div>
+  <div class="phone">
+    <div class="hdr">
+      <span class="logo"><span class="mk">₩</span>캐쉬플로우</span>
+      <span class="right">
+        <span class="switch-pill mgr"><span class="ic">🔄</span>관리</span>
+        <span class="bell">🔔<span class="dot">1</span></span>
+        <span class="chip">문보영</span>
+      </span>
+    </div>
+    <div class="body">파란 알약 "🔄 관리" = 지금 관리 모드<br>누르면 ↓</div>
+  </div>
+
+  <div class="arrow">🔄</div>
+
+  <div class="label">누르면 → 내 근무 모드</div>
+  <div class="phone">
+    <div class="hdr">
+      <span class="logo"><span class="mk">₩</span>캐쉬플로우</span>
+      <span class="right">
+        <span class="switch-pill me"><span class="ic">🔄</span>내 근무</span>
+        <span class="bell">🔔<span class="dot">1</span></span>
+        <span class="chip">문보영</span>
+      </span>
+    </div>
+    <div class="body">초록 알약 "🔄 내 근무" = 지금 내 근무 모드<br>다시 누르면 관리로</div>
+  </div>
+
+  <div class="sub" style="margin-top:14px;">· 🔄 아이콘으로 "전환 버튼"인 게 한눈에<br>· 관리=파랑 / 내 근무=초록 (색으로도 구분)<br>· 알약 1개라 토글보다 작음 (매장명은 이름 누르면 메뉴에)<br><br>이거 어떠세요?</div>
+</div>
+</body>
+</html>
