@@ -641,17 +641,20 @@ async function loadDashboard(force){
 
     // 고정비 일할계산 — 항목별 유효 월 금액(실제 납부액 우선) 합산 (활성 항목만)
     const fixedMonthly=fcRows.filter(r=>r.is_active!==false).reduce((a,r)=>a+fcEffectiveMonthly(r,_fcActualMap),0);
-    const fixedProrated=Math.round(fixedMonthly/lastDay*passedDays);
     // 카테고리별 일할 (차트 그룹 분리용: 고정비/공과금/마케팅/세금 등)
     const fcByCatMonthly={};
     fcRows.filter(r=>r.is_active!==false).forEach(r=>{
       const c=r.category||'고정비';
       fcByCatMonthly[c]=(fcByCatMonthly[c]||0)+fcEffectiveMonthly(r,_fcActualMap);
     });
+    // 고정비 일할 — 캘린더(월카드)와 동일하게 '일별 카테고리별 반올림 × 경과일' 누적 (2026-06-16 수익 일치)
+    //   옛: round(월합/lastDay*passedDays) 1회 반올림 → 캘린더(일별 반올림 누적, 1084줄)와 수십원 어긋남
+    //   새: 일별 share(round(카테고리월합/lastDay)) × passedDays → 홈요약=캘린더=월카드 일치
     const fixedProratedByCat={};
     Object.keys(fcByCatMonthly).forEach(c=>{
-      fixedProratedByCat[c]=Math.round(fcByCatMonthly[c]/lastDay*passedDays);
+      fixedProratedByCat[c]=Math.round(fcByCatMonthly[c]/lastDay)*passedDays;
     });
+    const fixedProrated=Object.values(fixedProratedByCat).reduce((a,v)=>a+v,0);
 
     // 지출에서 고정비를 일할계산으로 교체
     const totalCostRaw=expData.reduce((a,e)=>a+e.amount,0);
@@ -675,8 +678,10 @@ async function loadDashboard(force){
       royalty=(royaltyTxRes.data||[]).reduce((a,r)=>a+Math.abs(r.amount||0),0);
       cardFee=Math.round(cardSales*cardFeeRate);
     } else {
-      royalty=Math.round(totalRevenue*royaltyRate);
-      cardFee=Math.round(cardSales*cardFeeRate);
+      // 캘린더(월카드)와 동일하게 '일별 반올림 누적' (2026-06-16 수익 일치) — 1100·1101줄과 동일 식
+      //   옛: round(월합*요율) 1회 반올림 → 캘린더(일별 반올림 누적)와 어긋남
+      royalty=Object.entries(dailySalesMap).reduce((a,[k,v])=>parseInt(k,10)<=passedDays?a+Math.round((v||0)*royaltyRate):a,0);
+      cardFee=Object.entries(dailyCardSalesMap).reduce((a,[k,v])=>parseInt(k,10)<=passedDays?a+Math.round((v||0)*cardFeeRate):a,0);
     }
 
     // ══ 핵심 수치 계산 ══
