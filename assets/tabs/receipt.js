@@ -1637,7 +1637,7 @@ function buildReceiptRow(i={}) {
   const _vatOn = _tax>0;                 // AI가 세액 읽었으면 토글 켜진 상태로 시작
   const vatSplitTxt = _vatOn ? `공급가 ${fmt(_supply)} + 부가세 ${fmt(_tax)} = ${fmt(_total)}` : '';
   const detailWrap = `
-    <div class="rcp-detail" id="detail-${idx}" style="display:none;">
+    <div class="rcp-detail" id="detail-${idx}" style="display:block;">
       <div class="det-row">
         <span class="det-lbl">규격</span>
         <input type="text" class="c-spec det-field txt" value="${esc(i.spec||'')}" placeholder="규격 없음 (예: 500g)">
@@ -1672,7 +1672,7 @@ function buildReceiptRow(i={}) {
       <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
       ${autoTag}
       ${learnBadge}
-      <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▾</button>
+      <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▴</button>
     </div>
     ${detailWrap}
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
