@@ -702,6 +702,8 @@ function nav(tab, el) {
   if (tab === 'opening') { initOpeningDate(); openingTab('input', null); }
   // 거래처 진입 시 항상 목록으로 초기화 (상세→하단네비 재진입 시 이전 거래처 남는 버그 방지, dev_lessons #16)
   if (tab === 'vendors' && typeof vendorTab === 'function') vendorTab('list', null);
+  // 영수증 진입 시 어정쩡 상태(모드만 고르고 거래처 미선택) 청소 — 거래처 #16의 영수증판 (2026-06-16)
+  if (tab === 'receipt' && typeof _rcpOnTabEnter === 'function') _rcpOnTabEnter();
   // 서브탭 초기화: 탭 진입 시 첫 번째 서브탭을 active로
   if (!subTab) {
     const firstSub = document.querySelector(`#${tab}Cont .sub-tabs .sub-tab:first-child`);

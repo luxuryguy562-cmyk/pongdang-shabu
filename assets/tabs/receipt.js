@@ -17,7 +17,7 @@ let rcpPastItems = [];       // 현재 거래처 과거 품목명 — 품목명 
 let rcpPastPriceMap = new Map(); // 단가 → Set<품목명> (단가 매칭 자동채움용, 2026-06-05)
 let rcpPastSheetTargetIdx = null; // 과거 품목 시트 열 때 대상 행 인덱스
 
-function setRcpMode(mode){
+function setRcpMode(mode, autoPicker=true){
   if(!guardStore()) return;
   rcpMode = mode;
   rcpInputMethod = null;
@@ -38,7 +38,7 @@ function setRcpMode(mode){
     renderRcpVendorRow(false);
     document.getElementById('rcpGuideBox').style.display = 'none';
     _setRcpUploadEnabled(false);
-    setTimeout(() => openRcpVendorPicker(), 80); // 종류 선택 즉시 → 선택창 자동 열기
+    if(autoPicker) setTimeout(() => openRcpVendorPicker(), 80); // 종류 선택 즉시 → 선택창 자동 열기 (직접입력 진입 시엔 autoPicker=false로 안 열기)
   } else {
     // 그 외(수동 등): 선택 행 없이 바로 사진
     if(vTtl) vTtl.style.display = 'none';
@@ -101,6 +101,19 @@ function _clearRcpData(){
   const hint = document.getElementById('rcpImgHint'); if(hint) hint.style.display = 'none';
   const pb = document.getElementById('rcpPageInfoBox'); if(pb) pb.style.display = 'none';
   const sc = document.getElementById('rcpSumCheck'); if(sc){ sc.innerHTML = ''; sc.className = 'rcp-sumbar'; }
+  // 거래처·날짜 입력칸도 비우기 — 모드 전환 시 이전 거래처명 잔류 방지 (사장님 호소 2026-06-16: 기타지출에 이전 거래처 남음)
+  //   AI 분석은 이 함수 호출 뒤에 거래처/날짜를 다시 채우므로 분석 흐름엔 영향 없음
+  const rv = document.getElementById('rcpReceiptVendor'); if(rv) rv.value = '';
+  const rd = document.getElementById('rcpReceiptDate'); if(rd) rd.value = '';
+}
+
+// 영수증 탭 재진입 시 어정쩡 상태 청소 — 모드만 고르고 아무 작업 안 한 채 나갔다 오면 종류 선택부터 (거래처 dev_lessons #16의 영수증판)
+function _rcpOnTabEnter(){
+  const idle = (rcpMode==='vendor'||rcpMode==='online'||rcpMode==='direct')
+    && !rcpVendorId
+    && (!b64Pages || !b64Pages.length)
+    && rcpInputMethod !== 'manual';
+  if(idle) resetRcpMode();
 }
 
 function resetRcpMode(){
@@ -652,9 +665,11 @@ function openCatReceiptInput(method){
   rcpEntryReturn = 'catReceipt:' + catReceiptMode; // 저장 후 복귀
   nav('receipt');
   setTimeout(()=>{
-    setRcpMode('direct');
+    // 기타 카드 진입 = 'etc' 모드(거래처 없음), 직구·식자재 = 'direct'. 직접입력이면 거래처 선택창 자동오픈 X (사장님 호소 2026-06-16)
+    const _mode = catReceiptMode === 'etc' ? 'etc' : 'direct';
+    setRcpMode(_mode, method !== 'manual');
     if(method === 'manual'){
-      // setRcpMode('direct')는 모드 선택 화면 → uploadGroup 노출. manualReceipt 호출하여 빈 행 진입.
+      // 모드 선택 화면 → uploadGroup 노출. manualReceipt 호출하여 빈 행 진입.
       manualReceipt();
     }
     if(catReceiptMode === 'etc'){
