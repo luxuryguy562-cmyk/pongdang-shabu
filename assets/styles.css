@@ -1673,6 +1673,25 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .ric-spec .c-spec{flex:1;border:none;background:var(--gray-100);border-radius:8px;padding:6px 9px;font-size:12px;font-weight:600;color:var(--toss-text-2);outline:none;font-family:inherit;min-width:0;}
 /* 원산지 칩 (점선 — 참고 정보) */
 .ric-meta{background:transparent;border:1px dashed var(--toss-line-2);border-radius:8px;padding:5px 9px;font-size:11px;color:var(--toss-text-4);font-weight:600;display:flex;align-items:center;gap:4px;}
+/* ─── 세부 펼침 영역 (2026-06-16 — HTML만 있고 CSS 없던 것 토스 스타일로 통일) ─── */
+.rcp-more-btn{flex:0 0 auto;font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--toss-line);color:var(--toss-text-3);border:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.rcp-detail{margin-top:9px;padding-top:10px;border-top:1px solid var(--toss-line);display:flex;flex-direction:column;gap:8px;}
+.det-row{display:flex;align-items:center;gap:8px;}
+.det-lbl{flex:0 0 42px;font-size:11px;font-weight:700;color:var(--toss-text-4);}
+.det-field,.rcp-detail .txt{flex:1;border:none;background:var(--gray-100);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:var(--toss-text-2);outline:none;font-family:inherit;min-width:0;}
+.det-half{display:flex;gap:8px;flex:1;}
+.det-cell{flex:1;display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:8px;padding:6px 10px;}
+.det-cell>span{font-size:11px;font-weight:700;color:var(--toss-text-4);flex:0 0 auto;}
+.det-cell input{flex:1;border:none;background:transparent;font-size:13px;font-weight:700;text-align:right;color:var(--toss-text-1);outline:none;font-family:inherit;min-width:0;}
+.vat-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.vat-toggle{display:flex;align-items:center;gap:7px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--toss-text-2);cursor:pointer;font-family:inherit;padding:0;}
+.vat-toggle .sw{width:34px;height:20px;border-radius:20px;background:var(--toss-blue);position:relative;transition:background .15s;flex:0 0 auto;}
+.vat-toggle .sw::after{content:'';position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;}
+.vat-toggle .sw.off{background:var(--toss-line);}
+.vat-toggle .sw.off::after{left:2px;}
+.vat-amt{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--toss-text-3);}
+.vat-amt input{width:72px;border:none;background:var(--gray-100);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:700;text-align:right;color:var(--toss-text-1);outline:none;font-family:inherit;}
+.vat-split{font-size:11px;color:var(--toss-text-4);font-weight:600;text-align:right;}
 .ric-meta input{border:none;background:transparent;font-size:12px;font-weight:700;text-align:left;color:var(--toss-text-2);outline:none;font-family:inherit;width:54px;}
 /* 과거 품목 시트 내 행 */
 .past-item-row{padding:11px 14px;border:1px solid var(--toss-line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--toss-text-1);}
