@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>헤더 v6 — 메뉴 안 토글</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-500:#70757a; --gray-600:#5f6368; --line:#e6e8eb; --blue:#2563eb; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:16px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .phone{background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.06); margin-bottom:14px;}
+  .hdr{display:flex; align-items:center; justify-content:space-between; padding:12px 13px; gap:7px;}
+  .logo{display:flex; align-items:center; gap:6px; font-size:15px; font-weight:900; color:var(--blue); flex-shrink:0;}
+  .logo .mk{width:24px; height:24px; border-radius:7px; background:linear-gradient(135deg,#0050FF,#3B82F6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900;}
+  .right{display:flex; align-items:center; gap:7px;}
+  .bell{position:relative; color:var(--gray-600); font-size:18px;}
+  .bell .dot{position:absolute; top:-2px; right:-3px; width:13px; height:13px; background:#e5484d; color:#fff; font-size:8px; font-weight:800; border-radius:50%; display:flex; align-items:center; justify-content:center;}
+  .chip{font-size:12px; font-weight:700; color:var(--gray-600); background:#eef0f3; border-radius:99px; padding:6px 10px; white-space:nowrap; max-width:90px; overflow:hidden; text-overflow:ellipsis;}
+  .chip.user{display:inline-flex; align-items:center; gap:3px;}
+  .body{padding:16px 14px; min-height:60px; color:var(--gray-400); font-size:13px; text-align:center;}
+  .label{font-size:12px; font-weight:800; color:var(--gray-600); margin:4px 0 8px 4px;}
+  .arrow{text-align:center; font-size:20px; color:var(--gray-400); margin:2px 0 8px;}
+
+  .sheet{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:10px; box-shadow:0 6px 24px rgba(0,0,0,.1);}
+  .who{padding:10px 12px 12px; font-size:15px; font-weight:800;}
+  .who small{display:block; font-size:12px; color:var(--gray-500); font-weight:600; margin-top:2px;}
+  /* 메뉴 안 토글 (좌우 왔다갔다) */
+  .toggle{display:flex; background:#eef0f3; border-radius:13px; padding:4px; margin:0 4px 10px;}
+  .toggle button{flex:1; border:none; background:transparent; font-size:14px; font-weight:800; padding:11px 0; border-radius:10px; color:var(--gray-600); cursor:pointer;}
+  .toggle button.on{background:#fff; color:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  .sep{height:1px; background:#f1f2f4; margin:4px 8px;}
+  .item{display:flex; align-items:center; gap:11px; padding:13px 14px; border-radius:11px; font-size:14px; font-weight:700;}
+  .item .ic{font-size:18px;}
+  .item .arr{margin-left:auto; color:var(--gray-400); font-size:13px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>헤더 깔끔 + 메뉴 안 토글</h1>
+  <div class="sub">헤더엔 토글 없음 · 이름 누르면 메뉴에 [관리|내근무] 토글</div>
+
+  <div class="label">① 평소 헤더 (매장명·이름 그대로, 토글 없음)</div>
+  <div class="phone">
+    <div class="hdr">
+      <span class="logo"><span class="mk">₩</span>캐쉬플로우</span>
+      <span class="right">
+        <span class="bell">🔔<span class="dot">1</span></span>
+        <span class="chip">풍당샤브 논산점</span>
+        <span class="chip user">문보영 ▾</span>
+      </span>
+    </div>
+    <div class="body">깔끔. 토글 없음.</div>
+  </div>
+
+  <div class="arrow">👆 "문보영 ▾" 누르면</div>
+
+  <div class="label">② 메뉴 안에 토글 (좌우 왔다갔다 전환)</div>
+  <div class="sheet">
+    <div class="who">문보영 <small>점장 · 풍당샤브 논산점</small></div>
+    <div class="toggle"><button class="on">관리</button><button>내 근무</button></div>
+    <div class="sep"></div>
+    <div class="item"><span class="ic">👤</span>내 정보<span class="arr">›</span></div>
+    <div class="item"><span class="ic">🏪</span>매장 변경<span class="arr">›</span></div>
+    <div class="item"><span class="ic">🚪</span>로그아웃<span class="arr">›</span></div>
+  </div>
+
+  <div class="sub" style="margin-top:14px;">· 헤더 = 매장명·이름 그대로, 토글 없어 깔끔<br>· 이름 누르면 메뉴에 <b>[관리|내근무] 토글</b> (좌우 전환버튼 그대로)<br><br>이거 맞죠?</div>
+</div>
+</body>
+</html>

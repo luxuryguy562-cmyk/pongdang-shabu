@@ -27,7 +27,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260615o">
+<link rel="stylesheet" href="assets/styles.css?v=20260615p">
 </head>
 <body>
 
@@ -464,14 +464,9 @@
     <div class="header-title logo-row" style="cursor:pointer;" data-action="navHome"><span class="logo-mark" style="width:26px;height:26px;font-size:13px;">₩</span><span>캐쉬플로우</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:6px;">
-    <!-- 역할 전환: 관리 ↔ 내 근무 (관리자 직원만, 2026-06-15) -->
-    <div id="roleSwitchToggle" class="role-switch" style="display:none;">
-      <button id="rsMgr" class="rs-btn on" data-action="exitMyWork">관리</button>
-      <button id="rsMe" class="rs-btn" data-action="enterMyWork">내 근무</button>
-    </div>
     <div id="headerBell" class="manager-only" data-action="openNotifSheet" style="display:none;position:relative;cursor:pointer;line-height:0;color:var(--gray-600);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span id="headerBellBadge" style="display:none;position:absolute;top:-5px;right:-6px;min-width:16px;height:16px;padding:0 4px;background:var(--danger);color:#fff;font-size:10px;font-weight:900;border-radius:8px;line-height:16px;text-align:center;border:1.5px solid #fff;">0</span></div>
     <div class="header-store" id="headerStore" data-action="openStoreSheet">매장 선택</div>
-    <div class="header-user" id="headerUser" data-action="openMyInfoHub">개발모드</div>
+    <div class="header-user" id="headerUser" data-action="openHeaderMenu">개발모드</div>
   </div>
 </div>
 <!-- 내 근무 모드 배너 폐기 (2026-06-15 사장님: 전환 토글과 중복) — 토글로만 모드 표시 -->
@@ -3279,6 +3274,20 @@
   <button class="btn btn-secondary btn-full" style="margin-top:14px;" data-action="closeAllSheets">닫기</button>
 </div>
 
+<!-- 헤더 이름 메뉴 (모드 전환 + 내 정보 + 매장 변경 + 로그아웃, 2026-06-16) -->
+<div class="sheet" id="headerMenuSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="hmWho" style="font-size:16px;margin-bottom:4px;"></div>
+  <!-- 관리 ↔ 내 근무 토글 (관리자만 표시) -->
+  <div id="hmToggle" class="role-switch-menu" style="display:none;">
+    <button id="rsMgr" class="rsm-btn on" data-action="exitMyWork">관리</button>
+    <button id="rsMe" class="rsm-btn" data-action="enterMyWork">내 근무</button>
+  </div>
+  <div class="notif-item" data-action="goMyInfoFromMenu"><span class="ni-ic">👤</span><div class="ni-tx"><b>내 정보</b></div><span class="ni-arr">›</span></div>
+  <div class="notif-item" data-action="goStoreFromMenu"><span class="ni-ic">🏪</span><div class="ni-tx"><b>매장 변경</b></div><span class="ni-arr">›</span></div>
+  <div class="notif-item" data-action="doLogout"><span class="ni-ic">🚪</span><div class="ni-tx"><b>로그아웃</b></div><span class="ni-arr">›</span></div>
+</div>
+
 <!-- 직급별 화면 권한 설정 (사장만, 2026-06-15) -->
 <div class="sheet" id="rolePermSheet">
   <div class="sheet-handle"></div>
@@ -3610,7 +3619,7 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260615o"></script>
+<script src="assets/common.js?v=20260615p"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
   <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>

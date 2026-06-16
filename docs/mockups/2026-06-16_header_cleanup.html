@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>헤더 정리</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; --line:#e6e8eb; --blue:#2563eb; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+  .case{margin-bottom:22px;}
+  .lbl{font-size:13px; font-weight:800; margin-bottom:8px; display:flex; align-items:center; gap:7px;}
+  .tag{font-size:11px; font-weight:800; color:#fff; padding:2px 9px; border-radius:20px;}
+
+  .hdr{background:var(--card); border:1px solid var(--line); border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:11px 13px; gap:8px;}
+  .logo{display:flex; align-items:center; gap:7px; font-size:15px; font-weight:900; color:var(--blue); flex-shrink:0;}
+  .logo .mk{width:24px; height:24px; border-radius:7px; background:linear-gradient(135deg,#0050FF,#3B82F6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900;}
+  .right{display:flex; align-items:center; gap:8px;}
+  .toggle{display:inline-flex; background:#eef0f3; border-radius:13px; padding:2px;}
+  .toggle button{border:none; background:transparent; font-size:10px; font-weight:700; padding:3px 7px; border-radius:11px; color:var(--gray-600);}
+  .toggle button.on{background:#fff; color:var(--blue); box-shadow:0 1px 2px rgba(0,0,0,.12);}
+  .bell{position:relative; color:var(--gray-600);}
+  .bell .dot{position:absolute; top:-3px; right:-3px; width:14px; height:14px; background:#e5484d; color:#fff; font-size:9px; font-weight:800; border-radius:50%; display:flex; align-items:center; justify-content:center;}
+  .avatar{width:30px; height:30px; border-radius:50%; background:#eef0ff; color:var(--blue); font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .chip{font-size:12px; font-weight:700; color:var(--gray-600); background:#eef0f3; border-radius:99px; padding:6px 11px; white-space:nowrap; max-width:80px; overflow:hidden; text-overflow:ellipsis;}
+  .note{font-size:11px; color:var(--gray-600); margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>헤더 — 깔끔하게 정리</h1>
+  <div class="sub">지금: 로고·토글·종·매장·이름 5개가 한 줄 → 과밀·잘림</div>
+
+  <!-- 지금 -->
+  <div class="case">
+    <div class="lbl"><span class="tag" style="background:#ef4444;">지금</span> 다 욱여넣음 (매장명 잘림)</div>
+    <div class="hdr">
+      <span class="logo"><span class="mk">₩</span>캐쉬플로…</span>
+      <span class="right">
+        <span class="toggle"><button class="on">관리</button><button>내 근무</button></span>
+        <span class="bell">🔔<span class="dot">1</span></span>
+        <span class="chip">풍당샤…</span>
+        <span class="chip">문보영</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- 안 A -->
+  <div class="case">
+    <div class="lbl"><span class="tag" style="background:#22a06b;">안 A</span> 매장·이름 → 동그란 프로필 1개로</div>
+    <div class="hdr">
+      <span class="logo"><span class="mk">₩</span>캐쉬플로우</span>
+      <span class="right">
+        <span class="toggle"><button class="on">관리</button><button>내 근무</button></span>
+        <span class="bell">🔔<span class="dot">1</span></span>
+        <span class="avatar">문</span>
+      </span>
+    </div>
+    <div class="note">동그라미(문) 누르면 → 매장 선택·내 정보·로그아웃 메뉴. 로고 안 잘리고 깔끔.</div>
+  </div>
+
+  <!-- 안 B -->
+  <div class="case">
+    <div class="lbl"><span class="tag" style="background:#2563eb;">안 B</span> 토글을 헤더 아래 얇은 줄로</div>
+    <div class="hdr">
+      <span class="logo"><span class="mk">₩</span>캐쉬플로우</span>
+      <span class="right">
+        <span class="bell">🔔<span class="dot">1</span></span>
+        <span class="chip">논산점</span>
+        <span class="avatar">문</span>
+      </span>
+    </div>
+    <div style="background:#eef4ff;border-radius:0 0 10px 10px;margin-top:-1px;padding:7px 13px;display:flex;justify-content:center;">
+      <span class="toggle"><button class="on">관리</button><button>내 근무</button></span>
+    </div>
+    <div class="note">헤더는 깔끔, 토글은 바로 아래 별도 줄. 매장명도 '논산점'으로 짧게.</div>
+  </div>
+
+  <div class="sub">A = 프로필 동그라미로 합침 / B = 토글 아래 줄로 분리<br>A · B 중 골라주세요 (저는 A 추천 — 제일 깔끔)</div>
+</div>
+</body>
+</html>

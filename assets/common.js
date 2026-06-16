@@ -444,6 +444,7 @@ function setMyWorkMode(on){
   _myWorkMode = !!on;
   recalcPermissions();
   applyPermissionUI();
+  if(typeof closeAllSheets==='function') closeAllSheets(); // 이름 메뉴 닫고 화면 이동
   // 이동 탭: 내 근무=출퇴근 / 관리 복귀=권한 있는 첫 탭 (홈 권한 없으면 홈으로 안 감 — 2026-06-15)
   let target='attendance';
   if(!on && isManager){
@@ -456,6 +457,22 @@ function setMyWorkMode(on){
 }
 function enterMyWork(){ setMyWorkMode(true); }   // 내 근무 모드
 function exitMyWork(){ setMyWorkMode(false); }   // 관리 모드 복귀
+// ─── 헤더 이름 메뉴 (2026-06-16): 모드 전환 토글 + 내 정보 + 매장 변경 + 로그아웃 ───
+function openHeaderMenu(){
+  if(!currentEmp){ if(typeof openMyInfoSheet==='function') openMyInfoSheet(); return; } // 미로그인=기존
+  const who=document.getElementById('hmWho');
+  if(who){
+    const roleLabel = currentEmp.role || (isManager?'관리자':'직원');
+    const storeName = (typeof currentStore!=='undefined' && currentStore) ? currentStore.name : '';
+    who.innerHTML = `${currentEmp.name} <span style="font-size:12px;color:var(--gray-500);font-weight:600;">${roleLabel}${storeName?' · '+storeName:''}</span>`;
+  }
+  const tog=document.getElementById('hmToggle');
+  if(tog) tog.style.display = isRealManager() ? 'flex' : 'none';
+  updateRoleSwitchUI();
+  if(typeof openSheet==='function') openSheet('headerMenuSheet');
+}
+function goMyInfoFromMenu(){ if(typeof closeAllSheets==='function') closeAllSheets(); setTimeout(()=>{ if(typeof openMyInfoHub==='function') openMyInfoHub(); },60); }
+function goStoreFromMenu(){ if(typeof closeAllSheets==='function') closeAllSheets(); setTimeout(()=>{ if(typeof openStoreSheet==='function') openStoreSheet(); },60); }
 let dashMonthStr = new Date().toISOString().slice(0,7);
 let schedEmpId = null;
 let chartInstances = {};
@@ -794,9 +811,7 @@ function applyPermissionUI() {
 }
 // 역할 전환 토글 표시 + 현재 모드 강조 + '내 근무' 배너 (관리자 직원만)
 function updateRoleSwitchUI(){
-  const can = isRealManager();
-  const tog=document.getElementById('roleSwitchToggle');
-  if(tog) tog.style.display = can ? 'inline-flex' : 'none';
+  // 토글은 이제 헤더 이름 메뉴 안에만 존재 (rsMgr/rsMe). 현재 모드 강조만 갱신
   const mBtn=document.getElementById('rsMgr'), wBtn=document.getElementById('rsMe');
   if(mBtn) mBtn.classList.toggle('on', !_myWorkMode);
   if(wBtn) wBtn.classList.toggle('on', !!_myWorkMode);

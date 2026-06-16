@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>헤더 v3</title>
+<style>
+  :root{ --bg:#f4f5f7; --card:#fff; --text:#1d2129; --gray-400:#9aa0a6; --gray-600:#5f6368; --line:#e6e8eb; --blue:#2563eb; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); padding:16px; line-height:1.5;}
+  h1{font-size:18px; text-align:center; margin-bottom:4px;}
+  .sub{font-size:12px; color:var(--gray-600); text-align:center; margin-bottom:18px;}
+  .wrap{max-width:430px; margin:0 auto;}
+
+  .phone{background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.06);}
+  .hdr{display:flex; align-items:center; justify-content:space-between; padding:12px 13px; gap:8px;}
+  .logo{display:flex; align-items:center; gap:7px; font-size:15px; font-weight:900; color:var(--blue); flex-shrink:0;}
+  .logo .mk{width:24px; height:24px; border-radius:7px; background:linear-gradient(135deg,#0050FF,#3B82F6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900;}
+  .right{display:flex; align-items:center; gap:7px;}
+  .bell{position:relative; color:var(--gray-600); font-size:18px;}
+  .bell .dot{position:absolute; top:-2px; right:-3px; width:14px; height:14px; background:#e5484d; color:#fff; font-size:9px; font-weight:800; border-radius:50%; display:flex; align-items:center; justify-content:center;}
+  .chip{font-size:12px; font-weight:700; color:var(--gray-600); background:#eef0f3; border-radius:99px; padding:6px 11px; white-space:nowrap;}
+
+  /* 토글 줄 (헤더 아래, 관리자만) */
+  .togbar{display:flex; justify-content:center; padding:7px 0 9px; border-top:1px solid #f1f2f4; background:#fafbfc;}
+  .toggle{display:inline-flex; background:#eef0f3; border-radius:14px; padding:3px;}
+  .toggle button{border:none; background:transparent; font-size:12px; font-weight:700; padding:6px 18px; border-radius:12px; color:var(--gray-600);}
+  .toggle button.on{background:#fff; color:var(--blue); box-shadow:0 1px 2px rgba(0,0,0,.12);}
+
+  .body{padding:18px 14px; min-height:120px; color:var(--gray-400); font-size:13px; text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>토글만 아래로 — 매장명·이름 유지</h1>
+  <div class="sub">위 헤더엔 로고·종·매장명·이름 그대로 (안 잘림)</div>
+
+  <div class="phone">
+    <div class="hdr">
+      <span class="logo"><span class="mk">₩</span>캐쉬플로우</span>
+      <span class="right">
+        <span class="bell">🔔<span class="dot">1</span></span>
+        <span class="chip">풍당샤브 논산점</span>
+        <span class="chip">문보영</span>
+      </span>
+    </div>
+    <div class="togbar">
+      <span class="toggle"><button class="on">관리</button><button>내 근무</button></span>
+    </div>
+    <div class="body">— 화면 내용 —<br>(점장: 관리 ↔ 내 근무 전환은 위 줄에서)</div>
+  </div>
+
+  <div class="sub" style="margin-top:16px;">· 헤더 = 로고·종·<b>매장명·이름</b> 그대로<br>· 토글 = 바로 아래 얇은 줄 (관리자만 보임, 알바는 이 줄 없음)<br><br>이렇게 갈까요?</div>
+</div>
+</body>
+</html>
