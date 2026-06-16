@@ -2466,6 +2466,12 @@ async function loadAllSettings(){
   // 로열티 & 수수료 & 예비비
   const rrEl=document.getElementById('si-royalty-rate');if(rrEl)rrEl.value=settings.royalty_rate||0;
   const cfEl=document.getElementById('si-card-fee-rate');if(cfEl)cfEl.value=settings.card_fee_rate||0;
+  // 영업일 시작 시각 select 채우기 (2026-06-16)
+  const bdEl=document.getElementById('si-bizday-start');
+  if(bdEl){
+    const _cur=(settings.business_day_start_hour!=null)?Number(settings.business_day_start_hour):6;
+    bdEl.innerHTML=Array.from({length:24},(_,i)=>`<option value="${i}"${i===_cur?' selected':''}>${String(i).padStart(2,'0')}:00</option>`).join('');
+  }
   // 예비비 비율/고정금액 입력 폐기 (2026-05-22)
   // 특별수당
   await loadSpecialWages();
@@ -2557,6 +2563,18 @@ async function saveBasicSettings(){
   const snEl=document.getElementById('sv-store-name');
   if(snEl)snEl.innerText=settings.store_name||'미설정';
   toast('저장됐어요','success');
+}
+// ─── 새 기능: 영업일 시작 시각 저장 (2026-06-16) ───
+async function saveBizDayStart(){
+  if(!guardStore())return;
+  const h=parseInt(document.getElementById('si-bizday-start').value,10);
+  if(isNaN(h)||h<0||h>23) return toast('0~23시 사이로 정해주세요','warn');
+  setLoad(true,'저장 중...');
+  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,business_day_start_hour:h},{onConflict:'store_id'});
+  setLoad(false);
+  if(error) return errToast('저장',error);
+  settings.business_day_start_hour=h; // 전역 즉시 반영 (bizDateStr 바로 적용)
+  toast('영업일 시작 시각 저장됐어요','success');
 }
 async function saveWageSettings(){
   if(!guardStore())return;setLoad(true,'저장 중...');

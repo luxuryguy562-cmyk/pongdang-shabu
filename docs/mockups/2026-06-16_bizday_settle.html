@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영업일 기준 날짜 + 마감 안전장치 목업</title>
+<style>
+  :root{
+    --blue:#0050FF;--blue-light:#EEF3FF;--bg:#FFFFFF;--white:#FFFFFF;
+    --gray-100:#F9FAFB;--gray-200:#E5E8EB;--gray-300:#D1D6DB;--gray-400:#B0B8C1;--gray-500:#8B95A1;--gray-600:#4E5968;
+    --text:#191F28;--danger:#F04452;--danger-light:#FFEBEE;
+    --success:#05C072;--success-light:#E8FAF3;--warn:#FF9500;--warn-light:#FFF3E0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:#EDF0F3;color:var(--text);padding:24px 0;}
+  .phone{width:390px;margin:0 auto 28px;background:var(--bg);border-radius:22px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.12);}
+  .topbar{padding:16px 20px;font-size:17px;font-weight:800;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:8px;}
+  .body{padding:18px 20px 24px;}
+  .caption{width:390px;margin:0 auto 8px;font-size:13px;font-weight:800;color:var(--blue);padding-left:4px;}
+  .caption .sub{display:block;font-size:11px;font-weight:600;color:var(--gray-500);margin-top:2px;}
+  .card{background:var(--white);border:1px solid var(--gray-200);border-radius:16px;padding:16px;margin-bottom:14px;}
+  .card-title{font-size:15px;font-weight:800;margin-bottom:4px;}
+  .card-sub{font-size:12px;color:var(--gray-500);margin-bottom:14px;line-height:1.5;}
+  /* 설정 행 */
+  .setting-row{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--gray-100);border-radius:13px;margin-bottom:10px;}
+  .setting-name{font-size:14px;font-weight:700;color:var(--text);}
+  .setting-desc{font-size:11px;color:var(--gray-500);margin-top:3px;line-height:1.4;}
+  .setting-val{font-size:14px;font-weight:800;color:var(--blue);background:var(--blue-light);padding:9px 14px;border-radius:10px;text-align:right;white-space:nowrap;}
+  /* 마감 날짜 */
+  .date-box{background:var(--blue-light);border-radius:14px;padding:15px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .date-label{font-size:12px;font-weight:700;color:var(--gray-600);}
+  .date-big{font-size:20px;font-weight:900;color:var(--blue);margin-top:3px;}
+  .date-edit{font-size:12px;font-weight:700;color:var(--blue);background:#fff;border:1px solid var(--blue);border-radius:9px;padding:8px 12px;}
+  .auto-tag{display:inline-block;font-size:10px;font-weight:800;color:var(--success);background:var(--success-light);border-radius:99px;padding:2px 8px;margin-top:6px;}
+  /* 경고 배너 */
+  .warn-banner{background:var(--danger-light);border:1px solid var(--danger);border-radius:13px;padding:13px 15px;display:flex;gap:10px;align-items:flex-start;margin-bottom:14px;}
+  .warn-icon{font-size:18px;line-height:1.2;}
+  .warn-text{font-size:12.5px;font-weight:600;color:var(--danger);line-height:1.5;}
+  .warn-text b{font-weight:800;}
+  /* 버튼 */
+  .btn{width:100%;padding:15px;border:none;border-radius:13px;font-size:15px;font-weight:800;cursor:pointer;}
+  .btn-primary{background:var(--blue);color:#fff;}
+  /* 확인 팝업 */
+  .pop-wrap{background:rgba(0,0,0,.35);padding:30px 20px;display:flex;align-items:center;justify-content:center;}
+  .pop{background:#fff;border-radius:18px;padding:22px 20px;width:100%;max-width:320px;text-align:center;}
+  .pop-q{font-size:16px;font-weight:800;margin-bottom:6px;}
+  .pop-date{font-size:22px;font-weight:900;color:var(--blue);margin:10px 0;}
+  .pop-sub{font-size:12.5px;color:var(--gray-600);line-height:1.5;margin-bottom:18px;}
+  .pop-btns{display:flex;gap:9px;}
+  .pop-btns button{flex:1;padding:13px;border:none;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;}
+  .pop-no{background:var(--gray-200);color:var(--gray-600);}
+  .pop-yes{background:var(--blue);color:#fff;}
+  .picker-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .pchip{font-size:13px;font-weight:700;padding:9px 14px;border-radius:10px;border:1px solid var(--gray-300);background:#fff;color:var(--gray-600);}
+  .pchip.on{background:var(--blue);color:#fff;border-color:var(--blue);}
+</style>
+</head>
+<body>
+
+<!-- ───────── ① 매장설정 ───────── -->
+<div class="caption">① 매장설정 — 영업일 시작 시각 (새 칸)
+  <span class="sub">새벽 몇 시에 하루를 끊을지. 24시간·심야 매장도 이 한 칸으로 해결.</span>
+</div>
+<div class="phone">
+  <div class="topbar">🏪 매장 설정</div>
+  <div class="body">
+    <div class="card">
+      <div class="card-title">영업일 기준</div>
+      <div class="card-sub">이 시각 전에 입력·마감하면 <b>전날 영업</b>으로 칩니다.</div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-name">⏰ 영업일 시작 시각</div>
+          <div class="setting-desc">새벽 6시 전 = 어제 영업으로 묶음</div>
+        </div>
+        <div class="setting-val">새벽 6:00 ▾</div>
+      </div>
+      <div style="font-size:11px;color:var(--gray-500);padding:4px 4px 0;line-height:1.5;">
+        💡 예) 새벽 5시에 마감 쳐도 → 어제 매출로 들어가요.<br>
+        24시간 매장이면 장사 한가한 시각(새벽 4~6시)으로 정하세요.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────── ② 마감 화면 (자동 날짜) ───────── -->
+<div class="caption">② 마감 화면 — 안 끝낸 영업일을 자동으로 채움
+  <span class="sub">9시 넘겨 열어도, 어제 마감이 비었으면 자동으로 '어제'를 채워줘요.</span>
+</div>
+<div class="phone">
+  <div class="topbar">💰 마감 정산</div>
+  <div class="body">
+    <div class="date-box">
+      <div>
+        <div class="date-label">마감할 영업일</div>
+        <div class="date-big">6월 15일 (일)</div>
+        <span class="auto-tag">✓ 안 끝낸 영업일 자동 선택</span>
+      </div>
+      <div class="date-edit">📅 날짜 변경</div>
+    </div>
+    <div style="font-size:11px;color:var(--gray-500);padding:6px 4px 0;line-height:1.5;">
+      지금 6/16 오전 10시지만, 6/15 마감이 비어서 <b style="color:var(--blue)">6/15</b>를 먼저 채웠어요.
+    </div>
+  </div>
+</div>
+
+<!-- ───────── ③ 빈 영업일 경고 ───────── -->
+<div class="caption">③ 빈 영업일 경고 — 빠진 날 건너뛰면만 떠요
+  <span class="sub">평소엔 안 뜨고, 사장님이 빈 날을 건너뛸 때만 빨갛게 막아줘요.</span>
+</div>
+<div class="phone">
+  <div class="topbar">💰 마감 정산</div>
+  <div class="body">
+    <div class="warn-banner">
+      <div class="warn-icon">⚠️</div>
+      <div class="warn-text"><b>6월 15일 마감이 아직 비어있어요.</b><br>
+      그 전에 6월 16일부터 마감하면 6/15 정산이 빠집니다.</div>
+    </div>
+    <div class="date-box" style="background:var(--gray-100);">
+      <div>
+        <div class="date-label">선택한 영업일</div>
+        <div class="date-big" style="color:var(--text);">6월 16일 (월)</div>
+      </div>
+      <div class="date-edit">📅 날짜 변경</div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px;">마감 저장</button>
+  </div>
+</div>
+
+<!-- ───────── ④ 저장 직전 확인 팝업 ───────── -->
+<div class="caption">④ 저장 직전 확인 — 날짜 안 보고 눌러도 한 번 더 잡아줌
+  <span class="sub">마감 저장 누르면 뜨는 마지막 확인.</span>
+</div>
+<div class="phone">
+  <div class="pop-wrap">
+    <div class="pop">
+      <div class="pop-q">이 날짜로 마감할까요?</div>
+      <div class="pop-date">6월 15일 (일) 영업</div>
+      <div class="pop-sub">매출 5,554,300원 · 금고 차액 ✅ 일치<br>맞으면 저장, 아니면 날짜를 바꿔주세요.</div>
+      <div class="pop-btns">
+        <button class="pop-no">날짜 바꾸기</button>
+        <button class="pop-yes">네, 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
