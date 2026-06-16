@@ -6,9 +6,10 @@
 function initSettleDate(){
   const picker=document.getElementById('settleDatePicker');
   const group=document.getElementById('settleDateGroup');
-  const today=ymdLocal(new Date());
-  picker.value=today;
-  picker.max=today; // 미래 날짜 차단
+  // 2026-06-16: 영업일 기준 오늘 (영업일 시작 시각 전이면 전날 — 새벽 마감 정확)
+  const bizToday=bizDateStr(new Date());
+  picker.value=bizToday;
+  picker.max=bizToday; // 미래(영업일 기준) 차단
   if(isManager){
     group.style.display='block';
     picker.addEventListener('change',function(){
@@ -16,6 +17,28 @@ function initSettleDate(){
       loadOpeningForDate(this.value);
     });
   }
+  // 안 끝낸 영업일 자동 선택 (빠뜨린 마감이 있으면 그날 우선)
+  applySettleAutoDate(picker, bizToday);
+}
+// ─── 새 기능: 안 끝낸 영업일 자동 선택 (2026-06-16) ───
+// 마지막 마감 다음날이 영업일 오늘보다 이르면 = 빠뜨린 영업일 → 그날을 자동 선택.
+// 사장님이 날짜 안 보고 눌러도 빠진 날이 잡히게.
+async function applySettleAutoDate(picker, bizToday){
+  if(!currentStore||!picker) return;
+  const{data}=await sb.from('settlements').select('settle_date')
+    .eq('store_id',currentStore.id).lte('settle_date',bizToday)
+    .order('settle_date',{ascending:false}).limit(1);
+  let target=bizToday;
+  if(data&&data[0]){
+    const next=ymdAddDays(data[0].settle_date,1); // 마지막 마감 다음날
+    if(next<bizToday) target=next;                // 밀린 영업일이 있으면 그날 우선
+  }
+  picker.value=target;
+  if(target!==bizToday){
+    const st=document.getElementById('settleDateStatus');
+    if(st) st.innerText='⏳ 안 끝낸 영업일 자동';
+  }
+  loadOpeningForDate(target);
 }
 function moveSettleDate(dir){
   const picker=document.getElementById('settleDatePicker');
@@ -750,6 +773,18 @@ async function finishSettlement2(){
     const dateStr=new Date(_settleDate).toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
     const msg=`⚠️ 이미 ${dateStr} 마감 기록이 있습니다.\n저장된 매출: ${fmt(_existSettle.sales_total||0)}원\n저장된 금고: ${fmt(_existSettle.actual_total||0)}원\n\n새 입력으로 덮어쓸까요?`;
     if(!confirm(msg)) return;
+  } else {
+    // 빈 영업일 경고 (2026-06-16): 안 끝낸 이전 영업일 건너뛰고 저장하면 정산이 빠짐
+    const{data:_lastDone}=await sb.from('settlements').select('settle_date')
+      .eq('store_id',currentStore.id).lt('settle_date',_settleDate)
+      .order('settle_date',{ascending:false}).limit(1);
+    if(_lastDone&&_lastDone[0]){
+      const _gap=ymdAddDays(_lastDone[0].settle_date,1); // 마지막 마감 다음날
+      if(_gap<_settleDate){
+        const _gStr=new Date(_gap+'T00:00:00').toLocaleDateString('ko-KR',{month:'long',day:'numeric'});
+        if(!confirm(`⚠️ ${_gStr} 마감이 아직 비어있어요.\n그 날을 건너뛰고 저장하면 그 날 정산이 빠집니다.\n\n그래도 진행할까요?`)) return;
+      }
+    }
   }
   // 차감: 동적 행 → deductions[] + 호환 합산값(deduct_etc/bank)
   const _stDed=getSettleDeductTotals();
@@ -783,7 +818,8 @@ async function finishSettlement2(){
   let vault=0;const vMap={};document.querySelectorAll('.v-input').forEach(i=>{const val=parseInt(i.value)||0;vMap[i.dataset.unit]=val;vault+=parseInt(i.dataset.unit)*val;});
   const diff=vault-book;const diffStatus=diff===0?'일치':`차액 ${diff>0?'+':''}${fmt(diff)}원`;
   const extraLine=extraTotal>0?`\n기타매출: ${fmt(extraTotal)}원 (별도 관리)`:'';
-  if(!confirm(`매출: ${fmt(salesTotal)}원${extraLine}\n장부상 금고: ${fmt(book)}원\n금고 현황: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
+  const _dateLabel=new Date(_settleDate+'T00:00:00').toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  if(!confirm(`📅 ${_dateLabel} 영업 마감\n\n매출: ${fmt(salesTotal)}원${extraLine}\n장부상 금고: ${fmt(book)}원\n금고 현황: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'마감 저장 중...');
   const settleDate=getSettleDate();
   const{data:savedRow,error}=await sb.from('settlements').upsert({

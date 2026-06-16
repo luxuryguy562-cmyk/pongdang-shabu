@@ -2697,6 +2697,19 @@
     <button class="btn btn-primary btn-full" data-action="saveWageSettings">수당 & 휴게 저장</button>
   </div>
 
+  <!-- 영업일 기준 (2026-06-16) -->
+  <div class="card">
+    <div class="card-title">영업일 기준</div>
+    <div class="card-sub">이 시각 전에 입력·마감하면 전날 영업으로 칩니다. (심야·24시간 매장용)</div>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">⏰ 영업일 시작 시각</div><div class="setting-sub">기본 새벽 6시</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <select id="si-bizday-start" class="input-inline" style="width:110px;text-align:right;"></select>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" data-action="saveBizDayStart">저장</button>
+  </div>
+
   <!-- 로열티 & 수수료 (예비비 폐기 2026-05-22) -->
   <div class="card">
     <div class="card-title">로열티 · 수수료</div>

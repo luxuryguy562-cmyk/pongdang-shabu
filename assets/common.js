@@ -785,6 +785,25 @@ function ymdLocal(date){
   const d=date instanceof Date?date:new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+// ─── 새 기능: 영업일 기준 날짜 (2026-06-16) ───
+// store_settings.business_day_start_hour(영업일 시작 시각, 기본 6시) 전에 입력/마감하면 전날 영업으로 침.
+// 자정 넘는 심야·24시간 매장용. settings 전역 객체 사용(loadAllSettings에서 select '*'로 로드됨).
+function bizStartHour(){
+  const h=(typeof settings==='object'&&settings&&settings.business_day_start_hour!=null)?Number(settings.business_day_start_hour):6;
+  return (Number.isInteger(h)&&h>=0&&h<=23)?h:6;
+}
+// 영업일 기준 'YYYY-MM-DD' — 영업일 시작 시각 전이면 전날
+function bizDateStr(dateObj){
+  const d=new Date((dateObj||new Date()).getTime());
+  if(d.getHours()<bizStartHour()) d.setDate(d.getDate()-1);
+  return ymdLocal(d);
+}
+// 'YYYY-MM-DD' + n일
+function ymdAddDays(ymd,n){
+  const d=new Date(ymd+'T00:00:00');
+  d.setDate(d.getDate()+n);
+  return ymdLocal(d);
+}
 // 금액 입력란 공용: 입력 중 세자리 콤마 자동 (dev_lessons #58)
 function formatNumberInput(el){const raw=(el.value||'').replace(/[^\d]/g,'');el.value=raw?parseInt(raw).toLocaleString():'';}
 const guardStore = () => { if(!currentStore){toast('매장을 먼저 선택하세요.','warn');openStoreSheet();return false;}return true; };
