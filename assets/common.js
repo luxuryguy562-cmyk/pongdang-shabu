@@ -460,6 +460,9 @@ function exitMyWork(){ setMyWorkMode(false); }   // 관리 모드 복귀
 // ─── 헤더 이름 메뉴 (2026-06-16): 모드 전환 토글 + 내 정보 + 매장 변경 + 로그아웃 ───
 function openHeaderMenu(){
   if(!currentEmp){ if(typeof openMyInfoSheet==='function') openMyInfoSheet(); return; } // 미로그인=기존
+  // 기존 열린 시트 직접 닫기 (openSheet는 기존 시트 안 닫음 → 중첩 방지, 2026-06-16). closeAllSheets의 overlay 타임아웃 충돌 피해 즉시 처리
+  document.querySelectorAll('.sheet.show').forEach(s=>{ if(s.id!=='headerMenuSheet') s.classList.remove('show'); });
+  document.querySelectorAll('.sheet-overlay').forEach(s=>{ s.style.display='none'; const inn=s.querySelector('.sheet'); if(inn) inn.classList.remove('show'); });
   const who=document.getElementById('hmWho');
   if(who){
     const roleLabel = currentEmp.role || (isManager?'관리자':'직원');
@@ -471,8 +474,17 @@ function openHeaderMenu(){
   updateRoleSwitchUI();
   if(typeof openSheet==='function') openSheet('headerMenuSheet');
 }
-function goMyInfoFromMenu(){ if(typeof closeAllSheets==='function') closeAllSheets(); setTimeout(()=>{ if(typeof openMyInfoHub==='function') openMyInfoHub(); },60); }
-function goStoreFromMenu(){ if(typeof closeAllSheets==='function') closeAllSheets(); setTimeout(()=>{ if(typeof openStoreSheet==='function') openStoreSheet(); },60); }
+// 메뉴 → 다른 화면: 메뉴 닫고(즉시) 이동. closeAllSheets 타임아웃 충돌 피해 직접 닫음
+function goMyInfoFromMenu(){
+  document.querySelectorAll('.sheet.show').forEach(s=>s.classList.remove('show'));
+  const ov=document.getElementById('overlay'); if(ov) ov.style.display='none';
+  setTimeout(()=>{ if(typeof openMyInfoHub==='function') openMyInfoHub(); }, 40);
+}
+function goStoreFromMenu(){
+  document.querySelectorAll('.sheet.show').forEach(s=>s.classList.remove('show'));
+  const ov=document.getElementById('overlay'); if(ov) ov.style.display='none';
+  setTimeout(()=>{ if(typeof openStoreSheet==='function') openStoreSheet(); }, 40);
+}
 let dashMonthStr = new Date().toISOString().slice(0,7);
 let schedEmpId = null;
 let chartInstances = {};
