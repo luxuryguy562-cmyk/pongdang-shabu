@@ -1,6 +1,6 @@
 # 퐁당샤브 Supabase DB 스키마
 
-> **Supabase URL**: `https://ruytgygjwnbtzmtofopg.supabase.co`
+> **Supabase URL**: `https://ecfjkfqlnqfxovlwhdtx.supabase.co` (서울 리전 Cashflow, 2026-06-17 시드니→서울 전환. 옛 ref `ruytgygjwnbtzmtofopg` 폐기 예정)
 > **store_id**: `4ae03341-e5dc-4933-b746-29728cbc685f` (퐁당샤브 논산점)
 > **최종 업데이트**: 2026-05-15 (식자재 트리 정상화 — 논산점 expense_categories 마이그레이션, receipts.price/count 컬럼 코드 제거)
 >
