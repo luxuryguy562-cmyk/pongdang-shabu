@@ -26,8 +26,14 @@
    - ⚠️ **시드니 DB 비번 채팅 노출됨** → 시드니 정리 전 사장님 재설정 권장(단 폐기하면 무의미).
 3. ✅ **Edge Functions 재배포 완료** (2026-06-17): 8개 서울 배포(emp-login·emp-session·emp-private·send-otp·verify-otp·complete-signup·join-store·store-join-admin), 전부 verify_jwt=false 유지. 쿠팡(coupang-receiver) 제외. 배포 중 수정: ①send-otp 문자본문 오타 `[퍼당샤브]`→`[퐁당샤브]` ②join-store·store-join-admin 하드코딩 PUBLIC_KEY를 시드니→서울(`sb_publishable_YuKpf2bsq72vo4N9Qm2GEQ_p2HivKgu`)로 교체. 8개 전부 ACTIVE 확인.
 4. ⏳ 솔라피 키 서울 설정(다음): `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER`(010-5242-1260). ⚠️ MCP에 secret 설정 도구 없음 → 사장님 대시보드 Edge Functions secrets 직접 입력 안내 필요. 키 채팅 노출됨 → 재발급 권장.
-5. ⏳ 연결 교체: assets/common.js sb URL/anon key → 서울(URL `https://ecfjkfqlnqfxovlwhdtx.supabase.co`, anon은 get_publishable_keys). ← 이게 진짜 전환, 사장님 확인 후.
-6. ⏳ 검증: 로그인·영수증분석·문자인증. 시드니 안 지움.
+5. ✅ **연결 교체 완료** (2026-06-17): assets/common.js 4-5줄 sb URL/anon → 서울(`https://ecfjkfqlnqfxovlwhdtx.supabase.co` + `sb_publishable_YuKpf2bsq72vo4N9Qm2GEQ_p2HivKgu`). 레포 functions 소스 2개 PUBLIC_KEY도 서울 동기화. node --check 통과. main 머지 → 앱 서울 전환. 롤백=common.js 2줄 시드니 복구.
+   - 추가 검증: 시드니=서울 **금액 합계 + 영수증 641건 ID 해시(`f8c7354f…`) 완전 일치** 확인.
+6. 🔄 검증(사장님 앱 확인 중): 로그인·영수증·정산·대시보드 데이터 표시. 솔라피 키 사장님 재발급+서울 secret 입력 진행 중.
+
+**전환 후 마무리 TODO**:
+- `.mcp.json` project-ref 시드니→서울(`ecfjkfqlnqfxovlwhdtx`) 변경 (전환 안정 후, --read-only 유지). 현재 시드니 검증용으로 유지 중.
+- 서울 프로젝트명 `Cashflow`로 변경됨(사장님, project_id 불변).
+- 안정 며칠 후 시드니(ruytgygjwnbtzmtofopg) 정리 + 시드니 DB비번 무의미화. coupang-install.html·scripts 시드니 잔재는 쿠팡 미사용이라 보류.
 3. Edge Functions 재배포: emp-login·emp-session·emp-private·complete-signup·join-store·store-join-admin·**send-otp·verify-otp**(문자) — get_edge_function(시드니) → deploy_edge_function(서울). 쿠팡(coupang-receiver)은 **제외**(사장님 "안 살림").
 4. 솔라피 키 서울 설정: `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER`(010-5242-1260). ⚠️ 키 채팅 노출됨 → **이전 후 재발급 필요**(사장님). (키 값은 사장님이 채팅으로 줬음 — 레포엔 절대 X)
 5. 연결 교체: `assets/common.js`의 sb createClient URL/anon key → 서울. (get_project_url + get_publishable_keys로 서울 값)

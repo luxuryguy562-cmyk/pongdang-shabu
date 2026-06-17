@@ -1,8 +1,8 @@
 // ══════════════════════════════════════════
 // 설정
 // ══════════════════════════════════════════
-const SUPABASE_URL      = 'https://ruytgygjwnbtzmtofopg.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe';
+const SUPABASE_URL      = 'https://ecfjkfqlnqfxovlwhdtx.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_YuKpf2bsq72vo4N9Qm2GEQ_p2HivKgu';
 const GEMINI_URL        = 'https://gemini-proxy.luxuryguy562.workers.dev';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
