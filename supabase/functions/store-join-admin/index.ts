@@ -9,7 +9,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const MANAGER_LEVELS = ["owner", "franchise_admin", "store_manager"];
-const PUBLIC_KEY = "sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe";
+const PUBLIC_KEY = "sb_publishable_YuKpf2bsq72vo4N9Qm2GEQ_p2HivKgu";
 function json(b: unknown, s = 200) {
   return new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 }
