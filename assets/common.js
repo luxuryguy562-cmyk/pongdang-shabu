@@ -249,7 +249,7 @@ ${_rcpCommonRespTail()}
 - p:공급가+부가세만 (용기대 제외). u×q 계산 X — 인쇄된 공급가+부가세 합산값 우선
 - t:행 세액. 세액 칸 있으면 그 값, 없으면 0
 - f:면세 여부(true/false). 주류는 보통 false
-- c:카테고리 [${catList}] — 주류·음료 등 품목 성격대로
+- c:카테고리 [${catList}] — 주류·음료 등 품목 성격대로. ⚠️반드시 목록에 있는 이름 그대로만, 목록에 없는 새 분류명 생성 금지
 
 [규칙]
 ${_rcpCommonRules()}
@@ -297,7 +297,7 @@ ${_rcpCommonRespTail()}
 - p:행 [합계/금액] 칸 인쇄값 그대로 정수(세후=실제 낸 돈). 행마다 [공급가·세액·합계] 칸 따로면 [합계] 칸. u×q 계산 X — 1~2원 차이도 인쇄 우선
 - t:행 [세액] 칸 값(정수). 세액 칸이 따로 있으면 그 값, 없거나 면세면 0
 - f:면세 여부(true/false). t>0이면 false. 면세표시(*)·면세 칸·미가공 농축수산물(육류·생선·야채·과일·쌀)이면 true
-- c:카테고리 [${catList}] — 품목 성격대로 행마다. 못 정하면 가장 가까운 것. 빈 값 X
+- c:카테고리 [${catList}] — 품목 성격대로 행마다. ⚠️반드시 이 목록에 있는 이름 그대로만 사용. 목록에 없는 새 분류명 절대 만들지 마라. 못 정하면 목록 중 가장 가까운 것. 빈 값 X
 
 [규칙]
 ${_rcpCommonRules()}
@@ -352,7 +352,7 @@ ${_rcpCommonRespTail()}
 - p:행 [상품금액/주문금액] 인쇄값 그대로 정수(할인 이미 반영된 실결제 단위). u×q 계산 X — 인쇄값 우선
 - t:0 (온라인 주문 화면은 행별 세액 분리 안 됨)
 - f:면세 여부(true/false). 보통 false
-- c:카테고리 [${catList}] — 품목 성격대로 행마다. 못 정하면 가장 가까운 것. 빈 값 X
+- c:카테고리 [${catList}] — 품목 성격대로 행마다. ⚠️반드시 이 목록에 있는 이름 그대로만 사용. 목록에 없는 새 분류명 절대 만들지 마라. 못 정하면 목록 중 가장 가까운 것. 빈 값 X
 
 [규칙]
 ${_rcpCommonRules()}
@@ -391,7 +391,7 @@ ${_rcpCommonRespTail()}
 - p:행 [합계/금액] 칸 인쇄값 그대로 정수(세후=실제 낸 돈). 행마다 [공급가·세액·합계] 칸 따로면 [합계] 칸. u×q 계산 X — 1~2원 차이도 인쇄 우선
 - t:행 [세액] 칸 값(정수). 세액 칸이 따로 있으면 그 값, 없거나 면세면 0
 - f:면세 여부(true/false). t>0이면 false. 면세표시(*)·면세 칸·미가공 농축수산물(육류·생선·야채·과일·쌀)이면 true
-- c:카테고리 [${catList}] — 품목 성격대로 행마다. 못 정하면 가장 가까운 것. 빈 값 X
+- c:카테고리 [${catList}] — 품목 성격대로 행마다. ⚠️반드시 이 목록에 있는 이름 그대로만 사용. 목록에 없는 새 분류명 절대 만들지 마라. 못 정하면 목록 중 가장 가까운 것. 빈 값 X
 
 [규칙]
 ${_rcpCommonRules()}
@@ -702,6 +702,8 @@ function nav(tab, el) {
   if (tab === 'opening') { initOpeningDate(); openingTab('input', null); }
   // 거래처 진입 시 항상 목록으로 초기화 (상세→하단네비 재진입 시 이전 거래처 남는 버그 방지, dev_lessons #16)
   if (tab === 'vendors' && typeof vendorTab === 'function') vendorTab('list', null);
+  // 영수증 진입 시 어정쩡 상태(모드만 고르고 거래처 미선택) 청소 — 거래처 #16의 영수증판 (2026-06-16)
+  if (tab === 'receipt' && typeof _rcpOnTabEnter === 'function') _rcpOnTabEnter();
   // 서브탭 초기화: 탭 진입 시 첫 번째 서브탭을 active로
   if (!subTab) {
     const firstSub = document.querySelector(`#${tab}Cont .sub-tabs .sub-tab:first-child`);
@@ -784,6 +786,25 @@ function cacheInvalidate(prefix){
 function ymdLocal(date){
   const d=date instanceof Date?date:new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+// ─── 새 기능: 영업일 기준 날짜 (2026-06-16) ───
+// store_settings.business_day_start_hour(영업일 시작 시각, 기본 6시) 전에 입력/마감하면 전날 영업으로 침.
+// 자정 넘는 심야·24시간 매장용. settings 전역 객체 사용(loadAllSettings에서 select '*'로 로드됨).
+function bizStartHour(){
+  const h=(typeof settings==='object'&&settings&&settings.business_day_start_hour!=null)?Number(settings.business_day_start_hour):6;
+  return (Number.isInteger(h)&&h>=0&&h<=23)?h:6;
+}
+// 영업일 기준 'YYYY-MM-DD' — 영업일 시작 시각 전이면 전날
+function bizDateStr(dateObj){
+  const d=new Date((dateObj||new Date()).getTime());
+  if(d.getHours()<bizStartHour()) d.setDate(d.getDate()-1);
+  return ymdLocal(d);
+}
+// 'YYYY-MM-DD' + n일
+function ymdAddDays(ymd,n){
+  const d=new Date(ymd+'T00:00:00');
+  d.setDate(d.getDate()+n);
+  return ymdLocal(d);
 }
 // 금액 입력란 공용: 입력 중 세자리 콤마 자동 (dev_lessons #58)
 function formatNumberInput(el){const raw=(el.value||'').replace(/[^\d]/g,'');el.value=raw?parseInt(raw).toLocaleString():'';}

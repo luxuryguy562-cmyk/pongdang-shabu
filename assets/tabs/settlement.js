@@ -3,12 +3,14 @@
 // ══════════════════════════════════════════
 // ── 마감정산 로직 ──
 // ─── 정산 날짜 선택 (관리자용) ───
+let _isEditingSettle=false; // editSettlement(수정) 진입 시 true — 자동날짜가 수정 날짜를 덮는 경쟁 방지 (2026-06-16)
 function initSettleDate(){
   const picker=document.getElementById('settleDatePicker');
   const group=document.getElementById('settleDateGroup');
-  const today=ymdLocal(new Date());
-  picker.value=today;
-  picker.max=today; // 미래 날짜 차단
+  // 2026-06-16: 영업일 기준 오늘 (영업일 시작 시각 전이면 전날 — 새벽 마감 정확)
+  const bizToday=bizDateStr(new Date());
+  picker.value=bizToday;
+  picker.max=bizToday; // 미래(영업일 기준) 차단
   if(isManager){
     group.style.display='block';
     picker.addEventListener('change',function(){
@@ -16,6 +18,29 @@ function initSettleDate(){
       loadOpeningForDate(this.value);
     });
   }
+  // 안 끝낸 영업일 자동 선택 (빠뜨린 마감이 있으면 그날 우선)
+  applySettleAutoDate(picker, bizToday);
+}
+// ─── 새 기능: 안 끝낸 영업일 자동 선택 (2026-06-16) ───
+// 마지막 마감 다음날이 영업일 오늘보다 이르면 = 빠뜨린 영업일 → 그날을 자동 선택.
+// 사장님이 날짜 안 보고 눌러도 빠진 날이 잡히게.
+async function applySettleAutoDate(picker, bizToday){
+  if(!currentStore||!picker) return;
+  const{data}=await sb.from('settlements').select('settle_date')
+    .eq('store_id',currentStore.id).lte('settle_date',bizToday)
+    .order('settle_date',{ascending:false}).limit(1);
+  if(_isEditingSettle) return; // 수정 모드면 editSettlement가 picker를 그 날짜로 잡음 — 자동날짜로 덮지 않음
+  let target=bizToday;
+  if(data&&data[0]){
+    const next=ymdAddDays(data[0].settle_date,1); // 마지막 마감 다음날
+    if(next<bizToday) target=next;                // 밀린 영업일이 있으면 그날 우선
+  }
+  picker.value=target;
+  if(target!==bizToday){
+    const st=document.getElementById('settleDateStatus');
+    if(st) st.innerText='⏳ 안 끝낸 영업일 자동';
+  }
+  loadOpeningForDate(target);
 }
 function moveSettleDate(dir){
   const picker=document.getElementById('settleDatePicker');
@@ -388,7 +413,7 @@ function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
   const amtStyle='flex:1;border:none;background:transparent;font-size:20px;font-weight:900;color:var(--text);min-width:0;';
   const memoStyle='flex:1;border:none;background:#fff;border-radius:8px;padding:9px 10px;font-size:12px;min-width:0;';
   if(type==='bank'){
-    // ── 통장 입금: 1줄 고정(삭제 X), 입금자 칩(직원 연결, 기본 현재 로그인) ──
+    // ── 통장 입금: 금액 + 입금자만 (메모 제거 — 2026-06-16 사장님: 현금 이동은 메모 불필요, 헷갈림 유발) ──
     empId = empId || (currentEmp?.id||'');
     if(empId && !empName){ const e=(employees||[]).find(x=>x.id===empId); empName = e?e.name:''; }
     empName = empName || (currentEmp?.name||'');
@@ -396,10 +421,7 @@ function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
     cont.insertAdjacentHTML('beforeend', `
       <div class="st-deduct-row" data-id="${id}" data-type="bank" data-sign="1" data-emp-id="${empId}" data-emp-name="${empName.replace(/"/g,'&quot;')}" style="${cardStyle}">
         <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-          <input type="text" class="st-ded-memo" placeholder="메모 (선택)" value="${memo.replace(/"/g,'&quot;')}" style="${memoStyle}">
+          <input type="text" class="st-ded-amount" placeholder="입금 금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
           <button class="st-ded-emp" data-action="pickDepositor|${id}" title="입금자 (탭하면 변경)" style="flex:0 0 auto;padding:9px 11px;border:1px solid var(--blue);border-radius:8px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue);cursor:pointer;white-space:nowrap;">${empLabel}</button>
         </div>
       </div>
@@ -414,7 +436,7 @@ function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
       <div class="st-deduct-row" data-id="${id}" data-type="etc" data-sign="${sign}" data-cat-id="${catId}" data-cat-name="${catName.replace(/"/g,'&quot;')}" style="${cardStyle}">
         <div style="display:flex;align-items:center;gap:8px;">
           <button class="st-ded-sign" data-action="toggleStDedSign|${id}" title="빠짐/들어옴 토글" style="flex:0 0 26px;height:26px;border-radius:50%;border:none;background:${sign>0?'var(--danger-light)':'#DCFCE7'};color:${sign>0?'var(--danger)':'#15803D'};font-size:15px;font-weight:900;cursor:pointer;padding:0;">${sign>0?'−':'+'}</button>
-          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this">
+          <input type="text" class="st-ded-amount" placeholder="금액" value="${absAmt?fmt(absAmt):''}" inputmode="numeric" style="${amtStyle}" data-input="onStDedAmountInput|this" data-change="recalcSettle2">
           <button class="x-btn" data-action="removeSettleDeductRow|${id}" style="flex:0 0 24px;height:24px;border-radius:50%;border:none;background:#fff;color:var(--gray-400);font-size:14px;cursor:pointer;padding:0;">×</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
@@ -426,18 +448,30 @@ function addSettleDeductRow(type, amount, memo, catName, catId, empId, empName){
   }
   recalcSettle2();
 }
-// ─── 통장 입금 입금자 변경 (탭하면 직원 순환, 직원 연결) ───
+// ─── 통장 입금 입금자 선택 (목록에서 고르기 — 2026-06-16 사장님 요청, 순환→드롭박스) ───
 function pickDepositor(rowId){
   const row=document.querySelector('.st-deduct-row[data-id="'+rowId+'"]');
   if(!row) return;
   if(!employees || !employees.length){ toast('등록된 직원이 없어요','warn'); return; }
-  const curId=row.dataset.empId;
-  const idx=employees.findIndex(e=>e.id===curId);
-  const next=employees[(idx+1)%employees.length];
-  row.dataset.empId=next.id;
-  row.dataset.empName=next.name;
-  const btn=row.querySelector('.st-ded-emp');
-  if(btn) btn.textContent='👤 '+next.name;
+  const cur=row.dataset.empId;
+  const sheet=document.createElement('div');
+  sheet.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;display:flex;align-items:flex-end;';
+  sheet.innerHTML=`<div style="background:#fff;width:100%;border-radius:18px 18px 0 0;padding:18px 18px 28px;max-height:70vh;overflow:auto;">
+    <div style="font-size:16px;font-weight:800;margin-bottom:14px;">입금자 선택</div>
+    ${employees.map(e=>`<button data-eid="${e.id}" data-en="${(e.name||'').replace(/"/g,'&quot;')}" style="width:100%;text-align:left;padding:14px;margin-bottom:8px;border:1px solid ${e.id===cur?'var(--blue)':'var(--gray-200)'};border-radius:12px;background:${e.id===cur?'var(--blue-light)':'#fff'};font-size:15px;font-weight:${e.id===cur?'800':'600'};color:${e.id===cur?'var(--blue)':'var(--text)'};cursor:pointer;">👤 ${e.name}${e.id===cur?' ✓':''}</button>`).join('')}
+  </div>`;
+  sheet.addEventListener('click',ev=>{
+    if(ev.target===sheet){ sheet.remove(); return; }
+    const btn=ev.target.closest('[data-eid]');
+    if(btn){
+      row.dataset.empId=btn.dataset.eid;
+      row.dataset.empName=btn.dataset.en;
+      const lbl=row.querySelector('.st-ded-emp');
+      if(lbl) lbl.textContent='👤 '+btn.dataset.en;
+      sheet.remove();
+    }
+  });
+  document.body.appendChild(sheet);
 }
 // ─── 부호 토글 (etc 행만, 양방향) ───
 // sign=1: 빠짐 (UI '−'), sign=-1: 들어옴 (UI '+')
@@ -518,7 +552,7 @@ function getSettleDeductRows(){
     const sign = parseInt(row.dataset.sign)||1;
     const abs = parseInt((row.querySelector('.st-ded-amount').value||'').replace(/,/g,''))||0;
     const amount = (type==='etc') ? sign*abs : abs;
-    const memo = row.querySelector('.st-ded-memo').value || '';
+    const memo = row.querySelector('.st-ded-memo')?.value || ''; // bank 행은 메모칸 없음 → ''
     const category_id = row.dataset.catId || null;
     const category_name = row.dataset.catName || '';
     const employee_id = (type==='bank') ? (row.dataset.empId || null) : null; // 통장입금 입금자
@@ -729,6 +763,7 @@ function settleTab(tab,el){
 }
 // 마감정산 입력폼 초기화 (탭 진입 시)
 function resetSettleView(){
+  _isEditingSettle=false; // 신규 마감 진입 기준선 — 자동날짜 허용 (수정은 editSettlement가 다시 true)
   ['siPosCash','siPosCashReceipt','siPosCard','siPosEtc','siCashCash','siCashQr','siCashTransfer'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.querySelectorAll('.v-input').forEach(i=>i.value='');
   document.querySelectorAll('.s-extra-input').forEach(i=>i.value='');
@@ -750,6 +785,18 @@ async function finishSettlement2(){
     const dateStr=new Date(_settleDate).toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
     const msg=`⚠️ 이미 ${dateStr} 마감 기록이 있습니다.\n저장된 매출: ${fmt(_existSettle.sales_total||0)}원\n저장된 금고: ${fmt(_existSettle.actual_total||0)}원\n\n새 입력으로 덮어쓸까요?`;
     if(!confirm(msg)) return;
+  } else {
+    // 빈 영업일 경고 (2026-06-16): 안 끝낸 이전 영업일 건너뛰고 저장하면 정산이 빠짐
+    const{data:_lastDone}=await sb.from('settlements').select('settle_date')
+      .eq('store_id',currentStore.id).lt('settle_date',_settleDate)
+      .order('settle_date',{ascending:false}).limit(1);
+    if(_lastDone&&_lastDone[0]){
+      const _gap=ymdAddDays(_lastDone[0].settle_date,1); // 마지막 마감 다음날
+      if(_gap<_settleDate){
+        const _gStr=new Date(_gap+'T00:00:00').toLocaleDateString('ko-KR',{month:'long',day:'numeric'});
+        if(!confirm(`⚠️ ${_gStr} 마감이 아직 비어있어요.\n그 날을 건너뛰고 저장하면 그 날 정산이 빠집니다.\n\n그래도 진행할까요?`)) return;
+      }
+    }
   }
   // 차감: 동적 행 → deductions[] + 호환 합산값(deduct_etc/bank)
   const _stDed=getSettleDeductTotals();
@@ -783,7 +830,8 @@ async function finishSettlement2(){
   let vault=0;const vMap={};document.querySelectorAll('.v-input').forEach(i=>{const val=parseInt(i.value)||0;vMap[i.dataset.unit]=val;vault+=parseInt(i.dataset.unit)*val;});
   const diff=vault-book;const diffStatus=diff===0?'일치':`차액 ${diff>0?'+':''}${fmt(diff)}원`;
   const extraLine=extraTotal>0?`\n기타매출: ${fmt(extraTotal)}원 (별도 관리)`:'';
-  if(!confirm(`매출: ${fmt(salesTotal)}원${extraLine}\n장부상 금고: ${fmt(book)}원\n금고 현황: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
+  const _dateLabel=new Date(_settleDate+'T00:00:00').toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  if(!confirm(`📅 ${_dateLabel} 영업 마감\n\n매출: ${fmt(salesTotal)}원${extraLine}\n장부상 금고: ${fmt(book)}원\n금고 현황: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'마감 저장 중...');
   const settleDate=getSettleDate();
   const{data:savedRow,error}=await sb.from('settlements').upsert({
@@ -1117,6 +1165,7 @@ async function renderSettleCardExtraSection(data){
 async function editSettlement(dateStr, silent){
   // 기존 정산 데이터를 입력 폼에 로드하고 입력 탭으로 전환
   // silent=true: 날짜 화살표 이동 시 재사용 (안내 토스트 생략)
+  _isEditingSettle=true; // 수정 모드 — 자동날짜가 이 날짜를 덮지 않게 (2026-06-16)
   if(!currentStore){toast('매장이 선택되지 않았어요','warn');return;}
   if(!currentEmp){toast('로그인 정보가 없어요. 다시 로그인 해주세요','warn');return;}
   let data, error;

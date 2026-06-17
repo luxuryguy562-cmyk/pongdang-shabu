@@ -17,7 +17,7 @@ let rcpPastItems = [];       // 현재 거래처 과거 품목명 — 품목명 
 let rcpPastPriceMap = new Map(); // 단가 → Set<품목명> (단가 매칭 자동채움용, 2026-06-05)
 let rcpPastSheetTargetIdx = null; // 과거 품목 시트 열 때 대상 행 인덱스
 
-function setRcpMode(mode){
+function setRcpMode(mode, autoPicker=true){
   if(!guardStore()) return;
   rcpMode = mode;
   rcpInputMethod = null;
@@ -38,7 +38,7 @@ function setRcpMode(mode){
     renderRcpVendorRow(false);
     document.getElementById('rcpGuideBox').style.display = 'none';
     _setRcpUploadEnabled(false);
-    setTimeout(() => openRcpVendorPicker(), 80); // 종류 선택 즉시 → 선택창 자동 열기
+    if(autoPicker) setTimeout(() => openRcpVendorPicker(), 80); // 종류 선택 즉시 → 선택창 자동 열기 (직접입력 진입 시엔 autoPicker=false로 안 열기)
   } else {
     // 그 외(수동 등): 선택 행 없이 바로 사진
     if(vTtl) vTtl.style.display = 'none';
@@ -101,6 +101,19 @@ function _clearRcpData(){
   const hint = document.getElementById('rcpImgHint'); if(hint) hint.style.display = 'none';
   const pb = document.getElementById('rcpPageInfoBox'); if(pb) pb.style.display = 'none';
   const sc = document.getElementById('rcpSumCheck'); if(sc){ sc.innerHTML = ''; sc.className = 'rcp-sumbar'; }
+  // 거래처·날짜 입력칸도 비우기 — 모드 전환 시 이전 거래처명 잔류 방지 (사장님 호소 2026-06-16: 기타지출에 이전 거래처 남음)
+  //   AI 분석은 이 함수 호출 뒤에 거래처/날짜를 다시 채우므로 분석 흐름엔 영향 없음
+  const rv = document.getElementById('rcpReceiptVendor'); if(rv) rv.value = '';
+  const rd = document.getElementById('rcpReceiptDate'); if(rd) rd.value = '';
+}
+
+// 영수증 탭 재진입 시 어정쩡 상태 청소 — 모드만 고르고 아무 작업 안 한 채 나갔다 오면 종류 선택부터 (거래처 dev_lessons #16의 영수증판)
+function _rcpOnTabEnter(){
+  const idle = (rcpMode==='vendor'||rcpMode==='online'||rcpMode==='direct')
+    && !rcpVendorId
+    && (!b64Pages || !b64Pages.length)
+    && rcpInputMethod !== 'manual';
+  if(idle) resetRcpMode();
 }
 
 function resetRcpMode(){
@@ -652,9 +665,11 @@ function openCatReceiptInput(method){
   rcpEntryReturn = 'catReceipt:' + catReceiptMode; // 저장 후 복귀
   nav('receipt');
   setTimeout(()=>{
-    setRcpMode('direct');
+    // 기타 카드 진입 = 'etc' 모드(거래처 없음), 직구·식자재 = 'direct'. 직접입력이면 거래처 선택창 자동오픈 X (사장님 호소 2026-06-16)
+    const _mode = catReceiptMode === 'etc' ? 'etc' : 'direct';
+    setRcpMode(_mode, method !== 'manual');
     if(method === 'manual'){
-      // setRcpMode('direct')는 모드 선택 화면 → uploadGroup 노출. manualReceipt 호출하여 빈 행 진입.
+      // 모드 선택 화면 → uploadGroup 노출. manualReceipt 호출하여 빈 행 진입.
       manualReceipt();
     }
     if(catReceiptMode === 'etc'){
@@ -738,7 +753,10 @@ async function pickRcpVendor(vendorId){
   if(error || !data) return toast('거래처 정보를 못 가져왔어요', 'error');
   rcpVendorId = data.id;
   rcpVendorName = data.name || '';
-  rcpVendorKind = data.kind || 'vendor';
+  // 주류 거래처 자동 인식 — 분류에 "주류" 포함이면 liquor 모드 (openRcpReceiptFromVendor와 동일 로직 — 진입로 일관성 버그 수정 2026-06-16)
+  //   영수증 탭 거래처 목록으로 진입 시 분류를 무시하고 kind만 봐서 주류 프롬프트(빈용기보증금 추출)를 안 타던 버그.
+  const _isLiquorVendor = (data.category || '').includes('주류');
+  rcpVendorKind = _isLiquorVendor ? 'liquor' : (data.kind || 'vendor');
   // 온라인·마트는 취급품목 없이 자율 분류 → 카테고리 고정 안 함 (마트 2026-06-12)
   if(rcpVendorKind === 'online' || rcpVendorKind === 'mart'){
     rcpCatId = null; rcpCatName = '';
@@ -1634,7 +1652,7 @@ function buildReceiptRow(i={}) {
   const _vatOn = _tax>0;                 // AI가 세액 읽었으면 토글 켜진 상태로 시작
   const vatSplitTxt = _vatOn ? `공급가 ${fmt(_supply)} + 부가세 ${fmt(_tax)} = ${fmt(_total)}` : '';
   const detailWrap = `
-    <div class="rcp-detail" id="detail-${idx}" style="display:none;">
+    <div class="rcp-detail" id="detail-${idx}" style="display:block;">
       <div class="det-row">
         <span class="det-lbl">규격</span>
         <input type="text" class="c-spec det-field txt" value="${esc(i.spec||'')}" placeholder="규격 없음 (예: 500g)">
@@ -1669,7 +1687,7 @@ function buildReceiptRow(i={}) {
       <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
       ${autoTag}
       ${learnBadge}
-      <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▾</button>
+      <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▴</button>
     </div>
     ${detailWrap}
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
@@ -1917,11 +1935,13 @@ async function saveReceipt(){
       note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
     };
   });
-  // 사전 가드: 정상 행 중 분류가 expense_categories에 매칭 안 되는 건 안내 (오답은 통과)
-  const missing=rows.filter(r=>r.note==='정상'&&r._cat&&!r.category_id);
+  // 사전 가드: 정상 행에 분류번호(category_id) 없으면 저장 차단 (사장님 명시 2026-06-16: 분류 없거나 번호 안 잡히면 지출 저장 X)
+  //   category 텍스트만 있고 목록 매칭 실패(AI가 목록 밖 분류 생성) + category 자체 빈 행 둘 다 차단 → 집계 누락 원천 차단
+  const missing=rows.filter(r=>r.note==='정상'&&!r.category_id);
   if(missing.length){
-    const detail=missing.map(r=>`${r._idx}행 "${r._cat}"`).join('\n• ');
-    if(!confirm(`아래 분류는 카테고리 목록에 없어요:\n• ${detail}\n\n그래도 저장할까요?\n(분류명은 텍스트로 들어가지만 집계가 안 잡힐 수 있어요)`)) return;
+    const detail=missing.map(r=>`${r._idx}행 "${r.item||r._cat||'품목'}"${r._cat?` (분류 "${r._cat}")`:' (분류 미선택)'}`).join('\n• ');
+    alert(`아래 품목은 분류가 정해지지 않아 저장할 수 없어요:\n• ${detail}\n\n각 품목의 "분류"를 목록에서 골라주신 뒤 다시 저장해주세요.\n분류가 있어야 지출 집계에 정확히 잡혀요.`);
+    return; // 분류번호 없으면 저장 차단 (집계 무결성)
   }
   // 날짜 이상 경고 (2023 등 AI 오인식 방지, 2026-06-02)
   const _today=ymdLocal(new Date());
@@ -2450,6 +2470,11 @@ async function saveReceiptEdit(){
     return catById[target]||catById[parts[0]]||null;
   };
 
+  // 분류번호 없으면 저장 차단 (신규 저장과 동일 — 사장님 명시 2026-06-16, 집계 무결성)
+  if(note==='정상' && !resolveRcpCatId(cat)){
+    alert('분류가 정해지지 않아 저장할 수 없어요.\n"분류"를 목록에서 골라주신 뒤 다시 저장해주세요.');
+    return;
+  }
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').update({
     receipt_date:date,vendor,item,total_price:amount,
@@ -2654,6 +2679,12 @@ async function saveReceiptGroupEdit(){
   const groupId=k.type==='grp'?k.id:null;
   const invalid=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&(!r.amount||r.amount<=0));
   if(invalid.length) return toast('정상 행은 금액이 필요해요','warn');
+  // 분류번호 없으면 저장 차단 (신규·단건편집과 동일 — 사장님 명시 2026-06-16, 집계 무결성)
+  const noCat=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&!r.catId);
+  if(noCat.length){
+    alert('분류가 정해지지 않은 품목이 있어 저장할 수 없어요.\n각 품목의 "분류"를 목록에서 골라주신 뒤 다시 저장해주세요.');
+    return;
+  }
   setLoad(true,'저장 중...');
   // 화면에 보이는 순서대로 seq 재부여 — 편집 후에도 품목 순서 고정 (2026-06-09)
   let _seqCounter=0;
