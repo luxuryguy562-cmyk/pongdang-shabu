@@ -16,9 +16,13 @@
 - ❌ pg_dump 자동복사 불가 — 이 환경에서 시드니 DB 직접연결(db.*.supabase.co:5432) **네트워크 차단** 확인됨. supabase CLI도 없음. DB 비번도 미기록.
 - → MCP `execute_sql`로만 이전 가능. 복잡도: **표 58개**(백업 `_bak`/`_backup` 13개 제외하면 운영 ~45), 함수 2·트리거 1(적음), RLS 정책 30, enum 0, 시퀀스 2.
 
+**진행 상황 (2026-06-17 세션 — MCP 직접이전 방식, 사장님 "니가 해" + 실행승인)**:
+- ✅ **1단계 스키마 이전 완료** (서울 apply_migration `seoul_migration_01_schema`): 45표(운영41+쿠팡4, 백업13제외) + PK45/UNIQUE20/CHECK6/FK66/색인136/정책30/함수2/트리거1/RLS37/시퀀스2. **시드니=서울 개수 100% 일치 검증**. 로컬 PG16에 미리 적용해 문법검증(generated 컬럼 daily_opening.diff_amount·search_path 2건 수정). SQL 보존: `docs/migration_seoul/01_schema.sql`.
+  - ⚠️ pg_dump 불가 재확인: 이 세션도 DB직접연결(5432/6543) 차단 + 환경이 HTTP프록시라 postgres TCP 불가. → MCP execute_sql(HTTPS)로 진행 중.
+
 **남은 작업 (순서)**:
-1. 스키마 이전: 시드니 pg_catalog로 각 객체 DDL 추출 → 서울 apply (테이블·PK·FK·UNIQUE·CHECK·기본값·색인38+·RLS 30·함수2·트리거1·시퀀스2). 백업표 제외.
-2. 데이터 이전: 시드니 SELECT → 서울 INSERT. FK 순서 주의. **검증: 테이블별 행수 시드니=서울**.
+1. ✅ 스키마 이전 (완료 — 위 참조)
+2. ⏳ **데이터 이전**(다음): 시드니 SELECT → 서울 INSERT. FK 순서 주의(stores→나머지). generated 컬럼(daily_opening.diff_amount)은 INSERT 제외. **검증: 테이블별 행수 시드니=서울**. 실행승인 필요(🟡).
 3. Edge Functions 재배포: emp-login·emp-session·emp-private·complete-signup·join-store·store-join-admin·**send-otp·verify-otp**(문자) — get_edge_function(시드니) → deploy_edge_function(서울). 쿠팡(coupang-receiver)은 **제외**(사장님 "안 살림").
 4. 솔라피 키 서울 설정: `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER`(010-5242-1260). ⚠️ 키 채팅 노출됨 → **이전 후 재발급 필요**(사장님). (키 값은 사장님이 채팅으로 줬음 — 레포엔 절대 X)
 5. 연결 교체: `assets/common.js`의 sb createClient URL/anon key → 서울. (get_project_url + get_publishable_keys로 서울 값)
