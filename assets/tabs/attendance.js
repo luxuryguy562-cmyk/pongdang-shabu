@@ -54,6 +54,7 @@ async function approveDaySched(date){
   const{error}=await sb.from('work_schedules').update({status:'확정'}).in('id',ids).eq('store_id',currentStore.id);
   setLoad(false); if(error) return errToast('승인',error);
   toast(`${ids.length}건 승인 완료!`,'success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule'); // 실시간
   loadAttList();
 }
 // 근무 신청 승인 — 주간 현황 그리드 (직원×요일 한눈에, 2026-06-15 재설계)
@@ -102,6 +103,7 @@ async function approveSched(id, ctx){
   const{error}=await sb.from('work_schedules').update({status:'확정'}).eq('id',id).eq('store_id',currentStore.id);
   setLoad(false); if(error) return errToast('승인',error);
   toast('승인했어요','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule'); // 실시간
   if(ctx==='sheet'){ await openSchedApproveSheet(); } else { closeAllSheets(); }
   loadAttList();
 }
@@ -112,6 +114,7 @@ async function rejectSched(id, ctx){
   const{error}=await sb.from('work_schedules').delete().eq('id',id).eq('store_id',currentStore.id);
   setLoad(false); if(error) return errToast('거절',error);
   toast('거절했어요','info');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule'); // 실시간
   if(ctx==='sheet'){ await openSchedApproveSheet(); } else { closeAllSheets(); }
   loadAttList();
 }
@@ -125,6 +128,7 @@ async function approveAllSched(){
   const{error}=await sb.from('work_schedules').update({status:'확정'}).eq('store_id',currentStore.id).eq('status','희망');
   setLoad(false); if(error) return errToast('승인', error);
   toast('모두 승인 완료!','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule'); // 실시간
   closeAllSheets(); await loadAttList();
 }
 
@@ -376,6 +380,7 @@ async function checkIn(){
   // ─── 새 기능: 출근 즉시 피드백 ───
   const _t=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
   toast(`🌅 출근 완료! ${_t} · 좋은 하루 보내세요`,'success',3500);
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance'); // 실시간: 다른 기기 화면 갱신
   await loadTodayRecord();
   }finally{_checkInBusy=false;}
 }
@@ -427,6 +432,7 @@ async function checkOut(){
   const _h=Math.floor(_totalMin/60), _m=_totalMin%60;
   const _wageStr=w.wage?` · 오늘 ${fmt(w.wage)}원`:'';
   toast(`👏 오늘 ${_h}시간 ${_m}분 일하셨어요${_wageStr}. 수고하셨습니다!`,'success',4500);
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance'); // 실시간
   await loadTodayRecord();
 }
 async function openEmpSheet(ctx='att'){
@@ -489,6 +495,7 @@ async function saveAttendance(){
   setLoad(false);
   if(error) return errToast('저장', error);
   toast(crossedMidnight?`기록됐어요 (익일 ${eStr} 퇴근으로 처리)`:'기록됐어요','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance'); // 실시간
   selectedEmpId=null;
   ['vEmpName','vStart','vEnd'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerText=id==='vEmpName'?'선택':'-';el.classList.add('empty');}});
   closeAllSheets();
@@ -1089,6 +1096,7 @@ async function saveEditAttendance(){
   setLoad(false);
   if(error) return errToast('수정', error);
   toast('근태 기록 수정됐어요','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance'); // 실시간
   closeAllSheets();loadAttList();
 }
 async function deleteAttendance(){
@@ -1099,6 +1107,7 @@ async function deleteAttendance(){
   setLoad(false);
   if(error) return errToast('삭제', error);
   toast('기록 삭제됐어요','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance'); // 실시간
   closeAllSheets();loadAttList();
 }
 

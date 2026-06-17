@@ -89,6 +89,7 @@ async function saveSchedule(){
   attAllMonth=date.slice(0,7);
   attAllSelectedDate=date;
   await loadAttList();
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule'); // 실시간: 신청→사장 화면·배지 갱신
   toast(isManager?'근무계획이 등록됐습니다!':'희망근무를 신청했어요! 사장님 승인을 기다려요','success');
 }
 // ─── 새 기능: 주단위 일괄 입력 (사장님 요청 2026-05-21) ───
