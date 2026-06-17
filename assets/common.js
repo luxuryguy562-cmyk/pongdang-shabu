@@ -986,7 +986,7 @@ function broadcastStoreChange(kind, extra){
   try{ if(_storeChannel) _storeChannel.send({ type:'broadcast', event:'change', payload:Object.assign({kind:kind}, extra||{}) }); }catch(e){}
 }
 // 운영 데이터 변경 시 자동 갱신할 화면 → 로더 (시트 안 떠있을 때만)
-const _RT_REFRESH = { dashboard:'loadDashboard', explist:'initExplist', sales:'loadSalesDaily', recon:'initRecon', vendors:'loadVendors' };
+const _RT_REFRESH = { dashboard:'loadDashboard', explist:'initExplist', sales:'loadSalesDaily', recon:'initRecon', vendors:'loadVendors', attendance:'loadAttList', busHub:'loadBusHubData' };
 function _rtSheetOpen(){
   if([...document.querySelectorAll('.sheet-overlay')].some(s=>s.style.display && s.style.display!=='none')) return true;
   for(const id of ['signupOverlay','joinOverlay']){ const el=document.getElementById(id); if(el && el.style.display==='block') return true; }
@@ -1003,14 +1003,14 @@ function _rtRefreshActive(){
 }
 function onStoreRealtime(payload){
   const k=payload&&payload.kind;
-  // 가입 신청/승인/거절 → 종 배지 + 직원관리 목록 갱신
+  // 모든 변경에 종 배지 갱신 (가입·근무신청·승인 등 — 2026-06-16 사장님: 전부 실시간)
+  if(typeof refreshJoinBadge==='function') refreshJoinBadge();
+  // 직원관리 화면이면 가입 대기 목록도 갱신
   if(k==='join'||k==='approve'||k==='reject'){
-    if(typeof refreshJoinBadge==='function') refreshJoinBadge();
     const staffCont=document.getElementById('staffCont');
     if(staffCont&&staffCont.classList.contains('active')&&typeof loadJoinAdmin==='function') loadJoinAdmin();
-    return;
   }
-  // 운영 데이터(지출·매출·정산·거래처) 변경 → 보던 화면 자동 갱신
+  // 보던 화면 자동 갱신 (지출·매출·정산·거래처·근태·개시마감)
   _rtRefreshActive();
 }
 function initRealtimeAndBadge(){
