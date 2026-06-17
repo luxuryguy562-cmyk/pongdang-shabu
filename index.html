@@ -24,9 +24,10 @@
 <!-- Pretendard 폰트 (토스/카뱅/당근 표준) — dev_lessons #57 톤 통일 일환 -->
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<!-- 로그인엔 불필요한 무거운 라이브러리 = defer (콜드 스타트 로그인창 blocking 제거, 2026-06-16). 셋 다 함수 내부에서만 사용(로드 즉시 X)이라 안전. supabase SDK는 common.js가 즉시 쓰므로 동기 유지 -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
 <link rel="stylesheet" href="assets/styles.css?v=20260615q">
 </head>
 <body>
