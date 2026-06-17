@@ -534,9 +534,9 @@ async function loadDashboard(force){
     // 2026-05-21 Phase B: SWR 캐시 (5분 TTL). 캐시 hit이면 즉시 렌더 + 5초 후 백그라운드 fresh
     const _dashKey=`dashv2_${sid}_${ym}_${dashSaleSource}_${dashMode||'auto'}`;
     let _dashPack = !force ? cacheGet(_dashKey, 300000) : null;
-    let settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2;
+    let settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2, schedRes2;
     if(_dashPack){
-      ({settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2} = _dashPack);
+      ({settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2, schedRes2} = _dashPack);
     } else {
       const _runDashQueries=()=>Promise.all([
         // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
@@ -562,7 +562,9 @@ async function loadDashboard(force){
         sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
         sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',pStart).lte('receipt_date',pEnd),
         sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
-        sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end)
+        sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end),
+        // ── 당월 근무계획 (주휴수당 결근 차감 판정용 — 2026-06-17 직원 급여화면과 두 화면 통일) ──
+        sb.from('work_schedules').select('employee_id,work_date,is_off').eq('store_id',sid).gte('work_date',start).lte('work_date',end)
       ]);
       // ── 자동 재시도 (2026-06-12 사장님 호소: 일시 500/제한시간 초과) ──
       //   서버가 잠깐 바빠 일부 조회 실패하면 짧게 쉬고 다시 시도 (최대 3번). 사장님 눈엔 안 보이게.
@@ -581,8 +583,8 @@ async function loadDashboard(force){
           await new Promise(r=>setTimeout(r, 500*(_try+1)));
         }
       }
-      [settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2] = _packArr;
-      cacheSet(_dashKey, {settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2});
+      [settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2, schedRes2] = _packArr;
+      cacheSet(_dashKey, {settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2, schedRes2});
     }
     // SWR: 캐시 hit이면 5초 후 백그라운드로 fresh 호출 (force=true → setLoad 무음)
     if(_dashPack && !force){
@@ -1058,20 +1060,33 @@ async function loadDashboard(force){
       });
     }
     // 주휴수당 일별 배분 — 해당 주 마지막 근무일에 집중 (시급제만)
+    // 2026-06-17: 결근 차감 설정 반영 — 직원 급여화면(calcMonthlyHolidayPay)과 동일 기준으로 두 화면 통일
     if(settings.weekly_holiday_pay_enabled){
       const _hpMEmpIds2=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+      // 출근 있은 날 집합(직원별) + 근무계획(직원별 날짜→행) — 결근 차감 판정용
+      const _attPresent={}, _schedByEmp={};
+      (attDaily||[]).forEach(a=>{ (_attPresent[a.employee_id]||(_attPresent[a.employee_id]=new Set())).add(a.work_date); });
+      ((schedRes2&&schedRes2.data)||[]).forEach(s=>{ (_schedByEmp[s.employee_id]||(_schedByEmp[s.employee_id]={}))[s.work_date]=s; });
       const _hp2Map={};
       (attDaily||[]).forEach(a=>{
         if(_hpMEmpIds2.has(a.employee_id)||!(a.total_work_min>0)) return;
         const dt=new Date(a.work_date+'T00:00:00');
         const wsKey=ymdLocal(new Date(dt.getTime()-((dt.getDay()+6)%7)*86400000));
         const k=a.employee_id+'_'+wsKey;
-        if(!_hp2Map[k]) _hp2Map[k]={empId:a.employee_id,min:0,lastDay:null};
+        if(!_hp2Map[k]) _hp2Map[k]={empId:a.employee_id,min:0,lastDay:null,wsKey};
         _hp2Map[k].min+=a.total_work_min;
         if(!_hp2Map[k].lastDay||a.work_date>_hp2Map[k].lastDay) _hp2Map[k].lastDay=a.work_date;
       });
-      Object.values(_hp2Map).forEach(({empId,min,lastDay})=>{
+      Object.values(_hp2Map).forEach(({empId,min,lastDay,wsKey})=>{
         if(min<15*60||!lastDay||!lastDay.startsWith(ym)) return;
+        // 결근 차감 ON → 그 주 근무예정일(근무계획 is_off=false)에 출근 없으면 주휴수당 없음 (급여화면 attendance.js:629-631과 동일)
+        if(settings.weekly_holiday_pay_deduct_absent){
+          const _ws=new Date(wsKey+'T00:00:00');
+          const weekDays=[]; for(let i=0;i<7;i++) weekDays.push(ymdLocal(new Date(_ws.getTime()+i*86400000)));
+          const empSched=_schedByEmp[empId]||{}, empAtt=_attPresent[empId]||new Set();
+          const schedDays=weekDays.filter(wd=>{ const s=empSched[wd]; return s&&!s.is_off; });
+          if(schedDays.length>0 && schedDays.some(wd=>!empAtt.has(wd))) return; // 결근 → 주휴수당 스킵
+        }
         const emp=(employees||[]).find(e=>e.id===empId);
         if(!emp) return;
         const hp=Math.round(Math.min(min/60/5,8)*(emp.base_wage||10030));
