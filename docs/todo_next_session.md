@@ -29,6 +29,32 @@
 
 ---
 
+### ✅ [2026-06-17 사장님 합의] 완전 이전 방법 확정 = pg_dump 통째 복사 (누락 0)
+
+> MCP 수작업(58표 한 땀) 대신, **pg_dump로 통째 복사**가 누락 0 최선. 단 이 세션은 DB 직접연결 차단으로 불가였음. **새 세션에서 아래 2가지 갖추면 가능.** 사장님 "내 손 조금 타도 됨" 승인.
+
+**새 세션 준비물 (사장님 손)**:
+1. **네트워크 정책**: 새 대화(claude.ai/code) 만들 때 Supabase DB 접근 허용 정책 선택 (현 세션은 db.*.supabase.co:5432 차단이라 pg_dump 불가였음).
+2. **DB connection string 2개**: Supabase 대시보드 → 각 프로젝트 → Settings → Database → Connection string(URI, 비번 포함) 복사.
+   - 시드니 원본: `ruytgygjwnbtzmtofopg`
+   - 서울 대상: `ecfjkfqlnqfxovlwhdtx` (이름은 사장님이 대시보드서 "Cashflow"로 변경 예정)
+   - 비번 모르면 Settings>Database>Reset database password로 재설정 후 복사.
+
+**환경 준비물 (CTO)**:
+- `pg_dump`/`psql` 버전 = Supabase가 PG17이므로 **pg17 클라이언트** 필요 (현 환경 pg16이라 `server version newer` 에러 가능). 또는 `supabase` CLI 설치(`npm i -g supabase`, `supabase db dump`가 버전 호환).
+
+**CTO 실행 (조건 갖춰지면)**:
+1. `pg_dump`(시드니, --schema+data) 또는 `supabase db dump` → 덤프파일
+2. `psql`(Cashflow) 복원
+3. 검증: 테이블별 행수 시드니=Cashflow
+4. Edge Functions 8개 재배포(쿠팡 제외) + 솔라피 키(채팅 노출분 → 재발급본) 설정
+5. `assets/common.js` sb URL/anon key → Cashflow
+6. 작동 검증 후 시드니 정리
+
+**대안(네트워크 못 열 때)**: MCP execute_sql 수작업(누락 위험, 비추천).
+
+---
+
 ## 🩺 [2026-06-17 진단 세션 — 사장님 8개 항목 점검 결과]
 
 진단 후 사장님 결정 사항 (휘발 방지):
