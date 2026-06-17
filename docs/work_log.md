@@ -4,6 +4,23 @@
 
 ---
 
+## [2026-06-17] 🌏 Supabase 시드니→서울 리전 이전 (완료) — 홈 거리지연 해소
+
+**배경**: 홈 7초 느림. 색인+defer로 50% 개선 후, 남은 거리지연(호주 ap-southeast-2) 해소 위해 서울(ap-northeast-2) 이전. 사장님 "니가 해" + 단계별 실행승인.
+
+**방법 결정**: pg_dump 불가(이 환경 DB직접연결 5432/6543 차단 + HTTP프록시라 postgres TCP 불가). → **postgres_fdw**(서울→시드니 직접연결, 사장님 DB비번 리셋분)로 데이터 직접 끌어옴 = 누락 0.
+
+**5단계 완료**:
+1. **스키마**: apply_migration `seoul_migration_01_schema` — 45표(운영41+쿠팡4, 백업13제외)+PK45/UNIQUE20/CHECK6/FK66/색인136/정책30/함수2/트리거1/시퀀스2. 로컬 PG16 사전검증(generated컬럼·search_path 2버그 잡음). SQL: `docs/migration_seoul/01_schema.sql`.
+2. **데이터**: fdw로 30표 ~1947건 INSERT(session_replication_role=replica로 FK미룸). **검증**: 행수 30/30 + 금액합계 + 영수증641 ID해시(`f8c7354f…`) 완전일치. FK orphan 0, 시퀀스 setval. fdw·비번 즉시 제거.
+3. **Edge Functions**: 8개 서울 배포(쿠팡 제외, verify_jwt=false). 수정: send-otp 오타 퍼당샤브→퐁당샤브, join-store·store-join-admin PUBLIC_KEY 서울키로.
+4. **솔라피**: 사장님 키 재발급+서울 secret 입력. send-otp 실발송 테스트 `{ok:true}`, 사장님 문자 수신 확인.
+5. **연결 교체**: common.js URL/anon→서울(`ecfjkfqlnqfxovlwhdtx`). 사장님 앱 데이터 정상확인 = 전환 성공. PR #687·#688 main.
+
+**후속**: `.mcp.json`·services.md·db_schema.md 서울 갱신(다음세션 혼란방지). 서울명 `Cashflow`(사장님). 로그인 콜드스타트(첫호출 2초)→pg_cron 5분 warm(warm-emp-login/session, active) 적용.
+
+**남은**: 시드니(ruytgygjwnbtzmtofopg) 안정 며칠 후 정리. coupang-install.html·scripts 시드니잔재 쿠팡미사용이라 보류.
+
 ## [2026-06-15] 근무 신청·승인 재설계 — 주단위 + 사장 주간 그리드 (CTO 제안)
 
 **사장님 질책**: 그냥 시키는 것만 하지 말고 CTO로서 전체 설계(신청 주기 등) 제안하라.
