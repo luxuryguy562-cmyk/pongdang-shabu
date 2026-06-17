@@ -22,7 +22,12 @@
 
 **남은 작업 (순서)**:
 1. ✅ 스키마 이전 (완료 — 위 참조)
-2. ⏳ **데이터 이전**(다음): 시드니 SELECT → 서울 INSERT. FK 순서 주의(stores→나머지). generated 컬럼(daily_opening.diff_amount)은 INSERT 제외. **검증: 테이블별 행수 시드니=서울**. 실행승인 필요(🟡).
+2. ✅ **데이터 이전 완료** (2026-06-17): postgres_fdw로 서울→시드니 직접연결(비번 사장님 리셋분, 끝나고 user mapping DROP으로 제거 완료). session_replication_role=replica로 FK 미뤄 30표 INSERT. **시드니=서울 행수 30/30 100% 일치**(receipts 641·ai_usage 391·classification 189·attendance 185 등 총 ~1947건). FK orphan 0, 시퀀스 setval 완료. daily_opening은 generated컬럼 제외 INSERT. fdw통로·비번 서울서 완전제거.
+   - ⚠️ **시드니 DB 비번 채팅 노출됨** → 시드니 정리 전 사장님 재설정 권장(단 폐기하면 무의미).
+3. ⏳ Edge Functions 재배포(다음): emp-login·emp-session·emp-private·complete-signup·join-store·store-join-admin·send-otp·verify-otp. 쿠팡 제외.
+4. ⏳ 솔라피 키 서울 설정.
+5. ⏳ 연결 교체: assets/common.js sb URL/anon key → 서울.
+6. ⏳ 검증: 로그인·영수증분석·문자인증. 시드니 안 지움.
 3. Edge Functions 재배포: emp-login·emp-session·emp-private·complete-signup·join-store·store-join-admin·**send-otp·verify-otp**(문자) — get_edge_function(시드니) → deploy_edge_function(서울). 쿠팡(coupang-receiver)은 **제외**(사장님 "안 살림").
 4. 솔라피 키 서울 설정: `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER`(010-5242-1260). ⚠️ 키 채팅 노출됨 → **이전 후 재발급 필요**(사장님). (키 값은 사장님이 채팅으로 줬음 — 레포엔 절대 X)
 5. 연결 교체: `assets/common.js`의 sb createClient URL/anon key → 서울. (get_project_url + get_publishable_keys로 서울 값)
