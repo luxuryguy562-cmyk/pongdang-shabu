@@ -2,6 +2,33 @@
 
 ---
 
+## 🚨 [2026-06-17 진행중] 서울 리전 이전 (시드니→서울) — 중단 지점 기록
+
+**왜**: 홈 7초 호소 → 색인+defer로 50% 개선 → 거리 지연(시드니 ap-southeast-2) 마저 잡으려 서울 이전. 사장님 "실행 승인".
+
+**여기까지 완료 (안전, 되돌릴 수 있음)**:
+- ✅ ureem 전체 백업 → 사장님께 파일 전송 완료 (`/tmp/ureem_backup_20260616.json`, 11표 ~400행)
+- ✅ **ureem 프로젝트 멈춤(pause)** 처리 (project_id `wowodgsiogxnqcfujbgc`) — 무료 슬롯 확보용. 복구 가능(restore). 사장님 "안 씀" 확인.
+- ✅ **서울 새 프로젝트 생성**: name `pongdang-seoul`, project_id **`ecfjkfqlnqfxovlwhdtx`**, region ap-northeast-2, 비용 $0. 현재 **빈 창고**.
+- 시드니 원본(`ruytgygjwnbtzmtofopg`)은 **그대로 살아있음** (전환 전까지 안 지움).
+
+**막힌 지점 (다음 세션 핵심)**:
+- ❌ pg_dump 자동복사 불가 — 이 환경에서 시드니 DB 직접연결(db.*.supabase.co:5432) **네트워크 차단** 확인됨. supabase CLI도 없음. DB 비번도 미기록.
+- → MCP `execute_sql`로만 이전 가능. 복잡도: **표 58개**(백업 `_bak`/`_backup` 13개 제외하면 운영 ~45), 함수 2·트리거 1(적음), RLS 정책 30, enum 0, 시퀀스 2.
+
+**남은 작업 (순서)**:
+1. 스키마 이전: 시드니 pg_catalog로 각 객체 DDL 추출 → 서울 apply (테이블·PK·FK·UNIQUE·CHECK·기본값·색인38+·RLS 30·함수2·트리거1·시퀀스2). 백업표 제외.
+2. 데이터 이전: 시드니 SELECT → 서울 INSERT. FK 순서 주의. **검증: 테이블별 행수 시드니=서울**.
+3. Edge Functions 재배포: emp-login·emp-session·emp-private·complete-signup·join-store·store-join-admin·**send-otp·verify-otp**(문자) — get_edge_function(시드니) → deploy_edge_function(서울). 쿠팡(coupang-receiver)은 **제외**(사장님 "안 살림").
+4. 솔라피 키 서울 설정: `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER`(010-5242-1260). ⚠️ 키 채팅 노출됨 → **이전 후 재발급 필요**(사장님). (키 값은 사장님이 채팅으로 줬음 — 레포엔 절대 X)
+5. 연결 교체: `assets/common.js`의 sb createClient URL/anon key → 서울. (get_project_url + get_publishable_keys로 서울 값)
+6. 검증: 로그인·영수증 분석·문자인증 작동. 시드니 안 지움.
+7. 안정 후 시드니 정리 (pause 또는 사장님 대시보드 삭제 — MCP 삭제 도구 없음).
+
+**주의**: MCP 수작업이라 누락 위험. 사장님 "누락 없이" 최우선 → 스키마/데이터 1:1 검증 필수. 한 세션에 무리하면 사고 → 집중 세션에서 단계별 검증하며.
+
+---
+
 ## 🩺 [2026-06-17 진단 세션 — 사장님 8개 항목 점검 결과]
 
 진단 후 사장님 결정 사항 (휘발 방지):
