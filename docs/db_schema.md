@@ -751,3 +751,15 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
   - `receipts.category_id` = **소분류 id 저장** (영수증 품목 명시, 소분류 확정 가능, 2026-04-22 확립)
   - 집계 시 대분류는 자식(소분류) 합산 or 본인 id receipts 포함
 - **DB 변경 시**: 이 파일 즉시 업데이트할 것 (→ dev_lessons.md #7)
+
+---
+
+## 성능 색인 (2026-06-16 — 외래키 38개 색인 추가)
+
+> 배경: 사장님 "홈 7초" 호소 → 성능권고(advisors) 116건 측정. `store_id` 등 외래키에 색인 없는 표 19개 = 데이터 누적 시 풀스캔. 마이그레이션 `add_missing_fk_indexes`로 일괄 추가.
+
+추가된 색인(모두 `idx_<table>_<col>`, FK 컬럼): receipts(store), vendor_orders(store·vendor), attendance_logs(store·emp), vendors(store·cat), fixed_costs(store), expense_categories(store·parent), expense_category_amounts(store), fixed_cost_amounts(store), employees(store·person), work_schedules(emp), caps_upload_staging(store·emp), mydata_transactions(cat), mydata_accounts(store), reconciliation(cat), reserve_fund_logs(store·srctx), exp_groups·exp_items·exp_item_amounts(store/group/item), coupang_inbox·coupang_learning_rules(cat·vendor), daily_opening(createdby), franchises(owner), pending_joins(code·store), signup_tokens(person), store_join_codes(store), stores(franchise), vendor_diffs(vendor).
+
+롤백: `DROP INDEX IF EXISTS idx_receipts_store, idx_vendor_orders_store, ...` (각 idx_ 이름).
+
+> ⚠️ 미실행 잔여: ① RLS 정책 중복 정리(mydata_transactions·reconciliation·vendor_diffs `pd_phase2b_all` 중복 60건) ② 안 쓰는 색인 5개·중복 색인 1개 정리 ③ 시드니→서울 리전 이전(큰 공사). 색인 효과 확인 후 판단.
