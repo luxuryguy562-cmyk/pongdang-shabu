@@ -109,11 +109,11 @@ async function approveSched(id, ctx){
 }
 async function rejectSched(id, ctx){
   if(!isManager) return;
-  if(!confirm('이 신청을 거절(삭제)할까요?')) return;
+  if(!confirm('이 신청을 거절할까요? (거절 기록은 남아요)')) return;
   setLoad(true,'처리 중...');
-  const{error}=await sb.from('work_schedules').delete().eq('id',id).eq('store_id',currentStore.id);
+  const{error}=await sb.from('work_schedules').update({status:'거절'}).eq('id',id).eq('store_id',currentStore.id); // 삭제 X → 거절 기록 보존 (2026-06-17)
   setLoad(false); if(error) return errToast('거절',error);
-  toast('거절했어요','info');
+  toast('거절했어요 (기록 보존)','info');
   if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule'); // 실시간
   if(ctx==='sheet'){ await openSchedApproveSheet(); } else { closeAllSheets(); }
   loadAttList();
@@ -689,6 +689,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
   let query = sb.from('attendance_logs')
     .select('*, employees(name)')
     .eq('store_id', currentStore.id)
+    .neq('status', '거절') // 거절된 신청은 계획·간트에서 숨김 (기록만 보존)
     .gte('work_date', startDate)
     .lte('work_date', endDate)
     .order('work_date', {ascending:false})
@@ -1147,6 +1148,7 @@ async function loadMyAttGantt(){
   // 이번 주 근무계획도 조회 (비교용)
   const{data:schedData}=await sb.from('work_schedules').select('*')
     .eq('store_id',currentStore.id)
+    .neq('status','거절') // 거절 신청 숨김 (기록 보존)
     .eq('employee_id',currentEmp.id)
     .gte('work_date',days[0].date)
     .lte('work_date',days[6].date);
