@@ -1624,19 +1624,21 @@ async function loadDashboard(force){
       }
       // ── 노무 자가점검 (AI 매니저에 얹음, 참고용 — 공인노무사법: 자문 아닌 정보 제공) ──
       const MIN_WAGE_2026 = 10320; // 2026 최저임금(시급). ⚠️ 매년 갱신 필요(법 개정 추적)
-      const _belowMin = (employees||[]).filter(e=>e.is_active && e.wage_type!=='monthly' && e.base_wage && e.base_wage < MIN_WAGE_2026).map(e=>e.name);
+      // 사장(owner)은 근로자 아님 → 노무 점검(최저임금·휴게·5인·퇴직금) 전부 제외
+      const _ownerIds = new Set((employees||[]).filter(e=>e.auth_level==='owner').map(e=>e.id));
+      const _belowMin = (employees||[]).filter(e=>e.is_active && e.auth_level!=='owner' && e.wage_type!=='monthly' && e.base_wage && e.base_wage < MIN_WAGE_2026).map(e=>e.name);
       let _pendingChgCnt = 0;
       try{ const{data:_cr}=await sb.from('schedule_change_requests').select('id').eq('store_id',sid).eq('status','대기'); _pendingChgCnt=(_cr||[]).length; }catch(_){}
-      // 휴게 미부여(8h+인데 확정 휴게 없음) / 상시근로자 추정(연인원÷가동일수) — 당월 근태 기준
-      const _attRows=(attRes2&&attRes2.data)||[];
+      // 휴게 미부여(8h+인데 확정 휴게 없음) / 상시근로자 추정(연인원÷가동일수) — 당월 근태, 사장 제외
+      const _attRows=((attRes2&&attRes2.data)||[]).filter(r=>!_ownerIds.has(r.employee_id));
       const _noRestShifts=_attRows.filter(r=>(r.total_work_min||0)>=480 && !(r.rest_start && r.rest_end && r.rest_status==='확정')).length;
       const _byDate={};
       _attRows.forEach(r=>{ if(r.work_date&&r.employee_id){ (_byDate[r.work_date]=_byDate[r.work_date]||new Set()).add(r.employee_id); } });
       const _wDays=Object.keys(_byDate).length;
       const _avgHead=_wDays>0 ? Object.values(_byDate).reduce((a,s)=>a+s.size,0)/_wDays : 0;
-      // 퇴직금 1년 임박 (입사 320~365일)
+      // 퇴직금 1년 임박 (입사 320~365일), 사장 제외
       const _nowR=new Date();
-      const _retireSoon=(employees||[]).filter(e=>{ if(!e.is_active||!e.hire_date) return false; const d=(_nowR-new Date(e.hire_date))/86400000; return d>=320&&d<365; }).map(e=>e.name);
+      const _retireSoon=(employees||[]).filter(e=>{ if(!e.is_active||e.auth_level==='owner'||!e.hire_date) return false; const d=(_nowR-new Date(e.hire_date))/86400000; return d>=320&&d<365; }).map(e=>e.name);
       renderAiBrief({
         totalRevenue,
         currAtt:   expByGroup['인건비'] || 0,
