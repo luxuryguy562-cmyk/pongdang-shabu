@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>휴게시간 기록탭 미리보기</title>
+<style>
+  :root{
+    --blue:#3182F6; --blue-strong:#1B64DA; --toss-blue-strong:#1B64DA; --blue-light:#E8F3FF;
+    --white:#fff; --text:#191F28; --toss-text-1:#191F28; --toss-text-4:#8B95A1;
+    --gray-100:#F2F4F6; --gray-200:#E5E8EB; --gray-300:#D1D6DB; --gray-400:#B0B8C1;
+    --gray-500:#8B95A1; --gray-600:#6B7684; --gray-700:#4E5968;
+    --danger:#F04452; --warn:#F59E0B; --success:#16A34A; --toss-line:#F2F4F6;
+    --card-shadow:0 1px 3px rgba(0,0,0,0.06); --rest:#F5A11E;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#F2F4F6;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:var(--text);-webkit-font-smoothing:antialiased;}
+  .phone{max-width:420px;margin:0 auto;background:#F2F4F6;min-height:100vh;padding:16px 14px 40px;}
+  .preview-note{background:#FFF7E6;border:1px solid #FFE2B0;border-radius:12px;padding:11px 13px;font-size:12px;color:#8a6d3b;line-height:1.5;margin-bottom:18px;}
+  .preview-note b{color:#7a5b1e;}
+  .sec-title{font-size:13px;font-weight:800;color:var(--gray-700);margin:24px 2px 10px;display:flex;align-items:center;gap:6px;}
+  .new-tag{display:inline-block;background:var(--blue);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;vertical-align:middle;}
+
+  /* ===== KPI 카드 (앱 실제 CSS) ===== */
+  .att-kpi-row{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:12px;align-items:stretch;}
+  .att-kpi-cell{background:var(--white);padding:14px 12px;border-radius:14px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;justify-content:center;}
+  .att-kpi-lbl{font-size:11px;color:var(--toss-text-4);font-weight:600;letter-spacing:-0.2px;}
+  .att-kpi-val{font-size:18px;font-weight:800;color:var(--toss-text-1);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;}
+  .att-kpi-cell.aux{padding:12px 12px;gap:6px;}
+  .att-kpi-cell.aux .item{display:flex;flex-direction:column;gap:1px;}
+  .att-kpi-cell.aux .item+.item{border-top:1px dashed var(--gray-100);padding-top:7px;}
+  .att-kpi-cell.aux .item .l{font-size:10.5px;color:var(--gray-500);font-weight:600;white-space:nowrap;}
+  .att-kpi-cell.aux .item .v{font-size:15px;color:var(--text);font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-0.3px;}
+  .att-kpi-cell.aux .item .v.rest{color:var(--rest);}
+  .att-kpi-cell.wage{background:var(--white);padding:12px 14px;align-items:flex-start;}
+  .att-kpi-cell.wage .att-kpi-lbl{color:var(--blue-strong);font-weight:700;margin-bottom:2px;}
+  .att-kpi-cell.wage .att-kpi-val{color:var(--toss-blue-strong);font-size:22px;letter-spacing:-0.4px;white-space:nowrap;}
+  .att-kpi-split{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(49,130,246,0.25);font-size:11px;font-weight:700;line-height:1.3;color:var(--gray-700);width:100%;display:flex;flex-direction:column;gap:3px;}
+  .att-kpi-split .h{color:var(--blue);white-space:nowrap;}
+
+  /* ===== 일별 간트 (앱 실제 CSS) ===== */
+  .card{background:var(--white);border-radius:14px;box-shadow:var(--card-shadow);padding:13px 12px;margin-bottom:12px;}
+  .att-dayhdr{display:flex;align-items:center;gap:9px;margin-bottom:8px;padding:0 2px;}
+  .att-dayhdr .dh-date{font-size:13px;font-weight:900;color:var(--text);background:var(--white);border-radius:10px;padding:6px 12px;box-shadow:var(--card-shadow);white-space:nowrap;}
+  .att-dayhdr .dh-h{font-size:12px;font-weight:800;color:var(--blue);white-space:nowrap;}
+  .att-dayhdr .dh-line{flex:1;height:1px;background:var(--toss-line);min-width:6px;}
+  .att-dayhdr .dh-btn{display:inline-flex;align-items:center;gap:3px;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;background:var(--white);color:var(--gray-600);box-shadow:var(--card-shadow);}
+
+  .att-axis{display:flex;align-items:flex-end;height:15px;margin-top:8px;}
+  .att-row-label-sp{min-width:55px;flex-shrink:0;}
+  .att-axis-ticks{position:relative;flex:1;height:100%;}
+  .att-tk{position:absolute;bottom:0;transform:translateX(-50%);font-size:9px;color:var(--text);font-weight:600;white-space:nowrap;}
+  .att-tk.mid{color:var(--danger);font-weight:700;}
+  .att-grow{display:flex;align-items:center;min-height:26px;}
+  .att-row-label{display:flex;align-items:center;gap:4px;min-width:55px;font-size:10px;font-weight:700;color:var(--text);padding:2px;flex-shrink:0;white-space:nowrap;}
+  .att-row-label .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .att-track{position:relative;flex:1;height:24px;border-top:1px solid var(--gray-100);}
+  .att-gl{position:absolute;top:0;bottom:0;width:0;}
+  .att-gl.major{border-left:1px solid var(--gray-200);}
+  .att-gl.mid{border-left:1.5px dashed rgba(240,68,82,0.55);}
+  .att-bar{position:absolute;top:4px;height:16px;border-radius:8px;opacity:.92;z-index:1;min-width:6px;}
+  /* NEW: 휴게 막대 — 근무 막대 위에 주황 빗금으로 표시 */
+  .att-bar.rest{top:4px;height:16px;z-index:3;border-radius:4px;opacity:1;
+    background:repeating-linear-gradient(45deg,var(--rest),var(--rest) 3px,#FFE2B0 3px,#FFE2B0 6px);
+    box-shadow:0 0 0 1px #fff;}
+  .att-row-meta{display:flex;justify-content:flex-start;gap:10px;align-items:baseline;margin:-2px 0 10px 59px;font-size:10px;color:var(--gray-600);}
+  .att-row-meta .time{color:var(--text);font-weight:700;}
+  .att-row-meta .rest{color:var(--rest);font-weight:800;}
+  .att-row-meta .rest.miss{color:var(--danger);}
+  .att-row-meta .hours{color:var(--text);font-weight:700;font-size:11px;}
+
+  /* AI 안내 칩 + 보정 버튼 */
+  .aib-row{display:flex;gap:9px;align-items:flex-start;background:#FFF4F4;border:1px solid #FAD2D2;border-radius:11px;padding:10px 11px;margin:2px 0 8px 0;}
+  .aib-row.warn{background:#FFF8E8;border-color:#FCE4B0;}
+  .aib-ic{font-size:15px;flex-shrink:0;line-height:1.4;}
+  .aib-tx{font-size:11.5px;line-height:1.5;color:var(--gray-700);}
+  .aib-tx b{color:var(--text);}
+  .aib-disc{font-size:10px;color:var(--gray-400);margin-top:3px;}
+  .fix-btn{display:inline-block;margin-top:7px;background:var(--blue);color:#fff;font-size:11px;font-weight:700;padding:6px 12px;border-radius:8px;}
+
+  /* 직원 출퇴근 버튼 개념 */
+  .punch-wrap{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .punch{border:none;border-radius:13px;padding:16px 10px;font-size:14px;font-weight:800;color:#fff;text-align:center;}
+  .punch.in{background:var(--blue);} .punch.out{background:var(--gray-600);}
+  .punch.rest-start{background:var(--rest);} .punch.rest-end{background:#C77F12;}
+  .punch small{display:block;font-size:10px;font-weight:600;opacity:.85;margin-top:3px;}
+
+  /* 직원 승인 알림 카드 */
+  .approve-card{background:var(--blue-light);border:1px solid #CFE3FF;border-radius:13px;padding:13px;}
+  .approve-card .ttl{font-size:12.5px;font-weight:800;color:var(--blue-strong);margin-bottom:5px;}
+  .approve-card .body{font-size:12px;color:var(--gray-700);line-height:1.5;}
+  .approve-card .btns{display:flex;gap:8px;margin-top:11px;}
+  .approve-card .btns button{flex:1;border:none;border-radius:9px;padding:10px;font-size:12px;font-weight:800;}
+  .ok{background:var(--blue);color:#fff;} .no{background:#fff;color:var(--gray-600);border:1px solid var(--gray-200)!important;}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--gray-600);margin:4px 2px 0;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .lg-box{width:22px;height:11px;border-radius:3px;display:inline-block;}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="preview-note">
+    📋 <b>미리보기입니다 (실제 앱 아님).</b> 지금 기록탭과 똑같은 디자인에 <b>휴게시간</b>만 얹은 모습이에요.
+    <span class="new-tag">NEW</span> 표시가 이번에 새로 들어가는 부분입니다.
+  </div>
+
+  <!-- ===== 1. KPI 카드 ===== -->
+  <div class="sec-title">① 위 카드에 휴게시간 추가 <span class="new-tag">NEW</span></div>
+  <div class="att-kpi-row">
+    <div class="att-kpi-cell aux">
+      <div class="item"><span class="l">📅 출근일</span><span class="v">22일</span></div>
+      <div class="item"><span class="l">⏱ 근무시간</span><span class="v">176.0h</span></div>
+      <div class="item"><span class="l">☕ 휴게시간</span><span class="v rest">22.0h</span></div>
+    </div>
+    <div class="att-kpi-cell wage">
+      <div class="att-kpi-lbl">인건비</div>
+      <div class="att-kpi-val">2,118,400원</div>
+      <div class="att-kpi-split"><span class="h">🎁 주휴수당 +176,000원</span></div>
+    </div>
+  </div>
+
+  <!-- ===== 2. 일별 간트 ===== -->
+  <div class="sec-title">② 일별 간트차트에 휴게 표시 <span class="new-tag">NEW</span></div>
+  <div class="card">
+    <div class="att-dayhdr">
+      <span class="dh-date">06-17 (화)</span>
+      <span class="dh-h">8.0h</span>
+      <span class="dh-line"></span>
+      <span class="dh-btn">＋ 근무 등록</span>
+    </div>
+
+    <!-- 시간축 -->
+    <div class="att-axis">
+      <div class="att-row-label-sp"></div>
+      <div class="att-axis-ticks">
+        <span class="att-tk" style="left:0%">6</span>
+        <span class="att-tk" style="left:8.33%">8</span>
+        <span class="att-tk" style="left:16.67%">10</span>
+        <span class="att-tk" style="left:25%">12</span>
+        <span class="att-tk" style="left:33.33%">14</span>
+        <span class="att-tk" style="left:41.67%">16</span>
+        <span class="att-tk" style="left:50%">18</span>
+        <span class="att-tk" style="left:58.33%">20</span>
+        <span class="att-tk" style="left:66.67%">22</span>
+        <span class="att-tk mid" style="left:75%">0</span>
+        <span class="att-tk" style="left:83.33%">2</span>
+        <span class="att-tk" style="left:91.67%">4</span>
+      </div>
+    </div>
+
+    <!-- 정상 케이스: 근무 09~18, 휴게 13~14 -->
+    <div class="att-grow">
+      <div class="att-row-label"><span class="dot" style="background:#3182F6"></span>김알바</div>
+      <div class="att-track">
+        <span class="att-gl major" style="left:0%"></span><span class="att-gl major" style="left:8.33%"></span>
+        <span class="att-gl major" style="left:16.67%"></span><span class="att-gl major" style="left:25%"></span>
+        <span class="att-gl major" style="left:33.33%"></span><span class="att-gl major" style="left:41.67%"></span>
+        <span class="att-gl major" style="left:50%"></span><span class="att-gl major" style="left:58.33%"></span>
+        <span class="att-gl major" style="left:66.67%"></span><span class="att-gl mid" style="left:75%"></span>
+        <span class="att-gl major" style="left:83.33%"></span><span class="att-gl major" style="left:91.67%"></span>
+        <!-- 근무 막대 09:00~18:00 -->
+        <div class="att-bar" style="left:12.5%;width:37.5%;background:#3182F6;"></div>
+        <!-- NEW 휴게 막대 13:00~14:00 (주황 빗금) -->
+        <div class="att-bar rest" style="left:29.17%;width:4.17%;" title="휴게 13:00~14:00"></div>
+      </div>
+    </div>
+    <div class="att-row-meta">
+      <span class="time">09:00~18:00</span>
+      <span class="rest">☕ 13:00~14:00</span>
+      <span class="hours">8.0h</span>
+    </div>
+
+    <!-- 누락 케이스: 근무 10~21 (11시간) 휴게 없음 -->
+    <div class="att-grow">
+      <div class="att-row-label"><span class="dot" style="background:#16A34A"></span>박알바</div>
+      <div class="att-track">
+        <span class="att-gl major" style="left:0%"></span><span class="att-gl major" style="left:8.33%"></span>
+        <span class="att-gl major" style="left:16.67%"></span><span class="att-gl major" style="left:25%"></span>
+        <span class="att-gl major" style="left:33.33%"></span><span class="att-gl major" style="left:41.67%"></span>
+        <span class="att-gl major" style="left:50%"></span><span class="att-gl major" style="left:58.33%"></span>
+        <span class="att-gl major" style="left:66.67%"></span><span class="att-gl mid" style="left:75%"></span>
+        <span class="att-gl major" style="left:83.33%"></span><span class="att-gl major" style="left:91.67%"></span>
+        <div class="att-bar" style="left:16.67%;width:45.83%;background:#16A34A;"></div>
+      </div>
+    </div>
+    <div class="att-row-meta">
+      <span class="time">10:00~21:00</span>
+      <span class="rest miss">☕ 휴게 없음</span>
+      <span class="hours">11.0h</span>
+    </div>
+
+    <!-- AI 안내 (휴게 누락) -->
+    <div class="aib-row warn">
+      <div class="aib-ic">☕</div>
+      <div class="aib-tx">
+        <b>박알바님이 11시간 일했는데 휴게 기록이 없어요.</b><br>
+        8시간 넘게 일하면 1시간 휴게 부여가 의무예요. 실제로 휴게를 줬다면 아래에서 기록해 주세요.
+        <div class="aib-disc">※ 참고용 안내예요. 자세한 건 노무사에게 확인하세요.</div>
+        <span class="fix-btn">＋ 휴게시간 기록 (직원 확인 요청)</span>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i class="lg-box" style="background:#3182F6"></i>근무</span>
+      <span><i class="lg-box" style="background:repeating-linear-gradient(45deg,#F5A11E,#F5A11E 3px,#FFE2B0 3px,#FFE2B0 6px)"></i>휴게</span>
+    </div>
+  </div>
+
+  <!-- ===== 3. 직원 출퇴근 화면 ===== -->
+  <div class="sec-title">③ 직원이 휴게도 직접 찍기 <span class="new-tag">NEW</span></div>
+  <div class="card">
+    <div class="punch-wrap">
+      <button class="punch in">출근<small>09:00 찍음</small></button>
+      <button class="punch out">퇴근<small>대기</small></button>
+      <button class="punch rest-start">☕ 휴게 시작<small>지금 누르기</small></button>
+      <button class="punch rest-end">☕ 휴게 종료<small>대기</small></button>
+    </div>
+    <div style="font-size:11px;color:var(--gray-500);margin-top:10px;line-height:1.5;text-align:center;">
+      직원이 쉴 때 <b>휴게 시작</b>, 다시 일할 때 <b>휴게 종료</b>를 누르면<br>그대로 기록에 남아요 (분쟁 시 증거).
+    </div>
+  </div>
+
+  <!-- ===== 4. 사장 보정 → 직원 승인 ===== -->
+  <div class="sec-title">④ 사장이 보정하면 직원이 승인 <span class="new-tag">NEW</span></div>
+  <div class="approve-card">
+    <div class="ttl">🔔 사장님이 휴게시간을 추가했어요</div>
+    <div class="body">
+      <b>6/17 (화)</b> 휴게시간 <b>13:00 ~ 14:00 (1시간)</b><br>
+      맞으면 승인해 주세요. (직원 본인이 확인해야 기록 효력이 생겨요)
+    </div>
+    <div class="btns">
+      <button class="ok">맞아요, 승인</button>
+      <button class="no">아니에요</button>
+    </div>
+  </div>
+
+  <div style="font-size:11px;color:var(--gray-400);text-align:center;margin-top:22px;line-height:1.6;">
+    이건 디자인 미리보기예요. 사장님이 OK하면 실제 앱에 똑같이 만들어 넣습니다.<br>근무계획 승인처럼 직원 승인 절차가 들어가 조작 걱정이 없어요.
+  </div>
+
+</div>
+</body>
+</html>

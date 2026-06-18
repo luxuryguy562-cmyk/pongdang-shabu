@@ -564,7 +564,7 @@ async function loadDashboard(force){
         sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
         sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end),
         // ── 당월 근무계획 (주휴수당 결근 차감 판정용 — 2026-06-17 직원 급여화면과 두 화면 통일) ──
-        sb.from('work_schedules').select('employee_id,work_date,is_off').eq('store_id',sid).gte('work_date',start).lte('work_date',end)
+        sb.from('work_schedules').select('employee_id,work_date,is_off,status').eq('store_id',sid).gte('work_date',start).lte('work_date',end)
       ]);
       // ── 자동 재시도 (2026-06-12 사장님 호소: 일시 500/제한시간 초과) ──
       //   서버가 잠깐 바빠 일부 조회 실패하면 짧게 쉬고 다시 시도 (최대 3번). 사장님 눈엔 안 보이게.
@@ -1084,7 +1084,7 @@ async function loadDashboard(force){
           const _ws=new Date(wsKey+'T00:00:00');
           const weekDays=[]; for(let i=0;i<7;i++) weekDays.push(ymdLocal(new Date(_ws.getTime()+i*86400000)));
           const empSched=_schedByEmp[empId]||{}, empAtt=_attPresent[empId]||new Set();
-          const schedDays=weekDays.filter(wd=>{ const s=empSched[wd]; return s&&!s.is_off; });
+          const schedDays=weekDays.filter(wd=>{ const s=empSched[wd]; return s&&!s.is_off&&s.status==='확정'; }); // 확정 근무계획만 (미승인 신청 제외 — 직원 보호)
           if(schedDays.length>0 && schedDays.some(wd=>!empAtt.has(wd))) return; // 결근 → 주휴수당 스킵
         }
         const emp=(employees||[]).find(e=>e.id===empId);

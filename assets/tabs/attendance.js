@@ -627,7 +627,8 @@ function calcMonthlyHolidayPay(monthStr, attData, schedData, empFilter){
       if(weekMin<15*60) continue; // 주 15시간 미만 → 주휴수당 없음
       // 결근 차감 설정 ON이면 소정근로일 개근 여부 확인
       if(settings.weekly_holiday_pay_deduct_absent){
-        const schedDays=weekDays.filter(wd=>{ const s=empSched[wd]; return s&&!s.is_off; });
+        // 확정된 근무계획만 소정근로일로 인정 (미승인 신청 '희망'은 제외 — 직원 보호, 2026-06-17)
+        const schedDays=weekDays.filter(wd=>{ const s=empSched[wd]; return s&&!s.is_off&&s.status==='확정'; });
         if(schedDays.length>0 && schedDays.some(wd=>!empAtt[wd])) continue; // 결근 → 주휴수당 없음
       }
       // 주휴수당 = min(주근무h ÷ 5, 8h) × 시급
@@ -1341,7 +1342,7 @@ async function loadEmpPay(){
       .eq('store_id',currentStore.id).eq('employee_id',currentEmp.id)
       .gte('work_date', yearStart).order('work_date'),
     sb.from('work_schedules')
-      .select('work_date,is_off')
+      .select('work_date,is_off,status')
       .eq('store_id',currentStore.id).eq('employee_id',currentEmp.id)
       .gte('work_date', yearStart)
   ]);
