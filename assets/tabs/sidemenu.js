@@ -2522,6 +2522,11 @@ function renderIPInputs(){
     <input class="input-field ip-input" style="flex:1;margin-bottom:0;padding:10px;font-size:14px;" placeholder="예: 59.26.106.174" value="${ip}">
     ${ips.length>1?`<button class="btn btn-danger btn-sm" style="padding:8px 10px;font-size:12px;flex-shrink:0;" data-action="removeIPInput|${i}">삭제</button>`:''}
   </div>`).join('');
+  // GPS 매장 위치 상태·반경 표시 (같은 시트)
+  const gEl=document.getElementById('sv-store-geo');
+  if(gEl) gEl.innerText=(settings.store_lat!=null&&settings.store_lng!=null)?'등록됨 ✅':'미설정';
+  const grEl=document.getElementById('geoRadiusInput');
+  if(grEl) grEl.value=settings.geo_radius_m||150;
 }
 function addIPInput(){
   const list=document.getElementById('ipInputList');if(!list)return;
@@ -2542,10 +2547,14 @@ function collectIPs(){
 async function saveBasicSettings(){
   if(!guardStore())return;setLoad(true,'저장 중...');
   settings.target_ip=collectIPs()||null;
+  // GPS 허용 반경 (m)
+  const grEl=document.getElementById('geoRadiusInput');
+  if(grEl){ const rv=parseInt(grEl.value); settings.geo_radius_m=(rv&&rv>0)?rv:150; }
   const payload={
     store_id:currentStore.id,
     store_name:settings.store_name||null,
     target_ip:settings.target_ip||null,
+    geo_radius_m:settings.geo_radius_m||150,
     crawler_url:settings.crawler_url||null,
     crawler_secret:settings.crawler_secret||null,
     ups_store_code:settings.ups_store_code||null,
@@ -6246,15 +6255,77 @@ async function getPublicIP(){
     return data.ip||'';
   }catch(e){console.error('IP 조회 실패:',e);return '';}
 }
+// 위치 검증: WiFi 공인 IP 1차 → 실패 시 GPS 2차 (둘 중 하나만 통과해도 OK). 둘 다 미설정이면 통과.
 async function checkIPForAttendance(){
   const targetIP=settings.target_ip;
-  if(!targetIP) return {ok:true,ip:'',msg:'IP 검증 미설정'};
-  const ip=await getPublicIP();
-  if(!ip) return {ok:false,ip:'',msg:'IP를 확인할 수 없습니다. 인터넷 연결을 확인하세요.'};
-  // 쉼표 구분 다중 IP 지원
-  const allowedIPs=targetIP.split(',').map(s=>s.trim()).filter(Boolean);
-  if(allowedIPs.includes(ip)) return {ok:true,ip,msg:'매장 WiFi 확인됨'};
-  return {ok:false,ip,msg:`매장 WiFi가 아닙니다.\n현재 IP: ${ip}\n등록 IP: ${allowedIPs.join(', ')}`};
+  const hasGeo=settings.store_lat!=null&&settings.store_lng!=null;
+  // 1차: 매장 WiFi 공인 IP
+  if(targetIP){
+    const ip=await getPublicIP();
+    if(ip){
+      const allowedIPs=targetIP.split(',').map(s=>s.trim()).filter(Boolean);
+      if(allowedIPs.includes(ip)) return {ok:true,ip,msg:'매장 WiFi 확인됨'};
+    }
+    // IP 불일치/조회실패 → GPS 2차로 (GPS 없으면 여기서 실패)
+    if(!hasGeo){
+      if(!ip) return {ok:false,ip:'',msg:'IP를 확인할 수 없습니다. 인터넷 연결을 확인하세요.'};
+      const allowedIPs=targetIP.split(',').map(s=>s.trim()).filter(Boolean);
+      return {ok:false,ip,msg:`매장 WiFi가 아닙니다.\n현재 IP: ${ip}\n등록 IP: ${allowedIPs.join(', ')}`};
+    }
+  }
+  // 2차: GPS (설정된 경우 — WiFi 죽어도 여기서 통과 가능)
+  if(hasGeo){
+    const geo=await checkGeoForAttendance();
+    if(geo.ok) return {ok:true,ip:'',msg:geo.msg};
+    return {ok:false,ip:'',msg:(targetIP?'매장 WiFi·GPS 모두 확인 안 됨.\n':'')+geo.msg};
+  }
+  // 둘 다 미설정 → 통과 (기존 동작 유지)
+  return {ok:true,ip:'',msg:'위치 검증 미설정'};
+}
+
+// ─── GPS 위치 기반 출퇴근 검증 (WiFi 2차 보조, 2026-06-17) ───
+// 브라우저 위치 1회 조회 (권한 거부·미지원·시간초과 시 null)
+function getCurrentPositionOnce(){
+  return new Promise(resolve=>{
+    if(!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),
+      ()=>resolve(null),
+      {enableHighAccuracy:true,timeout:8000,maximumAge:60000}
+    );
+  });
+}
+// 두 좌표 사이 거리(m) — Haversine 공식
+function geoDistanceM(lat1,lng1,lat2,lng2){
+  const R=6371000,toR=d=>d*Math.PI/180;
+  const dLat=toR(lat2-lat1),dLng=toR(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+Math.cos(toR(lat1))*Math.cos(toR(lat2))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+async function checkGeoForAttendance(){
+  const sLat=settings.store_lat, sLng=settings.store_lng;
+  if(sLat==null||sLng==null) return {ok:false,msg:'매장 위치 미설정'};
+  const pos=await getCurrentPositionOnce();
+  if(!pos) return {ok:false,msg:'GPS 위치를 못 받았어요. 휴대폰 위치 권한을 허용하세요.'};
+  const dist=geoDistanceM(pos.lat,pos.lng,sLat,sLng);
+  const radius=settings.geo_radius_m||150;
+  if(dist<=radius) return {ok:true,msg:`GPS 위치 확인됨 (매장에서 약 ${Math.round(dist)}m)`};
+  return {ok:false,msg:`매장에서 너무 멀어요 (약 ${Math.round(dist)}m / 허용 ${radius}m)`};
+}
+// 사장님: 매장 안에서 현재 위치를 매장 좌표로 등록
+async function registerStoreLocation(){
+  if(!guardStore())return;
+  setLoad(true,'현재 위치 확인 중...');
+  const pos=await getCurrentPositionOnce();
+  setLoad(false);
+  if(!pos){ toast('위치를 못 받았어요. 휴대폰 위치(GPS) 권한을 허용하고 매장 안에서 다시 누르세요.','error'); return; }
+  setLoad(true,'매장 위치 저장 중...');
+  const{error}=await sb.from('store_settings').upsert({store_id:currentStore.id,store_lat:pos.lat,store_lng:pos.lng},{onConflict:'store_id'});
+  setLoad(false);
+  if(error)return errToast('위치 저장',error);
+  settings.store_lat=pos.lat; settings.store_lng=pos.lng;
+  const el=document.getElementById('sv-store-geo'); if(el) el.innerText='등록됨 ✅';
+  toast(`📍 매장 위치 등록 완료 (정확도 약 ${Math.round(pos.acc||0)}m)`,'success');
 }
 
 // ─── 새 기능: 기기 지문(Device Fingerprint) ───
