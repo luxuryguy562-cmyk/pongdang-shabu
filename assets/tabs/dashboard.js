@@ -1789,10 +1789,10 @@ function renderAiBrief(a){
   const today = new Date();
   const rowsHtml = top.length
     ? top.map(it=>`
-      <div class="aib-row ${sevCls(it.sev)}" data-key="${it.key||''}">
+      <div class="aib-row ${sevCls(it.sev)}" data-key="${it.key||''}" style="position:relative;padding-right:38px;">
         <div class="aib-ic">${it.ic}</div>
         <div class="aib-tx"><div class="aib-title">${it.title}</div><div class="aib-desc">${it.desc}</div></div>
-        ${it.key?`<button class="aib-x" data-action="dismissAibAlert|${it.key}" aria-label="지우기">✕</button>`:''}
+        ${it.key?`<button data-action="dismissAibAlert|${it.key}" aria-label="지우기" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border:none;background:rgba(0,0,0,.07);color:#8B95A1;border-radius:50%;font-size:12px;line-height:22px;text-align:center;padding:0;cursor:pointer;">✕</button>`:''}
       </div>`).join('')
     : `<div class="aib-row green">
         <div class="aib-ic">👍</div>
