@@ -540,7 +540,7 @@ async function checkOut(){
   if(record.app_out){toast('이미 퇴근 처리됐습니다.','warn');return;}
   const appIn=new Date(record.app_in);
   // 실제 휴게 기록 있으면 그만큼 차감(직원이 찍은 휴게 우선), 없으면 매장 자동휴게(settings.auto_rest_min)
-  const restOverride = (record.rest_start && record.rest_end) ? Math.max(0,Math.round((new Date(record.rest_end)-new Date(record.rest_start))/60000)) : null;
+  const restOverride = (record.rest_start && record.rest_end && record.rest_status==='확정') ? Math.max(0,Math.round((new Date(record.rest_end)-new Date(record.rest_start))/60000)) : null;
   const w=await calcWageData(empId, appIn, now, today, restOverride);
   setLoad(true,'퇴근 처리 중...');
   const{error}=await sb.from('attendance_logs').update({app_out:now.toISOString(),rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage,check_out_ip:ipCheck.ip||null}).eq('id',record.id).eq('store_id',currentStore.id);
@@ -865,7 +865,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
       const totalMin  = data.reduce((a,r)=>a+(r.total_work_min||0),0);
       // 휴게 합계 (직원이 찍은 실제 휴게, 거절 제외) — 2026-06-17
       const totalRestMin = data.reduce((a,r)=>{
-        if(r.rest_start && r.rest_end && r.rest_status!=='거절')
+        if(r.rest_start && r.rest_end && r.rest_status==='확정') // 확정된 휴게만(사장 보정 미승인 제외)
           return a+Math.max(0,Math.round((new Date(r.rest_end)-new Date(r.rest_start))/60000));
         return a;
       },0);
@@ -1126,8 +1126,8 @@ function renderAttDayDetail(date, logs, isSingleView){
         const width = Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
         bar = `<div class="att-bar" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${color};"></div>`;
       }
-      // 휴게 빗금 — 출근 기준 경과시간으로 위치(자정 넘김 안전), 거절 제외
-      if(r.rest_start && r.rest_end && r.rest_status!=='거절'){
+      // 휴게 빗금 — 출근 기준 경과시간으로 위치(자정 넘김 안전), 확정된 휴게만
+      if(r.rest_start && r.rest_end && r.rest_status==='확정'){
         const rsH = sH + (new Date(r.rest_start)-inT)/3600000;
         const reH = sH + (new Date(r.rest_end)-inT)/3600000;
         restMinThis = Math.max(0,Math.round((new Date(r.rest_end)-new Date(r.rest_start))/60000));
