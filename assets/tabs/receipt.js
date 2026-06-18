@@ -16,6 +16,7 @@ let rcpEntryReturn = null; // 영수증 저장 후 자동 복귀할 화면 ('cat
 let rcpPastItems = [];       // 현재 거래처 과거 품목명 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
 let rcpPastPriceMap = new Map(); // 단가 → Set<품목명> (단가 매칭 자동채움용, 2026-06-05)
 let rcpPastSheetTargetIdx = null; // 과거 품목 시트 열 때 대상 행 인덱스
+let _rcpKeepOnEnter = false; // true면 이번 nav('receipt')는 거래처/카테고리 세팅 진입 = 초기화 스킵 (2026-06-18)
 
 function setRcpMode(mode, autoPicker=true){
   if(!guardStore()) return;
@@ -107,13 +108,14 @@ function _clearRcpData(){
   const rd = document.getElementById('rcpReceiptDate'); if(rd) rd.value = '';
 }
 
-// 영수증 탭 재진입 시 어정쩡 상태 청소 — 모드만 고르고 아무 작업 안 한 채 나갔다 오면 종류 선택부터 (거래처 dev_lessons #16의 영수증판)
+// 영수증 탭 재진입 시 초기화 — 분석·결과 봤다가 나갔다 다시 오면 깨끗한 시작(종류 선택부터).
+//   단, 거래처/카테고리 카드에서 진입(nav 직전 거래처·모드 세팅)은 _rcpKeepOnEnter=true라 보존.
+//   그 외(하단 네비·"+영수증 추가" 등 새 진입)는 이전 분석 잔재까지 무조건 청소.
+//   (옛 idle 조건은 이전 분석 잔재 rcpVendorId/b64Pages를 "작업 중"으로 오인해 잔류 — 사장님 2026-06-18 "초기화 넣었다며 왜 살아있냐")
 function _rcpOnTabEnter(){
-  const idle = (rcpMode==='vendor'||rcpMode==='online'||rcpMode==='direct')
-    && !rcpVendorId
-    && (!b64Pages || !b64Pages.length)
-    && rcpInputMethod !== 'manual';
-  if(idle) resetRcpMode();
+  if(_rcpKeepOnEnter){ _rcpKeepOnEnter = false; return; } // 거래처/카테고리 세팅 진입 = 보존
+  _clearRcpData();   // 사진·결과 행·미리보기 비우기
+  resetRcpMode();    // 모드·거래처·날짜 비우고 종류 선택 화면으로
 }
 
 function resetRcpMode(){
@@ -626,6 +628,7 @@ async function openRcpReceiptFromVendor(vendorId, method){
   }
   rcpInputMethod = (method === 'manual') ? 'manual' : 'photo';
   rcpEntryReturn = 'vendors:' + vid; // 저장 후 거래처 상세로 복귀
+  _rcpKeepOnEnter = true; // 거래처 세팅 후 진입 — 재진입 초기화 스킵
   nav('receipt');
   setTimeout(()=>{
     _clearRcpData(); // 새 진입 = 이전 분석(사진·결과·행) 비우기 (사장님 호소 2026-06-02)
@@ -653,6 +656,7 @@ async function openRcpReceiptFromVendor(vendorId, method){
 function openManualReceiptShortcut(){
   if(!guardStore()) return;
   rcpEntryReturn = null; // 모드 선택 화면에서 시작이므로 자동 복귀 X
+  _rcpKeepOnEnter = true; // 수동 모드 세팅 진입 — 재진입 초기화 스킵
   nav('receipt');
   setTimeout(()=>setRcpMode('manual'), 60);
 }
@@ -663,6 +667,7 @@ function openCatReceiptInput(method){
   // 기타 카드에서 진입한 경우 = 사장님이 카테고리 picker에서 "기타" 선택해야 [기타] 카드에 합산됨.
   // 진입 즉시 모드를 'direct'로 박고, 기타 카드면 안내.
   rcpEntryReturn = 'catReceipt:' + catReceiptMode; // 저장 후 복귀
+  _rcpKeepOnEnter = true; // 카테고리 세팅 후 진입 — 재진입 초기화 스킵
   nav('receipt');
   setTimeout(()=>{
     // 기타 카드 진입 = 'etc' 모드(거래처 없음), 직구·식자재 = 'direct'. 직접입력이면 거래처 선택창 자동오픈 X (사장님 호소 2026-06-16)
