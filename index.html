@@ -577,7 +577,7 @@
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
-<div id="loading"><div class="spinner" id="loadSpinner"></div><div class="scan-card" id="loadScan" style="display:none;"><i class="sl-row l"></i><i class="sl-row m"></i><i class="sl-row s"></i><i class="sl-row l"></i><i class="sl-row m"></i><i class="sl-row l"></i><span class="scan-glow"></span><span class="scan-line"></span></div><p id="loadText" style="font-size:13px;font-weight:700;color:var(--blue);">처리 중...</p></div>
+<div id="loading"><div class="spinner" id="loadSpinner"></div><div class="scan-card" id="loadScan" style="display:none;"><img id="loadScanImg" alt=""><span class="scan-grid"></span><span class="scan-glow"></span><span class="scan-line"></span></div><p id="loadText" style="font-size:13px;font-weight:700;color:var(--blue);">처리 중...</p></div>
 
 <!-- ══ [1] 영수증 ══ -->
 <div id="receiptCont" class="container active">
@@ -1065,8 +1065,6 @@
         <div class="att-status-action" id="attStatusAction">
           <button class="btn btn-primary att-big-btn" id="btnCheckIn" data-action="checkIn">🟢 출근 찍기</button>
           <button class="btn btn-danger att-big-btn" id="btnCheckOut" data-action="checkOut" style="display:none;">🔴 퇴근 찍기</button>
-          <button class="btn att-big-btn" id="btnRestStart" data-action="startRest" style="display:none;background:#F5A11E;color:#fff;">☕ 휴게 시작</button>
-          <button class="btn att-big-btn" id="btnRestEnd" data-action="endRest" style="display:none;background:#C77F12;color:#fff;">☕ 휴게 종료</button>
         </div>
         <div class="att-status-meta" id="attStatusMeta"></div>
       </div>
@@ -1090,7 +1088,6 @@
       </div>
       <!-- 새 기능: 직원 근무 신청 승인 배너 (사장만, 2026-06-15) -->
       <div id="schedApproveBanner" class="sched-approve-banner manager-only" style="display:none;"></div>
-      <button id="changeReqBtn" data-action="openChangeReqSheet" style="width:100%;margin-bottom:10px;padding:10px;font-size:12px;font-weight:700;background:var(--white);box-shadow:var(--card-shadow);color:var(--gray-700);border:none;border-radius:11px;cursor:pointer;">🔄 근무 변경·취소 신청 / 이력 보기</button>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <div style="font-size:11px;font-weight:700;color:var(--gray-600);flex-shrink:0;">👥 직원별 보기</div>
         <select id="attEmpFilter" class="input-field" style="flex:1;padding:10px 14px;font-size:13px;" data-change="loadAttAll">
@@ -3009,13 +3006,6 @@
 </div>
 
 <!-- 근무 계획 등록/편집 시트 (단일 일정 — 카드 클릭 편집용) -->
-<div class="sheet" id="changeReqSheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-title">🔄 근무 변경·취소 신청 / 이력</div>
-  <div style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">대기 중인 신청은 승인/거절할 수 있어요. 처리된 건 기록으로 남습니다.</div>
-  <div id="changeReqList" style="max-height:60vh;overflow-y:auto;"></div>
-</div>
-
 <div class="sheet" id="addSchedSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addSchedTitle">희망근무 등록</div>
