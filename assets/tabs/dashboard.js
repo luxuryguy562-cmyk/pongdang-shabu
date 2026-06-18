@@ -557,7 +557,7 @@ async function loadDashboard(force){
         // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
         sb.from('vendor_orders').select('id,order_group_id,amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
         sb.from('receipts').select('id,receipt_group_id,total_price,category_id,receipt_date,vendor_id,vendor,vendors(name)').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
-        sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+        sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id,rest_start,rest_end,rest_status').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
         // ── 전월 일별 식자재/영수증/인건비 ──
         sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
         sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',pStart).lte('receipt_date',pEnd),
@@ -1627,6 +1627,16 @@ async function loadDashboard(force){
       const _belowMin = (employees||[]).filter(e=>e.is_active && e.wage_type!=='monthly' && e.base_wage && e.base_wage < MIN_WAGE_2026).map(e=>e.name);
       let _pendingChgCnt = 0;
       try{ const{data:_cr}=await sb.from('schedule_change_requests').select('id').eq('store_id',sid).eq('status','대기'); _pendingChgCnt=(_cr||[]).length; }catch(_){}
+      // 휴게 미부여(8h+인데 확정 휴게 없음) / 상시근로자 추정(연인원÷가동일수) — 당월 근태 기준
+      const _attRows=(attRes2&&attRes2.data)||[];
+      const _noRestShifts=_attRows.filter(r=>(r.total_work_min||0)>=480 && !(r.rest_start && r.rest_end && r.rest_status==='확정')).length;
+      const _byDate={};
+      _attRows.forEach(r=>{ if(r.work_date&&r.employee_id){ (_byDate[r.work_date]=_byDate[r.work_date]||new Set()).add(r.employee_id); } });
+      const _wDays=Object.keys(_byDate).length;
+      const _avgHead=_wDays>0 ? Object.values(_byDate).reduce((a,s)=>a+s.size,0)/_wDays : 0;
+      // 퇴직금 1년 임박 (입사 320~365일)
+      const _nowR=new Date();
+      const _retireSoon=(employees||[]).filter(e=>{ if(!e.is_active||!e.hire_date) return false; const d=(_nowR-new Date(e.hire_date))/86400000; return d>=320&&d<365; }).map(e=>e.name);
       renderAiBrief({
         totalRevenue,
         currAtt:   expByGroup['인건비'] || 0,
@@ -1639,6 +1649,7 @@ async function loadDashboard(force){
         fcLate: _fcLate, fcDue: _fcDue,
         fcLateManual: _fcLateManual, fcDueManual: _fcDueManual,
         belowMinWage: _belowMin, pendingChgCnt: _pendingChgCnt,
+        noRestShifts: _noRestShifts, avgHeadcount: _avgHead, is5plus: _avgHead>=5, retireSoon: _retireSoon,
       });
     } catch(e){ console.warn('[aiBrief]', e.message); }
 
@@ -1728,6 +1739,18 @@ function renderAiBrief(a){
   if(a.pendingChgCnt > 0){
     items.push({ sev:1, ic:'🔄', title:'근무 변경·취소 신청이 있어요',
       desc:`승인 대기 중인 근무 변경/취소 신청이 <b>${a.pendingChgCnt}건</b> 있어요. 근태 기록 화면의 <b>“🔄 근무 변경·취소 신청/이력”</b>에서 확인하세요.` });
+  }
+  if(a.noRestShifts > 0){
+    items.push({ sev:1, ic:'☕', title:'휴게 기록 없는 긴 근무가 있어요',
+      desc:`8시간 넘게 일했는데 휴게 기록이 없는 근무가 <b>${a.noRestShifts}건</b> 있어요. 휴게를 실제로 줬다면 기록해 주세요. <span style="color:var(--gray-400);">※ 휴게 부여는 의무예요. 참고용.</span>` });
+  }
+  if(a.is5plus){
+    items.push({ sev:1, ic:'👥', title:'상시 5인 이상으로 보여요',
+      desc:`최근 출퇴근 기준 상시근로자가 <b>약 ${(a.avgHeadcount||0).toFixed(1)}명</b>으로 추정돼요. 5인 이상이면 연장·야간·휴일 가산수당이 의무일 수 있어요. <span style="color:var(--gray-400);">※ 추정값이에요. 노무사 확인 권장.</span>` });
+  }
+  if(a.retireSoon && a.retireSoon.length){
+    items.push({ sev:1, ic:'🎁', title:'곧 근속 1년 직원이 있어요',
+      desc:`<b>${a.retireSoon.join(', ')}</b>님이 곧 입사 1년이에요. 1년 이상·주 15시간 이상이면 퇴직금 대상이에요. <span style="color:var(--gray-400);">※ 참고용, 노무사 확인 권장.</span>` });
   }
 
   // 심각도순 정렬(빨강→노랑→초록) 후 최대 3개
