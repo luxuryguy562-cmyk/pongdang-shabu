@@ -1631,7 +1631,10 @@ async function loadDashboard(force){
       try{ const{data:_cr}=await sb.from('schedule_change_requests').select('id').eq('store_id',sid).eq('status','대기'); _pendingChgCnt=(_cr||[]).length; }catch(_){}
       // 휴게 미부여(8h+인데 확정 휴게 없음) / 상시근로자 추정(연인원÷가동일수) — 당월 근태, 사장 제외
       const _attRows=((attRes2&&attRes2.data)||[]).filter(r=>!_ownerIds.has(r.employee_id));
-      const _noRestShifts=_attRows.filter(r=>(r.total_work_min||0)>=480 && !(r.rest_start && r.rest_end && r.rest_status==='확정')).length;
+      // 휴게 미부여 경보: 눈엣가시 방지 — 휴게 기록을 '쓰는 매장'에만 + 최근 7일치만 (안 쓰면 0=조용)
+      const _usesRest=_attRows.some(r=>r.rest_start);
+      const _7agoStr=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+      const _noRestShifts=_usesRest ? _attRows.filter(r=>(r.total_work_min||0)>=480 && r.work_date>=_7agoStr && !(r.rest_start && r.rest_end && r.rest_status==='확정')).length : 0;
       const _byDate={};
       _attRows.forEach(r=>{ if(r.work_date&&r.employee_id){ (_byDate[r.work_date]=_byDate[r.work_date]||new Set()).add(r.employee_id); } });
       const _wDays=Object.keys(_byDate).length;
