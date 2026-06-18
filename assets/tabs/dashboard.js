@@ -557,7 +557,7 @@ async function loadDashboard(force){
         // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
         sb.from('vendor_orders').select('id,order_group_id,amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
         sb.from('receipts').select('id,receipt_group_id,total_price,category_id,receipt_date,vendor_id,vendor,vendors(name)').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
-        sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+        sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id,rest_start,rest_end,rest_status').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
         // ── 전월 일별 식자재/영수증/인건비 ──
         sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
         sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',pStart).lte('receipt_date',pEnd),
@@ -1622,6 +1622,25 @@ async function loadDashboard(force){
           else if(_dToday >= _due-1) (_manual?_fcDueManual:_fcDue).push(r.name);    // 전날·당일 = 임박
         });
       }
+      // ── 노무 자가점검 (AI 매니저에 얹음, 참고용 — 공인노무사법: 자문 아닌 정보 제공) ──
+      const MIN_WAGE_2026 = 10320; // 2026 최저임금(시급). ⚠️ 매년 갱신 필요(법 개정 추적)
+      // 사장(owner)은 근로자 아님 → 노무 점검(최저임금·휴게·5인·퇴직금) 전부 제외
+      const _ownerIds = new Set((employees||[]).filter(e=>e.auth_level==='owner').map(e=>e.id));
+      const _belowMin = (employees||[]).filter(e=>e.is_active && e.auth_level!=='owner' && e.wage_type!=='monthly' && e.base_wage && e.base_wage < MIN_WAGE_2026).map(e=>e.name);
+      let _pendingChgCnt = 0;
+      try{ const{data:_cr}=await sb.from('schedule_change_requests').select('id').eq('store_id',sid).eq('status','대기'); _pendingChgCnt=(_cr||[]).length; }catch(_){}
+      // 휴게 미부여(8h+인데 확정 휴게 없음) / 상시근로자 추정(연인원÷가동일수) — 당월 근태, 사장 제외
+      const _attRows=((attRes2&&attRes2.data)||[]).filter(r=>!_ownerIds.has(r.employee_id));
+      // 휴게 미부여: 최근 7일 긴 근무 중 확정 휴게 없는 건 (노이즈는 알림 '지우기'로 관리)
+      const _7agoStr=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+      const _noRestShifts=_attRows.filter(r=>(r.total_work_min||0)>=480 && r.work_date>=_7agoStr && !(r.rest_start && r.rest_end && r.rest_status==='확정')).length;
+      const _byDate={};
+      _attRows.forEach(r=>{ if(r.work_date&&r.employee_id){ (_byDate[r.work_date]=_byDate[r.work_date]||new Set()).add(r.employee_id); } });
+      const _wDays=Object.keys(_byDate).length;
+      const _avgHead=_wDays>0 ? Object.values(_byDate).reduce((a,s)=>a+s.size,0)/_wDays : 0;
+      // 퇴직금 1년 임박 (입사 320~365일), 사장 제외
+      const _nowR=new Date();
+      const _retireSoon=(employees||[]).filter(e=>{ if(!e.is_active||e.auth_level==='owner'||!e.hire_date) return false; const d=(_nowR-new Date(e.hire_date))/86400000; return d>=320&&d<365; }).map(e=>e.name);
       renderAiBrief({
         totalRevenue,
         currAtt:   expByGroup['인건비'] || 0,
@@ -1633,6 +1652,8 @@ async function loadDashboard(force){
         momRev: _briefMomRev,
         fcLate: _fcLate, fcDue: _fcDue,
         fcLateManual: _fcLateManual, fcDueManual: _fcDueManual,
+        belowMinWage: _belowMin, pendingChgCnt: _pendingChgCnt,
+        noRestShifts: _noRestShifts, avgHeadcount: _avgHead, is5plus: _avgHead>=5, retireSoon: _retireSoon,
       });
     } catch(e){ console.warn('[aiBrief]', e.message); }
 
@@ -1673,6 +1694,7 @@ function renderAiBrief(a){
   const el = document.getElementById('dashAiBrief');
   const btn = document.getElementById('dashAiBriefBtn');
   if(!el || !btn) return;
+  window._lastAiBriefArg = a; // '지우기' 후 가벼운 재렌더용
   const rev = a.totalRevenue||0;
   // 매출 없으면(데이터 없음) AI 매니저 숨김
   if(rev<=0){ el.style.display='none'; el.innerHTML=''; btn.style.display='none'; return; }
@@ -1687,39 +1709,64 @@ function renderAiBrief(a){
   const attR = Math.round((a.currAtt||0)/rev*100);
   const attTh = thOf('인건비');
   if(attTh>0 && attR > attTh){
-    items.push({ sev: attR>=attTh+5?0:1, ic:'🚨', title:'인건비가 기준보다 높아요',
+    items.push({ key:'att', sev: attR>=attTh+5?0:1, ic:'🚨', title:'인건비가 기준보다 높아요',
       desc:`이번 달 <b>지금까지</b> 인건비가 매출의 <b>${attR}%</b>예요. 기준(${attTh}%)보다 높아요.${_thNote}` });
   }
   // 🔴/🟡 식자재 비율
   const venR = Math.round((a.currVendor||0)/rev*100);
   const venTh = thOf('식자재');
   if(venTh>0 && venR > venTh){
-    items.push({ sev: venR>=venTh+5?0:1, ic:'📈', title:'식자재 비중이 높아요',
+    items.push({ key:'vendor', sev: venR>=venTh+5?0:1, ic:'📈', title:'식자재 비중이 높아요',
       desc:`이번 달 <b>지금까지</b> 식자재가 매출의 <b>${venR}%</b>예요. 기준(${venTh}%)보다 높아요.${_thNote}` });
   }
   // 🔴/🟡 프라임코스트 — 식자재+인건비 합 (줄일 수 있는 두 비용. 한국 외식업 평균 70%, 건강 기준 65% — 2026-06-15)
   const primeR = Math.round(((a.currAtt||0)+(a.currVendor||0))/rev*100);
   if(primeR > 65){
-    items.push({ sev: primeR>70?0:1, ic:'🔥', title:'식자재+인건비 합이 높아요',
+    items.push({ key:'prime', sev: primeR>70?0:1, ic:'🔥', title:'식자재+인건비 합이 높아요',
       desc:`식자재와 인건비를 합치면 매출의 <b>${primeR}%</b>예요. 건강 기준(65%)보다 높아요. (외식업 평균 70%)` });
   }
   // ⚠️ 적자 위험만 '조언'으로 (흑자/적자 숫자는 월 요약 담당. 2026-06-15)
   if(a.isCurrent && (a.estNetProfit||0) < 0){
-    items.push({ sev:0, ic:'⚠️', title:'이대로면 이번 달 적자 예상',
+    items.push({ key:'deficit', sev:0, ic:'⚠️', title:'이대로면 이번 달 적자 예상',
       desc:`이대로면 월말 적자가 예상돼요. 아래 <b>이번 달 요약</b>에서 지출을 점검해 보세요.` });
   }
   // 🎉 매출 상승 칭찬 (좋은 소식 — 경고 아님, 배지엔 안 셈)
   if(a.momRev && a.momRev.up && a.momRev.text!=='비슷'){
-    items.push({ sev:2, ic:'🎉', title:'매출이 지난달보다 올랐어요',
+    items.push({ key:'momup', sev:2, ic:'🎉', title:'매출이 지난달보다 올랐어요',
       desc:`매출이 지난달 같은 기간보다 <span style="color:var(--toss-blue-strong);font-weight:800;">${a.momRev.text}</span> 늘었어요.` });
   }
 
+  // ── 노무 자가점검 (참고용 — 공인노무사법: 자문 아닌 정보 제공 + 노무사 확인 권장) ──
+  if(a.belowMinWage && a.belowMinWage.length){
+    items.push({ key:'minwage', sev:0, ic:'⚖️', title:'최저임금보다 낮은 시급이 있어요',
+      desc:`<b>${a.belowMinWage.join(', ')}</b>님 시급이 2026년 최저임금(10,320원)보다 낮아요. 직원관리에서 확인해 주세요. <span style="color:var(--gray-400);">※ 참고용이에요. 자세한 건 노무사에게 확인하세요.</span>` });
+  }
+  if(a.pendingChgCnt > 0){
+    items.push({ key:'changereq', sev:1, ic:'🔄', title:'근무 변경·취소 신청이 있어요',
+      desc:`승인 대기 중인 근무 변경/취소 신청이 <b>${a.pendingChgCnt}건</b> 있어요. 근태 기록 화면의 <b>“🔄 근무 변경·취소 신청/이력”</b>에서 확인하세요.` });
+  }
+  if(a.noRestShifts > 0){
+    items.push({ key:'rest', sev:1, ic:'☕', title:'휴게 기록 없는 긴 근무가 있어요',
+      desc:`8시간 넘게 일했는데 휴게 기록이 없는 근무가 <b>${a.noRestShifts}건</b> 있어요. 휴게를 실제로 줬다면 기록해 주세요. <span style="color:var(--gray-400);">※ 휴게 부여는 의무예요. 참고용.</span>` });
+  }
+  if(a.is5plus){
+    items.push({ key:'headcount', sev:1, ic:'👥', title:'상시 5인 이상으로 보여요',
+      desc:`최근 출퇴근 기준 상시근로자가 <b>약 ${(a.avgHeadcount||0).toFixed(1)}명</b>으로 추정돼요. 5인 이상이면 연장·야간·휴일 가산수당이 의무일 수 있어요. <span style="color:var(--gray-400);">※ 추정값이에요. 노무사 확인 권장.</span>` });
+  }
+  if(a.retireSoon && a.retireSoon.length){
+    items.push({ key:'retire', sev:1, ic:'🎁', title:'곧 근속 1년 직원이 있어요',
+      desc:`<b>${a.retireSoon.join(', ')}</b>님이 곧 입사 1년이에요. 1년 이상·주 15시간 이상이면 퇴직금 대상이에요. <span style="color:var(--gray-400);">※ 참고용, 노무사 확인 권장.</span>` });
+  }
+
+  // '지우기'(7일 스누즈)된 알림 제외 — 아이폰 알림 지우듯 (2026-06-18)
+  const _dm=_aibDismissMap(), _DAY=86400000;
+  const visItems=items.filter(it=> !(it.key && _dm[it.key] && (Date.now()-_dm[it.key] < 7*_DAY)));
   // 심각도순 정렬(빨강→노랑→초록) 후 최대 3개
-  items.sort((x,y)=>x.sev-y.sev);
-  const top = items.slice(0,3);
+  visItems.sort((x,y)=>x.sev-y.sev);
+  const top = visItems.slice(0,3);
   const sevCls = s => s===0?'red':(s===1?'warn':'green');
   // 배지 = '주의 필요'(경고) 건수만 — 칭찬(sev2)은 안 셈 (2026-06-15 사장님 안: 제목 옆 숫자 배지)
-  const warnItems = items.filter(it=>it.sev<=1);
+  const warnItems = visItems.filter(it=>it.sev<=1);
   const warnCnt = warnItems.length;
   const worst = warnCnt>0 ? sevCls(Math.min(...warnItems.map(it=>it.sev))) : 'green';
 
@@ -1742,9 +1789,10 @@ function renderAiBrief(a){
   const today = new Date();
   const rowsHtml = top.length
     ? top.map(it=>`
-      <div class="aib-row ${sevCls(it.sev)}">
+      <div class="aib-row ${sevCls(it.sev)}" data-key="${it.key||''}">
         <div class="aib-ic">${it.ic}</div>
         <div class="aib-tx"><div class="aib-title">${it.title}</div><div class="aib-desc">${it.desc}</div></div>
+        ${it.key?`<button class="aib-x" data-action="dismissAibAlert|${it.key}" aria-label="지우기">✕</button>`:''}
       </div>`).join('')
     : `<div class="aib-row green">
         <div class="aib-ic">👍</div>
@@ -1754,6 +1802,23 @@ function renderAiBrief(a){
     <div class="aib-greet">사장님, <b>${today.getMonth()+1}월 ${today.getDate()}일</b> 알려드릴 것이에요 👇</div>
     ${rowsHtml}`;
   el.style.display='none'; // 매 로드 시 접힘(단추만)
+}
+
+// ─── AI 매니저 알림 '지우기'(7일 스누즈) — 아이폰 알림 지우듯 (2026-06-18) ───
+function _aibDismissMap(){
+  try{ return JSON.parse(localStorage.getItem('aib_dismiss_'+((typeof currentStore!=='undefined'&&currentStore)?currentStore.id:''))||'{}'); }catch(_){ return {}; }
+}
+function dismissAibAlert(key){
+  if(!key) return;
+  try{
+    const k='aib_dismiss_'+((typeof currentStore!=='undefined'&&currentStore)?currentStore.id:'');
+    const m=_aibDismissMap(); m[key]=Date.now();
+    localStorage.setItem(k, JSON.stringify(m));
+  }catch(_){}
+  // 펼침 유지한 채 가볍게 다시 그림 (배지·목록 갱신)
+  const wasOpen = (document.getElementById('dashAiBrief')||{}).style?.display==='block';
+  if(window._lastAiBriefArg) renderAiBrief(window._lastAiBriefArg);
+  if(wasOpen){ const el=document.getElementById('dashAiBrief'); if(el) el.style.display='block'; const arr=document.querySelector('#dashAiBriefBtn .aib-btn-arr'); if(arr) arr.textContent='⌄'; }
 }
 
 // AI 매니저 단추 ↔ 카드 펼침/접힘

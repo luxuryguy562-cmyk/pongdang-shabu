@@ -200,6 +200,29 @@ franchises (프랜차이즈/브랜드)
 | caps_match_status | 매칭 상태 |
 | time_diff_min | 앱-CAPS 시간차 |
 | check_in_ip, check_out_ip | IP 기록 |
+| **rest_start, rest_end** (timestamptz, 2026-06-17 추가) | 휴게 시작/종료 시각. 직원이 "☕ 휴게 시작/종료" 버튼으로 기록. 퇴근 시 (rest_end−rest_start) 분을 급여에서 차감(실제 휴게 우선, 없으면 settings.auto_rest_min). |
+| **rest_status** (text default '확정', 2026-06-17) | '확정'(직원 본인 기록) / '대기승인'(사장 보정→직원 승인 대기) / '거절'. 미승인 휴게는 급여 자동 차감 X(예정). |
+| **rest_set_by** (uuid, 2026-06-17) | 휴게 입력자 (직원 본인 vs 사장 보정 구분). |
+
+### schedule_change_requests (2026-06-17 신설, migration `create_schedule_change_requests`)
+> 노무 2단계: 확정된 근무를 직원이 변경·취소 신청 시 **원본(work_schedules) 유지**하고 여기 보관. 사장 승인해야 원본 반영. 거절·미응답도 이력으로 보존(분쟁 대비, 사장/직원 조회용).
+
+| 컬럼 | 타입 | 용도 |
+|------|------|------|
+| id | uuid PK | gen_random_uuid() |
+| store_id | uuid NOT NULL → stores | 매장 |
+| employee_id | uuid → employees | 신청 대상 직원 |
+| schedule_id | uuid | 원본 확정 work_schedules.id (취소/변경 대상). 신규면 null |
+| work_date | date NOT NULL | 근무일 |
+| req_type | text default '변경' | '변경' / '취소' / '신규' |
+| new_start, new_end | time | 변경 희망 시각 |
+| new_is_off | bool default false | 휴무 전환 여부 |
+| reason | text | 사유 |
+| status | text default '대기' | '대기' / '승인' / '거절' |
+| requested_by, requested_at | uuid, timestamptz | 신청자·신청시각(서버) |
+| resolved_by, resolved_at | uuid, timestamptz | 승인/거절한 사장·시각 |
+
+RLS: enabled, policy `scr_all` USING(true) WITH CHECK(store_id IS NOT NULL) — 기존 패턴(앱 레이어 권한).
 
 ### work_schedules
 > 2026-05-21 갱신: 실제 DB 컬럼명으로 정정 (옛 start_time/end_time 표기는 오류). is_off 컬럼은 통합 PR #185 시 누락됐다가 PR #190에서 ALTER ADD.

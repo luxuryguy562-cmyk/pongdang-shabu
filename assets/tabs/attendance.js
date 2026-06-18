@@ -109,11 +109,11 @@ async function approveSched(id, ctx){
 }
 async function rejectSched(id, ctx){
   if(!isManager) return;
-  if(!confirm('이 신청을 거절(삭제)할까요?')) return;
+  if(!confirm('이 신청을 거절할까요? (거절 기록은 남아요)')) return;
   setLoad(true,'처리 중...');
-  const{error}=await sb.from('work_schedules').delete().eq('id',id).eq('store_id',currentStore.id);
+  const{error}=await sb.from('work_schedules').update({status:'거절'}).eq('id',id).eq('store_id',currentStore.id); // 삭제 X → 거절 기록 보존 (2026-06-17)
   setLoad(false); if(error) return errToast('거절',error);
-  toast('거절했어요','info');
+  toast('거절했어요 (기록 보존)','info');
   if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule'); // 실시간
   if(ctx==='sheet'){ await openSchedApproveSheet(); } else { closeAllSheets(); }
   loadAttList();
@@ -130,6 +130,76 @@ async function approveAllSched(){
   toast('모두 승인 완료!','success');
   if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule'); // 실시간
   closeAllSheets(); await loadAttList();
+}
+
+// ─── 새 기능: 근무 변경·취소 신청 사장 승인 + 이력 (노무 2단계-B, 2026-06-17) ───
+// 사장: 대기 신청 승인/거절 + 전체 이력 / 직원: 본인 이력 조회
+async function openChangeReqSheet(){
+  if(!guardStore()) return;
+  setLoad(true,'불러오는 중...');
+  let q=sb.from('schedule_change_requests').select('*,employees(name)').eq('store_id',currentStore.id).order('requested_at',{ascending:false}).limit(50);
+  if(!isManager && currentEmp) q=q.eq('employee_id',currentEmp.id);
+  const{data,error}=await q;
+  setLoad(false);
+  if(error) return errToast('이력 조회', error);
+  window._changeReqs=data||[];
+  renderChangeReqList();
+  openSheet('changeReqSheet');
+}
+function renderChangeReqList(){
+  const el=document.getElementById('changeReqList'); if(!el) return;
+  const rows=window._changeReqs||[];
+  if(!rows.length){ el.innerHTML='<div style="text-align:center;color:var(--gray-400);padding:28px 0;font-size:13px;">신청·변경 이력이 없어요</div>'; return; }
+  const stColor={'대기':'#F59E0B','승인':'#16A34A','거절':'#F04452'};
+  const typeLabel={'변경':'시간 변경','취소':'근무 취소','신규':'근무 추가'};
+  el.innerHTML=rows.map(r=>{
+    const nm=r.employees?.name||'?';
+    const when=r.new_start?`${(r.new_start||'').slice(0,5)}~${(r.new_end||'').slice(0,5)}`:(r.req_type==='취소'?'(취소 요청)':'');
+    const reqAt=r.requested_at?new Date(r.requested_at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    const pending=r.status==='대기';
+    const actions=(isManager&&pending)?`<div style="display:flex;gap:8px;margin-top:9px;">
+      <button class="btn btn-primary" style="flex:1;padding:9px;font-size:12px;" data-action="approveChangeReq|${r.id}">승인</button>
+      <button class="btn" style="flex:1;padding:9px;font-size:12px;background:#fff;color:var(--gray-600);border:1px solid var(--gray-200);" data-action="rejectChangeReq|${r.id}">거절</button>
+    </div>`:'';
+    return `<div style="background:var(--white);border-radius:12px;box-shadow:var(--card-shadow);padding:12px;margin-bottom:9px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b style="font-size:13px;">${nm} · ${typeLabel[r.req_type]||r.req_type}</b>
+        <span style="font-size:11px;font-weight:800;color:${stColor[r.status]||'#888'};">${r.status}</span>
+      </div>
+      <div style="font-size:12px;color:var(--gray-600);margin-top:3px;">${r.work_date}${when?' · '+when:''}</div>
+      ${r.reason?`<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">사유: ${r.reason}</div>`:''}
+      <div style="font-size:10px;color:var(--gray-400);margin-top:2px;">신청 ${reqAt}</div>
+      ${actions}
+    </div>`;
+  }).join('');
+}
+async function approveChangeReq(id){
+  if(!isManager) return;
+  const r=(window._changeReqs||[]).find(x=>String(x.id)===String(id)); if(!r) return;
+  setLoad(true,'승인 중...');
+  try{
+    if(r.req_type==='취소'){
+      if(r.schedule_id) await sb.from('work_schedules').delete().eq('id',r.schedule_id).eq('store_id',currentStore.id);
+    } else if(r.schedule_id){
+      await sb.from('work_schedules').update({wish_start:r.new_start,wish_end:r.new_end,is_off:!!r.new_is_off,status:'확정'}).eq('id',r.schedule_id).eq('store_id',currentStore.id);
+    } else {
+      await sb.from('work_schedules').upsert({store_id:currentStore.id,employee_id:r.employee_id,work_date:r.work_date,wish_start:r.new_start,wish_end:r.new_end,is_off:!!r.new_is_off,status:'확정'},{onConflict:'store_id,employee_id,work_date'});
+    }
+    await sb.from('schedule_change_requests').update({status:'승인',resolved_by:(currentEmp?.id||null),resolved_at:new Date().toISOString()}).eq('id',id).eq('store_id',currentStore.id);
+  }catch(e){ setLoad(false); return errToast('승인', e); }
+  setLoad(false);
+  toast('승인했어요! 근무계획에 반영됐어요','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule');
+  await openChangeReqSheet();
+  if(typeof loadAttList==='function') loadAttList();
+}
+async function rejectChangeReq(id){
+  if(!isManager) return;
+  setLoad(true,'거절 중...');
+  const{error}=await sb.from('schedule_change_requests').update({status:'거절',resolved_by:(currentEmp?.id||null),resolved_at:new Date().toISOString()}).eq('id',id).eq('store_id',currentStore.id);
+  setLoad(false); if(error) return errToast('거절', error);
+  toast('거절했어요 (기록 보존)','info');
+  await openChangeReqSheet();
 }
 
 // 직원 '급여' 탭 → 사장과 같은 📋 기록(월 캘린더+KPI 출근/시간/인건비/주휴+일별 간트) 화면으로 통일 (2026-06-15)
@@ -262,7 +332,11 @@ function updateCheckInOutUI(record){
   const nameEl= document.getElementById('attStatusName');
   const inBtn = document.getElementById('btnCheckIn');
   const outBtn= document.getElementById('btnCheckOut');
+  const restStartBtn = document.getElementById('btnRestStart');
+  const restEndBtn   = document.getElementById('btnRestEnd');
+  const hideRestBtns = ()=>{ if(restStartBtn) restStartBtn.style.display='none'; if(restEndBtn) restEndBtn.style.display='none'; };
   if(!card) return;
+  hideRestBtns();
   // 아바타 글자 + 이름 (selectedEmp가 있으면 우선, 없으면 currentEmp)
   const empObj = (selectedEmpId && (employees||[]).find(e=>e.id===selectedEmpId)) || currentEmp || null;
   const empName = empObj?.name || '사장님';
@@ -282,7 +356,8 @@ function updateCheckInOutUI(record){
     const inT = new Date(record.app_in);
     const elapsedMin = Math.max(0, Math.round((new Date()-inT)/60000));
     const eh = Math.floor(elapsedMin/60), em = elapsedMin%60;
-    if(badge) badge.innerText = `🔵 근무 중  ${eh>0?eh+'시간 ':''}${em}분 째`;
+    const onBreak = record.rest_start && !record.rest_end; // 휴게 중 여부
+    if(badge) badge.innerText = onBreak ? '☕ 휴게 중' : `🔵 근무 중  ${eh>0?eh+'시간 ':''}${em}분 째`;
     if(meta){
       meta.classList.add('grid');
       meta.innerHTML = `
@@ -290,7 +365,14 @@ function updateCheckInOutUI(record){
         <div class="cell"><div class="lbl">경과</div><div class="vl">${eh>0?eh+'h ':''}${em}m</div></div>`;
     }
     if(inBtn){ inBtn.style.display='none'; }
-    if(outBtn){ outBtn.style.display=''; outBtn.disabled=false; }
+    if(onBreak){
+      // 휴게 중: 휴게 종료만 (퇴근은 휴게 끝낸 뒤)
+      if(outBtn) outBtn.style.display='none';
+      if(restEndBtn){ restEndBtn.style.display=''; restEndBtn.disabled=false; }
+    } else {
+      if(outBtn){ outBtn.style.display=''; outBtn.disabled=false; }
+      if(restStartBtn){ restStartBtn.style.display=''; restStartBtn.disabled=false; }
+    }
   } else {
     card.classList.add('after');
     const inT  = new Date(record.app_in);
@@ -336,6 +418,41 @@ function openAttManualSheet(date, empId){
   if(rEl) rEl.value = (typeof settings!=='undefined' && settings.auto_rest_min) || 0;
   selectedEmpCtx='att'; // 직원 선택 시 vEmpName 갱신용
   openSheet('attManualSheet');
+}
+// ─── 새 기능: 휴게 시작/종료 (직원 본인 기록, 2026-06-17) ───
+async function startRest(){
+  if(!guardStore()) return;
+  const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
+  if(!empId) return toast('직원을 선택하거나 로그인하세요.','warn');
+  const today=ymdLocal(new Date());
+  const{data:rec}=await sb.from('attendance_logs').select('id,app_in,app_out,rest_start,rest_end').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
+  if(!rec?.app_in){ toast('먼저 출근을 찍으세요.','warn'); return; }
+  if(rec.app_out){ toast('이미 퇴근했어요.','warn'); return; }
+  if(rec.rest_start && !rec.rest_end){ toast('이미 휴게 중이에요.','warn'); return; }
+  setLoad(true,'휴게 시작...');
+  // 직원 본인 기록 = 바로 확정. 시작 시 종료 초기화(재휴게 대비)
+  const{error}=await sb.from('attendance_logs').update({rest_start:new Date().toISOString(),rest_end:null,rest_status:'확정',rest_set_by:empId}).eq('id',rec.id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('휴게 시작', error);
+  toast('☕ 휴게 시작했어요. 푹 쉬세요!','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+  await loadTodayRecord();
+}
+async function endRest(){
+  if(!guardStore()) return;
+  const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
+  if(!empId) return toast('직원을 선택하거나 로그인하세요.','warn');
+  const today=ymdLocal(new Date());
+  const{data:rec}=await sb.from('attendance_logs').select('id,rest_start,rest_end').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
+  if(!rec?.rest_start || rec.rest_end){ toast('휴게 중이 아니에요.','warn'); return; }
+  const restMin=Math.max(0,Math.round((new Date()-new Date(rec.rest_start))/60000));
+  setLoad(true,'휴게 종료...');
+  const{error}=await sb.from('attendance_logs').update({rest_end:new Date().toISOString()}).eq('id',rec.id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('휴게 종료', error);
+  toast(`☕ 휴게 ${restMin}분 끝! 다시 힘내요`,'success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+  await loadTodayRecord();
 }
 let _checkInBusy=false; // 출근 버튼 연타 방지 (경쟁조건 중복 저장 차단)
 async function checkIn(){
@@ -422,7 +539,9 @@ async function checkOut(){
   if(!record?.app_in){toast('출근 기록이 없습니다.','warn');return;}
   if(record.app_out){toast('이미 퇴근 처리됐습니다.','warn');return;}
   const appIn=new Date(record.app_in);
-  const w=await calcWageData(empId, appIn, now, today, null);
+  // 실제 휴게 기록 있으면 그만큼 차감(직원이 찍은 휴게 우선), 없으면 매장 자동휴게(settings.auto_rest_min)
+  const restOverride = (record.rest_start && record.rest_end && record.rest_status==='확정') ? Math.max(0,Math.round((new Date(record.rest_end)-new Date(record.rest_start))/60000)) : null;
+  const w=await calcWageData(empId, appIn, now, today, restOverride);
   setLoad(true,'퇴근 처리 중...');
   const{error}=await sb.from('attendance_logs').update({app_out:now.toISOString(),rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage,check_out_ip:ipCheck.ip||null}).eq('id',record.id).eq('store_id',currentStore.id);
   setLoad(false);
@@ -689,6 +808,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
   let query = sb.from('attendance_logs')
     .select('*, employees(name)')
     .eq('store_id', currentStore.id)
+    .neq('status', '거절') // 거절된 신청은 계획·간트에서 숨김 (기록만 보존)
     .gte('work_date', startDate)
     .lte('work_date', endDate)
     .order('work_date', {ascending:false})
@@ -743,6 +863,12 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
     if(data && data.length){
       const totalDays = Object.keys(attAllDayMap).length;
       const totalMin  = data.reduce((a,r)=>a+(r.total_work_min||0),0);
+      // 휴게 합계 (직원이 찍은 실제 휴게, 거절 제외) — 2026-06-17
+      const totalRestMin = data.reduce((a,r)=>{
+        if(r.rest_start && r.rest_end && r.rest_status==='확정') // 확정된 휴게만(사장 보정 미승인 제외)
+          return a+Math.max(0,Math.round((new Date(r.rest_end)-new Date(r.rest_start))/60000));
+        return a;
+      },0);
       // 2026-05-25 인건비 통일: 시급제 calculated_wage + 월급제 일할 누적 (사장님 호소: 월급 누락)
       //  · 직원 필터 모드(empF)면 그 직원 1명만 계산. 전체 모드면 모든 직원.
       const monthlyEmpIds = new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
@@ -779,6 +905,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
         <div class="att-kpi-cell aux">
           <div class="item"><span class="l">📅 출근일</span><span class="v">${totalDays}일</span></div>
           <div class="item"><span class="l">⏱ 근무시간</span><span class="v">${fmtHourDecimal(totalMin)}</span></div>
+          ${totalRestMin>0?`<div class="item"><span class="l">☕ 휴게시간</span><span class="v" style="color:#F5A11E;">${fmtHourDecimal(totalRestMin)}</span></div>`:''}
         </div>
         <div class="att-kpi-cell wage">
           <div class="att-kpi-lbl">인건비</div>
@@ -988,8 +1115,8 @@ function renderAttDayDetail(date, logs, isSingleView){
       }
     }
 
-    // 실제 막대 (텍스트 없음)
-    let bar = '';
+    // 실제 막대 (텍스트 없음) + 휴게 빗금
+    let bar = '', restBar='', restMinThis=0;
     if(inT){
       const sH = inT.getHours()+inT.getMinutes()/60;
       let eH = outT ? (outT.getHours()+outT.getMinutes()/60) : (sH+0.3);
@@ -999,15 +1126,27 @@ function renderAttDayDetail(date, logs, isSingleView){
         const width = Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
         bar = `<div class="att-bar" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${color};"></div>`;
       }
+      // 휴게 빗금 — 출근 기준 경과시간으로 위치(자정 넘김 안전), 확정된 휴게만
+      if(r.rest_start && r.rest_end && r.rest_status==='확정'){
+        const rsH = sH + (new Date(r.rest_start)-inT)/3600000;
+        const reH = sH + (new Date(r.rest_end)-inT)/3600000;
+        restMinThis = Math.max(0,Math.round((new Date(r.rest_end)-new Date(r.rest_start))/60000));
+        if(reH>rsH){
+          const rLeft=Math.max(0,(rsH-GANTT_START)/GANTT_SPAN*100);
+          const rWidth=Math.min(100-rLeft,(reH-rsH)/GANTT_SPAN*100);
+          restBar=`<div class="att-bar rest" style="left:${rLeft.toFixed(1)}%;width:${rWidth.toFixed(1)}%;" title="휴게 ${restMinThis}분"></div>`;
+        }
+      }
     }
     const timeLabel = inT ? `${fmtTime(r.app_in)}~${outT?fmtTime(r.app_out):'?'}` : '미출근';
     const clickable = isManager && idx>=0;
     html += `<div class="att-grow" ${clickable?`data-action="openEditAttByIdx|${idx}" style="cursor:pointer;"`:''}>
       <div class="att-row-label"><span class="dot" style="background:${color}"></span>${(r.employees?.name||'?').slice(0,4)}</div>
-      <div class="att-track">${attGridLines()}${planBar}${bar}</div>
+      <div class="att-track">${attGridLines()}${planBar}${bar}${restBar}</div>
     </div>
     <div class="att-row-meta">
       <span class="time">${timeLabel}</span>
+      ${restMinThis>0?`<span class="rest" style="color:#F5A11E;font-weight:800;">☕ ${restMinThis}분</span>`:''}
       <span class="hours">${fmtHourDecimal(r.total_work_min||0)}</span>
     </div>`;
   });
@@ -1147,6 +1286,7 @@ async function loadMyAttGantt(){
   // 이번 주 근무계획도 조회 (비교용)
   const{data:schedData}=await sb.from('work_schedules').select('*')
     .eq('store_id',currentStore.id)
+    .neq('status','거절') // 거절 신청 숨김 (기록 보존)
     .eq('employee_id',currentEmp.id)
     .gte('work_date',days[0].date)
     .lte('work_date',days[6].date);
