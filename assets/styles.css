@@ -576,6 +576,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 끝시간 미정 = 시작점에서 한 막대로 자연스럽게 흐려짐 (2026-06-15 사장님: 단일 막대) */
 .att-bar.plan.open{border:none;border-radius:7px 0 0 7px;background:linear-gradient(90deg,rgba(120,135,155,0.5) 0%,rgba(120,135,155,0.5) 22%,rgba(120,135,155,0) 100%);}
 .att-bar.absent{top:2px;height:20px;border:1px solid rgba(239,68,68,0.85);background:repeating-linear-gradient(45deg,rgba(239,68,68,0.85),rgba(239,68,68,0.85) 4px,rgba(254,202,202,0.85) 4px,rgba(254,202,202,0.85) 8px);}
+.att-bar.rest{top:4px;height:16px;z-index:3;border-radius:4px;box-shadow:0 0 0 1px #fff;background:repeating-linear-gradient(45deg,#F5A11E,#F5A11E 3px,#FFE2B0 3px,#FFE2B0 6px);}
 
 /* ─ 대시보드 */
 .kpi-section{padding:14px 0;border-bottom:1px solid var(--gray-100);}
