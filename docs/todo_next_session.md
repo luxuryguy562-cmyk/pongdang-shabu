@@ -91,6 +91,77 @@
 
 ---
 
+## ✅ [2026-06-17 완료] 서울 리전 이전 (시드니→서울) — 앱 전환 성공
+> 1~5단계 전부 완료 + 검증(데이터·금액·ID해시 일치, 솔라피 실발송, 사장님 앱 정상). 로그인 콜드스타트 pg_cron warm 적용.
+> **유일한 남은 일**: 시드니(`ruytgygjwnbtzmtofopg`) 안정 며칠 후 정리(pause 또는 대시보드 삭제) + 시드니 DB비번 무의미화. 그 전까진 롤백 대비 보존.
+> 아래는 이전 과정 상세 기록(보존).
+
+**왜**: 홈 7초 호소 → 색인+defer로 50% 개선 → 거리 지연(시드니 ap-southeast-2) 마저 잡으려 서울 이전. 사장님 "실행 승인".
+
+**여기까지 완료 (안전, 되돌릴 수 있음)**:
+- ✅ ureem 전체 백업 → 사장님께 파일 전송 완료 (`/tmp/ureem_backup_20260616.json`, 11표 ~400행)
+- ✅ **ureem 프로젝트 멈춤(pause)** 처리 (project_id `wowodgsiogxnqcfujbgc`) — 무료 슬롯 확보용. 복구 가능(restore). 사장님 "안 씀" 확인.
+- ✅ **서울 새 프로젝트 생성**: name `pongdang-seoul`, project_id **`ecfjkfqlnqfxovlwhdtx`**, region ap-northeast-2, 비용 $0. 현재 **빈 창고**.
+- 시드니 원본(`ruytgygjwnbtzmtofopg`)은 **그대로 살아있음** (전환 전까지 안 지움).
+
+**막힌 지점 (다음 세션 핵심)**:
+- ❌ pg_dump 자동복사 불가 — 이 환경에서 시드니 DB 직접연결(db.*.supabase.co:5432) **네트워크 차단** 확인됨. supabase CLI도 없음. DB 비번도 미기록.
+- → MCP `execute_sql`로만 이전 가능. 복잡도: **표 58개**(백업 `_bak`/`_backup` 13개 제외하면 운영 ~45), 함수 2·트리거 1(적음), RLS 정책 30, enum 0, 시퀀스 2.
+
+**진행 상황 (2026-06-17 세션 — MCP 직접이전 방식, 사장님 "니가 해" + 실행승인)**:
+- ✅ **1단계 스키마 이전 완료** (서울 apply_migration `seoul_migration_01_schema`): 45표(운영41+쿠팡4, 백업13제외) + PK45/UNIQUE20/CHECK6/FK66/색인136/정책30/함수2/트리거1/RLS37/시퀀스2. **시드니=서울 개수 100% 일치 검증**. 로컬 PG16에 미리 적용해 문법검증(generated 컬럼 daily_opening.diff_amount·search_path 2건 수정). SQL 보존: `docs/migration_seoul/01_schema.sql`.
+  - ⚠️ pg_dump 불가 재확인: 이 세션도 DB직접연결(5432/6543) 차단 + 환경이 HTTP프록시라 postgres TCP 불가. → MCP execute_sql(HTTPS)로 진행 중.
+
+**남은 작업 (순서)**:
+1. ✅ 스키마 이전 (완료 — 위 참조)
+2. ✅ **데이터 이전 완료** (2026-06-17): postgres_fdw로 서울→시드니 직접연결(비번 사장님 리셋분, 끝나고 user mapping DROP으로 제거 완료). session_replication_role=replica로 FK 미뤄 30표 INSERT. **시드니=서울 행수 30/30 100% 일치**(receipts 641·ai_usage 391·classification 189·attendance 185 등 총 ~1947건). FK orphan 0, 시퀀스 setval 완료. daily_opening은 generated컬럼 제외 INSERT. fdw통로·비번 서울서 완전제거.
+   - ⚠️ **시드니 DB 비번 채팅 노출됨** → 시드니 정리 전 사장님 재설정 권장(단 폐기하면 무의미).
+3. ✅ **Edge Functions 재배포 완료** (2026-06-17): 8개 서울 배포(emp-login·emp-session·emp-private·send-otp·verify-otp·complete-signup·join-store·store-join-admin), 전부 verify_jwt=false 유지. 쿠팡(coupang-receiver) 제외. 배포 중 수정: ①send-otp 문자본문 오타 `[퍼당샤브]`→`[퐁당샤브]` ②join-store·store-join-admin 하드코딩 PUBLIC_KEY를 시드니→서울(`sb_publishable_YuKpf2bsq72vo4N9Qm2GEQ_p2HivKgu`)로 교체. 8개 전부 ACTIVE 확인.
+4. ⏳ 솔라피 키 서울 설정(다음): `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER`(010-5242-1260). ⚠️ MCP에 secret 설정 도구 없음 → 사장님 대시보드 Edge Functions secrets 직접 입력 안내 필요. 키 채팅 노출됨 → 재발급 권장.
+5. ✅ **연결 교체 완료** (2026-06-17): assets/common.js 4-5줄 sb URL/anon → 서울(`https://ecfjkfqlnqfxovlwhdtx.supabase.co` + `sb_publishable_YuKpf2bsq72vo4N9Qm2GEQ_p2HivKgu`). 레포 functions 소스 2개 PUBLIC_KEY도 서울 동기화. node --check 통과. main 머지 → 앱 서울 전환. 롤백=common.js 2줄 시드니 복구.
+   - 추가 검증: 시드니=서울 **금액 합계 + 영수증 641건 ID 해시(`f8c7354f…`) 완전 일치** 확인.
+6. 🔄 검증(사장님 앱 확인 중): 로그인·영수증·정산·대시보드 데이터 표시. 솔라피 키 사장님 재발급+서울 secret 입력 진행 중.
+
+**전환 후 마무리 TODO**:
+- `.mcp.json` project-ref 시드니→서울(`ecfjkfqlnqfxovlwhdtx`) 변경 (전환 안정 후, --read-only 유지). 현재 시드니 검증용으로 유지 중.
+- 서울 프로젝트명 `Cashflow`로 변경됨(사장님, project_id 불변).
+- 안정 며칠 후 시드니(ruytgygjwnbtzmtofopg) 정리 + 시드니 DB비번 무의미화. coupang-install.html·scripts 시드니 잔재는 쿠팡 미사용이라 보류.
+3. Edge Functions 재배포: emp-login·emp-session·emp-private·complete-signup·join-store·store-join-admin·**send-otp·verify-otp**(문자) — get_edge_function(시드니) → deploy_edge_function(서울). 쿠팡(coupang-receiver)은 **제외**(사장님 "안 살림").
+4. 솔라피 키 서울 설정: `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER`(010-5242-1260). ⚠️ 키 채팅 노출됨 → **이전 후 재발급 필요**(사장님). (키 값은 사장님이 채팅으로 줬음 — 레포엔 절대 X)
+5. 연결 교체: `assets/common.js`의 sb createClient URL/anon key → 서울. (get_project_url + get_publishable_keys로 서울 값)
+6. 검증: 로그인·영수증 분석·문자인증 작동. 시드니 안 지움.
+7. 안정 후 시드니 정리 (pause 또는 사장님 대시보드 삭제 — MCP 삭제 도구 없음).
+
+**주의**: MCP 수작업이라 누락 위험. 사장님 "누락 없이" 최우선 → 스키마/데이터 1:1 검증 필수. 한 세션에 무리하면 사고 → 집중 세션에서 단계별 검증하며.
+
+---
+
+### ✅ [2026-06-17 사장님 합의] 완전 이전 방법 확정 = pg_dump 통째 복사 (누락 0)
+
+> MCP 수작업(58표 한 땀) 대신, **pg_dump로 통째 복사**가 누락 0 최선. 단 이 세션은 DB 직접연결 차단으로 불가였음. **새 세션에서 아래 2가지 갖추면 가능.** 사장님 "내 손 조금 타도 됨" 승인.
+
+**새 세션 준비물 (사장님 손)**:
+1. **네트워크 정책**: 새 대화(claude.ai/code) 만들 때 Supabase DB 접근 허용 정책 선택 (현 세션은 db.*.supabase.co:5432 차단이라 pg_dump 불가였음).
+2. **DB connection string 2개**: Supabase 대시보드 → 각 프로젝트 → Settings → Database → Connection string(URI, 비번 포함) 복사.
+   - 시드니 원본: `ruytgygjwnbtzmtofopg`
+   - 서울 대상: `ecfjkfqlnqfxovlwhdtx` (이름은 사장님이 대시보드서 "Cashflow"로 변경 예정)
+   - 비번 모르면 Settings>Database>Reset database password로 재설정 후 복사.
+
+**환경 준비물 (CTO)**:
+- `pg_dump`/`psql` 버전 = Supabase가 PG17이므로 **pg17 클라이언트** 필요 (현 환경 pg16이라 `server version newer` 에러 가능). 또는 `supabase` CLI 설치(`npm i -g supabase`, `supabase db dump`가 버전 호환).
+
+**CTO 실행 (조건 갖춰지면)**:
+1. `pg_dump`(시드니, --schema+data) 또는 `supabase db dump` → 덤프파일
+2. `psql`(Cashflow) 복원
+3. 검증: 테이블별 행수 시드니=Cashflow
+4. Edge Functions 8개 재배포(쿠팡 제외) + 솔라피 키(채팅 노출분 → 재발급본) 설정
+5. `assets/common.js` sb URL/anon key → Cashflow
+6. 작동 검증 후 시드니 정리
+
+**대안(네트워크 못 열 때)**: MCP execute_sql 수작업(누락 위험, 비추천).
+
+---
+
 ## 🩺 [2026-06-17 진단 세션 — 사장님 8개 항목 점검 결과]
 
 진단 후 사장님 결정 사항 (휘발 방지):

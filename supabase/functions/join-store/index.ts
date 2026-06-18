@@ -9,7 +9,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 // 실시간 종 알림용 공개키 (client와 동일, 공개키라 노출 무방)
-const PUBLIC_KEY = "sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe";
+const PUBLIC_KEY = "sb_publishable_YuKpf2bsq72vo4N9Qm2GEQ_p2HivKgu";
 function json(b: unknown, s = 200) {
   return new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 }

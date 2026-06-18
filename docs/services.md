@@ -10,8 +10,8 @@
 | 서비스 | URL / 값 | 위치 (index.html 변수) | 비고 |
 |--------|----------|----------------------|------|
 | **SOLAPI(문자)** | `https://api.solapi.com/messages/v4/send` | Edge Function 환경변수 `SOLAPI_API_KEY`/`SOLAPI_API_SECRET`/`SOLAPI_SENDER` | 직원 문자 인증(OTP). 계정명 '김은성님의 계정', 발신번호 010-5242-1260(인증완료, 만료 2026-12-09). HMAC-SHA256 인증. 2026-06-09 실발송 테스트 성공. 키는 Supabase Edge Function Secrets에 저장(레포 커밋 X) |
-| **Supabase** | `https://ruytgygjwnbtzmtofopg.supabase.co` | `SUPABASE_URL` | DB + REST API |
-| **Supabase Key** | `sb_publishable_7QoW2WkSQE4WA4w7uFughA_GXQMkMUe` | `SUPABASE_ANON_KEY` | anon key (RLS 1차 활성 — Phase 2b 2026-04-17, USING true + WITH CHECK store_id) |
+| **Supabase** | `https://ecfjkfqlnqfxovlwhdtx.supabase.co` | `SUPABASE_URL` | DB + REST API. **2026-06-17 서울 리전 전환**(ecfjkfqlnqfxovlwhdtx, ap-northeast-2, 프로젝트명 Cashflow). 옛 시드니 `ruytgygjwnbtzmtofopg`(ap-southeast-2)는 폐기 예정·검증용 보존 |
+| **Supabase Key** | `sb_publishable_YuKpf2bsq72vo4N9Qm2GEQ_p2HivKgu` | `SUPABASE_ANON_KEY` | anon key (서울). RLS 1차 활성 — Phase 2b, USING true + WITH CHECK store_id |
 | **AI 프록시** (구 Gemini) | `https://gemini-proxy.luxuryguy562.workers.dev` | `GEMINI_URL` | **2026-05-19부터 Multi-Provider** (Clova+GPT / GPT / Gemini). 이름은 호환 유지. body._provider로 분기. |
 | **Naver Clova OCR** | `xxxxxxxxxx.apigw.ntruss.com/custom/v1/.../general` | Worker `env.CLOVA_URL` | 한국 영수증·세금계산서 OCR 1위. **API Gateway 자동 연동 필수** (수동 연동 URL은 외부 호출 차단, dev_lessons #96). 도메인명 `cashflow-receipt`. Premium 플랜. |
 | **Naver Clova OCR Secret** | (Secret Key) | Worker `env.CLOVA_SECRET` | 자동 연동 화면에서 생성된 키 (Domain Secret과 별개). 헤더 `X-OCR-SECRET`. |
@@ -69,7 +69,7 @@
 | **설정 파일** | `.mcp.json` (레포 루트) |
 | **MCP 서버 패키지** | `@supabase/mcp-server-supabase@latest` (npx 자동 실행) |
 | **모드** | `--read-only` (조회 전용, 쓰기 차단) |
-| **프로젝트 한정** | `--project-ref=ruytgygjwnbtzmtofopg` (퐁당샤브 전용) |
+| **프로젝트 한정** | `--project-ref=ecfjkfqlnqfxovlwhdtx` (서울 Cashflow 전용, 2026-06-17 전환) |
 | **인증 방식** | Personal Access Token, 환경변수 `SUPABASE_ACCESS_TOKEN` 참조 |
 | **토큰 등록 위치** | 데스크탑 클로드 → "기본값" 클라우드 환경 → 환경 변수 (사장님 본인만) |
 | **토큰 폐기** | https://supabase.com/dashboard/account/tokens → Revoke |
