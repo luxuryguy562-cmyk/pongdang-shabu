@@ -288,7 +288,7 @@ async function renderGanttWeek(){
   });
   document.getElementById('ganttDayTabs').innerHTML=tabsHtml;
   // 주간 데이터 로드
-  const{data}=await sb.from('work_schedules').select('*,employees(name)').eq('store_id',currentStore.id).gte('work_date',days[0].date).lte('work_date',endDate).not('employee_id','is',null).order('wish_start');
+  const{data}=await sb.from('work_schedules').select('*,employees(name)').eq('store_id',currentStore.id).neq('status','거절').gte('work_date',days[0].date).lte('work_date',endDate).not('employee_id','is',null).order('wish_start');
   window._ganttWeekData=data||[];
   window._ganttWeekDays=days;
   renderGanttFiltered();
