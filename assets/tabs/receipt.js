@@ -16,6 +16,7 @@ let rcpEntryReturn = null; // 영수증 저장 후 자동 복귀할 화면 ('cat
 let rcpPastItems = [];       // 현재 거래처 과거 품목명 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
 let rcpPastPriceMap = new Map(); // 단가 → Set<품목명> (단가 매칭 자동채움용, 2026-06-05)
 let rcpPastSheetTargetIdx = null; // 과거 품목 시트 열 때 대상 행 인덱스
+let _rcpKeepOnEnter = false; // true면 이번 nav('receipt')는 거래처/카테고리 세팅 진입 = 초기화 스킵 (2026-06-18)
 
 function setRcpMode(mode, autoPicker=true){
   if(!guardStore()) return;
@@ -107,13 +108,14 @@ function _clearRcpData(){
   const rd = document.getElementById('rcpReceiptDate'); if(rd) rd.value = '';
 }
 
-// 영수증 탭 재진입 시 어정쩡 상태 청소 — 모드만 고르고 아무 작업 안 한 채 나갔다 오면 종류 선택부터 (거래처 dev_lessons #16의 영수증판)
+// 영수증 탭 재진입 시 초기화 — 분석·결과 봤다가 나갔다 다시 오면 깨끗한 시작(종류 선택부터).
+//   단, 거래처/카테고리 카드에서 진입(nav 직전 거래처·모드 세팅)은 _rcpKeepOnEnter=true라 보존.
+//   그 외(하단 네비·"+영수증 추가" 등 새 진입)는 이전 분석 잔재까지 무조건 청소.
+//   (옛 idle 조건은 이전 분석 잔재 rcpVendorId/b64Pages를 "작업 중"으로 오인해 잔류 — 사장님 2026-06-18 "초기화 넣었다며 왜 살아있냐")
 function _rcpOnTabEnter(){
-  const idle = (rcpMode==='vendor'||rcpMode==='online'||rcpMode==='direct')
-    && !rcpVendorId
-    && (!b64Pages || !b64Pages.length)
-    && rcpInputMethod !== 'manual';
-  if(idle) resetRcpMode();
+  if(_rcpKeepOnEnter){ _rcpKeepOnEnter = false; return; } // 거래처/카테고리 세팅 진입 = 보존
+  _clearRcpData();   // 사진·결과 행·미리보기 비우기
+  resetRcpMode();    // 모드·거래처·날짜 비우고 종류 선택 화면으로
 }
 
 function resetRcpMode(){
@@ -626,6 +628,7 @@ async function openRcpReceiptFromVendor(vendorId, method){
   }
   rcpInputMethod = (method === 'manual') ? 'manual' : 'photo';
   rcpEntryReturn = 'vendors:' + vid; // 저장 후 거래처 상세로 복귀
+  _rcpKeepOnEnter = true; // 거래처 세팅 후 진입 — 재진입 초기화 스킵
   nav('receipt');
   setTimeout(()=>{
     _clearRcpData(); // 새 진입 = 이전 분석(사진·결과·행) 비우기 (사장님 호소 2026-06-02)
@@ -653,6 +656,7 @@ async function openRcpReceiptFromVendor(vendorId, method){
 function openManualReceiptShortcut(){
   if(!guardStore()) return;
   rcpEntryReturn = null; // 모드 선택 화면에서 시작이므로 자동 복귀 X
+  _rcpKeepOnEnter = true; // 수동 모드 세팅 진입 — 재진입 초기화 스킵
   nav('receipt');
   setTimeout(()=>setRcpMode('manual'), 60);
 }
@@ -663,6 +667,7 @@ function openCatReceiptInput(method){
   // 기타 카드에서 진입한 경우 = 사장님이 카테고리 picker에서 "기타" 선택해야 [기타] 카드에 합산됨.
   // 진입 즉시 모드를 'direct'로 박고, 기타 카드면 안내.
   rcpEntryReturn = 'catReceipt:' + catReceiptMode; // 저장 후 복귀
+  _rcpKeepOnEnter = true; // 카테고리 세팅 후 진입 — 재진입 초기화 스킵
   nav('receipt');
   setTimeout(()=>{
     // 기타 카드 진입 = 'etc' 모드(거래처 없음), 직구·식자재 = 'direct'. 직접입력이면 거래처 선택창 자동오픈 X (사장님 호소 2026-06-16)
@@ -991,7 +996,7 @@ async function runAI() {
   const pageCount = b64Pages.length;
   // 여러 장이면 AI 호출(비용 발생) 전에 확인 — 다른 거래처 섞임 방지 (2026-06-04, 비용 0으로 차단)
   if(pageCount>1 && !confirm(`사진 ${pageCount}장이 선택됐어요.\n\n같은 영수증의 여러 페이지인가요?\n거래처가 다르면 '취소' 후 한 곳씩 올려주세요.`)) return;
-  setLoad(true, pageCount>1 ? `AI 분석 중... (${pageCount}장 페이지별 동시 분석)` : 'AI 분석 중...');
+  setLoad(true, pageCount>1 ? `AI 분석 중... (${pageCount}장 페이지별 동시 분석)` : 'AI 분석 중...', b64Pages[0]);
   try {
     let catList = getCatListForPrompt();
     const isVendorModeAI = rcpMode === 'vendor';
@@ -1062,7 +1067,7 @@ async function runAI() {
       // ─── 페이지별 독립 분석 → 병합 (2026-06-11) ───
       // 여러 장을 한 호출에 던지면 페이지끼리 섞여 품목명 오독 폭증 (사장님 실측 — 삼성웰스토리 2장).
       // 페이지마다 따로 분석 = 1장 정확도 그대로. 요약 페이지(품목 0 + 합계만)는 합계 기준으로만 쓰임.
-      setLoad(true, `AI 분석 중... (${pageCount}장 페이지별 동시 분석)`);
+      setLoad(true, `AI 분석 중... (${pageCount}장 페이지별 동시 분석)`, b64Pages[0]);
       const singlePrompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, isOnlineMode:isOnlineModeAI, isLiquorMode:isLiquorModeAI, vendorName:rcpVendorName, catList, pageCount:1 });
       const results = await Promise.all(b64Pages.map(b64 =>
         _rcpAICallWithFallback([{text:singlePrompt},{inline_data:{mime_type:'image/jpeg',data:b64}}], 30, 1)
@@ -1139,7 +1144,7 @@ async function runAI() {
         const _rowSum=list.reduce((s,it)=>s+(parseInt(it.totalPrice)||0),0);
         const _diff=Math.abs(_rowSum-receiptTotalSum);
         if(_diff<=Math.max(500, receiptTotalSum*0.005)) break; // 0.5% 또는 500원 이내 = 통과
-        setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`);
+        setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`, b64Pages[0]);
         try{
           const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u)·세액(t) 오류만 찾아 수정된 JSON만 반환.\n⚠️품목명(i)·규격(spec)·원산지(og)는 이전 응답 그대로 복사 — 절대 다시 읽거나 바꾸지 마라(이름 수정은 숫자 검산과 무관).`},...parts.slice(1)];
           const _fixRaw=await callGemini(_rParts,_refTimeout,'receipt_reflection',_refModel,_refProvider);
@@ -1502,11 +1507,11 @@ async function _rcpAICallWithFallback(parts, timeoutSec, pageCount){
     const isOverloadLike = /high demand|overload|currently|503|429|시간 초과|비어있|json|응답 오류/i.test(m);
     if(!isOverloadLike) throw geminiErr;
     try {
-      setLoad(true, 'Gemini Flash 혼잡 → Gemini 2.0으로 재시도 중...');
+      setLoad(true, 'Gemini Flash 혼잡 → Gemini 2.0으로 재시도 중...', b64Pages[0]);
       const raw = await callGemini(parts, timeoutSec+10, 'receipt_ocr', 'gemini-2.0-flash', 'gemini');
       return { raw, usedFallback:true, fallbackProvider:'gemini', fallbackModel:(_shortModelName(lastAIUsage?.model) || 'Gemini 2.0') }; // worker가 강등시켜도 실제 쓴 모델 정직 표시
     } catch(e2){
-      setLoad(true, 'Gemini 전체 혼잡 → GPT-4o로 재시도 중...');
+      setLoad(true, 'Gemini 전체 혼잡 → GPT-4o로 재시도 중...', b64Pages[0]);
       toast('⚠️ Gemini 혼잡 — GPT-4o 백업 분석', 'warn', 2500);
       const raw = await callGemini(parts, 60+(pageCount-1)*5, 'receipt_ocr', 'gpt-4o', 'gpt'); // GPT-4o 느림 → 60초 (2026-06-08 실측)
       return { raw, usedFallback:true, fallbackProvider:'gpt', fallbackModel:'GPT-4o' };

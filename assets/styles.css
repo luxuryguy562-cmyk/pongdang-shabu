@@ -576,7 +576,6 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* 끝시간 미정 = 시작점에서 한 막대로 자연스럽게 흐려짐 (2026-06-15 사장님: 단일 막대) */
 .att-bar.plan.open{border:none;border-radius:7px 0 0 7px;background:linear-gradient(90deg,rgba(120,135,155,0.5) 0%,rgba(120,135,155,0.5) 22%,rgba(120,135,155,0) 100%);}
 .att-bar.absent{top:2px;height:20px;border:1px solid rgba(239,68,68,0.85);background:repeating-linear-gradient(45deg,rgba(239,68,68,0.85),rgba(239,68,68,0.85) 4px,rgba(254,202,202,0.85) 4px,rgba(254,202,202,0.85) 8px);}
-.att-bar.rest{top:4px;height:16px;z-index:3;border-radius:4px;box-shadow:0 0 0 1px #fff;background:repeating-linear-gradient(45deg,#F5A11E,#F5A11E 3px,#FFE2B0 3px,#FFE2B0 6px);}
 
 /* ─ 대시보드 */
 .kpi-section{padding:14px 0;border-bottom:1px solid var(--gray-100);}
@@ -912,6 +911,15 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 #loading{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
 .spinner{width:34px;height:34px;border:3px solid var(--gray-200);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+/* 영수증 AI 분석 — 올린 사진을 크게 띄우고 그 위를 스캔선이 훑는 스캐너 (2026-06-18 사장님 "전체 스캔 느낌") */
+#loading.scan-mode{background:rgba(15,23,42,.85);}
+#loading.scan-mode #loadText{color:#fff;margin-top:4px;}
+.scan-card{position:relative;width:min(84vw,370px);height:min(64vh,520px);background:#0b1220;border-radius:16px;box-shadow:0 12px 44px rgba(0,0,0,.45);overflow:hidden;}
+.scan-card #loadScanImg{width:100%;height:100%;object-fit:cover;display:block;}
+.scan-grid{position:absolute;inset:0;z-index:1;background-image:linear-gradient(rgba(49,130,246,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(49,130,246,.07) 1px,transparent 1px);background-size:26px 26px;pointer-events:none;}
+.scan-line{position:absolute;left:0;top:0;width:100%;height:3px;background:#3182F6;box-shadow:0 0 16px 4px rgba(49,130,246,.7);z-index:3;animation:scanMove 2s ease-in-out infinite;}
+.scan-glow{position:absolute;left:0;top:0;width:100%;height:64px;transform:translateY(-64px);background:linear-gradient(180deg,rgba(49,130,246,0),rgba(49,130,246,.30));z-index:2;animation:scanMove 2s ease-in-out infinite;}
+@keyframes scanMove{0%{top:0;}50%{top:calc(100% - 4px);}100%{top:0;}}
 .empty-state{text-align:center;padding:48px 20px;color:var(--gray-500);}
 .empty-icon{width:72px;height:72px;margin:0 auto 14px;background:var(--toss-line);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;}
 .empty-state p{font-size:14px;font-weight:600;color:var(--toss-text-3);margin:0;line-height:1.5;letter-spacing:-0.3px;}
