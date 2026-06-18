@@ -15,12 +15,13 @@
 
 ### 📋 다음 할 일 — A) GPS 출퇴근 (결정됨) + B) AI 매니저 노무
 
-**A. GPS 출퇴근 보조 (✅ 사장님 결정함 — "하기로 했잖아")**
-- **와이파이 IP 1차 + GPS 2차 보조** — 둘 중 하나만 통과해도 출근 (와이파이/외부 IP서비스 죽어도 GPS로 출근됨).
-- 매장 좌표(위도·경도) 설정 + **반경 여유 100~150m** (실내 GPS 오차 대비). 매장 장치 설치 불필요(직원 휴대폰 위치).
-- 동의 = **처음 1회** (직원등록 시 법적 위치정보 동의 + 브라우저 권한 1회. 매번 X). 사장님 "법으로 풀면 됨" 확인.
-- 기존 IP 검증(`sidemenu.js:6242 getPublicIP/checkIPForAttendance`)에 GPS 분기 추가, checkIn/checkOut(`attendance.js:341/387`)에서 IP 실패 시 GPS fallback.
-- 중규모. 매장설정에 좌표·반경 입력 UI + 직원 출근 시 위치 권한 요청.
+**A. GPS 출퇴근 보조 — ✅ 구현 완료 (2026-06-17)**
+- DB: store_settings에 `store_lat`·`store_lng`·`geo_radius_m`(기본150) 추가 (migration `add_store_geo_columns`).
+- 위치검증 `checkIPForAttendance`(sidemenu.js): **WiFi IP 1차 → 실패 시 GPS 2차**(둘 중 하나만 통과해도 출근). 둘 다 미설정이면 통과(기존 동작).
+- 함수 추가: `getCurrentPositionOnce`(브라우저 GPS)·`geoDistanceM`(Haversine)·`checkGeoForAttendance`·`registerStoreLocation`(사장 매장위치 등록).
+- 설정 UI(index.html 매장 기본정보): "📍 현재 위치를 매장으로 등록" 버튼 + 반경 입력.
+- ⚠️ **사장님 할 일**: 매장 안에서 설정 > 매장 기본정보 > "현재 위치를 매장으로 등록" 한 번 누르기 (그래야 GPS 작동). 안 누르면 GPS 미설정으로 기존 WiFi만 동작.
+- 동의: 직원 첫 출근 시 브라우저 위치 권한 1회 요청(자동). 법적 위치정보 동의는 사장님이 직원등록 시 처리.
 
 **B. AI 매니저 노무 (아래 ★마스터 블록 참조)**
 - **2단계**: 거절·취소를 삭제 말고 **기록 보존** + 확정 후 변경=승인(원본 유지). DB 소변경 → **계획서+실행승인 필요**. (사장님 "2단계 계획서 만들어" 하면 착수)
