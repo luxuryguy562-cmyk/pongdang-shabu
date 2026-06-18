@@ -615,12 +615,17 @@ function errToast(action, err){
   const detail=msg?` ${String(msg).slice(0,60)}`:'';
   toast(action+'하지 못했어요'+tag+detail+(tag||detail?'':' 잠시 후 다시 시도해주세요'),'error',7000);
 }
-const setLoad = (on, t='처리 중...', scan=false) => {
-  document.getElementById('loading').style.display = on ? 'flex' : 'none';
+const setLoad = (on, t='처리 중...', scanImg=false) => {
+  const ld=document.getElementById('loading');
+  ld.style.display = on ? 'flex' : 'none';
   document.getElementById('loadText').innerText = t;
-  // scan=true(영수증 AI 분석)면 동그라미 대신 바코드 스캔선 카드 표시 (2026-06-18)
-  const sp=document.getElementById('loadSpinner'), sc=document.getElementById('loadScan');
-  if(sp&&sc){ sp.style.display=scan?'none':'block'; sc.style.display=scan?'block':'none'; }
+  // 영수증 AI 분석: 올린 사진(scanImg=base64)을 크게 띄우고 그 위를 스캔선이 훑는 스캐너 모드 (2026-06-18)
+  const sp=document.getElementById('loadSpinner'), sc=document.getElementById('loadScan'), im=document.getElementById('loadScanImg');
+  const scanOn = on && !!scanImg;
+  if(sc) sc.style.display = scanOn ? 'block' : 'none';
+  if(sp) sp.style.display = scanOn ? 'none' : 'block';
+  ld.classList.toggle('scan-mode', scanOn);
+  if(scanOn && im && typeof scanImg==='string') im.src='data:image/jpeg;base64,'+scanImg;
 };
 function nav(tab, el) {
   // 서브탭 분리: staffRoles → staff 컨테이너 + roles 서브탭
