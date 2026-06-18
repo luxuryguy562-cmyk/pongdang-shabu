@@ -2651,11 +2651,9 @@
         <div class="setting-val" id="sv-store-geo">미설정</div>
       </div>
       <button class="btn btn-secondary" style="padding:10px;font-size:13px;" data-action="registerStoreLocation">📍 현재 위치를 매장으로 등록</button>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
-        <span class="setting-sub" style="flex-shrink:0;">허용 반경(m)</span>
-        <input id="geoRadiusInput" class="input-field" type="number" min="30" max="500" step="10" style="flex:1;margin-bottom:0;padding:10px;font-size:14px;" placeholder="150">
-      </div>
-      <div class="setting-sub" style="margin-top:6px;">※ 매장 안에서 등록하세요. 실내는 오차가 있어 반경 150m 권장.</div>
+      <!-- 허용 반경: 일반 사장님 헷갈림 방지로 숨김 (기본 150m 자동). 필요 시 노출 -->
+      <input id="geoRadiusInput" type="hidden" value="150">
+      <div class="setting-sub" style="margin-top:6px;">※ 매장 안에서 한 번 눌러 등록하세요.</div>
     </div>
     <button class="btn btn-primary btn-full" data-action="saveBasicSettings">저장</button>
   </div>
