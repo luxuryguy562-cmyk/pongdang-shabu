@@ -1090,6 +1090,7 @@
       </div>
       <!-- 새 기능: 직원 근무 신청 승인 배너 (사장만, 2026-06-15) -->
       <div id="schedApproveBanner" class="sched-approve-banner manager-only" style="display:none;"></div>
+      <button id="changeReqBtn" data-action="openChangeReqSheet" style="width:100%;margin-bottom:10px;padding:10px;font-size:12px;font-weight:700;background:var(--white);box-shadow:var(--card-shadow);color:var(--gray-700);border:none;border-radius:11px;cursor:pointer;">🔄 근무 변경·취소 신청 / 이력 보기</button>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <div style="font-size:11px;font-weight:700;color:var(--gray-600);flex-shrink:0;">👥 직원별 보기</div>
         <select id="attEmpFilter" class="input-field" style="flex:1;padding:10px 14px;font-size:13px;" data-change="loadAttAll">
@@ -3008,6 +3009,13 @@
 </div>
 
 <!-- 근무 계획 등록/편집 시트 (단일 일정 — 카드 클릭 편집용) -->
+<div class="sheet" id="changeReqSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">🔄 근무 변경·취소 신청 / 이력</div>
+  <div style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">대기 중인 신청은 승인/거절할 수 있어요. 처리된 건 기록으로 남습니다.</div>
+  <div id="changeReqList" style="max-height:60vh;overflow-y:auto;"></div>
+</div>
+
 <div class="sheet" id="addSchedSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="addSchedTitle">희망근무 등록</div>

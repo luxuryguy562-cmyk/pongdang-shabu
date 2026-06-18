@@ -55,6 +55,21 @@ function deleteScheduleFromSheet(){
 }
 async function deleteSchedule(schedId){
   if(!guardStore()||!schedId) return;
+  // ── 2단계-B: 직원이 '확정'된 근무를 취소하려 하면 → 원본 유지 + 취소 신청 ──
+  if(!isManager){
+    const{data:row}=await sb.from('work_schedules').select('id,employee_id,work_date,status').eq('id',schedId).eq('store_id',currentStore.id).maybeSingle();
+    if(row && row.status==='확정'){
+      if(!confirm('확정된 근무예요. 취소 신청할까요?\n(원래 근무는 그대로 두고, 사장님 승인 후 빠져요)')) return;
+      setLoad(true,'취소 신청 중...');
+      const{error:crErr}=await sb.from('schedule_change_requests').insert({store_id:currentStore.id,employee_id:row.employee_id,schedule_id:row.id,work_date:row.work_date,req_type:'취소',status:'대기',requested_by:row.employee_id});
+      setLoad(false);
+      if(crErr) return errToast('취소 신청', crErr);
+      toast('취소 신청했어요! 사장님 승인 후 빠져요','success');
+      closeSheet('addSchedSheet');
+      if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule');
+      return;
+    }
+  }
   if(!confirm('이 일정을 삭제할까요?')) return;
   setLoad(true,'삭제 중...');
   const {error}=await sb.from('work_schedules').delete().eq('id',schedId).eq('store_id',currentStore.id);
@@ -73,6 +88,26 @@ async function saveSchedule(){
   const start=document.getElementById('vSchedStart').innerText;
   const end=document.getElementById('vSchedEnd').innerText;
   const memo=document.getElementById('vSchedMemo').value;
+  // ── 2단계-B: 직원이 '확정'된 근무를 바꾸려 하면 → 원본 유지 + 변경 신청(사장 승인 대기) ──
+  const dayPlans=(window._attSchedDayMap&&window._attSchedDayMap[date])||[];
+  const existConfirmed=dayPlans.find(p=>p.employee_id===empId && p.status==='확정');
+  if(!isManager && existConfirmed){
+    setLoad(true,'변경 신청 중...');
+    const{error:crErr}=await sb.from('schedule_change_requests').insert({
+      store_id:currentStore.id, employee_id:empId, schedule_id:existConfirmed.id, work_date:date,
+      req_type:'변경',
+      new_start:(start&&start!=='-'&&start!=='선택')?start+':00':null,
+      new_end:(end&&end!=='-'&&end!=='선택')?end+':00':null,
+      reason:memo||null, status:'대기', requested_by:empId
+    });
+    setLoad(false);
+    if(crErr) return errToast('변경 신청', crErr);
+    document.getElementById('vSchedMemo').value='';
+    closeSheet('addSchedSheet');
+    if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule');
+    toast('변경 신청했어요! 원래 근무는 그대로 두고, 사장님 승인 후 바뀌어요','success');
+    return;
+  }
   setLoad(true,'저장 중...');
   const payload={
     store_id:currentStore.id,employee_id:empId,work_date:date,

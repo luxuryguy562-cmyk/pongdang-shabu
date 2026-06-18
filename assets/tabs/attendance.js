@@ -132,6 +132,76 @@ async function approveAllSched(){
   closeAllSheets(); await loadAttList();
 }
 
+// ─── 새 기능: 근무 변경·취소 신청 사장 승인 + 이력 (노무 2단계-B, 2026-06-17) ───
+// 사장: 대기 신청 승인/거절 + 전체 이력 / 직원: 본인 이력 조회
+async function openChangeReqSheet(){
+  if(!guardStore()) return;
+  setLoad(true,'불러오는 중...');
+  let q=sb.from('schedule_change_requests').select('*,employees(name)').eq('store_id',currentStore.id).order('requested_at',{ascending:false}).limit(50);
+  if(!isManager && currentEmp) q=q.eq('employee_id',currentEmp.id);
+  const{data,error}=await q;
+  setLoad(false);
+  if(error) return errToast('이력 조회', error);
+  window._changeReqs=data||[];
+  renderChangeReqList();
+  openSheet('changeReqSheet');
+}
+function renderChangeReqList(){
+  const el=document.getElementById('changeReqList'); if(!el) return;
+  const rows=window._changeReqs||[];
+  if(!rows.length){ el.innerHTML='<div style="text-align:center;color:var(--gray-400);padding:28px 0;font-size:13px;">신청·변경 이력이 없어요</div>'; return; }
+  const stColor={'대기':'#F59E0B','승인':'#16A34A','거절':'#F04452'};
+  const typeLabel={'변경':'시간 변경','취소':'근무 취소','신규':'근무 추가'};
+  el.innerHTML=rows.map(r=>{
+    const nm=r.employees?.name||'?';
+    const when=r.new_start?`${(r.new_start||'').slice(0,5)}~${(r.new_end||'').slice(0,5)}`:(r.req_type==='취소'?'(취소 요청)':'');
+    const reqAt=r.requested_at?new Date(r.requested_at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    const pending=r.status==='대기';
+    const actions=(isManager&&pending)?`<div style="display:flex;gap:8px;margin-top:9px;">
+      <button class="btn btn-primary" style="flex:1;padding:9px;font-size:12px;" data-action="approveChangeReq|${r.id}">승인</button>
+      <button class="btn" style="flex:1;padding:9px;font-size:12px;background:#fff;color:var(--gray-600);border:1px solid var(--gray-200);" data-action="rejectChangeReq|${r.id}">거절</button>
+    </div>`:'';
+    return `<div style="background:var(--white);border-radius:12px;box-shadow:var(--card-shadow);padding:12px;margin-bottom:9px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b style="font-size:13px;">${nm} · ${typeLabel[r.req_type]||r.req_type}</b>
+        <span style="font-size:11px;font-weight:800;color:${stColor[r.status]||'#888'};">${r.status}</span>
+      </div>
+      <div style="font-size:12px;color:var(--gray-600);margin-top:3px;">${r.work_date}${when?' · '+when:''}</div>
+      ${r.reason?`<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">사유: ${r.reason}</div>`:''}
+      <div style="font-size:10px;color:var(--gray-400);margin-top:2px;">신청 ${reqAt}</div>
+      ${actions}
+    </div>`;
+  }).join('');
+}
+async function approveChangeReq(id){
+  if(!isManager) return;
+  const r=(window._changeReqs||[]).find(x=>String(x.id)===String(id)); if(!r) return;
+  setLoad(true,'승인 중...');
+  try{
+    if(r.req_type==='취소'){
+      if(r.schedule_id) await sb.from('work_schedules').delete().eq('id',r.schedule_id).eq('store_id',currentStore.id);
+    } else if(r.schedule_id){
+      await sb.from('work_schedules').update({wish_start:r.new_start,wish_end:r.new_end,is_off:!!r.new_is_off,status:'확정'}).eq('id',r.schedule_id).eq('store_id',currentStore.id);
+    } else {
+      await sb.from('work_schedules').upsert({store_id:currentStore.id,employee_id:r.employee_id,work_date:r.work_date,wish_start:r.new_start,wish_end:r.new_end,is_off:!!r.new_is_off,status:'확정'},{onConflict:'store_id,employee_id,work_date'});
+    }
+    await sb.from('schedule_change_requests').update({status:'승인',resolved_by:(currentEmp?.id||null),resolved_at:new Date().toISOString()}).eq('id',id).eq('store_id',currentStore.id);
+  }catch(e){ setLoad(false); return errToast('승인', e); }
+  setLoad(false);
+  toast('승인했어요! 근무계획에 반영됐어요','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('schedule');
+  await openChangeReqSheet();
+  if(typeof loadAttList==='function') loadAttList();
+}
+async function rejectChangeReq(id){
+  if(!isManager) return;
+  setLoad(true,'거절 중...');
+  const{error}=await sb.from('schedule_change_requests').update({status:'거절',resolved_by:(currentEmp?.id||null),resolved_at:new Date().toISOString()}).eq('id',id).eq('store_id',currentStore.id);
+  setLoad(false); if(error) return errToast('거절', error);
+  toast('거절했어요 (기록 보존)','info');
+  await openChangeReqSheet();
+}
+
 // 직원 '급여' 탭 → 사장과 같은 📋 기록(월 캘린더+KPI 출근/시간/인건비/주휴+일별 간트) 화면으로 통일 (2026-06-15)
 // 사장님 지시: 직원 급여탭 = 사장 화면 그대로. 옛 급여달력(empPayCont)·주간리스트(empSchedCont) 폐기.
 function goEmpSched(el){
