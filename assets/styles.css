@@ -131,6 +131,10 @@ td{padding:10px 5px;font-size:12px;border-bottom:1px solid var(--gray-100);text-
 #resultArea.vendor-mode .col-vendor{display:none;}
 td input{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 tr.row-off{opacity:.35;filter:grayscale(1);}
+/* 영수증 분석 카드 — 미합산(제외) 처리된 행: 빨간 띠 + "미합산" 배지로 한눈에 (2026-06-18 사장님) */
+.rcp-item-card.row-off{background:#FEF2F2;border-left:3px solid var(--danger);}
+.rcp-item-card.row-off .ric-l1 .c-i,.rcp-item-card.row-off .ric-l1 .c-p{text-decoration:line-through;color:var(--danger);}
+.rcp-item-card.row-off::before{content:'🚫 미합산 · 합계에서 빠짐';display:block;font-size:11px;font-weight:800;color:var(--danger);margin-bottom:7px;letter-spacing:-0.3px;}
 td input.c-v,td input.c-i,td input.c-p{width:100%;border:none;background:var(--gray-100);padding:6px;border-radius:7px;font-size:12px;text-align:center;outline:none;}
 /* 영수증 분류 학습 시그널 (2026-05-19) — 사용자 변경 시 ✨ 페이드인 */
 .rcp-learn-badge{font-size:14px;color:var(--success);line-height:1;display:inline-block;}
@@ -923,6 +927,9 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 /* manager-only: JS로 제어 */
 .reason-item{padding:14px 16px;background:var(--gray-100);border-radius:13px;font-size:14px;font-weight:600;text-align:center;cursor:pointer;margin-bottom:7px;}
 .reason-item.cancel{background:var(--danger-light);color:var(--danger);}
+/* 제외 사유 시트 안내문 — × 누르면 뜨는 창에서 "삭제 아님·합계에서 빠짐" 바로 알게 (2026-06-18 사장님) */
+.reason-sub{font-size:13px;font-weight:600;color:var(--toss-text-3);line-height:1.5;margin-bottom:14px;margin-top:-6px;}
+.reason-sub b{color:var(--danger);font-weight:800;}
 .role-manage-item{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--gray-100);}
 .role-manage-item:last-child{border-bottom:none;}
 .my-info-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--gray-100);}
