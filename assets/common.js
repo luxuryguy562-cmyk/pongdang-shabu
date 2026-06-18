@@ -615,9 +615,12 @@ function errToast(action, err){
   const detail=msg?` ${String(msg).slice(0,60)}`:'';
   toast(action+'하지 못했어요'+tag+detail+(tag||detail?'':' 잠시 후 다시 시도해주세요'),'error',7000);
 }
-const setLoad = (on, t='처리 중...') => {
+const setLoad = (on, t='처리 중...', scan=false) => {
   document.getElementById('loading').style.display = on ? 'flex' : 'none';
   document.getElementById('loadText').innerText = t;
+  // scan=true(영수증 AI 분석)면 동그라미 대신 바코드 스캔선 카드 표시 (2026-06-18)
+  const sp=document.getElementById('loadSpinner'), sc=document.getElementById('loadScan');
+  if(sp&&sc){ sp.style.display=scan?'none':'block'; sc.style.display=scan?'block':'none'; }
 };
 function nav(tab, el) {
   // 서브탭 분리: staffRoles → staff 컨테이너 + roles 서브탭

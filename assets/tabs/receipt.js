@@ -991,7 +991,7 @@ async function runAI() {
   const pageCount = b64Pages.length;
   // 여러 장이면 AI 호출(비용 발생) 전에 확인 — 다른 거래처 섞임 방지 (2026-06-04, 비용 0으로 차단)
   if(pageCount>1 && !confirm(`사진 ${pageCount}장이 선택됐어요.\n\n같은 영수증의 여러 페이지인가요?\n거래처가 다르면 '취소' 후 한 곳씩 올려주세요.`)) return;
-  setLoad(true, pageCount>1 ? `AI 분석 중... (${pageCount}장 페이지별 동시 분석)` : 'AI 분석 중...');
+  setLoad(true, pageCount>1 ? `AI 분석 중... (${pageCount}장 페이지별 동시 분석)` : 'AI 분석 중...', true);
   try {
     let catList = getCatListForPrompt();
     const isVendorModeAI = rcpMode === 'vendor';
@@ -1062,7 +1062,7 @@ async function runAI() {
       // ─── 페이지별 독립 분석 → 병합 (2026-06-11) ───
       // 여러 장을 한 호출에 던지면 페이지끼리 섞여 품목명 오독 폭증 (사장님 실측 — 삼성웰스토리 2장).
       // 페이지마다 따로 분석 = 1장 정확도 그대로. 요약 페이지(품목 0 + 합계만)는 합계 기준으로만 쓰임.
-      setLoad(true, `AI 분석 중... (${pageCount}장 페이지별 동시 분석)`);
+      setLoad(true, `AI 분석 중... (${pageCount}장 페이지별 동시 분석)`, true);
       const singlePrompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, isOnlineMode:isOnlineModeAI, isLiquorMode:isLiquorModeAI, vendorName:rcpVendorName, catList, pageCount:1 });
       const results = await Promise.all(b64Pages.map(b64 =>
         _rcpAICallWithFallback([{text:singlePrompt},{inline_data:{mime_type:'image/jpeg',data:b64}}], 30, 1)
@@ -1139,7 +1139,7 @@ async function runAI() {
         const _rowSum=list.reduce((s,it)=>s+(parseInt(it.totalPrice)||0),0);
         const _diff=Math.abs(_rowSum-receiptTotalSum);
         if(_diff<=Math.max(500, receiptTotalSum*0.005)) break; // 0.5% 또는 500원 이내 = 통과
-        setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`);
+        setLoad(true,`합계 ${fmt(_diff)}원 차이 — AI 재검산 중... (${_ref+1}/2)`, true);
         try{
           const _rParts=[{text:`이전 분석 수정 요청. 품목 합산 ${_rowSum}원인데 영수증 합계가 ${receiptTotalSum}원 (차이 ${_diff}원).\n이전 응답: ${JSON.stringify(raw)}\n이미지를 다시 확인해 수량(q)·금액(p)·단가(u)·세액(t) 오류만 찾아 수정된 JSON만 반환.\n⚠️품목명(i)·규격(spec)·원산지(og)는 이전 응답 그대로 복사 — 절대 다시 읽거나 바꾸지 마라(이름 수정은 숫자 검산과 무관).`},...parts.slice(1)];
           const _fixRaw=await callGemini(_rParts,_refTimeout,'receipt_reflection',_refModel,_refProvider);
@@ -1502,11 +1502,11 @@ async function _rcpAICallWithFallback(parts, timeoutSec, pageCount){
     const isOverloadLike = /high demand|overload|currently|503|429|시간 초과|비어있|json|응답 오류/i.test(m);
     if(!isOverloadLike) throw geminiErr;
     try {
-      setLoad(true, 'Gemini Flash 혼잡 → Gemini 2.0으로 재시도 중...');
+      setLoad(true, 'Gemini Flash 혼잡 → Gemini 2.0으로 재시도 중...', true);
       const raw = await callGemini(parts, timeoutSec+10, 'receipt_ocr', 'gemini-2.0-flash', 'gemini');
       return { raw, usedFallback:true, fallbackProvider:'gemini', fallbackModel:(_shortModelName(lastAIUsage?.model) || 'Gemini 2.0') }; // worker가 강등시켜도 실제 쓴 모델 정직 표시
     } catch(e2){
-      setLoad(true, 'Gemini 전체 혼잡 → GPT-4o로 재시도 중...');
+      setLoad(true, 'Gemini 전체 혼잡 → GPT-4o로 재시도 중...', true);
       toast('⚠️ Gemini 혼잡 — GPT-4o 백업 분석', 'warn', 2500);
       const raw = await callGemini(parts, 60+(pageCount-1)*5, 'receipt_ocr', 'gpt-4o', 'gpt'); // GPT-4o 느림 → 60초 (2026-06-08 실측)
       return { raw, usedFallback:true, fallbackProvider:'gpt', fallbackModel:'GPT-4o' };
