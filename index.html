@@ -3370,12 +3370,13 @@
 <!-- 제외 사유 -->
 <div class="sheet" id="reasonSheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-title">제외 사유</div>
-  <div class="reason-item" data-action="selectReason|부가세 제외">부가세 제외</div>
-  <div class="reason-item" data-action="selectReason|합계 오답">합계 오답</div>
-  <div class="reason-item" data-action="selectReason|글자 깨짐">글자 깨짐</div>
-  <div class="reason-item" data-action="selectReason|중복 항목">중복 항목</div>
-  <div class="reason-item cancel" data-action="selectReason|cancel">다시 포함하기</div>
+  <div class="sheet-title">이 항목, 합계에서 뺄까요?</div>
+  <div class="reason-sub">고르면 이 항목이 <b>합계(집계)에서 빠져요</b>. 삭제는 아니에요 — '다시 포함하기'로 언제든 되돌릴 수 있어요.</div>
+  <div class="reason-item" data-action="selectReason|부가세 제외">부가세 줄이라서 (중복 합산 방지)</div>
+  <div class="reason-item" data-action="selectReason|합계 오답">금액(합계)을 잘못 읽음</div>
+  <div class="reason-item" data-action="selectReason|글자 깨짐">글자가 깨져서 알아볼 수 없음</div>
+  <div class="reason-item" data-action="selectReason|중복 항목">똑같은 항목이 중복됨</div>
+  <div class="reason-item cancel" data-action="selectReason|cancel">↩️ 다시 포함하기 (되돌리기)</div>
 </div>
 
 <!-- 설정값 편집 -->
