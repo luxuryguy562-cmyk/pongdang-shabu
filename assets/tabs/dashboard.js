@@ -1622,6 +1622,11 @@ async function loadDashboard(force){
           else if(_dToday >= _due-1) (_manual?_fcDueManual:_fcDue).push(r.name);    // 전날·당일 = 임박
         });
       }
+      // ── 노무 자가점검 (AI 매니저에 얹음, 참고용 — 공인노무사법: 자문 아닌 정보 제공) ──
+      const MIN_WAGE_2026 = 10320; // 2026 최저임금(시급). ⚠️ 매년 갱신 필요(법 개정 추적)
+      const _belowMin = (employees||[]).filter(e=>e.is_active && e.wage_type!=='monthly' && e.base_wage && e.base_wage < MIN_WAGE_2026).map(e=>e.name);
+      let _pendingChgCnt = 0;
+      try{ const{data:_cr}=await sb.from('schedule_change_requests').select('id').eq('store_id',sid).eq('status','대기'); _pendingChgCnt=(_cr||[]).length; }catch(_){}
       renderAiBrief({
         totalRevenue,
         currAtt:   expByGroup['인건비'] || 0,
@@ -1633,6 +1638,7 @@ async function loadDashboard(force){
         momRev: _briefMomRev,
         fcLate: _fcLate, fcDue: _fcDue,
         fcLateManual: _fcLateManual, fcDueManual: _fcDueManual,
+        belowMinWage: _belowMin, pendingChgCnt: _pendingChgCnt,
       });
     } catch(e){ console.warn('[aiBrief]', e.message); }
 
@@ -1712,6 +1718,16 @@ function renderAiBrief(a){
   if(a.momRev && a.momRev.up && a.momRev.text!=='비슷'){
     items.push({ sev:2, ic:'🎉', title:'매출이 지난달보다 올랐어요',
       desc:`매출이 지난달 같은 기간보다 <span style="color:var(--toss-blue-strong);font-weight:800;">${a.momRev.text}</span> 늘었어요.` });
+  }
+
+  // ── 노무 자가점검 (참고용 — 공인노무사법: 자문 아닌 정보 제공 + 노무사 확인 권장) ──
+  if(a.belowMinWage && a.belowMinWage.length){
+    items.push({ sev:0, ic:'⚖️', title:'최저임금보다 낮은 시급이 있어요',
+      desc:`<b>${a.belowMinWage.join(', ')}</b>님 시급이 2026년 최저임금(10,320원)보다 낮아요. 직원관리에서 확인해 주세요. <span style="color:var(--gray-400);">※ 참고용이에요. 자세한 건 노무사에게 확인하세요.</span>` });
+  }
+  if(a.pendingChgCnt > 0){
+    items.push({ sev:1, ic:'🔄', title:'근무 변경·취소 신청이 있어요',
+      desc:`승인 대기 중인 근무 변경/취소 신청이 <b>${a.pendingChgCnt}건</b> 있어요. 근태 기록 화면의 <b>“🔄 근무 변경·취소 신청/이력”</b>에서 확인하세요.` });
   }
 
   // 심각도순 정렬(빨강→노랑→초록) 후 최대 3개
