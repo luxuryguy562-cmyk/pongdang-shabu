@@ -808,7 +808,6 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
   let query = sb.from('attendance_logs')
     .select('*, employees(name)')
     .eq('store_id', currentStore.id)
-    .neq('status', '거절') // 거절된 신청은 계획·간트에서 숨김 (기록만 보존)
     .gte('work_date', startDate)
     .lte('work_date', endDate)
     .order('work_date', {ascending:false})
@@ -822,6 +821,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
   let schedQuery = sb.from('work_schedules')
     .select('*, employees(name)')
     .eq('store_id', currentStore.id)
+    .neq('status', '거절') // 거절된 신청은 계획에서 숨김 (기록만 보존)
     .gte('work_date', startDate)
     .lte('work_date', endDate)
     .limit(500);
