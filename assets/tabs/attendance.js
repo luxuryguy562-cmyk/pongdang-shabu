@@ -262,7 +262,11 @@ function updateCheckInOutUI(record){
   const nameEl= document.getElementById('attStatusName');
   const inBtn = document.getElementById('btnCheckIn');
   const outBtn= document.getElementById('btnCheckOut');
+  const restStartBtn = document.getElementById('btnRestStart');
+  const restEndBtn   = document.getElementById('btnRestEnd');
+  const hideRestBtns = ()=>{ if(restStartBtn) restStartBtn.style.display='none'; if(restEndBtn) restEndBtn.style.display='none'; };
   if(!card) return;
+  hideRestBtns();
   // 아바타 글자 + 이름 (selectedEmp가 있으면 우선, 없으면 currentEmp)
   const empObj = (selectedEmpId && (employees||[]).find(e=>e.id===selectedEmpId)) || currentEmp || null;
   const empName = empObj?.name || '사장님';
@@ -282,7 +286,8 @@ function updateCheckInOutUI(record){
     const inT = new Date(record.app_in);
     const elapsedMin = Math.max(0, Math.round((new Date()-inT)/60000));
     const eh = Math.floor(elapsedMin/60), em = elapsedMin%60;
-    if(badge) badge.innerText = `🔵 근무 중  ${eh>0?eh+'시간 ':''}${em}분 째`;
+    const onBreak = record.rest_start && !record.rest_end; // 휴게 중 여부
+    if(badge) badge.innerText = onBreak ? '☕ 휴게 중' : `🔵 근무 중  ${eh>0?eh+'시간 ':''}${em}분 째`;
     if(meta){
       meta.classList.add('grid');
       meta.innerHTML = `
@@ -290,7 +295,14 @@ function updateCheckInOutUI(record){
         <div class="cell"><div class="lbl">경과</div><div class="vl">${eh>0?eh+'h ':''}${em}m</div></div>`;
     }
     if(inBtn){ inBtn.style.display='none'; }
-    if(outBtn){ outBtn.style.display=''; outBtn.disabled=false; }
+    if(onBreak){
+      // 휴게 중: 휴게 종료만 (퇴근은 휴게 끝낸 뒤)
+      if(outBtn) outBtn.style.display='none';
+      if(restEndBtn){ restEndBtn.style.display=''; restEndBtn.disabled=false; }
+    } else {
+      if(outBtn){ outBtn.style.display=''; outBtn.disabled=false; }
+      if(restStartBtn){ restStartBtn.style.display=''; restStartBtn.disabled=false; }
+    }
   } else {
     card.classList.add('after');
     const inT  = new Date(record.app_in);
@@ -336,6 +348,41 @@ function openAttManualSheet(date, empId){
   if(rEl) rEl.value = (typeof settings!=='undefined' && settings.auto_rest_min) || 0;
   selectedEmpCtx='att'; // 직원 선택 시 vEmpName 갱신용
   openSheet('attManualSheet');
+}
+// ─── 새 기능: 휴게 시작/종료 (직원 본인 기록, 2026-06-17) ───
+async function startRest(){
+  if(!guardStore()) return;
+  const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
+  if(!empId) return toast('직원을 선택하거나 로그인하세요.','warn');
+  const today=ymdLocal(new Date());
+  const{data:rec}=await sb.from('attendance_logs').select('id,app_in,app_out,rest_start,rest_end').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
+  if(!rec?.app_in){ toast('먼저 출근을 찍으세요.','warn'); return; }
+  if(rec.app_out){ toast('이미 퇴근했어요.','warn'); return; }
+  if(rec.rest_start && !rec.rest_end){ toast('이미 휴게 중이에요.','warn'); return; }
+  setLoad(true,'휴게 시작...');
+  // 직원 본인 기록 = 바로 확정. 시작 시 종료 초기화(재휴게 대비)
+  const{error}=await sb.from('attendance_logs').update({rest_start:new Date().toISOString(),rest_end:null,rest_status:'확정',rest_set_by:empId}).eq('id',rec.id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('휴게 시작', error);
+  toast('☕ 휴게 시작했어요. 푹 쉬세요!','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+  await loadTodayRecord();
+}
+async function endRest(){
+  if(!guardStore()) return;
+  const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
+  if(!empId) return toast('직원을 선택하거나 로그인하세요.','warn');
+  const today=ymdLocal(new Date());
+  const{data:rec}=await sb.from('attendance_logs').select('id,rest_start,rest_end').eq('store_id',currentStore.id).eq('employee_id',empId).eq('work_date',today).maybeSingle();
+  if(!rec?.rest_start || rec.rest_end){ toast('휴게 중이 아니에요.','warn'); return; }
+  const restMin=Math.max(0,Math.round((new Date()-new Date(rec.rest_start))/60000));
+  setLoad(true,'휴게 종료...');
+  const{error}=await sb.from('attendance_logs').update({rest_end:new Date().toISOString()}).eq('id',rec.id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('휴게 종료', error);
+  toast(`☕ 휴게 ${restMin}분 끝! 다시 힘내요`,'success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+  await loadTodayRecord();
 }
 let _checkInBusy=false; // 출근 버튼 연타 방지 (경쟁조건 중복 저장 차단)
 async function checkIn(){
@@ -422,7 +469,9 @@ async function checkOut(){
   if(!record?.app_in){toast('출근 기록이 없습니다.','warn');return;}
   if(record.app_out){toast('이미 퇴근 처리됐습니다.','warn');return;}
   const appIn=new Date(record.app_in);
-  const w=await calcWageData(empId, appIn, now, today, null);
+  // 실제 휴게 기록 있으면 그만큼 차감(직원이 찍은 휴게 우선), 없으면 매장 자동휴게(settings.auto_rest_min)
+  const restOverride = (record.rest_start && record.rest_end) ? Math.max(0,Math.round((new Date(record.rest_end)-new Date(record.rest_start))/60000)) : null;
+  const w=await calcWageData(empId, appIn, now, today, restOverride);
   setLoad(true,'퇴근 처리 중...');
   const{error}=await sb.from('attendance_logs').update({app_out:now.toISOString(),rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage,check_out_ip:ipCheck.ip||null}).eq('id',record.id).eq('store_id',currentStore.id);
   setLoad(false);
