@@ -561,8 +561,8 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 
 **⚠️ 2026-05-06 변경 (`estimated_monthly` 도입)**:
 - 가마감 고정비 집계는 이제 `fixed_costs.estimated_monthly` 합산 (활성 항목만)
-- `fixed_cost_amounts` 테이블/UI는 **사용 중단** (월별 입력 화면 제거됨)
-- 기존 `fixed_cost_amounts` 데이터는 보존 (역사용, 안 씀)
+- `fixed_cost_amounts` = **공과금/고정비 "이번 달 실제 납부액" 저장용으로 재사용 중** (2026-06-14~). 실제액 입력 시 `fcEffectiveMonthly`가 예상액(`estimated_monthly`) 대신 실제액 우선 사용 → 그 달 일할 집계에 반영.
+  - ⚠️ 2026-06-17 정정: 이전 "사용 중단/안 씀" 기재는 **틀림** — 코드(`common.js fcEffectiveMonthly`, `sidemenu.js:1660 fcActualMap`, `dashboard.js:640 loadFcActualMap`)에서 실사용 중. (옛 "월별 입력 UI"만 제거)
 - 진마감 = `mydata_transactions` 출금 그대로 (변경 없음)
 - 코드 변경: `loadDashboard`, `calcReserveBalance`, `calcExpenseByCategories`, `monthSummary` 모두 `fixed_costs.estimated_monthly` 직접 합산
 

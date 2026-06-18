@@ -503,10 +503,20 @@ async function saveAttendance(){
   if(typeof loadAttList==='function') loadAttList();
 }
 function calcNightMin(inT,outT,date,ns,ne){
+  // 야간대(ns~ne) 자정 넘김(예 22:00~06:00) + 교대(자정 넘는 근무) 모두 정확 계산 (2026-06-17 범용 버그수정)
   const [nh,nm]=ns.split(':').map(Number);const [eh,em]=ne.split(':').map(Number);
-  const nsD=new Date(date);nsD.setHours(nh,nm,0);
-  const neD=new Date(date);neD.setHours(eh,em,0);
-  return Math.max(0,Math.round((Math.min(outT,neD)-Math.max(inT,nsD))/60000));
+  const crossMid=(eh*60+em)<=(nh*60+nm); // 끝시각<=시작시각 → 야간대가 자정 넘김
+  let total=0;
+  // 전날·당일·다음날 야간대와 근무시간[inT,outT] 겹침 합산 (세 구간은 서로 안 겹쳐 중복 없음)
+  for(let off=-1; off<=1; off++){
+    const ds=new Date(date); ds.setDate(ds.getDate()+off);
+    const s=new Date(ds); s.setHours(nh,nm,0,0);
+    const e=new Date(ds); e.setHours(eh,em,0,0);
+    if(crossMid) e.setDate(e.getDate()+1); // 끝시각을 다음날로 (자정 넘김)
+    const ov=Math.min(+outT,+e)-Math.max(+inT,+s);
+    if(ov>0) total+=ov;
+  }
+  return Math.round(total/60000);
 }
 // 급여 계산 공통 헬퍼
 async function calcWageData(empId, appIn, appOut, date, restMinOverride){
