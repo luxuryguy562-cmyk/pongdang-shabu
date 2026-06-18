@@ -793,6 +793,12 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
     if(data && data.length){
       const totalDays = Object.keys(attAllDayMap).length;
       const totalMin  = data.reduce((a,r)=>a+(r.total_work_min||0),0);
+      // 휴게 합계 (직원이 찍은 실제 휴게, 거절 제외) — 2026-06-17
+      const totalRestMin = data.reduce((a,r)=>{
+        if(r.rest_start && r.rest_end && r.rest_status!=='거절')
+          return a+Math.max(0,Math.round((new Date(r.rest_end)-new Date(r.rest_start))/60000));
+        return a;
+      },0);
       // 2026-05-25 인건비 통일: 시급제 calculated_wage + 월급제 일할 누적 (사장님 호소: 월급 누락)
       //  · 직원 필터 모드(empF)면 그 직원 1명만 계산. 전체 모드면 모든 직원.
       const monthlyEmpIds = new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
@@ -829,6 +835,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
         <div class="att-kpi-cell aux">
           <div class="item"><span class="l">📅 출근일</span><span class="v">${totalDays}일</span></div>
           <div class="item"><span class="l">⏱ 근무시간</span><span class="v">${fmtHourDecimal(totalMin)}</span></div>
+          ${totalRestMin>0?`<div class="item"><span class="l">☕ 휴게시간</span><span class="v" style="color:#F5A11E;">${fmtHourDecimal(totalRestMin)}</span></div>`:''}
         </div>
         <div class="att-kpi-cell wage">
           <div class="att-kpi-lbl">인건비</div>
@@ -1038,8 +1045,8 @@ function renderAttDayDetail(date, logs, isSingleView){
       }
     }
 
-    // 실제 막대 (텍스트 없음)
-    let bar = '';
+    // 실제 막대 (텍스트 없음) + 휴게 빗금
+    let bar = '', restBar='', restMinThis=0;
     if(inT){
       const sH = inT.getHours()+inT.getMinutes()/60;
       let eH = outT ? (outT.getHours()+outT.getMinutes()/60) : (sH+0.3);
@@ -1049,15 +1056,27 @@ function renderAttDayDetail(date, logs, isSingleView){
         const width = Math.min(100-left,(eH-sH)/GANTT_SPAN*100);
         bar = `<div class="att-bar" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${color};"></div>`;
       }
+      // 휴게 빗금 — 출근 기준 경과시간으로 위치(자정 넘김 안전), 거절 제외
+      if(r.rest_start && r.rest_end && r.rest_status!=='거절'){
+        const rsH = sH + (new Date(r.rest_start)-inT)/3600000;
+        const reH = sH + (new Date(r.rest_end)-inT)/3600000;
+        restMinThis = Math.max(0,Math.round((new Date(r.rest_end)-new Date(r.rest_start))/60000));
+        if(reH>rsH){
+          const rLeft=Math.max(0,(rsH-GANTT_START)/GANTT_SPAN*100);
+          const rWidth=Math.min(100-rLeft,(reH-rsH)/GANTT_SPAN*100);
+          restBar=`<div class="att-bar rest" style="left:${rLeft.toFixed(1)}%;width:${rWidth.toFixed(1)}%;" title="휴게 ${restMinThis}분"></div>`;
+        }
+      }
     }
     const timeLabel = inT ? `${fmtTime(r.app_in)}~${outT?fmtTime(r.app_out):'?'}` : '미출근';
     const clickable = isManager && idx>=0;
     html += `<div class="att-grow" ${clickable?`data-action="openEditAttByIdx|${idx}" style="cursor:pointer;"`:''}>
       <div class="att-row-label"><span class="dot" style="background:${color}"></span>${(r.employees?.name||'?').slice(0,4)}</div>
-      <div class="att-track">${attGridLines()}${planBar}${bar}</div>
+      <div class="att-track">${attGridLines()}${planBar}${bar}${restBar}</div>
     </div>
     <div class="att-row-meta">
       <span class="time">${timeLabel}</span>
+      ${restMinThis>0?`<span class="rest" style="color:#F5A11E;font-weight:800;">☕ ${restMinThis}분</span>`:''}
       <span class="hours">${fmtHourDecimal(r.total_work_min||0)}</span>
     </div>`;
   });
