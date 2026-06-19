@@ -53,7 +53,16 @@
 - 옛 **시드니**(pongdang, `ruytgygjwnbtzmtofopg`) = **INACTIVE**(꺼짐). 며칠 안정 후 정리 예정.
 - ⚠️ **`.mcp.json` 기본 연결이 아직 시드니** → Supabase MCP 작업 시 **`project_id=ecfjkfqlnqfxovlwhdtx`(서울) 명시 필수**.
 - ⚠️ **`uquest`(`ofeqiqauhvcovtzjangm`)는 사장님 별개 사내앱** — 절대 건드리지 말 것. (표 이름 `stores` 겹쳐도 다른 DB라 데이터는 안 섞임)
-- 🔴 **보안 미해결**: Cashflow RLS `USING(true)` + RLS 꺼진 표 8개(stores·franchises·ai_usage_logs·coupang계열·accuracy_lab). 보안 작업은 **노무 끝난 후**(사장님 "모든 항목 후").
+- 🔴 **보안 — 매장 격리(멀티테넌트) 실행 계획 (2026-06-18 사장님 "미리 하자", CTO 끌고감)**:
+  > **확인된 현 상태**: 민감정보(PIN·주민번호·계좌)는 ✅ 금고(employee_private/persons, 서버만)로 **안전**. 남은 건 **매장 격리** 한 조각 — 데이터 표 ~37개가 RLS `USING(true)`라 anon key로 전 매장 접근 가능. + RLS 꺼진 표 8개(stores·franchises·ai_usage_logs·accuracy_lab_logs·coupang 4종). **우리 매장 단독 사용 시 실질 위험 낮음**, 다른 매장 깔기 전 필수.
+  > **핵심 사실(설계 근거)**: 사장·직원·관리자 **전부 emp-login(PIN) 단일 로그인** (sidemenu.js:5193). franchise/owner 계정만 sb.auth(owner_user_id). → 신분증 발급을 emp-login 한 곳에 박으면 통일됨.
+  > **추천 방식 (사장님 손 0)**: emp-login(서버, service_role 이미 보유)에서 로그인 성공 시 **store_id 박힌 세션 발급** → 앱이 그 세션으로 DB 접근 → RLS `store_id = (auth.jwt()의 store_id)`. **JWT 비밀키 사장님 등록 불필요** (service_role/Supabase Auth admin으로 처리).
+  > **단계 (각 단계 테스트+롤백 필수, 서두르지 말 것 — 오늘 근태 버그 교훈)**:
+  >  - Phase 1: emp-login/emp-session에 store_id 세션 발급 + common.js가 그 세션 사용. **RLS는 USING(true) 유지(안 깨짐)**. 골든패스 테스트(로그인·전 화면).
+  >  - Phase 2: 표 1~2개(예: receipts)만 `store_id=jwt store_id`로 조이고 테스트(다른 매장 토큰으론 못 보는지).
+  >  - Phase 3: 전체 ~37표 확대 + 꺼진 8표 정리(server-only는 client 차단, 공용은 적절 정책).
+  > **⚠️ 주의**: 이 환경에선 Edge Function 테스트 불가 → 인증 코드는 검증 가능한 집중 세션에서 단계별로. 한 방에 X.
+  > **사장님**: 할 일 없음. CTO가 단계마다 "됐고 안 깨짐" 보고하며 진행.
 
 ### ✅ 야간수당 자정 넘김 버그 — 고침 완료 (2026-06-17, 모든 매장용)
 - `calcNightMin`(`attendance.js:505`)이 자정 넘는 야간대(예 22:00~06:00)에서 야간분을 0으로 깨뜨리던 버그 **수정**. 전날·당일·다음날 야간대 겹침 합산으로 자정 넘김·교대근무 정확 계산. node 검증 6케이스 통과(우리매장 18~22 동일, 22~06 정상화).
