@@ -1680,7 +1680,7 @@ function buildReceiptRow(i={}) {
     <div class="ric-l1">
       ${nameSuspectMark}
       <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목" list="rcpPastItems" autocomplete="off">
-      <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
+      <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
     </div>
     <div class="ric-l2">
       ${suspectMark}
@@ -1690,8 +1690,8 @@ function buildReceiptRow(i={}) {
       ${freeBadge}
       ${pastBtn}
       <span class="ric-l2-right">
-        <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
         <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▴</button>
+        <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
       </span>
     </div>
     ${detailWrap}
