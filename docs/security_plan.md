@@ -72,6 +72,11 @@
 
 ## 6. ✅ 확정 설계 (2026-06-19 실측 검증 — 사장님 "다 잠가" 승인)
 
+### 6-0. 진행 현황
+- ✅ **A단계 완료·배포·검증 (2026-06-19)**: emp-login/emp-session 버전5 배포(verify_jwt=false 유지). 임시직원 실로그인 테스트 → 신분증(JWT) 안에 `role=authenticated` + `app_metadata.store_id` 정확히 박힘 확인 + 그 신분증으로 REST 200(인증통과) 확인. 테스트 직원/유저 전부 삭제 완료. **라이브 무변화**(앱은 아직 session 미사용).
+- ⏭️ **다음 = B단계**: 앱(common.js)이 받은 session을 `sb.auth.setSession()`으로 부착. 정책은 아직 USING(true)라 안 깨짐. **사장님 폰 전탭 테스트 필요**.
+- ⏳ **그 다음 = C단계**: 6-3-A 함정(로그인 전 매장/직원 읽기) 먼저 해결 후 RLS 표별 격리.
+
 ### 6-1. 검증된 사실
 - JWT 비밀키(secret)는 코드로 **못 읽음** (GUC false, vault 없음, pgsodium 없음) → 직접 서명 방식 불가.
 - 그러나 **Supabase Auth(자체 로그인) 살아있음** (`auth.users` 존재, `auth.jwt()` 함수 있음) → **Supabase(GoTrue)가 신분증 서명** → 비밀키 불필요, 사장님 손 0.
