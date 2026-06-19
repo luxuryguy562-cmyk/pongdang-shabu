@@ -8,6 +8,7 @@
 
 ### ✅ 해결됨
 - **로열티 본사명 하드코딩** (dashboard 진마감 로열티가 `유림에퐁당` 고정 LIKE) → 매장 `classification_rules`(sub_category='로열티') 키워드 **동적 조회**로 변경. 우리 매장 그대로, 다른 매장은 자기 규칙(없으면 로열티 0). **DB 변경 없음.** (2026-06-18, PR #713, dev_lessons #208)
+- **뽑기(기타매출/extra_revenue) 우리 매장 특화** → settlement·sidemenu·dashboard·common·index에서 **코드 495줄 제거**(잔재 0) + DB 데이터 삭제(extra_revenue_items 2 + extra_revenue_logs 1). 새 매장 seed에서도 제외(LEGACY_EXTRA_DEFS 삭제). 마감 매출·장부 계산식 불변(뽑기는 원래 표시·로그용). 테이블은 DROP 안 함(빈 채 보존). (2026-06-18)
 
 ### ✅ 확인 결과 무해 (가드 있음 — 손대지 말 것)
 - **`seedDefaultRules`의 우리 매장 거래처 30여 개**(양두현·대봄야채·순창국제·노무법인대유·SK쉴더스…) → `currentStore.id===SEED_LEGACY_STORE_ID`(퐁당샤브 논산점) **가드**라 다른 매장엔 안 심김. 범용 결함 아님 (sidemenu.js:6566).

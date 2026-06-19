@@ -706,7 +706,7 @@ function nav(tab, el) {
   if (actions[tab]) actions[tab]();
   // 홈 v7: dashboard 진입 시 home stage로 리셋 (2026-05-22)
   if (tab === 'dashboard') { try { dashGoStage('home'); } catch(_){} }
-  if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); renderExtraRevenueInputs(); recalcSettle2(); initSettleDate(); loadOpeningAmount(); }
+  if (tab === 'settle') { resetSettleView(); ensureSettleDeductDefaultRows(); recalcSettle2(); initSettleDate(); loadOpeningAmount(); }
   if (tab === 'opening') { initOpeningDate(); openingTab('input', null); }
   // 거래처 진입 시 항상 목록으로 초기화 (상세→하단네비 재진입 시 이전 거래처 남는 버그 방지, dev_lessons #16)
   if (tab === 'vendors' && typeof vendorTab === 'function') vendorTab('list', null);
@@ -993,7 +993,7 @@ async function selectStore(id, name) {
     await loadLoginNames();
     showLoginScreen();
   } else {
-    await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories(), loadPaymentMethods(), loadExtraItems()]);
+    await Promise.all([loadEmployees(), loadAllSettings(), loadVendors(), loadFixedCosts(), loadExpCategories(), loadPaymentMethods()]);
     // 매출 캐시 클리어 (매장 바꾸면 새로 로드)
     salesDaily = []; salesEditCtx = null;
     recalcSettle2();

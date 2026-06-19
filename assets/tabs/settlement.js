@@ -202,21 +202,12 @@ async function handleSalesUpload(input){
     const vals=Object.values(targetRow);
     const getVal=idx=>idx!=null?parseNum(String(vals[idx]||'')):0;
     const fill=(id,val)=>{const el=document.getElementById(id);if(el&&val)el.value=parseInt(val).toLocaleString();};
-    const fillExtra=(legacyKey,val)=>{
-      if(!val) return;
-      const it=extraItems.find(x=>x.legacy_key===legacyKey);
-      if(!it) return;
-      const inp=document.querySelector('.s-extra-input[data-extra-id="'+it.id+'"]');
-      if(inp) inp.value=parseInt(val).toLocaleString();
-    };
 
     // 매출 필드 채우기
     fill('siPosCash',getVal(colMap.pos_cash));
     fill('siPosCashReceipt',getVal(colMap.pos_cash_receipt));
     fill('siPosCard',getVal(colMap.pos_card));
     fill('siPosEtc',getVal(colMap.pos_etc));
-    fillExtra('draw_large',getVal(colMap.draw_large));
-    fillExtra('draw_small',getVal(colMap.draw_small));
     recalcSettle2();
 
     const dateStr=colMap.settle_date!=null?parseDate(String(vals[colMap.settle_date]||''))||'':'';
@@ -240,7 +231,7 @@ function recalcSettle2(){
   if(_etcEl) _etcEl.innerText=fmt(_ded.etcSum)+'원';
   if(_dedTotalEl) _dedTotalEl.innerText=fmt(_ded.total)+'원';
 
-  // 매출합계 (본 매출만 — 기타매출은 장부와 별개)
+  // 매출합계 (POS 매출 4칸)
   const salesTotal=posCash+posCR+posCard+posEtc;
   document.getElementById('calcSalesTotal').innerText=fmt(salesTotal)+'원';
 
@@ -260,7 +251,7 @@ function recalcSettle2(){
     cvEl.innerText='❌ 차액 '+(d>0?'+':'')+fmt(d)+'원';cvEl.style.color='var(--danger)';cvBox.style.background='var(--danger-light)';
   }
 
-  // 장부 합계 (금고에 있어야 할 금액) — 기타매출 제외
+  // 장부 합계 (금고에 있어야 할 금액)
   const book=opening+cashCash-deductEtc-deductBank;
   document.getElementById('calcBook').innerText=fmt(book)+'원';
 
@@ -281,9 +272,6 @@ function recalcSettle2(){
     if(calcBox){calcBox.classList.toggle('diff-ok',diff===0);calcBox.classList.toggle('diff-bad',diff!==0);}
   }
 
-  // 기타매출 패널 (오늘 입력 + 누적)
-  recalcExtraRevenuePanel();
-
   refreshSaveButtonState(diff);
 }
 // 차액 0이면 저장 버튼 초록 강조 (sticky 차액 패널과 동기)
@@ -293,46 +281,6 @@ function refreshSaveButtonState(diff){
   saveBtn.classList.toggle('settle-ready', diff===0);
 }
 
-// 기타매출 입력칸 동적 렌더링
-function renderExtraRevenueInputs(){
-  const c=document.getElementById('extraRevenueInputs');
-  if(!c) return;
-  if(!extraItems.length){
-    c.innerHTML='<div style="text-align:center;padding:14px 0;color:var(--gray-500);font-size:12px;">등록된 항목 없음 — 사이드메뉴 ▸ 매출 관리 ▸ 기타매출 항목 관리</div>';
-    document.getElementById('extraRevenuePanel').style.display='none';
-    return;
-  }
-  c.innerHTML=extraItems.map(it=>{
-    const sum=extraItemSums[it.id]||0;
-    return `<div class="settle-item">
-      <span class="si-icon">${it.icon||'🎰'}</span>
-      <span class="si-label">${it.name}<br><span style="font-size:10px;color:var(--gray-500);font-weight:500;">누적 ${fmt(sum)}원</span></span>
-      <input type="text" class="s-input s-extra-input" data-extra-id="${it.id}" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2">
-    </div>`;
-  }).join('');
-}
-
-// 기타매출 결과 패널 갱신 (오늘 합계 + 항목별 누적)
-function recalcExtraRevenuePanel(){
-  const panel=document.getElementById('extraRevenuePanel');
-  const summary=document.getElementById('extraRevenueSummary');
-  if(!panel||!summary) return;
-  if(!extraItems.length){panel.style.display='none';return;}
-  let todayTotal=0;
-  const rows=extraItems.map(it=>{
-    const inp=document.querySelector('.s-extra-input[data-extra-id="'+it.id+'"]');
-    const today=inp?(parseInt((inp.value||'').replace(/,/g,''))||0):0;
-    todayTotal+=today;
-    const cum=(extraItemSums[it.id]||0)+today;
-    return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;">
-      <span style="color:#6B21A8;">${it.icon||'🎰'} ${it.name}</span>
-      <span style="font-weight:700;color:#6B21A8;">오늘 ${fmt(today)} · 누적 ${fmt(cum)}원</span>
-    </div>`;
-  }).join('');
-  summary.innerHTML=rows+`<div style="display:flex;justify-content:space-between;border-top:1px dashed #C084FC;padding-top:5px;margin-top:5px;font-size:13px;font-weight:800;color:#6B21A8;">
-    <span>오늘 기타매출 합계</span><span>${fmt(todayTotal)}원</span></div>`;
-  panel.style.display='block';
-}
 document.addEventListener('input',e=>{
   if(e.target.classList.contains('v-input')) recalcSettle2();
   if(e.target.classList.contains('op-v-input')) recalcOpening();
@@ -766,7 +714,6 @@ function resetSettleView(){
   _isEditingSettle=false; // 신규 마감 진입 기준선 — 자동날짜 허용 (수정은 editSettlement가 다시 true)
   ['siPosCash','siPosCashReceipt','siPosCard','siPosEtc','siCashCash','siCashQr','siCashTransfer'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.querySelectorAll('.v-input').forEach(i=>i.value='');
-  document.querySelectorAll('.s-extra-input').forEach(i=>i.value='');
   // 지출 행 초기화 → 통장입금·현금지출 각각 기본 1행
   const bankCont=document.getElementById('settleDeductBankRows');
   const etcCont=document.getElementById('settleDeductEtcRows');
@@ -809,29 +756,14 @@ async function finishSettlement2(){
     deductions:_stDedRows,
     deduct_etc:_stDed.etcSum, deduct_bank:_stDed.bankSum
   };
-  // 기타매출 입력값 수집 (legacy_key='draw_large/small'는 items_json에도 호환용 저장)
-  const extraInputs={};  // {item_id: amount}
-  let extraTotal=0;
-  document.querySelectorAll('.s-extra-input').forEach(inp=>{
-    const v=parseInt((inp.value||'').replace(/,/g,''))||0;
-    if(v>0) extraInputs[inp.dataset.extraId]=v;
-    extraTotal+=v;
-  });
-  // 호환용: 기존 items_json에 extra_draw_* 키도 채움 (마감 카드 itemDefs가 본 옛 형태)
-  extraItems.forEach(it=>{
-    const v=extraInputs[it.id]||0;
-    if(it.legacy_key==='draw_large') items.extra_draw_large=v;
-    if(it.legacy_key==='draw_small') items.extra_draw_small=v;
-  });
-  // 장부 합계 (기타매출 제외)
+  // 장부 합계
   const book=items.opening+items.cash_detail_cash-items.deduct_etc-items.deduct_bank;
-  // 매출 합계 (본 매출만 — 기타매출은 별도 패널에서 표시)
+  // 매출 합계 (POS 매출 4칸)
   const salesTotal=items.pos_cash+items.pos_cash_receipt+items.pos_card+items.pos_etc;
   let vault=0;const vMap={};document.querySelectorAll('.v-input').forEach(i=>{const val=parseInt(i.value)||0;vMap[i.dataset.unit]=val;vault+=parseInt(i.dataset.unit)*val;});
   const diff=vault-book;const diffStatus=diff===0?'일치':`차액 ${diff>0?'+':''}${fmt(diff)}원`;
-  const extraLine=extraTotal>0?`\n기타매출: ${fmt(extraTotal)}원 (별도 관리)`:'';
   const _dateLabel=new Date(_settleDate+'T00:00:00').toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
-  if(!confirm(`📅 ${_dateLabel} 영업 마감\n\n매출: ${fmt(salesTotal)}원${extraLine}\n장부상 금고: ${fmt(book)}원\n금고 현황: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
+  if(!confirm(`📅 ${_dateLabel} 영업 마감\n\n매출: ${fmt(salesTotal)}원\n장부상 금고: ${fmt(book)}원\n금고 현황: ${fmt(vault)}원\n결과: ${diffStatus}\n\n저장하시겠습니까?`)) return;
   setLoad(true,'마감 저장 중...');
   const settleDate=getSettleDate();
   const{data:savedRow,error}=await sb.from('settlements').upsert({
@@ -842,23 +774,6 @@ async function finishSettlement2(){
     sales_total:salesTotal
   },{onConflict:'store_id,settle_date'}).select('id').maybeSingle();
   if(error){setLoad(false);return errToast('저장', error);}
-  // ─── 새 기능: 기타매출 로그 기록 (extra_revenue_logs) ───
-  // 같은 마감의 기존 로그는 삭제 후 새로 INSERT (재저장 안전)
-  if(savedRow?.id){
-    try{
-      await sb.from('extra_revenue_logs').delete().eq('settlement_id',savedRow.id);
-      const logRows=Object.entries(extraInputs)
-        .filter(([itemId,])=>!itemId.startsWith('legacy_'))  // 레거시 가짜 ID는 DB에 INSERT 불가
-        .map(([itemId,amount])=>({
-          store_id:currentStore.id, item_id:itemId, log_date:settleDate,
-          amount, settlement_id:savedRow.id, memo:'마감자동'
-        }));
-      if(logRows.length){
-        const{error:elErr}=await sb.from('extra_revenue_logs').insert(logRows);
-        if(elErr) console.warn('[extra_revenue_logs] 저장 실패:',elErr.message);
-      }
-    } catch(e){ console.warn('[extra_revenue_logs] skip:',e.message); }
-  }
   // ─── 새 기능: sales_daily 동시 기록 (매출 관리 페이지용) ───
   let syncResult={skipped:false};
   try{ syncResult=await syncClosingToSalesDaily(settleDate, items)||{skipped:false}; }
@@ -899,9 +814,7 @@ async function syncClosingToSalesDaily(settleDate, items){
     cash:items.pos_cash||0,
     cash_receipt:items.pos_cash_receipt||0,
     qr:0,
-    etc:items.pos_etc||0,
-    extra_large:0,
-    extra_small:0
+    etc:items.pos_etc||0
   };
   // Part F: amounts jsonb에도 동시 저장 (legacy_key 매핑된 결제수단만)
   const amounts={};
@@ -1094,13 +1007,6 @@ async function loadSettleCard(d){
     if(deductBank>0) html += dedRow('🏧 통장 입금', deductBank, deductBankMemo);
   }
 
-  // 5) 기타매출 (기존 함수)
-  const extraHtml = await renderSettleCardExtraSection(data);
-  if(extraHtml && extraHtml.trim()) {
-    html += sectionHead('🎰','기타매출','장부와 별도 관리');
-    html += extraHtml;
-  }
-
   // 6) 금고 계수
   if(data.vault_json && Object.values(data.vault_json).some(v=>v>0)){
     html += sectionHead('💰','금고 계수');
@@ -1121,44 +1027,6 @@ async function loadSettleCard(d){
     </div>`;
   }
   c.innerHTML=html;
-}
-
-// ─── 새 기능: 마감 카드 기타매출 섹션 ───
-// settlement_id로 logs 조회 → 항목별 표시. logs 없으면 items_json 폴백(옛 마감).
-async function renderSettleCardExtraSection(data){
-  if(!data) return '';
-  let logs=[];
-  if(data.id){
-    try{
-      const{data:lg}=await sb.from('extra_revenue_logs')
-        .select('item_id,amount').eq('settlement_id',data.id);
-      logs=lg||[];
-    }catch(e){ /* 테이블 미존재 폴백 */ }
-  }
-  // logs 있으면 신규 형식, 없으면 items_json의 extra_draw_* 폴백
-  let entries=[];  // [{name, icon, amount}]
-  if(logs.length){
-    const itemMap={};
-    extraItems.forEach(it=>{itemMap[it.id]=it;});
-    logs.forEach(l=>{
-      const it=itemMap[l.item_id];
-      if(it && l.amount>0) entries.push({name:it.name,icon:it.icon||'🎰',amount:l.amount});
-    });
-  } else if(data.items_json){
-    const lg=data.items_json.extra_draw_large||0;
-    const sm=data.items_json.extra_draw_small||0;
-    if(lg>0) entries.push({name:'뽑기(대형)',icon:'🎰',amount:lg});
-    if(sm>0) entries.push({name:'뽑기(소형)',icon:'🎲',amount:sm});
-  }
-  if(!entries.length) return '';
-  const total=entries.reduce((s,e)=>s+e.amount,0);
-  let h='<div style="margin-top:8px;background:#F3E8FF;border:1px solid #D8B4FE;border-radius:10px;padding:10px 12px;">'
-    +'<div style="font-size:12px;font-weight:700;color:#6B21A8;margin-bottom:6px;">기타매출 (장부 별도)</div>';
-  entries.forEach(e=>{
-    h+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:#6B21A8;"><span>${e.icon} ${e.name}</span><span style="font-weight:700;">${fmt(e.amount)}원</span></div>`;
-  });
-  h+=`<div style="display:flex;justify-content:space-between;border-top:1px dashed #C084FC;padding-top:5px;margin-top:5px;font-size:13px;font-weight:800;color:#6B21A8;"><span>합계</span><span>${fmt(total)}원</span></div></div>`;
-  return h;
 }
 
 // ─── 새 기능: 정산 수정 ───
@@ -1221,32 +1089,6 @@ async function editSettlement(dateStr, silent){
     }
     // 🔧 통장입금(시재입금) 행이 없으면 빈 행 보장 — 수정 화면에서 입금 입력 못 하던 버그 (2026-06-15)
     ensureSettleDeductDefaultRows();
-  }
-  // 기타매출 입력칸 동적 렌더링 + 기존 logs 채우기
-  renderExtraRevenueInputs();
-  if(data.id){
-    try{
-      const{data:lg}=await sb.from('extra_revenue_logs')
-        .select('item_id,amount').eq('settlement_id',data.id);
-      (lg||[]).forEach(l=>{
-        const inp=document.querySelector('.s-extra-input[data-extra-id="'+l.item_id+'"]');
-        if(inp && l.amount>0) inp.value=parseInt(l.amount).toLocaleString();
-      });
-    }catch(e){ /* 테이블 미존재 폴백 */ }
-  }
-  // 폴백: logs가 없고 items_json에 옛 extra_draw_*가 있으면 → legacy_key로 매핑
-  const lg=items.extra_draw_large||0, sm=items.extra_draw_small||0;
-  if(lg>0 || sm>0){
-    extraItems.forEach(it=>{
-      if(it.legacy_key==='draw_large' && lg>0){
-        const inp=document.querySelector('.s-extra-input[data-extra-id="'+it.id+'"]');
-        if(inp && !inp.value) inp.value=parseInt(lg).toLocaleString();
-      }
-      if(it.legacy_key==='draw_small' && sm>0){
-        const inp=document.querySelector('.s-extra-input[data-extra-id="'+it.id+'"]');
-        if(inp && !inp.value) inp.value=parseInt(sm).toLocaleString();
-      }
-    });
   }
   // vault_json → 금고 입력
   const vault=data.vault_json||{};
