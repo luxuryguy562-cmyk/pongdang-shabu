@@ -1351,6 +1351,7 @@ async function runAI() {
     rowCount=0;
     document.getElementById('resTable').innerHTML=_rcpDatalistHtml()+list.map(i=>buildReceiptRow(i)).join('');
     rowCount=list.length;
+    requestAnimationFrame(autoGrowAllNames); // 품목명 칸 높이 자동 맞춤 (긴 이름 다 보이게)
     // 영수증 날짜 상단 입력칸에 AI 인식 날짜 표시 + 이상 경고 (2026-06-02: 날짜 hidden 문제 해결)
     const _rcpDateEl=document.getElementById('rcpReceiptDate');
     if(_rcpDateEl){ _rcpDateEl.value=(list[0]&&list[0].date)||ymdLocal(new Date()); _checkRcpDateWarn(_rcpDateEl.value); }
@@ -1679,8 +1680,8 @@ function buildReceiptRow(i={}) {
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
       ${nameSuspectMark}
-      <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목" list="rcpPastItems" autocomplete="off">
-      <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
+      <textarea class="c-i" rows="1" placeholder="품목" data-input="autoGrowName|this">${esc(i.item||'')}</textarea>
+      <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
     </div>
     <div class="ric-l2">
       ${suspectMark}
@@ -1690,8 +1691,8 @@ function buildReceiptRow(i={}) {
       ${freeBadge}
       ${pastBtn}
       <span class="ric-l2-right">
-        <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
         <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▴</button>
+        <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
       </span>
     </div>
     ${detailWrap}
@@ -1701,6 +1702,9 @@ function buildReceiptRow(i={}) {
     <input type="hidden" class="c-is-deposit" value="0">
   </div>`;
 }
+// ─── 새 기능: 품목명 칸 자동 높이 (긴 이름 줄바꿈으로 다 보이게, 2026-06-19 사장님) ───
+function autoGrowName(el){ if(!el) return; el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,84)+'px'; }
+function autoGrowAllNames(){ try{ document.querySelectorAll('#resTable .c-i').forEach(autoGrowName); }catch(_e){} }
 // ─── 세부 펼침/접힘 토글 (2026-06-15 통일·정리) ───
 function toggleRcpDetail(idx){
   const d=document.getElementById('detail-'+idx);
