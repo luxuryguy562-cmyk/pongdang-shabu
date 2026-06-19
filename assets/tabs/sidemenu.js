@@ -5225,12 +5225,22 @@ async function loadDiffTable(){
   }
   const THRESHOLD=1000;
 
-  const[opRes,stRes]=await Promise.all([
-    sb.from('daily_opening').select('opening_date,actual_total,previous_close_total').eq('store_id',sid).gte('opening_date',startDate).lte('opening_date',endDate),
-    sb.from('settlements').select('settle_date,actual_total,expected_total,diff_amount,items_json').eq('store_id',sid).gte('settle_date',startDate).lte('settle_date',endDate)
+  const[opRes,stRes,empRes]=await Promise.all([
+    sb.from('daily_opening').select('opening_date,actual_total,previous_close_total,created_by,created_at').eq('store_id',sid).gte('opening_date',startDate).lte('opening_date',endDate),
+    sb.from('settlements').select('settle_date,actual_total,expected_total,diff_amount,items_json,created_by,created_at').eq('store_id',sid).gte('settle_date',startDate).lte('settle_date',endDate),
+    sb.from('employees').select('id,name').eq('store_id',sid)
   ]);
   const opByDate={};(opRes.data||[]).forEach(o=>opByDate[o.opening_date]=o);
   const stByDate={};(stRes.data||[]).forEach(s=>stByDate[s.settle_date]=s);
+  // 누가·언제 기록 — created_by→이름, created_at→KST 시각 (사장님 요청 2026-06-19)
+  const _empName={};(empRes.data||[]).forEach(e=>_empName[e.id]=e.name);
+  const _byWhen=(by,at)=>{
+    const nm = by ? (_empName[by]||'(퇴사자)') : '';
+    let tm='';
+    if(at){ try{ tm=new Date(at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Seoul'}); }catch(_e){} }
+    if(!nm&&!tm) return '';
+    return `${nm||'기록자 미상'}${tm?' · '+tm:''}`;
+  };
 
   // 2026-05-14: 사장님 요청 — 날짜 오름차순 (옛날 → 최신, 아래로 갈수록 오늘)
   const dates=Object.keys(stByDate).sort((a,b)=>a.localeCompare(b));
@@ -5289,6 +5299,7 @@ async function loadDiffTable(){
       flow+=fr('전일 마감 금고', fmt(op.previous_close_total||0)+'원');
       flow+=fr('오늘 개시 금고 (실제)', fmt(op.actual_total||0)+'원','','var(--text)');
       flow+=fr('＝ 영업개시 차액', opDiff===0?'✅ 일치':(opDiff>0?'+':'')+fmt(opDiff)+'원','', opDiff===0?'var(--success)':'var(--danger)');
+      { const w=_byWhen(op.created_by,op.created_at); if(w) flow+=`<div style="font-size:11px;color:var(--gray-500);padding:1px 0 2px;">🖊️ 개시: ${w}</div>`; }
     } else {
       flow+=`<div style="font-size:11px;color:var(--gray-400);padding:4px 0;">영업개시 기록 없음 — 전일 마감 금고에서 바로 마감</div>`;
     }
@@ -5300,6 +5311,7 @@ async function loadDiffTable(){
     flow+=fr('＝ 장부상 금고', fmt(book)+'원','','var(--text)');
     flow+=fr('금고 현황 (실제)', fmt(closeVault)+'원','','var(--text)');
     flow+=`<div style="border-radius:10px;padding:9px;text-align:center;margin-top:8px;font-weight:900;font-size:13px;background:${stDiff===0?'var(--success-light)':'var(--danger-light)'};color:${stDiff===0?'var(--success)':'var(--danger)'};">마감 차액 ${stDiff===0?'✅ 일치':(stDiff>0?'+':'')+fmt(stDiff)+'원'}</div>`;
+    { const sw=_byWhen(st.created_by,st.created_at); if(sw) flow+=`<div style="font-size:11px;color:var(--gray-500);padding:5px 0 0;text-align:center;">🖊️ 마감: ${sw}</div>`; }
     flow+=`<button data-action="gotoSettleEdit|${d}" style="width:100%;margin-top:8px;padding:10px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">✏️ 이 날 마감 수정</button>`;
 
     html+=`<tr class="diff-main-row" data-action="toggleDiffRow|${d}" style="border-top:1px solid var(--gray-100);cursor:pointer;">
