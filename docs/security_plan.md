@@ -78,7 +78,7 @@
 - ✅ **C단계 SQL 준비 완료 (미적용)**: `docs/sql/security_rls_lock.sql`(잠금) + `..._rollback.sql`(되돌리기). store_id 33표 격리 + stores/franchises/coupang_global_hints 처리.
 - 🔴 **C 적용 전 남은 선행조건**:
   1. **B(앱 변경) 본가(main) 반영 + 사장님 폰 정상 확인** — 잠금 전 앱이 신분증을 실제로 들고 다녀야 함.
-  2. **신규 매장 가입(owner-signup) 서버 경유 전환** — 현재 가입은 앱이 stores/employees 직접 insert(sidemenu.js:4868·4882). 잠그면 **새 손님 가입만** 깨짐(우리 매장 일상 무관). 범용성(헌법 3-5 #10)상 가입도 Edge Function으로 옮겨야 함.
+  2. ✅ **신규 매장 가입 서버화 완료** — `owner-signup` 배포+테스트 통과(테스트가게 생성→검증→삭제). 앱 completeSignup 교체. 잠금 후에도 가입 동작.
   3. **잠금 적용 직후 사장님 폰 전 탭 확인** — 깨지면 rollback SQL 즉시 실행.
 - ⚠️ 알려진 제약: 잠금 후 **프랜차이즈 본사 다매장 동시 조회**(sidemenu.js:8617 등)는 자기 매장만 보임 — 본사 역할은 별도 설계 필요(미래).
 
