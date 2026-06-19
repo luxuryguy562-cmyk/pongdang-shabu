@@ -4,6 +4,19 @@
 
 ---
 
+## [2026-06-19] 🔐 매장 간 데이터 격리 보안 완성 (RLS) — 사장님 "다 잠가"/"bc 다 해"
+
+**문제**: anon(공개 publishable key) 코드 노출 + RLS `USING(true)`(무조건 통과) → 누구나 전 매장 데이터 읽기/쓰기/삭제 가능. SaaS 치명.
+**원인**: 앱이 anon key 하나로 33표 직접 접근, 요청에 매장 신분 없음 → RLS 격리 불가.
+**해결(실측 검증)**: JWT secret 코드로 못 읽음 → **Supabase Auth(GoTrue)가 신분증 서명**. emp-login이 직원당 Auth 유저(`emp.<id>@pongdang.local`, 결정적 비번)+`app_metadata.store_id` 도장 → 세션 발급. RLS: `store_id::text = auth.jwt()->'app_metadata'->>'store_id'`.
+
+- **A**(배포+테스트): emp-login/emp-session v5 store_id 세션 발급(verify_jwt=false).
+- **B**(PR #715 main): 앱 setSession/signOut. 로그인전 매장/직원목록 공개함수 `login-meta`(비민감만). 가입 `owner-signup` 서버화 → 잠금 후도 가입 동작.
+- **C**(잠금+검증): `docs/sql/security_rls_lock.sql` store_id 33표 격리 + stores/franchises/coupang_global_hints. 검증: 본인매장=전체 / 가짜·anon=0. 사장님 폰 전탭 정상. advisors ERROR8·WARN30여→0. 롤백SQL 보관.
+
+**남은 것**: 프랜차이즈 본사 다매장뷰=자기매장만(미래). 폰 UI 실가입 미확인. 소소 하드닝 선택.
+**불변**: service_role(MCP)·Edge Function은 RLS 무시 → 자동 유지보수 그대로.
+
 ## [2026-06-17] 🌏 Supabase 시드니→서울 리전 이전 (완료) — 홈 거리지연 해소
 
 **배경**: 홈 7초 느림. 색인+defer로 50% 개선 후, 남은 거리지연(호주 ap-southeast-2) 해소 위해 서울(ap-northeast-2) 이전. 사장님 "니가 해" + 단계별 실행승인.
