@@ -505,7 +505,6 @@
       <div class="side-group-body">
         <div class="side-item" data-action="navFromSide|sales">매출 기록</div>
         <div class="side-item" data-action="openPaymentMethodsSheet">결제수단 관리</div>
-        <div class="side-item" data-action="openExtraItemsSheet">기타매출 항목 관리</div>
       </div>
     </div>
 
@@ -1272,16 +1271,6 @@
       </div>
     </div>
 
-    <!-- 기타매출 (매장별 동적 항목) -->
-    <div class="settle-card-group" id="extraRevenueCard">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="card-title">기타매출</div>
-        <span style="font-size:11px;color:var(--gray-500);">장부와 별도 관리</span>
-      </div>
-      <p class="card-sub">뽑기·오락기 등 매장별 부가 매출 (사이드메뉴에서 항목 관리)</p>
-      <div id="extraRevenueInputs"></div>
-    </div>
-
     <!-- 통장입금 (현금→통장 이동, 금고에서 빠짐) -->
     <div class="settle-card-group">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1330,11 +1319,6 @@
       </div>
     </div>
 
-    <!-- 기타매출 패널 (장부와 별도) -->
-    <div class="settle-result" id="extraRevenuePanel" style="margin-top:8px;background:var(--purple-light,#F3E8FF);border:1px solid #D8B4FE;display:none;">
-      <div style="font-size:12px;font-weight:700;color:#6B21A8;margin-bottom:6px;">기타매출 (오늘 / 누적)</div>
-      <div id="extraRevenueSummary"></div>
-    </div>
     <button class="btn btn-primary btn-full" style="margin-top:8px;border-radius:16px;padding:18px;font-size:16px;" data-action="finishSettlement2">마감 저장하기</button>
   </div>
   <div id="settleList" style="display:none;">
@@ -1459,19 +1443,6 @@
 
     <!-- 예비비 박스 폐기 (2026-05-22) — DB는 보존, 미래 세무 시스템 도입 시 부활 -->
 
-    <!-- 기타매출 (탭 → extra) -->
-    <div class="dash-enter-v7" id="dashHomeExtraEnter" data-dash-go="extra" style="display:none;">
-      <div class="ic-wrap amber">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#F5A11E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.6 2.4 7.4L12 16.8 5.8 21.4l2.4-7.4L2 9.4h7.6z"/></svg>
-      </div>
-      <div class="body-col">
-        <div class="lb">기타매출 누적</div>
-        <div class="vl"><span id="dashHomeExtraAmt">0</span><span class="won">원</span></div>
-        <div class="sub">배달앱 적립금 등</div>
-      </div>
-      <div class="arrow">›</div>
-    </div>
-
   </div>
 
   <!-- ═══ stage: today-detail (오늘 매출 상세) ═══ -->
@@ -1557,19 +1528,6 @@
     </div>
     <!-- 세부 본문 (JS v17RenderMonthDetail가 채움): 큰요약 + 예상마감 + 카테고리별 + 전월대비 + 주차 매트릭스 -->
     <div id="v17MonthDetailBody"></div>
-  </div>
-
-  <!-- ═══ stage: extra (기타매출 누적) ═══ -->
-  <div class="dash-stage" data-dash-stage="extra">
-    <div class="dash-back-row" data-dash-go="home">
-      <div class="back-btn">‹</div>
-      <div class="back-ttl">기타매출 누적</div>
-    </div>
-    <div class="card" id="dashExtraRevenueCard">
-      <div class="card-title"><svg class="icon-inline"><use href="#i-coins"/></svg>기타매출 누적</div>
-      <p class="card-sub">장부와 별도로 관리되는 매출. 항목별 월/전체 누적.</p>
-      <div id="dashExtraRevenueBody"></div>
-    </div>
   </div>
 
 </div>
@@ -2255,55 +2213,6 @@
       <button class="btn btn-primary" style="flex:2;" data-action="savePaymentMethod">💾 저장</button>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--gray-500);line-height:1.5;" id="pmeLegacyHint"></div>
-  </div>
-</div>
-
-<!-- 기타매출 항목 관리 시트 (목록 + 추가/수정/삭제) -->
-<div class="sheet-overlay" id="extraItemsSheet">
-  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
-    <div class="sheet-header">
-      <div class="sheet-title"><svg class="icon-inline"><use href="#i-coins"/></svg>기타매출 항목 관리</div>
-      <button class="sheet-close" data-action="closeSheet|extraItemsSheet">✕</button>
-    </div>
-    <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;line-height:1.5;">
-      뽑기·인형뽑기·오락기 등 매장별 부가 매출 항목.<br>
-      마감정산에서 항목별로 매출을 입력하고 누적을 볼 수 있어요.
-    </div>
-    <div id="eriList" style="margin-bottom:14px;"></div>
-    <button class="btn btn-primary btn-full" data-action="openExtraItemEdit|new">＋ 새 항목 추가</button>
-  </div>
-</div>
-
-<!-- 기타매출 항목 추가/수정 시트 -->
-<div class="sheet-overlay" id="extraItemEditSheet">
-  <div class="sheet">
-    <div class="sheet-header">
-      <div class="sheet-title" id="erieTitle">기타매출 항목 추가</div>
-      <button class="sheet-close" data-action="closeSheet|extraItemEditSheet">✕</button>
-    </div>
-    <input type="hidden" id="erieId">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-      <span style="font-size:12px;color:var(--gray-600);width:50px;">아이콘</span>
-      <input type="text" id="erieIcon" placeholder="🎰 (이모지 1자)" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-      <span style="font-size:12px;color:var(--gray-600);width:50px;">이름</span>
-      <input type="text" id="erieName" placeholder="예: 오락기" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-      <span style="font-size:12px;color:var(--gray-600);width:50px;">색상</span>
-      <input type="color" id="erieColor" value="#7C3AED" style="width:50px;height:36px;border:1px solid var(--gray-300);border-radius:6px;padding:2px;">
-      <input type="text" id="erieColorHex" placeholder="#7C3AED" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-      <span style="font-size:12px;color:var(--gray-600);width:50px;">순서</span>
-      <input type="number" id="erieSort" value="99" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-secondary" style="flex:1;" data-action="deleteExtraItem" id="erieDeleteBtn">🗑 삭제</button>
-      <button class="btn btn-primary" style="flex:2;" data-action="saveExtraItem">💾 저장</button>
-    </div>
-    <div style="margin-top:10px;font-size:11px;color:var(--gray-500);line-height:1.5;" id="erieLegacyHint"></div>
   </div>
 </div>
 
