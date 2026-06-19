@@ -4827,96 +4827,35 @@ async function completeSignup(){
 
   setLoad(true,'가입 중...');
   try {
-    // 1. Supabase Auth 가입
-    const { data: authData, error: authErr } = await sb.auth.signUp({
-      email, password: pw,
-      options:{ data:{ owner_name: ownerName } }
-    });
-    if(authErr) throw new Error('계정 생성 실패: '+authErr.message);
-    const userId = authData.user?.id;
-    if(!userId) throw new Error('사용자 ID를 받지 못했어요. 잠시 후 다시 시도해주세요.');
+    // 가입 핵심(계정·본사·매장·사장·설정)을 서버에서 처리 — 잠금(RLS) 후에도 가입되게 (새 기능)
+    const { data: r, error: invErr } = await sb.functions.invoke('owner-signup', { body:{ email, pw, storeName, ownerName, address, bizNo, inviteCode, signupType } });
+    if(invErr) throw new Error('가입 처리 중 오류가 났어요. 잠시 후 다시 시도해주세요.');
+    if(!r||!r.ok) throw new Error((r&&r.error)||'가입에 실패했어요');
+    const storeId = r.storeId;
+    const actualStoreName = r.storeName;
+    const storeCode = r.storeCode;
+    // 매장 신분증 부착 → 이후 기본데이터 seed 가 RLS 통과
+    if(r.session&&r.session.access_token){ try{ await sb.auth.setSession({access_token:r.session.access_token,refresh_token:r.session.refresh_token}); }catch(_e){} }
 
-    // 2. 타입별 franchise_id / auth_level 결정
-    let franchiseId = null;
-    let authLevelForEmp = 'owner';
-
-    if(signupType==='franchise_hq'){
-      // 본사 가입: franchises 생성 + invite_code 발급
-      const inv = 'F-'+generateStoreCode();
-      const { data: frRows, error: frErr } = await sb.from('franchises').insert({
-        name: storeName,
-        invite_code: inv,
-        owner_user_id: userId,
-        is_active: true
-      }).select().single();
-      if(frErr) throw new Error('본사 생성 실패: '+frErr.message);
-      franchiseId = frRows.id;
-      authLevelForEmp = 'franchise_admin';
-    } else if(signupType==='franchisee' && inviteCode){
-      // 가맹점주 + 본사 코드: 기존 franchise 찾기
-      const { data: frRows, error: frErr } = await sb.from('franchises')
-        .select('id,name').eq('invite_code', inviteCode).maybeSingle();
-      if(frErr) throw new Error('본사 코드 조회 실패');
-      if(!frRows) throw new Error('초대 코드가 맞지 않아요. 본사에서 받은 코드를 다시 확인하세요.');
-      franchiseId = frRows.id;
-      authLevelForEmp = 'owner';
-    }
-
-    // 3. 매장 생성 (본사면 "브랜드명 본사"용 비활성 매장, 나머지는 실제 매장)
-    const storeCode = generateStoreCode();
-    const actualStoreName = signupType==='franchise_hq' ? '['+storeName+'] 본사' : storeName;
-    const { data: storeRows, error: storeErr } = await sb.from('stores').insert({
-      name: actualStoreName,
-      address: address||null,
-      business_no: bizNo||null,
-      store_code: storeCode,
-      tos_accepted_at: new Date().toISOString(),
-      franchise_id: franchiseId,
-      is_active: signupType!=='franchise_hq'  // 본사는 비활성 (드롭다운에 안 뜨게)
-    }).select().single();
-    if(storeErr) throw new Error('매장 생성 실패: '+storeErr.message);
-    const storeId = storeRows.id;
-
-    // 4. owner/franchise_admin employee 생성
-    const ownerPin = Math.floor(1000+Math.random()*9000).toString();
-    const { error: empErr } = await sb.from('employees').insert({
-      store_id: storeId,
-      name: ownerName,
-      pin: ownerPin,
-      auth_level: authLevelForEmp,
-      auth_user_id: userId,
-      is_active: true,
-      is_approved: true,
-      is_manager: true,
-      base_wage: 0
-    });
-    if(empErr) throw new Error('사장 직원 생성 실패: '+empErr.message);
-
-    // 5. store_settings + 기본 seed (본사 더미 매장도 에러 방지용으로 기본값만)
-    await sb.from('store_settings').upsert({
-      store_id: storeId,
-      royalty_rate: 0, card_fee_rate: 2.5,
-      reserve_rate: 5, reserve_fixed: 400000
-    }, { onConflict:'store_id' });
+    // 기본 데이터 seed (신분증 받은 뒤 = 권한 OK). 본사 더미매장은 생략
     if(signupType!=='franchise_hq'){
-      await seedNewStoreDefaults(storeId);
+      try{ await seedNewStoreDefaults(storeId); }catch(_se){ console.warn('[signup] seed 일부 실패',_se); }
     }
 
     setLoad(false);
     closeSignup();
 
-    // 자동 로그인
+    // 자동 로그인 (방금 만든 사장 직원)
     currentStore = { id: storeId, name: actualStoreName };
     localStorage.setItem('pd_store', JSON.stringify(currentStore));
     await loadEmployees();
-    const emp = employees.find(e=>e.auth_user_id===userId);
+    const emp = employees.find(e=>e.name===ownerName) || employees[0];
     if(emp) completeLogin(emp);
 
     // 본사는 매장 코드 대신 초대 코드 보여주기
     if(signupType==='franchise_hq'){
-      const invCode = 'F-'+storeCode;
       toast(`🎉 본사 등록 완료!`,'success');
-      setTimeout(()=>showFranchiseWelcomeCard(storeName, invCode), 600);
+      setTimeout(()=>showFranchiseWelcomeCard(storeName, r.inviteCode||('F-'+storeCode)), 600);
     } else {
       toast(`🎉 가입 완료! 매장 코드: ${storeCode}`,'success');
       setTimeout(()=>showWelcomeCard(storeCode), 600);
