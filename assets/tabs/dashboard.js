@@ -538,6 +538,13 @@ async function loadDashboard(force){
     if(_dashPack){
       ({settleRes, fcRes, royaltyTxRes, prevSettleRes, voRes2, rcRes2, attRes2, prevVoRes, prevRcRes, prevAttRes, setRes2, schedRes2} = _dashPack);
     } else {
+      // 로열티 통장 키워드 동적 조회 — 매장별 분류 규칙에서(우리매장 '유림에퐁당', 다른 매장은 자기 규칙). 하드코딩 제거 → 범용화 (2026-06-18)
+      //   규칙 없으면(개인 사업자 등 로열티 없는 매장) 키워드 0 → 로열티 조회 자체를 스킵
+      let _royaltyKws = [];
+      if(dashMode==='final'){
+        const { data:_rkw } = await sb.from('classification_rules').select('keyword').eq('store_id',sid).eq('sub_category','로열티');
+        _royaltyKws = (_rkw||[]).map(r=>r.keyword).filter(Boolean);
+      }
       const _runDashQueries=()=>Promise.all([
         // 당월 매출 ('settle' = sales_daily 기준 / 'ups' = 업솔루션 daily_sales)
         // Part F Phase 2: select('*') — paymentMethods amounts jsonb + 레거시 7컬럼 모두 수용
@@ -546,10 +553,13 @@ async function loadDashboard(force){
           :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end).order('date'),
         // 고정비 — 항목별 예상 월 금액 1회 입력 (모든 달 동일 적용)
         sb.from('fixed_costs').select('id,estimated_monthly,is_active,category').eq('store_id',sid),
-        // 진마감 로열티 (병렬 조회, 가마감이면 빈 결과)
-        dashMode==='final'
-          ?sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description','%유림에퐁당%').gte('tx_date',start).lte('tx_date',end)
-          :Promise.resolve({data:null}),
+        // 진마감 로열티 (병렬 조회, 가마감이거나 로열티 키워드 없으면 빈 결과) — 매장 로열티 키워드로 통장 거래 합산
+        //   키워드 1개(대부분)는 기존과 동일한 .like(), 여러 개면 .or(...like) — 회귀 방지
+        (dashMode==='final' && _royaltyKws.length)
+          ? ( _royaltyKws.length===1
+              ? sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).like('description',`%${_royaltyKws[0]}%`).gte('tx_date',start).lte('tx_date',end)
+              : sb.from('mydata_transactions').select('amount').eq('store_id',sid).eq('exclude_from_settlement',false).or(_royaltyKws.map(k=>`description.like.*${k}*`).join(',')).gte('tx_date',start).lte('tx_date',end) )
+          : Promise.resolve({data:null}),
         // ── 전월 매출 ──
         dashSaleSource==='ups'
           ?sb.from('daily_sales').select('sale_date,total_sales,card_sales').eq('store_id',sid).gte('sale_date',pStart).lte('sale_date',pEnd)
