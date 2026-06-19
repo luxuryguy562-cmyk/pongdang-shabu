@@ -14,6 +14,25 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 }
 
+// ─── 새 기능: 매장 격리용 Supabase Auth 신분증(세션) 발급 (emp-login 과 동일) ───
+// 자동 로그인 복원 시에도 store_id 도장 박힌 Supabase 세션을 같이 발급해 RLS가 매장 격리 가능.
+// ⚠️ 실패해도 자동 로그인은 안 깨지게 호출부에서 try/catch.
+async function mintStoreSession(admin: any, employeeId: string, storeId: string) {
+  const email = `emp.${employeeId}@pongdang.local`;
+  const seed = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")! + ":" + employeeId;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(seed));
+  const password = "Pd1!" + [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  await admin.auth.admin.createUser({
+    email, password, email_confirm: true,
+    app_metadata: { store_id: storeId },
+    user_metadata: { employee_id: employeeId },
+  });
+  const anon = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+  const { data: signed, error: se } = await anon.auth.signInWithPassword({ email, password });
+  if (se || !signed?.session) throw se || new Error("세션 발급 실패");
+  return { access_token: signed.session.access_token, refresh_token: signed.session.refresh_token };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ ok: false, error: "POST만 허용" }, 405);
@@ -52,7 +71,12 @@ Deno.serve(async (req: Request) => {
     safe.birth_date = m.birth_date ?? null;
 
     await admin.from("emp_sessions").update({ last_used_at: new Date().toISOString() }).eq("token", token);
-    return json({ ok: true, emp: safe });
+
+    // 매장 격리용 Supabase 신분증 발급 (실패해도 자동 로그인은 그대로) — 새 기능
+    let session = null;
+    try { session = await mintStoreSession(admin, sess.employee_id, sess.store_id); } catch (_se) { /* 무시 */ }
+
+    return json({ ok: true, emp: safe, session });
   } catch (_e) {
     return json({ ok: false, error: "서버 오류" }, 500);
   }

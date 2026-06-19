@@ -15,6 +15,34 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 }
 
+// ─── 새 기능: 매장 격리용 Supabase Auth 신분증(세션) 발급 ───
+// PIN 검증을 이미 통과한 직원에게 store_id 도장이 박힌 Supabase 세션을 발급한다.
+// 앱이 이 세션을 부착하면 RLS(매장 격리 잠금)가 "이 매장 것만" 보여줄 수 있다.
+// app_metadata 는 JWT에 실리고 사용자가 못 고치므로 위조 불가 = 안전.
+// ⚠️ 실패해도 로그인은 안 깨지게 호출부에서 try/catch 로 감싼다.
+async function mintStoreSession(admin: any, employeeId: string, storeId: string) {
+  const email = `emp.${employeeId}@pongdang.local`;
+  // 결정적 비번(서버만 앎): service_role + employeeId 해시. 어디에도 저장 안 함.
+  const seed = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")! + ":" + employeeId;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(seed));
+  const password = "Pd1!" + [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+
+  // 1) 유저 확보 + store_id 도장 (없으면 생성)
+  const created = await admin.auth.admin.createUser({
+    email, password, email_confirm: true,
+    app_metadata: { store_id: storeId },
+    user_metadata: { employee_id: employeeId },
+  });
+  // 이미 있으면(에러) 그대로 둠 — 비번/도장은 기존 것 사용(매장 변경은 별도 처리 예정).
+
+  // 2) Supabase가 직접 서명한 세션 발급 (anon 클라이언트로 비번 로그인)
+  const anon = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+  const { data: signed, error: se } = await anon.auth.signInWithPassword({ email, password });
+  if (se || !signed?.session) throw se || new Error("세션 발급 실패");
+  void created;
+  return { access_token: signed.session.access_token, refresh_token: signed.session.refresh_token };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ ok: false, error: "POST만 허용" }, 405);
@@ -56,7 +84,11 @@ Deno.serve(async (req: Request) => {
     const expires = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
     await admin.from("emp_sessions").insert({ token, employee_id: matched.id, store_id, expires_at: expires });
 
-    return json({ ok: true, emp: safe, token });
+    // 5) 매장 격리용 Supabase 신분증 발급 (실패해도 로그인은 그대로) — 새 기능
+    let session = null;
+    try { session = await mintStoreSession(admin, matched.id, store_id); } catch (_se) { /* 신분증 실패 무시 */ }
+
+    return json({ ok: true, emp: safe, token, session });
   } catch (_e) {
     return json({ ok: false, error: "서버 오류" }, 500);
   }
