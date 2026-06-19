@@ -6009,7 +6009,9 @@ function completeLogin(emp){
   // auth_level 기반 권한 (is_manager와 동기화)
   authLevel=emp.auth_level||'staff';
   if(authLevel==='staff'&&emp.is_manager) authLevel='store_manager';
-  _myWorkMode=false; // 로그인 시 관리 모드로 시작 (2026-06-15)
+  // 권한 준 직원(매니저급, 사장·본사 아님)은 근무화면부터 시작 → 관리화면은 헤더 전환버튼으로 (사장님 2026-06-19)
+  // 사장(owner)·본사(franchise_admin)는 기존대로 관리 모드 시작. 일반 직원은 어차피 근무 화면뿐.
+  _myWorkMode = isRealManager() && !['owner','franchise_admin'].includes(authLevel);
   recalcPermissions();
   // 2026-05-25 사장님 호소: 직원 전환 시 옛 필터·일자·캐시 잔재 → 잘못된 직원 데이터 노출
   _resetUserState();
