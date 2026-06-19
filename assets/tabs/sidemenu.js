@@ -5154,8 +5154,10 @@ async function submitJoinFranchise(){
 // ─── 새 기능: 로그인 화면용 직원 목록 (비민감만 — PIN·계좌·주민번호 휴대폰에 안 내림) ───
 async function loadLoginNames(){
   if(!currentStore)return;
-  const{data}=await sb.from('employees').select('id,name,auth_level,role,is_active').eq('store_id',currentStore.id).eq('is_active',true).order('name');
-  employees=(data||[]);
+  // 로그인 전이라 신분증 없음 → 공개 통로(login-meta)로 직원 이름 목록만 안전하게 받음 (RLS 잠금 후에도 동작)
+  let list=[];
+  try{ const{data}=await sb.functions.invoke('login-meta',{body:{action:'employees',store_id:currentStore.id}}); if(data&&data.ok) list=data.employees||[]; }catch(_e){}
+  employees=list;
 }
 // ─── 아이폰식 PIN 키패드 (동그라미 점 + 숫자 키패드) ───
 function renderPinDots(){
@@ -5207,6 +5209,8 @@ async function submitLogin(){
   _loginBusy=false;
   localStorage.setItem('pd_last_name',nameVal);
   if(res.token) localStorage.setItem('pd_token',res.token);
+  // 매장 격리용 신분증을 supabase 클라이언트에 부착 → RLS가 이 매장 것만 보여줌 (새 기능)
+  if(res.session&&res.session.access_token){ try{ await sb.auth.setSession({access_token:res.session.access_token,refresh_token:res.session.refresh_token}); }catch(_e){} }
   resetPinPad();
   completeLogin(res.emp);
 }
@@ -6234,6 +6238,8 @@ function doLogout(){
   // 로그인 증표(세션 토큰) 서버 폐기 + 로컬 삭제
   const _t=localStorage.getItem('pd_token');
   if(_t){ try{ sb.functions.invoke('emp-session',{body:{token:_t,action:'logout'}}); }catch(_e){} localStorage.removeItem('pd_token'); }
+  // 매장 신분증도 폐기 (다음 사람이 남 매장으로 못 들어가게) — 새 기능
+  try{ sb.auth.signOut(); }catch(_e){}
   localStorage.removeItem('pd_emp');
   // 모든 컨테이너 내용 초기화 (이전 세션 데이터 잔류 방지)
   document.querySelectorAll('.container').forEach(c=>{c.classList.remove('active');});
@@ -9486,8 +9492,12 @@ document.addEventListener('DOMContentLoaded', async()=>{
   // (PIN 없이 복원하되, 본인 민감정보는 서버가 증표 확인 후에만 내려줌 — 2026-06-09 서버화)
   const savedToken=localStorage.getItem('pd_token');
   if(savedToken&&currentStore){
-    sb.functions.invoke('emp-session',{body:{token:savedToken}}).then(({data,error})=>{
-      if(!error&&data&&data.ok&&data.emp){ completeLogin(data.emp); }
+    sb.functions.invoke('emp-session',{body:{token:savedToken}}).then(async ({data,error})=>{
+      if(!error&&data&&data.ok&&data.emp){
+        // 자동 로그인 복원 시에도 매장 신분증 부착 (새 기능)
+        if(data.session&&data.session.access_token){ try{ await sb.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token}); }catch(_e){} }
+        completeLogin(data.emp);
+      }
       else { localStorage.removeItem('pd_token'); localStorage.removeItem('pd_emp'); showLoginScreen(); }
     }).catch(()=>{ localStorage.removeItem('pd_token'); localStorage.removeItem('pd_emp'); showLoginScreen(); });
     return;
