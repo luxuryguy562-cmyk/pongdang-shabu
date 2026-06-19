@@ -1659,12 +1659,10 @@ function buildReceiptRow(i={}) {
   const detailWrap = `
     <div class="rcp-detail" id="detail-${idx}" style="display:block;">
       <div class="det-row">
-        <span class="det-lbl">규격</span>
-        <input type="text" class="c-spec det-field txt" value="${esc(i.spec||'')}" placeholder="규격 없음 (예: 500g)">
-      </div>
-      <div class="det-row">
-        <span class="det-lbl">원산지</span>
-        <input type="text" class="c-og det-field txt" value="${esc(i.origin||'')}" placeholder="원산지 없음">
+        <div class="det-half">
+          <div class="det-cell txtcell"><span>규격</span><input type="text" class="c-spec" value="${esc(i.spec||'')}" placeholder="없음"></div>
+          <div class="det-cell txtcell"><span>원산지</span><input type="text" class="c-og" value="${esc(i.origin||'')}" placeholder="없음"></div>
+        </div>
       </div>
       <div class="det-row">
         <div class="det-half">
@@ -1682,9 +1680,6 @@ function buildReceiptRow(i={}) {
     <div class="ric-l1">
       ${nameSuspectMark}
       <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="품목" list="rcpPastItems" autocomplete="off">
-      ${freeBadge}
-      <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
-      ${pastBtn}
       <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
     </div>
     <div class="ric-l2">
@@ -1692,7 +1687,12 @@ function buildReceiptRow(i={}) {
       <button type="button" class="c-cBtn ric-chip${cat?'':' empty'}" data-action="openReceiptCatPicker|${idx}">${cat?label:'🏷️ 분류'}</button>
       ${autoTag}
       ${learnBadge}
-      <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▴</button>
+      ${freeBadge}
+      ${pastBtn}
+      <span class="ric-l2-right">
+        <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
+        <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▴</button>
+      </span>
     </div>
     ${detailWrap}
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
