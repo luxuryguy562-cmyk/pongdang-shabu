@@ -451,8 +451,6 @@ function renderTodayPaymentMethods(row, totalSale){
     {key:'cash_receipt', name:'현금영수증', color:'#F5A11E'},
     {key:'qr',           name:'QR',         color:'#8B5CF6'},
     {key:'etc',          name:'기타결제',   color:'#8B95A1'},
-    {key:'extra_large',  name:'뽑기(대형)', color:'#EC4899'},
-    {key:'extra_small',  name:'뽑기(소형)', color:'#06B6D4'},
   ];
   const pmList = (typeof paymentMethods!=='undefined' && Array.isArray(paymentMethods)) ? paymentMethods : [];
   const items = pmDefs.map(p=>{
@@ -485,8 +483,6 @@ async function loadDashboard(force){
   }
   // 2026-05-21 Phase B: SWR — force=true는 백그라운드 fresh, 사장님 화면 무음
   if(!force) setLoad(true,'데이터 조회 중...');
-  // 기타매출 누적 카드는 백그라운드로 갱신 (대시보드 메인 흐름 차단 안 함)
-  renderExtraRevenueDashboard().catch(e=>console.warn('[dashExtraRevenue]',e.message));
   try{
     const ym=dashMonthStr;
     const _dml=document.getElementById('dashMonthLabel'); if(_dml)_dml.innerText=ym; // 홈 월네비 제거됨(2026-06-03), 세부화면은 mdMonthLabel
@@ -1148,7 +1144,7 @@ async function loadDashboard(force){
         const cv=s.card_sales||0;prevCardTotal+=cv;if(d)prevDailyCardSalesMap[d]=cv;
       });
     } else {
-      // sales_daily 기준 (본 매출만 — 기타매출 분리)
+      // sales_daily 기준 (본 매출)
       prevSettle.forEach(s=>{
         const d=s.date?.slice(8);
         const ds=salesRowTotal(s);
