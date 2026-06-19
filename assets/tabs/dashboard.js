@@ -1768,9 +1768,13 @@ function renderAiBrief(a){
       desc:`<b>${a.retireSoon.join(', ')}</b>님이 곧 입사 1년이에요. 1년 이상·주 15시간 이상이면 퇴직금 대상이에요. <span style="color:var(--gray-400);">※ 참고용, 노무사 확인 권장.</span>` });
   }
 
-  // '지우기'(7일 스누즈)된 알림 제외 — 아이폰 알림 지우듯 (2026-06-18)
-  const _dm=_aibDismissMap(), _DAY=86400000;
-  const visItems=items.filter(it=> !(it.key && _dm[it.key] && (Date.now()-_dm[it.key] < 7*_DAY)));
+  // 알림별 '심각도 신호'(클수록 나쁨) — ✕로 지운 뒤 더 나빠지거나 새 일 생기면 다시 뜨게
+  const _sigByKey={ att:Math.floor(attR/5)*5, vendor:Math.floor(venR/5)*5, prime:Math.floor(primeR/5)*5, deficit:1, momup:1, minwage:(a.belowMinWage||[]).length, changereq:a.pendingChgCnt||0, rest:a.noRestShifts||0, headcount:1, retire:(a.retireSoon||[]).length };
+  items.forEach(it=>{ it.sig = (_sigByKey[it.key]!=null?_sigByKey[it.key]:1); });
+  const _dm=_aibDismissMap();
+  // 지운 알림 = key가 저장돼 있고 지금 신호가 그때보다 나빠지지 않았으면 숨김
+  const visItems=items.filter(it=> !(it.key && (it.key in _dm)) || (it.sig > _dm[it.key]));
+  const hiddenActive=items.filter(it=> it.key && (it.key in _dm) && it.sig <= _dm[it.key]).length;
   // 심각도순 정렬(빨강→노랑→초록) 후 최대 3개
   visItems.sort((x,y)=>x.sev-y.sev);
   const top = visItems.slice(0,3);
@@ -1799,18 +1803,21 @@ function renderAiBrief(a){
   const today = new Date();
   const rowsHtml = top.length
     ? top.map(it=>`
-      <div class="aib-row ${sevCls(it.sev)}" data-key="${it.key||''}">
+      <div class="aib-row ${sevCls(it.sev)}" data-key="${it.key||''}" style="position:relative;padding-right:38px;">
         <div class="aib-ic">${it.ic}</div>
         <div class="aib-tx"><div class="aib-title">${it.title}</div><div class="aib-desc">${it.desc}</div></div>
-        ${it.key?`<button class="aib-x" data-action="dismissAibAlert|${it.key}" aria-label="지우기">✕</button>`:''}
+        ${it.key?`<button data-action="dismissAibAlert|${it.key}|${it.sig}" aria-label="지우기" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border:none;background:rgba(0,0,0,.07);color:#8B95A1;border-radius:50%;font-size:12px;line-height:22px;text-align:center;padding:0;cursor:pointer;">✕</button>`:''}
       </div>`).join('')
     : `<div class="aib-row green">
         <div class="aib-ic">👍</div>
         <div class="aib-tx"><div class="aib-title">오늘 챙길 거 없어요</div><div class="aib-desc">비용·수익 모두 양호해요. 잘 가고 있어요.</div></div>
       </div>`;
+  const hiddenLine = hiddenActive>0
+    ? `<div data-action="clearAibDismissed" style="text-align:center;margin-top:10px;padding:8px;font-size:12px;color:var(--gray-500);cursor:pointer;">🔕 지운 알림 ${hiddenActive}개 · 다시 보기</div>`
+    : '';
   el.innerHTML = `
     <div class="aib-greet">사장님, <b>${today.getMonth()+1}월 ${today.getDate()}일</b> 알려드릴 것이에요 👇</div>
-    ${rowsHtml}`;
+    ${rowsHtml}${hiddenLine}`;
   el.style.display='none'; // 매 로드 시 접힘(단추만)
 }
 
@@ -1818,17 +1825,25 @@ function renderAiBrief(a){
 function _aibDismissMap(){
   try{ return JSON.parse(localStorage.getItem('aib_dismiss_'+((typeof currentStore!=='undefined'&&currentStore)?currentStore.id:''))||'{}'); }catch(_){ return {}; }
 }
-function dismissAibAlert(key){
+function dismissAibAlert(key, sig){
   if(!key) return;
   try{
     const k='aib_dismiss_'+((typeof currentStore!=='undefined'&&currentStore)?currentStore.id:'');
-    const m=_aibDismissMap(); m[key]=Date.now();
+    const m=_aibDismissMap(); m[key]=(sig!=null?Number(sig):0); // 지운 시점 신호 저장 (이보다 나빠지면 다시 뜸)
     localStorage.setItem(k, JSON.stringify(m));
   }catch(_){}
   // 펼침 유지한 채 가볍게 다시 그림 (배지·목록 갱신)
   const wasOpen = (document.getElementById('dashAiBrief')||{}).style?.display==='block';
   if(window._lastAiBriefArg) renderAiBrief(window._lastAiBriefArg);
   if(wasOpen){ const el=document.getElementById('dashAiBrief'); if(el) el.style.display='block'; const arr=document.querySelector('#dashAiBriefBtn .aib-btn-arr'); if(arr) arr.textContent='⌄'; }
+}
+
+// 지운 알림 전부 다시 보기 (실수로 지웠거나 확인하고 싶을 때 — 안전장치)
+function clearAibDismissed(){
+  try{ localStorage.removeItem('aib_dismiss_'+((typeof currentStore!=='undefined'&&currentStore)?currentStore.id:'')); }catch(_){}
+  if(window._lastAiBriefArg) renderAiBrief(window._lastAiBriefArg);
+  const el=document.getElementById('dashAiBrief'); if(el) el.style.display='block';
+  const arr=document.querySelector('#dashAiBriefBtn .aib-btn-arr'); if(arr) arr.textContent='⌄';
 }
 
 // AI 매니저 단추 ↔ 카드 펼침/접힘
