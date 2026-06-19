@@ -67,3 +67,29 @@
 ## 5. 환경 제약 (정직)
 - 여기서 **가능**: DB 진단·RLS 정책 작성·SQL 격리 시뮬레이션 검증·Edge 소스 작성/배포.
 - 여기서 **불가**: 라이브 PWA(사장님 폰/앱) 로그인 후 전 탭 클릭 검증 → **사장님 손 필요한 유일 구간**.
+
+---
+
+## 6. ✅ 확정 설계 (2026-06-19 실측 검증 — 사장님 "다 잠가" 승인)
+
+### 6-1. 검증된 사실
+- JWT 비밀키(secret)는 코드로 **못 읽음** (GUC false, vault 없음, pgsodium 없음) → 직접 서명 방식 불가.
+- 그러나 **Supabase Auth(자체 로그인) 살아있음** (`auth.users` 존재, `auth.jwt()` 함수 있음) → **Supabase(GoTrue)가 신분증 서명** → 비밀키 불필요, 사장님 손 0.
+- RLS 표현식 실측 통과: `current_setting('request.jwt.claims',true)::json->'app_metadata'->>'store_id'` 로 매장ID 정확 추출 + 매칭 `true` 확인.
+
+### 6-2. 확정 구조 = "Supabase Auth 신분증 + app_metadata 매장도장"
+1. **emp-login**: PIN 검증(기존) 후 → 그 직원용 Supabase Auth 유저 확보(없으면 생성), `app_metadata.store_id` 도장 → **Supabase 세션(서명된 신분증) 발급** → 앱에 반환. (랜덤 토큰도 기존대로 병행 유지)
+2. **앱(common.js 등)**: 받은 세션을 `sb.auth.setSession()` 로 부착 → 모든 요청이 신분증 지님. 이 시점 정책은 아직 `USING(true)` → **안 깨짐**(안전 확인 구간).
+3. **RLS**: 표마다 `USING(true)` → `store_id::text = (auth.jwt()->'app_metadata'->>'store_id')` 로 교체. RLS 꺼진 8표도 동일 정책으로 켬.
+
+### 6-3. 단계별 실행 + 게이트
+| 단계 | 내용 | 라이브 위험 | 검증 | 게이트 |
+|---|---|---|---|---|
+| A | emp-login/session 신분증 발급 추가 | 0 (앱 미사용) | 함수 호출 테스트 | 🔴 Edge 배포 = "실행 승인" |
+| B | 앱이 신분증 부착(setSession) | 낮음(정책 아직 USING(true)) | **사장님 폰 로그인+전탭** | 사장님 테스트 |
+| C | RLS 표마다 매장격리로 교체 | 중(부착 확인 후만) | SQL 격리 시뮬 + 사장님 폰 | 🔴 표별 "실행 승인" + 롤백SQL |
+
+### 6-4. 불변 보장 (사장님 약속)
+- 잠근 뒤에도 **클로드코드(관리자 통로=service_role)는 RLS 무시하고 다 봄·다 고침** → 자동 유지보수 그대로.
+- 민감 금고(employee_private 등)는 이미 잠김 → 그대로.
+- 순서 A→B→C 고정. 거꾸로 가면 라이브 다운 → 절대 금지.
