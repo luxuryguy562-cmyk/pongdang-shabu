@@ -409,6 +409,9 @@ async function openVendorDetail(vendorId){
   // 캐시 stale 방지: vendors 배열을 항상 fresh하게 (DB의 거래처 이름·카테고리 변경이 즉시 반영)
   if(typeof loadVendors==='function') await loadVendors();
   currentVendorDetailId=vendorId; // 주문 입력 시 이 거래처 고정용
+  // 거래처 상세 진입 시 월 필터 초기화 → loadVendorOrders가 전체 기간으로 조회
+  const vOrderEl=document.getElementById('vOrderMonth');
+  if(vOrderEl) vOrderEl.innerText='-';
   // 2026-05-15: 다른 거래처 주문이 잠깐 깜빡이던 버그 fix —
   // sel.value 먼저 set 후 vendorTab(orders) 호출 (자동 loadVendorOrders가 올바른 vendorId 사용)
   const sel=document.getElementById('orderVendorFilter');
@@ -1138,50 +1141,42 @@ async function toggleVendor(id,active){
 }
 async function loadVendorOrders(){
   if(!guardStore())return;
-  const ms=document.getElementById('vOrderMonth')?.innerText;
-  const monthStr=(ms==='-'||!ms)?new Date().toISOString().slice(0,7):ms;
-  if(document.getElementById('vOrderMonth'))document.getElementById('vOrderMonth').innerText=monthStr;
+  const ms=(document.getElementById('vOrderMonth')?.innerText||'-').trim();
+  // '-' 또는 '전체 기간' = 날짜 필터 없이 전체 조회 (거래처 상세 진입 기본값)
+  const allPeriod=(ms==='-'||ms==='전체 기간');
+  const vOrderEl=document.getElementById('vOrderMonth');
+  if(allPeriod && vOrderEl) vOrderEl.innerText='전체 기간';
   // 거래처 상세 진입(currentVendorDetailId) 시 그 거래처로 필터.
   // ⚠️온라인 거래처(쿠팡)는 orderVendorFilter 드롭다운 옵션에 없어 sel.value가 빈 채로 남음 →
-  //   전체 영수증이 다 보이던 버그 우회. 상세 진입이면 currentVendorDetailId 우선 (2026-06-09)
+  //   상세 진입이면 currentVendorDetailId 우선 (2026-06-09)
   const vendorId = (typeof currentVendorDetailId!=='undefined' && currentVendorDetailId)
     ? currentVendorDetailId
     : (document.getElementById('orderVendorFilter')?.value||'');
   const listEl=document.getElementById('orderListData');
   if(listEl) listEl.innerHTML='<div class="empty-state"><p style="color:var(--gray-400);">조회 중...</p></div>';
-  // 2026-05-25 갈아엎기 (D안): 영수증분도 같이 표시 (사장님 호소 — 거래처 화면에 영수증이 안 보여서 또 입력하게 됨)
-  //  · vendor_orders + receipts(vendor_id NOT NULL, 정상) 통합 (catReceipt 패턴과 통일)
-  //  · 정규화 헬퍼: _normalizeExpenseRow / _groupExpenseRows
-  //  · 헤더 아이콘: 거래처 주문 = 🏪 / 영수증 = 📸 또는 ✏️
-  //  · 행 액션: order → openEditOrderSheet / receipt → openReceiptEdit (헤더 [✏][🗑]도 분기)
-  const [y,m]=monthStr.split('-').map(Number);
-  const lastDay=new Date(y,m,0).getDate();
-  const start=monthStr+'-01', end=monthStr+'-'+String(lastDay).padStart(2,'0');
-  let oq=sb.from('vendor_orders').select('id,order_date,vendor_id,item,amount,unit_price,quantity,memo,order_group_id,vendors(name,category)')
-    .eq('store_id',currentStore.id).gte('order_date',start).lte('order_date',end).order('order_date',{ascending:false});
+  // 2026-06-20 갈아엎기: vendor_orders 폐기(0건) → receipts 단일 조회
   let rq=sb.from('receipts')
     .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty,seq,spec,origin')
     .eq('store_id',currentStore.id).eq('note','정상').not('vendor_id','is',null)
-    .gte('receipt_date',start).lte('receipt_date',end).order('receipt_date',{ascending:false});
-  if(vendorId){ oq=oq.eq('vendor_id',vendorId); rq=rq.eq('vendor_id',vendorId); }
-  const [oRes,rRes]=await Promise.all([oq,rq]);
-  if(oRes.error||rRes.error){
-    const err=(oRes.error||rRes.error);
-    document.getElementById('orderListData').innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><p>불러오기 실패: ${esc(err?.message||'')}</p></div>`;
+    .order('receipt_date',{ascending:false});
+  if(!allPeriod){
+    const [y,m]=ms.split('-').map(Number);
+    const lastDay=new Date(y,m,0).getDate();
+    rq=rq.gte('receipt_date',ms+'-01').lte('receipt_date',ms+'-'+String(lastDay).padStart(2,'0'));
+  }
+  if(vendorId) rq=rq.eq('vendor_id',vendorId);
+  const {data,error}=await rq;
+  if(error){
+    document.getElementById('orderListData').innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><p>불러오기 실패: ${esc(error?.message||'')}</p></div>`;
     return;
   }
-  // openReceiptEdit / openReceiptGroupEdit 호환 — receipts 원본을 글로벌 rcpRecords에 박음 (catReceipt 패턴과 일관)
-  rcpRecords = rRes.data || [];
-  const normOrders=(oRes.data||[]).map(r=>_normalizeExpenseRow(r,'order'));
-  const normReceipts=(rRes.data||[]).map(r=>_normalizeExpenseRow(r,'receipt'));
-  const all=normOrders.concat(normReceipts);
-  if(!all.length){
-    document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>이번달 주문·영수증이 없습니다</p></div>';
+  rcpRecords=data||[];
+  const norm=rcpRecords.map(r=>_normalizeExpenseRow(r,'receipt'));
+  if(!norm.length){
+    document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>등록된 영수증이 없습니다</p></div>';
     return;
   }
-  // 2026-06-11 행형 갈아엎기: 표(grp-tbl) → 행형 2줄 구조 (_rclListHtml 공통 렌더, receipt.js)
-  // 영수증 기록·카테고리 화면과 같은 컴포넌트 — 날짜 구분줄 + 거래처 그룹 카드 + 품목 2줄
-  document.getElementById('orderListData').innerHTML=_rclListHtml(all);
+  document.getElementById('orderListData').innerHTML=_rclListHtml(norm);
 }
 // 주문 입력/편집 공통 시트 — 멀티행 accordion 패턴 (2026-05-20 사장님 D 패턴)
 //  · _orderDraftRows = [{item,unit_price,qty,amount,memo,_origId?}, ...]  현재 시트 안 입력 행들
