@@ -737,23 +737,39 @@ input:checked+.toggle-slider:before{transform:translateX(20px);}
 .rcl-chips:empty{display:none;}
 .rcl-chip{flex-shrink:0;padding:7px 12px;border-radius:18px;font-size:12px;font-weight:700;background:var(--gray-100);color:var(--gray-600);border:1px solid var(--gray-200);cursor:pointer;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
 .rcl-chip.active{background:var(--blue-light);color:var(--blue);border-color:var(--blue);}
+/* 거래처 필터 버튼 (가로 칩 대체, 2026-06-20) — 누르면 바텀시트 */
+.rcl-filterbtn{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:9px 14px;margin:2px 0 10px;border-radius:12px;font-size:13px;font-weight:700;background:var(--gray-100);color:var(--text);border:1px solid var(--gray-200);cursor:pointer;}
+.rcl-filterbtn.on{background:var(--blue-light);color:var(--blue);border-color:var(--blue);}
+.rcl-filterbtn .rfb-tx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rcl-filterbtn .rfb-cv{color:var(--gray-400);font-size:12px;}
+.rcl-filterbtn.on .rfb-cv{color:var(--blue);}
+/* 거래처 필터 바텀시트 행 */
+.rcl-fsheet-row{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 14px;margin-bottom:6px;border-radius:10px;background:#fff;border:1px solid var(--gray-200);cursor:pointer;text-align:left;}
+.rcl-fsheet-row.active{background:var(--blue-light);border-color:var(--blue);}
+.rcl-fsheet-row .rfs-nm{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rcl-fsheet-row.active .rfs-nm{color:var(--blue);font-weight:800;}
+.rcl-fsheet-row .rfs-sub{font-size:11px;color:var(--gray-500);flex-shrink:0;}
 /* 날짜 구분줄 — 좌측 날짜(굵게) + 가로선 + 우측 그날 합계 (좌측정렬 통일) */
 .rcl-dayhd{display:flex;align-items:center;gap:8px;padding:18px 6px 9px;}
 .rcl-dayhd .d{font-size:13px;font-weight:800;color:var(--text);}
 .rcl-dayhd .line{flex:1;height:1px;background:var(--gray-200);}
 .rcl-dayhd .dsum{font-size:11px;color:var(--gray-600);font-weight:700;font-variant-numeric:tabular-nums;}
-/* 거래처 그룹 카드 */
+/* 거래처 그룹 카드 — 아코디언(접었다 펴기, 2026-06-20) */
 .rcl-store{background:#fff;border:1px solid var(--gray-200);border-radius:16px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);}
-.rcl-storehd{display:flex;align-items:center;gap:10px;padding:14px 16px;}
-.rcl-storehd.clickable{cursor:pointer;}
-.rcl-storehd.clickable:active{background:var(--gray-100);}
+/* 헤더(summary)=총액 행. 살짝 다른 배경색으로 묶음 시작점 강조 (사장님 호소: "총액 부분 색깔 달랐으면") */
+.rcl-storehd{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;background:var(--gray-100);list-style:none;user-select:none;-webkit-tap-highlight-color:transparent;}
+.rcl-storehd::-webkit-details-marker{display:none;}
+.rcl-storehd:active{background:var(--gray-200);}
 .rcl-storehd .ic{width:34px;height:34px;border-radius:10px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
 .rcl-storehd .nm{flex:1;min-width:0;font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rcl-storehd .nm small{display:block;font-size:11px;color:var(--gray-600);font-weight:500;margin-top:2px;}
 .rcl-storehd .amt{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;flex-shrink:0;}
-.rcl-storehd .chev{color:var(--gray-400);font-size:16px;margin-left:2px;flex-shrink:0;}
-.rcl-storehd .acts{display:flex;gap:4px;flex-shrink:0;}
-.rcl-storehd .acts .btn{padding:5px 9px;font-size:11px;font-weight:700;min-width:32px;}
+/* 펼침 화살표 — 닫힘 ▸, 열림 ▾ (90도 회전) */
+.rcl-acc-chev{color:var(--gray-400);font-size:18px;margin-left:2px;flex-shrink:0;transition:transform .18s ease;}
+details.rcl-store[open] .rcl-acc-chev{transform:rotate(90deg);}
+/* 펼친 영역 하단 편집·삭제 버튼 */
+.rcl-cardacts{display:flex;gap:6px;justify-content:flex-end;padding:10px 16px;border-top:1px solid var(--gray-100);background:#fff;}
+.rcl-cardacts .btn{padding:7px 12px;font-size:12px;font-weight:700;}
 /* 분류 배지 — 행 오른쪽 고정 (.bw) → 열 정렬 */
 .rcl-badge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:6px;white-space:nowrap;line-height:1.2;}
 /* 품목 1건 = 2줄 */

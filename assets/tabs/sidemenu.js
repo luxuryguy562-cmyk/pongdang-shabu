@@ -5654,28 +5654,18 @@ async function renderExpHubVendorView(){
     const ym = new Date().toISOString().slice(0,7); // YYYY-MM
     const monthStart = ym + '-01';
     const monthEnd = new Date(ym.slice(0,4), parseInt(ym.slice(5,7)), 0).toISOString().slice(0,10);
-    // vendor_orders 이번달 거래처별 집계
-    const {data:orders} = await sb.from('vendor_orders')
-      .select('vendor_id, amount, vendors(name, category)')
-      .eq('store_id', currentStore.id)
-      .gte('order_date', monthStart).lte('order_date', monthEnd);
-    // receipts(vendor_id 있는 것) 이번달 거래처별 집계
+    // 거래처별 집계 — receipts(vendor_id 있는 것) + vendors 조인으로 카테고리·종류까지
+    //   2026-06-20: vendor_orders(거래처 수동 주문) 폐기 → 영수증 단일 루트. 거래처/마트/온라인 종류 라벨 정확 표기
     const {data:rcpts} = await sb.from('receipts')
-      .select('vendor_id, total_price, vendor')
+      .select('vendor_id, total_price, vendor, vendors(name, category, kind)')
       .eq('store_id', currentStore.id)
       .not('vendor_id', 'is', null)
       .gte('receipt_date', monthStart).lte('receipt_date', monthEnd);
     // 거래처별 합산
-    const agg = {}; // {vendor_id: {name, category, total, count}}
-    (orders||[]).forEach(r=>{
-      if(!r.vendor_id) return;
-      if(!agg[r.vendor_id]) agg[r.vendor_id] = {name: r.vendors?.name||'(이름 없음)', category: r.vendors?.category||'', total:0, count:0};
-      agg[r.vendor_id].total += (r.amount||0);
-      agg[r.vendor_id].count++;
-    });
+    const agg = {}; // {vendor_id: {name, category, kind, total, count}}
     (rcpts||[]).forEach(r=>{
       if(!r.vendor_id) return;
-      if(!agg[r.vendor_id]) agg[r.vendor_id] = {name: r.vendor||'(이름 없음)', category:'', total:0, count:0};
+      if(!agg[r.vendor_id]) agg[r.vendor_id] = {name: r.vendors?.name||r.vendor||'(이름 없음)', category: r.vendors?.category||'', kind: r.vendors?.kind||'vendor', total:0, count:0};
       agg[r.vendor_id].total += (r.total_price||0);
       agg[r.vendor_id].count++;
     });
@@ -5689,9 +5679,12 @@ async function renderExpHubVendorView(){
     }
     let html = '';
     list.forEach(([vid, v])=>{
-      const sub = (v.category||'거래처') + ' · ' + v.count + '건';
+      // 종류 라벨: 마트/온라인은 종류 표기, 거래처는 취급 카테고리(없으면 '거래처')
+      const kindLabel = v.kind==='mart' ? '마트' : (v.kind==='online' ? '온라인' : (v.category||'거래처'));
+      const sub = kindLabel + ' · ' + v.count + '건';
       const amtTxt = fmt(v.total) + '원';
-      html += `<button type="button" class="exp-cat-row" data-vendor-id="${esc(vid)}" data-action="openCatReceipt|vendor:${esc(vid)}">
+      // 클릭 = 해당 거래처로 필터 잡힌 채 지출 기록 화면 진입 (전체 목록으로 새지 않게 — 2026-06-20)
+      html += `<button type="button" class="exp-cat-row" data-vendor-id="${esc(vid)}" data-action="openExpenseRecords|${encodeURIComponent(v.name)}">
         <span class="ecr-icon"><svg><use href="#i-building"/></svg></span>
         <span class="ecr-body">
           <span class="ecr-title">${esc(v.name)}</span>
