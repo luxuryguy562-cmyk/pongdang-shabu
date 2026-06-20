@@ -586,7 +586,7 @@ function renderCatReceiptList(rows){
   const body = document.getElementById('catReceiptBody');
   const totalEl = document.getElementById('catReceiptTotal');
   const chipsEl = document.getElementById('catReceiptChips');
-  if(chipsEl) chipsEl.innerHTML = _rclChipsHtml(rows||[], catReceiptFilter, 'pickCatReceiptChip');
+  if(chipsEl) chipsEl.innerHTML = _rclFilterBtnHtml(catReceiptFilter, 'cat');
   const filtered = _rclApplyFilter(rows||[], catReceiptFilter);
   // 'all' 모드(홈 "어디에 썼나" 진입) = 영수증+거래처주문 변동 지출만이라 라벨에 명시
   const scopeTag = (catReceiptMode==='all') ? ' · 고정비·인건비 제외' : '';
@@ -2276,6 +2276,53 @@ function _rclChipsHtml(rows, activeFilter, pickFn){
   return html;
 }
 
+// ─── 거래처 필터 버튼 + 바텀시트 (2026-06-20 가로 칩 폐기 — 거래처 많아도 깔끔) ───
+// 칩 영역에 버튼 1개만 표시 → 누르면 거래처 목록 바텀시트. 거래처 5개·20개 무관하게 동작 (SaaS 범용)
+//   which = 'cat'(지출관리 거래처별/카테고리 화면) | 'rcp'(영수증 기록 내역 화면)
+function _rclFilterBtnHtml(activeFilter, which){
+  const on=activeFilter&&activeFilter!=='all';
+  const label=on?_rclFilterName(activeFilter):'전체 거래처';
+  return `<button type="button" class="rcl-filterbtn${on?' on':''}" data-action="openRclFilterSheet|${which}">`
+    +`<span class="rfb-ic">🏪</span><span class="rfb-tx">${esc(label)}</span><span class="rfb-cv">▾</span></button>`;
+}
+let _rclFilterSheetWhich='cat';
+function openRclFilterSheet(which){
+  _rclFilterSheetWhich = (which==='rcp') ? 'rcp' : 'cat';
+  let rows, activeFilter;
+  if(_rclFilterSheetWhich==='rcp'){
+    rows=(rcpRecords||[]).map(r=>_normalizeExpenseRow(r,'receipt'));
+    activeFilter=rcpListFilter;
+  } else {
+    rows=catReceiptRowsCache||[];
+    activeFilter=catReceiptFilter;
+  }
+  // 거래처별 집계 (금액 큰 순)
+  const agg={};
+  (rows||[]).forEach(r=>{
+    if(r.note&&r.note!=='정상') return;
+    const n=_rclVendorName(r);
+    if(!agg[n]) agg[n]={total:0,count:0};
+    agg[n].total+=(r.amount||0); agg[n].count++;
+  });
+  const names=Object.entries(agg).sort((a,b)=>b[1].total-a[1].total);
+  const totalCount=names.reduce((s,e)=>s+e[1].count,0);
+  const totalAmt=names.reduce((s,e)=>s+e[1].total,0);
+  const mkRow=(val,label,sub,active)=>`<button type="button" class="rcl-fsheet-row${active?' active':''}" data-action="pickRclFilter|${val}">`
+    +`<span class="rfs-nm">${esc(label)}</span><span class="rfs-sub">${esc(sub)}</span></button>`;
+  let html=mkRow('all','전체',`${totalCount}건 · ${fmt(totalAmt)}원`,(!activeFilter||activeFilter==='all'));
+  names.forEach(([n,v])=>{
+    html+=mkRow('v:'+encodeURIComponent(n), n, `${v.count}건 · ${fmt(v.total)}원`, activeFilter==='v:'+encodeURIComponent(n));
+  });
+  const listEl=document.getElementById('rclFilterSheetList');
+  if(listEl) listEl.innerHTML=html;
+  openSheet('rclFilterSheet');
+}
+function pickRclFilter(val){
+  closeSheet('rclFilterSheet');
+  if(_rclFilterSheetWhich==='rcp') pickRcpListChip(val);
+  else pickCatReceiptChip(val);
+}
+
 // 거래처 필터 적용 — 새 칩 형식('v:<이름>') + 옛 거래방법 시트 형식(direct/vendor:/shop:) 호환
 function _rclApplyFilter(rows, filter){
   const list=rows||[];
@@ -2312,19 +2359,18 @@ function _rclStoreCardHtml(g){
   else icon=(g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'🧾'));
   const subBits=[`품목 ${g.rows.length}개`];
   if(g.hasErr) subBits.push('일부 오답');
-  let hdCls='', hdAttr='', tail='';
+  // 2026-06-20 아코디언: 헤더(summary)=펼치기/접기 전용. 편집·삭제는 펼친 영역 하단으로 이동 (헤더 클릭 충돌 방지)
+  let cardActs='';
   if(isMydata){
     const txId=g.rows[0]?.id||g.recId, txType=g.rows[0]?.txType||'bank';
-    tail=`<div class="acts"><button type="button" class="btn btn-secondary" data-action="openTxEditSheet|${txId}|${txType}">✏</button></div>`;
+    cardActs=`<div class="rcl-cardacts"><button type="button" class="btn btn-secondary" data-action="openTxEditSheet|${txId}|${txType}">✏ 편집</button></div>`;
   } else if(isOrder){
     const editId=g.rows[0]?.id||g.recId;
     const delKey=g.groupId?('g:'+g.groupId):('s:'+g.recId);
-    tail=`<div class="acts"><button type="button" class="btn btn-secondary" data-action="openEditOrderSheet|${editId}">✏</button><button type="button" class="btn btn-danger" data-action="deleteOrderGroupFromCard|${delKey}">🗑</button></div>`;
+    cardActs=`<div class="rcl-cardacts"><button type="button" class="btn btn-secondary" data-action="openEditOrderSheet|${editId}">✏ 편집</button><button type="button" class="btn btn-danger" data-action="deleteOrderGroupFromCard|${delKey}">🗑 삭제</button></div>`;
   } else {
     const editKey=g.groupId?('grp:'+g.groupId):('rec:'+g.recId);
-    hdCls=' clickable';
-    hdAttr=` data-action="openReceiptGroupEdit|${editKey}"`;
-    tail=`<span class="chev">›</span>`;
+    cardActs=`<div class="rcl-cardacts"><button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏ 묶음 편집</button></div>`;
   }
   const itemsHtml=g.rows.map(r=>{
     const cls=['rcl-item'];
@@ -2347,11 +2393,13 @@ function _rclStoreCardHtml(g){
   }).join('');
   // 거래처명 없는 영수증 = '직접 구매' (칩 필터 이름과 통일)
   const cardName=g.vendor||((!isOrder&&!isMydata)?'직접 구매':'(거래처 없음)');
-  return `<div class="rcl-store"><div class="rcl-storehd${hdCls}"${hdAttr}>`
+  // 헤더(summary) 탭 = 펼치기/접기. 품목·편집은 펼쳐야 보임 (사장님 호소 2026-06-20: "묶음이 뭔지 모르겠음")
+  return `<details class="rcl-store"><summary class="rcl-storehd">`
     +`<div class="ic">${icon}</div>`
     +`<div class="nm">${esc(cardName)}<small>${subBits.join(' · ')}</small></div>`
-    +`<div class="amt">${fmt(g.total)}원</div>${tail}`
-    +`</div><div class="rcl-rows">${itemsHtml}</div></div>`;
+    +`<div class="amt">${fmt(g.total)}원</div>`
+    +`<span class="rcl-acc-chev">›</span>`
+    +`</summary><div class="rcl-rows">${itemsHtml}${cardActs}</div></details>`;
 }
 
 // 정규화 행 배열 → 행형 리스트 전체 HTML (날짜 구분줄 + 카드들)
@@ -2395,7 +2443,7 @@ function renderReceiptList(){
     return;
   }
   const norm=rcpRecords.map(r=>_normalizeExpenseRow(r,'receipt'));
-  if(chipsEl) chipsEl.innerHTML=_rclChipsHtml(norm, rcpListFilter, 'pickRcpListChip');
+  if(chipsEl) chipsEl.innerHTML=_rclFilterBtnHtml(rcpListFilter, 'rcp');
   const filtered=_rclApplyFilter(norm, rcpListFilter);
   const total=filtered.reduce((s,r)=>s+(r.note==='정상'?(r.amount||0):0),0);
   totalEl.innerText=fmt(total)+'원';
