@@ -356,8 +356,8 @@ RLS: enabled, policy `scr_all` USING(true) WITH CHECK(store_id IS NOT NULL) — 
 | **tax_amount** (int, 2026-06-04) | 행 세액(부가세). 인쇄된 세액만, 없거나 면세면 0. 부가세 역산 안 함 |
 | **is_tax_free** (boolean, 2026-06-04) | 면세 여부. true=면세(육류·야채 등 미가공 농축수산물), false=과세, NULL=옛 영수증. 의제매입세액공제 집계용. 마이그레이션 `add_receipts_is_tax_free_20260604` |
 | **is_deposit** (boolean, 2026-06-09) | 보증금 행 여부. true=보증금 입금/회수 행(매입비 집계 제외), false=일반 품목. 주류 영수증 용기보증금 분리용. 기본값 false. 마이그레이션 `add_is_deposit_to_receipts` |
-| **spec** (text, 2026-06-08) | 규격·포장 규격 (예 "F0용 슬라이스 1Kg/EA", "500g"). 거래처 모드 영수증만 AI가 i에서 분리 추출. 직구·옛 영수증 NULL. 마이그레이션 `add_receipts_spec_origin_20260608` |
-| **origin** (text, 2026-06-08) | 원산지 (예 "외국산", "국내산"). 거래처 모드만 분리 추출. ⚠️쉼표로 품명에 섞인 원산지(고기손만두,돈육:국내산)는 item에 그대로 두고 origin=NULL. 직구·옛 영수증 NULL |
+| **spec** (text, 2026-06-08) | 규격·포장 규격 (예 "F0용 슬라이스 1kg", "500g"). AI가 i에서 분리 추출. 직구·옛 영수증 NULL. 마이그레이션 `add_receipts_spec_origin_20260608`. **2026-06-21 규격 표준형 통일**: 단위 소문자(kg·g·ml·l), 포장 꼬리표 "/EA"·"/PAC"·"/BOX" 제거 (1KG/PAC→1kg). 기존 DB 단순 패턴 101건 일괄 정규화 + 프롬프트 [규격 표준형] 규칙 박음 |
+| **origin** (text, 2026-06-08) | 원산지 (예 "외국산", "국내산", "돈육:국내산"). AI가 분리 추출. **2026-06-21 정책 변경**: 옛 규칙(쉼표로 품명에 섞인 산지는 item에 그대로 두고 origin=NULL)을 폐기 → 영수증 어디든 산지가 보이면 origin으로 분리(품명에서 제거). 원재료 여럿이면 쉼표로 origin에 다 담음. 과거 데이터는 백필 안 함(앞으로 분석분만). 직구·옛 영수증 NULL |
 | note | 정상/오답/반품 등 |
 | **seq** (int, 2026-06-09) | 영수증 내 품목 순서(분석 순서, 0부터). 한 영수증의 created_at은 모두 동일 + id는 uuid라 순서 정보가 없어 기록 표시 시 품목이 매번 섞이던 버그 해결. 저장 시 행 인덱스 박음. 옛 영수증 NULL(원래 순서 유지). 마이그레이션 `ALTER TABLE receipts ADD COLUMN seq INT;` 롤백 `ALTER TABLE receipts DROP COLUMN seq;` |
 | created_at | 등록일시 |

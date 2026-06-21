@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부가세 숨김 — 변경 전/후 목업</title>
+<style>
+  :root{
+    --gray-100:#F9FAFB;--success:#05C072;--warn:#FF9500;
+    --toss-blue:#3182F6;--toss-blue-light:#EDF4FF;
+    --toss-text-1:#191F28;--toss-text-2:#333D4B;--toss-text-3:#6B7684;--toss-text-4:#8B95A1;
+    --toss-line:#F2F4F6;
+    --card-shadow:0 4px 14px rgba(20,40,80,0.07), 0 1px 3px rgba(20,40,80,0.05);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#EEF1F5;font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:var(--toss-text-1);padding:18px;}
+  h1{font-size:19px;text-align:center;margin:4px 0 6px;}
+  .sub{text-align:center;font-size:13px;color:var(--toss-text-3);margin-bottom:20px;}
+  .wrap{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;}
+  .panel{flex:1 1 340px;max-width:390px;}
+  .panel-head{font-size:14px;font-weight:800;padding:9px 14px;border-radius:10px;margin-bottom:12px;text-align:center;}
+  .ph-before{background:#FFE9E9;color:#C0392B;}
+  .ph-after{background:#E4F7EE;color:#0B8A4F;}
+  .screen{background:#EEF1F5;border-radius:16px;padding:14px;}
+
+  /* ── 영수증 요약 카드 ── */
+  .rcp-sumcard{background:#fff;border-radius:14px;box-shadow:var(--card-shadow);padding:14px 16px;margin-bottom:10px;}
+  .rcp-sumcard .rsc-big{font-size:24px;font-weight:900;color:var(--toss-text-1);letter-spacing:-.5px;}
+  .rcp-sumcard .rsc-ok{font-size:11.5px;color:#05C072;font-weight:700;margin-top:2px;}
+  .rcp-sumcard .rsc-br{border:none;border-top:1px solid var(--toss-line);margin:11px 0;}
+  .rcp-sumcard .rsc-ln{display:flex;justify-content:space-between;font-size:13px;margin:5px 0;color:var(--toss-text-3);font-weight:600;}
+  .rcp-sumcard .rsc-ln b{color:var(--toss-text-1);font-weight:700;}
+  .rcp-sumcard .rsc-ln.total{font-size:14px;color:var(--toss-text-1);font-weight:800;}
+
+  /* ── 품목 카드 ── */
+  .rcp-item-card{background:#fff;border-radius:13px;box-shadow:var(--card-shadow);padding:9px 12px;margin-bottom:7px;}
+  .ric-l1 .c-i{font-size:15px;font-weight:700;color:var(--toss-text-1);}
+  .ric-l2{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;}
+  .ric-chip{font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;background:var(--toss-blue-light);color:var(--toss-blue);}
+  .learn{font-size:13px;}
+  .ric-free{font-size:9px;font-weight:800;color:var(--warn);border:1px solid var(--warn);border-radius:5px;padding:1px 5px;}
+  .ric-l2-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+  .c-p{font-size:16px;font-weight:800;color:var(--toss-text-1);}
+  .rcp-more-btn{font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--toss-line);color:var(--toss-text-3);border:none;}
+  .ric-x{font-size:14px;color:var(--toss-text-4);}
+
+  .rcp-detail{margin-top:9px;padding-top:10px;border-top:1px solid var(--toss-line);display:flex;flex-direction:column;gap:8px;}
+  .det-half{display:flex;gap:8px;}
+  .det-cell{flex:1;display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:8px;padding:6px 10px;}
+  .det-cell>span{font-size:11px;font-weight:700;color:var(--toss-text-4);}
+  .det-cell .val{flex:1;font-size:13px;font-weight:700;text-align:right;color:var(--toss-text-1);}
+  .det-cell .ph{flex:1;font-size:13px;text-align:right;color:#C5CCD4;}
+
+  /* 부가세 줄 (변경 전에만) */
+  .vat-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .vat-toggle{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--toss-text-2);}
+  .sw{width:34px;height:20px;border-radius:20px;background:var(--toss-blue);position:relative;flex:0 0 auto;}
+  .sw::after{content:'';position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#fff;}
+  .sw.off{background:var(--toss-line);}
+  .sw.off::after{left:2px;}
+  .vat-amt{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--toss-text-3);}
+  .vat-amt .box{width:72px;background:var(--gray-100);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:700;text-align:right;color:var(--toss-text-1);}
+  .vat-split{font-size:11px;color:var(--toss-text-4);font-weight:600;text-align:right;}
+
+  .markdel{outline:2px dashed #E74C3C;outline-offset:3px;border-radius:6px;position:relative;}
+  .markdel::before{content:'❌ 사라짐';position:absolute;top:-9px;right:-4px;background:#E74C3C;color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:5px;}
+  .note{font-size:12px;color:var(--toss-text-3);text-align:center;margin-top:14px;line-height:1.7;}
+</style>
+</head>
+<body>
+  <h1>영수증 화면 — 부가세 숨김 미리보기</h1>
+  <div class="sub">왼쪽 = 지금 모습 · 오른쪽 = 바꾼 뒤 모습 (예: 순창국제식 거래명세서 1장)</div>
+
+  <div class="wrap">
+
+    <!-- ════════ 변경 전 ════════ -->
+    <div class="panel">
+      <div class="panel-head ph-before">변경 전 (지금)</div>
+      <div class="screen">
+
+        <!-- 요약 카드 -->
+        <div class="rcp-sumcard">
+          <div class="rsc-big">115,620원</div>
+          <div class="rsc-ok">✅ 영수증 원본과 일치 · 2개 품목</div>
+          <div class="markdel">
+            <hr class="rsc-br">
+            <div class="rsc-ln"><span>공급가</span><b>113,340</b></div>
+            <div class="rsc-ln"><span>부가세</span><b>2,280</b></div>
+            <div class="rsc-ln total"><span>합계</span><b>115,620</b></div>
+          </div>
+        </div>
+
+        <!-- 품목 1 (과세) -->
+        <div class="rcp-item-card">
+          <div class="ric-l1"><span class="c-i">가위바위보뉴진면</span></div>
+          <div class="ric-l2">
+            <span class="ric-chip">🍜 식자재</span>
+            <span class="learn">✨</span>
+            <span class="ric-l2-right"><span class="c-p">25,080</span><button class="rcp-more-btn">세부 ▴</button><span class="ric-x">×</span></span>
+          </div>
+          <div class="rcp-detail">
+            <div class="det-half">
+              <div class="det-cell"><span>규격</span><span class="ph">없음</span></div>
+              <div class="det-cell"><span>원산지</span><span class="ph">없음</span></div>
+            </div>
+            <div class="det-half">
+              <div class="det-cell"><span>단가</span><span class="val">3,800</span></div>
+              <div class="det-cell"><span>수량</span><span class="val">6</span></div>
+            </div>
+            <div class="markdel">
+              <div class="vat-row">
+                <span class="vat-toggle"><span class="sw"></span> 부가세 포함</span>
+                <span class="vat-amt">부가세 <span class="box">2,280</span></span>
+              </div>
+              <div class="vat-split">공급가 22,800 + 부가세 2,280 = 25,080</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 품목 2 (면세) -->
+        <div class="rcp-item-card">
+          <div class="ric-l1"><span class="c-i">냉동돈육 목살</span></div>
+          <div class="ric-l2">
+            <span class="ric-chip">🍜 식자재</span>
+            <span class="learn">✨</span>
+            <span class="ric-free markdel">면세</span>
+            <span class="ric-l2-right"><span class="c-p">90,540</span><button class="rcp-more-btn">세부 ▴</button><span class="ric-x">×</span></span>
+          </div>
+          <div class="rcp-detail">
+            <div class="det-half">
+              <div class="det-cell"><span>규격</span><span class="val">1.3kg</span></div>
+              <div class="det-cell"><span>원산지</span><span class="val">국내산</span></div>
+            </div>
+            <div class="det-half">
+              <div class="det-cell"><span>단가</span><span class="val">9,400</span></div>
+              <div class="det-cell"><span>수량</span><span class="val">9.63</span></div>
+            </div>
+            <div class="markdel">
+              <div class="vat-row">
+                <span class="vat-toggle"><span class="sw off"></span> 부가세 포함</span>
+                <span class="vat-amt">부가세 <span class="box">0</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ════════ 변경 후 ════════ -->
+    <div class="panel">
+      <div class="panel-head ph-after">변경 후 (부가세 숨김)</div>
+      <div class="screen">
+
+        <!-- 요약 카드 -->
+        <div class="rcp-sumcard">
+          <div class="rsc-big">115,620원</div>
+          <div class="rsc-ok">✅ 영수증 원본과 일치 · 2개 품목</div>
+        </div>
+
+        <!-- 품목 1 -->
+        <div class="rcp-item-card">
+          <div class="ric-l1"><span class="c-i">가위바위보뉴진면</span></div>
+          <div class="ric-l2">
+            <span class="ric-chip">🍜 식자재</span>
+            <span class="learn">✨</span>
+            <span class="ric-l2-right"><span class="c-p">25,080</span><button class="rcp-more-btn">세부 ▴</button><span class="ric-x">×</span></span>
+          </div>
+          <div class="rcp-detail">
+            <div class="det-half">
+              <div class="det-cell"><span>규격</span><span class="ph">없음</span></div>
+              <div class="det-cell"><span>원산지</span><span class="ph">없음</span></div>
+            </div>
+            <div class="det-half">
+              <div class="det-cell"><span>단가</span><span class="val">3,800</span></div>
+              <div class="det-cell"><span>수량</span><span class="val">6</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 품목 2 -->
+        <div class="rcp-item-card">
+          <div class="ric-l1"><span class="c-i">냉동돈육 목살</span></div>
+          <div class="ric-l2">
+            <span class="ric-chip">🍜 식자재</span>
+            <span class="learn">✨</span>
+            <span class="ric-l2-right"><span class="c-p">90,540</span><button class="rcp-more-btn">세부 ▴</button><span class="ric-x">×</span></span>
+          </div>
+          <div class="rcp-detail">
+            <div class="det-half">
+              <div class="det-cell"><span>규격</span><span class="val">1.3kg</span></div>
+              <div class="det-cell"><span>원산지</span><span class="val">국내산</span></div>
+            </div>
+            <div class="det-half">
+              <div class="det-cell"><span>단가</span><span class="val">9,400</span></div>
+              <div class="det-cell"><span>수량</span><span class="val">9.63</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    ❌ 표시된 3가지가 사라집니다: ① 요약카드 공급가/부가세/합계 줄 · ② 품목 세부의 "부가세 포함" 스위치·부가세칸·분리표시 · ③ 면세 배지<br>
+    합계(실제 낸 돈)·품목·분류·단가·수량은 그대로. 저장된 부가세 데이터도 안 지우고 화면만 가립니다(나중에 되살릴 수 있음).
+  </div>
+</body>
+</html>
