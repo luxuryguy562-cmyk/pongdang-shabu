@@ -5943,21 +5943,18 @@ async function loadExpHubData(force){
     catSums[p.id] = {amount: amt, count: cnt, cat: p};
   });
 
-  // 로열티 (카테고리 X — 매출 × 요율)
+  // 로열티·카드수수료 (카테고리 X) — 진행일까지 일별 반올림 누적 (대시보드와 단일 규칙, 2026-06-21)
+  const _ehPassed=accPassedDay(ym);
+  const _ehCardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
+  // 로열티 (매출 × 요율)
   try{
-    const sd=sdRes.data||[];
-    const totalRev=sumSales(sd);
     const rate=parseFloat(ssRes.data?.royalty_rate||0)/100;
-    catSums._royalty = {amount: Math.round(totalRev*rate), rate: rate};
+    catSums._royalty = {amount: prorateByDay(dailySalesMapOf(sdRes.data||[]), rate, _ehPassed), rate: rate};
   }catch(e){ catSums._royalty = {amount:0, rate:0}; }
-
-  // 카드수수료 (카테고리 X — 카드 매출 × 요율)
+  // 카드수수료 (카드 매출 × 요율)
   try{
-    const sd=sdRes.data||[];
-    const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
-    const cardSales=sumCardSales(sd, cardMethod);
     const cardFeeRt=parseFloat(ssRes.data?.card_fee_rate||0)/100;
-    catSums._cardfee={amount:Math.round(cardSales*cardFeeRt),rate:cardFeeRt};
+    catSums._cardfee={amount: prorateByDay(dailyCardMapOf(sdRes.data||[], _ehCardMethod), cardFeeRt, _ehPassed), rate:cardFeeRt};
   }catch(e){catSums._cardfee={amount:0,rate:0};}
 
   // ── 카드 동적 생성 (활성 expense parent + 로열티 + 카드수수료) ──
@@ -7634,17 +7631,18 @@ async function loadReconciliation(){
       summary.push(entry);
     });
 
-    // 로열티/카드수수료 (가상 항목)
+    // 로열티/카드수수료 (가상 항목) — 진행일까지 일별 반올림 누적 (대시보드·지출관리와 단일 규칙, 2026-06-21)
     const royaltyRate=parseFloat(storeSettings.royalty_rate||0)/100;
     const cardFeeRate=parseFloat(storeSettings.card_fee_rate||0)/100;
+    const _rcPassed=accPassedDay(ym);
     if(royaltyRate>0){
-      const royaltyAmt=Math.round(totalRevenue*royaltyRate);
+      const royaltyAmt=prorateByDay(dailySalesMapOf(salesDailyRows), royaltyRate, _rcPassed);
       const s=savedRecon.find(r=>r.sub_key==='_royalty');
       summary.push({categoryId:'_royalty',name:`로열티 (${(royaltyRate*100).toFixed(1)}%)`,source:'auto',type:'expense',color:'#EF4444',recorded:royaltyAmt,actual:s?.actual_total||0,
         details:[{subKey:'_royalty',label:'로열티',recorded:royaltyAmt,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''}]});
     }
     if(cardFeeRate>0){
-      const cardFeeAmt=Math.round(cardSales*cardFeeRate);
+      const cardFeeAmt=prorateByDay(dailyCardMapOf(salesDailyRows, cardMethod), cardFeeRate, _rcPassed);
       const s=savedRecon.find(r=>r.sub_key==='_cardfee');
       summary.push({categoryId:'_cardfee',name:`카드수수료 (${(cardFeeRate*100).toFixed(1)}%)`,source:'auto',type:'expense',color:'#EF4444',recorded:cardFeeAmt,actual:s?.actual_total||0,
         details:[{subKey:'_cardfee',label:'카드수수료',recorded:cardFeeAmt,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''}]});
@@ -9334,6 +9332,35 @@ function sumCardSales(rows, cardMethod){
     if(cardMethod && typeof getMethodAmount==='function') return a+(getMethodAmount(r,cardMethod)||0);
     return a+(Number(r.card)||0);
   },0);
+}
+
+// ─── 로열티·카드수수료 단일 진실 (2026-06-21 회계 통일 2단계 — business_rules 0-7) ───
+// 사장님 결정: "진행일까지(하루씩)" 기준. 날짜별로 (그날 매출×요율) 반올림해서 진행일까지 더함.
+// 대시보드·지출관리·정산대조 세 화면이 아래 3함수만 부른다 (화면마다 따로 계산 금지).
+// dailySalesMapOf: 일별 총매출 맵 {'01':합,...} (salesRowTotal 단일 규칙)
+function dailySalesMapOf(rows){
+  const m={};
+  (rows||[]).forEach(r=>{ const d=(r.date||'').slice(8,10); if(!d) return; m[d]=(m[d]||0)+salesRowTotal(r); });
+  return m;
+}
+// dailyCardMapOf: 일별 카드매출 맵 {'01':합,...} (sumCardSales 단일 규칙)
+function dailyCardMapOf(rows, cardMethod){
+  const m={};
+  (rows||[]).forEach(r=>{ const d=(r.date||'').slice(8,10); if(!d) return; m[d]=(m[d]||0)+sumCardSales([r],cardMethod); });
+  return m;
+}
+// prorateByDay: 진행일까지 일별 반올림 누적. dailyMap={'dd':금액}, rate=소수(0.05=5%), passedDay=진행일.
+//   캘린더 일별 표시와 합이 정확히 맞도록 '날짜별 반올림 후 합산' (월합×요율 1회 반올림과 다름).
+function prorateByDay(dailyMap, rate, passedDay){
+  if(!rate) return 0;
+  return Object.entries(dailyMap||{}).reduce((a,[k,v])=> parseInt(k,10)<=passedDay ? a+Math.round((v||0)*rate) : a, 0);
+}
+// accPassedDay: 진행일 = 현재월이면 오늘 날짜, 과거·미래월이면 그달 말일(=전체).
+function accPassedDay(ym){
+  const today=new Date(), curYm=today.toISOString().slice(0,7);
+  if(ym===curYm) return today.getDate();
+  const [y,m]=(ym||curYm).split('-').map(Number);
+  return new Date(y,m,0).getDate();
 }
 
 async function loadSalesDaily(){
