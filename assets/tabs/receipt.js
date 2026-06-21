@@ -1887,6 +1887,33 @@ function selectReason(r){
   if(r==='cancel'){tr.classList.remove('row-off');btn.style.background='var(--danger-light)';btn.style.color='var(--danger)';btn.innerText='X';}
   else{tr.classList.add('row-off');btn.style.background='var(--gray-200)';btn.style.color='var(--gray-600)';btn.innerText='＋';tr.dataset.reason=r;}
   closeAllSheets();
+  _rcpRefreshSum(); // row-off 토글 후 합계 카드 재계산
+}
+
+// row-off(제외) 상태 변경 후 요약 카드 합계·건수 재계산 — DOM이 진실
+function _rcpRefreshSum(){
+  const sumBox=document.getElementById('rcpSumCheck');
+  if(!sumBox) return;
+  let rowSum=0, rowTax=0, cnt=0;
+  document.querySelectorAll('#resTable .rcp-item-card').forEach(tr=>{
+    if(tr.classList.contains('row-off')) return;
+    cnt++;
+    rowSum+=parseInt((tr.querySelector('.c-p')?.value||'').replace(/[^0-9-]/g,''))||0;
+    rowTax+=parseInt((tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''))||0;
+  });
+  const sumBig=sumBox.querySelector('.rsc-big');
+  if(sumBig) sumBig.textContent=fmt(rowSum)+'원';
+  const okEl=sumBox.querySelector('.rsc-ok');
+  if(okEl) okEl.textContent=okEl.textContent.replace(/\d+개 품목/,cnt+'개 품목');
+  const rowSupply=rowSum-rowTax;
+  sumBox.querySelectorAll('.rsc-ln').forEach(el=>{
+    const label=el.querySelector('span')?.textContent;
+    const b=el.querySelector('b');
+    if(!b) return;
+    if(label==='공급가') b.textContent=fmt(rowSupply);
+    else if(label==='부가세') b.textContent=fmt(rowTax);
+    else if(label==='합계') b.textContent=fmt(rowSum);
+  });
 }
 async function saveReceipt(){
   if(!guardStore()) return;
