@@ -215,6 +215,9 @@ function calcStoreNetProfit(ctx: {
     const ds = cat.data_source;
     if (ds === "vendor_orders") {
       amount = (vendorOrders || []).filter((o) => o.vendors?.category_id === cat.id).reduce((a, o) => a + (Number(o.amount) || 0), 0);
+      // 이 카테고리로 분류된 영수증도 합산 — 대시보드 v17(도넛/순익)이 영수증을 소스 구분 없이 전부 계상하므로 동일하게.
+      //   (calcExpenseByCategories 표는 거래처 소스 영수증을 누락하지만, 사장님이 보는 순익은 v17 기준)
+      amount += (receipts || []).filter((r) => r.category_id === cat.id).reduce((a, r) => a + (Number(r.total_price) || 0), 0);
       amount += sumAllSourcesByCatId(cat.id, true);
     } else if (ds === "receipts") {
       const childIds = (childByParent[cat.id] || []).map((c) => c.id);
