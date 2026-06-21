@@ -1797,6 +1797,10 @@ details.rcl-store[open] .rcl-acc-chev{transform:rotate(90deg);}
 .ecr-amt.amt-xl{font-size:16px;}
 .ecr-amtlbl{font-size:10.5px;color:var(--toss-text-4);margin-top:1px;}
 .ecr-chev{color:var(--gray-400);font-size:18px;margin-left:2px;flex-shrink:0;}
+/* 거래처 관리 통합(2026-06-21): 행 우측 편집 버튼 + 거래종료 흐리게 */
+.ehv-edit{flex-shrink:0;width:36px;height:36px;border:0;border-radius:10px;background:var(--gray-100);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:2px;padding:0;line-height:1;}
+.ehv-edit:active{background:var(--gray-200);}
+.exp-cat-row.is-inactive{opacity:.55;}
 /* 화면 상단 월 표시 (지출 허브·거래처별 — 2026-06-11) */
 .exp-month-ttl{font-size:17px;font-weight:900;color:var(--text);margin:0 2px 10px;letter-spacing:-0.4px;}
 
