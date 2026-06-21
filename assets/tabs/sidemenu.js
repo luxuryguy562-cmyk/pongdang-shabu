@@ -3592,8 +3592,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
     // 인건비 = 시급제 attendance_logs.calculated_wage + 월급제 monthly_wage 분배 (사장님 매장: 탁성현 750만원 등)
     // 진행일까지만 합산 (미래 일자 제외 — 사장님 짚음 2026-05-17)
     _attLogsRows=(attRes.data||[]);
-    const _monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-    const _hourlySum=_attLogsRows.filter(r=>!_monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+    const _hourlySum=sumHourlyWage(_attLogsRows);
     const _today=new Date();
     const _isCurrentMonth=(y===_today.getFullYear() && m===_today.getMonth()+1);
     _effectiveDaysShared=_isCurrentMonth ? _today.getDate() : lastDay;
@@ -3627,8 +3626,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
     expCategories.filter(c=>c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense').forEach(child=>{
       let cAmt=0;
       if(child.data_source==='attendance_hourly'){
-        const ids=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-        cAmt=_attLogsRows.filter(r=>!ids.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+        cAmt=sumHourlyWage(_attLogsRows);
       } else if(child.data_source==='attendance_monthly'){
         (employees||[]).filter(e=>e.is_active&&e.wage_type==='monthly'&&e.monthly_wage>0).forEach(emp=>{
           cAmt+=Math.round((emp.monthly_wage*10000)/lastDay)*_effectiveDaysShared;
@@ -5179,7 +5177,7 @@ async function loadBusHubData(){
   }catch(e){setAmt('busMiniStAmt','-');}
   try{
     const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end);
-    const total=(sd||[]).reduce((a,r)=>a+(typeof salesRowTotal==='function'?salesRowTotal(r):(r.card||0)+(r.cash||0)+(r.cash_receipt||0)+(r.qr||0)+(r.etc||0)),0);
+    const total=sumSales(sd);
     setAmt('busMiniSaAmt', fmt(total));
     setSub('busMiniSaSub', `${(sd||[]).length}일 기록`);
   }catch(e){setAmt('busMiniSaAmt','-');}
@@ -5408,8 +5406,7 @@ async function loadRoyaltyPage(){
   (sd||[]).forEach(s=>{
     const ym=(s.date||'').slice(0,7);
     if(!ym) return;
-    const t=typeof salesRowTotal==='function'?salesRowTotal(s):((s.card||0)+(s.cash||0)+(s.cash_receipt||0)+(s.qr||0)+(s.etc||0));
-    salesByMonth[ym]=(salesByMonth[ym]||0)+t;
+    salesByMonth[ym]=(salesByMonth[ym]||0)+salesRowTotal(s);
   });
 
   // 4) 월별 표 렌더 (최신순) — 매출 / 요율 / 금액
@@ -5891,9 +5888,9 @@ async function loadExpHubData(force){
     //  · 2026-05-25 갈아엎기: 시급제(calculated_wage) + 월급제 일할 합산 (사장님 호소: 통일)
     //  · 옛: calculated_wage만 → 월급제 누락 (탁성현 700만 빠짐)
     else if(ds==='attendance'){
-      // 시급제 — calculated_wage 합 (월급제는 calculated_wage=0 또는 따로 박힘 → 둘 다 안전하게 wage_type 필터)
+      // 시급제 — calculated_wage 합 (단일 함수 sumHourlyWage, 월급제 자동 제외)
       const monthlyEmpIds = new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-      amt = (alRes.data||[]).filter(r=>!monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+      amt = sumHourlyWage(alRes.data||[]);
       // 월급제 일할 누적
       calcMonthlyProratedWages(ym).forEach(m=>{ amt += m.total; });
       // 주휴수당 (시급제만) — 근태 화면과 동일 함수로 정확히 일치 (2026-06-21 누락 수정)
@@ -5944,21 +5941,18 @@ async function loadExpHubData(force){
     catSums[p.id] = {amount: amt, count: cnt, cat: p};
   });
 
-  // 로열티 (카테고리 X — 매출 × 요율)
+  // 로열티·카드수수료 (카테고리 X) — 진행일까지 일별 반올림 누적 (대시보드와 단일 규칙, 2026-06-21)
+  const _ehPassed=accPassedDay(ym);
+  const _ehCardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
+  // 로열티 (매출 × 요율)
   try{
-    const sd=sdRes.data||[];
-    const totalRev=sd.reduce((a,r)=>a+(typeof salesRowTotal==='function'?salesRowTotal(r):(r.card||0)+(r.cash||0)+(r.cash_receipt||0)+(r.qr||0)+(r.etc||0)),0);
     const rate=parseFloat(ssRes.data?.royalty_rate||0)/100;
-    catSums._royalty = {amount: Math.round(totalRev*rate), rate: rate};
+    catSums._royalty = {amount: prorateByDay(dailySalesMapOf(sdRes.data||[]), rate, _ehPassed), rate: rate};
   }catch(e){ catSums._royalty = {amount:0, rate:0}; }
-
-  // 카드수수료 (카테고리 X — 카드 매출 × 요율)
+  // 카드수수료 (카드 매출 × 요율)
   try{
-    const sd=sdRes.data||[];
-    const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
-    const cardSales=sd.reduce((a,r)=>a+(typeof getMethodAmount==='function'&&cardMethod?getMethodAmount(r,cardMethod):(r.card||0)),0);
     const cardFeeRt=parseFloat(ssRes.data?.card_fee_rate||0)/100;
-    catSums._cardfee={amount:Math.round(cardSales*cardFeeRt),rate:cardFeeRt};
+    catSums._cardfee={amount: prorateByDay(dailyCardMapOf(sdRes.data||[], _ehCardMethod), cardFeeRt, _ehPassed), rate:cardFeeRt};
   }catch(e){catSums._cardfee={amount:0,rate:0};}
 
   // ── 카드 동적 생성 (활성 expense parent + 로열티 + 카드수수료) ──
@@ -7648,17 +7642,18 @@ async function loadReconciliation(){
       summary.push(entry);
     });
 
-    // 로열티/카드수수료 (가상 항목)
+    // 로열티/카드수수료 (가상 항목) — 진행일까지 일별 반올림 누적 (대시보드·지출관리와 단일 규칙, 2026-06-21)
     const royaltyRate=parseFloat(storeSettings.royalty_rate||0)/100;
     const cardFeeRate=parseFloat(storeSettings.card_fee_rate||0)/100;
+    const _rcPassed=accPassedDay(ym);
     if(royaltyRate>0){
-      const royaltyAmt=Math.round(totalRevenue*royaltyRate);
+      const royaltyAmt=prorateByDay(dailySalesMapOf(salesDailyRows), royaltyRate, _rcPassed);
       const s=savedRecon.find(r=>r.sub_key==='_royalty');
       summary.push({categoryId:'_royalty',name:`로열티 (${(royaltyRate*100).toFixed(1)}%)`,source:'auto',type:'expense',color:'#EF4444',recorded:royaltyAmt,actual:s?.actual_total||0,
         details:[{subKey:'_royalty',label:'로열티',recorded:royaltyAmt,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''}]});
     }
     if(cardFeeRate>0){
-      const cardFeeAmt=Math.round(cardSales*cardFeeRate);
+      const cardFeeAmt=prorateByDay(dailyCardMapOf(salesDailyRows, cardMethod), cardFeeRate, _rcPassed);
       const s=savedRecon.find(r=>r.sub_key==='_cardfee');
       summary.push({categoryId:'_cardfee',name:`카드수수료 (${(cardFeeRate*100).toFixed(1)}%)`,source:'auto',type:'expense',color:'#EF4444',recorded:cardFeeAmt,actual:s?.actual_total||0,
         details:[{subKey:'_cardfee',label:'카드수수료',recorded:cardFeeAmt,actual:s?.actual_total||0,status:s?.status||'pending',confirmed:!!s?.confirmed_at,memo:s?.memo||''}]});
@@ -9334,6 +9329,49 @@ function salesRowTotal(r){
   // 레거시 폴백: 본 매출 5개 합산
   const LEGACY_KEYS=['card','cash','cash_receipt','qr','etc'];
   return LEGACY_KEYS.reduce((s,k)=>s+(Number(r[k])||0),0);
+}
+
+// ─── 매출 단일 진실: 합산 헬퍼 (2026-06-21 회계 통일 — business_rules 0-7) ───
+// 모든 화면은 매출을 직접 reduce 하지 말고 이 함수를 부른다. 규칙이 한 곳에만 있어야 화면마다 안 갈린다.
+// sumSales: sales_daily 행 배열의 총매출 합 (행 한 줄 규칙은 salesRowTotal 하나)
+function sumSales(rows){
+  return (rows||[]).reduce((a,r)=>a+salesRowTotal(r),0);
+}
+// sumCardSales: 카드 매출만 합 (카드수수료 기준). cardMethod 있으면 getMethodAmount, 없으면 레거시 card 컬럼.
+function sumCardSales(rows, cardMethod){
+  return (rows||[]).reduce((a,r)=>{
+    if(cardMethod && typeof getMethodAmount==='function') return a+(getMethodAmount(r,cardMethod)||0);
+    return a+(Number(r.card)||0);
+  },0);
+}
+
+// ─── 로열티·카드수수료 단일 진실 (2026-06-21 회계 통일 2단계 — business_rules 0-7) ───
+// 사장님 결정: "진행일까지(하루씩)" 기준. 날짜별로 (그날 매출×요율) 반올림해서 진행일까지 더함.
+// 대시보드·지출관리·정산대조 세 화면이 아래 3함수만 부른다 (화면마다 따로 계산 금지).
+// dailySalesMapOf: 일별 총매출 맵 {'01':합,...} (salesRowTotal 단일 규칙)
+function dailySalesMapOf(rows){
+  const m={};
+  (rows||[]).forEach(r=>{ const d=(r.date||'').slice(8,10); if(!d) return; m[d]=(m[d]||0)+salesRowTotal(r); });
+  return m;
+}
+// dailyCardMapOf: 일별 카드매출 맵 {'01':합,...} (sumCardSales 단일 규칙)
+function dailyCardMapOf(rows, cardMethod){
+  const m={};
+  (rows||[]).forEach(r=>{ const d=(r.date||'').slice(8,10); if(!d) return; m[d]=(m[d]||0)+sumCardSales([r],cardMethod); });
+  return m;
+}
+// prorateByDay: 진행일까지 일별 반올림 누적. dailyMap={'dd':금액}, rate=소수(0.05=5%), passedDay=진행일.
+//   캘린더 일별 표시와 합이 정확히 맞도록 '날짜별 반올림 후 합산' (월합×요율 1회 반올림과 다름).
+function prorateByDay(dailyMap, rate, passedDay){
+  if(!rate) return 0;
+  return Object.entries(dailyMap||{}).reduce((a,[k,v])=> parseInt(k,10)<=passedDay ? a+Math.round((v||0)*rate) : a, 0);
+}
+// accPassedDay: 진행일 = 현재월이면 오늘 날짜, 과거·미래월이면 그달 말일(=전체).
+function accPassedDay(ym){
+  const today=new Date(), curYm=today.toISOString().slice(0,7);
+  if(ym===curYm) return today.getDate();
+  const [y,m]=(ym||curYm).split('-').map(Number);
+  return new Date(y,m,0).getDate();
 }
 
 async function loadSalesDaily(){

@@ -120,7 +120,7 @@
 **현재 단일 진실 함수 (인건비) — 세 화면 공통:**
 | 요소 | 함수 | 정의 위치 |
 |---|---|---|
-| 시급제 | `attendance_logs.calculated_wage` 합 (월급제 제외) | 인라인 (동일 필터) |
+| 시급제 | `sumHourlyWage(attLogs, empFilter)` (월급제 자동 제외) | attendance.js (2026-06-21 단일화) |
 | 월급제 일할 | `calcMonthlyProratedWages(ym)` | attendance.js |
 | 주휴수당 | `calcMonthlyHolidayPay(ym, att, sched)` | attendance.js |
 
@@ -128,6 +128,19 @@
 1. 근태 기록 KPI — `attendance.js` `loadAttList`
 2. 지출관리 "자동으로 잡혀요" 인건비 — `sidemenu.js` `loadExpHubData`
 3. 대시보드 지출 표 인건비 — `dashboard.js` `loadDashboard`
+
+**현재 단일 진실 함수 (매출·로열티·카드수수료) — 2026-06-21 통일:**
+| 수치 | 함수 | 정의 위치 |
+|---|---|---|
+| 매출 한 줄 | `salesRowTotal(행)` | sidemenu.js |
+| 총매출 합 | `sumSales(행들)` | sidemenu.js |
+| 카드매출 합 | `sumCardSales(행들, cardMethod)` | sidemenu.js |
+| 일별 매출맵 | `dailySalesMapOf(행들)` | sidemenu.js |
+| 일별 카드맵 | `dailyCardMapOf(행들, cardMethod)` | sidemenu.js |
+| 로열티·카드수수료 | `prorateByDay(일별맵, 요율, 진행일)` + `accPassedDay(년월)` | sidemenu.js |
+
+- **로열티·카드수수료 규칙 (사장님 결정 2026-06-21)**: "진행일까지(하루씩)". 날짜별 (그날 매출×요율) 반올림 → 진행일까지 합산. 현재월=오늘까지, 과거월=말일(전체).
+- **쓰는 화면 (셋 다 동일해야 함)**: 대시보드 `loadDashboard`(가마감) / 지출관리 `loadExpHubData` / 정산대조 `loadReconciliation`. (진마감은 mydata 실제 출금 기준 — 정당한 차이)
 
 **coder·reviewer·critic 의무 (새 회계 화면·수정 시):**
 1. 이미 같은 수치를 계산하는 함수가 있는지 **먼저 grep** (복붙·재구현 금지)

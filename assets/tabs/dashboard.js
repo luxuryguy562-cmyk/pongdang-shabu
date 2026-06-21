@@ -686,10 +686,10 @@ async function loadDashboard(force){
       royalty=(royaltyTxRes.data||[]).reduce((a,r)=>a+Math.abs(r.amount||0),0);
       cardFee=Math.round(cardSales*cardFeeRate);
     } else {
-      // 캘린더(월카드)와 동일하게 '일별 반올림 누적' (2026-06-16 수익 일치) — 1100·1101줄과 동일 식
-      //   옛: round(월합*요율) 1회 반올림 → 캘린더(일별 반올림 누적)와 어긋남
-      royalty=Object.entries(dailySalesMap).reduce((a,[k,v])=>parseInt(k,10)<=passedDays?a+Math.round((v||0)*royaltyRate):a,0);
-      cardFee=Object.entries(dailyCardSalesMap).reduce((a,[k,v])=>parseInt(k,10)<=passedDays?a+Math.round((v||0)*cardFeeRate):a,0);
+      // 진행일까지 일별 반올림 누적 — 지출관리·정산대조와 단일 함수 통일 (2026-06-21, business_rules 0-7)
+      //   prorateByDay 정의: sidemenu.js. 캘린더(월카드)와도 동일 식이라 합 일치.
+      royalty=prorateByDay(dailySalesMap, royaltyRate, passedDays);
+      cardFee=prorateByDay(dailyCardSalesMap, cardFeeRate, passedDays);
     }
 
     // ══ 핵심 수치 계산 ══
