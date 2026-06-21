@@ -100,6 +100,11 @@
    - ✅ 2026-06-21: 옛 월요약 "표"(summHtml→#dashSummaryGrid) 빌드 101줄 제거 완료(`dashboard.js`). 구문 검증·잔재 0건 확인. 홈 도넛 카드 표시는 그대로(살아있는 값 유지).
    - ⏳ 남음: momCat(전월대비) 다운스트림(now null-safe dead), dashDailyTable 가드, 고아 핸들러(toggleExpMoreCategories 등) — 3단계 통일 때 함께 정리.
 2. **마이데이터/진마감 제거** — 사장님 안 씀. 퍼진 범위 목록 먼저 → 백업 후 제거.
+   - 확인됨: "통장 기준 마감(진마감)" 계산은 **이미 죽음**(토글 DOM 없어 `dashMode` 항상 'provisional'). dashboard.js 540/554/685, sidemenu.js `calcExpenseByCategories` isFinal 분기 = 사실상 죽은 코드.
+   - 확인됨: 마이데이터는 전용 화면 2개(`explistCont` 계좌·카드내역, `reconCont` 지출대조표) 외에 **사장님이 쓰는 화면(영수증 receipt.js, 거래처대조 vendorCompare, 세금 등 manualCatCont)에도 조회가 섞여 있음** — 단 데이터 없으면 빈 결과라 무해.
+   - ⚠️ `reconCont` 뒤(index.html 2116~2396)는 **공용 바텀시트**(txEditSheet 등, 영수증 화면도 씀) → 통째 삭제 금지. 화면 덩어리만 정밀 삭제.
+   - ✅ 2026-06-21: 사이드메뉴 입구 2개 제거(지출 대조표 묶음 + 계좌·카드 내역) → 두 화면 메뉴에서 사라짐. (화면 본체·함수는 careful 후속에서 폰 확인하며 제거)
+   - ⏳ 남음: explistCont/reconCont 본체, 전용 함수, 진마감 죽은 분기, 쓰는 화면의 무해 마이데이터 가지.
 3. **순익·지출 계산 하나로 통합** (헌법 7-7) — 홈·내 매장들·어디서나 같은 함수. 매 단계 골든값(논산 903만 등) 대조 검산.
 
 > 각 단계 백업 커밋 + `node --check` + 골든값 대조 필수 (헌법 11조).
