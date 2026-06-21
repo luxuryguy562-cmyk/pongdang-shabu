@@ -1038,28 +1038,37 @@ async function loadMyStores(){
 
     const stores = Array.isArray(data.stores) ? data.stores : [];
     const totalRev = Number(data.total_revenue)||0;
+    const totalProfit = Number(data.total_profit)||0;
 
     document.getElementById('msTotalRev').innerText = fmt(totalRev) + '원';
-    // 순익은 아직 데이터 없음 → 1차는 매출만 ("—" 유지)
+    // 전체 순익 — 서버(my-stores)가 대시보드 공식대로 매장별 계산한 합 (헌법 7-7 단일 진실)
+    const profEl = document.getElementById('msTotalProfit');
+    if(profEl){
+      profEl.innerText = (totalProfit<0 ? '-' : '') + fmt(Math.abs(totalProfit)) + '원';
+      profEl.style.color = totalProfit<0 ? 'var(--red,#e74c3c)' : '';
+    }
 
     if(!stores.length){
       listEl.innerHTML = '<div class="ms-empty">아직 매장이 없어요.<br>아래 [+ 매장 추가]로 첫 매장을 만들어보세요.</div>';
     } else {
       listEl.innerHTML = stores.map((s,i)=>{
         const rev = Number(s.revenue)||0;
+        const prof = Number(s.net_profit)||0;
         const pct = totalRev>0 ? (rev/totalRev*100).toFixed(1) : '0';
         const rankColor = i<3 ? 'var(--blue)' : 'var(--gray-500)';
         const name = (s.name||'').replace(/</g,'&lt;');
+        const profColor = prof<0 ? 'var(--red,#e74c3c)' : 'var(--green,#27ae60)';
+        const profTxt = (prof<0?'-':'') + msCompactMoney(Math.abs(prof));
         return `
         <div class="ms-store" data-action="enterStoreFromList|${s.id}|${s.name}">
           <div class="ms-rank" style="color:${rankColor};">${i+1}</div>
           <div class="ms-store-info">
             <div class="ms-store-name">${name}</div>
-            <div class="ms-store-code">코드: ${s.code||'-'}</div>
+            <div class="ms-store-code">순익 <b style="color:${profColor};">${profTxt}</b></div>
           </div>
           <div class="ms-store-rev">
             <div class="ms-rev-val">${msCompactMoney(rev)}</div>
-            <div class="ms-rev-pct">${pct}%</div>
+            <div class="ms-rev-pct">매출 ${pct}%</div>
           </div>
           <div class="ms-chev">›</div>
         </div>`;
