@@ -96,13 +96,22 @@ Deno.serve(async (req: Request) => {
     // 5) 매장 정보 + 매출 집계
     const { data: stores } = await admin.from("stores")
       .select("id, name, store_code").in("id", storeIds);
+
+    // settle 소스 (sales_daily — 단일 진실)
     const { data: sd } = await admin.from("sales_daily")
       .select("*").in("store_id", storeIds).gte("date", start).lte("date", end);
+    const revSettle: Record<string, number> = {};
+    (sd || []).forEach((r: any) => { revSettle[r.store_id] = (revSettle[r.store_id] || 0) + rowTotal(r); });
 
+    // ups 소스 (daily_sales — 업솔루션 POS 연동 매장)
+    const { data: dsUps } = await admin.from("daily_sales")
+      .select("store_id, total_sales").in("store_id", storeIds).gte("sale_date", start).lte("sale_date", end);
+    const revUps: Record<string, number> = {};
+    (dsUps || []).forEach((r: any) => { revUps[r.store_id] = (revUps[r.store_id] || 0) + (Number(r.total_sales) || 0); });
+
+    // 매장별: settle 데이터 있으면 settle, 없으면 ups — 중복 합산 방지(한 매장은 보통 한 소스)
     const rev: Record<string, number> = {};
-    (sd || []).forEach((r: any) => {
-      rev[r.store_id] = (rev[r.store_id] || 0) + rowTotal(r);
-    });
+    storeIds.forEach((sid) => { rev[sid] = revSettle[sid] || revUps[sid] || 0; });
 
     const result = (stores || []).map((s: any) => ({
       id: s.id,

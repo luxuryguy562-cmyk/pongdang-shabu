@@ -680,6 +680,7 @@ function nav(tab, el) {
     settings: loadAllSettings,
     dashboard: loadDashboard,
     franchiseHome: loadFranchiseHome,
+    myStores: loadMyStores,
     // reserve 탭 폐기 (2026-05-22)
     vendors: loadVendors,
     fixedcost: loadFixedCosts,
@@ -1001,6 +1002,102 @@ async function selectStore(id, name) {
     recalcSettle2();
   }
 }
+
+// ─── 새 기능: 내 매장들 통합 홈 (my-stores edge function 연결, Phase 1-B) ───
+// 만원 단위 압축 표기: 12500000 → "1,250만", 120000000 → "1.2억"
+function msCompactMoney(won){
+  const n = Number(won)||0;
+  if(n >= 100000000){
+    const eok = n/100000000;
+    return (eok>=10 ? Math.round(eok) : eok.toFixed(1).replace(/\.0$/,'')) + '억';
+  }
+  const man = Math.round(n/10000);
+  return fmt(man) + '만';
+}
+
+async function loadMyStores(){
+  const listEl = document.getElementById('msStoreList');
+  // 월 초기화 (없으면 이번달)
+  const mEl = document.getElementById('msMonth');
+  const ym = (mEl && mEl.value) || new Date().toISOString().slice(0,7);
+  if(mEl && !mEl.value) mEl.value = ym;
+
+  setLoad(true, '내 매장들 불러오는 중...');
+  try{
+    const { data, error } = await sb.functions.invoke('my-stores', { body:{ ym } });
+    if(error) throw error;
+    if(!data || !data.ok) throw new Error((data && data.error) || '불러오기 실패');
+
+    const stores = Array.isArray(data.stores) ? data.stores : [];
+    const totalRev = Number(data.total_revenue)||0;
+
+    document.getElementById('msTotalRev').innerText = fmt(totalRev) + '원';
+    // 순익은 아직 데이터 없음 → 1차는 매출만 ("—" 유지)
+
+    if(!stores.length){
+      listEl.innerHTML = '<div class="ms-empty">아직 매장이 없어요.<br>아래 [+ 매장 추가]로 첫 매장을 만들어보세요.</div>';
+    } else {
+      listEl.innerHTML = stores.map((s,i)=>{
+        const rev = Number(s.revenue)||0;
+        const pct = totalRev>0 ? (rev/totalRev*100).toFixed(1) : '0';
+        const rankColor = i<3 ? 'var(--blue)' : 'var(--gray-500)';
+        const name = (s.name||'').replace(/</g,'&lt;');
+        return `
+        <div class="ms-store" data-action="enterStoreFromList|${s.id}|${s.name}">
+          <div class="ms-rank" style="color:${rankColor};">${i+1}</div>
+          <div class="ms-store-info">
+            <div class="ms-store-name">${name}</div>
+            <div class="ms-store-code">코드: ${s.code||'-'}</div>
+          </div>
+          <div class="ms-store-rev">
+            <div class="ms-rev-val">${msCompactMoney(rev)}</div>
+            <div class="ms-rev-pct">${pct}%</div>
+          </div>
+          <div class="ms-chev">›</div>
+        </div>`;
+      }).join('');
+    }
+    setLoad(false);
+  }catch(e){
+    setLoad(false);
+    if(listEl) listEl.innerHTML = '<div class="ms-empty">매장 목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.</div>';
+    console.error('[my-stores]', e);
+    toast('내 매장들 불러오기 실패','error');
+  }
+}
+
+// 매장 전환 — switch-store 서버 함수가 권한 확인 후 그 매장 세션 발급 → setSession → 그 매장으로
+async function enterStoreFromList(storeId, storeName){
+  if(currentStore && currentStore.id===storeId){ nav('dashboard'); return; } // 이미 그 매장이면 그냥 이동
+  setLoad(true, '매장 전환 중...');
+  try{
+    const { data, error } = await sb.functions.invoke('switch-store', { body:{ target_store_id: storeId } });
+    if(error) throw error;
+    if(!data || !data.ok || !data.session){
+      setLoad(false);
+      toast((data && data.error) || '이 매장에 들어갈 권한이 없어요', 'warn');
+      return;
+    }
+    // 새 매장 신분증으로 교체 → 이후 모든 조회가 그 매장 것으로(RLS 격리 그대로)
+    await sb.auth.setSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
+    if(typeof currentEmp === 'object' && currentEmp && data.employee_id){
+      currentEmp.id = data.employee_id;
+      if(data.employee_name) currentEmp.name = data.employee_name;
+    }
+    await selectStore(storeId, storeName); // currentStore 변경 + 그 매장 데이터 재로드
+    setLoad(false);
+    nav('dashboard');
+    toast(storeName + '(으)로 전환했어요', 'success');
+  }catch(e){
+    setLoad(false);
+    console.error('[switch-store]', e);
+    toast('매장 전환에 실패했어요', 'error');
+  }
+}
+
+// 자리만 (동작은 다음 단계)
+function msAddStore(){ toast('매장 추가는 다음 단계에서 연결됩니다','info'); }
+function msInviteFranchise(){ toast('가맹점 초대는 다음 단계에서 연결됩니다','info'); }
 
 // ─── 실시간 (Supabase Realtime broadcast) + 가입 알림 종 배지 (2026-06-09) ───
 let _storeChannel = null;

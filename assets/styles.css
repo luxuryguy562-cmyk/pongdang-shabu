@@ -1927,3 +1927,27 @@ details.rcl-store[open] .rcl-acc-chev{transform:rotate(90deg);}
 /* ─── 새 기능: 일별 간트 '이 날 모두 승인' 바 ─── */
 .day-approve-bar{background:var(--toss-blue);color:#fff;border-radius:12px;padding:13px;text-align:center;font-size:13.5px;font-weight:800;margin-bottom:10px;cursor:pointer;letter-spacing:-0.3px;}
 .day-approve-bar:active{opacity:.85;}
+
+/* ─── 새 기능: 내 매장들 통합 홈 (Phase 1-B) ─── */
+.ms-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.ms-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.ms-sum-card{padding:14px;border-radius:14px;}
+.ms-sum-rev{background:var(--blue-light);}
+.ms-sum-profit{background:var(--gray-100);}
+.ms-sum-label{font-size:11px;color:var(--gray-600);font-weight:700;}
+.ms-sum-val{font-size:18px;font-weight:900;margin-top:5px;font-variant-numeric:tabular-nums;}
+.ms-sum-rev .ms-sum-val{color:var(--blue);}
+.ms-section-title{font-size:13px;font-weight:800;margin-bottom:10px;color:var(--toss-text-1);}
+.ms-store{display:flex;align-items:center;gap:10px;padding:13px;background:var(--gray-100);border-radius:14px;margin-bottom:9px;cursor:pointer;transition:opacity .12s;}
+.ms-store:active{opacity:.7;}
+.ms-rank{width:26px;font-size:14px;font-weight:800;text-align:center;}
+.ms-store-info{flex:1;min-width:0;}
+.ms-store-name{font-size:14.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--toss-text-1);}
+.ms-store-code{font-size:11px;color:var(--gray-500);margin-top:2px;}
+.ms-store-rev{text-align:right;}
+.ms-rev-val{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--toss-text-1);}
+.ms-rev-pct{font-size:10px;color:var(--gray-400);margin-top:1px;}
+.ms-chev{color:var(--gray-400);font-size:18px;}
+.ms-empty{text-align:center;padding:28px 16px;color:var(--gray-400);font-size:13px;line-height:1.6;}
+.ms-actions{display:flex;gap:10px;margin-top:14px;}
+.ms-actions .btn{flex:1;}
