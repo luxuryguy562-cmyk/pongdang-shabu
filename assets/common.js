@@ -1066,10 +1066,33 @@ async function loadMyStores(){
   }
 }
 
-// 1차: 매장 선택만 + 안내 토스트 (실제 세션 전환은 다음 단계)
-function enterStoreFromList(storeId, storeName){
-  selectStore(storeId, storeName);
-  toast('매장 전환은 다음 단계에서 연결됩니다','info');
+// 매장 전환 — switch-store 서버 함수가 권한 확인 후 그 매장 세션 발급 → setSession → 그 매장으로
+async function enterStoreFromList(storeId, storeName){
+  if(currentStore && currentStore.id===storeId){ nav('dashboard'); return; } // 이미 그 매장이면 그냥 이동
+  setLoad(true, '매장 전환 중...');
+  try{
+    const { data, error } = await sb.functions.invoke('switch-store', { body:{ target_store_id: storeId } });
+    if(error) throw error;
+    if(!data || !data.ok || !data.session){
+      setLoad(false);
+      toast((data && data.error) || '이 매장에 들어갈 권한이 없어요', 'warn');
+      return;
+    }
+    // 새 매장 신분증으로 교체 → 이후 모든 조회가 그 매장 것으로(RLS 격리 그대로)
+    await sb.auth.setSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
+    if(typeof currentEmp === 'object' && currentEmp && data.employee_id){
+      currentEmp.id = data.employee_id;
+      if(data.employee_name) currentEmp.name = data.employee_name;
+    }
+    await selectStore(storeId, storeName); // currentStore 변경 + 그 매장 데이터 재로드
+    setLoad(false);
+    nav('dashboard');
+    toast(storeName + '(으)로 전환했어요', 'success');
+  }catch(e){
+    setLoad(false);
+    console.error('[switch-store]', e);
+    toast('매장 전환에 실패했어요', 'error');
+  }
 }
 
 // 자리만 (동작은 다음 단계)
