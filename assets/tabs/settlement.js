@@ -771,7 +771,8 @@ async function finishSettlement2(){
     items_json:items,vault_json:vMap,
     actual_total:vault,expected_total:book,
     diff_amount:diff,diff_status:diffStatus,
-    sales_total:salesTotal
+    sales_total:salesTotal,
+    created_by:(typeof currentEmp!=='undefined'&&currentEmp)?currentEmp.id:null
   },{onConflict:'store_id,settle_date'}).select('id').maybeSingle();
   if(error){setLoad(false);return errToast('저장', error);}
   // ─── 새 기능: sales_daily 동시 기록 (매출 관리 페이지용) ───

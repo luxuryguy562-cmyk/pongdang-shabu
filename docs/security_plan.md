@@ -73,7 +73,11 @@
 ## 6. ✅ 확정 설계 (2026-06-19 실측 검증 — 사장님 "다 잠가" 승인)
 
 ### 6-0. 진행 현황
-- ✅ **A단계 완료·배포·검증 (2026-06-19)**: emp-login/emp-session 버전5 배포(verify_jwt=false). 임시직원 실로그인 테스트 → 신분증(JWT)에 `role=authenticated`+`app_metadata.store_id` 박힘 + REST 200 확인. 테스트 데이터 삭제 완료. 라이브 무변화.
+- ✅✅ **C단계 잠금 적용 완료·검증 (2026-06-19)** — **매장 격리 보안 완성.**
+  - 잠금 SQL 적용(execute_sql). 검증: 논산점 신분증=데이터 다 보임(영수증744·매출49·직원13·정산49·거래75·매장1) / 가짜 매장 신분증=전부 0 / **신분증 없는 anon=전부 0(원래 구멍 막힘)**. 사장님 폰 전탭 정상 확인.
+  - get_advisors: 이전 ERROR(rls_disabled) 8개 + WARN(policy_always_true) 30여개 → **전부 해소**. 잔여는 INFO(이미 잠긴 내부표)·소소한 WARN(함수 search_path·pg_net·vote_global_hint·비번유출검사)뿐.
+  - 되돌리기: `docs/sql/security_rls_lock_rollback.sql` 보관.
+- ✅ **A단계 완료·배포·검증 (2026-06-19)**: emp-login/emp-session 버전5(verify_jwt=false). 신분증에 store_id 박힘 확인.
 - ✅ **B단계 코드 완성 (브랜치, 미배포)**: ① 앱 로그인/자동로그인에 `sb.auth.setSession()` 부착 + 로그아웃 `signOut()` (sidemenu.js). ② 로그인 전 매장/직원 목록용 **공개함수 `login-meta` 배포+테스트 완료**(매장1·직원12·PIN없음 확인). ③ openStoreSheet/loadLoginNames 를 login-meta 로 교체. **node 구문 통과. DB 잠금 전이라 비파괴.**
 - ✅ **C단계 SQL 준비 완료 (미적용)**: `docs/sql/security_rls_lock.sql`(잠금) + `..._rollback.sql`(되돌리기). store_id 33표 격리 + stores/franchises/coupang_global_hints 처리.
 - 🔴 **C 적용 전 남은 선행조건**:

@@ -391,6 +391,8 @@ RLS: enabled, policy `scr_all` USING(true) WITH CHECK(store_id IS NOT NULL) — 
 | actual_total, expected_total, diff_amount (int) | 실제/예상/차이 |
 | diff_status | 과부족 상태 |
 | sales_total (int) | 매출 합계 |
+| created_at (timestamptz) | 최초 기록 시각 |
+| created_by (uuid→employees.id, 2026-06-19 추가) | 누가 마감했는지 (개시·마감 기록 표시용) |
 - upsert onConflict: `store_id, settle_date`
 - `items_json` 구조 (2026-05-12 업데이트 / 2026-05-17 차감 카테고리 FK 추가):
   - `opening` — 전일 이월금

@@ -409,6 +409,9 @@ async function openVendorDetail(vendorId){
   // 캐시 stale 방지: vendors 배열을 항상 fresh하게 (DB의 거래처 이름·카테고리 변경이 즉시 반영)
   if(typeof loadVendors==='function') await loadVendors();
   currentVendorDetailId=vendorId; // 주문 입력 시 이 거래처 고정용
+  // 거래처 상세 진입 시 월 필터 초기화 → loadVendorOrders가 전체 기간으로 조회
+  const vOrderEl=document.getElementById('vOrderMonth');
+  if(vOrderEl) vOrderEl.innerText='-';
   // 2026-05-15: 다른 거래처 주문이 잠깐 깜빡이던 버그 fix —
   // sel.value 먼저 set 후 vendorTab(orders) 호출 (자동 loadVendorOrders가 올바른 vendorId 사용)
   const sel=document.getElementById('orderVendorFilter');
@@ -1138,50 +1141,42 @@ async function toggleVendor(id,active){
 }
 async function loadVendorOrders(){
   if(!guardStore())return;
-  const ms=document.getElementById('vOrderMonth')?.innerText;
-  const monthStr=(ms==='-'||!ms)?new Date().toISOString().slice(0,7):ms;
-  if(document.getElementById('vOrderMonth'))document.getElementById('vOrderMonth').innerText=monthStr;
+  const ms=(document.getElementById('vOrderMonth')?.innerText||'-').trim();
+  // '-' 또는 '전체 기간' = 날짜 필터 없이 전체 조회 (거래처 상세 진입 기본값)
+  const allPeriod=(ms==='-'||ms==='전체 기간');
+  const vOrderEl=document.getElementById('vOrderMonth');
+  if(allPeriod && vOrderEl) vOrderEl.innerText='전체 기간';
   // 거래처 상세 진입(currentVendorDetailId) 시 그 거래처로 필터.
   // ⚠️온라인 거래처(쿠팡)는 orderVendorFilter 드롭다운 옵션에 없어 sel.value가 빈 채로 남음 →
-  //   전체 영수증이 다 보이던 버그 우회. 상세 진입이면 currentVendorDetailId 우선 (2026-06-09)
+  //   상세 진입이면 currentVendorDetailId 우선 (2026-06-09)
   const vendorId = (typeof currentVendorDetailId!=='undefined' && currentVendorDetailId)
     ? currentVendorDetailId
     : (document.getElementById('orderVendorFilter')?.value||'');
   const listEl=document.getElementById('orderListData');
   if(listEl) listEl.innerHTML='<div class="empty-state"><p style="color:var(--gray-400);">조회 중...</p></div>';
-  // 2026-05-25 갈아엎기 (D안): 영수증분도 같이 표시 (사장님 호소 — 거래처 화면에 영수증이 안 보여서 또 입력하게 됨)
-  //  · vendor_orders + receipts(vendor_id NOT NULL, 정상) 통합 (catReceipt 패턴과 통일)
-  //  · 정규화 헬퍼: _normalizeExpenseRow / _groupExpenseRows
-  //  · 헤더 아이콘: 거래처 주문 = 🏪 / 영수증 = 📸 또는 ✏️
-  //  · 행 액션: order → openEditOrderSheet / receipt → openReceiptEdit (헤더 [✏][🗑]도 분기)
-  const [y,m]=monthStr.split('-').map(Number);
-  const lastDay=new Date(y,m,0).getDate();
-  const start=monthStr+'-01', end=monthStr+'-'+String(lastDay).padStart(2,'0');
-  let oq=sb.from('vendor_orders').select('id,order_date,vendor_id,item,amount,unit_price,quantity,memo,order_group_id,vendors(name,category)')
-    .eq('store_id',currentStore.id).gte('order_date',start).lte('order_date',end).order('order_date',{ascending:false});
+  // 2026-06-20 갈아엎기: vendor_orders 폐기(0건) → receipts 단일 조회
   let rq=sb.from('receipts')
     .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty,seq,spec,origin')
     .eq('store_id',currentStore.id).eq('note','정상').not('vendor_id','is',null)
-    .gte('receipt_date',start).lte('receipt_date',end).order('receipt_date',{ascending:false});
-  if(vendorId){ oq=oq.eq('vendor_id',vendorId); rq=rq.eq('vendor_id',vendorId); }
-  const [oRes,rRes]=await Promise.all([oq,rq]);
-  if(oRes.error||rRes.error){
-    const err=(oRes.error||rRes.error);
-    document.getElementById('orderListData').innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><p>불러오기 실패: ${esc(err?.message||'')}</p></div>`;
+    .order('receipt_date',{ascending:false});
+  if(!allPeriod){
+    const [y,m]=ms.split('-').map(Number);
+    const lastDay=new Date(y,m,0).getDate();
+    rq=rq.gte('receipt_date',ms+'-01').lte('receipt_date',ms+'-'+String(lastDay).padStart(2,'0'));
+  }
+  if(vendorId) rq=rq.eq('vendor_id',vendorId);
+  const {data,error}=await rq;
+  if(error){
+    document.getElementById('orderListData').innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><p>불러오기 실패: ${esc(error?.message||'')}</p></div>`;
     return;
   }
-  // openReceiptEdit / openReceiptGroupEdit 호환 — receipts 원본을 글로벌 rcpRecords에 박음 (catReceipt 패턴과 일관)
-  rcpRecords = rRes.data || [];
-  const normOrders=(oRes.data||[]).map(r=>_normalizeExpenseRow(r,'order'));
-  const normReceipts=(rRes.data||[]).map(r=>_normalizeExpenseRow(r,'receipt'));
-  const all=normOrders.concat(normReceipts);
-  if(!all.length){
-    document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>이번달 주문·영수증이 없습니다</p></div>';
+  rcpRecords=data||[];
+  const norm=rcpRecords.map(r=>_normalizeExpenseRow(r,'receipt'));
+  if(!norm.length){
+    document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>등록된 영수증이 없습니다</p></div>';
     return;
   }
-  // 2026-06-11 행형 갈아엎기: 표(grp-tbl) → 행형 2줄 구조 (_rclListHtml 공통 렌더, receipt.js)
-  // 영수증 기록·카테고리 화면과 같은 컴포넌트 — 날짜 구분줄 + 거래처 그룹 카드 + 품목 2줄
-  document.getElementById('orderListData').innerHTML=_rclListHtml(all);
+  document.getElementById('orderListData').innerHTML=_rclListHtml(norm);
 }
 // 주문 입력/편집 공통 시트 — 멀티행 accordion 패턴 (2026-05-20 사장님 D 패턴)
 //  · _orderDraftRows = [{item,unit_price,qty,amount,memo,_origId?}, ...]  현재 시트 안 입력 행들
@@ -5225,12 +5220,22 @@ async function loadDiffTable(){
   }
   const THRESHOLD=1000;
 
-  const[opRes,stRes]=await Promise.all([
-    sb.from('daily_opening').select('opening_date,actual_total,previous_close_total').eq('store_id',sid).gte('opening_date',startDate).lte('opening_date',endDate),
-    sb.from('settlements').select('settle_date,actual_total,expected_total,diff_amount,items_json').eq('store_id',sid).gte('settle_date',startDate).lte('settle_date',endDate)
+  const[opRes,stRes,empRes]=await Promise.all([
+    sb.from('daily_opening').select('opening_date,actual_total,previous_close_total,created_by,created_at').eq('store_id',sid).gte('opening_date',startDate).lte('opening_date',endDate),
+    sb.from('settlements').select('settle_date,actual_total,expected_total,diff_amount,items_json,created_by,created_at').eq('store_id',sid).gte('settle_date',startDate).lte('settle_date',endDate),
+    sb.from('employees').select('id,name').eq('store_id',sid)
   ]);
   const opByDate={};(opRes.data||[]).forEach(o=>opByDate[o.opening_date]=o);
   const stByDate={};(stRes.data||[]).forEach(s=>stByDate[s.settle_date]=s);
+  // 누가·언제 기록 — created_by→이름, created_at→KST 시각 (사장님 요청 2026-06-19)
+  const _empName={};(empRes.data||[]).forEach(e=>_empName[e.id]=e.name);
+  const _byWhen=(by,at)=>{
+    const nm = by ? (_empName[by]||'(퇴사자)') : '';
+    let tm='';
+    if(at){ try{ tm=new Date(at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Seoul'}); }catch(_e){} }
+    if(!nm&&!tm) return '';
+    return `${nm||'기록자 미상'}${tm?' · '+tm:''}`;
+  };
 
   // 2026-05-14: 사장님 요청 — 날짜 오름차순 (옛날 → 최신, 아래로 갈수록 오늘)
   const dates=Object.keys(stByDate).sort((a,b)=>a.localeCompare(b));
@@ -5289,6 +5294,7 @@ async function loadDiffTable(){
       flow+=fr('전일 마감 금고', fmt(op.previous_close_total||0)+'원');
       flow+=fr('오늘 개시 금고 (실제)', fmt(op.actual_total||0)+'원','','var(--text)');
       flow+=fr('＝ 영업개시 차액', opDiff===0?'✅ 일치':(opDiff>0?'+':'')+fmt(opDiff)+'원','', opDiff===0?'var(--success)':'var(--danger)');
+      { const w=_byWhen(op.created_by,op.created_at); if(w) flow+=`<div style="font-size:11px;color:var(--gray-500);padding:1px 0 2px;">🖊️ 개시: ${w}</div>`; }
     } else {
       flow+=`<div style="font-size:11px;color:var(--gray-400);padding:4px 0;">영업개시 기록 없음 — 전일 마감 금고에서 바로 마감</div>`;
     }
@@ -5300,6 +5306,7 @@ async function loadDiffTable(){
     flow+=fr('＝ 장부상 금고', fmt(book)+'원','','var(--text)');
     flow+=fr('금고 현황 (실제)', fmt(closeVault)+'원','','var(--text)');
     flow+=`<div style="border-radius:10px;padding:9px;text-align:center;margin-top:8px;font-weight:900;font-size:13px;background:${stDiff===0?'var(--success-light)':'var(--danger-light)'};color:${stDiff===0?'var(--success)':'var(--danger)'};">마감 차액 ${stDiff===0?'✅ 일치':(stDiff>0?'+':'')+fmt(stDiff)+'원'}</div>`;
+    { const sw=_byWhen(st.created_by,st.created_at); if(sw) flow+=`<div style="font-size:11px;color:var(--gray-500);padding:5px 0 0;text-align:center;">🖊️ 마감: ${sw}</div>`; }
     flow+=`<button data-action="gotoSettleEdit|${d}" style="width:100%;margin-top:8px;padding:10px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">✏️ 이 날 마감 수정</button>`;
 
     html+=`<tr class="diff-main-row" data-action="toggleDiffRow|${d}" style="border-top:1px solid var(--gray-100);cursor:pointer;">
@@ -5642,28 +5649,18 @@ async function renderExpHubVendorView(){
     const ym = new Date().toISOString().slice(0,7); // YYYY-MM
     const monthStart = ym + '-01';
     const monthEnd = new Date(ym.slice(0,4), parseInt(ym.slice(5,7)), 0).toISOString().slice(0,10);
-    // vendor_orders 이번달 거래처별 집계
-    const {data:orders} = await sb.from('vendor_orders')
-      .select('vendor_id, amount, vendors(name, category)')
-      .eq('store_id', currentStore.id)
-      .gte('order_date', monthStart).lte('order_date', monthEnd);
-    // receipts(vendor_id 있는 것) 이번달 거래처별 집계
+    // 거래처별 집계 — receipts(vendor_id 있는 것) + vendors 조인으로 카테고리·종류까지
+    //   2026-06-20: vendor_orders(거래처 수동 주문) 폐기 → 영수증 단일 루트. 거래처/마트/온라인 종류 라벨 정확 표기
     const {data:rcpts} = await sb.from('receipts')
-      .select('vendor_id, total_price, vendor')
+      .select('vendor_id, total_price, vendor, vendors(name, category, kind)')
       .eq('store_id', currentStore.id)
       .not('vendor_id', 'is', null)
       .gte('receipt_date', monthStart).lte('receipt_date', monthEnd);
     // 거래처별 합산
-    const agg = {}; // {vendor_id: {name, category, total, count}}
-    (orders||[]).forEach(r=>{
-      if(!r.vendor_id) return;
-      if(!agg[r.vendor_id]) agg[r.vendor_id] = {name: r.vendors?.name||'(이름 없음)', category: r.vendors?.category||'', total:0, count:0};
-      agg[r.vendor_id].total += (r.amount||0);
-      agg[r.vendor_id].count++;
-    });
+    const agg = {}; // {vendor_id: {name, category, kind, total, count}}
     (rcpts||[]).forEach(r=>{
       if(!r.vendor_id) return;
-      if(!agg[r.vendor_id]) agg[r.vendor_id] = {name: r.vendor||'(이름 없음)', category:'', total:0, count:0};
+      if(!agg[r.vendor_id]) agg[r.vendor_id] = {name: r.vendors?.name||r.vendor||'(이름 없음)', category: r.vendors?.category||'', kind: r.vendors?.kind||'vendor', total:0, count:0};
       agg[r.vendor_id].total += (r.total_price||0);
       agg[r.vendor_id].count++;
     });
@@ -5677,9 +5674,12 @@ async function renderExpHubVendorView(){
     }
     let html = '';
     list.forEach(([vid, v])=>{
-      const sub = (v.category||'거래처') + ' · ' + v.count + '건';
+      // 종류 라벨: 마트/온라인은 종류 표기, 거래처는 취급 카테고리(없으면 '거래처')
+      const kindLabel = v.kind==='mart' ? '마트' : (v.kind==='online' ? '온라인' : (v.category||'거래처'));
+      const sub = kindLabel + ' · ' + v.count + '건';
       const amtTxt = fmt(v.total) + '원';
-      html += `<button type="button" class="exp-cat-row" data-vendor-id="${esc(vid)}" data-action="openCatReceipt|vendor:${esc(vid)}">
+      // 클릭 = 해당 거래처로 필터 잡힌 채 지출 기록 화면 진입 (전체 목록으로 새지 않게 — 2026-06-20)
+      html += `<button type="button" class="exp-cat-row" data-vendor-id="${esc(vid)}" data-action="openExpenseRecords|${encodeURIComponent(v.name)}">
         <span class="ecr-icon"><svg><use href="#i-building"/></svg></span>
         <span class="ecr-body">
           <span class="ecr-title">${esc(v.name)}</span>
@@ -5997,7 +5997,9 @@ function completeLogin(emp){
   // auth_level 기반 권한 (is_manager와 동기화)
   authLevel=emp.auth_level||'staff';
   if(authLevel==='staff'&&emp.is_manager) authLevel='store_manager';
-  _myWorkMode=false; // 로그인 시 관리 모드로 시작 (2026-06-15)
+  // 권한 준 직원(매니저급, 사장·본사 아님)은 근무화면부터 시작 → 관리화면은 헤더 전환버튼으로 (사장님 2026-06-19)
+  // 사장(owner)·본사(franchise_admin)는 기존대로 관리 모드 시작. 일반 직원은 어차피 근무 화면뿐.
+  _myWorkMode = isRealManager() && !['owner','franchise_admin'].includes(authLevel);
   recalcPermissions();
   // 2026-05-25 사장님 호소: 직원 전환 시 옛 필터·일자·캐시 잔재 → 잘못된 직원 데이터 노출
   _resetUserState();
