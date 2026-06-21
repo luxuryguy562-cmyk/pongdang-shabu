@@ -735,24 +735,11 @@ async function loadDashboard(force){
     if(royalty>0) expByGroup['로열티']=(expByGroup['로열티']||0)+royalty;
     if(cardFee>0) expByGroup['카드수수료']=(expByGroup['카드수수료']||0)+cardFee;
     // 주휴수당 월 집계 → expByGroup 인건비 항목에 합산 (summHtml 빌드 전이라 표에 반영됨)
+    // 2026-06-21 회계 단일 진실: 근태·지출관리와 똑같은 calcMonthlyHolidayPay 함수로 통일 (결근 차감 포함)
     if(settings.weekly_holiday_pay_enabled){
       const _hpLaborKey=(expCategories||[]).find(c=>!c.parent_id&&c.data_source==='attendance')?.name||'인건비';
-      const _hpMEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-      const _hpWkMap={};
-      (attRes2.data||[]).forEach(a=>{
-        if(_hpMEmpIds.has(a.employee_id)||!(a.total_work_min>0)) return;
-        const dt=new Date(a.work_date+'T00:00:00');
-        const wsKey=ymdLocal(new Date(dt.getTime()-((dt.getDay()+6)%7)*86400000));
-        const k=a.employee_id+'_'+wsKey;
-        if(!_hpWkMap[k]) _hpWkMap[k]={empId:a.employee_id,min:0};
-        _hpWkMap[k].min+=a.total_work_min;
-      });
-      let _dashHp=0;
-      Object.values(_hpWkMap).forEach(({empId,min})=>{
-        if(min<15*60) return;
-        const emp=(employees||[]).find(e=>e.id===empId);
-        if(emp) _dashHp+=Math.round(Math.min(min/60/5,8)*(emp.base_wage||10030));
-      });
+      const _hpMap=calcMonthlyHolidayPay(ym, attRes2.data||[], (schedRes2&&schedRes2.data)||[]);
+      const _dashHp=Object.values(_hpMap).reduce((a,b)=>a+b,0);
       if(_dashHp>0) expByGroup[_hpLaborKey]=(expByGroup[_hpLaborKey]||0)+_dashHp;
     }
 

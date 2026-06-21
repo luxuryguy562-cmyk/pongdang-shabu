@@ -57,6 +57,7 @@ depends_on: planner (승인된 계획서)
    - [ ] FK 컬럼 일관 박았나? (vendors.category_id / receipts.category_id / fixed_costs.category_id)
    - [ ] 옛 사고 재현 X (#36 FK 전수 / #2226 CAT_NAME_MAP 하드코딩 / #2603 item.category 텍스트)
    - [ ] data_source 매칭 정확 (composite 대분류면 자식 ids 포함)
+   - [ ] **🚨 회계 단일 진실 (0-7)**: 같은 회계 수치(인건비·매출·지출 등) 계산 함수 이미 있나 **grep 먼저** → 있으면 호출(복붙·재구현 금지). 회계 수치 화면 2개+면 "모든 화면 합계 같은가?" 자가 검증 (#208 인건비 화면마다 다른 빙산)
 3. **변경 후**: business_rules.md 0번 표 갱신 의무 (휘발 방지)
 4. 빠뜨림 시 → 사장님 마감·정산 데이터 손상 위험 = dev_lessons 빙산 박음
 
