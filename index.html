@@ -492,6 +492,7 @@
       </div>
       <div class="side-group-body">
         <div class="side-item franchise-admin-only" data-action="navFromSide|franchiseHome" style="display:none;"><svg class="icon-inline"><use href="#i-building"/></svg>본사 홈</div>
+        <div class="side-item" data-action="navFromSide|myStores"><svg class="icon-inline"><use href="#i-building"/></svg>내 매장들</div>
         <div class="side-item" data-action="navFromSide|dashboard">대시보드</div>
         <div class="side-item owner-only" data-action="openJoinFranchise" style="display:none;"><svg class="icon-inline"><use href="#i-link"/></svg>본사 연결</div>
       </div>
@@ -1586,6 +1587,38 @@
       · 가맹점주가 가입 시 <b>가맹점주</b> 유형 선택 → 이 코드 입력 → 자동 연결<br>
       · 이미 혼자 앱 쓰는 가맹점주는 사이드메뉴 "본사 연결" 에서 이 코드 입력
     </div>
+  </div>
+</div>
+
+<!-- ══ [5-D] 내 매장들 통합 홈 (Phase 1-B) ══ -->
+<div id="myStoresCont" class="container">
+  <div class="card">
+    <div class="ms-head">
+      <div class="card-title"><svg class="icon-inline"><use href="#i-building"/></svg>내 매장들</div>
+      <input type="month" id="msMonth" class="input-inline" style="width:140px;" data-change="loadMyStores">
+    </div>
+
+    <!-- 요약 카드 2개 -->
+    <div class="ms-summary">
+      <div class="ms-sum-card ms-sum-rev">
+        <div class="ms-sum-label">전체 매출</div>
+        <div class="ms-sum-val" id="msTotalRev">0원</div>
+      </div>
+      <div class="ms-sum-card ms-sum-profit">
+        <div class="ms-sum-label">전체 순익</div>
+        <div class="ms-sum-val" id="msTotalProfit">—</div>
+      </div>
+    </div>
+
+    <div class="ms-section-title">매장별 현황</div>
+    <div id="msStoreList">
+      <div class="ms-empty">불러오는 중...</div>
+    </div>
+  </div>
+
+  <div class="ms-actions">
+    <button class="btn btn-secondary btn-full" data-action="msAddStore">+ 매장 추가</button>
+    <button class="btn btn-secondary btn-full" data-action="msInviteFranchise">가맹점 초대</button>
   </div>
 </div>
 
