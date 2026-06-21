@@ -699,7 +699,7 @@ function nav(tab, el) {
     empSched: loadEmpSched,
     busHub: loadBusHubData,
     expHub: loadExpHubData,
-    expHubVendor: renderExpHubVendorView,
+    expHubVendor: loadVendors, // loadVendors 끝에서 renderExpHubVendorView 자동 호출 (거래처 관리 통합, 2026-06-21)
     catReceipt: loadCatReceiptData,
     manualCat: loadManualCatView,
   };

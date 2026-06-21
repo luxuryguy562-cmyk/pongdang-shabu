@@ -28,7 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260620a">
+<link rel="stylesheet" href="assets/styles.css?v=20260621a">
 </head>
 <body>
 
@@ -955,10 +955,13 @@
   </div>
 </div>
 
-<!-- ══ 거래처별 보기 (지출 허브에서 "거래처별 ›" 진입, 별도 화면) ══ -->
+<!-- ══ 거래처 관리 (지출 허브에서 "거래처별 ›" 진입 — 거래처별 지출 + 추가·편집 통합, 2026-06-21) ══ -->
 <div id="expHubVendorCont" class="container">
   <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl">지출관리</span></div>
-  <div class="exp-group-label" style="margin-top:0;">🏪 <span id="expHubVendorMonthLbl">이번달</span> 거래처별 지출 <span class="exp-group-hint">많이 쓴 순</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">
+    <div class="exp-group-label" style="margin:0;">🏪 거래처 관리 <span class="exp-group-hint"><span id="expHubVendorMonthLbl">이번달</span> 많이 쓴 순</span></div>
+    <button type="button" class="btn btn-primary btn-sm" style="flex:0 0 auto;padding:8px 14px;font-size:13px;font-weight:700;" data-action="openAddVendorSheet|vendor">＋ 추가</button>
+  </div>
   <div class="exp-cat-list" id="expHubVendorList"></div>
 </div>
 
@@ -1611,7 +1614,8 @@
   <div class="app-back" data-action="nav|expHub"><span class="back-btn">‹</span><span class="back-ttl" id="vendorViewTitle">거래처 관리</span></div>
   <!-- 서브탭(파일 업로드·대조&단가) 제거 (2026-06-02 사장님 요청 — 단순화. 대조는 정산 대조에서 별도 관리) -->
 
-  <div id="vendorList">
+  <!-- 옛 거래처 목록 패널 — 거래처 관리로 통합(expHubVendorCont)되어 진입 안 함. hide-not-delete (renderVendorList 등 참조 유지, 2026-06-21) -->
+  <div id="vendorList" style="display:none;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:6px;">
       <select id="vendorCatFilter" class="input-field" style="margin-bottom:0;flex:1;padding:10px 14px;font-size:13px;" data-change="renderVendorList">
         <!-- 옵션은 refreshVendorListFilter에서 동적 채움 -->
@@ -1625,7 +1629,7 @@
   <div id="vendorOrders" style="display:none;">
     <!-- 거래처 상세 헤더 (카드에서 진입 시 채워짐) -->
     <div id="vendorDetailHeader" style="display:flex;align-items:center;gap:6px;padding:10px 0 14px;margin-bottom:8px;border-bottom:1px solid var(--gray-100);">
-      <button type="button" data-action="vendorTab|list|null" style="width:36px;height:36px;border-radius:50%;border:none;background:transparent;font-size:20px;color:#333D4B;font-weight:600;cursor:pointer;flex-shrink:0;line-height:1;padding:0;">‹</button>
+      <button type="button" data-action="nav|expHubVendor" style="width:36px;height:36px;border-radius:50%;border:none;background:transparent;font-size:20px;color:#333D4B;font-weight:600;cursor:pointer;flex-shrink:0;line-height:1;padding:0;">‹</button>
       <div style="flex:1;min-width:0;">
         <div id="vdName" style="font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">전체 거래처</div>
         <div id="vdCategory" style="font-size:11px;color:var(--gray-500);font-weight:600;"></div>
@@ -3559,7 +3563,7 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260619a"></script>
+<script src="assets/common.js?v=20260621a"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
   <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>
@@ -3571,7 +3575,7 @@
 <script src="assets/tabs/schedule.js?v=20260615s"></script>
 <script src="assets/tabs/settlement.js?v=20260619b"></script>
 <script src="assets/tabs/dashboard.js?v=20260615d"></script>
-<script src="assets/tabs/sidemenu.js?v=20260620a"></script>
+<script src="assets/tabs/sidemenu.js?v=20260621a"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260610"></script>
 </body>
 </html>
