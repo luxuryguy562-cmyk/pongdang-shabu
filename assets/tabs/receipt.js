@@ -959,13 +959,7 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplyS
     }
   }
   sumBox.className = cls;
-  // 세액 있으면 공급가/부가세/합계 3줄, 없으면 합계 큰 숫자만
-  const taxLines = rowTax>0
-    ? `<hr class="rsc-br"><div class="rsc-ln"><span>공급가</span><b>${fmt(rowSupply)}</b></div>`
-      + `<div class="rsc-ln"><span>부가세</span><b>${fmt(rowTax)}</b></div>`
-      + `<div class="rsc-ln total"><span>합계</span><b>${fmt(rowSum)}</b></div>`
-    : '';
-  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>${taxLines}`;
+  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>`;
 }
 async function applyRulesToReceipt(list){
   if(!storeClassRules?.length) await loadClassificationRules();
@@ -1636,9 +1630,8 @@ function buildReceiptRow(i={}) {
   const nameSuspect = i._nameSuspect;
   const nameSuspectCls = nameSuspect ? ' name-suspect' : '';
   const nameSuspectMark = nameSuspect ? `<span class="rcp-ns-mark" title="${esc(nameSuspect)} — 📋 눌러 고쳐주세요" style="font-size:13px;cursor:help;">🔴</span>` : '';
-  // 면세 배지 — AI 면세 판단(isTaxFree) 우선, 없으면 세액 섞인 영수증의 세액 0 행 = 면세
   const _tax = parseInt(i.taxAmount)||0;
-  const freeBadge = (i.isTaxFree || (i._taxFormat && _tax===0)) ? `<span class="ric-free">면세</span>` : '';
+  const freeBadge = ''; // 부가세 화면 숨김 (2026-06-21)
   // 📋 버튼 — 과거 품목 원터치 선택 (거래처 모드 + 과거 품목 있을 때만)
   const pastBtn = rcpPastItems.length ? `<button type="button" class="ric-past-btn" data-action="openRcpPastSheet|${idx}" title="과거 품목 선택">📋</button>` : '';
   // 단가 매칭 뱃지 (2026-06-05)
@@ -1671,11 +1664,11 @@ function buildReceiptRow(i={}) {
           <div class="det-cell"><span>수량</span><input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></div>
         </div>
       </div>
-      <div class="vat-row">
+      <div class="vat-row" style="display:none">
         <button type="button" class="vat-toggle" data-action="onRcpVatToggle|${idx}"><span class="sw${_vatOn?'':' off'}"></span> 부가세 포함</button>
         <span class="vat-amt">부가세 <input type="text" class="c-t" inputmode="numeric" value="${_tax||0}" data-input="onRcpVatInput|this|${idx}"></span>
       </div>
-      <div class="vat-split" id="vatsplit-${idx}">${vatSplitTxt}</div>
+      <div class="vat-split" id="vatsplit-${idx}" style="display:none">${vatSplitTxt}</div>
     </div>`;
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
