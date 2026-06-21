@@ -5179,7 +5179,7 @@ async function loadBusHubData(){
   }catch(e){setAmt('busMiniStAmt','-');}
   try{
     const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end);
-    const total=(sd||[]).reduce((a,r)=>a+(typeof salesRowTotal==='function'?salesRowTotal(r):(r.card||0)+(r.cash||0)+(r.cash_receipt||0)+(r.qr||0)+(r.etc||0)),0);
+    const total=sumSales(sd);
     setAmt('busMiniSaAmt', fmt(total));
     setSub('busMiniSaSub', `${(sd||[]).length}일 기록`);
   }catch(e){setAmt('busMiniSaAmt','-');}
@@ -5408,8 +5408,7 @@ async function loadRoyaltyPage(){
   (sd||[]).forEach(s=>{
     const ym=(s.date||'').slice(0,7);
     if(!ym) return;
-    const t=typeof salesRowTotal==='function'?salesRowTotal(s):((s.card||0)+(s.cash||0)+(s.cash_receipt||0)+(s.qr||0)+(s.etc||0));
-    salesByMonth[ym]=(salesByMonth[ym]||0)+t;
+    salesByMonth[ym]=(salesByMonth[ym]||0)+salesRowTotal(s);
   });
 
   // 4) 월별 표 렌더 (최신순) — 매출 / 요율 / 금액
@@ -5947,7 +5946,7 @@ async function loadExpHubData(force){
   // 로열티 (카테고리 X — 매출 × 요율)
   try{
     const sd=sdRes.data||[];
-    const totalRev=sd.reduce((a,r)=>a+(typeof salesRowTotal==='function'?salesRowTotal(r):(r.card||0)+(r.cash||0)+(r.cash_receipt||0)+(r.qr||0)+(r.etc||0)),0);
+    const totalRev=sumSales(sd);
     const rate=parseFloat(ssRes.data?.royalty_rate||0)/100;
     catSums._royalty = {amount: Math.round(totalRev*rate), rate: rate};
   }catch(e){ catSums._royalty = {amount:0, rate:0}; }
@@ -5956,7 +5955,7 @@ async function loadExpHubData(force){
   try{
     const sd=sdRes.data||[];
     const cardMethod=(paymentMethods||[]).find(m=>m.legacy_key==='card');
-    const cardSales=sd.reduce((a,r)=>a+(typeof getMethodAmount==='function'&&cardMethod?getMethodAmount(r,cardMethod):(r.card||0)),0);
+    const cardSales=sumCardSales(sd, cardMethod);
     const cardFeeRt=parseFloat(ssRes.data?.card_fee_rate||0)/100;
     catSums._cardfee={amount:Math.round(cardSales*cardFeeRt),rate:cardFeeRt};
   }catch(e){catSums._cardfee={amount:0,rate:0};}
@@ -9321,6 +9320,20 @@ function salesRowTotal(r){
   // 레거시 폴백: 본 매출 5개 합산
   const LEGACY_KEYS=['card','cash','cash_receipt','qr','etc'];
   return LEGACY_KEYS.reduce((s,k)=>s+(Number(r[k])||0),0);
+}
+
+// ─── 매출 단일 진실: 합산 헬퍼 (2026-06-21 회계 통일 — business_rules 0-7) ───
+// 모든 화면은 매출을 직접 reduce 하지 말고 이 함수를 부른다. 규칙이 한 곳에만 있어야 화면마다 안 갈린다.
+// sumSales: sales_daily 행 배열의 총매출 합 (행 한 줄 규칙은 salesRowTotal 하나)
+function sumSales(rows){
+  return (rows||[]).reduce((a,r)=>a+salesRowTotal(r),0);
+}
+// sumCardSales: 카드 매출만 합 (카드수수료 기준). cardMethod 있으면 getMethodAmount, 없으면 레거시 card 컬럼.
+function sumCardSales(rows, cardMethod){
+  return (rows||[]).reduce((a,r)=>{
+    if(cardMethod && typeof getMethodAmount==='function') return a+(getMethodAmount(r,cardMethod)||0);
+    return a+(Number(r.card)||0);
+  },0);
 }
 
 async function loadSalesDaily(){
