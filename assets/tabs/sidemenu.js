@@ -41,6 +41,9 @@ async function loadVendors(){
   const sels=['orderVendorFilter','uploadVendorSel','orderVendorInput'];
   const vendorOnly=vendors.filter(v=>(v.kind||'vendor')!=='online'); // 주문 드롭다운엔 거래처만(온라인 제외)
   sels.forEach(id=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML=(id==='orderVendorFilter'?'<option value="">전체 거래처</option>':'')+vendorOnly.map(v=>`<option value="${v.id}"${!v.is_active?' (거래종료)':''}>${v.name}</option>`).join('');if(cur)el.value=cur;});
+  // 거래처 관리 통합 화면이 보이는 중이면 자동 갱신 (추가·편집·삭제 직후 반영 — 2026-06-21)
+  const _ehv=document.getElementById('expHubVendorCont');
+  if(_ehv && _ehv.classList.contains('active') && typeof renderExpHubVendorView==='function') renderExpHubVendorView();
 }
 function vendorTab(tab,el){
   document.querySelectorAll('#vendorsCont .sub-tab').forEach(t=>t.classList.remove('active'));
@@ -341,12 +344,10 @@ function _vendorCatLabel(v, maxShow=2){
   return names.slice(0,maxShow).join('·')+` 외 ${names.length-maxShow}`;
 }
 let vendorListKind = 'vendor'; // 거래처 관리 화면 종류 (2026-06-10): 'vendor'(정기 거래처) | 'online'(쿠팡 등 플랫폼)
-// 거래 채널 카드(거래처/온라인) 진입 — 종류 설정 후 거래처 관리 화면
+// 거래 채널 카드(거래처/온라인) 진입 — 거래처 관리 통합 화면(expHubVendorCont)으로 (2026-06-21)
 function openVendorChannel(kind){
   vendorListKind = (kind==='online') ? 'online' : 'vendor';
-  nav('vendors');
-  _applyVendorViewKind();
-  renderVendorList();
+  nav('expHubVendor'); // 통합 화면 — renderExpHubVendorView 자동 호출 (전체 거래처 표시)
 }
 // 거래처 관리 화면을 종류에 맞게 (제목·필터·추가버튼)
 function _applyVendorViewKind(){
@@ -406,8 +407,9 @@ function renderVendorList(){
 }
 // 거래처 카드 ↘ 진입 → 주문 내역 패널로 이동 (그 거래처만 필터 + 헤더 갱신)
 async function openVendorDetail(vendorId){
-  // 캐시 stale 방지: vendors 배열을 항상 fresh하게 (DB의 거래처 이름·카테고리 변경이 즉시 반영)
-  if(typeof loadVendors==='function') await loadVendors();
+  // 2026-06-21 통합: 거래처 관리 화면(expHubVendorCont)에서 진입하므로 컨테이너를 vendorsCont로 전환.
+  //   nav('vendors')가 자동 vendorTab('list')를 부르지만 vendorList는 숨김 → 바로 아래 vendorTab('orders')로 상세 패널 전환.
+  nav('vendors');
   currentVendorDetailId=vendorId; // 주문 입력 시 이 거래처 고정용
   // 거래처 상세 진입 시 월 필터 초기화 → loadVendorOrders가 전체 기간으로 조회
   const vOrderEl=document.getElementById('vOrderMonth');
@@ -417,6 +419,8 @@ async function openVendorDetail(vendorId){
   const sel=document.getElementById('orderVendorFilter');
   if(sel) sel.value=vendorId;
   vendorTab('orders', null);
+  // 캐시 stale 방지: vendors 배열을 항상 fresh하게 (DB의 거래처 이름·카테고리 변경이 즉시 반영)
+  if(typeof loadVendors==='function') await loadVendors();
   const v=vendors.find(x=>x.id===vendorId);
   const nm=document.getElementById('vdName');
   const cat=document.getElementById('vdCategory');
@@ -1058,20 +1062,21 @@ async function saveVendor(){
 }
 
 // 거래처 완전 삭제 (잘못 추가한 거래처용, 2026-05-15)
-// - vendor_orders 0건 → hard delete 가능
+// - 영수증(receipts) 0건 → hard delete 가능
 // - 1건 이상 → 거래종료(is_active=false)로 안내
+//   2026-06-21: 지출 루트 영수증 단일화로 vendor_orders 폐기 → 영수증 기록 기준으로 확인 (영수증 있는 거래처 실수 삭제 방지)
 async function hardDeleteVendor(){
   if(!guardStore()) return;
   const eid=document.getElementById('editVendorId').value;
   if(!eid) return;
   const v=vendors.find(x=>x.id===eid);
   if(!v) return;
-  setLoad(true,'주문 기록 확인 중...');
-  const{count,error:cntErr}=await sb.from('vendor_orders').select('id',{count:'exact',head:true}).eq('vendor_id',eid).eq('store_id',currentStore.id);
+  setLoad(true,'영수증 기록 확인 중...');
+  const{count,error:cntErr}=await sb.from('receipts').select('id',{count:'exact',head:true}).eq('vendor_id',eid).eq('store_id',currentStore.id);
   if(cntErr){setLoad(false);return errToast('조회',cntErr);}
   if((count||0)>0){
     setLoad(false);
-    alert(`${v.name}에 주문 기록 ${count}건이 있어요.\n완전 삭제 대신 "거래종료"로 처리하세요.\n(편집 닫고 거래처 카드 → 거래종료 버튼)`);
+    alert(`${v.name}에 영수증 기록 ${count}건이 있어요.\n완전 삭제 대신 "거래종료"로 처리하세요.\n(편집 시트 안 거래종료 버튼)`);
     return;
   }
   setLoad(false);
@@ -5646,40 +5651,35 @@ async function renderExpHubVendorView(){
   if(!grid) return;
   grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>';
   try {
+    // 2026-06-21 통합: 옛 거래처 관리 화면(vendorsCont) 진입 경로 소실 → 이 화면 하나로 합침.
+    //   · 전체 거래처(영수증 0원 포함) 표시 + 행 클릭=상세(영수증 목록) + ✏️=편집 + 상단 ＋추가
+    //   · vendors 배열 + vendorMonthTotals(이번달 합계)는 loadVendors가 채움. (이 함수는 loadVendors 끝에서 자동 호출 — 무한루프 방지 위해 여기선 loadVendors 호출 X)
     const ym = new Date().toISOString().slice(0,7); // YYYY-MM
-    const monthStart = ym + '-01';
-    const monthEnd = new Date(ym.slice(0,4), parseInt(ym.slice(5,7)), 0).toISOString().slice(0,10);
-    // 거래처별 집계 — receipts(vendor_id 있는 것) + vendors 조인으로 카테고리·종류까지
-    //   2026-06-20: vendor_orders(거래처 수동 주문) 폐기 → 영수증 단일 루트. 거래처/마트/온라인 종류 라벨 정확 표기
-    const {data:rcpts} = await sb.from('receipts')
-      .select('vendor_id, total_price, vendor, vendors(name, category, kind)')
-      .eq('store_id', currentStore.id)
-      .not('vendor_id', 'is', null)
-      .gte('receipt_date', monthStart).lte('receipt_date', monthEnd);
-    // 거래처별 합산
-    const agg = {}; // {vendor_id: {name, category, kind, total, count}}
-    (rcpts||[]).forEach(r=>{
-      if(!r.vendor_id) return;
-      if(!agg[r.vendor_id]) agg[r.vendor_id] = {name: r.vendors?.name||r.vendor||'(이름 없음)', category: r.vendors?.category||'', kind: r.vendors?.kind||'vendor', total:0, count:0};
-      agg[r.vendor_id].total += (r.total_price||0);
-      agg[r.vendor_id].count++;
-    });
-    const list = Object.entries(agg).sort((a,b)=>b[1].total-a[1].total);
-    // 상단 라벨에 몇 월인지 박음 ("이번달" 표기 폐기 — 2026-06-11 사장님 지시)
     const _moLbl=document.getElementById('expHubVendorMonthLbl');
     if(_moLbl) _moLbl.textContent=parseInt(ym.slice(5,7),10)+'월';
-    if(!list.length){
-      grid.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;">${parseInt(ym.slice(5,7),10)}월 거래 없음</div>`;
+    // 전체 거래처 (종류 무관 — 거래처/마트/온라인 다 표시). 활성 거래처 우선, 거래종료는 뒤로.
+    const all = (vendors||[]).slice().sort((a,b)=>{
+      const aa=(a.is_active===false)?1:0, ab=(b.is_active===false)?1:0;
+      if(aa!==ab) return aa-ab; // 활성 먼저
+      const ta=vendorMonthTotals[a.id]?.total||0, tb=vendorMonthTotals[b.id]?.total||0;
+      if(tb!==ta) return tb-ta; // 이번달 많이 쓴 순
+      return (a.name||'').localeCompare(b.name||''); // 0원끼리는 이름순
+    });
+    if(!all.length){
+      grid.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;line-height:1.6;">등록된 거래처가 없습니다.<br>위 <b>＋ 추가</b>로 거래처를 등록하세요.</div>`;
       return;
     }
     let html = '';
-    list.forEach(([vid, v])=>{
+    all.forEach(v=>{
+      const t = vendorMonthTotals[v.id];
+      const cnt = t?.count||0;
       // 종류 라벨: 마트/온라인은 종류 표기, 거래처는 취급 카테고리(없으면 '거래처')
-      const kindLabel = v.kind==='mart' ? '마트' : (v.kind==='online' ? '온라인' : (v.category||'거래처'));
-      const sub = kindLabel + ' · ' + v.count + '건';
-      const amtTxt = fmt(v.total) + '원';
-      // 클릭 = 해당 거래처로 필터 잡힌 채 지출 기록 화면 진입 (전체 목록으로 새지 않게 — 2026-06-20)
-      html += `<button type="button" class="exp-cat-row" data-vendor-id="${esc(vid)}" data-action="openExpenseRecords|${encodeURIComponent(v.name)}">
+      const kindLabel = v.kind==='mart' ? '마트' : (v.kind==='online' ? '온라인' : (_vendorCatLabel(v)||'거래처'));
+      const closedTag = (v.is_active===false) ? ' · 거래종료' : '';
+      const sub = kindLabel + (cnt ? ' · '+cnt+'건' : ' · 이번달 없음') + closedTag;
+      const amtTxt = fmt(t?.total||0) + '원';
+      // 행 클릭 = 거래처 상세(영수증 목록·등록 화면) / ✏️ = 거래처 편집 시트 (data-stop으로 행 클릭 차단)
+      html += `<div class="exp-cat-row${v.is_active===false?' is-inactive':''}" data-vendor-id="${esc(v.id)}" data-action="openVendorDetail|${esc(v.id)}" style="cursor:pointer;">
         <span class="ecr-icon"><svg><use href="#i-building"/></svg></span>
         <span class="ecr-body">
           <span class="ecr-title">${esc(v.name)}</span>
@@ -5688,8 +5688,9 @@ async function renderExpHubVendorView(){
         <span class="ecr-amtwrap">
           <span class="ecr-amt${_expAmtClass(amtTxt)}">${amtTxt}</span>
         </span>
+        <button type="button" class="ehv-edit" data-stop="1" data-action="openEditVendorSheet|${esc(v.id)}" title="거래처 편집">✏️</button>
         <span class="ecr-chev">›</span>
-      </button>`;
+      </div>`;
     });
     grid.innerHTML = html;
   } catch(e){
