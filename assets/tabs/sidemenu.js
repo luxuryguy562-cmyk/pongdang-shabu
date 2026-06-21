@@ -3592,8 +3592,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
     // 인건비 = 시급제 attendance_logs.calculated_wage + 월급제 monthly_wage 분배 (사장님 매장: 탁성현 750만원 등)
     // 진행일까지만 합산 (미래 일자 제외 — 사장님 짚음 2026-05-17)
     _attLogsRows=(attRes.data||[]);
-    const _monthlyEmpIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-    const _hourlySum=_attLogsRows.filter(r=>!_monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+    const _hourlySum=sumHourlyWage(_attLogsRows);
     const _today=new Date();
     const _isCurrentMonth=(y===_today.getFullYear() && m===_today.getMonth()+1);
     _effectiveDaysShared=_isCurrentMonth ? _today.getDate() : lastDay;
@@ -3627,8 +3626,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
     expCategories.filter(c=>c.parent_id && c.is_active!==false && (c.category_type||'expense')==='expense').forEach(child=>{
       let cAmt=0;
       if(child.data_source==='attendance_hourly'){
-        const ids=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-        cAmt=_attLogsRows.filter(r=>!ids.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+        cAmt=sumHourlyWage(_attLogsRows);
       } else if(child.data_source==='attendance_monthly'){
         (employees||[]).filter(e=>e.is_active&&e.wage_type==='monthly'&&e.monthly_wage>0).forEach(emp=>{
           cAmt+=Math.round((emp.monthly_wage*10000)/lastDay)*_effectiveDaysShared;
@@ -5890,9 +5888,9 @@ async function loadExpHubData(force){
     //  · 2026-05-25 갈아엎기: 시급제(calculated_wage) + 월급제 일할 합산 (사장님 호소: 통일)
     //  · 옛: calculated_wage만 → 월급제 누락 (탁성현 700만 빠짐)
     else if(ds==='attendance'){
-      // 시급제 — calculated_wage 합 (월급제는 calculated_wage=0 또는 따로 박힘 → 둘 다 안전하게 wage_type 필터)
+      // 시급제 — calculated_wage 합 (단일 함수 sumHourlyWage, 월급제 자동 제외)
       const monthlyEmpIds = new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-      amt = (alRes.data||[]).filter(r=>!monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+      amt = sumHourlyWage(alRes.data||[]);
       // 월급제 일할 누적
       calcMonthlyProratedWages(ym).forEach(m=>{ amt += m.total; });
       // 주휴수당 (시급제만) — 근태 화면과 동일 함수로 정확히 일치 (2026-06-21 누락 수정)
