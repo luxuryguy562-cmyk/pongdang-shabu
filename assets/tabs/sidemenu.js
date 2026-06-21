@@ -5995,6 +5995,18 @@ function loadMyInfo(){
   if(pinBtn) pinBtn.style.display='flex';
 }
 
+// 로그인 후 관리자 첫 화면 — 매장 2개 이상이면 '내 매장들' 먼저, 1개면 바로 대시보드 (멀티매장, 2026-06-19)
+async function _routeManagerHome(){
+  setLoad(true, '불러오는 중...');
+  let go = 'dashboard';
+  try{
+    const { data } = await sb.functions.invoke('my-stores', { body:{} });
+    if(data && data.ok && Array.isArray(data.stores) && data.stores.length >= 2) go = 'myStores';
+  }catch(e){ console.warn('[routeManagerHome]', e); }
+  setLoad(false);
+  nav(go);
+}
+
 function completeLogin(emp){
   currentEmp=emp;
   // auth_level 기반 권한 (is_manager와 동기화)
@@ -6016,10 +6028,11 @@ function completeLogin(emp){
   applyPermissionUI();
   // 옛 영수증 복귀값 잔재 제거 (저장이 더는 reload 안 함 — 2026-06-08 in-page 전환으로 폐기)
   try{ localStorage.removeItem('pd_rcp_return'); }catch(e){}
-  // 로그인 후 첫 화면: 본사→본사 홈, 관리자→대시보드, 직원→근태
+  // 로그인 후 첫 화면: 본사→본사 홈, 관리자→(매장 2개+면 내 매장들 / 1개면 대시보드), 직원→근태
   if(authLevel==='franchise_admin') nav('franchiseHome');
   else {
-    nav(isManager?'dashboard':'attendance');
+    if(isManager) _routeManagerHome();   // 매장 2개+면 '내 매장들' 먼저, 1개면 바로 대시보드 (멀티매장 2026-06-19)
+    else nav('attendance');
     // 나머지 데이터 백그라운드 로드 (화면 차단 없이) — loadEmployees로 직원 전체 복원(로그인 전엔 이름만 로드했으므로)
     Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
   }
