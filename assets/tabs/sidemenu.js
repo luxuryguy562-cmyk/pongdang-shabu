@@ -5810,23 +5810,26 @@ async function loadExpHubData(force){
   // 2026-05-21 Phase B: SWR 캐시 진입
   const _expKey=`exp_${sid}_${ym}`;
   let _expPack = !force ? cacheGet(_expKey, 300000) : null;
-  let rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes;
+  let rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes, wsRes;
   if(_expPack){
-    ({rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes} = _expPack);
+    ({rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes, wsRes} = _expPack);
   } else {
-    [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes] = await Promise.all([
+    [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes, wsRes] = await Promise.all([
       sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
       sb.from('fixed_costs').select('id,estimated_monthly,is_active,category').eq('store_id',sid),
       sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
       sb.from('store_settings').select('royalty_rate,card_fee_rate').eq('store_id',sid).maybeSingle(),
       sb.from('expense_category_amounts').select('category_id,amount').eq('store_id',sid).eq('year_month',ym),
-      sb.from('attendance_logs').select('calculated_wage,employee_id').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
+      // 2026-06-21: 주휴수당 계산 위해 work_date,total_work_min 추가 (근태 화면 인건비와 통일)
+      sb.from('attendance_logs').select('calculated_wage,employee_id,work_date,total_work_min').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
       sb.from('mydata_transactions').select('category_id,amount').eq('store_id',sid).gte('tx_date',start).lte('tx_date',end),
       sb.from('reconciliation').select('id',{count:'exact',head:true}).eq('store_id',sid).eq('status','pending'),
       sb.from('settlements').select('items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end),
-      sb.from('vendor_orders').select('vendor_id,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end)
+      sb.from('vendor_orders').select('vendor_id,amount').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
+      // 주휴수당 결근 차감 판정용 근무계획 (calcMonthlyHolidayPay 인자)
+      sb.from('work_schedules').select('employee_id,work_date,is_off,status').eq('store_id',sid).neq('status','거절').gte('work_date',start).lte('work_date',end)
     ]);
-    cacheSet(_expKey, {rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes});
+    cacheSet(_expKey, {rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes, wsRes});
   }
   // SWR: 캐시 hit이면 5초 후 백그라운드 fresh
   if(_expPack && !force){
@@ -5893,6 +5896,11 @@ async function loadExpHubData(force){
       amt = (alRes.data||[]).filter(r=>!monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
       // 월급제 일할 누적
       calcMonthlyProratedWages(ym).forEach(m=>{ amt += m.total; });
+      // 주휴수당 (시급제만) — 근태 화면과 동일 함수로 정확히 일치 (2026-06-21 누락 수정)
+      try{
+        const _hp=calcMonthlyHolidayPay(ym, alRes.data||[], wsRes.data||[]);
+        Object.values(_hp).forEach(v=>{ amt += v; });
+      }catch(e){ console.warn('[expHub 주휴수당]',e); }
       (setRes.data||[]).forEach(s=>{
         (s.items_json?.deductions||[]).forEach(d=>{
           if(d.category_id && ids.has(d.category_id) && d.amount){ amt+=Number(d.amount); }
