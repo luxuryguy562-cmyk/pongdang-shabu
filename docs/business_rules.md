@@ -120,7 +120,7 @@
 **현재 단일 진실 함수 (인건비) — 세 화면 공통:**
 | 요소 | 함수 | 정의 위치 |
 |---|---|---|
-| 시급제 | `attendance_logs.calculated_wage` 합 (월급제 제외) | 인라인 (동일 필터) |
+| 시급제 | `sumHourlyWage(attLogs, empFilter)` (월급제 자동 제외) | attendance.js (2026-06-21 단일화) |
 | 월급제 일할 | `calcMonthlyProratedWages(ym)` | attendance.js |
 | 주휴수당 | `calcMonthlyHolidayPay(ym, att, sched)` | attendance.js |
 

@@ -683,6 +683,17 @@ function fmtHourDecimal(min){
 //  · 사장님 호소: 월급제(탁성현) 인건비 누락 → 시급+월급 합산 통일
 //  · 이번달 = 진행일까지, 지난달 = lastDay까지 누적 (hire/resign 고려)
 //  · 반환: [{empId, name, monthly_wage(만원), daily(원), daysCovered, total(원)}]
+
+// ─── 인건비 단일 진실: 시급제 합산 (2026-06-21 회계 통일 — business_rules 0-7) ───
+// 시급제 직원 calculated_wage 합 (월급제 제외). 모든 화면이 직접 reduce 말고 이 함수를 부른다.
+// empFilter 있으면 그 직원 1명만 (근태 직원별 보기).
+function sumHourlyWage(attLogs, empFilter){
+  const monthlyIds=new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
+  return (attLogs||[])
+    .filter(r=>!monthlyIds.has(r.employee_id) && (!empFilter||r.employee_id===empFilter))
+    .reduce((a,r)=>a+(r.calculated_wage||0),0);
+}
+
 function calcMonthlyProratedWages(ym){
   if(!ym) return [];
   const [y,m] = ym.split('-').map(Number);
@@ -871,8 +882,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
       },0);
       // 2026-05-25 인건비 통일: 시급제 calculated_wage + 월급제 일할 누적 (사장님 호소: 월급 누락)
       //  · 직원 필터 모드(empF)면 그 직원 1명만 계산. 전체 모드면 모든 직원.
-      const monthlyEmpIds = new Set((employees||[]).filter(e=>e.wage_type==='monthly').map(e=>e.id));
-      const hourlyWage = data.filter(r=>!monthlyEmpIds.has(r.employee_id)).reduce((a,r)=>a+(r.calculated_wage||0),0);
+      const hourlyWage = sumHourlyWage(data, empF);
       const monthlyList = calcMonthlyProratedWages(monthStr).filter(m=>!empF || m.empId===empF);
       const monthlyWage = monthlyList.reduce((a,m)=>a+m.total,0);
       const totalWage = hourlyWage + monthlyWage;
