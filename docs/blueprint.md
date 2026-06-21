@@ -26,7 +26,7 @@
   │   ├─ 고정비 관리 (fixed_costs)
   │   ├─ 지출 카테고리 (expense_categories)
   │   └─ 급여 집계 (attendance_logs)
-  ├─ 💰 매출 관리 (sales_daily + payment_methods + extra_revenue_*)
+  ├─ 💰 매출 관리 (sales_daily + payment_methods)
   ├─ 🔍 정산/검수 (reconciliation + vendor_diffs)
   ├─ 📥 엑셀 업로드 (mydata_transactions + classification_rules)
   ├─ 🏦 예비비 (reserve_fund_logs)
@@ -231,7 +231,6 @@
 | 현금 분해 | `cash_detail_cash` / `cash_detail_qr` / `cash_detail_transfer` |
 | 차감 (인출·송금) | `deductions: [{type, amount, memo, category_id, category_name}, ...]` |
 | 금고 계수 | `vault_json` (5만원·1만원·5천·1천 장수) |
-| 기타매출 | `extra_revenue_logs` (뽑기 등, settlement_id 연결) |
 
 ## 💡 금고 이월 사슬 규칙 (2026-06-01 사장님 정의)
 > 마감정산의 **시작 금고**(= 전일 이월금 칸)는 아래 순서로 정한다:
@@ -254,8 +253,6 @@
   - `items.pos_cash_receipt → cash_receipt`
   - `items.cash_detail_qr → qr`
   - `items.pos_etc + items.cash_detail_transfer → etc`
-  - `items.extra_draw_large/small → extra_large/small`
-- `extra_revenue_logs` 백필 (옛 settlements.items_json → 분리 테이블)
 
 ## 핵심 함수
 - `finishSettlement2()` — 저장 진입점
@@ -307,7 +304,7 @@
 ## DB
 - `sales_daily` (단일 진실의 원천) — UNIQUE(store_id, date)
 - `payment_methods` (동적 결제수단 CRUD) — 기본 seed 7개
-- `extra_revenue_items` + `extra_revenue_logs` (뽑기 등 기타매출)
+- (기타매출 기능 제거 — 2026-06-18. extra_revenue_* 테이블은 빈 채 보존)
 
 ## 결제수단 동적 관리
 - 사장님이 UI에서 추가/수정/삭제 (예: 카카오페이 추가)
@@ -513,7 +510,6 @@ saveExcelBatch → mydata_transactions
 | 🥇 | `vendors.category_id` | 거래처 매입이 카테고리 합계 미반영 |
 | 🥈 | `receipts.category_id` | 영수증 → 카테고리 합산 0 / "소분류 id 규칙" 위반 |
 | 🥈 | `mydata_transactions.category_id` | 진마감 카테고리 합산 X / "대분류 id 규칙" 위반 |
-| 🥉 | `extra_revenue_logs.settlement_id` SET NULL | 마감 삭제 시 기타매출 보존 보장 |
 
 → 매 작업 시 자문: "이 작업이 위 5개 FK에 영향 주는가?"
 
