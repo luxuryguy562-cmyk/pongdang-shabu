@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>직원 대시보드 목업 v3</title>
+<style>
+:root{
+  --blue:#0050FF;--blue-light:#EEF3FF;--bg:#FFFFFF;--white:#FFFFFF;
+  --gray-100:#F9FAFB;--gray-200:#E5E8EB;--gray-400:#B0B8C1;--gray-500:#8B95A1;--gray-600:#4E5968;--gray-700:#333D4B;
+  --text:#191F28;--danger:#F04452;--success:#05C072;--success-light:#E8FAF3;
+  --toss-blue:#3182F6;--toss-blue-strong:#0064FF;--toss-blue-light:#EDF4FF;
+  --toss-green:#0CAB6C;
+  --toss-text-1:#191F28;--toss-text-2:#333D4B;--toss-text-3:#6B7684;--toss-text-4:#8B95A1;
+  --toss-line:#F2F4F6;--toss-line-2:#E5E8EB;
+  --card-radius:20px;
+  --card-shadow:0 4px 14px rgba(20,40,80,0.07), 0 1px 3px rgba(20,40,80,0.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:var(--bg);color:var(--text);
+  max-width:430px;margin:0 auto;
+  padding:60px 14px 72px;
+}
+
+/* ─ 헤더 */
+.header{
+  position:fixed;top:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;height:60px;padding:0 16px;
+  background:var(--white);border-bottom:1px solid var(--toss-line-2);
+  display:flex;align-items:center;justify-content:space-between;z-index:100;
+}
+.header-title{font-size:18px;font-weight:800;color:var(--toss-blue-strong);letter-spacing:-0.5px;}
+.header-store{
+  font-size:12px;font-weight:700;color:var(--toss-text-2);
+  background:var(--toss-line);padding:7px 11px;border-radius:99px;
+}
+
+/* ─ 카드 */
+.card{background:var(--white);border-radius:var(--card-radius);padding:22px;margin-bottom:14px;box-shadow:var(--card-shadow);}
+.card-title{font-size:16px;font-weight:800;margin-bottom:14px;color:var(--toss-text-1);letter-spacing:-0.4px;}
+
+/* ─ 내 매장들과 동일한 ms- 클래스 그대로 */
+.ms-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.ms-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.ms-sum-card{padding:14px;border-radius:14px;}
+.ms-sum-rev{background:var(--blue-light);}
+.ms-sum-profit{background:var(--gray-100);}
+.ms-sum-label{font-size:11px;color:var(--gray-600);font-weight:700;}
+.ms-sum-val{font-size:18px;font-weight:900;margin-top:5px;font-variant-numeric:tabular-nums;}
+.ms-sum-rev .ms-sum-val{color:var(--blue);}
+.ms-section-title{font-size:13px;font-weight:800;margin-bottom:10px;color:var(--toss-text-1);}
+.ms-store{display:flex;align-items:center;gap:10px;padding:13px;background:var(--gray-100);border-radius:14px;margin-bottom:9px;cursor:pointer;transition:opacity .12s;}
+.ms-store:active{opacity:.7;}
+.ms-rank{width:26px;font-size:14px;font-weight:800;text-align:center;}
+.ms-store-info{flex:1;min-width:0;}
+.ms-store-name{font-size:14.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--toss-text-1);}
+.ms-store-code{font-size:11px;color:var(--gray-500);margin-top:2px;}
+.ms-store-rev{text-align:right;}
+.ms-rev-val{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--toss-text-1);}
+.ms-rev-pct{font-size:10px;color:var(--gray-400);margin-top:1px;}
+.ms-chev{color:var(--gray-400);font-size:18px;}
+
+/* 월 선택 인풋 (기존 input-inline) */
+.input-inline{border:none;background:var(--gray-100);border-radius:9px;padding:7px 10px;font-size:14px;font-weight:700;outline:none;color:var(--blue);}
+
+/* ─ 하단 버튼 (ms-actions 그대로) */
+.ms-actions{display:flex;gap:10px;margin-top:14px;}
+.ms-actions .btn{flex:1;}
+.btn{border:none;border-radius:12px;font-weight:700;cursor:pointer;font-family:inherit;padding:15px;font-size:14px;}
+.btn-secondary{background:var(--gray-200);color:var(--text);}
+
+/* ─ 하단 네비 */
+.bottom-nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;height:56px;
+  background:var(--white);border-top:1px solid var(--gray-200);
+  display:flex;z-index:100;
+}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--toss-text-4);cursor:pointer;gap:2px;}
+.nav-item.active{color:var(--toss-blue-strong);}
+.nav-icon{font-size:19px;line-height:1;}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div class="header">
+  <div class="header-title">퐁당샤브</div>
+  <div class="header-store">퐁당샤브 강남점</div>
+</div>
+
+<!-- 카드 (사장의 "내 매장들" 카드와 동일 구조) -->
+<div class="card">
+  <div class="ms-head">
+    <div class="card-title" style="margin-bottom:0;">👤 내 근무처들</div>
+    <input type="month" class="input-inline" value="2026-06">
+  </div>
+
+  <!-- 요약 카드 2개 (사장: 전체 매출 / 전체 순익) -->
+  <div class="ms-summary">
+    <div class="ms-sum-card ms-sum-rev">
+      <div class="ms-sum-label">총 근무시간</div>
+      <div class="ms-sum-val">87h</div>
+    </div>
+    <div class="ms-sum-card ms-sum-profit">
+      <div class="ms-sum-label">총 예상 급여</div>
+      <div class="ms-sum-val">992,000원</div>
+    </div>
+  </div>
+
+  <!-- 근무처별 현황 (사장: 매장별 현황) -->
+  <div class="ms-section-title">근무처별 현황</div>
+
+  <div class="ms-store">
+    <div class="ms-rank" style="color:#3182F6;">1</div>
+    <div class="ms-store-info">
+      <div class="ms-store-name">퐁당샤브 강남점</div>
+      <div class="ms-store-code">예상 급여 <b style="color:#0CAB6C;">572,000원</b></div>
+    </div>
+    <div class="ms-store-rev">
+      <div class="ms-rev-val">52h</div>
+      <div class="ms-rev-pct">전체 59.8%</div>
+    </div>
+    <div class="ms-chev">›</div>
+  </div>
+
+  <div class="ms-store">
+    <div class="ms-rank" style="color:#B0B8C1;">2</div>
+    <div class="ms-store-info">
+      <div class="ms-store-name">국밥집 서초점</div>
+      <div class="ms-store-code">예상 급여 <b style="color:#0CAB6C;">420,000원</b></div>
+    </div>
+    <div class="ms-store-rev">
+      <div class="ms-rev-val">35h</div>
+      <div class="ms-rev-pct">전체 40.2%</div>
+    </div>
+    <div class="ms-chev">›</div>
+  </div>
+</div>
+
+<!-- 하단 버튼 (사장: + 매장 추가 / 가맹점 초대) -->
+<div class="ms-actions">
+  <button class="btn btn-secondary">+ 근무처 추가</button>
+  <button class="btn btn-secondary">연결 요청 확인</button>
+</div>
+
+<!-- 하단 네비 -->
+<div class="bottom-nav">
+  <div class="nav-item active">
+    <div class="nav-icon">📊</div>
+    <span>대시보드</span>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">⏰</div>
+    <span>근태</span>
+  </div>
+</div>
+
+</body>
+</html>

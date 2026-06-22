@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>직원 대시보드 목업 v2</title>
+<style>
+:root{
+  --blue:#0050FF;--blue-light:#EEF3FF;--bg:#FFFFFF;--white:#FFFFFF;
+  --gray-50:#F9FAFB;--gray-100:#F9FAFB;--gray-200:#E5E8EB;--gray-400:#B0B8C1;--gray-500:#8B95A1;--gray-600:#4E5968;--gray-700:#333D4B;
+  --text:#191F28;--danger:#F04452;--success:#05C072;--success-light:#E8FAF3;
+  --toss-blue:#3182F6;--toss-blue-strong:#0064FF;--toss-blue-light:#EDF4FF;
+  --toss-green:#0CAB6C;--toss-orange:#F5A11E;
+  --toss-text-1:#191F28;--toss-text-2:#333D4B;--toss-text-3:#6B7684;--toss-text-4:#8B95A1;--toss-text-5:#B0B8C1;
+  --toss-line:#F2F4F6;--toss-line-2:#E5E8EB;
+  --card-radius:20px;
+  --card-shadow:0 4px 14px rgba(20,40,80,0.07), 0 1px 3px rgba(20,40,80,0.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:var(--bg);color:var(--text);
+  max-width:430px;margin:0 auto;
+  padding:60px 14px 72px;
+}
+
+/* ─ 헤더 (기존 앱과 동일) */
+.header{
+  position:fixed;top:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;height:60px;padding:0 16px;
+  background:var(--white);border-bottom:1px solid var(--toss-line-2);
+  display:flex;align-items:center;justify-content:space-between;z-index:100;
+}
+.header-title{font-size:18px;font-weight:800;color:var(--toss-blue-strong);letter-spacing:-0.5px;}
+.header-store{
+  font-size:12px;font-weight:700;color:var(--toss-text-2);
+  background:var(--toss-line);padding:7px 11px;border-radius:99px;
+  max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* ─ 인사말 (기존 .dash-hello 그대로) */
+.dash-hello{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:6px 4px 12px;}
+.dash-hello h1{font-size:17px;font-weight:800;color:#191F28;margin:0;letter-spacing:-0.5px;line-height:1.2;}
+.dash-hello p{font-size:12px;color:#8B95A1;margin:0;font-weight:500;letter-spacing:-0.3px;white-space:nowrap;}
+
+/* ─ 오늘 근무 카드 (사장의 dash-today-v7과 동일 구조) */
+.dash-today-v7{
+  background:linear-gradient(150deg,#FFFFFF 0%,#FBFCFE 100%);
+  border-radius:20px;padding:16px 16px 14px;margin-bottom:12px;
+  box-shadow:0 4px 16px rgba(20,40,80,0.06),0 1px 3px rgba(20,40,80,0.04);
+}
+.t7-head-v2{display:flex;align-items:center;margin-bottom:8px;gap:0;}
+.t7-center{flex:1;display:flex;flex-direction:column;gap:2px;}
+.t7-day-row{display:flex;align-items:center;gap:6px;}
+.t7-day-main{font-size:20px;font-weight:900;color:#191F28;letter-spacing:-0.7px;}
+.t7-day-badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:7px;background:#E7F4EE;color:#0CAB6C;}
+.t7-day-sub{font-size:11.5px;color:#A0A8B3;font-weight:600;letter-spacing:-0.2px;}
+.t7-amt-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:46px;}
+.t7-sales-lb{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#B0B8C1;letter-spacing:-0.3px;flex-shrink:0;}
+.t7-sales-lb::before{content:'';width:6px;height:6px;border-radius:50%;background:#3182F6;flex-shrink:0;}
+.t7-amt{font-size:31px;font-weight:800;color:#191F28;letter-spacing:-1.3px;font-variant-numeric:tabular-nums;line-height:1.1;}
+.t7-amt .won{font-size:20px;font-weight:700;color:#6B7684;margin-left:2px;letter-spacing:-0.5px;}
+.t7-time{font-size:12px;color:#8B95A1;margin-top:6px;font-weight:500;letter-spacing:-0.2px;}
+
+/* 근무 중 라이브 dot */
+.live-dot-wrap{display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;position:relative;flex-shrink:0;margin-right:4px;}
+.live-dot-inner{width:7px;height:7px;border-radius:50%;background:#0CAB6C;position:relative;z-index:1;}
+.live-dot-ring{position:absolute;inset:0;border-radius:50%;background:#0CAB6C;animation:livePulse 1.8s ease-out infinite;opacity:0;}
+@keyframes livePulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.4);opacity:0}}
+
+.t7-rows{margin-top:2px;padding-top:0;border-top:1px solid #F2F4F6;}
+.t7-row{display:grid;grid-template-columns:1fr 110px;align-items:center;height:38px;border-bottom:1px solid #F2F4F6;}
+.t7-row:last-child{border-bottom:none;}
+.t7-row .r-lb{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#8B95A1;font-weight:600;letter-spacing:-0.2px;}
+.t7-row .r-amt{font-size:14px;font-weight:800;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;text-align:right;}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.dot.blue{background:#3182F6;}
+.dot.green{background:#0CAB6C;}
+.dot.orange{background:#F5A11E;}
+.r-amt.blue{color:#3182F6;}
+.r-amt.green{color:#0CAB6C;}
+.r-amt.orange{color:#F5A11E;}
+
+/* ─ 섹션 헤더 (사장 .dash-sec 그대로) */
+.dash-sec{font-size:14px;font-weight:800;color:var(--toss-text-2);margin:16px 0 8px 2px;letter-spacing:-0.4px;display:flex;align-items:center;gap:6px;}
+.dash-sec .ic{font-size:15px;}
+
+/* ─ 이번 달 요약 카드 (사장 month-card 그대로) */
+.month-card{background:var(--white);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.mc-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--toss-line);}
+.mc-row:last-child{border-bottom:none;}
+.mc-label{font-size:13px;font-weight:600;color:var(--toss-text-3);}
+.mc-val{font-size:16px;font-weight:900;color:var(--toss-text-1);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;}
+.mc-val.blue{color:var(--toss-blue-strong);}
+.mc-val.green{color:var(--toss-green);}
+
+/* ─ 하단 네비 (기존과 동일) */
+.bottom-nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;height:56px;
+  background:var(--white);border-top:1px solid var(--gray-200);
+  display:flex;z-index:100;
+}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--toss-text-4);cursor:pointer;gap:2px;}
+.nav-item.active{color:var(--toss-blue-strong);}
+.nav-icon{font-size:19px;line-height:1;}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div class="header">
+  <div class="header-title">퐁당샤브</div>
+  <div class="header-store">퐁당샤브 강남점 ▾</div>
+</div>
+
+<!-- 인사말 (사장 dash-hello와 동일) -->
+<div class="dash-hello">
+  <h1>안녕하세요, 김민준님</h1>
+  <p id="dashHelloDate">6월 22일 (일)</p>
+</div>
+
+<!-- 오늘 근무 카드 (사장의 "오늘 매출" 카드와 동일 구조) -->
+<div class="dash-today-v7">
+  <div class="t7-head-v2">
+    <div class="t7-center">
+      <div class="t7-day-row">
+        <span class="t7-day-main">오늘 근무</span>
+        <span class="t7-day-badge">근무 중</span>
+      </div>
+      <div class="t7-day-sub" style="display:flex;align-items:center;">
+        <div class="live-dot-wrap"><div class="live-dot-inner"></div><div class="live-dot-ring"></div></div>
+        09:00 출근 · 지금까지 5시간 30분
+      </div>
+    </div>
+  </div>
+  <div class="t7-amt-row">
+    <div>
+      <div class="t7-sales-lb">근무시간</div>
+      <div class="t7-amt">5.5<span class="won">h</span></div>
+    </div>
+  </div>
+  <div class="t7-time">예상 퇴근 18:00 · 오늘 예상 급여 60,500원</div>
+
+  <!-- 오늘 세부 -->
+  <div class="t7-rows" style="margin-top:10px;">
+    <div class="t7-row">
+      <div class="r-lb"><span class="dot blue"></span>시급</div>
+      <div class="r-amt blue">11,000원</div>
+    </div>
+    <div class="t7-row">
+      <div class="r-lb"><span class="dot orange"></span>휴게시간</div>
+      <div class="r-amt orange">30분</div>
+    </div>
+    <div class="t7-row">
+      <div class="r-lb"><span class="dot green"></span>예상 급여</div>
+      <div class="r-amt green">60,500원</div>
+    </div>
+  </div>
+</div>
+
+<!-- 이번 달 요약 -->
+<div class="dash-sec"><span class="ic">📆</span>이번 달 요약</div>
+<div class="month-card">
+  <div class="mc-row">
+    <div class="mc-label">총 근무시간</div>
+    <div class="mc-val">52 h</div>
+  </div>
+  <div class="mc-row">
+    <div class="mc-label">근무일</div>
+    <div class="mc-val">18일 <span style="font-size:12px;font-weight:600;color:var(--toss-text-4);">(잔여 4일)</span></div>
+  </div>
+  <div class="mc-row">
+    <div class="mc-label">예상 급여</div>
+    <div class="mc-val blue">572,000원</div>
+  </div>
+  <div class="mc-row">
+    <div class="mc-label">주휴수당 예상</div>
+    <div class="mc-val green">44,000원</div>
+  </div>
+</div>
+
+<!-- 하단 네비 -->
+<div class="bottom-nav">
+  <div class="nav-item active">
+    <div class="nav-icon">📊</div>
+    <span>대시보드</span>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">⏰</div>
+    <span>근태</span>
+  </div>
+</div>
+
+</body>
+</html>
