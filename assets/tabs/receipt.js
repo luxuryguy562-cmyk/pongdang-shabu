@@ -1220,9 +1220,11 @@ async function runAI() {
     if(isLiquorModeAI) _rcpLiquorUnitPrice(list);
     // 거래처(비주류): 수량 = 공급가 ÷ 단가. AI가 BOX수만 읽고 BOX×단위 못 곱할 때 역산 교정 (2026-06-10).
     if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list);
-    // 온라인(쿠팡): 과세 행 부가세 자동 분리 (결제금액÷11). 면세 행은 0 (2026-06-22).
-    if(isOnlineModeAI) _rcpOnlineVatDerive(list);
-    // 영수증에 세액이 하나라도 있으면 = 세액 별도 양식 → 행마다 공급가·부가세 줄 표시 (세액 0 행은 면세)
+    // 세액이 영수증에 안 찍힌 과세 매입(쿠팡·순창국제 등 부가세 칸 없는 명세서) = 결제금액에서 부가세 역산 (÷11).
+    //   영수증에 세액이 하나라도 찍혀 있으면 그 값 신뢰 → 역산 안 함. 주류는 자체 단가 처리라 제외. (2026-06-22 사장님 "찍힌 금액만큼만 이체 = 부가세 포함")
+    const _hadPrintedTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
+    if(!isLiquorModeAI && !_hadPrintedTax) _rcpDeriveVatNoTaxLine(list);
+    // 역산 후 재계산: 세액이 생겼으면 = 공급가·부가세 줄 표시 (세액 0 행은 면세)
     const _hasAnyTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
     list.forEach(it=> it._taxFormat = _hasAnyTax);
     // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
@@ -1271,7 +1273,8 @@ async function runAI() {
           list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
           if(isLiquorModeAI) _rcpLiquorUnitPrice(list); // 재검산 후에도 주류 단가=공급가÷수량 재계산
           if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list); // 재검산 후에도 거래처 수량 역산
-          if(isOnlineModeAI) _rcpOnlineVatDerive(list); // 재검산 후에도 온라인 과세 부가세 재분리
+          const _hpt2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
+          if(!isLiquorModeAI && !_hpt2) _rcpDeriveVatNoTaxLine(list); // 재검산 후에도 세액 없는 과세 부가세 역산
           const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
           list.forEach(it=>it._taxFormat=_ht2);
           list=await applyRulesToReceipt(list);
@@ -1692,10 +1695,11 @@ function _rcpVendorQtyFix(list){
     }
   });
 }
-// 온라인(쿠팡·네이버 등) 부가세 자동 분리 — 행별 세액이 안 찍히는 온라인 주문용 (2026-06-22 사장님 "과세는 부가세 나오게").
-//   온라인 결제금액(p)은 부가세 포함값 → 과세 행: 부가세 = round(p÷11), 공급가 = p − 부가세 (예: 11,000 → 공급가 10,000 + 부가세 1,000).
+// 세액 칸 없는 과세 매입 부가세 자동 분리 — 쿠팡·순창국제 등 부가세가 영수증에 안 찍히는 명세서용 (2026-06-22 사장님 "찍힌 금액만큼만 이체 = 부가세 포함").
+//   결제금액(p)은 부가세 포함값 → 과세 행: 부가세 = round(p÷11), 공급가 = p − 부가세 (예: 11,000 → 공급가 10,000 + 부가세 1,000).
 //   면세 행(쌀·정육·야채 등 AI f=true)은 부가세 0. 단가(u)는 세전 공급가 기준으로 맞춰 검산(u×q=공급가) 유지. 금액(p)·순익은 불변.
-function _rcpOnlineVatDerive(list){
+//   ⚠️ 영수증에 세액이 이미 찍혀 있으면(_hadPrintedTax) 호출 안 함 — 인쇄된 세액을 신뢰.
+function _rcpDeriveVatNoTaxLine(list){
   (list||[]).forEach(it=>{
     if(it._isDeposit) return;
     const p=parseInt(it.totalPrice)||0;
