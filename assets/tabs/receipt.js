@@ -1745,6 +1745,11 @@ function buildReceiptRow(i={}) {
   const _supply = _total - _tax;        // 공급가(세전)
   const _vatOn = _tax>0;                 // AI가 세액 읽었으면 토글 켜진 상태로 시작
   const vatSplitTxt = _vatOn ? `공급가 ${fmt(_supply)} + 부가세 ${fmt(_tax)} = ${fmt(_total)}` : '';
+  // 단가 표기 = 부가세 포함 단가(금액÷수량) — 단가×수량=금액 곱셈 일치 + 부가세 숨김 (2026-06-22 사장님 결정)
+  //   부가세 자체는 안 건드림: 저장(unit_price 매칭·검산)은 세전 it.unitPrice 그대로, 순익도 세후 total 그대로 불변
+  //   화면 단가 박스만 (공급가+부가세)÷수량 으로 보여줌 → 면세 품목은 세전=세후라 변화 없음, 과세만 곱셈 맞아짐
+  const _dispQty = parseFloat(i.qty)||0;
+  const _dispUnit = (_dispQty>0 && _total) ? Math.round(_total/_dispQty) : (parseInt(i.unitPrice)||0);
   const detailWrap = `
     <div class="rcp-detail" id="detail-${idx}" style="display:block;">
       <div class="det-row">
@@ -1755,7 +1760,7 @@ function buildReceiptRow(i={}) {
       </div>
       <div class="det-row">
         <div class="det-half">
-          <div class="det-cell"><span>단가</span><input type="text" class="c-u" inputmode="numeric" value="${i.unitPrice?fmt(i.unitPrice):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></div>
+          <div class="det-cell"><span>단가</span><input type="text" class="c-u" inputmode="numeric" value="${_dispUnit?fmt(_dispUnit):''}" placeholder="-" data-input="onRcpUnitPriceInput|this|${idx}"></div>
           <div class="det-cell"><span>수량</span><input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></div>
         </div>
       </div>
@@ -2502,7 +2507,10 @@ function _rclStoreCardHtml(g){
     const itemTitle=(r._source==='order'&&r.memo)?esc(itemRaw+' · 메모: '+r.memo):esc(itemRaw);
     const hasQty=(r.qty!=null&&r.qty!=='');
     // 2줄째 좌측 = 단가 × 수량 계산식 (둘 다 있을 때만 ×, 단가만 있으면 단가만)
-    const calcTxt=r.unit?(hasQty?`${fmt(r.unit)} × ${esc(String(r.qty))}`:fmt(r.unit)):'';
+    // 단가 = 부가세 포함 단가(금액÷수량) — 단가×수량=금액 곱셈 일치 + 부가세 숨김 (2026-06-22 사장님 결정)
+    const _listQ=parseFloat(r.qty)||0;
+    const _listU=(hasQty && _listQ>0 && r.amount) ? Math.round(r.amount/_listQ) : (r.unit||0);
+    const calcTxt=_listU?(hasQty?`${fmt(_listU)} × ${esc(String(r.qty))}`:fmt(_listU)):'';
     const badge=_expBadgeHtml(r.category);
     return `<div class="${cls.join(' ')}" data-action="${clickAction}">`
       +`<div class="r1"><span class="nm" title="${itemTitle}">${esc(itemRaw)}${memoFlag}</span>${badge?`<span class="bw">${badge}</span>`:''}</div>`
@@ -2583,11 +2591,14 @@ function openReceiptEdit(id){
   document.getElementById('reDate').value=r.receipt_date||ymdLocal(new Date());
   document.getElementById('reVendor').value=r.vendor||'';
   document.getElementById('reItem').value=r.item||'';
-  document.getElementById('reUnitPrice').value=r.unit_price?fmt(r.unit_price):'';
+  // 단가 = 부가세 포함 단가(금액÷수량) — 단가×수량=금액 곱셈 일치 + 부가세 숨김 (2026-06-22 사장님 결정, 분석카드와 통일)
+  const _q=parseFloat(r.qty)||0, _t=r.total_price||0;
+  const _dispU = (_q>0 && _t) ? Math.round(_t/_q) : (parseInt(r.unit_price)||0);
+  document.getElementById('reUnitPrice').value=_dispU?fmt(_dispU):'';
   document.getElementById('reQty').value=(r.qty!=null&&r.qty!=='')?r.qty:'';
   document.getElementById('reAmount').value=r.total_price?fmt(r.total_price):'';
   // 단가×수량이 합계와 이미 맞으면 자동계산 허용(수량 수정 편의), 안 맞으면(OCR 오독) 합계 보호 → 단가만 고침
-  const _u=r.unit_price||0, _q=parseFloat(r.qty)||0, _t=r.total_price||0;
+  const _u=_dispU;
   _reEditAmountManual = _t>0 && !(_u>0 && _q>0 && Math.round(_u*_q)===_t);
   document.getElementById('reCatBtn').innerHTML=(r.category?'🏷️ '+getCatLabel(r.category,''):'미분류 ▸');
   const noteVal=(r.note==='정상')?'정상':'오답';
@@ -2758,6 +2769,9 @@ function renderRgeTable(){
         <input type="text" class="c-spec" value="${esc(row.spec||'')}" placeholder="규격 없음" data-input="setRgeRowField|${idx}|spec|this">
       </div>`;
     const ogChip=`<span class="ric-meta">🌍 <input type="text" class="c-og" value="${esc(row.origin||'')}" placeholder="원산지" data-input="setRgeRowField|${idx}|origin|this"></span>`;
+    // 단가 = 부가세 포함 단가(금액÷수량) — 단가×수량=금액 곱셈 일치 + 부가세 숨김 (2026-06-22 사장님 결정, 분석카드와 통일)
+    const _rgeQ=parseFloat(row.qty)||0;
+    const _rgeU=(_rgeQ>0 && row.amount) ? Math.round(row.amount/_rgeQ) : (parseInt(row.unitPrice)||0);
     html+=`<div class="rcp-item-card${offCls}" id="rge-row-${idx}">
       <div class="ric-l1">
         <button type="button" class="ric-x x-btn" style="${off?'background:#E5E8EB;color:#8B95A1;':'background:#FFE5E5;color:#DC2626;'}" data-action="toggleRgeRowOff|${idx}" title="오답/정상 토글">×</button>
@@ -2767,7 +2781,7 @@ function renderRgeTable(){
       ${specRow}
       <div class="ric-l2">
         <button type="button" class="c-cBtn ric-chip${row.cat?'':' empty'}" data-action="openRgeCatPicker|${idx}">${catLabel}</button>
-        <span class="ric-mini">단가 <input type="text" class="c-u" inputmode="numeric" value="${row.unitPrice?fmt(row.unitPrice):''}" placeholder="-" data-input="setRgeRowUnitPrice|${idx}|this"></span>
+        <span class="ric-mini">단가 <input type="text" class="c-u" inputmode="numeric" value="${_rgeU?fmt(_rgeU):''}" placeholder="-" data-input="setRgeRowUnitPrice|${idx}|this"></span>
         <span class="ric-mini">수량 <input type="text" class="c-q" inputmode="decimal" value="${row.qty||''}" placeholder="-" data-input="setRgeRowQty|${idx}|this"></span>
         ${ogChip}
       </div>
