@@ -334,8 +334,8 @@ Deno.serve(async (req: Request) => {
     if (!storeIds.length) return json({ ok: true, stores: [] });
 
     // 4) 대상 월 (없으면 이번달)
-    let ym = "";
-    try { ym = ((await req.json()) || {}).ym || ""; } catch (_e) { /* 본문 없음 */ }
+    let ym = "", clientToday = "";
+    try { const _b = (await req.json()) || {}; ym = _b.ym || ""; clientToday = _b.today || ""; } catch (_e) { /* 본문 없음 */ }
     if (!/^\d{4}-\d{2}$/.test(ym)) ym = new Date().toISOString().slice(0, 7);
     const [y, m] = ym.split("-").map(Number);
     const lastDay = new Date(y, m, 0).getDate();
@@ -369,6 +369,10 @@ Deno.serve(async (req: Request) => {
     //             ups는 daily_sales.card_sales.
     // ─────────────────────────────────────────────────────────────────
     const passedDays = (() => {
+      // 클라이언트(폰)가 보낸 오늘 날짜(로컬/한국시간) 우선 — 대시보드와 같은 진행일수 보장(서버 UTC 어긋남 방지)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(clientToday)) {
+        return clientToday.slice(0, 7) === ym ? parseInt(clientToday.slice(8), 10) : lastDay;
+      }
       const todayYm = new Date().toISOString().slice(0, 7);
       return todayYm === ym ? new Date().getUTCDate() : lastDay;
     })();

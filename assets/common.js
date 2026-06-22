@@ -1025,12 +1025,15 @@ async function loadMyStores(){
   const listEl = document.getElementById('msStoreList');
   // 월 초기화 (없으면 이번달)
   const mEl = document.getElementById('msMonth');
-  const ym = (mEl && mEl.value) || new Date().toISOString().slice(0,7);
+  // 폰의 '오늘'을 로컬(한국시간) 기준으로 만들어 서버에 전달 → 대시보드와 '며칠째'(진행일수) 일치 (서버 UTC 어긋남 방지)
+  const _now = new Date();
+  const _todayLocal = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+  const ym = (mEl && mEl.value) || _todayLocal.slice(0,7);
   if(mEl && !mEl.value) mEl.value = ym;
 
   setLoad(true, '내 매장들 불러오는 중...');
   try{
-    const { data, error } = await sb.functions.invoke('my-stores', { body:{ ym } });
+    const { data, error } = await sb.functions.invoke('my-stores', { body:{ ym, today: _todayLocal } });
     if(error) throw error;
     if(!data || !data.ok) throw new Error((data && data.error) || '불러오기 실패');
 
