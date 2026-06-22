@@ -643,7 +643,8 @@ function _renderCatRcpSubChips(rows){
     : [];
   if(!children.length){ el.innerHTML=''; return; }
   const active = catReceiptSubFilter!=='all';
-  el.innerHTML = `<button type="button" data-action="openCatReceiptSubSheet" style="padding:8px 14px;border-radius:18px;border:1px solid ${active?'#0050FF':'#E5E8EB'};background:${active?'#EBF3FF':'#fff'};color:${active?'#0050FF':'#4E5968'};font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;">🏷️ 분류: ${esc(_catRcpSubLabel())} <span style="color:#B0B8C1;">▾</span></button>`;
+  el.innerHTML = `<button type="button" class="rcl-filterbtn${active?' on':''}" data-action="openCatReceiptSubSheet">`
+    +`<span class="rfb-ic">🏷️</span><span class="rfb-tx">분류: ${esc(_catRcpSubLabel())}</span><span class="rfb-cv">▾</span></button>`;
 }
 // 소분류 선택 시트 (전체 / 소분류들 / 미분류 + 각 금액)
 function openCatReceiptSubSheet(){
@@ -654,7 +655,7 @@ function openCatReceiptSubSheet(){
     : [];
   const {amt, noneAmt, allAmt} = _catRcpSubAmounts(catReceiptRowsCache||[]);
   const _man=n=>{ const v=Math.round((n||0)/10000); return v>=1?(fmt(v)+'만'):(n>0?'<1만':'0'); };
-  const mkRow=(val,label,sub,checked)=>`<button class="btn btn-secondary" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;background:${checked?'#EBF3FF':'#fff'};border:1px solid ${checked?'var(--blue)':'var(--gray-200)'};" data-action="pickCatReceiptSub|${val}"><span style="font-weight:700;">${label}</span><b style="color:var(--gray-500);font-weight:600;">${sub}</b></button>`;
+  const mkRow=(val,label,sub,checked)=>`<button type="button" class="rcl-fsheet-row${checked?' active':''}" data-action="pickCatReceiptSub|${val}"><span class="rfs-nm">${label}</span><span class="rfs-sub">${sub}</span></button>`;
   let html=mkRow('all','전체',_man(allAmt),catReceiptSubFilter==='all');
   children.forEach(c=>{ html+=mkRow(c.id, esc(c.name), _man(amt[c.id]||0), catReceiptSubFilter===c.id); });
   html+=mkRow('__none__','미분류',_man(noneAmt),catReceiptSubFilter==='__none__');
