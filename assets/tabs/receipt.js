@@ -1689,9 +1689,13 @@ function buildReceiptRow(i={}) {
       <div class="vat-split" id="vatsplit-${idx}" style="display:none">${vatSplitTxt}</div>
     </div>`;
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
+    <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
     <div class="ric-l1">
       ${nameSuspectMark}
-      <textarea class="c-i" rows="1" placeholder="품목" data-input="autoGrowName|this">${esc(i.item||'')}</textarea>
+      <div class="ric-name-inner">
+        <div class="ric-name-label">품목</div>
+        <textarea class="c-i" rows="1" placeholder="품목명 입력" data-input="autoGrowName|this">${esc(i.item||'')}</textarea>
+      </div>
     </div>
     <div class="ric-l2">
       ${suspectMark}
@@ -1702,11 +1706,10 @@ function buildReceiptRow(i={}) {
       ${pastBtn}
       <span class="ric-l2-right">
         <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
-        <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▴</button>
-        <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
       </span>
     </div>
     ${detailWrap}
+    <button type="button" class="rcp-more-btn" id="morebtn-${idx}" data-action="toggleRcpDetail|${idx}">세부 ▴</button>
     <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
     <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
     <input type="hidden" class="c-f" value="${(i.isTaxFree || (i._taxFormat && (parseInt(i.taxAmount)||0)===0))?'1':'0'}">
@@ -1723,7 +1726,7 @@ function toggleRcpDetail(idx){
   if(!d) return;
   const open=d.style.display==='none';
   d.style.display=open?'block':'none';
-  if(btn) btn.textContent=open?'세부 ▴':'세부 ▾';
+  if(btn) btn.textContent=open?'세부 접기 ▴':'세부 펼치기 ▾';
 }
 // ─── 부가세 "포함" 토글 — 합계에서 부가세 자동 역산(합계÷11) 또는 0 (2026-06-15) ───
 function onRcpVatToggle(idx){
