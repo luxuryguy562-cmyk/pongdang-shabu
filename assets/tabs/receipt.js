@@ -1218,6 +1218,8 @@ async function runAI() {
     if(isLiquorModeAI) _rcpLiquorUnitPrice(list);
     // 거래처(비주류): 수량 = 공급가 ÷ 단가. AI가 BOX수만 읽고 BOX×단위 못 곱할 때 역산 교정 (2026-06-10).
     if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list);
+    // 온라인(쿠팡): 과세 행 부가세 자동 분리 (결제금액÷11). 면세 행은 0 (2026-06-22).
+    if(isOnlineModeAI) _rcpOnlineVatDerive(list);
     // 영수증에 세액이 하나라도 있으면 = 세액 별도 양식 → 행마다 공급가·부가세 줄 표시 (세액 0 행은 면세)
     const _hasAnyTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
     list.forEach(it=> it._taxFormat = _hasAnyTax);
@@ -1266,6 +1268,7 @@ async function runAI() {
           list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
           if(isLiquorModeAI) _rcpLiquorUnitPrice(list); // 재검산 후에도 주류 단가=공급가÷수량 재계산
           if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list); // 재검산 후에도 거래처 수량 역산
+          if(isOnlineModeAI) _rcpOnlineVatDerive(list); // 재검산 후에도 온라인 과세 부가세 재분리
           const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
           list.forEach(it=>it._taxFormat=_ht2);
           list=await applyRulesToReceipt(list);
@@ -1686,6 +1689,22 @@ function _rcpVendorQtyFix(list){
     }
   });
 }
+// 온라인(쿠팡·네이버 등) 부가세 자동 분리 — 행별 세액이 안 찍히는 온라인 주문용 (2026-06-22 사장님 "과세는 부가세 나오게").
+//   온라인 결제금액(p)은 부가세 포함값 → 과세 행: 부가세 = round(p÷11), 공급가 = p − 부가세 (예: 11,000 → 공급가 10,000 + 부가세 1,000).
+//   면세 행(쌀·정육·야채 등 AI f=true)은 부가세 0. 단가(u)는 세전 공급가 기준으로 맞춰 검산(u×q=공급가) 유지. 금액(p)·순익은 불변.
+function _rcpOnlineVatDerive(list){
+  (list||[]).forEach(it=>{
+    if(it._isDeposit) return;
+    const p=parseInt(it.totalPrice)||0;
+    if(p<=0){ it.taxAmount=0; it.supplyPrice=p; return; } // 할인(음수)·0원 행 제외
+    if(it.isTaxFree){ it.taxAmount=0; it.supplyPrice=p; return; } // 면세 = 부가세 0
+    const tax=Math.round(p/11);  // 부가세 포함 결제금액 ÷ 11 = 부가세
+    it.taxAmount=tax;
+    it.supplyPrice=p-tax;
+    const q=parseFloat(it.qty)||0;
+    if(q>0) it.unitPrice=Math.round(it.supplyPrice/q); // 세전 단가 — 검산 u×q=공급가 유지
+  });
+}
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
   // 보증금 행 — 별도 카드로 렌더링 (색상 구분, 분류·규격·원산지 칸 없음)
@@ -1745,11 +1764,10 @@ function buildReceiptRow(i={}) {
   const _supply = _total - _tax;        // 공급가(세전)
   const _vatOn = _tax>0;                 // AI가 세액 읽었으면 토글 켜진 상태로 시작
   const vatSplitTxt = _vatOn ? `공급가 ${fmt(_supply)} + 부가세 ${fmt(_tax)} = ${fmt(_total)}` : '';
-  // 단가 표기 = 부가세 포함 단가(금액÷수량) — 단가×수량=금액 곱셈 일치 + 부가세 숨김 (2026-06-22 사장님 결정)
-  //   부가세 자체는 안 건드림: 저장(unit_price 매칭·검산)은 세전 it.unitPrice 그대로, 순익도 세후 total 그대로 불변
-  //   화면 단가 박스만 (공급가+부가세)÷수량 으로 보여줌 → 면세 품목은 세전=세후라 변화 없음, 과세만 곱셈 맞아짐
+  // 단가 표기 = 세전 단가(공급가÷수량) — 과세는 부가세 줄로 따로 보여줌(아래 vat-split), 면세는 세전=세후라 단가×수량=금액 (2026-06-22 사장님 "과세는 부가세 나오게").
+  //   과세: 단가×수량=공급가 + "공급가+부가세=합계" 줄 표시. 면세: 단가×수량=금액, 부가세 줄 없음.
   const _dispQty = parseFloat(i.qty)||0;
-  const _dispUnit = (_dispQty>0 && _total) ? Math.round(_total/_dispQty) : (parseInt(i.unitPrice)||0);
+  const _dispUnit = (_dispQty>0 && _supply) ? Math.round(_supply/_dispQty) : (parseInt(i.unitPrice)||0);
   const detailWrap = `
     <div class="rcp-detail" id="detail-${idx}" style="display:block;">
       <div class="det-row">
@@ -1768,7 +1786,7 @@ function buildReceiptRow(i={}) {
         <button type="button" class="vat-toggle" data-action="onRcpVatToggle|${idx}"><span class="sw${_vatOn?'':' off'}"></span> 부가세 포함</button>
         <span class="vat-amt">부가세 <input type="text" class="c-t" inputmode="numeric" value="${_tax||0}" data-input="onRcpVatInput|this|${idx}"></span>
       </div>
-      <div class="vat-split" id="vatsplit-${idx}" style="display:none">${vatSplitTxt}</div>
+      <div class="vat-split" id="vatsplit-${idx}" style="display:${_vatOn?'block':'none'}">${vatSplitTxt}</div>
     </div>`;
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
