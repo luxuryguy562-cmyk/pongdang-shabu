@@ -649,6 +649,8 @@ function nav(tab, el) {
     subTab = subTabMap[tab].sub;
     tab = subTabMap[tab].container;
   }
+  // franchise_admin은 franchiseHome 외 다른 화면 진입 차단
+  if(typeof authLevel !== 'undefined' && authLevel === 'franchise_admin' && tab !== 'franchiseHome') tab = 'franchiseHome';
   // 대시보드 벗어날 때 차트 메모리 해제
   Object.keys(chartInstances).forEach(id=>destroyChart(id));
   // 컨테이너 전환
@@ -729,6 +731,12 @@ function nav(tab, el) {
     const subBtn = document.querySelector(`#${tab}Cont .sub-tab[data-sub="${subTab}"]`);
     if (subBtn) subBtn.click();
   }
+  // 내 매장들·본사 홈 화면: 하단 관리자 탭 숨기기 / 그 외: 권한 기준 복원
+  const _noNavTabs = tab === 'myStores' || tab === 'franchiseHome' || authLevel === 'franchise_admin';
+  document.querySelectorAll('.bottom-nav .nav-item.manager-only').forEach(el => {
+    el.style.display = _noNavTabs ? 'none' : (isManager ? '' : 'none');
+  });
+  if(!_noNavTabs && typeof applyRoleTabLimit === 'function') applyRoleTabLimit();
 }
 function openSheet(id) {
   const el=document.getElementById(id);
@@ -842,14 +850,22 @@ function applyPermissionUI() {
   document.querySelectorAll('.franchise-admin-only').forEach(el => {
     el.style.display = (authLevel==='franchise_admin') ? '' : 'none';
   });
-  // 네비바 탭: 권한별 표시 (manager-only / staff-only 분기)
+  // franchise-admin-hide: franchise_admin에게는 숨기기 (사이드메뉴 대시보드 등)
+  document.querySelectorAll('.franchise-admin-hide').forEach(el => {
+    el.style.display = (authLevel==='franchise_admin') ? 'none' : '';
+  });
+  // 네비바 탭: 권한별 표시
   document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
-    if(el.classList.contains('manager-only')) el.style.display = isManager ? '' : 'none';
+    if(el.classList.contains('manager-only')) {
+      // franchise_admin은 하단 탭 전부 숨기기 (본사 홈 전용 화면)
+      if(authLevel === 'franchise_admin') el.style.display = 'none';
+      else el.style.display = isManager ? '' : 'none';
+    }
     else if(el.classList.contains('staff-only')) el.style.display = (!isManager && currentEmp) ? '' : 'none';
     else el.style.display='';
   });
   // 내 정보 배지 업데이트
-  const badge=isOwner?'👑 사장':isManager?'🔑 관리자':'';
+  const badge = isOwner ? '👑 사장' : authLevel === 'franchise_admin' ? '👁 본사' : isManager ? '🔑 관리자' : '';
   const badgeEl=document.getElementById('authBadge');
   if(badgeEl) badgeEl.innerHTML=badge?`<span class="badge badge-warn">${badge}</span>`:'';
   // 역할 전환(관리 ↔ 내 근무) 토글 UI + 모드 배너 (2026-06-15)
