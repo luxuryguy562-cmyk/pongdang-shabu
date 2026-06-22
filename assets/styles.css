@@ -1659,7 +1659,8 @@ details.rcl-store[open] .rcl-acc-chev{transform:rotate(90deg);}
 .rcp-sumbar.danger .rsb-l,.rcp-sumbar.danger .rsb-v,.rcp-sumbar.danger .rsb-sub{color:var(--danger);}
 
 /* 카드 컴팩트화 (사장님 "공간 너무 잡아먹잖아" 2026-06-02) — 패딩·여백·글자 축소 */
-.rcp-item-card{background:var(--white);border-radius:13px;box-shadow:var(--card-shadow);padding:9px 12px;margin-bottom:7px;}
+/* × 버튼 절대 배치용 position:relative 추가 (2026-06-22 레이아웃 개선) */
+.rcp-item-card{background:var(--white);border-radius:13px;box-shadow:var(--card-shadow);padding:9px 12px 0;margin-bottom:7px;position:relative;}
 .rcp-item-card.suspect{background:#FEF7E6;}
 /* 품목명 환각 의심(_nameSuspect) — 빨간 배경 + 품목 칸 빨간 밑줄 (2026-06-05) */
 .rcp-item-card.name-suspect{background:#FEF2F2;}
@@ -1670,15 +1671,24 @@ details.rcl-store[open] .rcl-acc-chev{transform:rotate(90deg);}
 .rcp-item-card.deposit-out{border-left-color:#4A90D9;}
 .rcp-item-card.deposit-in .c-p{color:#5C7A9E;}
 .rcp-item-card.deposit-out .c-p{color:#2D6DB8;}
-.ric-l1{display:flex;align-items:center;gap:8px;}
-.ric-l1 .c-i{flex:1;border:none;background:transparent;font-size:15px;font-weight:700;color:var(--toss-text-1);min-width:0;outline:none;font-family:inherit;resize:none;overflow:hidden;line-height:1.35;padding:1px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;}
-.ric-x{flex:0 0 22px;height:22px;border:none;border-radius:50%;background:var(--toss-line);color:var(--toss-text-4);font-size:13px;font-weight:800;cursor:pointer;padding:0;}
-.ric-l2{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;}
+/* ×(삭제) 버튼 — 카드 오른쪽 상단 고정 (2026-06-22) */
+.ric-x{position:absolute;top:9px;right:10px;width:24px;height:24px;border:none;border-radius:50%;background:var(--toss-line);color:var(--toss-text-4);font-size:13px;font-weight:800;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;}
+/* 품목명 행 — × 버튼 자리 확보용 오른쪽 패딩 */
+.ric-l1{display:flex;align-items:flex-start;gap:8px;padding-right:28px;}
+/* 품목명 안쪽 래퍼 — 라벨 위, textarea 아래 */
+.ric-name-inner{flex:1;display:flex;flex-direction:column;gap:3px;}
+.ric-name-label{font-size:10px;font-weight:700;color:var(--toss-text-4);}
+/* 품목명 textarea — 배경 있는 입력칸 스타일로 명확히 (2026-06-22) */
+.ric-l1 textarea.c-i{width:100%;border:none;background:var(--toss-line);border-radius:10px;padding:7px 10px;font-size:15px;font-weight:700;color:var(--toss-text-1);min-width:0;outline:none;font-family:inherit;resize:none;overflow:hidden;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;}
+/* 품목명 input (보증금·rge 행용) — 기존 스타일 유지 */
+.ric-l1 input.c-i{flex:1;border:none;background:transparent;font-size:15px;font-weight:700;color:var(--toss-text-1);min-width:0;outline:none;font-family:inherit;line-height:1.35;}
+.ric-l2{display:flex;align-items:center;gap:6px;margin-top:7px;flex-wrap:wrap;}
 .ric-l2 .ric-chip{margin-left:0;}
 .ric-l2-right{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:8px;}
-/* 금액칸 폭 제한 — width:auto면 input 기본너비(210px)를 먹어 세부·X가 화면 밖으로 밀림.
-   iOS 사파리는 폰트가 넓어 더 심함(데스크탑 크롬은 좁아 안 보였음). max-width로 캡 + 줄어들 수 있게. (2026-06-22) */
+/* 금액칸 — 오른쪽 정렬, max-width로 폰 넘침 방지 (2026-06-22) */
 .ric-l2 .c-p{flex:0 1 auto;border:none;background:transparent;font-size:16px;font-weight:800;text-align:right;width:auto;min-width:50px;max-width:120px;color:var(--toss-text-1);outline:none;font-family:inherit;}
+/* 세부 펼치기 버튼 — 카드 맨 아래 전체 너비 (2026-06-22) */
+.rcp-more-btn{display:block;width:calc(100% + 24px);margin:9px -12px 0;padding:8px 0;text-align:center;font-size:11px;font-weight:600;background:transparent;color:var(--toss-text-4);border:none;border-top:1px solid var(--toss-line);cursor:pointer;font-family:inherit;border-radius:0 0 13px 13px;}
 .det-cell.txtcell{padding:5px 10px;}
 .det-cell.txtcell input{text-align:left;font-weight:600;font-size:12px;}
 .ric-mini{background:var(--toss-line);border-radius:8px;padding:5px 9px;font-size:11px;color:var(--toss-text-3);font-weight:600;display:flex;align-items:center;gap:4px;}
