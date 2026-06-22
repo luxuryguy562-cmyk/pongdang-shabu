@@ -563,6 +563,7 @@
   <!-- 직원 nav: 홈 / 내 정보 (급여·개시마감·영수증은 홈 행동허브 버튼으로) -->
   <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-home"/></svg></span>홈</div>
   <div class="nav-item staff-only" data-tab="empPay" data-action="goEmpSched|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>급여</div>
+  <div class="nav-item staff-only" data-tab="myWorkplaces" data-action="nav|myWorkplaces|this" style="display:none;"><span class="ni"><svg><use href="#i-building"/></svg></span>현황</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -1620,6 +1621,38 @@
   <div class="ms-actions">
     <button class="btn btn-secondary btn-full" data-action="msAddStore">+ 매장 추가</button>
     <button class="btn btn-secondary btn-full" data-action="msInviteFranchise">가맹점 초대</button>
+  </div>
+</div>
+
+<!-- ══ [직원] 내 근무처들 대시보드 ══ -->
+<div id="myWorkplacesCont" class="container">
+  <div class="card">
+    <div class="ms-head">
+      <div class="card-title"><svg class="icon-inline"><use href="#i-building"/></svg>내 근무처들</div>
+      <input type="month" id="mwMonth" class="input-inline" style="width:140px;" data-change="loadMyWorkplaces">
+    </div>
+
+    <!-- 요약 카드 2개 -->
+    <div class="ms-summary">
+      <div class="ms-sum-card ms-sum-rev">
+        <div class="ms-sum-label">총 근무시간</div>
+        <div class="ms-sum-val" id="mwTotalHours">—</div>
+      </div>
+      <div class="ms-sum-card ms-sum-profit">
+        <div class="ms-sum-label">총 예상 급여</div>
+        <div class="ms-sum-val" id="mwTotalWage">—</div>
+      </div>
+    </div>
+
+    <div class="ms-section-title">근무처별 현황</div>
+    <div id="mwWorkplaceList">
+      <div class="ms-empty">불러오는 중...</div>
+    </div>
+  </div>
+
+  <div class="ms-actions">
+    <button class="btn btn-secondary btn-full" data-action="mwAddWorkplace">+ 근무처 추가</button>
+    <button class="btn btn-secondary btn-full" data-action="mwCheckInvites">연결 요청 확인</button>
   </div>
 </div>
 
