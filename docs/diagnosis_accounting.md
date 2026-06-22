@@ -105,7 +105,12 @@
    - ⚠️ `reconCont` 뒤(index.html 2116~2396)는 **공용 바텀시트**(txEditSheet 등, 영수증 화면도 씀) → 통째 삭제 금지. 화면 덩어리만 정밀 삭제.
    - ✅ 2026-06-21: 사이드메뉴 입구 2개 제거(지출 대조표 묶음 + 계좌·카드 내역) → 두 화면 메뉴에서 사라짐. (화면 본체·함수는 careful 후속에서 폰 확인하며 제거)
    - ✅ 2026-06-22: 두 화면 본체 HTML 245줄 제거(explistCont/reconCont) + routing(common.js parent맵/init맵/_RT_REFRESH) 정리 + 영수증 빈상태 버튼 nav|explist→nav|expHub 수정. div 균형 1293=1293, node --check 통과, nav 잔재 0.
-   - ⏳ 남음: sidemenu.js 고아 함수(explistTab/initRecon/reconTab/loadBankTransactions 등, 이제 호출 불가 죽은 코드), 진마감 죽은 분기, 쓰는 화면의 무해 마이데이터 가지.
+   - ✅ 2026-06-22: 홈 순익 계산(dashboard.js loadDashboard) 안의 죽은 "통장 기준 마감(진마감)" 가지 제거 — `dashMode==='final'` 분기 3곳 + `_royaltyKws` 통장 조회. 실행되는 가마감 계산은 글자 그대로 보존(903만 불변), node --check 통과.
+   - ⚠️ **나머지 마이데이터 함수는 careful 필요 — 살아있는 기능과 얽힘**:
+     - `loadBankTransactions`/`renderBankTxTable`/`loadCardTransactions`/`renderCardTxTable`/`cleanDesc` 등은 **거래처 엑셀 업로드**(excelUploadSheet 저장 7424) + **영수증 분류 catPicker**(4452) 가 공유.
+     - 지출 대조표 함수 `loadReconciliation`/`renderReconDetailFor` 는 **매출 매칭 설정**(saveSalesReconMapping)·`confirmReconCategory`(catPicker 공유) 에서 호출.
+     - 이들 render 함수는 시작 null 가드가 없어, DOM 제거 후 그 경로가 실행되면 오류 가능 → **통째 제거 시 영수증 분류·매출 매칭·엑셀 업로드 깨질 위험.**
+     - 결론: 보이는 마이데이터(화면·메뉴)는 제거 완료. 남은 함수는 **테스트 가능한 세션에서 공유 함수 분리 후 careful 제거**. (지금 무리하면 working 기능 깨짐 — 헌법 1-5)
 3. **순익·지출 계산 하나로 통합** (헌법 7-7) — 홈·내 매장들·어디서나 같은 함수. 매 단계 골든값(논산 903만 등) 대조 검산.
 
 > 각 단계 백업 커밋 + `node --check` + 골든값 대조 필수 (헌법 11조).
