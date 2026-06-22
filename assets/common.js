@@ -343,7 +343,7 @@ function _rcpPromptOnline({vendorName, catList, multiPageHint}){
 [응답]
 {
   ${_rcpDateField()},
-  "items": [ {i,spec,og,u,q,p,t,f,c} 행 배열 ],
+  "items": [ {i,spec,og,u,q,p,t,f,c,vu} 행 배열 ],
 ${_rcpCommonRespTail()}
 }
 
@@ -356,6 +356,7 @@ ${_rcpCommonRespTail()}
 - p:행 [상품금액/주문금액] 인쇄값 그대로 정수(할인 이미 반영된 실결제 단위). u×q 계산 X — 인쇄값 우선
 - t:0 (온라인 주문 화면은 행별 세액 분리 안 됨 — 부가세는 앱이 과세분에서 자동 계산)
 - f:면세 여부(true/false). 미가공 농축수산물(쌀·생선·정육·야채·과일)·도서·신문 = true(면세). 그 외 공산품·비품·가공식품·생활용품·주방용품·생수·음료 = false(과세). 못 정하면 false
+- vu:면세/과세 판단이 애매하면 true (미가공인지 가공인지 헷갈리는 식품 — 냉동·반가공·손질·절임·양념·세트 등). 명확하면 false 또는 생략. ⚠️공산품·비품 등 명백한 과세나 생야채·생과일 등 명백한 미가공은 vu=false
 - c:카테고리 [${catList}] — 품목 성격대로 행마다. ⚠️반드시 이 목록에 있는 이름 그대로만 사용. 목록에 없는 새 분류명 절대 만들지 마라. 못 정하면 목록 중 가장 가까운 것. 빈 값 X
 
 [규칙]
