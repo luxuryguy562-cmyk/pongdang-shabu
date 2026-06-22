@@ -237,6 +237,8 @@ let catReceiptMode = null;   // 'direct' | 'food' | 'supplies' | 'etc'
 let catReceiptMonth = (new Date()).toISOString().slice(0,7);
 let catReceiptFilter = 'all'; // 'all' | 'direct' | 'vendor:<id>'
 let catReceiptRowsCache = []; // 거래처별 합계 계산용
+let catReceiptSubFilter = 'all'; // 소분류 필터: 'all' | <소분류 id> | '__none__'(미분류=상위로만 달림)
+let catReceiptParentId = null;   // 현재 진입한 상위 카테고리 id (cat: 모드에서만)
 
 // 헬퍼: 카테고리 id 풀 (parent + 자식)
 function _collectCatIdsByName(name){
@@ -253,6 +255,7 @@ function openCatReceipt(mode){
   if(!guardStore()) return;
   catReceiptMode = mode;
   catReceiptFilter = 'all';
+  catReceiptSubFilter = 'all';
   nav('catReceipt');
   const mEl = document.getElementById('catReceiptMonth');
   if(mEl && !mEl.value) mEl.value = catReceiptMonth;
@@ -425,6 +428,8 @@ async function loadCatReceiptData(){
     const iconEmojiMap = {'식자재':'🥬','비품':'📦','기타':'📂','주류':'🍶','음료':'🥤','마케팅':'📢','세금':'💰','인건비':'⏰','고정비':'📅','공과금/고정비':'📅'};
     iconEmoji = iconEmojiMap[title] || '📂';
   }
+  // 소분류 필터 기준 상위 카테고리 (cat: 모드에서만 소분류 칩 노출)
+  catReceiptParentId = (catParent && catReceiptMode && catReceiptMode.startsWith('cat:')) ? catParent.id : null;
   titleEl.textContent = title;
   iconEl.textContent = iconEmoji;
   body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
@@ -596,6 +601,50 @@ function pickCatReceiptChip(val){
   renderCatReceiptList(catReceiptRowsCache);
 }
 
+// ─── 새 기능: 소분류 필터 (식자재 진입 시 공산품·야채·육류·미분류) — 2026-06-22 ───
+// 행의 카테고리 id (영수증/거래처주문/통장)
+function _rowCatId(r){
+  if(!r) return null;
+  if(r._source==='order') return (r._origin && r._origin.vendors && r._origin.vendors.category_id) || null;
+  return (r._origin && r._origin.category_id) || null; // receipt / mydata
+}
+// 현재 상위(catReceiptParentId) 기준 소분류 키. 상위로만 달림/미지정 = '__none__'(미분류)
+function _subCatKeyOf(r){
+  if(!catReceiptParentId) return null;
+  const cid = _rowCatId(r);
+  if(!cid || cid===catReceiptParentId) return '__none__';
+  const c = (expCategories||[]).find(x=>x.id===cid);
+  if(c && c.parent_id===catReceiptParentId) return cid;
+  return '__none__';
+}
+// 소분류 칩 렌더 (cat: 모드 + 자식 카테고리 있을 때만 노출)
+function _renderCatRcpSubChips(rows){
+  const el = document.getElementById('catReceiptSubChips');
+  if(!el) return;
+  const children = catReceiptParentId
+    ? (expCategories||[]).filter(c=>c.parent_id===catReceiptParentId && c.is_active!==false)
+    : [];
+  if(!children.length){ el.innerHTML=''; return; }
+  const amt={}; let noneAmt=0, allAmt=0;
+  (rows||[]).forEach(r=>{
+    if(r.note!=='정상') return;
+    const a=r.amount||0; allAmt+=a;
+    const k=_subCatKeyOf(r);
+    if(k==='__none__') noneAmt+=a; else amt[k]=(amt[k]||0)+a;
+  });
+  // 금액 압축 표기 (만원). 소분류 합 = 전체 한눈에 (사장님 "소분류 합=총합")
+  const _man=n=>{ const v=Math.round((n||0)/10000); return v>=1?(fmt(v)+'만'):(n>0?'<1만':'0'); };
+  const chip=(val,label,sub,active)=>`<button type="button" data-action="pickCatReceiptSub|${val}" style="padding:6px 12px;border-radius:16px;border:1px solid ${active?'#0050FF':'#E5E8EB'};background:${active?'#EBF3FF':'#fff'};color:${active?'#0050FF':'#4E5968'};font-size:13px;font-weight:700;white-space:nowrap;margin-right:6px;">${label}${sub?` <span style="opacity:.65;font-weight:600;">${sub}</span>`:''}</button>`;
+  let html=chip('all','전체',_man(allAmt),catReceiptSubFilter==='all');
+  children.forEach(c=>{ html+=chip(c.id, esc(c.name), _man(amt[c.id]||0), catReceiptSubFilter===c.id); });
+  html+=chip('__none__','미분류',_man(noneAmt),catReceiptSubFilter==='__none__');
+  el.innerHTML=html;
+}
+function pickCatReceiptSub(val){
+  catReceiptSubFilter = val || 'all';
+  renderCatReceiptList(catReceiptRowsCache);
+}
+
 function renderCatReceiptList(rows){
   // 2026-06-11 행형 갈아엎기: 표(grp-tbl) → 행형 2줄 구조 (_rclListHtml 공통 렌더 — 영수증 기록 내역과 동일 컴포넌트)
   //  · rows = _normalizeExpenseRow 정규화 행 배열 ({_source, id, date, vendor, vendor_id, item, unit, qty, amount, group_id, ...})
@@ -606,7 +655,12 @@ function renderCatReceiptList(rows){
   const totalEl = document.getElementById('catReceiptTotal');
   const chipsEl = document.getElementById('catReceiptChips');
   if(chipsEl) chipsEl.innerHTML = _rclFilterBtnHtml(catReceiptFilter, 'cat');
-  const filtered = _rclApplyFilter(rows||[], catReceiptFilter);
+  _renderCatRcpSubChips(rows||[]);
+  let _subRows = rows||[];
+  if(catReceiptParentId && catReceiptSubFilter && catReceiptSubFilter!=='all'){
+    _subRows = _subRows.filter(r=>_subCatKeyOf(r)===catReceiptSubFilter);
+  }
+  const filtered = _rclApplyFilter(_subRows, catReceiptFilter);
   // 'all' 모드(홈 "어디에 썼나" 진입) = 영수증+거래처주문 변동 지출만이라 라벨에 명시
   const scopeTag = (catReceiptMode==='all') ? ' · 고정비·인건비 제외' : '';
   if(!filtered.length){
