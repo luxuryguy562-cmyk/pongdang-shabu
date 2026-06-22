@@ -341,7 +341,7 @@ function renderManualCatTxList(txs, cat){
         <div style="font-size:48px;margin-bottom:8px;">📋</div>
         <p style="font-size:14px;color:var(--gray-800);font-weight:600;margin-bottom:8px;">아직 ${cat} 거래내역이 없습니다</p>
         <p style="font-size:12px;color:var(--gray-600);line-height:1.7;">통장·카드 엑셀을 업로드하면<br>학습 규칙으로 자동 분류돼서<br>여기에 거래내역이 쌓입니다.</p>
-        <button class="btn btn-primary btn-sm" style="margin-top:16px;padding:8px 16px;" data-action="nav|explist">엑셀 업로드 화면으로 ›</button>
+        <button class="btn btn-primary btn-sm" style="margin-top:16px;padding:8px 16px;" data-action="nav|expHub">지출관리로 ›</button>
       </div>`;
     return;
   }
