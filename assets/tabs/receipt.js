@@ -959,13 +959,7 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplyS
     }
   }
   sumBox.className = cls;
-  // 세액 있으면 공급가/부가세/합계 3줄, 없으면 합계 큰 숫자만
-  const taxLines = rowTax>0
-    ? `<hr class="rsc-br"><div class="rsc-ln"><span>공급가</span><b>${fmt(rowSupply)}</b></div>`
-      + `<div class="rsc-ln"><span>부가세</span><b>${fmt(rowTax)}</b></div>`
-      + `<div class="rsc-ln total"><span>합계</span><b>${fmt(rowSum)}</b></div>`
-    : '';
-  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>${taxLines}`;
+  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>`;
 }
 async function applyRulesToReceipt(list){
   if(!storeClassRules?.length) await loadClassificationRules();
@@ -1636,9 +1630,8 @@ function buildReceiptRow(i={}) {
   const nameSuspect = i._nameSuspect;
   const nameSuspectCls = nameSuspect ? ' name-suspect' : '';
   const nameSuspectMark = nameSuspect ? `<span class="rcp-ns-mark" title="${esc(nameSuspect)} — 📋 눌러 고쳐주세요" style="font-size:13px;cursor:help;">🔴</span>` : '';
-  // 면세 배지 — AI 면세 판단(isTaxFree) 우선, 없으면 세액 섞인 영수증의 세액 0 행 = 면세
   const _tax = parseInt(i.taxAmount)||0;
-  const freeBadge = (i.isTaxFree || (i._taxFormat && _tax===0)) ? `<span class="ric-free">면세</span>` : '';
+  const freeBadge = ''; // 부가세 화면 숨김 (2026-06-21)
   // 📋 버튼 — 과거 품목 원터치 선택 (거래처 모드 + 과거 품목 있을 때만)
   const pastBtn = rcpPastItems.length ? `<button type="button" class="ric-past-btn" data-action="openRcpPastSheet|${idx}" title="과거 품목 선택">📋</button>` : '';
   // 단가 매칭 뱃지 (2026-06-05)
@@ -1671,11 +1664,11 @@ function buildReceiptRow(i={}) {
           <div class="det-cell"><span>수량</span><input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></div>
         </div>
       </div>
-      <div class="vat-row">
+      <div class="vat-row" style="display:none">
         <button type="button" class="vat-toggle" data-action="onRcpVatToggle|${idx}"><span class="sw${_vatOn?'':' off'}"></span> 부가세 포함</button>
         <span class="vat-amt">부가세 <input type="text" class="c-t" inputmode="numeric" value="${_tax||0}" data-input="onRcpVatInput|this|${idx}"></span>
       </div>
-      <div class="vat-split" id="vatsplit-${idx}">${vatSplitTxt}</div>
+      <div class="vat-split" id="vatsplit-${idx}" style="display:none">${vatSplitTxt}</div>
     </div>`;
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
     <div class="ric-l1">
@@ -1887,6 +1880,33 @@ function selectReason(r){
   if(r==='cancel'){tr.classList.remove('row-off');btn.style.background='var(--danger-light)';btn.style.color='var(--danger)';btn.innerText='X';}
   else{tr.classList.add('row-off');btn.style.background='var(--gray-200)';btn.style.color='var(--gray-600)';btn.innerText='＋';tr.dataset.reason=r;}
   closeAllSheets();
+  _rcpRefreshSum(); // row-off 토글 후 합계 카드 재계산
+}
+
+// row-off(제외) 상태 변경 후 요약 카드 합계·건수 재계산 — DOM이 진실
+function _rcpRefreshSum(){
+  const sumBox=document.getElementById('rcpSumCheck');
+  if(!sumBox) return;
+  let rowSum=0, rowTax=0, cnt=0;
+  document.querySelectorAll('#resTable .rcp-item-card').forEach(tr=>{
+    if(tr.classList.contains('row-off')) return;
+    cnt++;
+    rowSum+=parseInt((tr.querySelector('.c-p')?.value||'').replace(/[^0-9-]/g,''))||0;
+    rowTax+=parseInt((tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''))||0;
+  });
+  const sumBig=sumBox.querySelector('.rsc-big');
+  if(sumBig) sumBig.textContent=fmt(rowSum)+'원';
+  const okEl=sumBox.querySelector('.rsc-ok');
+  if(okEl) okEl.textContent=okEl.textContent.replace(/\d+개 품목/,cnt+'개 품목');
+  const rowSupply=rowSum-rowTax;
+  sumBox.querySelectorAll('.rsc-ln').forEach(el=>{
+    const label=el.querySelector('span')?.textContent;
+    const b=el.querySelector('b');
+    if(!b) return;
+    if(label==='공급가') b.textContent=fmt(rowSupply);
+    else if(label==='부가세') b.textContent=fmt(rowTax);
+    else if(label==='합계') b.textContent=fmt(rowSum);
+  });
 }
 async function saveReceipt(){
   if(!guardStore()) return;
