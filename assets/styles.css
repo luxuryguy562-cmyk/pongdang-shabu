@@ -1687,6 +1687,8 @@ details.rcl-store[open] .rcl-acc-chev{transform:rotate(90deg);}
 .ric-chip.empty{background:var(--toss-line);color:var(--toss-text-4);}
 /* 면세 배지 (품목명 옆 — 2026-06-04 가안 A) */
 .ric-free{flex:0 0 auto;font-size:9px;font-weight:800;color:var(--warn);border:1px solid var(--warn);border-radius:5px;padding:1px 5px;}
+/* 거래처 칸 — 고른 거래처 고정 표시(읽기전용). 빈 입력칸 중복 제거 (2026-06-22) */
+.rcp-vendor-fixed{background:var(--toss-blue-light)!important;color:var(--toss-blue)!important;font-weight:800!important;cursor:default;}
 /* 영수증 요약 카드 (가안 A — 공급가/부가세/합계 한 곳에) */
 .rcp-sumcard{background:#fff;border-radius:14px;box-shadow:var(--card-shadow);padding:14px 16px;margin-bottom:10px;}
 .rcp-sumcard .rsc-big{font-size:24px;font-weight:900;color:var(--toss-text-1);letter-spacing:-.5px;font-variant-numeric:tabular-nums;}

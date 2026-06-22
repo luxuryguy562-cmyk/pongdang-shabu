@@ -208,6 +208,25 @@ function manualReceipt(){
     vendor: initVendor,
     category: initCategory
   });
+  _setRcpVendorField(); // 거래처 칸 = 고른 거래처 고정 표시 (2026-06-22)
+}
+
+// ─── 새 기능: 거래처 칸 모드별 처리 (2026-06-22) ───
+// 거래처/온라인/마트를 골랐으면 그 이름을 고정 표시(읽기전용) — 사장님 "선택한 게 곧 거래처".
+// 안 골랐으면(특수) 직접 입력 가능. 저장 기준은 원래도 rcpVendorName 우선(saveReceipt 1936)이라 데이터 불변.
+function _setRcpVendorField(aiVendor){
+  const el = document.getElementById('rcpReceiptVendor');
+  if(!el) return;
+  const picked = (rcpMode==='vendor' || rcpMode==='online' || rcpMode==='direct') && rcpVendorName;
+  if(picked){
+    el.value = rcpVendorName;      // 고른 거래처 = 진실 (못 고침, 위 '바꾸기'로만 변경)
+    el.readOnly = true;
+    el.classList.add('rcp-vendor-fixed');
+  } else {
+    el.readOnly = false;
+    el.classList.remove('rcp-vendor-fixed');
+    if(aiVendor != null) el.value = aiVendor; // 거래처 미정일 때만 AI가 읽은 값 채움
+  }
 }
 
 // XSS 방지 헬퍼 (가이드 박스용)
@@ -1349,8 +1368,7 @@ async function runAI() {
     // 영수증 날짜 상단 입력칸에 AI 인식 날짜 표시 + 이상 경고 (2026-06-02: 날짜 hidden 문제 해결)
     const _rcpDateEl=document.getElementById('rcpReceiptDate');
     if(_rcpDateEl){ _rcpDateEl.value=(list[0]&&list[0].date)||ymdLocal(new Date()); _checkRcpDateWarn(_rcpDateEl.value); }
-    const _rcpVenEl=document.getElementById('rcpReceiptVendor');
-    if(_rcpVenEl){ _rcpVenEl.value=(list[0]&&list[0].vendor)||rcpVendorName||''; }
+    _setRcpVendorField((list[0]&&list[0].vendor)||''); // 거래처 칸 = 고른 거래처 고정 (미정 시 AI값) (2026-06-22)
     // 📊 합계 + 📄 페이지 박스 (pageInfo + photoCount 함께 전달)
     _renderRcpSumCheck(receiptTotalSum, list, pageInfo, pageCount, receiptSupplySum, receiptTaxSum);
     // 🔄 백업 모델 고정 경고 — 토스트는 사라지니 결과 맨 위에 빨간 띠로 박음 (2026-06-10 GPT 오독 사고)
