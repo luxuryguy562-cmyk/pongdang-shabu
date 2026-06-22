@@ -3560,7 +3560,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
   let _attLogsRows=[], _effectiveDaysShared=lastDay;
   if(!isFinal){
     const needVo=catsForAggregation.some(c=>c.data_source==='vendor_orders'||c.data_source==='composite');
-    const needRc=catsForAggregation.some(c=>c.data_source==='receipts'||c.data_source==='composite');
+    const needRc=catsForAggregation.some(c=>c.data_source==='receipts'||c.data_source==='composite'||c.data_source==='vendor_orders');
     // fixed_costs는 manual 카테고리(마케팅/세금)에도 합산되므로 무조건 SELECT
     const needFc=true;
     const ecaCatIds=catsForAggregation.filter(c=>c.data_source==='attendance'||c.data_source==='manual').map(c=>c.id);
@@ -3653,6 +3653,8 @@ async function calcExpenseByCategories(ym, mode, prefetched){
         //   - 새: o.vendors?.category_id IN [cat.id, ...child.ids] (FK, 안전)
         if(cat.data_source==='vendor_orders'){
           amount=voRows.filter(o=>o.vendors?.category_id===cat.id).reduce((a,o)=>a+(o.amount||0),0);
+          // 이 카테고리로 분류된 영수증도 합산 — 홈 도넛·내 매장들과 동일 (헌법 7-7 단일 진실, 2026-06-22)
+          amount+=rcRows.filter(r=>r.category_id===cat.id).reduce((a,r)=>a+(r.total_price||0),0);
           amount+=sumAllSourcesByCatId(cat.id,{skipAutoSources:true}); // mydata/eca/deductSum 추가
         } else if(cat.data_source==='receipts'){
           // receipts.category_id는 소분류 id. 대분류 receipts면 자식 id도 포함
