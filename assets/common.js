@@ -665,7 +665,7 @@ function nav(tab, el) {
     // sales는 홈 매출 행에서만 진입 (영업 탭 카드는 제거됨) → 홈 탭 active 유지
     sales:'dashboard',
     receipt:'expHub', vendors:'expHub', fixedcost:'expHub', wage:'expHub',
-    explist:'expHub', recon:'expHub', expcat:'expHub',
+    expcat:'expHub',
     royalty:'expHub', cardfee:'expHub', catReceipt:'expHub', manualCat:'expHub',
     expHubVendor:'expHub',
   };
@@ -696,11 +696,9 @@ function nav(tab, el) {
     // schedule: 2026-05-21 폐기 (근태 서브탭으로 통합). schedule 라우트 호출 시 attendance로 흡수.
     schedule: initAttDate,
     wage: loadWageSummary,
-    explist: initExplist,
     expcat: loadExpCategories,
     royalty: loadRoyaltyPage,
     cardfee: loadCardFeePage,
-    recon: initRecon,
     sales: loadSalesDaily,
     opening: loadOpeningPage,
     myinfo: loadMyInfo,
@@ -1131,7 +1129,7 @@ function broadcastStoreChange(kind, extra){
   try{ if(_storeChannel) _storeChannel.send({ type:'broadcast', event:'change', payload:Object.assign({kind:kind}, extra||{}) }); }catch(e){}
 }
 // 운영 데이터 변경 시 자동 갱신할 화면 → 로더 (시트 안 떠있을 때만)
-const _RT_REFRESH = { dashboard:'loadDashboard', explist:'initExplist', sales:'loadSalesDaily', recon:'initRecon', vendors:'loadVendors', attendance:'loadAttList', busHub:'loadBusHubData' };
+const _RT_REFRESH = { dashboard:'loadDashboard', sales:'loadSalesDaily', vendors:'loadVendors', attendance:'loadAttList', busHub:'loadBusHubData' };
 function _rtSheetOpen(){
   if([...document.querySelectorAll('.sheet-overlay')].some(s=>s.style.display && s.style.display!=='none')) return true;
   for(const id of ['signupOverlay','joinOverlay']){ const el=document.getElementById(id); if(el && el.style.display==='block') return true; }
