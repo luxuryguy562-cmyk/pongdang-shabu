@@ -13,3 +13,8 @@
 
 /sw.js
   Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+
+# 코드 파일(JS·CSS) — 매 접속 시 서버에 "바뀌었나?" 재검증(ETag 304).
+# ?v= 캐시버스터를 깜빡 안 올려도 항상 최신 보장 → 타지역 사용자 옛 파일 멈춤 재발 방지 (2026-06-22)
+/assets/*
+  Cache-Control: no-cache, must-revalidate
