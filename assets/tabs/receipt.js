@@ -617,14 +617,8 @@ function _subCatKeyOf(r){
   if(c && c.parent_id===catReceiptParentId) return cid;
   return '__none__';
 }
-// 소분류 칩 렌더 (cat: 모드 + 자식 카테고리 있을 때만 노출)
-function _renderCatRcpSubChips(rows){
-  const el = document.getElementById('catReceiptSubChips');
-  if(!el) return;
-  const children = catReceiptParentId
-    ? (expCategories||[]).filter(c=>c.parent_id===catReceiptParentId && c.is_active!==false)
-    : [];
-  if(!children.length){ el.innerHTML=''; return; }
+// 소분류 금액 집계 (만원) — 드롭다운/시트 공용
+function _catRcpSubAmounts(rows){
   const amt={}; let noneAmt=0, allAmt=0;
   (rows||[]).forEach(r=>{
     if(r.note!=='정상') return;
@@ -632,16 +626,44 @@ function _renderCatRcpSubChips(rows){
     const k=_subCatKeyOf(r);
     if(k==='__none__') noneAmt+=a; else amt[k]=(amt[k]||0)+a;
   });
-  // 금액 압축 표기 (만원). 소분류 합 = 전체 한눈에 (사장님 "소분류 합=총합")
+  return {amt, noneAmt, allAmt};
+}
+function _catRcpSubLabel(){
+  if(catReceiptSubFilter==='__none__') return '미분류';
+  if(catReceiptSubFilter==='all') return '전체';
+  const c=(expCategories||[]).find(x=>x.id===catReceiptSubFilter);
+  return c ? c.name : '전체';
+}
+// 소분류 필터 = 접힌 드롭다운 1개 (사장님: 칩 다 펼치지 말 것). 탭하면 시트로 펼침
+function _renderCatRcpSubChips(rows){
+  const el = document.getElementById('catReceiptSubChips');
+  if(!el) return;
+  const children = catReceiptParentId
+    ? (expCategories||[]).filter(c=>c.parent_id===catReceiptParentId && c.is_active!==false)
+    : [];
+  if(!children.length){ el.innerHTML=''; return; }
+  const active = catReceiptSubFilter!=='all';
+  el.innerHTML = `<button type="button" data-action="openCatReceiptSubSheet" style="padding:8px 14px;border-radius:18px;border:1px solid ${active?'#0050FF':'#E5E8EB'};background:${active?'#EBF3FF':'#fff'};color:${active?'#0050FF':'#4E5968'};font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;">🏷️ 분류: ${esc(_catRcpSubLabel())} <span style="color:#B0B8C1;">▾</span></button>`;
+}
+// 소분류 선택 시트 (전체 / 소분류들 / 미분류 + 각 금액)
+function openCatReceiptSubSheet(){
+  const list = document.getElementById('catReceiptSubList');
+  if(!list) return;
+  const children = catReceiptParentId
+    ? (expCategories||[]).filter(c=>c.parent_id===catReceiptParentId && c.is_active!==false)
+    : [];
+  const {amt, noneAmt, allAmt} = _catRcpSubAmounts(catReceiptRowsCache||[]);
   const _man=n=>{ const v=Math.round((n||0)/10000); return v>=1?(fmt(v)+'만'):(n>0?'<1만':'0'); };
-  const chip=(val,label,sub,active)=>`<button type="button" data-action="pickCatReceiptSub|${val}" style="padding:6px 12px;border-radius:16px;border:1px solid ${active?'#0050FF':'#E5E8EB'};background:${active?'#EBF3FF':'#fff'};color:${active?'#0050FF':'#4E5968'};font-size:13px;font-weight:700;white-space:nowrap;margin-right:6px;">${label}${sub?` <span style="opacity:.65;font-weight:600;">${sub}</span>`:''}</button>`;
-  let html=chip('all','전체',_man(allAmt),catReceiptSubFilter==='all');
-  children.forEach(c=>{ html+=chip(c.id, esc(c.name), _man(amt[c.id]||0), catReceiptSubFilter===c.id); });
-  html+=chip('__none__','미분류',_man(noneAmt),catReceiptSubFilter==='__none__');
-  el.innerHTML=html;
+  const mkRow=(val,label,sub,checked)=>`<button class="btn btn-secondary" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;background:${checked?'#EBF3FF':'#fff'};border:1px solid ${checked?'var(--blue)':'var(--gray-200)'};" data-action="pickCatReceiptSub|${val}"><span style="font-weight:700;">${label}</span><b style="color:var(--gray-500);font-weight:600;">${sub}</b></button>`;
+  let html=mkRow('all','전체',_man(allAmt),catReceiptSubFilter==='all');
+  children.forEach(c=>{ html+=mkRow(c.id, esc(c.name), _man(amt[c.id]||0), catReceiptSubFilter===c.id); });
+  html+=mkRow('__none__','미분류',_man(noneAmt),catReceiptSubFilter==='__none__');
+  list.innerHTML=html;
+  openSheet('catReceiptSubSheet');
 }
 function pickCatReceiptSub(val){
   catReceiptSubFilter = val || 'all';
+  closeSheet('catReceiptSubSheet');
   renderCatReceiptList(catReceiptRowsCache);
 }
 
