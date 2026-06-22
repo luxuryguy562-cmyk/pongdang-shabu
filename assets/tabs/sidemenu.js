@@ -6001,7 +6001,11 @@ async function _routeManagerHome(){
   let go = 'dashboard';
   try{
     const { data } = await sb.functions.invoke('my-stores', { body:{} });
-    if(data && data.ok && Array.isArray(data.stores) && data.stores.length >= 2) go = 'myStores';
+    if(data && data.ok && Array.isArray(data.stores) && data.stores.length >= 2){
+      go = 'myStores';
+      // 매장 2개+ → 사이드메뉴 '내 매장들' 입구 노출 (매장 안에서도 매장 현황으로 돌아갈 수 있게)
+      document.querySelectorAll('.multi-store-only').forEach(el=>{ el.style.display=''; });
+    }
   }catch(e){ console.warn('[routeManagerHome]', e); }
   setLoad(false);
   nav(go);
