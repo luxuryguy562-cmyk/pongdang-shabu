@@ -493,7 +493,7 @@
       <div class="side-group-body">
         <div class="side-item franchise-admin-only" data-action="navFromSide|franchiseHome" style="display:none;"><svg class="icon-inline"><use href="#i-building"/></svg>본사 홈</div>
         <div class="side-item multi-store-only" data-action="navFromSide|myStores" style="display:none;"><svg class="icon-inline"><use href="#i-building"/></svg>내 매장들</div>
-        <div class="side-item" data-action="navFromSide|dashboard">대시보드</div>
+        <div class="side-item franchise-admin-hide" data-action="navFromSide|dashboard">대시보드</div>
         <div class="side-item owner-only" data-action="openJoinFranchise" style="display:none;"><svg class="icon-inline"><use href="#i-link"/></svg>본사 연결</div>
       </div>
     </div>
@@ -982,6 +982,8 @@
       <span style="color:var(--gray-400);">▾</span>
     </button>
   </div>
+  <!-- 분류(소분류) 필터칩 — 카테고리 진입 시 동적 생성 (공산품·야채·육류·미분류). 미분류 = 상위로만 달린 영수증 -->
+  <div id="catReceiptSubChips" class="rcl-chips" style="margin-bottom:8px;"></div>
   <!-- 거래처 필터칩 (데이터에서 동적 생성 — 진입 시 해당 칩 활성화) -->
   <div id="catReceiptChips" class="rcl-chips"></div>
   <div id="catReceiptBody">
@@ -997,6 +999,15 @@
       <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>
     </div>
     <button class="btn btn-secondary" style="width:100%;margin-top:10px;padding:12px;" data-action="closeSheet|catReceiptFilterSheet">닫기</button>
+  </div>
+</div>
+
+<!-- 카테고리 영수증 소분류(분류) 필터 시트 — 2026-06-22 -->
+<div class="sheet-overlay" id="catReceiptSubSheet">
+  <div class="sheet" style="padding:18px;max-height:75vh;overflow-y:auto;">
+    <div style="font-size:16px;font-weight:800;color:var(--gray-900);margin-bottom:14px;">분류 선택</div>
+    <div id="catReceiptSubList"></div>
+    <button class="btn btn-secondary" style="width:100%;margin-top:10px;padding:12px;" data-action="closeSheet|catReceiptSubSheet">닫기</button>
   </div>
 </div>
 
