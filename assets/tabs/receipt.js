@@ -1204,6 +1204,7 @@ async function runAI() {
       totalPrice: x.p ?? x.totalPrice ?? 0,
       taxAmount: x.t ?? x.taxAmount ?? 0,
       isTaxFree: (x.f===true || x.f==='true' || x.isTaxFree===true), // 면세 여부 (의제매입세액공제용)
+      _vatUncertain: (x.vu===true || x.vu==='true'), // 면세/과세 애매 — 카드에 "부가세 확인?" 표시 (2026-06-22)
       category: x.c || x.category || defaultCat
     }));
     // 주류 채널: 보증금 입금(+) / 회수(−) 행 추가
@@ -1255,6 +1256,7 @@ async function runAI() {
             totalPrice:x.p??x.totalPrice??0,
             taxAmount:x.t??x.taxAmount??0,
             isTaxFree:(x.f===true||x.f==='true'||x.isTaxFree===true),
+            _vatUncertain:(x.vu===true||x.vu==='true'),
             category:x.c||x.category||defaultCat
           }));
           // 주류 보증금 행 복원 — 재검산 rebuild가 보증금 입금/빈병 회수 행을 날려먹던 버그 수정 (2026-06-10)
@@ -1747,6 +1749,8 @@ function buildReceiptRow(i={}) {
   const nameSuspectMark = nameSuspect ? `<span class="rcp-ns-mark" title="${esc(nameSuspect)} — 📋 눌러 고쳐주세요" style="font-size:13px;cursor:help;">🔴</span>` : '';
   const _tax = parseInt(i.taxAmount)||0;
   const freeBadge = ''; // 부가세 화면 숨김 (2026-06-21)
+  // 면세/과세 애매 표시 — AI가 미가공/가공 헷갈린 식품에 "부가세 확인?" (2026-06-22 사장님 요청). 세부의 "부가세 포함" 토글로 고침.
+  const vatCheckBadge = i._vatUncertain ? `<span class="rcp-guess-tag" title="면세인지 과세인지 애매해요 — 아래 세부에서 '부가세 포함'을 확인·수정해주세요">💧 부가세 확인?</span>` : '';
   // 📋 버튼 — 과거 품목 원터치 선택 (거래처 모드 + 과거 품목 있을 때만)
   const pastBtn = rcpPastItems.length ? `<button type="button" class="ric-past-btn" data-action="openRcpPastSheet|${idx}" title="과거 품목 선택">📋</button>` : '';
   // 단가 매칭 뱃지 (2026-06-05)
@@ -1804,6 +1808,7 @@ function buildReceiptRow(i={}) {
       ${autoTag}
       ${learnBadge}
       ${freeBadge}
+      ${vatCheckBadge}
       ${pastBtn}
       <span class="ric-l2-right">
         <input type="text" class="c-p" inputmode="numeric" value="${fmt(i.totalPrice||0)}" data-input="onReceiptAmountInput|this">
