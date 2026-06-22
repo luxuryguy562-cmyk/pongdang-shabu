@@ -206,7 +206,8 @@ function manualReceipt(){
   document.getElementById('resTable').innerHTML = buildReceiptRow({
     date: ymdLocal(new Date()),
     vendor: initVendor,
-    category: initCategory
+    category: initCategory,
+    _manual: true // 수동 입력 행 = "부가세 포함" 토글 보이게 (2026-06-22)
   });
   _setRcpVendorField(); // 거래처 칸 = 고른 거래처 고정 표시 (2026-06-22)
 }
@@ -1782,7 +1783,7 @@ function buildReceiptRow(i={}) {
           <div class="det-cell"><span>수량</span><input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></div>
         </div>
       </div>
-      <div class="vat-row" style="display:none">
+      <div class="vat-row" style="${i._manual?'':'display:none'}">
         <button type="button" class="vat-toggle" data-action="onRcpVatToggle|${idx}"><span class="sw${_vatOn?'':' off'}"></span> 부가세 포함</button>
         <span class="vat-amt">부가세 <input type="text" class="c-t" inputmode="numeric" value="${_tax||0}" data-input="onRcpVatInput|this|${idx}"></span>
       </div>
@@ -1908,7 +1909,7 @@ function onReceiptAmountInput(inputEl){
   const diff=formatted.length-before.length;
   try{ inputEl.setSelectionRange(pos+diff, pos+diff); }catch(e){}
 }
-function addReceiptRow(){document.getElementById('resultArea').style.display='block';document.getElementById('resTable').insertAdjacentHTML('beforeend',buildReceiptRow({date:document.getElementById('rcpReceiptDate')?.value||ymdLocal(new Date())}));}
+function addReceiptRow(){document.getElementById('resultArea').style.display='block';document.getElementById('resTable').insertAdjacentHTML('beforeend',buildReceiptRow({date:document.getElementById('rcpReceiptDate')?.value||ymdLocal(new Date()),_manual:true}));}
 // ─── 영수증 날짜 변경 → 모든 행 동기화 (영수증 1장 = 1날짜) + 이상 경고 (2026-06-02) ───
 function onRcpDateChange(el){
   const v=el.value; if(!v) return;
