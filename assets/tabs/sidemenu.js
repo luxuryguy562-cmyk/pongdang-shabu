@@ -9141,20 +9141,9 @@ document.addEventListener('DOMContentLoaded', async()=>{
 
   // ─── 파일 업로드 이벤트 바인딩 (inline onchange CSP 차단 대응) ───
   const bindFile=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',function(){fn(this);});};
-  bindFile('bankExcelInput',inp=>handleExcelUpload(inp,'bank'));
-  bindFile('cardExcelInput',inp=>handleExcelUpload(inp,'card'));
-  // 컬럼 정렬 이벤트
-  document.querySelectorAll('[id^="bankTh"]').forEach(th=>{
-    th.addEventListener('click',()=>toggleTxSort('bank',th.dataset.col));
-  });
-  document.querySelectorAll('[id^="cardTh"]').forEach(th=>{
-    th.addEventListener('click',()=>toggleTxSort('card',th.dataset.col));
-  });
-  // 필터 버튼 + 뱃지(필터 해제) 이벤트
-  document.getElementById('bankFilterBtn').addEventListener('click',()=>openTxFilter('bank'));
-  document.getElementById('cardFilterBtn').addEventListener('click',()=>openTxFilter('card'));
-  document.getElementById('bankFilterBadge').addEventListener('click',()=>{bankFilter={dateFrom:null,dateTo:null,cats:null,direction:'all'};renderBankTxTable();});
-  document.getElementById('cardFilterBadge').addEventListener('click',()=>{cardFilter={dateFrom:null,dateTo:null,cats:null};renderCardTxTable();});
+  // 계좌·카드 내역(explist) 전용 바인딩 제거 (2026-06-22)
+  //   화면 본체가 #748에서 삭제됨 → bankFilterBtn 등 요소 null → addEventListener 오류로
+  //   초기화 중단(로그인 진행 불가) 버그. 삭제된 화면 전용 바인딩이라 제거.
   // 분류 셀 탭 → 편집 진입 경로 제거됨 (편집 버튼 ✎ 사용, 2026-04-21)
   // 내용 셀 터치 → 말풍선 툴팁
   let activeTip=null;
