@@ -15,6 +15,7 @@ let rcpInputMethod = null; // 'photo' | 'manual' — 영수증 단위 입력 방
 let rcpEntryReturn = null; // 영수증 저장 후 자동 복귀할 화면 ('catReceipt:direct'|'catReceipt:etc'|'vendors:<id>')
 let rcpPastItems = [];       // 현재 거래처 과거 품목명 — 품목명 칸 자동완성(원터치 수정)용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
 let rcpPastPriceMap = new Map(); // 단가 → Set<품목명> (단가 매칭 자동채움용, 2026-06-05)
+let rcpPastUnitByName = new Map(); // 품목명 → 최근 단가 (수기입력 단가 자동채움용, 2026-06-22)
 let rcpPastSheetTargetIdx = null; // 과거 품목 시트 열 때 대상 행 인덱스
 let _rcpKeepOnEnter = false; // true면 이번 nav('receipt')는 거래처/카테고리 세팅 진입 = 초기화 스킵 (2026-06-18)
 
@@ -189,10 +190,41 @@ function renderRcpModeBadge(){
   }
 }
 
+// ─── 거래처 과거 품목+단가 로드 (사진 분석·수기입력 공통, 2026-06-22) ───
+//   품목명 자동완성(📋 검색) + 단가 매칭 + 단가 자동채움용. 오답·삭제 행 제외(단가 지도 오염 방지). 프롬프트엔 안 넣음(환각 방지).
+async function loadRcpPastItems(){
+  rcpPastItems = [];
+  rcpPastPriceMap = new Map();
+  rcpPastUnitByName = new Map();
+  if(!(rcpMode === 'vendor' && rcpVendorId)) return; // 거래처 모드만 (마트·온라인·기타는 과거 품목 매칭 X)
+  const {data:pData} = await sb.from('receipts')
+    .select('item, unit_price')
+    .eq('store_id', currentStore.id)
+    .eq('vendor_id', rcpVendorId)
+    .not('item','is',null)
+    .or('note.is.null,note.eq.정상') // 오답·삭제 표시 행 제외
+    .order('created_at',{ascending:false})
+    .limit(300);
+  if(!(pData && pData.length)) return;
+  const seen = new Set();
+  pData.forEach(r => {
+    const nm = (r.item||'').trim();
+    if(!nm) return;
+    seen.add(nm);
+    const p = parseInt(r.unit_price)||0;
+    if(p > 0){
+      if(!rcpPastPriceMap.has(p)) rcpPastPriceMap.set(p, new Set());
+      rcpPastPriceMap.get(p).add(nm);
+      if(!rcpPastUnitByName.has(nm)) rcpPastUnitByName.set(nm, p); // created_at desc → 첫 등장 = 최근 단가
+    }
+  });
+  rcpPastItems = [...seen].slice(0,120);
+}
 // ─── 새 기능: 수동 입력 (사진 없이 빈 행 1개로 시작) ───
-function manualReceipt(){
+async function manualReceipt(){
   if(!rcpMode) return toast('먼저 거래처 또는 마트·시장을 골라주세요','warn');
   rcpInputMethod = 'manual';
+  await loadRcpPastItems(); // 수기입력도 과거 품목 후보·단가 자동채움 받게 (2026-06-22) — 빈행 만들기 전에 로드
   document.getElementById('uploadGroup').style.display='none';
   document.getElementById('actionGroup').style.display='none';
   const ip = document.getElementById('imgPreview'); ip.style.display='none'; ip.src='';
@@ -1110,33 +1142,8 @@ async function runAI() {
     //  · total_sum 우선순위 정정: 금일합계 > 합계액 > 결제금액 (전미수/총합계/잔액/누계 무시)
     //  · page_info: {current, total} 신설 — 영수증 "Page (N/M)" 인쇄 감지
     //  · 멀티페이지: parts에 inline_data 여러 개 → AI가 통합 분석
-    // 거래처 과거 품목 로드 — 품목명 자동완성 + 단가 매칭 자동채움용. 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
-    rcpPastItems = [];
-    rcpPastPriceMap = new Map();
-    if(isVendorModeAI && rcpVendorId){
-      const {data:pData} = await sb.from('receipts')
-        .select('item, unit_price')
-        .eq('store_id', currentStore.id)
-        .eq('vendor_id', rcpVendorId)
-        .not('item','is',null)
-        .or('note.is.null,note.eq.정상') // 오답·삭제 표시 행 제외 — 틀린 이름이 단가 지도(정답) 오염 방지 (2026-06-11)
-        .order('created_at',{ascending:false})
-        .limit(300);
-      if(pData && pData.length){
-        const seen = new Set();
-        pData.forEach(r => {
-          const nm = (r.item||'').trim();
-          if(!nm) return;
-          seen.add(nm);
-          const p = parseInt(r.unit_price)||0;
-          if(p > 0){
-            if(!rcpPastPriceMap.has(p)) rcpPastPriceMap.set(p, new Set());
-            rcpPastPriceMap.get(p).add(nm);
-          }
-        });
-        rcpPastItems = [...seen].slice(0,120);
-      }
-    }
+    // 거래처 과거 품목 로드 — 품목명 자동완성 + 단가 매칭 자동채움용 (사진 분석·수기입력 공통). 프롬프트엔 안 넣음(환각 방지, 2026-06-05)
+    await loadRcpPastItems();
     // 프롬프트 = common.js 공통 함수 (측정실과 100% 동일 — 검증=실제 보장)
     const prompt = buildReceiptPrompt({ isVendorMode:isVendorModeAI, isOnlineMode:isOnlineModeAI, isLiquorMode:isLiquorModeAI, vendorName:rcpVendorName, catList, pageCount });
     // AI 단독 (2026-05-19 (4)): OCR 제거 — Gemini Flash 단독 (3차 best ~95%+) + High demand 시 GPT-4o fallback
@@ -2000,6 +2007,14 @@ function selectPastItemFromEl(el){
     // 빨간불 + 배경 해제
     row.classList.remove('name-suspect');
     row.querySelector('.rcp-ns-mark')?.remove();
+    // 단가 자동채움 — 고른 품목의 최근 단가 (단가 비어 있을 때만, 사장님이 고칠 수 있음 2026-06-22). 수기입력 단가 흐트러짐 방지.
+    const uEl = row.querySelector('.c-u');
+    if(uEl && !String(uEl.value||'').trim() && rcpPastUnitByName.has(name)){
+      uEl.value = fmt(rcpPastUnitByName.get(name));
+      // 금액도 비어 있을 때만 단가×수량 계산 (AI가 읽은 금액 덮어쓰기 방지). 수량은 나중에 넣어도 onRcpQtyInput이 계산.
+      const pEl = row.querySelector('.c-p');
+      if(pEl && !String(pEl.value||'').replace(/[^0-9]/g,'')) _rcpRecalcAmount(row);
+    }
   }
   closeAllSheets();
   rcpPastSheetTargetIdx = null;
