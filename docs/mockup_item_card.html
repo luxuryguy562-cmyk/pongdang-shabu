@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>품목 카드 — 변경 전/후</title>
+<style>
+  :root{
+    --toss-blue:#3182F6;--toss-blue-light:#EDF4FF;
+    --toss-text-1:#191F28;--toss-text-3:#6B7684;--toss-text-4:#8B95A1;
+    --toss-line:#F2F4F6;--toss-line-2:#E5E8EB;
+    --card-shadow:0 4px 14px rgba(20,40,80,0.07), 0 1px 3px rgba(20,40,80,0.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#EEF1F5;font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:var(--toss-text-1);padding:18px;}
+  h1{font-size:19px;text-align:center;margin:4px 0 6px;}
+  .sub{text-align:center;font-size:13px;color:var(--toss-text-3);margin-bottom:20px;line-height:1.6;}
+  .wrap{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;}
+  .panel{flex:1 1 300px;max-width:360px;}
+  .panel-head{font-size:14px;font-weight:800;padding:9px 14px;border-radius:10px;margin-bottom:12px;text-align:center;}
+  .ph-before{background:#FFE9E9;color:#C0392B;}
+  .ph-after{background:#E4F7EE;color:#0B8A4F;}
+  .screen{background:#EEF1F5;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+
+  /* 공통 카드 껍데기 */
+  .item-card{background:#fff;border-radius:14px;box-shadow:var(--card-shadow);padding:14px;}
+  .note{font-size:12px;line-height:1.7;color:var(--toss-text-3);padding:0 4px;}
+  .bad{color:#C0392B;font-weight:700;}
+  .good{color:#0B8A4F;font-weight:700;}
+  .label{font-size:11px;font-weight:700;color:var(--toss-text-4);margin-bottom:2px;}
+
+  /* ───── 변경 전 스타일 ───── */
+  .before-l1{display:flex;align-items:center;gap:8px;}
+  .before-l1 .c-i{flex:1;border:none;background:transparent;font-size:15px;font-weight:700;color:var(--toss-text-1);outline:none;resize:none;line-height:1.35;padding:1px 0;font-family:inherit;}
+  .before-l2{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .before-l2-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+  .ric-chip{font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;background:var(--toss-blue-light);color:var(--toss-blue);border:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .c-p-before{border:none;background:transparent;font-size:16px;font-weight:800;text-align:right;width:auto;min-width:50px;max-width:120px;color:var(--toss-text-1);outline:none;font-family:inherit;}
+  .more-btn{font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--toss-line);color:var(--toss-text-3);border:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .ric-x-before{flex:0 0 22px;height:22px;border:none;border-radius:50%;background:var(--toss-line);color:var(--toss-text-4);font-size:13px;font-weight:800;cursor:pointer;}
+
+  /* ───── 변경 후 스타일 ───── */
+  /* 카드 = 상대 위치 (× 버튼 절대 배치용) */
+  .item-card-after{background:#fff;border-radius:14px;box-shadow:var(--card-shadow);padding:14px 14px 0 14px;position:relative;}
+  /* × 버튼 — 오른쪽 상단 고정 */
+  .ric-x-after{position:absolute;top:10px;right:10px;width:24px;height:24px;border:none;border-radius:50%;background:var(--toss-line);color:var(--toss-text-4);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+  /* 품목명 — 배경 있는 입력칸 느낌 */
+  .after-name-wrap{margin-right:30px;/* × 버튼 자리 확보 */margin-bottom:10px;}
+  .after-name-label{font-size:10px;font-weight:700;color:var(--toss-text-4);margin-bottom:4px;}
+  .after-c-i{width:100%;border:none;background:var(--toss-line);border-radius:10px;padding:10px 12px;font-size:15px;font-weight:700;color:var(--toss-text-1);outline:none;resize:none;line-height:1.35;font-family:inherit;}
+  /* 분류 + 금액 행 */
+  .after-row2{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}
+  .after-c-p{border:none;background:var(--toss-line);border-radius:10px;padding:8px 12px;font-size:16px;font-weight:800;text-align:right;min-width:90px;color:var(--toss-text-1);outline:none;font-family:inherit;}
+  /* 세부 토글 — 카드 맨 아래, 전체 너비 */
+  .after-more-btn{display:block;width:100%;text-align:center;font-size:11px;font-weight:600;padding:9px 0;color:var(--toss-text-4);background:transparent;border:none;border-top:1px solid var(--toss-line);cursor:pointer;font-family:inherit;border-radius:0 0 14px 14px;}
+  .after-more-btn:hover{background:var(--toss-line);}
+</style>
+</head>
+<body>
+  <h1>품목 카드 — 변경 전 / 후</h1>
+  <div class="sub">분류·금액·세부·× 한 줄 몰림 → 역할별 자리 분리</div>
+
+  <div class="wrap">
+
+    <!-- 변경 전 -->
+    <div class="panel">
+      <div class="panel-head ph-before">변경 전 (지금) — 한 줄에 다 몰림</div>
+      <div class="screen">
+        <div class="item-card">
+          <!-- L1: 품목명 (제목처럼 보임) -->
+          <div class="before-l1">
+            <textarea class="c-i" rows="1">소고기 차돌박이 1kg</textarea>
+          </div>
+          <!-- L2: 분류 + 금액 + 세부 + × 한 줄 -->
+          <div class="before-l2">
+            <button class="ric-chip">🥩 식자재(육류)</button>
+            <span class="before-l2-right">
+              <input class="c-p-before" value="125,000">
+              <button class="more-btn">세부 ▴</button>
+              <button class="ric-x-before">×</button>
+            </span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="before-l1">
+            <textarea class="c-i" rows="1">음료수</textarea>
+          </div>
+          <div class="before-l2">
+            <button class="ric-chip" style="background:var(--toss-line);color:var(--toss-text-4)">🏷️ 분류</button>
+            <span class="before-l2-right">
+              <input class="c-p-before" value="12,000">
+              <button class="more-btn">세부 ▴</button>
+              <button class="ric-x-before">×</button>
+            </span>
+          </div>
+        </div>
+        <div class="note">
+          <span class="bad">문제 3가지:</span><br>
+          ① 품목명 = 배경 없어 <b>제목처럼</b> 보임, 입력칸인지 모름<br>
+          ② 분류·금액·세부·× 한 줄에 몰려 <b>좁고 복잡</b><br>
+          ③ × 버튼이 금액 옆 — 잘못 눌러 <b>품목 삭제</b> 위험
+        </div>
+      </div>
+    </div>
+
+    <!-- 변경 후 -->
+    <div class="panel">
+      <div class="panel-head ph-after">변경 후 (제안) — 역할별 자리 분리</div>
+      <div class="screen">
+        <!-- 카드 1 -->
+        <div class="item-card-after">
+          <!-- × 오른쪽 상단 고정 -->
+          <button class="ric-x-after">×</button>
+          <!-- 품목명: 배경 있는 입력칸 -->
+          <div class="after-name-wrap">
+            <div class="after-name-label">품목</div>
+            <textarea class="after-c-i" rows="1">소고기 차돌박이 1kg</textarea>
+          </div>
+          <!-- 분류 + 금액 (2열) -->
+          <div class="after-row2">
+            <button class="ric-chip">🥩 식자재(육류)</button>
+            <input class="after-c-p" value="125,000">
+          </div>
+          <!-- 세부: 맨 아래 전체 너비 -->
+          <button class="after-more-btn">세부 펼치기 ▾</button>
+        </div>
+        <!-- 카드 2 -->
+        <div class="item-card-after">
+          <button class="ric-x-after">×</button>
+          <div class="after-name-wrap">
+            <div class="after-name-label">품목</div>
+            <textarea class="after-c-i" rows="1">음료수</textarea>
+          </div>
+          <div class="after-row2">
+            <button class="ric-chip" style="background:var(--toss-line);color:var(--toss-text-4)">🏷️ 분류</button>
+            <input class="after-c-p" value="12,000">
+          </div>
+          <button class="after-more-btn">세부 펼치기 ▾</button>
+        </div>
+        <div class="note">
+          <span class="good">해결 3가지:</span><br>
+          ① 품목명 = 배경 칸으로 <b>입력칸임을 명확히</b><br>
+          ② 분류 왼쪽 / 금액 오른쪽 — <b>넉넉하게 2열</b><br>
+          ③ × = <b>카드 오른쪽 상단 고정</b> (잘못 누를 위험↓)<br>
+          ④ 세부 = 카드 <b>맨 아래 전체 너비</b> — 더 누르기 쉬움
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
