@@ -1227,14 +1227,10 @@ async function runAI() {
     if(isLiquorModeAI) _rcpLiquorUnitPrice(list);
     // 거래처(비주류): 수량 = 공급가 ÷ 단가. AI가 BOX수만 읽고 BOX×단위 못 곱할 때 역산 교정 (2026-06-10).
     if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list);
-    // 부가세 처리 (주류 제외): ① 영수증에 세액 총액 찍혀 있으면 그 값을 진실로 품목 합 자동 보정,
-    //   ② 안 찍혀 있으면(쿠팡 등) 과세 품목 ÷11 역산. (2026-06-23 사장님 "있는 건 똑바로, 없는 건 잘")
-    const _printedTax = parseInt(receiptTaxSum)||0;
+    // 부가세 처리 (주류 제외): 품목마다 따로 — 과세 품목만 ÷11, 면세는 0. 영수증에 줄별 세액이 찍혀 있으면 그 값 그대로.
+    //   ⚠️ 과세합 분배(나눠 넣기) 금지 — 비엔나 혼자 과세인데 연근에 부가세 나눠 넣던 사고 (2026-06-23 사장님 지적)
     const _hadPrintedTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
-    if(!isLiquorModeAI){
-      if(_printedTax>0) _rcpReconcileTaxToPrinted(list, _printedTax);   // 영수증 세액 찍힘 → 그 값에 맞춤
-      else if(!_hadPrintedTax) _rcpDeriveVatNoTaxLine(list);            // 세액 없음 → ÷11 역산
-    }
+    if(!isLiquorModeAI && !_hadPrintedTax) _rcpDeriveVatNoTaxLine(list); // 줄별 세액 없으면 과세 품목만 ÷11
     // 세액이 생겼으면 = 공급가·부가세 줄 표시 (세액 0 행은 면세)
     const _hasAnyTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
     list.forEach(it=> it._taxFormat = _hasAnyTax);
@@ -1284,12 +1280,8 @@ async function runAI() {
           list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
           if(isLiquorModeAI) _rcpLiquorUnitPrice(list); // 재검산 후에도 주류 단가=공급가÷수량 재계산
           if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list); // 재검산 후에도 거래처 수량 역산
-          const _pt2=parseInt(_fixRaw?.total_tax)||parseInt(receiptTaxSum)||0;
           const _hpt2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
-          if(!isLiquorModeAI){
-            if(_pt2>0) _rcpReconcileTaxToPrinted(list, _pt2);        // 영수증 세액 찍힘 → 그 값에 맞춤
-            else if(!_hpt2) _rcpDeriveVatNoTaxLine(list);            // 세액 없음 → ÷11 역산
-          }
+          if(!isLiquorModeAI && !_hpt2) _rcpDeriveVatNoTaxLine(list); // 줄별 세액 없으면 과세 품목만 ÷11 (분배 X)
           const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
           list.forEach(it=>it._taxFormat=_ht2);
           list=await applyRulesToReceipt(list);
@@ -1725,28 +1717,6 @@ function _rcpDeriveVatNoTaxLine(list){
     it.supplyPrice=p-tax;
     const q=parseFloat(it.qty)||0;
     if(q>0) it.unitPrice=Math.round(it.supplyPrice/q); // 세전 단가 — 검산 u×q=공급가 유지
-  });
-}
-// 영수증에 찍힌 세액 총액에 품목별 부가세 합을 맞춤 — "있는 건 똑바로" (2026-06-23 사장님).
-//   AI가 품목 과세/면세를 가끔 틀려(예: 면세 봉투에 과세 추가) 합이 영수증과 어긋남 → 영수증 세액을 진실로,
-//   과세 행(세액>0, 없으면 면세 아닌 행)에 비례 배분해 합을 정확히 일치. 금액(낸 돈)·순익은 불변(세액만 재배분).
-function _rcpReconcileTaxToPrinted(list, printedTax){
-  if(!(printedTax>0)) return;
-  const items=(list||[]).filter(it=>!it._isDeposit && (parseInt(it.totalPrice)||0)>0);
-  let taxed=items.filter(it=>(parseInt(it.taxAmount)||0)>0);
-  if(!taxed.length) taxed=items.filter(it=>!it.isTaxFree); // AI가 행 세액을 안 줬으면 면세 아닌 행 대상
-  if(!taxed.length) return;
-  const curSum=taxed.reduce((s,it)=>s+(parseInt(it.taxAmount)||0),0);
-  if(Math.abs(curSum-printedTax)<=1) return; // 이미 일치(반올림 1원 이내)
-  const weights=taxed.map(it=>(parseInt(it.taxAmount)||0) || (parseInt(it.totalPrice)||0));
-  const wSum=weights.reduce((a,b)=>a+b,0) || taxed.length;
-  let acc=0;
-  taxed.forEach((it,i)=>{
-    const v=(i===taxed.length-1) ? (printedTax-acc) : Math.round(printedTax*weights[i]/wSum);
-    it.taxAmount=v; acc+=v;
-    it.supplyPrice=(parseInt(it.totalPrice)||0)-v;
-    const q=parseFloat(it.qty)||0;
-    if(q>0) it.unitPrice=Math.round(it.supplyPrice/q); // 세전 단가 재계산 (검산 유지)
   });
 }
 function buildReceiptRow(i={}) {
