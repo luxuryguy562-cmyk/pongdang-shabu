@@ -1088,7 +1088,20 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplyS
     }
   }
   sumBox.className = cls;
-  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>`;
+  // 부가세 줄 — 합계 카드에 공급가+부가세 표시 (2026-06-23 사장님 요청)
+  const vatLine = rowTax>0
+    ? `<div style="font-size:12px;color:var(--toss-text-3);font-weight:600;margin-top:3px;">공급가 ${fmt(rowSupply)} + 부가세 ${fmt(rowTax)}</div>`
+    : '';
+  // 영수증에 부가세(세액 소계)가 찍혀 있으면 분석값과 대조 — 안 맞으면 경고만(자동수정 X, 사장님이 토글로 고침)
+  let warnLine = '';
+  const printedTax = parseInt(taxSum)||0;
+  if(printedTax>0){
+    const d = Math.abs(printedTax - rowTax);
+    if(d > Math.max(50, printedTax*0.03)){ // ±50원·3% 허용오차(반올림 헛경고 방지)
+      warnLine = `<div style="font-size:12px;color:#C77700;font-weight:700;margin-top:3px;">⚠️ 영수증 부가세 ${fmt(printedTax)}원 ≠ 분석 ${fmt(rowTax)}원 — 면세/과세 확인</div>`;
+    }
+  }
+  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>${vatLine}${warnLine}`;
 }
 async function applyRulesToReceipt(list){
   if(!storeClassRules?.length) await loadClassificationRules();
