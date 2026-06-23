@@ -1135,13 +1135,20 @@ async function runAI() {
     // (옛 thinking 플래그 제거 2026-06-10 — Gemini thinking은 한국 차단(dev_lessons #201), worker도 무시. 죽은 코드 정리)
     // 거래처 모드(온라인·주류 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
     // 온라인·마트(직구)·주류는 전체 자율(getCatListForPrompt 그대로)
-    let vendorCatNames = []; // 이 거래처가 지정한 취급분류 이름들 — 품목 분류 강제용 (사장님: 거래처=지정분류)
+    let vendorCatNames = []; // 거래처 지정 취급분류 — "부모>자식" 전체 경로 (강제·표시용. 사장님 수정 표기와 통일)
     if(isVendorModeAI && !isOnlineModeAI && !isLiquorModeAI && rcpVendorId){
       const _v = (typeof vendors!=='undefined') ? vendors.find(x=>x.id===rcpVendorId) : null;
       const _handled = _v && Array.isArray(_v.handled_category_ids) ? _v.handled_category_ids : [];
       if(_handled.length){
-        const _names = _handled.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean);
-        if(_names.length){ catList = _names.join(','); vendorCatNames = _names; }
+        const _cats = _handled.map(id=>(expCategories||[]).find(c=>c.id===id)).filter(Boolean);
+        if(_cats.length){
+          catList = _cats.map(c=>c.name).join(','); // AI 후보엔 말단(소분류) 이름만 — 단순
+          // 표시·강제용은 부모>자식 전체 경로 (예: 식자재>공산품) — 사장님 수동 수정과 똑같은 표기. 부모 없으면 자기 이름만.
+          vendorCatNames = _cats.map(c=>{
+            const _p = c.parent_id ? (expCategories||[]).find(x=>x.id===c.parent_id) : null;
+            return _p ? `${_p.name}>${c.name}` : c.name;
+          });
+        }
       }
     }
     // ─── 통합 개선 (2026-05-19 (4)) ───
@@ -1214,8 +1221,11 @@ async function runAI() {
     //   · 여러 개(예: 육류·공산품) → AI가 그 목록 안에서 고른 것만 인정, 목록 밖이면 첫 분류로 스냅(부모 "식자재" 같은 미분류 방지)
     const _enforceVendorCat = (aiCat) => {
       if(!vendorCatNames.length) return aiCat || defaultCat; // 거래처 지정분류 없음 → 기존대로 AI 분류
-      if(vendorCatNames.length===1) return vendorCatNames[0];
-      return vendorCatNames.find(n => n===aiCat) || vendorCatNames[0];
+      if(vendorCatNames.length===1) return vendorCatNames[0]; // 단일 지정분류 = 전 품목 그 경로로 고정
+      // AI는 말단 이름("공산품")으로 줌 → 지정분류 말단끼리 비교해 매칭, 결과는 전체 경로로 반환
+      const _leaf = s => String(s||'').split('>').pop().trim();
+      const _aiLeaf = _leaf(aiCat);
+      return vendorCatNames.find(n => _leaf(n)===_aiLeaf) || vendorCatNames[0];
     };
     let list = itemsRaw.map(x => ({
       date: x.d || x.date || respDate || ymdLocal(new Date()),
