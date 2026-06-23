@@ -1256,6 +1256,30 @@ async function loadEmpSettings(){
     if(listEl) listEl.innerHTML = '<div class="ms-empty">불러오기 실패</div>';
     console.error('[loadEmpSettings]', e);
   }
+  // 승인 대기 중인 연결 요청 조회
+  const pendingEl = document.getElementById('empSettingsPending');
+  const pendingSection = document.getElementById('empSettingsPendingSection');
+  if(pendingEl && pendingSection){
+    try {
+      const token = localStorage.getItem('pd_token');
+      if(token){
+        const { data: pd } = await sb.functions.invoke('join-store', { body: { token, action: 'list_my_pending' } });
+        const rows = pd?.rows || [];
+        if(rows.length > 0){
+          pendingEl.innerHTML = rows.map(r => `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--orange,#f97316);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">${(r.stores?.name||'매').slice(0,1)}</div>
+            <div>
+              <div style="font-size:14px;font-weight:700;">${r.stores?.name||'매장'}</div>
+              <div style="font-size:11px;color:var(--gray-500);">사장님 승인 대기 중</div>
+            </div>
+          </div>`).join('');
+          pendingSection.style.display = '';
+        } else {
+          pendingSection.style.display = 'none';
+        }
+      }
+    } catch(e){ console.warn('[empSettings pending]', e); }
+  }
 }
 
 // ─── 직원 설정 — 새 근무처 연결 버튼 ───
