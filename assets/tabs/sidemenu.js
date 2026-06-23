@@ -5672,8 +5672,9 @@ async function renderExpHubVendorView(){
     all.forEach(v=>{
       const t = vendorMonthTotals[v.id];
       const cnt = t?.count||0;
-      // 종류 라벨: 마트/온라인은 종류 표기, 거래처는 취급 카테고리(없으면 '거래처')
-      const kindLabel = v.kind==='mart' ? '마트' : (v.kind==='online' ? '온라인' : (_vendorCatLabel(v)||'거래처'));
+      // 종류 라벨: 항상 종류(마트/온라인/거래처) 먼저, 거래처는 취급 품목 뒤에 추가 (2026-06-23 일관성 통일)
+      const _catLbl = _vendorCatLabel(v);
+      const kindLabel = v.kind==='mart' ? '마트' : (v.kind==='online' ? '온라인' : ('거래처' + (_catLbl && _catLbl!=='기타' ? ' · '+_catLbl : '')));
       const closedTag = (v.is_active===false) ? ' · 거래종료' : '';
       const sub = kindLabel + (cnt ? ' · '+cnt+'건' : ' · 이번달 없음') + closedTag;
       const amtTxt = fmt(t?.total||0) + '원';
