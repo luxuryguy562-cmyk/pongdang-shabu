@@ -1240,7 +1240,7 @@ async function runAI() {
     //   2026-06-10: 백업 모델 결과에도 적용 (옛 !usedFallback 제외 → GPT 오독이 교정 기회 0인 채 통과하던 구멍).
     //   재검산은 분석에 실제 쓴 모델로 — Gemini 죽어서 백업 간 건데 재검산을 Gemini로 보내면 또 죽음.
     if(receiptTotalSum){
-      const _refModel = usedFallback ? (fallbackProvider==='gpt' ? 'gpt-4o' : 'gemini-2.0-flash') : aiModel;
+      const _refModel = usedFallback ? (fallbackProvider==='gpt' ? 'gpt-4o' : 'gemini-2.5-flash-lite') : aiModel; // 2.0-flash 종료(404) → lite
       const _refProvider = usedFallback ? fallbackProvider : 'gemini';
       const _refTimeout = _refProvider==='gpt' ? 60+(pageCount-1)*5 : timeoutSec+10;
       for(let _ref=0; _ref<2; _ref++){
@@ -1614,9 +1614,9 @@ async function _rcpAICallWithFallback(parts, timeoutSec, pageCount){
     //   (2026-06-23 버그 수정: 404가 백업 조건에서 빠져 Gemini 404 시 GPT로 안 넘어가고 그냥 실패하던 문제)
     if(/충전금|크레딧/.test(m)) throw geminiErr;
     try {
-      setLoad(true, 'Gemini Flash 혼잡 → Gemini 2.0으로 재시도 중...', b64Pages[0]);
-      const raw = await callGemini(parts, timeoutSec+10, 'receipt_ocr', 'gemini-2.0-flash', 'gemini');
-      return { raw, usedFallback:true, fallbackProvider:'gemini', fallbackModel:(_shortModelName(lastAIUsage?.model) || 'Gemini 2.0') }; // worker가 강등시켜도 실제 쓴 모델 정직 표시
+      setLoad(true, 'Gemini Flash 혼잡 → Gemini Lite로 재시도 중...', b64Pages[0]);
+      const raw = await callGemini(parts, timeoutSec+10, 'receipt_ocr', 'gemini-2.5-flash-lite', 'gemini'); // gemini-2.0-flash는 2026-06-01 구글 종료(404) → 살아있는 lite로 교체
+      return { raw, usedFallback:true, fallbackProvider:'gemini', fallbackModel:(_shortModelName(lastAIUsage?.model) || 'Gemini Lite') }; // worker가 강등시켜도 실제 쓴 모델 정직 표시
     } catch(e2){
       setLoad(true, 'Gemini 전체 혼잡 → GPT-4o로 재시도 중...', b64Pages[0]);
       toast('⚠️ Gemini 혼잡 — GPT-4o 백업 분석', 'warn', 2500);
