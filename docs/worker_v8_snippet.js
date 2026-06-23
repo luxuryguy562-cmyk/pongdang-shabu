@@ -95,10 +95,12 @@ async function callVertexCascade(body, env){
   try { sa = JSON.parse(env.GCP_SA_JSON); } catch(e){ return jsonError('GCP_SA_JSON 파싱 실패', 500); }
   const token = await getAccessToken(sa);
   const project = sa.project_id;
+  // Vertex는 contents 각 항목에 role(user/model) 필수 — 앱이 안 보내면 'user' 자동 부여 (AI Studio는 생략 허용, Vertex는 엄격)
+  const contents = (body.contents || []).map(c => (c && c.role) ? c : { ...c, role: 'user' });
   let lastText = 'Vertex 호출 실패', lastStatus = 502;
   for(const model of GEMINI_CASCADE){
     const url = `https://${VERTEX_LOCATION}-aiplatform.googleapis.com/v1/projects/${project}/locations/${VERTEX_LOCATION}/publishers/google/models/${model}:generateContent`;
-    const payload = { contents: body.contents, generationConfig: { ...(body.generationConfig || {}), maxOutputTokens: 4000, temperature: 0.1 } };
+    const payload = { contents, generationConfig: { ...(body.generationConfig || {}), maxOutputTokens: 4000, temperature: 0.1 } };
     let res;
     try {
       res = await fetch(url, { method:'POST', headers:{ 'Authorization':`Bearer ${token}`, 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
