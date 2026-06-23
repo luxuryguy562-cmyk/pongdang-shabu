@@ -1609,9 +1609,10 @@ async function _rcpAICallWithFallback(parts, timeoutSec, pageCount){
     const raw = await callGemini(parts, timeoutSec, 'receipt_ocr', 'gemini-2.5-flash', 'gemini');
     return { raw, usedFallback:false, fallbackModel:'', fallbackProvider:'' };
   } catch(geminiErr){
-    const m = String(geminiErr?.message || '').toLowerCase();
-    const isOverloadLike = /high demand|overload|currently|503|429|시간 초과|비어있|json|응답 오류/i.test(m);
-    if(!isOverloadLike) throw geminiErr;
+    const m = String(geminiErr?.message || '');
+    // 충전금(크레딧) 소진은 백업해도 무의미 → 즉시 안내. 그 외 모든 오류(404·503·500·429·타임아웃·네트워크 등)는 백업 사슬 시도.
+    //   (2026-06-23 버그 수정: 404가 백업 조건에서 빠져 Gemini 404 시 GPT로 안 넘어가고 그냥 실패하던 문제)
+    if(/충전금|크레딧/.test(m)) throw geminiErr;
     try {
       setLoad(true, 'Gemini Flash 혼잡 → Gemini 2.0으로 재시도 중...', b64Pages[0]);
       const raw = await callGemini(parts, timeoutSec+10, 'receipt_ocr', 'gemini-2.0-flash', 'gemini');
