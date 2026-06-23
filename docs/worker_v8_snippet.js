@@ -100,7 +100,8 @@ async function callVertexCascade(body, env){
   let lastText = 'Vertex 호출 실패', lastStatus = 502;
   for(const model of GEMINI_CASCADE){
     const url = `https://${VERTEX_LOCATION}-aiplatform.googleapis.com/v1/projects/${project}/locations/${VERTEX_LOCATION}/publishers/google/models/${model}:generateContent`;
-    const payload = { contents, generationConfig: { ...(body.generationConfig || {}), maxOutputTokens: 4000, temperature: 0.1 } };
+    // thinkingBudget:0 = 생각(thinking) 끄기 — 안 끄면 느리고 토큰 다 써서 답 잘림(MAX_TOKENS). dev_lessons #201 "켜지 마라"
+    const payload = { contents, generationConfig: { ...(body.generationConfig || {}), maxOutputTokens: 4000, temperature: 0.1, thinkingConfig: { thinkingBudget: 0 } } };
     let res;
     try {
       res = await fetch(url, { method:'POST', headers:{ 'Authorization':`Bearer ${token}`, 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
