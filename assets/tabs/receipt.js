@@ -2640,15 +2640,15 @@ function openReceiptEdit(id){
   document.getElementById('reDate').value=r.receipt_date||ymdLocal(new Date());
   document.getElementById('reVendor').value=r.vendor||'';
   document.getElementById('reItem').value=r.item||'';
-  // 단가 = 부가세 포함 단가(금액÷수량) — 단가×수량=금액 곱셈 일치 + 부가세 숨김 (2026-06-22 사장님 결정, 분석카드와 통일)
-  const _q=parseFloat(r.qty)||0, _t=r.total_price||0;
-  const _dispU = (_q>0 && _t) ? Math.round(_t/_q) : (parseInt(r.unit_price)||0);
-  document.getElementById('reUnitPrice').value=_dispU?fmt(_dispU):'';
+  // 단가 = 세전(공급가) 단가, 부가세 별도. 합계 = 단가×수량 + 부가세 (분석카드와 통일, 2026-06-23)
+  const _q=parseFloat(r.qty)||0, _t=r.total_price||0, _tax=parseInt(r.tax_amount)||0;
+  const _u=parseInt(r.unit_price)||0;
+  document.getElementById('reUnitPrice').value=_u?fmt(_u):'';
   document.getElementById('reQty').value=(r.qty!=null&&r.qty!=='')?r.qty:'';
+  document.getElementById('reTax').value=_tax?fmt(_tax):'';
   document.getElementById('reAmount').value=r.total_price?fmt(r.total_price):'';
-  // 단가×수량이 합계와 이미 맞으면 자동계산 허용(수량 수정 편의), 안 맞으면(OCR 오독) 합계 보호 → 단가만 고침
-  const _u=_dispU;
-  _reEditAmountManual = _t>0 && !(_u>0 && _q>0 && Math.round(_u*_q)===_t);
+  // 단가×수량+부가세가 합계와 맞으면 자동계산 허용(수량 수정 편의), 안 맞으면(OCR 오독) 합계 보호 → 단가만 고침
+  _reEditAmountManual = _t>0 && !(_u>0 && _q>0 && Math.round(_u*_q)+_tax===_t);
   document.getElementById('reCatBtn').innerHTML=(r.category?'🏷️ '+getCatLabel(r.category,''):'미분류 ▸');
   const noteVal=(r.note==='정상')?'정상':'오답';
   document.querySelectorAll('input[name="reNote"]').forEach(i=>{i.checked=(i.value===noteVal);});
@@ -2663,7 +2663,18 @@ function onReEditUnitQty(el){
   if(_reEditAmountManual) return; // 합계 직접 고쳤으면 자동계산 안 함
   const u=parseInt((document.getElementById('reUnitPrice').value||'').replace(/[^0-9]/g,''),10)||0;
   const q=parseFloat((document.getElementById('reQty').value||'').replace(/[^0-9.]/g,''))||0;
-  if(u>0&&q>0) document.getElementById('reAmount').value=fmt(Math.round(u*q));
+  const tax=parseInt((document.getElementById('reTax').value||'').replace(/[^0-9]/g,''),10)||0;
+  if(u>0&&q>0) document.getElementById('reAmount').value=fmt(Math.round(u*q)+tax); // 단가×수량 + 부가세 = 합계
+}
+// 부가세 직접 입력 → 합계 재계산 (단가×수량 + 부가세). 2026-06-23
+function onReEditTax(el){
+  const raw=String(el.value||'').replace(/[^0-9]/g,'');
+  el.value = raw?fmt(parseInt(raw,10)):'';
+  if(_reEditAmountManual) return;
+  const u=parseInt((document.getElementById('reUnitPrice').value||'').replace(/[^0-9]/g,''),10)||0;
+  const q=parseFloat((document.getElementById('reQty').value||'').replace(/[^0-9.]/g,''))||0;
+  const tax=parseInt(raw||'0',10)||0;
+  if(u>0&&q>0) document.getElementById('reAmount').value=fmt(Math.round(u*q)+tax);
 }
 // 합계 직접 입력 → 이후 단가·수량 변경해도 합계 보호 (지우면 자동계산 재허용)
 function onReEditAmount(el){
@@ -2690,6 +2701,7 @@ async function saveReceiptEdit(){
   const qtyRaw=(document.getElementById('reQty').value||'').replace(/[^0-9.]/g,'');
   const qty=qtyRaw?parseFloat(qtyRaw):null;
   const amount=unFmt(document.getElementById('reAmount').value)||0;
+  const taxAmount=parseInt((document.getElementById('reTax').value||'').replace(/[^0-9]/g,''),10)||0; // 부가세 (2026-06-23)
   const note=document.querySelector('input[name="reNote"]:checked')?.value||'정상';
   const cat=rcpEditingCategory||'';
   if(!date) return toast('날짜를 입력하세요','warn');
@@ -2713,7 +2725,8 @@ async function saveReceiptEdit(){
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').update({
     receipt_date:date,vendor,item,total_price:amount,
-    unit_price:unitPrice,qty:qty,
+    unit_price:unitPrice,qty:qty,tax_amount:taxAmount,
+    is_tax_free: taxAmount>0 ? false : undefined, // 부가세 넣으면 과세로 (면세 해제). 0이면 기존값 유지
     category:cat||null,category_id:resolveRcpCatId(cat),
     note
   }).eq('id',rcpEditingId).eq('store_id',currentStore.id);
