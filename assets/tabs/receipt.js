@@ -1852,18 +1852,21 @@ function onRcpVatToggle(idx){
   const fEl=tr.querySelector('.c-f');
   const sw=tr.querySelector('.vat-toggle .sw');
   const total=parseInt(String(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,''),10)||0;
+  const u=parseInt(String(tr.querySelector('.c-u')?.value||'').replace(/[^0-9]/g,''),10)||0;
+  const q=parseFloat(tr.querySelector('.c-q')?.value||'0')||0;
   const curTax=parseInt(String(tEl?.value||'0').replace(/[^0-9]/g,''),10)||0;
   if(curTax>0){
     // 켜져 있던 것 끄기 → 부가세 0
     if(tEl) tEl.value='0';
     if(sw) sw.classList.add('off');
   } else {
-    // 끄여 있던 것 켜기 → 합계에서 부가세 역산 (부가세 = 합계 ÷ 11)
-    const vat=Math.round(total/11);
+    // 켜기 → 부가세 계산. 단가·수량 있으면 공급가×10%(쌓기), 없으면(금액만 입력) 합계÷11(역산)
+    const vat = (u>0 && q>0) ? Math.round(u*q*0.1) : Math.round(total/11);
     if(tEl) tEl.value=String(vat);
     if(fEl) fEl.value='0'; // 부가세 있으면 면세 해제
     if(sw) sw.classList.remove('off');
   }
+  _rcpRecalcAmount(tr); // 단가·수량 있으면 금액 = 공급가 + 부가세 재계산 (없으면 금액 그대로)
   _rcpUpdateVatSplit(tr, idx);
 }
 // ─── 부가세 직접 입력 (천단위 콤마) + 분리표시 갱신 (2026-06-15) ───
@@ -1875,6 +1878,7 @@ function onRcpVatInput(el, idx){
   const sw=tr.querySelector('.vat-toggle .sw');
   const tax=parseInt(digits||'0',10)||0;
   if(sw){ if(tax>0) sw.classList.remove('off'); else sw.classList.add('off'); }
+  _rcpRecalcAmount(tr); // 부가세 입력 → 금액 = 공급가(단가×수량) + 부가세 재계산 (단가·수량 있을 때만). 누락 버그 수정 (2026-06-23)
   _rcpUpdateVatSplit(tr, idx);
 }
 // ─── 공급가/부가세/합계 분리표시 갱신 ───
@@ -1905,8 +1909,10 @@ function onRcpQtyInput(el, idx){
 function _rcpRecalcAmount(tr){
   const u=parseInt(String(tr.querySelector('.c-u')?.value||'').replace(/[^0-9]/g,''),10)||0;
   const q=parseFloat(tr.querySelector('.c-q')?.value||'0')||0;
+  const t=parseInt(String(tr.querySelector('.c-t')?.value||'0').replace(/[^0-9]/g,''),10)||0; // 부가세
   if(u>0 && q>0){
-    const amt=Math.round(u*q);
+    // 단가(세전 공급가) × 수량 + 부가세 = 금액(낸 돈, 세후). 부가세 빠뜨리던 버그 수정 (2026-06-23)
+    const amt=Math.round(u*q)+t;
     const pEl=tr.querySelector('.c-p');
     if(pEl) pEl.value=fmt(amt);
   }
