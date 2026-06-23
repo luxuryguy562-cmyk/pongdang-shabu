@@ -437,9 +437,12 @@ let currentEmp = null, isManager = false, isOwner = false;
 // auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
 let authLevel = 'staff';       // 화면에 적용되는 권한 (DB 실제 권한)
 let _myWorkMode = false;       // '내 근무' 모드 (관리자가 본인 직원 화면 볼 때, 2026-06-15) — 화면만, DB권한 불변
-// 관리자 직급 (직급명=권한 — 사장님 직관: 점장/팀장/매니저는 곧 관리자, 2026-06-15)
-const MGR_ROLES=['점장','팀장','매니저'];
-function _roleIsManager(){ return !!(typeof currentEmp!=='undefined' && currentEmp && MGR_ROLES.includes(currentEmp.role)); }
+// 직급 화면권한 설정(role_permissions)이 있으면 관리자 (어떤 직급이든 설정하면 관리자급 권한)
+function _roleIsManager(){
+  if(!currentEmp || !currentEmp.role) return false;
+  const perms = settings && settings.role_permissions;
+  return !!(perms && perms[currentEmp.role] && perms[currentEmp.role].length > 0);
+}
 // 권한 진입점: authLevel 또는 관리자 직급 → isManager/isOwner 갱신
 function recalcPermissions(){
   if(_myWorkMode){ isOwner=false; isManager=false; return; } // 내 근무 모드 = 직원처럼 (화면용, 실제 권한 아님)
@@ -672,6 +675,9 @@ function nav(tab, el) {
     royalty:'expHub', cardfee:'expHub', catReceipt:'expHub', manualCat:'expHub',
     expHubVendor:'expHub',
     myWorkplaces:'myWorkplaces',
+    empCommunity:'empCommunity',
+    ownerCommunity:'ownerCommunity',
+    empSettings:'empSettings',
   };
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
@@ -694,6 +700,9 @@ function nav(tab, el) {
     franchiseHome: loadFranchiseHome,
     myStores: loadMyStores,
     myWorkplaces: loadMyWorkplaces,
+    empCommunity: loadEmpCommunity,
+    ownerCommunity: loadOwnerCommunity,
+    empSettings: loadEmpSettings,
     // reserve 탭 폐기 (2026-05-22)
     vendors: loadVendors,
     fixedcost: loadFixedCosts,
@@ -1207,6 +1216,77 @@ async function loadMyWorkplaces(){
 
 function mwAddWorkplace(){ toast('근무처 추가는 다음 단계에서 연결됩니다','info'); }
 function mwCheckInvites(){ toast('연결 요청 확인은 다음 단계에서 연결됩니다','info'); }
+
+// ─── 직원 커뮤니티 (공간 오픈) ───
+function loadEmpCommunity(){ /* 준비 중 화면은 정적 HTML — 로딩 불필요 */ }
+
+// ─── 사장 커뮤니티 (공간 오픈) ───
+function loadOwnerCommunity(){ /* 준비 중 화면은 정적 HTML — 로딩 불필요 */ }
+
+// ─── 직원 설정 ───
+async function loadEmpSettings(){
+  const nameEl = document.getElementById('empSettingsName');
+  const phoneEl = document.getElementById('empSettingsPhone');
+  const listEl = document.getElementById('empSettingsWorkplaces');
+  if(!currentEmp){ return; }
+  if(nameEl) nameEl.textContent = currentEmp.name || '—';
+  if(phoneEl) phoneEl.textContent = currentEmp.phone || '—';
+  if(!listEl) return;
+  try {
+    // 직원이 연결된 매장 목록 조회 (employees 테이블에서 본인 레코드의 store 정보)
+    const { data, error } = await sb
+      .from('employees')
+      .select('stores(id,name)')
+      .eq('phone', currentEmp.phone)
+      .eq('is_active', true);
+    if(error) throw error;
+    if(!data || data.length === 0){
+      listEl.innerHTML = '<div class="ms-empty">연결된 근무처가 없어요.</div>';
+      return;
+    }
+    listEl.innerHTML = data.map(r => {
+      const s = r.stores;
+      if(!s) return '';
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">${s.name.slice(0,1)}</div>
+        <div style="font-size:14px;font-weight:700;">${s.name}</div>
+      </div>`;
+    }).join('');
+  } catch(e){
+    if(listEl) listEl.innerHTML = '<div class="ms-empty">불러오기 실패</div>';
+    console.error('[loadEmpSettings]', e);
+  }
+  // 승인 대기 중인 연결 요청 조회
+  const pendingEl = document.getElementById('empSettingsPending');
+  const pendingSection = document.getElementById('empSettingsPendingSection');
+  if(pendingEl && pendingSection){
+    try {
+      const token = localStorage.getItem('pd_token');
+      if(token){
+        const { data: pd } = await sb.functions.invoke('join-store', { body: { token, action: 'list_my_pending' } });
+        const rows = pd?.rows || [];
+        if(rows.length > 0){
+          pendingEl.innerHTML = rows.map(r => `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--orange,#f97316);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">${(r.stores?.name||'매').slice(0,1)}</div>
+            <div>
+              <div style="font-size:14px;font-weight:700;">${r.stores?.name||'매장'}</div>
+              <div style="font-size:11px;color:var(--gray-500);">사장님 승인 대기 중</div>
+            </div>
+          </div>`).join('');
+          pendingSection.style.display = '';
+        } else {
+          pendingSection.style.display = 'none';
+        }
+      }
+    } catch(e){ console.warn('[empSettings pending]', e); }
+  }
+}
+
+// ─── 직원 설정 — 새 근무처 연결 버튼 ───
+function openJoinStore(){
+  const ov = document.getElementById('joinOverlay');
+  if(ov){ ov.style.display='block'; }
+}
 
 // ─── 실시간 (Supabase Realtime broadcast) + 가입 알림 종 배지 (2026-06-09) ───
 let _storeChannel = null;
