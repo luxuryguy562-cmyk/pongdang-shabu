@@ -675,6 +675,9 @@ function nav(tab, el) {
     royalty:'expHub', cardfee:'expHub', catReceipt:'expHub', manualCat:'expHub',
     expHubVendor:'expHub',
     myWorkplaces:'myWorkplaces',
+    empCommunity:'empCommunity',
+    ownerCommunity:'ownerCommunity',
+    empSettings:'empSettings',
   };
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
@@ -697,6 +700,9 @@ function nav(tab, el) {
     franchiseHome: loadFranchiseHome,
     myStores: loadMyStores,
     myWorkplaces: loadMyWorkplaces,
+    empCommunity: loadEmpCommunity,
+    ownerCommunity: loadOwnerCommunity,
+    empSettings: loadEmpSettings,
     // reserve 탭 폐기 (2026-05-22)
     vendors: loadVendors,
     fixedcost: loadFixedCosts,
@@ -1210,6 +1216,53 @@ async function loadMyWorkplaces(){
 
 function mwAddWorkplace(){ toast('근무처 추가는 다음 단계에서 연결됩니다','info'); }
 function mwCheckInvites(){ toast('연결 요청 확인은 다음 단계에서 연결됩니다','info'); }
+
+// ─── 직원 커뮤니티 (공간 오픈) ───
+function loadEmpCommunity(){ /* 준비 중 화면은 정적 HTML — 로딩 불필요 */ }
+
+// ─── 사장 커뮤니티 (공간 오픈) ───
+function loadOwnerCommunity(){ /* 준비 중 화면은 정적 HTML — 로딩 불필요 */ }
+
+// ─── 직원 설정 ───
+async function loadEmpSettings(){
+  const nameEl = document.getElementById('empSettingsName');
+  const phoneEl = document.getElementById('empSettingsPhone');
+  const listEl = document.getElementById('empSettingsWorkplaces');
+  if(!currentEmp){ return; }
+  if(nameEl) nameEl.textContent = currentEmp.name || '—';
+  if(phoneEl) phoneEl.textContent = currentEmp.phone || '—';
+  if(!listEl) return;
+  try {
+    // 직원이 연결된 매장 목록 조회 (employees 테이블에서 본인 레코드의 store 정보)
+    const { data, error } = await sb
+      .from('employees')
+      .select('stores(id,name)')
+      .eq('phone', currentEmp.phone)
+      .eq('is_active', true);
+    if(error) throw error;
+    if(!data || data.length === 0){
+      listEl.innerHTML = '<div class="ms-empty">연결된 근무처가 없어요.</div>';
+      return;
+    }
+    listEl.innerHTML = data.map(r => {
+      const s = r.stores;
+      if(!s) return '';
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">${s.name.slice(0,1)}</div>
+        <div style="font-size:14px;font-weight:700;">${s.name}</div>
+      </div>`;
+    }).join('');
+  } catch(e){
+    if(listEl) listEl.innerHTML = '<div class="ms-empty">불러오기 실패</div>';
+    console.error('[loadEmpSettings]', e);
+  }
+}
+
+// ─── 직원 설정 — 새 근무처 연결 버튼 ───
+function openJoinStore(){
+  const ov = document.getElementById('joinOverlay');
+  if(ov){ ov.style.display='block'; }
+}
 
 // ─── 실시간 (Supabase Realtime broadcast) + 가입 알림 종 배지 (2026-06-09) ───
 let _storeChannel = null;
