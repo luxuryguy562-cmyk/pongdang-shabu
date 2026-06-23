@@ -1804,7 +1804,7 @@ function buildReceiptRow(i={}) {
       </div>
       <div class="vat-split" id="vatsplit-${idx}" style="display:${_vatOn?'block':'none'}">${vatSplitTxt}</div>
     </div>`;
-  return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}">
+  return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}" data-manual="${i._manual?'1':''}">
     <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
     <div class="ric-l1">
       ${nameSuspectMark}
@@ -1850,23 +1850,35 @@ function onRcpVatToggle(idx){
   const tr=document.getElementById('row-'+idx); if(!tr) return;
   const tEl=tr.querySelector('.c-t');
   const fEl=tr.querySelector('.c-f');
+  const pEl=tr.querySelector('.c-p');
+  const uEl=tr.querySelector('.c-u');
   const sw=tr.querySelector('.vat-toggle .sw');
-  const total=parseInt(String(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,''),10)||0;
-  const u=parseInt(String(tr.querySelector('.c-u')?.value||'').replace(/[^0-9]/g,''),10)||0;
+  const total=parseInt(String(pEl?.value||'').replace(/[^0-9]/g,''),10)||0;
+  const u=parseInt(String(uEl?.value||'').replace(/[^0-9]/g,''),10)||0;
   const q=parseFloat(tr.querySelector('.c-q')?.value||'0')||0;
   const curTax=parseInt(String(tEl?.value||'0').replace(/[^0-9]/g,''),10)||0;
-  if(curTax>0){
-    // 켜져 있던 것 끄기 → 부가세 0
-    if(tEl) tEl.value='0';
-    if(sw) sw.classList.add('off');
+  const isManual = tr.dataset.manual==='1'; // 수동 입력 = 쌓기(금액=공급가+부가세). 분석 영수증 = 금액 고정(낸 돈 불변)
+  if(isManual){
+    // 수동: 단가·수량 있으면 공급가×10% 쌓기, 없으면 합계÷11. 금액은 단가×수량+부가세로 재계산.
+    if(curTax>0){ if(tEl) tEl.value='0'; if(sw) sw.classList.add('off'); }
+    else { const vat=(u>0&&q>0)?Math.round(u*q*0.1):Math.round(total/11); if(tEl) tEl.value=String(vat); if(fEl) fEl.value='0'; if(sw) sw.classList.remove('off'); }
+    _rcpRecalcAmount(tr);
   } else {
-    // 켜기 → 부가세 계산. 단가·수량 있으면 공급가×10%(쌓기), 없으면(금액만 입력) 합계÷11(역산)
-    const vat = (u>0 && q>0) ? Math.round(u*q*0.1) : Math.round(total/11);
-    if(tEl) tEl.value=String(vat);
-    if(fEl) fEl.value='0'; // 부가세 있으면 면세 해제
-    if(sw) sw.classList.remove('off');
+    // 분석 영수증: 금액(낸 돈) 고정. 과세/면세만 바꾸고 단가(공급가÷수량) 재계산.
+    if(curTax>0){
+      // 끄기(면세) → 부가세 0, 공급가=금액, 단가=금액÷수량
+      if(tEl) tEl.value='0';
+      if(sw) sw.classList.add('off');
+      if(uEl && q>0) uEl.value=fmt(Math.round(total/q));
+    } else {
+      // 켜기(과세) → 부가세=금액÷11(포함), 공급가=금액−부가세, 단가=공급가÷수량
+      const vat=Math.round(total/11);
+      if(tEl) tEl.value=String(vat);
+      if(fEl) fEl.value='0';
+      if(sw) sw.classList.remove('off');
+      if(uEl && q>0) uEl.value=fmt(Math.round((total-vat)/q));
+    }
   }
-  _rcpRecalcAmount(tr); // 단가·수량 있으면 금액 = 공급가 + 부가세 재계산 (없으면 금액 그대로)
   _rcpUpdateVatSplit(tr, idx);
 }
 // ─── 부가세 직접 입력 (천단위 콤마) + 분리표시 갱신 (2026-06-15) ───
@@ -1878,7 +1890,15 @@ function onRcpVatInput(el, idx){
   const sw=tr.querySelector('.vat-toggle .sw');
   const tax=parseInt(digits||'0',10)||0;
   if(sw){ if(tax>0) sw.classList.remove('off'); else sw.classList.add('off'); }
-  _rcpRecalcAmount(tr); // 부가세 입력 → 금액 = 공급가(단가×수량) + 부가세 재계산 (단가·수량 있을 때만). 누락 버그 수정 (2026-06-23)
+  if(tr.dataset.manual==='1'){
+    _rcpRecalcAmount(tr); // 수동: 금액 = 단가×수량 + 부가세 (쌓기)
+  } else {
+    // 분석 영수증: 금액(낸 돈) 고정 → 단가만 재계산 (공급가=금액−부가세, 단가=공급가÷수량)
+    const total=parseInt(String(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,''),10)||0;
+    const q=parseFloat(tr.querySelector('.c-q')?.value||'0')||0;
+    const uEl=tr.querySelector('.c-u');
+    if(uEl && q>0) uEl.value=fmt(Math.round((total-tax)/q));
+  }
   _rcpUpdateVatSplit(tr, idx);
 }
 // ─── 공급가/부가세/합계 분리표시 갱신 ───
