@@ -437,9 +437,12 @@ let currentEmp = null, isManager = false, isOwner = false;
 // auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
 let authLevel = 'staff';       // 화면에 적용되는 권한 (DB 실제 권한)
 let _myWorkMode = false;       // '내 근무' 모드 (관리자가 본인 직원 화면 볼 때, 2026-06-15) — 화면만, DB권한 불변
-// 관리자 직급 (직급명=권한 — 사장님 직관: 점장/팀장/매니저는 곧 관리자, 2026-06-15)
-const MGR_ROLES=['점장','팀장','매니저'];
-function _roleIsManager(){ return !!(typeof currentEmp!=='undefined' && currentEmp && MGR_ROLES.includes(currentEmp.role)); }
+// 직급 화면권한 설정(role_permissions)이 있으면 관리자 (어떤 직급이든 설정하면 관리자급 권한)
+function _roleIsManager(){
+  if(!currentEmp || !currentEmp.role) return false;
+  const perms = settings && settings.role_permissions;
+  return !!(perms && perms[currentEmp.role] && perms[currentEmp.role].length > 0);
+}
 // 권한 진입점: authLevel 또는 관리자 직급 → isManager/isOwner 갱신
 function recalcPermissions(){
   if(_myWorkMode){ isOwner=false; isManager=false; return; } // 내 근무 모드 = 직원처럼 (화면용, 실제 권한 아님)
