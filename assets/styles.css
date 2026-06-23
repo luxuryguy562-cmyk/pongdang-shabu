@@ -14,7 +14,7 @@
   --card-shadow-lg:0 8px 24px rgba(20,40,80,0.10), 0 2px 6px rgba(20,40,80,0.06);
 }
 *{box-sizing:border-box;}
-html{overflow-x:hidden;overscroll-behavior:none;background:#FFFFFF;}
+html{overflow-x:hidden;overflow-x:clip;overscroll-behavior:none;background:#FFFFFF;}
 body{font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,Roboto,'Helvetica Neue','Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;margin:0;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;padding-top:calc(60px + env(safe-area-inset-top,0));padding-bottom:calc(56px + env(safe-area-inset-bottom,0));overflow-x:hidden;overflow-x:clip;overflow-y:visible;position:relative;max-width:100vw;min-height:100vh;min-height:100dvh;}
 /* 모든 요소 폰트 강제 상속 (monospace 등 명시 클래스만 예외) */
 *:not(.account-masked){font-family:inherit;}

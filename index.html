@@ -28,7 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260622e">
+<link rel="stylesheet" href="assets/styles.css?v=20260623a">
 </head>
 <body>
 
@@ -563,6 +563,7 @@
   <!-- 직원 nav: 홈 / 내 정보 (급여·개시마감·영수증은 홈 행동허브 버튼으로) -->
   <div class="nav-item staff-only" data-tab="attendance" data-action="nav|attendance|this" style="display:none;"><span class="ni"><svg><use href="#i-home"/></svg></span>홈</div>
   <div class="nav-item staff-only" data-tab="empPay" data-action="goEmpSched|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>급여</div>
+  <div class="nav-item staff-only" data-tab="myWorkplaces" data-action="nav|myWorkplaces|this" style="display:none;"><span class="ni"><svg><use href="#i-building"/></svg></span>현황</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -770,6 +771,11 @@
       <span style="font-size:12px;color:var(--gray-600);">×</span>
       <input type="text" id="reQty" placeholder="0" inputmode="decimal" data-input="onReEditUnitQty|this" style="width:56px;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
       <span style="font-size:12px;color:var(--gray-600);">개</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:12px;color:var(--gray-600);width:56px;">🧾 부가세</span>
+      <input type="text" id="reTax" placeholder="0" inputmode="numeric" data-input="onReEditTax|this" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
+      <span style="font-size:12px;color:var(--gray-600);">원</span>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
       <span style="font-size:12px;color:var(--gray-600);width:56px;">💰 합계</span>
@@ -982,10 +988,11 @@
       <span style="color:var(--gray-400);">▾</span>
     </button>
   </div>
-  <!-- 분류(소분류) 필터칩 — 카테고리 진입 시 동적 생성 (공산품·야채·육류·미분류). 미분류 = 상위로만 달린 영수증 -->
-  <div id="catReceiptSubChips" class="rcl-chips" style="margin-bottom:8px;"></div>
-  <!-- 거래처 필터칩 (데이터에서 동적 생성 — 진입 시 해당 칩 활성화) -->
-  <div id="catReceiptChips" class="rcl-chips"></div>
+  <!-- 필터 한 줄: 거래처 → 분류 순 (2026-06-22 사장님 요청, 같은 rcl-filterbtn 스타일로 통일) -->
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <div id="catReceiptChips" style="display:inline-flex;"></div>
+    <div id="catReceiptSubChips" style="display:inline-flex;"></div>
+  </div>
   <div id="catReceiptBody">
     <div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>
   </div>
@@ -1619,6 +1626,38 @@
   <div class="ms-actions">
     <button class="btn btn-secondary btn-full" data-action="msAddStore">+ 매장 추가</button>
     <button class="btn btn-secondary btn-full" data-action="msInviteFranchise">가맹점 초대</button>
+  </div>
+</div>
+
+<!-- ══ [직원] 내 근무처들 대시보드 ══ -->
+<div id="myWorkplacesCont" class="container">
+  <div class="card">
+    <div class="ms-head">
+      <div class="card-title"><svg class="icon-inline"><use href="#i-building"/></svg>내 근무처들</div>
+      <input type="month" id="mwMonth" class="input-inline" style="width:140px;" data-change="loadMyWorkplaces">
+    </div>
+
+    <!-- 요약 카드 2개 -->
+    <div class="ms-summary">
+      <div class="ms-sum-card ms-sum-rev">
+        <div class="ms-sum-label">총 근무시간</div>
+        <div class="ms-sum-val" id="mwTotalHours">—</div>
+      </div>
+      <div class="ms-sum-card ms-sum-profit">
+        <div class="ms-sum-label">총 예상 급여</div>
+        <div class="ms-sum-val" id="mwTotalWage">—</div>
+      </div>
+    </div>
+
+    <div class="ms-section-title">근무처별 현황</div>
+    <div id="mwWorkplaceList">
+      <div class="ms-empty">불러오는 중...</div>
+    </div>
+  </div>
+
+  <div class="ms-actions">
+    <button class="btn btn-secondary btn-full" data-action="mwAddWorkplace">+ 근무처 추가</button>
+    <button class="btn btn-secondary btn-full" data-action="mwCheckInvites">연결 요청 확인</button>
   </div>
 </div>
 
@@ -3358,7 +3397,7 @@
   <img id="imgFullSrc" style="max-width:90%;max-height:72vh;object-fit:contain;border-radius:12px;">
   <button style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:30px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;" data-action="closeImgFullPreview">닫기</button>
 </div>
-<script src="assets/tabs/receipt.js?v=20260622e"></script>
+<script src="assets/tabs/receipt.js?v=20260623b"></script>
 <script src="assets/tabs/attendance.js?v=20260622b"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260622b"></script>

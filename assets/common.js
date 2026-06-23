@@ -343,7 +343,7 @@ function _rcpPromptOnline({vendorName, catList, multiPageHint}){
 [응답]
 {
   ${_rcpDateField()},
-  "items": [ {i,spec,og,u,q,p,t,f,c} 행 배열 ],
+  "items": [ {i,spec,og,u,q,p,t,f,c,vu} 행 배열 ],
 ${_rcpCommonRespTail()}
 }
 
@@ -354,8 +354,9 @@ ${_rcpCommonRespTail()}
 - u:단가 (없으면 null)
 - q:수량 (없으면 1)
 - p:행 [상품금액/주문금액] 인쇄값 그대로 정수(할인 이미 반영된 실결제 단위). u×q 계산 X — 인쇄값 우선
-- t:0 (온라인 주문 화면은 행별 세액 분리 안 됨)
-- f:면세 여부(true/false). 보통 false
+- t:0 (온라인 주문 화면은 행별 세액 분리 안 됨 — 부가세는 앱이 과세분에서 자동 계산)
+- f:면세 여부(true/false). 미가공 농축수산물(쌀·생선·정육·야채·과일)·도서·신문 = true(면세). 그 외 공산품·비품·가공식품·생활용품·주방용품·생수·음료 = false(과세). 못 정하면 false
+- vu:면세/과세 판단이 애매하면 true (미가공인지 가공인지 헷갈리는 식품 — 냉동·반가공·손질·절임·양념·세트 등). 명확하면 false 또는 생략. ⚠️공산품·비품 등 명백한 과세나 생야채·생과일 등 명백한 미가공은 vu=false
 - c:카테고리 [${catList}] — 품목 성격대로 행마다. ⚠️반드시 이 목록에 있는 이름 그대로만 사용. 목록에 없는 새 분류명 절대 만들지 마라. 못 정하면 목록 중 가장 가까운 것. 빈 값 X
 
 [규칙]
@@ -670,6 +671,7 @@ function nav(tab, el) {
     expcat:'expHub',
     royalty:'expHub', cardfee:'expHub', catReceipt:'expHub', manualCat:'expHub',
     expHubVendor:'expHub',
+    myWorkplaces:'myWorkplaces',
   };
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el && el.classList) el.classList.add('active');
@@ -691,6 +693,7 @@ function nav(tab, el) {
     dashboard: loadDashboard,
     franchiseHome: loadFranchiseHome,
     myStores: loadMyStores,
+    myWorkplaces: loadMyWorkplaces,
     // reserve 탭 폐기 (2026-05-22)
     vendors: loadVendors,
     fixedcost: loadFixedCosts,
@@ -1132,6 +1135,78 @@ async function enterStoreFromList(storeId, storeName){
 // 자리만 (동작은 다음 단계)
 function msAddStore(){ toast('매장 추가는 다음 단계에서 연결됩니다','info'); }
 function msInviteFranchise(){ toast('가맹점 초대는 다음 단계에서 연결됩니다','info'); }
+
+// ─── 새 기능: 직원 내 근무처들 대시보드 ───
+async function loadMyWorkplaces(){
+  const listEl = document.getElementById('mwWorkplaceList');
+  const mEl = document.getElementById('mwMonth');
+  const _now = new Date();
+  const _todayLocal = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+  const ym = (mEl && mEl.value) || _todayLocal.slice(0,7);
+  if(mEl && !mEl.value) mEl.value = ym;
+
+  if(!currentEmp || !currentEmp.id){
+    if(listEl) listEl.innerHTML = '<div class="ms-empty">로그인이 필요해요.</div>';
+    return;
+  }
+
+  setLoad(true, '근무처 현황 불러오는 중...');
+  try{
+    const [y, m] = ym.split('-').map(Number);
+    const startDate = ym + '-01';
+    const nextYM = m === 12 ? `${y+1}-01-01` : `${y}-${String(m+1).padStart(2,'0')}-01`;
+
+    // 이번 달 출퇴근 완료 기록 (헌법 7 단일 진실 — calculated_wage 재사용)
+    const { data: logs, error } = await sb
+      .from('attendance_logs')
+      .select('total_work_min, calculated_wage')
+      .eq('employee_id', currentEmp.id)
+      .gte('check_in', startDate)
+      .lt('check_in', nextYM)
+      .not('check_out', 'is', null);
+
+    if(error) throw error;
+
+    const totalMin = (logs||[]).reduce((s,r)=> s + (Number(r.total_work_min)||0), 0);
+    const totalWage = (logs||[]).reduce((s,r)=> s + (Number(r.calculated_wage)||0), 0);
+    const hh = Math.floor(totalMin / 60);
+    const mm = Math.round(totalMin % 60);
+    const totalH = mm > 0 ? `${hh}h ${mm}m` : `${hh}h`;
+
+    document.getElementById('mwTotalHours').innerText = totalH;
+    document.getElementById('mwTotalWage').innerText = fmt(totalWage) + '원';
+
+    if(listEl){
+      if(!logs || logs.length === 0){
+        listEl.innerHTML = '<div class="ms-empty">이번 달 근무 기록이 없어요.</div>';
+      } else {
+        const storeName = (currentStore && currentStore.name) || '현재 근무처';
+        listEl.innerHTML = `
+        <div class="ms-store" data-action="nav|attendance|this">
+          <div class="ms-rank" style="color:var(--blue);">1</div>
+          <div class="ms-store-info">
+            <div class="ms-store-name">${storeName.replace(/</g,'&lt;')}</div>
+            <div class="ms-store-code">예상 급여 <b style="color:var(--toss-green,#0CAB6C);">${fmt(totalWage)}원</b></div>
+          </div>
+          <div class="ms-store-rev">
+            <div class="ms-rev-val">${totalH}</div>
+            <div class="ms-rev-pct">전체 100%</div>
+          </div>
+          <div class="ms-chev">›</div>
+        </div>`;
+      }
+    }
+    setLoad(false);
+  }catch(e){
+    setLoad(false);
+    if(listEl) listEl.innerHTML = '<div class="ms-empty">근무처 현황을 불러오지 못했어요.</div>';
+    console.error('[loadMyWorkplaces]', e);
+    toast('근무처 현황 불러오기 실패','error');
+  }
+}
+
+function mwAddWorkplace(){ toast('근무처 추가는 다음 단계에서 연결됩니다','info'); }
+function mwCheckInvites(){ toast('연결 요청 확인은 다음 단계에서 연결됩니다','info'); }
 
 // ─── 실시간 (Supabase Realtime broadcast) + 가입 알림 종 배지 (2026-06-09) ───
 let _storeChannel = null;
