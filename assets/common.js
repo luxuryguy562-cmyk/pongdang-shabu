@@ -974,10 +974,14 @@ async function openStoreSheet() {
   // 검색 입력창 비우고 시작
   const searchEl = document.getElementById('storeSearchInput');
   if(searchEl) searchEl.value = '';
+  // 이미 받아둔 목록 있으면 즉시 보여줌(재오픈 빠름), 없으면 '불러오는 중' 표시 → 빈 화면 방지
+  const listEl = document.getElementById('storeList');
+  if(_storeListCache.length){ renderStoreList(_storeListCache); }
+  else if(listEl){ listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>매장 목록 불러오는 중…</p></div>'; }
   // 로그인 전이라 신분증 없음 → 공개 통로(login-meta)로 매장 목록만 안전하게 받음 (RLS 잠금 후에도 동작)
   let list = [];
   try{ const {data} = await sb.functions.invoke('login-meta',{body:{action:'stores'}}); if(data&&data.ok) list = data.stores||[]; }catch(_e){}
-  _storeListCache = list;
+  if(list.length){ _storeListCache = list; }
   renderStoreList(_storeListCache);
 }
 function renderStoreList(stores){
