@@ -1135,12 +1135,13 @@ async function runAI() {
     // (옛 thinking 플래그 제거 2026-06-10 — Gemini thinking은 한국 차단(dev_lessons #201), worker도 무시. 죽은 코드 정리)
     // 거래처 모드(온라인·주류 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
     // 온라인·마트(직구)·주류는 전체 자율(getCatListForPrompt 그대로)
+    let vendorCatNames = []; // 이 거래처가 지정한 취급분류 이름들 — 품목 분류 강제용 (사장님: 거래처=지정분류)
     if(isVendorModeAI && !isOnlineModeAI && !isLiquorModeAI && rcpVendorId){
       const _v = (typeof vendors!=='undefined') ? vendors.find(x=>x.id===rcpVendorId) : null;
       const _handled = _v && Array.isArray(_v.handled_category_ids) ? _v.handled_category_ids : [];
       if(_handled.length){
         const _names = _handled.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean);
-        if(_names.length) catList = _names.join(',');
+        if(_names.length){ catList = _names.join(','); vendorCatNames = _names; }
       }
     }
     // ─── 통합 개선 (2026-05-19 (4)) ───
@@ -1207,6 +1208,15 @@ async function runAI() {
     const depositIn  = isLiquorModeAI ? (parseInt(raw?.deposit_in)||0)  : 0;
     const depositOut = isLiquorModeAI ? (parseInt(raw?.deposit_out)||0) : 0;
     const defaultCat = isVendorModeAI ? (rcpCatName || '식자재') : '';
+    // ─── 거래처 지정분류 강제 (2026-06-23 사장님 호소: 순창국제=공산품인데 AI가 부모 "식자재"로 → 미분류 떨어짐) ───
+    //   거래처에 취급분류 지정돼 있으면 AI 추측보다 사장님 지정이 우선.
+    //   · 1개(예: 공산품) → 전 품목 그 분류로 고정 (AI가 "식자재"라 해도 무시)
+    //   · 여러 개(예: 육류·공산품) → AI가 그 목록 안에서 고른 것만 인정, 목록 밖이면 첫 분류로 스냅(부모 "식자재" 같은 미분류 방지)
+    const _enforceVendorCat = (aiCat) => {
+      if(!vendorCatNames.length) return aiCat || defaultCat; // 거래처 지정분류 없음 → 기존대로 AI 분류
+      if(vendorCatNames.length===1) return vendorCatNames[0];
+      return vendorCatNames.find(n => n===aiCat) || vendorCatNames[0];
+    };
     let list = itemsRaw.map(x => ({
       date: x.d || x.date || respDate || ymdLocal(new Date()),
       vendor: x.v ?? x.vendor ?? respVendor ?? '',
@@ -1219,7 +1229,7 @@ async function runAI() {
       taxAmount: x.t ?? x.taxAmount ?? 0,
       isTaxFree: (x.f===true || x.f==='true' || x.isTaxFree===true), // 면세 여부 (의제매입세액공제용)
       _vatUncertain: (x.vu===true || x.vu==='true'), // 면세/과세 애매 — 카드에 "부가세 확인?" 표시 (2026-06-22)
-      category: x.c || x.category || defaultCat
+      category: _enforceVendorCat(x.c || x.category)
     }));
     // 주류 채널: 보증금 입금(+) / 회수(−) 행 추가
     if(isLiquorModeAI){
