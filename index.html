@@ -1693,8 +1693,7 @@
         <!-- 옵션은 refreshVendorListFilter에서 동적 채움 -->
         <option value="">전체 카테고리</option>
       </select>
-      <button id="vendorReclassBtn" class="btn btn-secondary btn-sm" style="flex:0 0 auto;padding:10px 10px;font-size:12px;" data-action="openVendorReclassSheet" title="기존 식자재/직구 거래처를 육류/야채/공산품으로 재지정">🔄 재분류</button>
-      <button id="vendorAddBtn" class="btn btn-primary btn-sm" data-action="openAddVendorSheet|vendor">+ 추가</button>
+<button id="vendorAddBtn" class="btn btn-primary btn-sm" data-action="openAddVendorSheet|vendor">+ 추가</button>
     </div>
     <div id="vendorListData"><div class="empty-state"><div class="empty-icon">🏪</div><p>등록된 거래처가 없습니다</p></div></div>
   </div>
@@ -2157,37 +2156,6 @@
   <div class="sheet" id="catPickerBox" style="z-index:7001;max-height:85vh;padding:0;display:flex;flex-direction:column;overflow:hidden;"></div>
 </div>
 
-<!-- 거래 전체 편집 시트 (날짜/내용/분류/입금/출금/정산제외) -->
-<div class="sheet-overlay" id="txEditSheet">
-  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
-    <div class="sheet-title">거래 편집</div>
-    <div style="font-size:11px;color:var(--gray-600);margin:0 0 14px;">수정 후 저장을 눌러야 반영됩니다.</div>
-    <label style="font-size:12px;font-weight:700;color:var(--gray-600);">날짜</label>
-    <input type="date" class="input-field" id="txEditDate" style="margin-bottom:10px;">
-    <label style="font-size:12px;font-weight:700;color:var(--gray-600);">내용</label>
-    <input type="text" class="input-field" id="txEditDesc" placeholder="거래 내용" style="margin-bottom:10px;">
-    <label style="font-size:12px;font-weight:700;color:var(--gray-600);">분류</label>
-    <div id="txEditCatArea" style="margin-bottom:10px;"></div>
-    <div id="txEditAmtArea" style="display:flex;gap:8px;margin-bottom:10px;">
-      <div style="flex:1;">
-        <label style="font-size:12px;font-weight:700;color:var(--success);">입금</label>
-        <input type="text" inputmode="numeric" class="input-field" id="txEditIn" placeholder="0" style="margin-bottom:0;">
-      </div>
-      <div style="flex:1;">
-        <label style="font-size:12px;font-weight:700;color:var(--danger);">출금</label>
-        <input type="text" inputmode="numeric" class="input-field" id="txEditOut" placeholder="0" style="margin-bottom:0;">
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--gray-100);border-radius:10px;margin-bottom:14px;">
-      <input type="checkbox" id="txEditExclude" style="width:18px;height:18px;">
-      <label for="txEditExclude" style="font-size:13px;font-weight:700;flex:1;">정산에서 제외 (카드대금/배당금 등)</label>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-secondary" data-action="closeTxEdit" style="flex:1;padding:12px;">취소</button>
-      <button class="btn btn-primary" data-action="saveTxEdit" style="flex:2;padding:12px;">저장</button>
-    </div>
-  </div>
-</div>
 
 <!-- ══ [10c] 로열티 (신규 — 매출 비례 자동 계산) ══ -->
 <div id="royaltyCont" class="container">
@@ -2851,20 +2819,6 @@
   <button id="vendorDeleteBtn" class="btn btn-danger" style="display:none;width:100%;padding:12px;margin-top:8px;font-size:13px;" data-action="hardDeleteVendor">🗑 완전 삭제 (잘못 추가한 거래처)</button>
 </div>
 
-<!-- 거래처 재분류 도우미 (2026-04-22 식자재 개편) -->
-<div class="sheet" id="vendorReclassSheet" style="max-height:80vh;overflow-y:auto;">
-  <div class="sheet-handle"></div>
-  <div class="sheet-title">🔄 거래처 재분류</div>
-  <p style="font-size:13px;color:var(--gray-600);margin:0 0 12px;line-height:1.5;">
-    이전 "식자재/직구" 로 분류된 거래처를 <b>육류/야채/공산품</b> 중 하나로 다시 지정해주세요.<br>
-    (주류는 그대로 유지됩니다)
-  </p>
-  <div id="vendorReclassList" style="margin-bottom:16px;"></div>
-  <div class="action-group">
-    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">닫기</button>
-    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveVendorReclass">일괄 저장</button>
-  </div>
-</div>
 
 <!-- 수동 입력 — 멀티행 accordion 패턴 (2026-05-20 사장님 D 패턴, 2026-06-02 '주문 수동 입력'→'수동 입력' 통합)
      [✓ 입력] = 현재 행 임시 저장 + 위로 접힘
@@ -3390,7 +3344,7 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260623a"></script>
+<script src="assets/common.js?v=20260623c"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
   <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>
@@ -3402,7 +3356,7 @@
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260622b"></script>
 <script src="assets/tabs/dashboard.js?v=20260622b"></script>
-<script src="assets/tabs/sidemenu.js?v=20260622f"></script>
+<script src="assets/tabs/sidemenu.js?v=20260623c"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 </body>
 </html>
