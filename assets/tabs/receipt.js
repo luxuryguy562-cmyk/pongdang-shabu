@@ -1040,10 +1040,38 @@ function normalizeItemKeyword(item){
 // 📊 합계 + 📄 페이지 감지 박스 (2026-05-19 (4) — Page(N/M) 인쇄 감지 + 페이지 누락 안내)
 //   pageInfo: {current, total} (AI 응답에서 추출, 없으면 null)
 //   photoCount: 사장님이 업로드한 사진 수 (b64Pages.length)
-function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplySum, taxSum){
+// 인쇄된 영수증 합계·세액 보관 — 품목 수정 시 합계 카드 실시간 재계산용 (2026-06-23)
+let _rcpPrinted = { sum:0, tax:0, pagesMissing:false, pageLabel:'' };
+// 합계 카드 그리기 (합계 + 영수증일치 + 공급가/부가세 + 대조경고) — 최초 분석·수정 공통 함수
+function _rcpSumCardRender(rowSum, rowTax, cnt){
   const sumBox = document.getElementById('rcpSumCheck');
+  if(!sumBox) return;
+  const rowSupply = rowSum - rowTax;
+  const printedSum = _rcpPrinted.sum;
+  let cls = 'rcp-sumcard', okLine = `${cnt}개 품목`;
+  if(printedSum > 0){
+    const diff = Math.abs(printedSum - rowSum);
+    const diffPct = printedSum>0 ? (diff/printedSum*100) : 0;
+    const ok = diff <= 10 || diffPct < 0.5;
+    if(_rcpPrinted.pagesMissing){ cls += ' warn'; okLine = _rcpPrinted.pageLabel; }
+    else if(ok){ okLine = `✅ 영수증 원본과 일치 · ${cnt}개 품목${diff>0?` (${fmt(diff)}원 반올림)`:''}`; }
+    else { cls += ' danger'; okLine = `⚠️ 영수증 원본 ${fmt(printedSum)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 확인`; }
+  }
+  const vatLine = rowTax>0
+    ? `<div style="font-size:12px;color:var(--toss-text-3);font-weight:600;margin-top:3px;">공급가 ${fmt(rowSupply)} + 부가세 ${fmt(rowTax)}</div>`
+    : '';
+  let warnLine = '';
+  const pt = _rcpPrinted.tax;
+  if(pt > 0 && Math.abs(pt - rowTax) > Math.max(50, pt*0.03)){ // ±50원·3% 허용(반올림 헛경고 방지)
+    warnLine = `<div style="font-size:12px;color:#C77700;font-weight:700;margin-top:3px;">⚠️ 영수증 부가세 ${fmt(pt)}원 ≠ 분석 ${fmt(rowTax)}원 — 면세/과세 확인</div>`;
+  }
+  sumBox.className = cls;
+  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>${vatLine}${warnLine}`;
+}
+function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplySum, taxSum){
   const pageBox = document.getElementById('rcpPageInfoBox');
   const rowSum = (list||[]).reduce((a,r)=>a+(parseInt(r.totalPrice)||0),0);
+  const rowTax = (list||[]).reduce((a,r)=>a+(parseInt(r.taxAmount)||0),0);
   const cnt = (list||[]).length;
   const hasReceiptSum = receiptTotalSum!=null && receiptTotalSum>0;
   const pageTotal = (pageInfo && pageInfo.total) ? pageInfo.total : 1;
@@ -1054,41 +1082,20 @@ function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplyS
     if(pagesMissing){
       const missing = pageTotal - photos;
       pageBox.innerHTML = `⚠️ <b>${pageTotal}페이지 영수증 감지 (${photos}/${pageTotal})</b><br>지금까지 품목 <b>${cnt}개</b>, ${fmt(rowSum)}원 분석${hasReceiptSum?` · 영수증 박스 ${fmt(receiptTotalSum)}원`:''}<br><b style="color:#92400E;">→ 남은 ${missing}장 사진 추가하면 완성됩니다</b>`;
-      pageBox.style.display='block';
-      pageBox.style.background='#FEF3C7';
-      pageBox.style.borderColor='#F59E0B';
-      pageBox.style.color='#92400E';
+      pageBox.style.display='block'; pageBox.style.background='#FEF3C7'; pageBox.style.borderColor='#F59E0B'; pageBox.style.color='#92400E';
     } else if(pageInfo && pageInfo.total>1 && !pagesMissing){
       pageBox.innerHTML = `✅ <b>${pageTotal}/${pageTotal} 페이지 모두 분석 완료</b> · 품목 ${cnt}개 · ${fmt(rowSum)}원`;
-      pageBox.style.display='block';
-      pageBox.style.background='#ECFDF5';
-      pageBox.style.borderColor='#10B981';
-      pageBox.style.color='#065F46';
-    } else {
-      pageBox.style.display='none';
-    }
+      pageBox.style.display='block'; pageBox.style.background='#ECFDF5'; pageBox.style.borderColor='#10B981'; pageBox.style.color='#065F46';
+    } else { pageBox.style.display='none'; }
   }
-  // 2️⃣ 영수증 요약 카드 (가안 A — 합계 크게 + 공급가/부가세/합계 한 곳. 2026-06-04)
-  if(!sumBox) return;
-  const rowTax = (list||[]).reduce((a,r)=>a+(parseInt(r.taxAmount)||0),0); // 세액 합
-  const rowSupply = rowSum - rowTax;                                       // 공급가(세전) 합
-  let cls = 'rcp-sumcard', okLine = `${cnt}개 품목`;
-  if(hasReceiptSum){
-    const diff = Math.abs(receiptTotalSum - rowSum);
-    const diffPct = receiptTotalSum>0 ? (diff/receiptTotalSum*100) : 0;
-    const ok = diff <= 10 || diffPct < 0.5;
-    if(pagesMissing){
-      cls += ' warn';
-      okLine = `⏳ ${pageTotal}페이지 중 ${photos}장 — 남은 페이지 추가 시 일치 예정`;
-    } else if(ok){
-      okLine = `✅ 영수증 원본과 일치 · ${cnt}개 품목${diff>0?` (${fmt(diff)}원 반올림)`:''}`;
-    } else {
-      cls += ' danger';
-      okLine = `⚠️ 영수증 원본 ${fmt(receiptTotalSum)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 확인`;
-    }
-  }
-  sumBox.className = cls;
-  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>`;
+  // 2️⃣ 인쇄 영수증 값 보관 후 합계 카드 그리기 (수정 시 _rcpRefreshSum이 같은 보관값으로 재계산)
+  _rcpPrinted = {
+    sum: hasReceiptSum ? receiptTotalSum : 0,
+    tax: parseInt(taxSum)||0,
+    pagesMissing: !!pagesMissing,
+    pageLabel: pagesMissing ? `⏳ ${pageTotal}페이지 중 ${photos}장 — 남은 페이지 추가 시 일치 예정` : ''
+  };
+  _rcpSumCardRender(rowSum, rowTax, cnt);
 }
 async function applyRulesToReceipt(list){
   if(!storeClassRules?.length) await loadClassificationRules();
@@ -1128,12 +1135,20 @@ async function runAI() {
     // (옛 thinking 플래그 제거 2026-06-10 — Gemini thinking은 한국 차단(dev_lessons #201), worker도 무시. 죽은 코드 정리)
     // 거래처 모드(온라인·주류 제외) = 그 거래처 취급품목만 AI 후보로 — 후보 좁힘 → 정확도↑·검수↓
     // 온라인·마트(직구)·주류는 전체 자율(getCatListForPrompt 그대로)
+    let vendorCatNames = []; // 거래처 지정 취급분류 — "부모>자식" 전체 경로 (강제·표시용. 사장님 수정 표기와 통일)
     if(isVendorModeAI && !isOnlineModeAI && !isLiquorModeAI && rcpVendorId){
       const _v = (typeof vendors!=='undefined') ? vendors.find(x=>x.id===rcpVendorId) : null;
       const _handled = _v && Array.isArray(_v.handled_category_ids) ? _v.handled_category_ids : [];
       if(_handled.length){
-        const _names = _handled.map(id=>(expCategories||[]).find(c=>c.id===id)?.name).filter(Boolean);
-        if(_names.length) catList = _names.join(',');
+        const _cats = _handled.map(id=>(expCategories||[]).find(c=>c.id===id)).filter(Boolean);
+        if(_cats.length){
+          catList = _cats.map(c=>c.name).join(','); // AI 후보엔 말단(소분류) 이름만 — 단순
+          // 표시·강제용은 부모>자식 전체 경로 (예: 식자재>공산품) — 사장님 수동 수정과 똑같은 표기. 부모 없으면 자기 이름만.
+          vendorCatNames = _cats.map(c=>{
+            const _p = c.parent_id ? (expCategories||[]).find(x=>x.id===c.parent_id) : null;
+            return _p ? `${_p.name}>${c.name}` : c.name;
+          });
+        }
       }
     }
     // ─── 통합 개선 (2026-05-19 (4)) ───
@@ -1200,6 +1215,18 @@ async function runAI() {
     const depositIn  = isLiquorModeAI ? (parseInt(raw?.deposit_in)||0)  : 0;
     const depositOut = isLiquorModeAI ? (parseInt(raw?.deposit_out)||0) : 0;
     const defaultCat = isVendorModeAI ? (rcpCatName || '식자재') : '';
+    // ─── 거래처 지정분류 강제 (2026-06-23 사장님 호소: 순창국제=공산품인데 AI가 부모 "식자재"로 → 미분류 떨어짐) ───
+    //   거래처에 취급분류 지정돼 있으면 AI 추측보다 사장님 지정이 우선.
+    //   · 1개(예: 공산품) → 전 품목 그 분류로 고정 (AI가 "식자재"라 해도 무시)
+    //   · 여러 개(예: 육류·공산품) → AI가 그 목록 안에서 고른 것만 인정, 목록 밖이면 첫 분류로 스냅(부모 "식자재" 같은 미분류 방지)
+    const _enforceVendorCat = (aiCat) => {
+      if(!vendorCatNames.length) return aiCat || defaultCat; // 거래처 지정분류 없음 → 기존대로 AI 분류
+      if(vendorCatNames.length===1) return vendorCatNames[0]; // 단일 지정분류 = 전 품목 그 경로로 고정
+      // AI는 말단 이름("공산품")으로 줌 → 지정분류 말단끼리 비교해 매칭, 결과는 전체 경로로 반환
+      const _leaf = s => String(s||'').split('>').pop().trim();
+      const _aiLeaf = _leaf(aiCat);
+      return vendorCatNames.find(n => _leaf(n)===_aiLeaf) || vendorCatNames[0];
+    };
     let list = itemsRaw.map(x => ({
       date: x.d || x.date || respDate || ymdLocal(new Date()),
       vendor: x.v ?? x.vendor ?? respVendor ?? '',
@@ -1212,7 +1239,7 @@ async function runAI() {
       taxAmount: x.t ?? x.taxAmount ?? 0,
       isTaxFree: (x.f===true || x.f==='true' || x.isTaxFree===true), // 면세 여부 (의제매입세액공제용)
       _vatUncertain: (x.vu===true || x.vu==='true'), // 면세/과세 애매 — 카드에 "부가세 확인?" 표시 (2026-06-22)
-      category: x.c || x.category || defaultCat
+      category: _enforceVendorCat(x.c || x.category)
     }));
     // 주류 채널: 보증금 입금(+) / 회수(−) 행 추가
     if(isLiquorModeAI){
@@ -1909,6 +1936,7 @@ function _rcpUpdateVatSplit(tr, idx){
   const supply=total-tax;
   const splitEl=document.getElementById('vatsplit-'+idx);
   if(splitEl) splitEl.textContent = tax>0 ? `공급가 ${fmt(supply)} + 부가세 ${fmt(tax)} = ${fmt(total)}` : '';
+  _rcpRefreshSum(); // 부가세 토글·수정 → 위 합계 카드 실시간 갱신
 }
 // 단가/수량 입력 시 자동 금액 계산 (사용자 편의 — 2026-05-19)
 function onRcpUnitPriceInput(el, idx){
@@ -1937,6 +1965,7 @@ function _rcpRecalcAmount(tr){
     const pEl=tr.querySelector('.c-p');
     if(pEl) pEl.value=fmt(amt);
   }
+  _rcpRefreshSum(); // 단가·수량 수정 → 위 합계 카드 실시간 갱신
 }
 // ─── 금액 입력: 천단위 콤마 자동 ───
 function onReceiptAmountInput(inputEl){
@@ -1951,6 +1980,7 @@ function onReceiptAmountInput(inputEl){
   // 커서 위치 보정 (콤마 삽입으로 위치 어긋남)
   const diff=formatted.length-before.length;
   try{ inputEl.setSelectionRange(pos+diff, pos+diff); }catch(e){}
+  _rcpRefreshSum(); // 금액 직접 수정 → 위 합계 카드 실시간 갱신
 }
 function addReceiptRow(){document.getElementById('resultArea').style.display='block';document.getElementById('resTable').insertAdjacentHTML('beforeend',buildReceiptRow({date:document.getElementById('rcpReceiptDate')?.value||ymdLocal(new Date()),_manual:true}));}
 // ─── 영수증 날짜 변경 → 모든 행 동기화 (영수증 1장 = 1날짜) + 이상 경고 (2026-06-02) ───
@@ -2056,10 +2086,8 @@ function selectReason(r){
   _rcpRefreshSum(); // row-off 토글 후 합계 카드 재계산
 }
 
-// row-off(제외) 상태 변경 후 요약 카드 합계·건수 재계산 — DOM이 진실
+// 품목 수정(금액·부가세·토글·단가·삭제) 시 합계 카드 실시간 재계산 — DOM이 진실 (2026-06-23 단일 함수화)
 function _rcpRefreshSum(){
-  const sumBox=document.getElementById('rcpSumCheck');
-  if(!sumBox) return;
   let rowSum=0, rowTax=0, cnt=0;
   document.querySelectorAll('#resTable .rcp-item-card').forEach(tr=>{
     if(tr.classList.contains('row-off')) return;
@@ -2067,19 +2095,7 @@ function _rcpRefreshSum(){
     rowSum+=parseInt((tr.querySelector('.c-p')?.value||'').replace(/[^0-9-]/g,''))||0;
     rowTax+=parseInt((tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''))||0;
   });
-  const sumBig=sumBox.querySelector('.rsc-big');
-  if(sumBig) sumBig.textContent=fmt(rowSum)+'원';
-  const okEl=sumBox.querySelector('.rsc-ok');
-  if(okEl) okEl.textContent=okEl.textContent.replace(/\d+개 품목/,cnt+'개 품목');
-  const rowSupply=rowSum-rowTax;
-  sumBox.querySelectorAll('.rsc-ln').forEach(el=>{
-    const label=el.querySelector('span')?.textContent;
-    const b=el.querySelector('b');
-    if(!b) return;
-    if(label==='공급가') b.textContent=fmt(rowSupply);
-    else if(label==='부가세') b.textContent=fmt(rowTax);
-    else if(label==='합계') b.textContent=fmt(rowSum);
-  });
+  _rcpSumCardRender(rowSum, rowTax, cnt); // 최초 분석과 똑같은 그림(공급가+부가세·대조경고 포함)
 }
 async function saveReceipt(){
   if(!guardStore()) return;
