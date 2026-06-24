@@ -647,7 +647,8 @@ function _subCatKeyOf(r){
   const cid = _rowCatId(r);
   if(!cid || cid===catReceiptParentId) return '__none__';
   const c = (expCategories||[]).find(x=>x.id===cid);
-  if(c && c.parent_id===catReceiptParentId) return cid;
+  // DB에 "미분류" 하위분류가 따로 있어도 = 분류 안 된 것(__none__)과 동일 취급 (시트에 미분류 2줄 방지)
+  if(c && c.parent_id===catReceiptParentId) return c.name==='미분류' ? '__none__' : cid;
   return '__none__';
 }
 // 소분류 금액 집계 (만원) — 드롭다운/시트 공용
@@ -672,7 +673,7 @@ function _renderCatRcpSubChips(rows){
   const el = document.getElementById('catReceiptSubChips');
   if(!el) return;
   const children = catReceiptParentId
-    ? (expCategories||[]).filter(c=>c.parent_id===catReceiptParentId && c.is_active!==false)
+    ? (expCategories||[]).filter(c=>c.parent_id===catReceiptParentId && c.is_active!==false && c.name!=='미분류')
     : [];
   if(!children.length){ el.innerHTML=''; return; }
   const active = catReceiptSubFilter!=='all';
@@ -684,7 +685,7 @@ function openCatReceiptSubSheet(){
   const list = document.getElementById('catReceiptSubList');
   if(!list) return;
   const children = catReceiptParentId
-    ? (expCategories||[]).filter(c=>c.parent_id===catReceiptParentId && c.is_active!==false)
+    ? (expCategories||[]).filter(c=>c.parent_id===catReceiptParentId && c.is_active!==false && c.name!=='미분류')
     : [];
   const {amt, noneAmt, allAmt} = _catRcpSubAmounts(catReceiptRowsCache||[]);
   const _man=n=>{ const v=Math.round((n||0)/10000); return v>=1?(fmt(v)+'만'):(n>0?'<1만':'0'); };
@@ -2896,10 +2897,13 @@ function setRgeRowField(idx,field,el){
 function setRgeRowAmount(idx,el){
   const i=parseInt(idx,10);
   if(!rgeRows[i]) return;
-  const raw=String(el.value||'').replace(/[^0-9]/g,'');
-  rgeRows[i].amount=parseInt(raw,10)||0;
-  rgeRows[i]._amountManual=rgeRows[i].amount>0; // 금액 입력하면 자동계산 차단, 지우면(0) 다시 허용
-  el.value=fmt(rgeRows[i].amount);
+  // 마이너스(할인·환불) 입력 허용 — 맨 앞 - 1개만 인정 (옛 [^0-9]는 부호 떼어 할인 못 적던 버그)
+  const cleaned=String(el.value||'').replace(/[^0-9-]/g,'');
+  const neg=cleaned.startsWith('-');
+  const digits=cleaned.replace(/-/g,'');
+  rgeRows[i].amount=(neg?-1:1)*(parseInt(digits,10)||0);
+  rgeRows[i]._amountManual=rgeRows[i].amount!==0; // 금액 입력하면 자동계산 차단, 0으로 지우면 다시 허용
+  el.value=rgeRows[i].amount?fmt(rgeRows[i].amount):'';
 }
 function setRgeRowUnitPrice(idx,el){
   const i=parseInt(idx,10);
@@ -2965,7 +2969,8 @@ async function saveReceiptGroupEdit(){
   const vendor=document.getElementById('rgeVendor').value.trim();
   if(!date) return toast('날짜를 입력하세요','warn');
   const groupId=k.type==='grp'?k.id:null;
-  const invalid=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&(!r.amount||r.amount<=0));
+  // 마이너스(할인·환불)는 정상 금액 — 빈칸(0/null)만 막음. 옛 r.amount<=0은 할인행 저장 막던 버그 (2026-06-24)
+  const invalid=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&(r.amount==null||r.amount===0||isNaN(r.amount)));
   if(invalid.length) return toast('정상 행은 금액이 필요해요','warn');
   // 분류번호 없으면 저장 차단 (신규·단건편집과 동일 — 사장님 명시 2026-06-16, 집계 무결성)
   const noCat=rgeRows.filter(r=>!r._deleted&&r.note==='정상'&&!r.catId);
