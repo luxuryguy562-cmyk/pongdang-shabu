@@ -268,10 +268,55 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 // ─── 새 기능: 카테고리별 영수증 목록 (직구·식자재·비품·기타 진입 공통) ───
 let catReceiptMode = null;   // 'direct' | 'food' | 'supplies' | 'etc'
 let catReceiptMonth = (new Date()).toISOString().slice(0,7);
+let catReceiptPeriodMode = 'month'; // 'month' | 'range'
+let catReceiptRangeFrom  = null;    // 'YYYY-MM' | null
+let catReceiptRangeTo    = null;    // 'YYYY-MM' | null
 let catReceiptFilter = 'all'; // 'all' | 'direct' | 'vendor:<id>'
 let catReceiptRowsCache = []; // 거래처별 합계 계산용
 let catReceiptSubFilter = 'all'; // 소분류 필터: 'all' | <소분류 id> | '__none__'(미분류=상위로만 달림)
 let catReceiptParentId = null;   // 현재 진입한 상위 카테고리 id (cat: 모드에서만)
+
+// ─── 새 기능: catReceipt 월 네비게이션 (2026-06-24) ───
+function _catReceiptMonthLabel(){
+  if(catReceiptPeriodMode==='range' && catReceiptRangeFrom && catReceiptRangeTo){
+    const [fy,fm]=catReceiptRangeFrom.split('-').map(Number);
+    const [ty,tm]=catReceiptRangeTo.split('-').map(Number);
+    if(fy===ty && fm===tm) return `${fy}년 ${fm}월`;
+    return `${fy}년 ${fm}월 ~ ${ty}년 ${tm}월`;
+  }
+  const [y,m]=catReceiptMonth.split('-').map(Number);
+  return `${y}년 ${m}월`;
+}
+
+function _renderCatReceiptMonthNav(){
+  const el=document.getElementById('catReceiptMonthLabel');
+  if(el) el.innerText=_catReceiptMonthLabel();
+}
+
+function moveCatReceiptMonth(dir){
+  catReceiptPeriodMode='month'; catReceiptRangeFrom=catReceiptRangeTo=null;
+  const d=new Date(catReceiptMonth+'-01');
+  d.setMonth(d.getMonth()+Number(dir));
+  if(Number(dir)>0){
+    const now=new Date();
+    const curYm=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const newYm=d.toISOString().slice(0,7);
+    if(newYm>curYm){ if(typeof toast==='function') toast('아직 오지 않은 달이에요','info'); return; }
+  }
+  catReceiptMonth=d.toISOString().slice(0,7);
+  _renderCatReceiptMonthNav();
+  loadCatReceiptData();
+}
+
+function _applyCatReceiptPeriod(from, to){
+  if(from===to){
+    catReceiptPeriodMode='month'; catReceiptMonth=from; catReceiptRangeFrom=catReceiptRangeTo=null;
+  } else {
+    catReceiptPeriodMode='range'; catReceiptRangeFrom=from; catReceiptRangeTo=to;
+  }
+  _renderCatReceiptMonthNav();
+  loadCatReceiptData();
+}
 
 // 헬퍼: 카테고리 id 풀 (parent + 자식)
 function _collectCatIdsByName(name){
@@ -290,8 +335,7 @@ function openCatReceipt(mode){
   catReceiptFilter = 'all';
   catReceiptSubFilter = 'all';
   nav('catReceipt');
-  const mEl = document.getElementById('catReceiptMonth');
-  if(mEl && !mEl.value) mEl.value = catReceiptMonth;
+  _renderCatReceiptMonthNav();
   // 직구 모드일 때만 영수증 등록 버튼 표시 (카테고리 모드는 조회 전용)
   const addBtns = document.getElementById('catRcpAddBtns');
   if(addBtns) addBtns.style.display = (mode === 'direct') ? 'flex' : 'none';
@@ -307,9 +351,8 @@ function openExpenseRecords(vendorNameEnc){
   const name = vendorNameEnc ? decodeURIComponent(String(vendorNameEnc)) : '';
   catReceiptFilter = name ? ('v:'+encodeURIComponent(name)) : 'all';
   // 홈에서 보던 달 그대로 (날짜 필터는 거래처 필터와 별개로 동작)
-  if(typeof dashMonthStr==='string' && dashMonthStr) catReceiptMonth = dashMonthStr;
-  const mEl = document.getElementById('catReceiptMonth');
-  if(mEl) mEl.value = catReceiptMonth;
+  if(typeof dashMonthStr==='string' && dashMonthStr){ catReceiptMonth = dashMonthStr; catReceiptPeriodMode='month'; catReceiptRangeFrom=catReceiptRangeTo=null; }
+  _renderCatReceiptMonthNav();
   const addBtns = document.getElementById('catRcpAddBtns');
   if(addBtns) addBtns.style.display = 'none';
   nav('catReceipt'); // nav가 loadCatReceiptData 자동 호출
@@ -434,11 +477,6 @@ function renderManualCatTxList(txs, cat){
   container.innerHTML = html;
 }
 
-function onCatReceiptMonthChange(el){
-  catReceiptMonth = el.value || catReceiptMonth;
-  loadCatReceiptData();
-}
-
 async function loadCatReceiptData(){
   if(!currentStore || !catReceiptMode) return;
   const body = document.getElementById('catReceiptBody');
@@ -466,9 +504,18 @@ async function loadCatReceiptData(){
   titleEl.textContent = title;
   iconEl.textContent = iconEmoji;
   body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
-  const [y,m] = catReceiptMonth.split('-').map(Number);
-  const lastDay = new Date(y,m,0).getDate();
-  const start = catReceiptMonth+'-01', end = catReceiptMonth+'-'+String(lastDay).padStart(2,'0');
+  _renderCatReceiptMonthNav();
+  // 기간 계산 — 단월 또는 범위
+  let start, end;
+  if(catReceiptPeriodMode==='range' && catReceiptRangeFrom && catReceiptRangeTo){
+    const [ty,tm]=catReceiptRangeTo.split('-').map(Number);
+    const lastDay=new Date(ty,tm,0).getDate();
+    start=catReceiptRangeFrom+'-01'; end=catReceiptRangeTo+'-'+String(lastDay).padStart(2,'0');
+  } else {
+    const [y,m]=catReceiptMonth.split('-').map(Number);
+    const lastDay=new Date(y,m,0).getDate();
+    start=catReceiptMonth+'-01'; end=catReceiptMonth+'-'+String(lastDay).padStart(2,'0');
+  }
   // 2026-05-21: receipts + vendor_orders 통합 조회 (사장님 호소: "거래처주문수동입력이 그리드 표에 없음")
   //  · 직구 모드 = receipts only (vendor_orders는 항상 vendor_id 있음 — 매칭 X)
   //  · 카테고리 모드 = receipts(category_id IN ids) + vendor_orders(vendors.category_id IN ids)

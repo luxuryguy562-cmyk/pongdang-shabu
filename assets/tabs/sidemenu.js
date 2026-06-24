@@ -411,9 +411,11 @@ async function openVendorDetail(vendorId){
   //   nav('vendors')가 자동 vendorTab('list')를 부르지만 vendorList는 숨김 → 바로 아래 vendorTab('orders')로 상세 패널 전환.
   nav('vendors');
   currentVendorDetailId=vendorId; // 주문 입력 시 이 거래처 고정용
-  // 거래처 상세 진입 시 월 필터 초기화 → loadVendorOrders가 전체 기간으로 조회
-  const vOrderEl=document.getElementById('vOrderMonth');
-  if(vOrderEl) vOrderEl.innerText='-';
+  // 거래처 상세 진입 시 월 필터 = 이번달로 초기화
+  vOrderPeriodMode='month'; vOrderRangeFrom=vOrderRangeTo=null;
+  const _now=new Date();
+  vOrderCurrentMonth=`${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}`;
+  _renderVOrderMonthNav();
   // 2026-05-15: 다른 거래처 주문이 잠깐 깜빡이던 버그 fix —
   // sel.value 먼저 set 후 vendorTab(orders) 호출 (자동 loadVendorOrders가 올바른 vendorId 사용)
   const sel=document.getElementById('orderVendorFilter');
@@ -1095,17 +1097,74 @@ async function toggleVendor(id,active){
   const msg=active?'거래처를 재개하시겠습니까?':'거래종료 처리하시겠습니까?\n(기존 거래내역은 유지됩니다)';
   if(!confirm(msg))return;await sb.from('vendors').update({is_active:active}).eq('id',id).eq('store_id',currentStore.id);await loadVendors();
 }
+// ─── 새 기능: 거래처 주문 월 네비게이션 (2026-06-24) ───
+let vOrderCurrentMonth = (()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;})();
+let vOrderPeriodMode = 'month'; // 'month' | 'range'
+let vOrderRangeFrom  = null;    // 'YYYY-MM' | null
+let vOrderRangeTo    = null;    // 'YYYY-MM' | null
+
+function _vOrderPeriodLabel(){
+  if(vOrderPeriodMode==='range' && vOrderRangeFrom && vOrderRangeTo){
+    const [fy,fm]=vOrderRangeFrom.split('-').map(Number);
+    const [ty,tm]=vOrderRangeTo.split('-').map(Number);
+    if(fy===ty && fm===tm) return `${fy}년 ${fm}월`;
+    return `${fy}년 ${fm}월 ~ ${ty}년 ${tm}월`;
+  }
+  const [y,m]=vOrderCurrentMonth.split('-').map(Number);
+  return `${y}년 ${m}월`;
+}
+
+function _renderVOrderMonthNav(){
+  const el=document.getElementById('vOrderMonth');
+  if(el) el.innerText=_vOrderPeriodLabel();
+}
+
+function moveVendorOrderMonth(dir){
+  vOrderPeriodMode='month';
+  vOrderRangeFrom=vOrderRangeTo=null;
+  const d=new Date(vOrderCurrentMonth+'-01');
+  d.setMonth(d.getMonth()+Number(dir));
+  if(Number(dir)>0){
+    const now=new Date();
+    const curYm=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const newYm=d.toISOString().slice(0,7);
+    if(newYm>curYm){ toast('아직 오지 않은 달이에요','info'); return; }
+  }
+  vOrderCurrentMonth=d.toISOString().slice(0,7);
+  _renderVOrderMonthNav();
+  loadVendorOrders();
+}
+
+function _applyVOrderPeriod(from, to){
+  if(from===to){
+    vOrderPeriodMode='month'; vOrderCurrentMonth=from; vOrderRangeFrom=vOrderRangeTo=null;
+  } else {
+    vOrderPeriodMode='range'; vOrderRangeFrom=from; vOrderRangeTo=to;
+  }
+  _renderVOrderMonthNav();
+  loadVendorOrders();
+}
+
 async function loadVendorOrders(){
   if(!guardStore())return;
-  const ms=(document.getElementById('vOrderMonth')?.innerText||'-').trim();
-  // '-' 또는 '전체 기간' = 날짜 필터 없이 전체 조회 (거래처 상세 진입 기본값)
-  const allPeriod=(ms==='-'||ms==='전체 기간');
-  const vOrderEl=document.getElementById('vOrderMonth');
-  if(allPeriod && vOrderEl) vOrderEl.innerText='전체 기간';
+  // 기간 계산 — 단월 또는 범위
+  let dateStart, dateEnd;
+  if(vOrderPeriodMode==='range' && vOrderRangeFrom && vOrderRangeTo){
+    const [ty,tm]=vOrderRangeTo.split('-').map(Number);
+    const lastDay=new Date(ty,tm,0).getDate();
+    dateStart=vOrderRangeFrom+'-01';
+    dateEnd  =vOrderRangeTo  +'-'+String(lastDay).padStart(2,'0');
+  } else {
+    const [y,m]=vOrderCurrentMonth.split('-').map(Number);
+    const lastDay=new Date(y,m,0).getDate();
+    dateStart=vOrderCurrentMonth+'-01';
+    dateEnd  =vOrderCurrentMonth+'-'+String(lastDay).padStart(2,'0');
+  }
+  _renderVOrderMonthNav();
   // 거래처 상세 진입(currentVendorDetailId) 시 그 거래처로 필터.
   // ⚠️온라인 거래처(쿠팡)는 orderVendorFilter 드롭다운 옵션에 없어 sel.value가 빈 채로 남음 →
   //   상세 진입이면 currentVendorDetailId 우선 (2026-06-09)
-  const vendorId = (typeof currentVendorDetailId!=='undefined' && currentVendorDetailId)
+  const vendorId=(typeof currentVendorDetailId!=='undefined' && currentVendorDetailId)
     ? currentVendorDetailId
     : (document.getElementById('orderVendorFilter')?.value||'');
   const listEl=document.getElementById('orderListData');
@@ -1114,12 +1173,8 @@ async function loadVendorOrders(){
   let rq=sb.from('receipts')
     .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty,seq,spec,origin')
     .eq('store_id',currentStore.id).eq('note','정상').not('vendor_id','is',null)
-    .order('receipt_date',{ascending:false});
-  if(!allPeriod){
-    const [y,m]=ms.split('-').map(Number);
-    const lastDay=new Date(y,m,0).getDate();
-    rq=rq.gte('receipt_date',ms+'-01').lte('receipt_date',ms+'-'+String(lastDay).padStart(2,'0'));
-  }
+    .order('receipt_date',{ascending:false})
+    .gte('receipt_date',dateStart).lte('receipt_date',dateEnd);
   if(vendorId) rq=rq.eq('vendor_id',vendorId);
   const {data,error}=await rq;
   if(error){
@@ -1128,6 +1183,15 @@ async function loadVendorOrders(){
   }
   rcpRecords=data||[];
   const norm=rcpRecords.map(r=>_normalizeExpenseRow(r,'receipt'));
+  // 기간 합계 카드 갱신
+  const cardEl=document.getElementById('vendorOrderSummaryCard');
+  if(cardEl){
+    const total=norm.reduce((s,r)=>s+(r.amount||0),0);
+    document.getElementById('vendorOrderSummaryPeriod').textContent=_vOrderPeriodLabel();
+    document.getElementById('vendorOrderSummaryAmt').textContent=fmt(total)+'원';
+    document.getElementById('vendorOrderSummaryCount').textContent=norm.length+'건';
+    cardEl.style.display='block';
+  }
   if(!norm.length){
     document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>등록된 영수증이 없습니다</p></div>';
     return;
@@ -2622,18 +2686,14 @@ function confirmDate(){
   const y=getPV('pYear'),m=getPV('pMonth'),d=getPV('pDay');
   const str=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   const monthStr=str.slice(0,7);
-  const targets={att:'vDate',sched:'vSchedDate',schedConfirmDate:'vSchedConfirmDate',orderMonth:'vOrderMonth'};
+  const targets={att:'vDate',sched:'vSchedDate',schedConfirmDate:'vSchedConfirmDate'};
   const targetId=targets[datePickerCtx];
   if(targetId){
     const el=document.getElementById(targetId);
-    if(el){
-      el.innerText=datePickerCtx==='orderMonth'?monthStr:str;
-      el.classList.remove('empty');
-    }
+    if(el){ el.innerText=str; el.classList.remove('empty'); }
   }
   // 'att' (사후 등록 시트)는 시트가 열려 있어야 하므로 dateSheet만 닫음
   if(datePickerCtx==='att') closeSheet('dateSheet'); else closeAllSheets();
-  if(datePickerCtx==='orderMonth') loadVendorOrders();
 }
 function openTimePicker(ctx){
   timePickerCtx=ctx;
