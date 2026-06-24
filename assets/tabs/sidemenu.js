@@ -4983,9 +4983,11 @@ async function renderExpHubVendorView(){
       const closedTag = (v.is_active===false) ? ' · 거래종료' : '';
       const sub = kindLabel + (cnt ? ' · '+cnt+'건' : ' · 이번달 없음') + closedTag;
       const amtTxt = fmt(t?.total||0) + '원';
+      // 종류별 아이콘·색 — 거래처🏪(파랑)·마트🛒(노랑)·온라인🌐(초록). 지출등록 첫화면과 통일 (2026-06-24 사장님: 구분 약함)
+      const kindIc = v.kind==='mart' ? {e:'🛒',bg:'#FEF3C7'} : (v.kind==='online' ? {e:'🌐',bg:'#DCFCE7'} : {e:'🏪',bg:'#EDF4FF'});
       // 행 클릭 = 거래처 상세(영수증 목록·등록 화면) / ✏️ = 거래처 편집 시트 (data-stop으로 행 클릭 차단)
       html += `<div class="exp-cat-row${v.is_active===false?' is-inactive':''}" data-vendor-id="${esc(v.id)}" data-action="openVendorDetail|${esc(v.id)}" style="cursor:pointer;">
-        <span class="ecr-icon"><svg><use href="#i-building"/></svg></span>
+        <span class="ecr-icon" style="background:${kindIc.bg};font-size:20px;">${kindIc.e}</span>
         <span class="ecr-body">
           <span class="ecr-title">${esc(v.name)}</span>
           <span class="ecr-sub">${esc(sub)}</span>
