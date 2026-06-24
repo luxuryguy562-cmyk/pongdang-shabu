@@ -891,6 +891,17 @@ function refreshVendorHandledCategories(selectedIds){
   box.innerHTML=html||'<div style="font-size:13px;color:var(--gray-500);padding:8px;">선택할 카테고리가 없습니다</div>';
 }
 // 대분류 [전체] 체크 → 그 그룹 소분류 일괄 토글
+// 거래처 부가세 구분 (과세/면세/혼합) 선택 — 세그먼트 토글 + 숨은 값 (2026-06-24, 나중 세금계산서용)
+function setVendorVat(type){
+  const t=(type==='taxable'||type==='free'||type==='mixed')?type:'';
+  const h=document.getElementById('vendorVatType'); if(h) h.value=t;
+  document.querySelectorAll('#vendorVatSeg .vvat-btn').forEach(b=>{
+    const on=(b.getAttribute('data-action')||'').endsWith('|'+t) && t!=='';
+    b.style.background=on?'#fff':'transparent';
+    b.style.color=on?'var(--toss-blue, #3182F6)':'var(--gray-600)';
+    b.style.boxShadow=on?'0 1px 4px rgba(20,40,80,.1)':'none';
+  });
+}
 function vendorCatToggleAll(el){
   const ids=(el.dataset.children||'').split(',').filter(Boolean);
   const box=document.getElementById('vendorHandledCats');
@@ -925,6 +936,7 @@ function openAddVendorSheet(kind){
   document.getElementById('editVendorId').value='';
   // 업체정보 초기화 (신규 추가)
   document.getElementById('vendorBizNoInput').value='';
+  setVendorVat(''); // 부가세 구분 초기화
   _renderVendorAccountRows([]);
   _renderVendorContactRows([]);
   const delBtn=document.getElementById('vendorDeleteBtn');
@@ -976,6 +988,7 @@ function openEditVendorSheet(id){
       : (v.category_id ? [v.category_id] : []);
     refreshVendorHandledCategories(handled);
   }
+  setVendorVat(v.vat_type||''); // 부가세 구분 복원 (과세/면세/혼합)
   openSheet('addVendorSheet');
 }
 // ─── 업체정보: 계좌·연락처 동적 행 (2026-06-09) ───
@@ -1040,9 +1053,10 @@ async function saveVendor(){
   const accounts=_collectVendorAccounts();
   const contacts=_collectVendorContacts();
   let payload;
+  const vatType=document.getElementById('vendorVatType')?.value||null; // 과세/면세/혼합 (나중에 세금계산서용, 2026-06-24)
   if(kind==='online'){
     // 온라인 플랫폼 = 취급품목 없이 자율. 카테고리는 영수증 품목별로 정해짐
-    payload={name,kind:'online',category:null,category_id:null,handled_category_ids:[],biz_no,accounts,contacts};
+    payload={name,kind:'online',category:null,category_id:null,handled_category_ids:[],vat_type:vatType,biz_no,accounts,contacts};
   } else {
     // 취급품목 체크 수집 (leaf id 배열)
     const handledIds=Array.from(document.querySelectorAll('#vendorHandledCats .vhc:checked')).map(c=>c.value);
@@ -1051,7 +1065,7 @@ async function saveVendor(){
     const category_id=handledIds[0];
     const cat=(expCategories||[]).find(c=>c.id===category_id);
     const categoryText=cat?.vendor_category||cat?.name||'';
-    payload={name,kind:'vendor',category:categoryText,category_id,handled_category_ids:handledIds,biz_no,accounts,contacts};
+    payload={name,kind:'vendor',category:categoryText,category_id,handled_category_ids:handledIds,vat_type:vatType,biz_no,accounts,contacts};
   }
   setLoad(true,'저장 중...');
   const{error}=eid
