@@ -250,6 +250,9 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .vault-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
 .vault-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;}
 .vault-item label{font-size:13px;font-weight:600;color:var(--gray-600);}
+/* ─ 마감정산 마법사 단계 타이틀 (2026-06-24) */
+.sw-step-title{font-size:18px;font-weight:900;color:var(--toss-text-1);letter-spacing:-.5px;padding:14px 0 12px;line-height:1.35;}
+.sw-step-title small{display:block;font-size:12px;font-weight:500;color:var(--toss-text-4);margin-top:3px;letter-spacing:0;}
 .vault-item input{width:50px;border:none;background:transparent;font-size:16px;font-weight:700;text-align:right;outline:none;color:var(--text);}
 
 /* ─ 정산 리스트/카드 */
