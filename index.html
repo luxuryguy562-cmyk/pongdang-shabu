@@ -28,7 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260623a">
+<link rel="stylesheet" href="assets/styles.css?v=20260624a">
 </head>
 <body>
 
@@ -1277,14 +1277,26 @@
       <div id="swBarContent" style="background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 10px;min-height:38px;display:flex;align-items:center;"></div>
     </div>
 
-    <!-- ② 단계 진행 표시 (얇은 프로그레스 바) -->
-    <div style="padding:14px 0 0;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span id="swStepLabel" style="font-size:11px;font-weight:700;color:var(--toss-text-4);">매출 입력</span>
-        <span id="swStepCount" style="font-size:11px;font-weight:700;color:var(--toss-text-4);">1 / 4</span>
+    <!-- ② 원형 스텝 인디케이터 -->
+    <div style="display:flex;align-items:center;padding:14px 16px 10px;background:#fff;flex-shrink:0;margin:0 -14px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
+        <div id="swDotA1" style="width:28px;height:28px;border-radius:50%;background:#0050FF;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(0,80,255,.18);transition:all .2s;">1</div>
+        <span id="swLblA1" style="font-size:10px;font-weight:700;color:#0050FF;">매출</span>
       </div>
-      <div style="height:3px;background:#f0f0f0;border-radius:3px;overflow:hidden;">
-        <div id="swProgress" style="height:3px;background:#0050FF;border-radius:3px;transition:width 0.35s cubic-bezier(.4,0,.2,1);width:25%;"></div>
+      <div id="swLineA1" style="flex:1;height:2px;background:#e5e7eb;margin:0 4px;margin-bottom:14px;border-radius:2px;transition:background .2s;"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
+        <div id="swDotA2" style="width:28px;height:28px;border-radius:50%;background:#f0f0f0;color:#bbb;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .2s;">2</div>
+        <span id="swLblA2" style="font-size:10px;font-weight:700;color:#bbb;">현금</span>
+      </div>
+      <div id="swLineA2" style="flex:1;height:2px;background:#e5e7eb;margin:0 4px;margin-bottom:14px;border-radius:2px;transition:background .2s;"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
+        <div id="swDotA3" style="width:28px;height:28px;border-radius:50%;background:#f0f0f0;color:#bbb;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .2s;">3</div>
+        <span id="swLblA3" style="font-size:10px;font-weight:700;color:#bbb;">이동</span>
+      </div>
+      <div id="swLineA3" style="flex:1;height:2px;background:#e5e7eb;margin:0 4px;margin-bottom:14px;border-radius:2px;transition:background .2s;"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
+        <div id="swDotA4" style="width:28px;height:28px;border-radius:50%;background:#f0f0f0;color:#bbb;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .2s;">4</div>
+        <span id="swLblA4" style="font-size:10px;font-weight:700;color:#bbb;">금고</span>
       </div>
     </div>
 
@@ -1299,25 +1311,17 @@
     <span id="vaultTotal" style="display:none;">0원</span>
 
     <!-- 날짜 선택 (관리자만 — initSettleDate가 block으로 변경) -->
-    <div class="settle-card-group" id="settleDateGroup" style="display:none;margin-top:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="card-title" style="margin-bottom:0;padding-bottom:0;">정산 날짜</div>
-        <span style="font-size:11px;color:var(--toss-text-4);" id="settleDateStatus">관리자 전용</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;margin-bottom:4px;">
-        <button class="btn btn-secondary btn-sm" data-action="moveSettleDate|-1">‹</button>
-        <input type="date" id="settleDatePicker" class="input-field" style="flex:1;text-align:center;font-size:15px;font-weight:700;padding:10px;margin-bottom:0;">
-        <button class="btn btn-secondary btn-sm" data-action="moveSettleDate|1">›</button>
+    <div id="settleDateGroup" style="display:none;margin:8px 0 2px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--toss-line);border-radius:10px;">
+        <span style="font-size:12px;color:var(--toss-text-4);font-weight:700;white-space:nowrap;">📅 날짜</span>
+        <input type="date" id="settleDatePicker" style="flex:1;border:none;background:transparent;font-size:14px;font-weight:700;color:var(--toss-text-1);outline:none;padding:0;">
+        <span id="settleDateStatus" style="font-size:10px;color:var(--toss-text-4);">관리자</span>
       </div>
     </div>
 
     <!-- ③ 1단계: POS 촬영 → 매출 입력 -->
     <div id="swStep1">
-      <div class="sw-step-header">
-        <span class="sw-emoji">📸</span>
-        <h2 class="sw-title">오늘 POS 장표를<br>찍어볼게요</h2>
-        <p class="sw-sub">AI가 매출을 자동으로 읽어드릴게요</p>
-      </div>
+      <div class="sw-step-title">오늘 POS 장표 찍어볼게요<small>AI가 매출을 자동으로 읽어드릴게요</small></div>
       <div class="settle-card-group">
         <img id="posPreview" style="width:100%;display:none;border-radius:12px;margin:8px 0;">
         <div id="posUploadGroup" style="display:flex;gap:10px;margin:8px 0 4px;">
@@ -1358,11 +1362,7 @@
 
     <!-- ④ 2단계: 현금 상세 -->
     <div id="swStep2" style="display:none;">
-      <div class="sw-step-header">
-        <span class="sw-emoji">💵</span>
-        <h2 class="sw-title">현금은 어떻게<br>받으셨나요?</h2>
-        <p class="sw-sub">POS 현금 합계를 방식별로 나눠주세요</p>
-      </div>
+      <div class="sw-step-title">현금은 어떻게 받으셨나요?<small>POS 현금 합계를 방식별로 나눠주세요</small></div>
       <div class="settle-card-group">
         <div class="settle-item dot-green"><span class="si-icon"></span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
         <div class="settle-item dot-purple"><span class="si-icon"></span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
@@ -1372,11 +1372,7 @@
 
     <!-- ⑤ 3단계: 통장입금 + 현금지출 -->
     <div id="swStep3" style="display:none;">
-      <div class="sw-step-header">
-        <span class="sw-emoji">🏧</span>
-        <h2 class="sw-title">금고에서 나간 돈이<br>있었나요?</h2>
-        <p class="sw-sub">통장 입금과 현금 지출을 입력해주세요</p>
-      </div>
+      <div class="sw-step-title">금고에서 나간 돈 있었나요?<small>통장 입금과 현금 지출을 입력해주세요</small></div>
       <div class="settle-card-group">
         <div class="card-title">통장 입금</div>
         <p class="card-sub">금고 현금을 통장으로 옮긴 돈 (지출 아닌 이동).<br>👤 입금자는 로그인한 사람 자동 — 다르면 탭해서 바꿔요.</p>
@@ -1392,11 +1388,7 @@
 
     <!-- ⑥ 4단계: 금고 계수 -->
     <div id="swStep4" style="display:none;">
-      <div class="sw-step-header">
-        <span class="sw-emoji">🔢</span>
-        <h2 class="sw-title">금고 안을<br>세어볼게요</h2>
-        <p class="sw-sub">권종별로 장수를 입력해주세요</p>
-      </div>
+      <div class="sw-step-title">금고 안을 세어볼게요<small>권종별로 장수를 입력해주세요</small></div>
       <div class="settle-card-group">
         <div class="vault-grid">
           <div class="vault-item"><label>50,000원</label><input type="number" data-unit="50000" class="v-input" placeholder="0"></div>
@@ -3515,7 +3507,7 @@
 <script src="assets/tabs/receipt.js?v=20260624j"></script>
 <script src="assets/tabs/attendance.js?v=20260624a"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
-<script src="assets/tabs/settlement.js?v=20260624b"></script>
+<script src="assets/tabs/settlement.js?v=20260624c"></script>
 <script src="assets/tabs/dashboard.js?v=20260622b"></script>
 <script src="assets/tabs/sidemenu.js?v=20260624b"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
