@@ -1090,11 +1090,10 @@ function normalizeItemKeyword(item){
 //   photoCount: 사장님이 업로드한 사진 수 (b64Pages.length)
 // 인쇄된 영수증 합계·세액 보관 — 품목 수정 시 합계 카드 실시간 재계산용 (2026-06-23)
 let _rcpPrinted = { sum:0, tax:0, pagesMissing:false, pageLabel:'' };
-// 합계 카드 그리기 (합계 + 영수증일치 + 공급가/부가세 + 대조경고) — 최초 분석·수정 공통 함수
+// 합계 카드 그리기 (총액 + 영수증일치) — 최초 분석·수정 공통 함수. 부가세 줄 폐기 (2026-06-24 총액만)
 function _rcpSumCardRender(rowSum, rowTax, cnt){
   const sumBox = document.getElementById('rcpSumCheck');
   if(!sumBox) return;
-  const rowSupply = rowSum - rowTax;
   const printedSum = _rcpPrinted.sum;
   let cls = 'rcp-sumcard', okLine = `${cnt}개 품목`;
   if(printedSum > 0){
@@ -1105,17 +1104,8 @@ function _rcpSumCardRender(rowSum, rowTax, cnt){
     else if(ok){ okLine = `✅ 영수증 원본과 일치 · ${cnt}개 품목${diff>0?` (${fmt(diff)}원 반올림)`:''}`; }
     else { cls += ' danger'; okLine = `⚠️ 영수증 원본 ${fmt(printedSum)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 확인`; }
   }
-  // 공급가+부가세 줄은 품목이 있으면 항상 표시 (면세 영수증도 "공급가 X + 부가세 0" — 사장님 호소: 왜 안 나오냐. 2026-06-24)
-  const vatLine = cnt>0
-    ? `<div style="font-size:12px;color:var(--toss-text-3);font-weight:600;margin-top:3px;">공급가 ${fmt(rowSupply)} + 부가세 ${fmt(rowTax)}</div>`
-    : '';
-  let warnLine = '';
-  const pt = _rcpPrinted.tax;
-  if(pt > 0 && Math.abs(pt - rowTax) > Math.max(50, pt*0.03)){ // ±50원·3% 허용(반올림 헛경고 방지)
-    warnLine = `<div style="font-size:12px;color:#C77700;font-weight:700;margin-top:3px;">⚠️ 영수증 부가세 ${fmt(pt)}원 ≠ 분석 ${fmt(rowTax)}원 — 면세/과세 확인</div>`;
-  }
   sumBox.className = cls;
-  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>${vatLine}${warnLine}`;
+  sumBox.innerHTML = `<div class="rsc-big">${fmt(rowSum)}원</div><div class="rsc-ok">${okLine}</div>`;
 }
 function _renderRcpSumCheck(receiptTotalSum, list, pageInfo, photoCount, supplySum, taxSum){
   const pageBox = document.getElementById('rcpPageInfoBox');
@@ -1303,19 +1293,11 @@ async function runAI() {
     if(isLiquorModeAI) _rcpLiquorUnitPrice(list);
     // 거래처(비주류): 수량 = 공급가 ÷ 단가. AI가 BOX수만 읽고 BOX×단위 못 곱할 때 역산 교정 (2026-06-10).
     if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list);
-    // 부가세 처리 (주류 제외): 품목마다 따로 — 과세 품목만 ÷11, 면세는 0. 영수증에 줄별 세액이 찍혀 있으면 그 값 그대로.
-    //   ⚠️ 과세합 분배(나눠 넣기) 금지 — 비엔나 혼자 과세인데 연근에 부가세 나눠 넣던 사고 (2026-06-23 사장님 지적)
-    // 명세서 "공급가액 = 합계"(세액 0/공란) = 전액 면세 거래 → ÷11 금지, 전 품목 면세 강제 (육류·야채 등. 영수증 표시 최우선, 2026-06-24 사장님 호소)
-    const _noVatDoc = receiptSupplySum>0 && receiptTotalSum>0 && Math.abs(receiptSupplySum-receiptTotalSum) <= Math.max(100, receiptTotalSum*0.005);
-    const _forceAllFree = lst => lst.forEach(it=>{ it.isTaxFree=true; it.taxAmount=0; it.supplyPrice=parseInt(it.totalPrice)||0; });
-    const _hadPrintedTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
-    if(!isLiquorModeAI){
-      if(_noVatDoc) _forceAllFree(list);                    // 공급가액=합계 → 전액 면세
-      else if(!_hadPrintedTax) _rcpDeriveVatNoTaxLine(list); // 줄별 세액 없으면 과세 품목만 ÷11
-    }
-    // 세액이 생겼으면 = 공급가·부가세 줄 표시 (세액 0 행은 면세)
-    const _hasAnyTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
-    list.forEach(it=> it._taxFormat = _hasAnyTax);
+    // ─── 부가세 자동 도출(÷11) 전면 폐기 (2026-06-24 사장님 결정) ───
+    //   "돈 얼마 나갔나(총액)만" 본다. 부가세는 나중에 세금계산서(홈택스) 연동으로 정산.
+    //   영수증에 실제 찍힌 세액(t)은 DB에 보존(향후 참고)하되, 전 화면 부가세 안 보여줌 = 총액 통일.
+    //   (옛 ÷11·면세과세 판정 _noVatDoc·_forceAllFree·_rcpDeriveVatNoTaxLine 제거 — dev_lessons #4123 빙산 근본 종결)
+    list.forEach(it=> it._taxFormat = false);
     // DB 규칙으로 카테고리 + display_item 덮어쓰기 (학습된 품목은 AI 판단 무시)
     list=await applyRulesToReceipt(list);
     // ─── Self-Reflection: 합계 불일치 시 AI 재검산 최대 2회 (2026-06-05) ───
@@ -1360,15 +1342,9 @@ async function runAI() {
             if(_dOut > 0) list.push({ date:_dd, vendor:rcpVendorName, item:'빈병 회수',  spec:null, origin:null, unitPrice:null, qty:1, totalPrice:-_dOut, taxAmount:0, isTaxFree:true, category:rcpCatName||'주류', _isDeposit:true, _depositLabel:'회수' });
           }
           list.forEach(it=>{it.supplyPrice=(parseInt(it.totalPrice)||0)-(parseInt(it.taxAmount)||0);});
-          if(isLiquorModeAI) _rcpLiquorUnitPrice(list); // 재검산 후에도 주류 단가=공급가÷수량 재계산
+          if(isLiquorModeAI) _rcpLiquorUnitPrice(list); // 재검산 후에도 주류 단가=금액÷수량 재계산
           if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list); // 재검산 후에도 거래처 수량 역산
-          const _hpt2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
-          if(!isLiquorModeAI){
-            if(_noVatDoc) _forceAllFree(list);             // 공급가액=합계 → 전액 면세 (재검산 후도 동일)
-            else if(!_hpt2) _rcpDeriveVatNoTaxLine(list);   // 줄별 세액 없으면 과세 품목만 ÷11 (분배 X)
-          }
-          const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
-          list.forEach(it=>it._taxFormat=_ht2);
+          list.forEach(it=>it._taxFormat=false); // 부가세 도출 폐기 (2026-06-24) — 총액만
           list=await applyRulesToReceipt(list);
         }catch(e){break;}
       }
@@ -1799,23 +1775,7 @@ function _rcpVendorQtyFix(list){
     }
   });
 }
-// 세액 칸 없는 과세 매입 부가세 자동 분리 — 쿠팡·순창국제 등 부가세가 영수증에 안 찍히는 명세서용 (2026-06-22 사장님 "찍힌 금액만큼만 이체 = 부가세 포함").
-//   결제금액(p)은 부가세 포함값 → 과세 행: 부가세 = round(p÷11), 공급가 = p − 부가세 (예: 11,000 → 공급가 10,000 + 부가세 1,000).
-//   면세 행(쌀·정육·야채 등 AI f=true)은 부가세 0. 단가(u)는 세전 공급가 기준으로 맞춰 검산(u×q=공급가) 유지. 금액(p)·순익은 불변.
-//   ⚠️ 영수증에 세액이 이미 찍혀 있으면(_hadPrintedTax) 호출 안 함 — 인쇄된 세액을 신뢰.
-function _rcpDeriveVatNoTaxLine(list){
-  (list||[]).forEach(it=>{
-    if(it._isDeposit) return;
-    const p=parseInt(it.totalPrice)||0;
-    if(p<=0){ it.taxAmount=0; it.supplyPrice=p; return; } // 할인(음수)·0원 행 제외
-    if(it.isTaxFree){ it.taxAmount=0; it.supplyPrice=p; return; } // 면세 = 부가세 0
-    const tax=Math.round(p/11);  // 부가세 포함 결제금액 ÷ 11 = 부가세
-    it.taxAmount=tax;
-    it.supplyPrice=p-tax;
-    const q=parseFloat(it.qty)||0;
-    if(q>0) it.unitPrice=Math.round(it.supplyPrice/q); // 세전 단가 — 검산 u×q=공급가 유지
-  });
-}
+// (옛 _rcpDeriveVatNoTaxLine ÷11 자동분리 함수 제거 — 2026-06-24 부가세 도출 폐기. 총액만 본다.)
 function buildReceiptRow(i={}) {
   const idx=rowCount++;
   // 보증금 행 — 별도 카드로 렌더링 (색상 구분, 분류·규격·원산지 칸 없음)
@@ -1856,9 +1816,8 @@ function buildReceiptRow(i={}) {
   const nameSuspectCls = nameSuspect ? ' name-suspect' : '';
   const nameSuspectMark = nameSuspect ? `<span class="rcp-ns-mark" title="${esc(nameSuspect)} — 📋 눌러 고쳐주세요" style="font-size:13px;cursor:help;">🔴</span>` : '';
   const _tax = parseInt(i.taxAmount)||0;
-  const freeBadge = ''; // 부가세 화면 숨김 (2026-06-21)
-  // 면세/과세 애매 표시 — AI가 미가공/가공 헷갈린 식품에 "부가세 확인?" (2026-06-22 사장님 요청). 세부의 "부가세 포함" 토글로 고침.
-  const vatCheckBadge = i._vatUncertain ? `<span class="rcp-guess-tag" title="면세인지 과세인지 애매해요 — 아래 세부에서 '부가세 포함'을 확인·수정해주세요">💧 부가세 확인?</span>` : '';
+  const freeBadge = '';      // 부가세 화면 숨김 (2026-06-21)
+  const vatCheckBadge = '';  // 면세/과세 애매 뱃지 폐기 (2026-06-24 부가세 도출 폐기 — 총액만)
   // 📋 버튼 — 과거 품목 원터치 선택 (거래처 모드 + 과거 품목 있을 때만)
   const pastBtn = rcpPastItems.length ? `<button type="button" class="ric-past-btn" data-action="openRcpPastSheet|${idx}" title="과거 품목 선택">📋</button>` : '';
   // 단가 매칭 뱃지 (2026-06-05)
@@ -1874,13 +1833,9 @@ function buildReceiptRow(i={}) {
   //   AI가 읽은 값(spec·u·q·tax)은 input에 채워두고 접음 → 저장 시 querySelector로 다 읽힘(회귀 없음, display:none이어도 값 보존)
   //   전 채널(거래처·온라인·마트·기타·직접입력) 동일 카드 구조 — 사장님 "싹 다 통일" (2026-06-15)
   const _total = parseInt(i.totalPrice)||0;
-  const _supply = _total - _tax;        // 공급가(세전)
-  const _vatOn = _tax>0;                 // AI가 세액 읽었으면 토글 켜진 상태로 시작
-  const vatSplitTxt = _vatOn ? `공급가 ${fmt(_supply)} + 부가세 ${fmt(_tax)} = ${fmt(_total)}` : '';
-  // 단가 표기 = 세전 단가(공급가÷수량) — 과세는 부가세 줄로 따로 보여줌(아래 vat-split), 면세는 세전=세후라 단가×수량=금액 (2026-06-22 사장님 "과세는 부가세 나오게").
-  //   과세: 단가×수량=공급가 + "공급가+부가세=합계" 줄 표시. 면세: 단가×수량=금액, 부가세 줄 없음.
+  // 단가 = 금액 ÷ 수량 (부가세 폐기 2026-06-24 → 공급가=금액. 전 화면 동일 공식 = 불일치 0).
   const _dispQty = parseFloat(i.qty)||0;
-  const _dispUnit = (_dispQty>0 && _supply) ? Math.round(_supply/_dispQty) : (parseInt(i.unitPrice)||0);
+  const _dispUnit = (_dispQty>0 && _total) ? Math.round(_total/_dispQty) : (parseInt(i.unitPrice)||0);
   const detailWrap = `
     <div class="rcp-detail" id="detail-${idx}" style="display:block;">
       <div class="det-row">
@@ -1895,11 +1850,7 @@ function buildReceiptRow(i={}) {
           <div class="det-cell"><span>수량</span><input type="text" class="c-q" inputmode="decimal" value="${i.qty||''}" placeholder="-" data-input="onRcpQtyInput|this|${idx}"></div>
         </div>
       </div>
-      <div class="vat-row">
-        <button type="button" class="vat-toggle" data-action="onRcpVatToggle|${idx}"><span class="sw${_vatOn?'':' off'}"></span> 부가세 포함</button>
-        <span class="vat-amt">부가세 <input type="text" class="c-t" inputmode="numeric" value="${_tax||0}" data-input="onRcpVatInput|this|${idx}"></span>
-      </div>
-      <div class="vat-split" id="vatsplit-${idx}" style="display:${_vatOn?'block':'none'}">${vatSplitTxt}</div>
+      <input type="hidden" class="c-t" value="${_tax||0}">
     </div>`;
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}" data-manual="${i._manual?'1':''}">
     <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
@@ -1942,71 +1893,7 @@ function toggleRcpDetail(idx){
   d.style.display=open?'block':'none';
   if(btn) btn.textContent=open?'세부 접기 ▴':'세부 펼치기 ▾';
 }
-// ─── 부가세 "포함" 토글 — 합계에서 부가세 자동 역산(합계÷11) 또는 0 (2026-06-15) ───
-function onRcpVatToggle(idx){
-  const tr=document.getElementById('row-'+idx); if(!tr) return;
-  const tEl=tr.querySelector('.c-t');
-  const fEl=tr.querySelector('.c-f');
-  const pEl=tr.querySelector('.c-p');
-  const uEl=tr.querySelector('.c-u');
-  const sw=tr.querySelector('.vat-toggle .sw');
-  const total=parseInt(String(pEl?.value||'').replace(/[^0-9]/g,''),10)||0;
-  const u=parseInt(String(uEl?.value||'').replace(/[^0-9]/g,''),10)||0;
-  const q=parseFloat(tr.querySelector('.c-q')?.value||'0')||0;
-  const curTax=parseInt(String(tEl?.value||'0').replace(/[^0-9]/g,''),10)||0;
-  const isManual = tr.dataset.manual==='1'; // 수동 입력 = 쌓기(금액=공급가+부가세). 분석 영수증 = 금액 고정(낸 돈 불변)
-  if(isManual){
-    // 수동: 단가·수량 있으면 공급가×10% 쌓기, 없으면 합계÷11. 금액은 단가×수량+부가세로 재계산.
-    if(curTax>0){ if(tEl) tEl.value='0'; if(sw) sw.classList.add('off'); }
-    else { const vat=(u>0&&q>0)?Math.round(u*q*0.1):Math.round(total/11); if(tEl) tEl.value=String(vat); if(fEl) fEl.value='0'; if(sw) sw.classList.remove('off'); }
-    _rcpRecalcAmount(tr);
-  } else {
-    // 분석 영수증: 금액(낸 돈) 고정. 과세/면세만 바꾸고 단가(공급가÷수량) 재계산.
-    if(curTax>0){
-      // 끄기(면세) → 부가세 0, 공급가=금액, 단가=금액÷수량
-      if(tEl) tEl.value='0';
-      if(sw) sw.classList.add('off');
-      if(uEl && q>0) uEl.value=fmt(Math.round(total/q));
-    } else {
-      // 켜기(과세) → 부가세=금액÷11(포함), 공급가=금액−부가세, 단가=공급가÷수량
-      const vat=Math.round(total/11);
-      if(tEl) tEl.value=String(vat);
-      if(fEl) fEl.value='0';
-      if(sw) sw.classList.remove('off');
-      if(uEl && q>0) uEl.value=fmt(Math.round((total-vat)/q));
-    }
-  }
-  _rcpUpdateVatSplit(tr, idx);
-}
-// ─── 부가세 직접 입력 (천단위 콤마) + 분리표시 갱신 (2026-06-15) ───
-function onRcpVatInput(el, idx){
-  const digits=String(el.value||'').replace(/[^0-9]/g,'');
-  el.value=digits?fmt(parseInt(digits,10)):'0';
-  const tr=document.getElementById('row-'+idx); if(!tr) return;
-  // 직접 입력으로 부가세 생기면 토글도 켜진 상태로 맞춤
-  const sw=tr.querySelector('.vat-toggle .sw');
-  const tax=parseInt(digits||'0',10)||0;
-  if(sw){ if(tax>0) sw.classList.remove('off'); else sw.classList.add('off'); }
-  if(tr.dataset.manual==='1'){
-    _rcpRecalcAmount(tr); // 수동: 금액 = 단가×수량 + 부가세 (쌓기)
-  } else {
-    // 분석 영수증: 금액(낸 돈) 고정 → 단가만 재계산 (공급가=금액−부가세, 단가=공급가÷수량)
-    const total=parseInt(String(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,''),10)||0;
-    const q=parseFloat(tr.querySelector('.c-q')?.value||'0')||0;
-    const uEl=tr.querySelector('.c-u');
-    if(uEl && q>0) uEl.value=fmt(Math.round((total-tax)/q));
-  }
-  _rcpUpdateVatSplit(tr, idx);
-}
-// ─── 공급가/부가세/합계 분리표시 갱신 ───
-function _rcpUpdateVatSplit(tr, idx){
-  const total=parseInt(String(tr.querySelector('.c-p')?.value||'').replace(/[^0-9]/g,''),10)||0;
-  const tax=parseInt(String(tr.querySelector('.c-t')?.value||'0').replace(/[^0-9]/g,''),10)||0;
-  const supply=total-tax;
-  const splitEl=document.getElementById('vatsplit-'+idx);
-  if(splitEl) splitEl.textContent = tax>0 ? `공급가 ${fmt(supply)} + 부가세 ${fmt(tax)} = ${fmt(total)}` : '';
-  _rcpRefreshSum(); // 부가세 토글·수정 → 위 합계 카드 실시간 갱신
-}
+// (옛 onRcpVatToggle·onRcpVatInput·_rcpUpdateVatSplit 제거 — 2026-06-24 부가세 도출/토글 폐기. 카드에 부가세칸 없음.)
 // 단가/수량 입력 시 자동 금액 계산 (사용자 편의 — 2026-05-19)
 function onRcpUnitPriceInput(el, idx){
   const tr=document.getElementById('row-'+idx); if(!tr) return;
@@ -2027,10 +1914,9 @@ function onRcpQtyInput(el, idx){
 function _rcpRecalcAmount(tr){
   const u=parseInt(String(tr.querySelector('.c-u')?.value||'').replace(/[^0-9]/g,''),10)||0;
   const q=parseFloat(tr.querySelector('.c-q')?.value||'0')||0;
-  const t=parseInt(String(tr.querySelector('.c-t')?.value||'0').replace(/[^0-9]/g,''),10)||0; // 부가세
   if(u>0 && q>0){
-    // 단가(세전 공급가) × 수량 + 부가세 = 금액(낸 돈, 세후). 부가세 빠뜨리던 버그 수정 (2026-06-23)
-    const amt=Math.round(u*q)+t;
+    // 단가 × 수량 = 금액 (부가세 폐기 2026-06-24 — 공급가=금액, 단순)
+    const amt=Math.round(u*q);
     const pEl=tr.querySelector('.c-p');
     if(pEl) pEl.value=fmt(amt);
   }
@@ -2155,16 +2041,15 @@ function selectReason(r){
   _rcpRefreshSum(); // row-off 토글 후 합계 카드 재계산
 }
 
-// 품목 수정(금액·부가세·토글·단가·삭제) 시 합계 카드 실시간 재계산 — DOM이 진실 (2026-06-23 단일 함수화)
+// 품목 수정(금액·단가·삭제) 시 합계 카드 실시간 재계산 — DOM이 진실. 부가세 폐기(2026-06-24) → 총액만
 function _rcpRefreshSum(){
-  let rowSum=0, rowTax=0, cnt=0;
+  let rowSum=0, cnt=0;
   document.querySelectorAll('#resTable .rcp-item-card').forEach(tr=>{
     if(tr.classList.contains('row-off')) return;
     cnt++;
     rowSum+=parseInt((tr.querySelector('.c-p')?.value||'').replace(/[^0-9-]/g,''))||0;
-    rowTax+=parseInt((tr.querySelector('.c-t')?.value||'').replace(/[^0-9]/g,''))||0;
   });
-  _rcpSumCardRender(rowSum, rowTax, cnt); // 최초 분석과 똑같은 그림(공급가+부가세·대조경고 포함)
+  _rcpSumCardRender(rowSum, 0, cnt);
 }
 async function saveReceipt(){
   if(!guardStore()) return;
@@ -2744,23 +2629,94 @@ function openReceiptEdit(id){
   rcpEditingId=r.id;
   rcpEditingCategory=r.category||'';
   document.getElementById('reDate').value=r.receipt_date||ymdLocal(new Date());
-  document.getElementById('reVendor').value=r.vendor||'';
+  _initReVendor(r.vendor_id||'', r.vendor||''); // 거래처 = 바텀시트 선택 (FK, 2026-06-24)
   document.getElementById('reItem').value=r.item||'';
-  // 단가 = 세전(공급가) 단가, 부가세 별도. 합계 = 단가×수량 + 부가세 (분석카드와 통일, 2026-06-23)
-  const _q=parseFloat(r.qty)||0, _t=r.total_price||0, _tax=parseInt(r.tax_amount)||0;
-  const _u=parseInt(r.unit_price)||0;
+  const _specEl=document.getElementById('reSpec'); if(_specEl) _specEl.value=r.spec||'';
+  const _ogEl=document.getElementById('reOrigin'); if(_ogEl) _ogEl.value=r.origin||'';
+  // 단가 = 금액 ÷ 수량 (부가세 폐기 2026-06-24 → 공급가=금액, 전 화면 동일 공식)
+  const _q=parseFloat(r.qty)||0, _t=r.total_price||0;
+  const _u=(_q>0 && _t) ? Math.round(_t/_q) : (parseInt(r.unit_price)||0);
   document.getElementById('reUnitPrice').value=_u?fmt(_u):'';
   document.getElementById('reQty').value=(r.qty!=null&&r.qty!=='')?r.qty:'';
-  document.getElementById('reTax').value=_tax?fmt(_tax):'';
   document.getElementById('reAmount').value=r.total_price?fmt(r.total_price):'';
-  // 단가×수량+부가세가 합계와 맞으면 자동계산 허용(수량 수정 편의), 안 맞으면(OCR 오독) 합계 보호 → 단가만 고침
-  _reEditAmountManual = _t>0 && !(_u>0 && _q>0 && Math.round(_u*_q)+_tax===_t);
+  // 단가×수량이 합계와 맞으면 자동계산 허용(수량 수정 편의), 안 맞으면(OCR 오독·할인) 합계 보호 → 단가만 고침
+  _reEditAmountManual = _t>0 && !(_u>0 && _q>0 && Math.round(_u*_q)===_t);
   document.getElementById('reCatBtn').innerHTML=(r.category?'🏷️ '+getCatLabel(r.category,''):'미분류 ▸');
   const noteVal=(r.note==='정상')?'정상':'오답';
   document.querySelectorAll('input[name="reNote"]').forEach(i=>{i.checked=(i.value===noteVal);});
   openSheet('receiptEditSheet');
 }
-// 단가·수량 입력 → 합계 자동계산 (합계 직접 입력 전까지만)
+// 거래처 FK = 바텀시트 선택 (2026-06-24 select→바텀시트). 값은 #reVendorVal(hidden), 표시는 #reVendorBtn.
+//   val 형식: vendor.id | "keep:이름"(미등록 옛 거래처) | ""(거래처 없음·직접구매)
+let _reVendorVal='';
+function _setReVendor(val){
+  _reVendorVal = val||'';
+  const btn=document.getElementById('reVendorBtn'); const h=document.getElementById('reVendorVal');
+  if(h) h.value=_reVendorVal;
+  let label='거래처 없음 · 직접구매';
+  if(_reVendorVal.startsWith('keep:')) label=_reVendorVal.slice(5)+' (미등록)';
+  else if(_reVendorVal){ const v=(typeof vendors!=='undefined'?vendors:[]).find(x=>String(x.id)===String(_reVendorVal)); if(v) label=v.name; }
+  if(btn) btn.innerHTML=`${esc(label)} <span style="color:var(--gray-400);flex-shrink:0;">▾</span>`;
+}
+// 진입 시 현재 거래처 세팅 (vendor_id 우선, 없으면 이름으로 매칭, 그래도 없으면 미등록 보존)
+function _initReVendor(vid, vname){
+  const list=(typeof vendors!=='undefined'?vendors:[]);
+  if(vid && list.find(v=>String(v.id)===String(vid))) return _setReVendor(String(vid));
+  if(vname){ const v=list.find(x=>x.name===vname); if(v) return _setReVendor(String(v.id)); return _setReVendor('keep:'+vname); }
+  _setReVendor('');
+}
+// 거래처 picker = 2단계 (종류 먼저 → 그 종류 목록). 분석 흐름과 동일 루틴 (2026-06-24 사장님: 다 섞이면 못 찾음)
+function openReVendorPicker(){
+  const box=document.getElementById('reVendorPickList'); if(!box) return;
+  const ttl=document.getElementById('reVendorPickTitle'); if(ttl) ttl.textContent='거래처 선택';
+  const active=(typeof vendors!=='undefined'?vendors:[]).filter(v=>v.is_active!==false);
+  const cnt=k=>active.filter(v=>(v.kind||'vendor')===k).length;
+  const typeBtn=(k,emoji,label)=>`<button type="button" class="btn btn-secondary" style="text-align:left;padding:15px 14px;display:flex;justify-content:space-between;align-items:center;" data-action="reVendorPickKind|${k}"><span style="font-size:15px;font-weight:700;">${emoji} ${label}</span><span style="font-size:12px;color:var(--gray-500);">${cnt(k)}곳 ›</span></button>`;
+  box.innerHTML =
+      typeBtn('vendor','🏪','거래처')
+    + typeBtn('mart','🛒','마트')
+    + typeBtn('online','🌐','온라인')
+    // "거래처 없음·직접구매"는 맨 아래 — 진짜 일회성 직접구매(직원 회식·경조사)용 (2026-06-24 사장님)
+    + `<button type="button" class="btn btn-secondary" style="text-align:left;padding:13px 14px;margin-top:6px;font-weight:700;color:var(--gray-500);${_reVendorVal===''?'border:1.5px solid var(--toss-blue);color:var(--toss-blue);':''}" data-action="pickReVendor|">🚫 거래처 없음 · 직접구매 <span style="font-weight:500;font-size:11px;">(일회성)</span></button>`;
+  openSheet('reVendorPickSheet');
+}
+function reVendorPickKind(kind){
+  const box=document.getElementById('reVendorPickList'); if(!box) return;
+  const label=kind==='online'?'온라인':(kind==='mart'?'마트':'거래처');
+  const ttl=document.getElementById('reVendorPickTitle'); if(ttl) ttl.textContent=label+' 선택';
+  const list=(typeof vendors!=='undefined'?vendors:[]).filter(v=>(v.kind||'vendor')===kind && v.is_active!==false)
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  const back=`<button type="button" class="btn btn-secondary" style="text-align:left;padding:11px 14px;font-weight:700;color:var(--toss-blue);" data-action="openReVendorPicker">‹ 종류 다시 선택</button>`;
+  const addBtn=`<button type="button" class="btn btn-secondary" style="text-align:center;padding:13px;margin-top:4px;font-weight:700;color:var(--toss-blue);" data-action="addReVendorInline|${kind}">➕ 새 ${label} 추가</button>`;
+  if(!list.length){ box.innerHTML=back+`<div style="text-align:center;padding:18px;color:var(--gray-500);font-size:13px;">등록된 ${label}가 없어요.</div>`+addBtn; return; }
+  const rowBtn=v=>`<button type="button" class="btn btn-secondary" style="text-align:left;padding:13px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;${String(_reVendorVal)===String(v.id)?'border:1.5px solid var(--toss-blue);color:var(--toss-blue);':''}" data-action="pickReVendor|${v.id}"><span style="font-size:14px;font-weight:700;">${esc(v.name)}</span><span style="font-size:11px;color:var(--gray-500);flex-shrink:0;">${esc(v.category||label)}</span></button>`;
+  box.innerHTML=back+list.map(rowBtn).join('')+addBtn;
+}
+// 새 거래처/마트/온라인 즉석 추가 (이름만) — 수정 picker에서 호출. 등록 후 바로 선택 (2026-06-24, addMartInline 패턴)
+async function addReVendorInline(kind){
+  if(!currentStore) return;
+  const k=(kind==='online'||kind==='mart')?kind:'vendor';
+  const label=k==='online'?'온라인 플랫폼':(k==='mart'?'마트':'거래처');
+  const name=(prompt(`새 ${label} 이름을 입력하세요`)||'').trim();
+  if(!name) return;
+  setLoad(true,`${label} 추가 중...`);
+  // 같은 이름+종류 이미 있으면 그걸 선택 (중복 방지)
+  const {data:exist}=await sb.from('vendors').select('id').eq('store_id',currentStore.id).eq('kind',k).eq('name',name).maybeSingle();
+  let vid=exist?.id;
+  if(!vid){
+    const {data:ins,error}=await sb.from('vendors').insert({store_id:currentStore.id,name,kind:k,is_active:true}).select('id').single();
+    if(error){ setLoad(false); return toast(`${label} 추가 실패`,'error'); }
+    vid=ins.id;
+    if(typeof loadVendors==='function') await loadVendors(); // 전역 vendors 캐시 갱신
+  }
+  setLoad(false);
+  pickReVendor(vid); // 추가 후 바로 선택 + 시트 닫기
+}
+function pickReVendor(val){
+  _setReVendor(val==null?'':String(val));
+  closeSheet('reVendorPickSheet');
+}
+// 단가·수량 입력 → 합계 자동계산 (합계 직접 입력 전까지만). 부가세 폐기(2026-06-24) → 단가×수량=합계
 function onReEditUnitQty(el){
   const pos=el.selectionStart;
   const raw=String(el.value||'').replace(/[^0-9.]/g,'');
@@ -2769,18 +2725,7 @@ function onReEditUnitQty(el){
   if(_reEditAmountManual) return; // 합계 직접 고쳤으면 자동계산 안 함
   const u=parseInt((document.getElementById('reUnitPrice').value||'').replace(/[^0-9]/g,''),10)||0;
   const q=parseFloat((document.getElementById('reQty').value||'').replace(/[^0-9.]/g,''))||0;
-  const tax=parseInt((document.getElementById('reTax').value||'').replace(/[^0-9]/g,''),10)||0;
-  if(u>0&&q>0) document.getElementById('reAmount').value=fmt(Math.round(u*q)+tax); // 단가×수량 + 부가세 = 합계
-}
-// 부가세 직접 입력 → 합계 재계산 (단가×수량 + 부가세). 2026-06-23
-function onReEditTax(el){
-  const raw=String(el.value||'').replace(/[^0-9]/g,'');
-  el.value = raw?fmt(parseInt(raw,10)):'';
-  if(_reEditAmountManual) return;
-  const u=parseInt((document.getElementById('reUnitPrice').value||'').replace(/[^0-9]/g,''),10)||0;
-  const q=parseFloat((document.getElementById('reQty').value||'').replace(/[^0-9.]/g,''))||0;
-  const tax=parseInt(raw||'0',10)||0;
-  if(u>0&&q>0) document.getElementById('reAmount').value=fmt(Math.round(u*q)+tax);
+  if(u>0&&q>0) document.getElementById('reAmount').value=fmt(Math.round(u*q)); // 단가×수량 = 합계
 }
 // 합계 직접 입력 → 이후 단가·수량 변경해도 합계 보호 (지우면 자동계산 재허용)
 function onReEditAmount(el){
@@ -2801,13 +2746,18 @@ function openReceiptEditCat(){
 async function saveReceiptEdit(){
   if(!guardStore()||!rcpEditingId) return;
   const date=document.getElementById('reDate').value;
-  const vendor=document.getElementById('reVendor').value.trim();
+  // 거래처 = 바텀시트 선택값. vendor.id면 그 거래처(이름·FK 동기화), "keep:이름"이면 미등록 옛 이름 보존, ""면 직접구매(없음)
+  const _vSel=document.getElementById('reVendorVal')?.value||'';
+  let vendor='', vendorId=null;
+  if(_vSel.startsWith('keep:')) vendor=_vSel.slice(5);
+  else if(_vSel){ const _v=(typeof vendors!=='undefined'?vendors:[]).find(v=>String(v.id)===String(_vSel)); if(_v){ vendor=_v.name; vendorId=_v.id; } }
   const item=document.getElementById('reItem').value.trim();
+  const spec=(document.getElementById('reSpec')?.value||'').trim()||null;
+  const origin=(document.getElementById('reOrigin')?.value||'').trim()||null;
   const unitPrice=parseInt((document.getElementById('reUnitPrice').value||'').replace(/[^0-9]/g,''),10)||null;
   const qtyRaw=(document.getElementById('reQty').value||'').replace(/[^0-9.]/g,'');
   const qty=qtyRaw?parseFloat(qtyRaw):null;
   const amount=unFmt(document.getElementById('reAmount').value)||0;
-  const taxAmount=parseInt((document.getElementById('reTax').value||'').replace(/[^0-9]/g,''),10)||0; // 부가세 (2026-06-23)
   const note=document.querySelector('input[name="reNote"]:checked')?.value||'정상';
   const cat=rcpEditingCategory||'';
   if(!date) return toast('날짜를 입력하세요','warn');
@@ -2830,9 +2780,8 @@ async function saveReceiptEdit(){
   }
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').update({
-    receipt_date:date,vendor,item,total_price:amount,
-    unit_price:unitPrice,qty:qty,tax_amount:taxAmount,
-    is_tax_free: taxAmount>0 ? false : undefined, // 부가세 넣으면 과세로 (면세 해제). 0이면 기존값 유지
+    receipt_date:date,vendor,vendor_id:vendorId,item,spec,origin,total_price:amount,
+    unit_price:unitPrice,qty:qty, // 부가세(tax_amount) 폐기 — 화면서 안 받음. 기존 DB값은 보존(건드리지 않음)
     category:cat||null,category_id:resolveRcpCatId(cat),
     note
   }).eq('id',rcpEditingId).eq('store_id',currentStore.id);

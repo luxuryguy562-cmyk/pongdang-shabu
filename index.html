@@ -772,24 +772,28 @@
       <input type="date" id="reDate" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
-      <span style="font-size:12px;color:var(--gray-600);width:56px;">🏪 거래처</span>
-      <input type="text" id="reVendor" placeholder="거래처명" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+      <span style="font-size:12px;color:var(--gray-600);width:56px;flex-shrink:0;">🏪 거래처</span>
+      <button type="button" id="reVendorBtn" data-action="openReVendorPicker" style="flex:1;padding:9px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;background:#fff;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;font-family:inherit;color:var(--text);">거래처 선택 <span style="color:var(--gray-400);flex-shrink:0;">▾</span></button>
+      <input type="hidden" id="reVendorVal" value="">
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
       <span style="font-size:12px;color:var(--gray-600);width:56px;">📦 품목</span>
       <input type="text" id="reItem" placeholder="품목명" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
-      <span style="font-size:12px;color:var(--gray-600);width:56px;">📐 단가</span>
-      <input type="text" id="reUnitPrice" placeholder="0" inputmode="numeric" data-input="onReEditUnitQty|this" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
-      <span style="font-size:12px;color:var(--gray-600);">×</span>
-      <input type="text" id="reQty" placeholder="0" inputmode="decimal" data-input="onReEditUnitQty|this" style="width:56px;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
-      <span style="font-size:12px;color:var(--gray-600);">개</span>
+      <span style="font-size:12px;color:var(--gray-600);width:56px;">📏 규격</span>
+      <input type="text" id="reSpec" placeholder="없음" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
-      <span style="font-size:12px;color:var(--gray-600);width:56px;">🧾 부가세</span>
-      <input type="text" id="reTax" placeholder="0" inputmode="numeric" data-input="onReEditTax|this" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
-      <span style="font-size:12px;color:var(--gray-600);">원</span>
+      <span style="font-size:12px;color:var(--gray-600);width:56px;">🌍 원산지</span>
+      <input type="text" id="reOrigin" placeholder="없음" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:12px;color:var(--gray-600);width:56px;flex-shrink:0;white-space:nowrap;">📐 단가</span>
+      <input type="text" id="reUnitPrice" placeholder="0" inputmode="numeric" data-input="onReEditUnitQty|this" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
+      <span style="font-size:12px;color:var(--gray-600);flex-shrink:0;">×</span>
+      <input type="text" id="reQty" placeholder="0" inputmode="decimal" data-input="onReEditUnitQty|this" style="width:50px;flex-shrink:0;padding:8px 6px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;text-align:right;">
+      <span style="font-size:12px;color:var(--gray-600);flex-shrink:0;">개</span>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
       <span style="font-size:12px;color:var(--gray-600);width:56px;">💰 합계</span>
@@ -817,6 +821,17 @@
       <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="deleteReceiptRow">🗑 삭제</button>
       <button class="btn btn-primary" style="flex:2;padding:14px;" data-action="saveReceiptEdit">💾 저장</button>
     </div>
+  </div>
+</div>
+
+<!-- 영수증 수정 → 거래처 선택 바텀시트 (수정시트 위에 겹쳐 뜸, 2026-06-24) -->
+<div class="sheet-overlay" id="reVendorPickSheet">
+  <div class="sheet" style="max-height:80vh;">
+    <div class="sheet-header">
+      <div class="sheet-title" id="reVendorPickTitle">거래처 선택</div>
+      <button class="sheet-close" data-action="closeSheet|reVendorPickSheet">✕</button>
+    </div>
+    <div id="reVendorPickList" style="display:flex;flex-direction:column;gap:6px;"></div>
   </div>
 </div>
 
@@ -2936,6 +2951,14 @@
     <div id="vendorHandledCats" style="max-height:240px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:10px;margin-bottom:4px;">
       <!-- refreshVendorHandledCategories()가 동적 생성 -->
     </div>
+    <!-- 부가세 구분 (과세/면세/혼합) — 나중에 세금계산서 연동용. 영수증 부가세 자동계산은 폐기(2026-06-24). -->
+    <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin:12px 0 6px;">부가세 구분 <span style="font-weight:500;color:var(--gray-500);">(나중에 세금계산서용 · 선택)</span></div>
+    <div id="vendorVatSeg" style="display:flex;gap:6px;background:var(--gray-100);border-radius:11px;padding:4px;">
+      <button type="button" class="vvat-btn" data-action="setVendorVat|taxable" style="flex:1;padding:10px 0;border:none;border-radius:8px;background:transparent;font-size:13px;font-weight:700;color:var(--gray-600);">과세</button>
+      <button type="button" class="vvat-btn" data-action="setVendorVat|free" style="flex:1;padding:10px 0;border:none;border-radius:8px;background:transparent;font-size:13px;font-weight:700;color:var(--gray-600);">면세</button>
+      <button type="button" class="vvat-btn" data-action="setVendorVat|mixed" style="flex:1;padding:10px 0;border:none;border-radius:8px;background:transparent;font-size:13px;font-weight:700;color:var(--gray-600);">혼합</button>
+    </div>
+    <input type="hidden" id="vendorVatType" value="">
   </div>
   <!-- 온라인 플랫폼 안내 (kind=online일 때만 표시) -->
   <div id="vendorOnlineHint" style="display:none;font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:10px;padding:12px;margin-bottom:4px;line-height:1.6;">🌐 온라인 플랫폼은 품목이 다양해서 <b>취급품목을 정하지 않습니다</b>. 영수증마다 AI가 품목별로 분류해드려요.</div>
@@ -3484,19 +3507,19 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260624a"></script>
+<script src="assets/common.js?v=20260624c"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
   <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>
   <img id="imgFullSrc" style="max-width:90%;max-height:72vh;object-fit:contain;border-radius:12px;">
   <button style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:30px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;" data-action="closeImgFullPreview">닫기</button>
 </div>
-<script src="assets/tabs/receipt.js?v=20260624d"></script>
+<script src="assets/tabs/receipt.js?v=20260624j"></script>
 <script src="assets/tabs/attendance.js?v=20260624a"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260624a"></script>
 <script src="assets/tabs/dashboard.js?v=20260622b"></script>
-<script src="assets/tabs/sidemenu.js?v=20260624a"></script>
+<script src="assets/tabs/sidemenu.js?v=20260624b"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 </body>
 </html>
