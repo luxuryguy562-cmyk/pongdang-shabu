@@ -8213,7 +8213,10 @@ document.addEventListener('DOMContentLoaded', async()=>{
   if(savedStore){
     const s=JSON.parse(savedStore);currentStore=s;
     document.getElementById('headerStore').innerText=s.name;
-    await loadEmployees(); // 로그인에 필수 (직원목록)
+    // 로그인 증표 있으면 신분증 살아있음 → 직접 조회. 없으면(로그아웃 상태) RLS에 막혀
+    // 직원목록 0명이 되므로 공개 통로(login-meta)로 이름만 받아 로그인 드롭다운을 채움.
+    if(localStorage.getItem('pd_token')) await loadEmployees();
+    else await loadLoginNames();
     // 나머지는 로그인 후 백그라운드 로드
   }
 

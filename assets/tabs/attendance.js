@@ -13,6 +13,9 @@ function attTab(tab,el){
   // 직원: 개시·마감/영수증 버튼(empHomeActions)은 홈(출퇴근)에만, 급여탭(📋기록)에선 숨김 (2026-06-15)
   const eha=document.getElementById('empHomeActions');
   if(eha && typeof isManager!=='undefined' && !isManager && currentEmp) eha.style.display=(tab==='manual')?'':'none';
+  // 인사말(안녕하세요 OO님)도 홈(출퇴근)에만 — 내 급여(📋기록)에선 숨김 (2026-06-24 사장님 호소: 홈에서만 보여야)
+  const ehs=document.getElementById('empHomeSummary');
+  if(ehs && typeof isManager!=='undefined' && !isManager && currentEmp) ehs.style.display=(tab==='manual')?'flex':'none';
   if(tab==='all'){
     document.getElementById('vAllMonth').innerText = attAllMonth;
     loadAttAll(); // 안에서 본인 모드면 주간 간트도 호출. work_schedules 동시 로드 → 계획+실제 통합 표시

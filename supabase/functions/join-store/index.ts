@@ -29,12 +29,28 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ ok: false, error: "POST만 허용" }, 405);
   try {
-    const { token, code } = await req.json();
+    const body = await req.json();
+    const { token, code, action } = body;
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // ─── 내가 신청한 미승인 연결 목록 (로그인 후 설정 화면용) ───
+    if (action === "list_my_pending") {
+      if (!token) return json({ ok: false, error: "증표 없음" }, 400);
+      const { data: sess } = await admin.from("emp_sessions").select("employee_id, expires_at").eq("token", token).maybeSingle();
+      if (!sess) return json({ ok: false, error: "세션 없음" });
+      if (new Date(sess.expires_at) < new Date()) return json({ ok: false, error: "세션 만료" });
+      const { data: emp } = await admin.from("employees").select("person_id").eq("id", sess.employee_id).maybeSingle();
+      if (!emp || !emp.person_id) return json({ ok: true, rows: [] });
+      const { data: rows } = await admin.from("pending_joins")
+        .select("id, status, created_at, stores(name)")
+        .eq("person_id", emp.person_id)
+        .eq("status", "pending");
+      return json({ ok: true, rows: rows || [] });
+    }
+
     if (!token) return json({ ok: false, error: "증표 없음" }, 400);
     const cd = normCode(code);
     if (!cd) return json({ ok: false, error: "매장 코드를 입력해주세요" }, 400);
-
-    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data: st } = await admin.from("signup_tokens").select("*").eq("token", token).maybeSingle();
     if (!st) return json({ ok: false, error: "인증을 다시 받아주세요" });
