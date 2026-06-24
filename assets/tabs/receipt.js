@@ -1258,8 +1258,14 @@ async function runAI() {
     if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list);
     // 부가세 처리 (주류 제외): 품목마다 따로 — 과세 품목만 ÷11, 면세는 0. 영수증에 줄별 세액이 찍혀 있으면 그 값 그대로.
     //   ⚠️ 과세합 분배(나눠 넣기) 금지 — 비엔나 혼자 과세인데 연근에 부가세 나눠 넣던 사고 (2026-06-23 사장님 지적)
+    // 명세서 "공급가액 = 합계"(세액 0/공란) = 전액 면세 거래 → ÷11 금지, 전 품목 면세 강제 (육류·야채 등. 영수증 표시 최우선, 2026-06-24 사장님 호소)
+    const _noVatDoc = receiptSupplySum>0 && receiptTotalSum>0 && Math.abs(receiptSupplySum-receiptTotalSum) <= Math.max(100, receiptTotalSum*0.005);
+    const _forceAllFree = lst => lst.forEach(it=>{ it.isTaxFree=true; it.taxAmount=0; it.supplyPrice=parseInt(it.totalPrice)||0; });
     const _hadPrintedTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
-    if(!isLiquorModeAI && !_hadPrintedTax) _rcpDeriveVatNoTaxLine(list); // 줄별 세액 없으면 과세 품목만 ÷11
+    if(!isLiquorModeAI){
+      if(_noVatDoc) _forceAllFree(list);                    // 공급가액=합계 → 전액 면세
+      else if(!_hadPrintedTax) _rcpDeriveVatNoTaxLine(list); // 줄별 세액 없으면 과세 품목만 ÷11
+    }
     // 세액이 생겼으면 = 공급가·부가세 줄 표시 (세액 0 행은 면세)
     const _hasAnyTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
     list.forEach(it=> it._taxFormat = _hasAnyTax);
@@ -1310,7 +1316,10 @@ async function runAI() {
           if(isLiquorModeAI) _rcpLiquorUnitPrice(list); // 재검산 후에도 주류 단가=공급가÷수량 재계산
           if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list); // 재검산 후에도 거래처 수량 역산
           const _hpt2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
-          if(!isLiquorModeAI && !_hpt2) _rcpDeriveVatNoTaxLine(list); // 줄별 세액 없으면 과세 품목만 ÷11 (분배 X)
+          if(!isLiquorModeAI){
+            if(_noVatDoc) _forceAllFree(list);             // 공급가액=합계 → 전액 면세 (재검산 후도 동일)
+            else if(!_hpt2) _rcpDeriveVatNoTaxLine(list);   // 줄별 세액 없으면 과세 품목만 ÷11 (분배 X)
+          }
           const _ht2=list.some(it=>(parseInt(it.taxAmount)||0)>0);
           list.forEach(it=>it._taxFormat=_ht2);
           list=await applyRulesToReceipt(list);
