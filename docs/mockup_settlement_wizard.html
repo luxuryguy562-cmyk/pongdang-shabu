@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>마감정산 위자드 목업</title>
+<title>마감정산 위자드 목업 v2</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif; background: #f0f2f5; color: #1a1a2e; }
 
   .page-title {
     text-align: center;
-    padding: 28px 20px 8px;
+    padding: 28px 20px 6px;
     font-size: 22px;
     font-weight: 900;
     color: #1a1a2e;
@@ -21,6 +21,7 @@
     font-size: 13px;
     color: #888;
     margin-bottom: 28px;
+    line-height: 1.7;
   }
 
   .panel-row {
@@ -32,95 +33,59 @@
   }
 
   .phone {
-    flex: 0 0 340px;
+    flex: 0 0 320px;
     background: #fff;
     border-radius: 32px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.13);
     overflow: hidden;
-    min-height: 680px;
+    min-height: 660px;
     display: flex;
     flex-direction: column;
     border: 6px solid #222;
     position: relative;
   }
 
-  /* === 고정 상단 바 === */
+  /* ── 단계별 상단 바 ── */
   .settle-topbar {
     background: linear-gradient(135deg, #1a1a2e, #16213e);
-    padding: 14px 16px 10px;
+    padding: 12px 14px 10px;
     flex-shrink: 0;
   }
-  .settle-date-row {
+  .topbar-title-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
-  .settle-date-label {
-    font-size: 12px;
-    color: rgba(255,255,255,0.5);
-    font-weight: 600;
-  }
-  .settle-date-val {
-    font-size: 15px;
-    font-weight: 800;
-    color: #fff;
-  }
+  .topbar-label { font-size: 11px; color: rgba(255,255,255,0.45); font-weight: 700; }
+  .topbar-date  { font-size: 13px; font-weight: 800; color: #fff; }
 
-  .calc-bar {
-    background: rgba(255,255,255,0.07);
+  /* 단계별 미니 바 */
+  .step-calc-bar {
+    background: rgba(255,255,255,0.08);
     border-radius: 10px;
-    padding: 10px 12px;
-  }
-  .calc-bar-title {
-    font-size: 9px;
-    color: rgba(255,255,255,0.4);
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-  }
-  .calc-formula {
+    padding: 9px 12px;
     display: flex;
     align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px;
   }
-  .calc-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .calc-item-label {
-    font-size: 8px;
-    color: rgba(255,255,255,0.45);
-    font-weight: 600;
-    margin-bottom: 2px;
-  }
-  .calc-item-val {
-    font-size: 14px;
-    font-weight: 800;
-    color: #fff;
-    font-variant-numeric: tabular-nums;
-  }
-  .calc-item-val.dim { color: rgba(255,255,255,0.5); }
-  .calc-item-val.ok  { color: #4ade80; }
-  .calc-item-val.warn{ color: #facc15; }
-  .calc-op {
-    font-size: 14px;
-    color: rgba(255,255,255,0.3);
-    font-weight: 600;
-    align-self: flex-end;
-    margin-bottom: 2px;
-    padding: 0 2px;
-  }
-  .calc-eq { color: rgba(255,255,255,0.5); }
+  .sc-label { font-size: 9px; color: rgba(255,255,255,0.45); font-weight: 700; }
+  .sc-val   { font-size: 13px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; }
+  .sc-val.dim  { color: rgba(255,255,255,0.35); }
+  .sc-val.ok   { color: #4ade80; }
+  .sc-val.warn { color: #facc15; }
+  .sc-val.err  { color: #f87171; }
+  .sc-op    { font-size: 13px; color: rgba(255,255,255,0.3); font-weight: 700; }
+  .sc-eq    { color: rgba(255,255,255,0.45); }
+  .sc-item  { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .sc-divider { width: 1px; height: 28px; background: rgba(255,255,255,0.12); }
 
-  /* === 단계 진행 표시 === */
+  /* ── 단계 진행 ── */
   .step-nav {
     display: flex;
     align-items: center;
-    padding: 10px 14px 0;
+    padding: 9px 12px 0;
     gap: 0;
     flex-shrink: 0;
   }
@@ -142,410 +107,232 @@
     z-index: 0;
   }
   .step-dot:last-child::after { display: none; }
+  .step-dot.done-line::after  { background: #22c55e; }
   .step-circle {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #e5e7eb;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: 800;
-    color: #999;
-    position: relative;
-    z-index: 1;
-    flex-shrink: 0;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #e5e7eb; display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 900; color: #999; position: relative; z-index: 1; flex-shrink: 0;
   }
-  .step-circle.done {
-    background: #22c55e;
-    color: #fff;
-  }
-  .step-circle.active {
-    background: #0050FF;
-    color: #fff;
-    box-shadow: 0 0 0 3px rgba(0,80,255,0.2);
-  }
-  .step-dot::after { background: #e5e7eb; }
-  .step-dot.done-line::after { background: #22c55e; }
-  .step-label {
-    font-size: 8px;
-    color: #bbb;
-    font-weight: 600;
-    margin-top: 3px;
-    white-space: nowrap;
-  }
-  .step-label.active { color: #0050FF; font-weight: 800; }
-  .step-label.done   { color: #22c55e; }
+  .step-circle.done   { background: #22c55e; color: #fff; }
+  .step-circle.active { background: #0050FF; color: #fff; box-shadow: 0 0 0 3px rgba(0,80,255,0.2); }
+  .step-lbl { font-size: 8px; color: #bbb; font-weight: 600; margin-top: 3px; white-space: nowrap; }
+  .step-lbl.active { color: #0050FF; font-weight: 800; }
+  .step-lbl.done   { color: #22c55e; }
 
-  /* === 본문 === */
-  .settle-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 14px 16px;
-  }
-  .step-heading {
-    font-size: 18px;
-    font-weight: 900;
-    color: #111;
-    letter-spacing: -0.5px;
-    margin-bottom: 4px;
-  }
-  .step-desc {
-    font-size: 12px;
-    color: #888;
-    margin-bottom: 16px;
-    line-height: 1.5;
-  }
+  /* ── 본문 ── */
+  .settle-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
+  .step-heading { font-size: 17px; font-weight: 900; color: #111; letter-spacing: -0.5px; margin-bottom: 3px; }
+  .step-desc    { font-size: 11px; color: #888; margin-bottom: 14px; line-height: 1.5; }
 
-  /* 카드 섹션 */
-  .card {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 12px;
+  .card { background: #f8f9fa; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .card-title { font-size: 10px; font-weight: 800; color: #666; letter-spacing: 0.3px; margin-bottom: 9px; }
+
+  /* 개시 확인 카드 */
+  .opening-card {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border: 1.5px solid #fcd34d;
+    border-radius: 14px; padding: 16px; margin-bottom: 10px; text-align: center;
   }
-  .card-title {
-    font-size: 11px;
-    font-weight: 800;
-    color: #666;
-    letter-spacing: 0.3px;
-    margin-bottom: 10px;
-  }
+  .opening-lbl  { font-size: 10px; color: #92400e; font-weight: 700; margin-bottom: 3px; }
+  .opening-amt  { font-size: 26px; font-weight: 900; color: #1a1a2e; font-variant-numeric: tabular-nums; }
+  .opening-sub  { font-size: 10px; color: #aaa; margin-top: 3px; }
 
   /* 촬영 버튼 */
   .cam-btn {
-    width: 100%;
-    padding: 22px;
-    border-radius: 16px;
-    border: none;
+    width: 100%; padding: 26px 16px;
+    border-radius: 16px; border: none;
     background: linear-gradient(135deg, #0050FF, #3b82f6);
-    color: #fff;
-    font-size: 16px;
-    font-weight: 800;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    box-shadow: 0 4px 16px rgba(0,80,255,0.3);
+    color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    margin-bottom: 8px; box-shadow: 0 4px 16px rgba(0,80,255,0.3);
   }
-  .cam-btn-sub {
-    font-size: 11px;
-    opacity: 0.8;
-    font-weight: 600;
-  }
-  .cam-btn-icon { font-size: 28px; }
+  .cam-icon { font-size: 30px; }
+  .cam-text-main { font-size: 15px; font-weight: 900; }
+  .cam-text-sub  { font-size: 11px; font-weight: 600; opacity: 0.8; margin-top: 2px; }
 
+  /* 수기 링크 (아주 작게) */
   .manual-link {
-    text-align: center;
-    font-size: 12px;
-    color: #999;
-    padding: 4px;
-    cursor: pointer;
-    text-decoration: underline;
-    margin-bottom: 12px;
+    text-align: center; font-size: 10px; color: #bbb;
+    padding: 3px; cursor: pointer; margin-bottom: 10px;
   }
+  .manual-link u { text-decoration-color: #ccc; }
 
   /* AI 결과 카드 */
   .ai-result {
-    background: #fff;
-    border: 2px solid #22c55e;
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
+    background: #fff; border: 2px solid #22c55e;
+    border-radius: 12px; padding: 11px 13px; margin-bottom: 10px;
   }
-  .ai-result-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 800;
-    color: #16a34a;
-    margin-bottom: 10px;
+  .ai-header { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 800; color: #16a34a; margin-bottom: 9px; }
+  .ai-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; border-bottom: 1px solid #f0f0f0;
   }
-  .ai-result-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px solid #f0f0f0;
-  }
-  .ai-result-row:last-child { border-bottom: none; }
-  .ai-result-label {
-    font-size: 12px;
-    color: #555;
-    font-weight: 600;
-  }
-  .ai-result-val {
-    font-size: 14px;
-    font-weight: 800;
-    color: #111;
-    font-variant-numeric: tabular-nums;
-  }
-  .ai-result-val.editable {
-    background: #f0f9ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 6px;
-    padding: 3px 8px;
-    color: #1d4ed8;
+  .ai-row:last-child { border-bottom: none; }
+  .ai-lbl { font-size: 12px; color: #555; font-weight: 600; }
+  .ai-input {
+    width: 108px; border: 1px solid #bfdbfe; border-radius: 6px;
+    padding: 3px 8px; font-size: 13px; font-weight: 800; color: #1d4ed8;
+    background: #f0f9ff; text-align: right;
   }
 
-  /* 입력 필드 */
+  /* 입력 행 */
   .input-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid #f0f0f0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0; border-bottom: 1px solid #f0f0f0;
   }
   .input-row:last-child { border-bottom: none; }
-  .input-label {
-    font-size: 13px;
-    color: #444;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  .input-lbl {
+    font-size: 12px; color: #444; font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
   }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .dot-green { background: #22c55e; }
-  .dot-blue  { background: #3b82f6; }
-  .dot-orange{ background: #f97316; }
-  .dot-purple{ background: #a855f7; }
+  .dot-green  { background: #22c55e; }
+  .dot-blue   { background: #3b82f6; }
+  .dot-orange { background: #f97316; }
+  .dot-purple { background: #a855f7; }
   .input-val {
-    font-size: 15px;
-    font-weight: 800;
-    color: #111;
-    font-variant-numeric: tabular-nums;
-    background: #f0f0f5;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 10px;
-    width: 110px;
-    text-align: right;
+    font-size: 14px; font-weight: 800; color: #111; font-variant-numeric: tabular-nums;
+    background: #f0f0f5; border: none; border-radius: 8px;
+    padding: 5px 9px; width: 108px; text-align: right;
   }
+
   .section-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 14px;
-    background: #1a1a2e;
-    border-radius: 8px;
-    margin-top: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 13px; background: #1a1a2e; border-radius: 8px; margin-top: 8px;
   }
-  .section-total-label { font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 700; }
-  .section-total-val   { font-size: 16px; color: #fff; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .st-label { font-size: 11px; color: rgba(255,255,255,0.6); font-weight: 700; }
+  .st-val   { font-size: 15px; color: #fff; font-weight: 800; font-variant-numeric: tabular-nums; }
 
   /* 검증 카드 */
   .verify-card {
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    border-radius: 10px; padding: 11px 13px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 10px;
   }
-  .verify-ok   { background: #f0fdf4; border: 1.5px solid #86efac; }
-  .verify-bad  { background: #fff1f2; border: 1.5px solid #fca5a5; }
-  .verify-icon { font-size: 22px; }
-  .verify-text { flex: 1; }
-  .verify-title { font-size: 13px; font-weight: 800; color: #15803d; }
-  .verify-title.bad { color: #dc2626; }
-  .verify-sub   { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .verify-ok  { background: #f0fdf4; border: 1.5px solid #86efac; }
+  .verify-bad { background: #fff1f2; border: 1.5px solid #fca5a5; }
+  .verify-icon { font-size: 20px; }
+  .verify-text-area { flex: 1; }
+  .v-title { font-size: 12px; font-weight: 800; color: #15803d; }
+  .v-title.bad { color: #dc2626; }
+  .v-sub   { font-size: 10px; color: #aaa; margin-top: 2px; }
 
   /* 통장/지출 행 */
   .deduct-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid #f0f0f0;
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 0; border-bottom: 1px solid #f0f0f0;
   }
   .deduct-row:last-child { border-bottom: none; }
-  .deduct-badge {
-    font-size: 10px;
-    font-weight: 800;
-    padding: 3px 7px;
-    border-radius: 20px;
-    flex-shrink: 0;
-  }
-  .badge-bank  { background: #dbeafe; color: #1d4ed8; }
-  .badge-cash  { background: #fef3c7; color: #92400e; }
-  .deduct-memo { flex: 1; font-size: 12px; color: #444; font-weight: 600; }
-  .deduct-amt  { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .deduct-badge { font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 20px; flex-shrink: 0; }
+  .badge-bank { background: #dbeafe; color: #1d4ed8; }
+  .badge-cash { background: #fef3c7; color: #92400e; }
+  .deduct-memo { flex: 1; font-size: 11px; color: #444; font-weight: 600; }
+  .deduct-amt  { font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .deduct-amt.minus { color: #dc2626; }
-  .deduct-amt.plus  { color: #16a34a; }
 
   .add-row-btn {
-    width: 100%;
-    padding: 10px;
-    border: 1.5px dashed #d1d5db;
-    border-radius: 8px;
-    background: transparent;
-    color: #9ca3af;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 8px;
+    width: 100%; padding: 9px; border: 1.5px dashed #d1d5db;
+    border-radius: 8px; background: transparent; color: #9ca3af;
+    font-size: 11px; font-weight: 700; cursor: pointer; margin-top: 8px;
+  }
+
+  /* 통장 고정 행 (추가 불가) */
+  .bank-fixed-note {
+    font-size: 9px; color: #bbb; font-weight: 600;
+    text-align: right; margin-top: 4px;
   }
 
   /* 금고 계수 */
-  .vault-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
+  .vault-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
   .vault-item {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 9px 11px; display: flex; flex-direction: column; gap: 4px;
   }
   .vault-denom { font-size: 11px; color: #888; font-weight: 700; }
-  .vault-input-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
+  .vault-input-row { display: flex; align-items: center; gap: 4px; }
   .vault-input {
-    flex: 1;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 4px 6px;
-    font-size: 13px;
-    font-weight: 700;
-    text-align: right;
-    width: 40px;
+    flex: 1; border: 1px solid #e0e0e0; border-radius: 6px;
+    padding: 4px 6px; font-size: 13px; font-weight: 700;
+    text-align: right; min-width: 0;
   }
-  .vault-unit { font-size: 10px; color: #bbb; }
-  .vault-sub  { font-size: 11px; color: #0050FF; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .vault-unit { font-size: 10px; color: #bbb; flex-shrink: 0; }
+  .vault-sub  { font-size: 10px; color: #0050FF; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-  /* 최종 차이 카드 */
+  /* 최종 차액 카드 */
   .final-diff {
-    border-radius: 14px;
-    padding: 16px;
-    text-align: center;
-    margin-bottom: 14px;
+    border-radius: 14px; padding: 14px 16px; text-align: center; margin-bottom: 12px;
   }
   .final-diff.ok   { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 2px solid #86efac; }
   .final-diff.warn { background: linear-gradient(135deg, #fff7ed, #fef3c7); border: 2px solid #fcd34d; }
-  .final-diff-icon { font-size: 32px; margin-bottom: 4px; }
-  .final-diff-title { font-size: 15px; font-weight: 900; color: #15803d; }
-  .final-diff-title.warn { color: #92400e; }
-  .final-diff-sub { font-size: 12px; color: #888; margin-top: 4px; }
-  .final-diff-num { font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; margin-top: 8px; }
+  .fd-icon  { font-size: 28px; margin-bottom: 3px; }
+  .fd-title { font-size: 14px; font-weight: 900; color: #15803d; }
+  .fd-title.warn { color: #92400e; }
+  .fd-num   { font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; margin-top: 6px; }
+  .fd-sub   { font-size: 10px; color: #888; margin-top: 3px; }
+
+  /* 실계수 바 */
+  .vault-total-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 12px; background: #1a1a2e; border-radius: 8px; margin-bottom: 8px;
+  }
+  .vtb-label { font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 700; }
+  .vtb-val   { font-size: 16px; font-weight: 900; color: #4ade80; font-variant-numeric: tabular-nums; }
 
   /* 하단 네비 */
   .settle-footer {
-    padding: 12px 16px;
-    display: flex;
-    gap: 8px;
-    border-top: 1px solid #f0f0f0;
-    flex-shrink: 0;
-    background: #fff;
+    padding: 10px 14px; display: flex; gap: 8px;
+    border-top: 1px solid #f0f0f0; flex-shrink: 0; background: #fff;
   }
   .btn-prev {
-    flex: 1;
-    padding: 13px;
-    border: 1.5px solid #e5e7eb;
-    border-radius: 12px;
-    background: #fff;
-    font-size: 13px;
-    font-weight: 700;
-    color: #555;
-    cursor: pointer;
+    flex: 1; padding: 12px; border: 1.5px solid #e5e7eb; border-radius: 12px;
+    background: #fff; font-size: 12px; font-weight: 700; color: #555; cursor: pointer;
   }
   .btn-next {
-    flex: 2;
-    padding: 13px;
-    border: none;
-    border-radius: 12px;
-    background: #0050FF;
-    font-size: 14px;
-    font-weight: 800;
-    color: #fff;
-    cursor: pointer;
+    flex: 2; padding: 12px; border: none; border-radius: 12px;
+    background: #0050FF; font-size: 13px; font-weight: 800; color: #fff; cursor: pointer;
     box-shadow: 0 3px 12px rgba(0,80,255,0.3);
   }
   .btn-save {
-    flex: 2;
-    padding: 13px;
-    border: none;
-    border-radius: 12px;
+    flex: 2; padding: 12px; border: none; border-radius: 12px;
     background: linear-gradient(135deg, #22c55e, #16a34a);
-    font-size: 14px;
-    font-weight: 800;
-    color: #fff;
-    cursor: pointer;
+    font-size: 13px; font-weight: 800; color: #fff; cursor: pointer;
     box-shadow: 0 3px 12px rgba(34,197,94,0.3);
   }
 
-  /* 배지 */
   .badge-auto {
-    font-size: 9px;
-    background: #f0f9ff;
-    color: #0369a1;
-    font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 20px;
-    border: 1px solid #bae6fd;
+    font-size: 8px; background: #f0f9ff; color: #0369a1; font-weight: 800;
+    padding: 2px 5px; border-radius: 20px; border: 1px solid #bae6fd;
+  }
+  .info-box {
+    background: #f0f9ff; border-radius: 10px; padding: 11px 12px;
+    font-size: 11px; color: #0369a1; font-weight: 600; line-height: 1.6; margin-bottom: 10px;
   }
 
   /* 패널 레이블 */
   .panel-label {
-    text-align: center;
-    font-size: 12px;
-    font-weight: 800;
-    color: #666;
-    margin-bottom: 10px;
-    padding: 6px 14px;
-    background: #fff;
-    border-radius: 20px;
-    display: inline-block;
+    text-align: center; font-size: 11px; font-weight: 800; color: #666; margin-bottom: 8px;
+    padding: 5px 12px; background: #fff; border-radius: 20px; display: inline-block;
     box-shadow: 0 2px 8px rgba(0,0,0,0.07);
   }
-  .panel-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 0 0 340px;
-  }
+  .panel-wrapper { display: flex; flex-direction: column; align-items: center; flex: 0 0 320px; }
 
-  /* 개시 확인 */
-  .opening-confirm {
-    background: linear-gradient(135deg, #fffbeb, #fef3c7);
-    border: 1.5px solid #fcd34d;
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 12px;
-    text-align: center;
-  }
-  .opening-confirm-label { font-size: 11px; color: #92400e; font-weight: 700; margin-bottom: 4px; }
-  .opening-confirm-val   { font-size: 28px; font-weight: 900; color: #1a1a2e; font-variant-numeric: tabular-nums; }
-  .opening-confirm-sub   { font-size: 11px; color: #aaa; margin-top: 4px; }
-
-  .info-box {
-    background: #f0f9ff;
-    border-radius: 10px;
-    padding: 12px 14px;
-    font-size: 12px;
-    color: #0369a1;
-    font-weight: 600;
-    line-height: 1.6;
-    margin-bottom: 12px;
+  /* 변경사항 주석 박스 */
+  .change-note {
+    font-size: 10px; color: #0050FF; font-weight: 700;
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+    padding: 6px 10px; margin-top: 8px; text-align: center; width: 100%;
   }
 </style>
 </head>
 <body>
 
-<div class="page-title">마감정산 — 단계 위자드(마법사) 목업</div>
-<div class="page-sub">5단계로 하나씩 안내 · 맨 위 계산수식 항상 고정 · 촬영 우선 매출 입력</div>
+<div class="page-title">마감정산 — 단계 위자드 목업 v2</div>
+<div class="page-sub">
+  ✅ 수정 반영 사항<br>
+  ① 상단 바 = <strong>단계별 관련 숫자만, 원 단위 전체 표시</strong> &nbsp;
+  ② 2단계 = 촬영 전/후 분리 &nbsp;
+  ③ 4단계 = 통장 고정 1행 &nbsp;
+  ④ 5단계 = 지폐·동전 계수 → 실시간 차액 원 단위 표시
+</div>
 
 <div class="panel-row">
 
@@ -553,82 +340,50 @@
   <div class="panel-wrapper">
     <span class="panel-label">1단계 — 영업개시 확인</span>
     <div class="phone">
-      <!-- 상단 고정 바 -->
       <div class="settle-topbar">
-        <div class="settle-date-row">
-          <span class="settle-date-label">마감 정산</span>
-          <span class="settle-date-val">2026년 6월 24일 (화)</span>
+        <div class="topbar-title-row">
+          <span class="topbar-label">마감정산</span>
+          <span class="topbar-date">2026. 6. 24 (화)</span>
         </div>
-        <div class="calc-bar">
-          <div class="calc-bar-title">실시간 계산</div>
-          <div class="calc-formula">
-            <div class="calc-item">
-              <div class="calc-item-label">영업개시</div>
-              <div class="calc-item-val">63만</div>
-            </div>
-            <div class="calc-op">+</div>
-            <div class="calc-item">
-              <div class="calc-item-label">매출(현금)</div>
-              <div class="calc-item-val dim">—</div>
-            </div>
-            <div class="calc-op">−</div>
-            <div class="calc-item">
-              <div class="calc-item-label">지출</div>
-              <div class="calc-item-val dim">—</div>
-            </div>
-            <div class="calc-op">−</div>
-            <div class="calc-item">
-              <div class="calc-item-label">통장이체</div>
-              <div class="calc-item-val dim">—</div>
-            </div>
-            <div class="calc-op calc-eq">=</div>
-            <div class="calc-item">
-              <div class="calc-item-label">금고예상</div>
-              <div class="calc-item-val dim">?</div>
-            </div>
+        <!-- 1단계: 개시금만 보여줌 -->
+        <div class="step-calc-bar">
+          <div class="sc-item">
+            <div class="sc-label">이 단계에서 확인할 것</div>
+            <div class="sc-val">영업개시금 확인</div>
+          </div>
+          <div class="sc-divider"></div>
+          <div class="sc-item">
+            <div class="sc-label">어제 마감 금고 잔액</div>
+            <div class="sc-val ok">630,000원</div>
           </div>
         </div>
       </div>
 
-      <!-- 단계 표시 -->
       <div class="step-nav">
         <div class="step-dot">
           <div class="step-circle active">1</div>
-          <div class="step-label active">개시</div>
+          <div class="step-lbl active">개시</div>
         </div>
-        <div class="step-dot">
-          <div class="step-circle">2</div>
-          <div class="step-label">매출</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle">3</div>
-          <div class="step-label">현금</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle">4</div>
-          <div class="step-label">이동</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle">5</div>
-          <div class="step-label">금고</div>
-        </div>
+        <div class="step-dot"><div class="step-circle">2</div><div class="step-lbl">매출</div></div>
+        <div class="step-dot"><div class="step-circle">3</div><div class="step-lbl">현금</div></div>
+        <div class="step-dot"><div class="step-circle">4</div><div class="step-lbl">이동</div></div>
+        <div class="step-dot"><div class="step-circle">5</div><div class="step-lbl">금고</div></div>
       </div>
 
-      <!-- 본문 -->
       <div class="settle-body">
         <div class="step-heading">영업개시금 확인</div>
-        <div class="step-desc">어제 마감 때 남긴 금고 금액입니다.<br>자동으로 불러왔습니다. 틀리면 수정하세요.</div>
+        <div class="step-desc">어제 마감 후 금고에 남긴 금액입니다. 자동으로 불러왔습니다. 맞으면 다음으로 넘어가세요.</div>
 
-        <div class="opening-confirm">
-          <div class="opening-confirm-label">어제(6/23) 마감 금고에서 자동 불러옴</div>
-          <div class="opening-confirm-val">630,000원</div>
-          <div class="opening-confirm-sub">틀리면 아래에서 직접 수정</div>
+        <div class="opening-card">
+          <div class="opening-lbl">어제(6/23) 마감 금고 잔액 → 자동 불러옴</div>
+          <div class="opening-amt">630,000원</div>
+          <div class="opening-sub">틀리면 아래 입력창에서 수정</div>
         </div>
 
         <div class="card">
-          <div class="card-title">개시금 수정 (필요시만)</div>
+          <div class="card-title">개시금 수정 (필요할 때만)</div>
           <div class="input-row">
-            <div class="input-label">
+            <div class="input-lbl">
               <div class="dot dot-orange"></div>영업개시금
               <span class="badge-auto">자동</span>
             </div>
@@ -637,12 +392,11 @@
         </div>
 
         <div class="info-box">
-          💡 영업개시금 = 어제 마감 후 실제 금고에 남긴 돈<br>
+          💡 영업개시금 = 어제 마감 후 실제 금고에 남겨둔 돈<br>
           다를 경우 수정하면 오늘 마감 차액에 자동 반영됩니다.
         </div>
       </div>
 
-      <!-- 하단 네비 -->
       <div class="settle-footer">
         <button class="btn-next">매출 입력하기 →</button>
       </div>
@@ -650,108 +404,141 @@
   </div>
 
 
-  <!-- ===== PANEL 2: 매출 입력 (촬영 우선) ===== -->
+  <!-- ===== PANEL 2a: 매출 입력 — 촬영 전 ===== -->
   <div class="panel-wrapper">
-    <span class="panel-label">2단계 — 매출 입력 (촬영 우선)</span>
+    <span class="panel-label">2단계 — 매출 입력 (촬영 전)</span>
     <div class="phone">
       <div class="settle-topbar">
-        <div class="settle-date-row">
-          <span class="settle-date-label">마감 정산</span>
-          <span class="settle-date-val">2026년 6월 24일 (화)</span>
+        <div class="topbar-title-row">
+          <span class="topbar-label">마감정산</span>
+          <span class="topbar-date">2026. 6. 24 (화)</span>
         </div>
-        <div class="calc-bar">
-          <div class="calc-bar-title">실시간 계산</div>
-          <div class="calc-formula">
-            <div class="calc-item">
-              <div class="calc-item-label">영업개시</div>
-              <div class="calc-item-val">63만</div>
-            </div>
-            <div class="calc-op">+</div>
-            <div class="calc-item">
-              <div class="calc-item-label">현금매출</div>
-              <div class="calc-item-val ok">47만</div>
-            </div>
-            <div class="calc-op">−</div>
-            <div class="calc-item">
-              <div class="calc-item-label">지출</div>
-              <div class="calc-item-val dim">—</div>
-            </div>
-            <div class="calc-op">−</div>
-            <div class="calc-item">
-              <div class="calc-item-label">통장이체</div>
-              <div class="calc-item-val dim">—</div>
-            </div>
-            <div class="calc-op calc-eq">=</div>
-            <div class="calc-item">
-              <div class="calc-item-label">금고예상</div>
-              <div class="calc-item-val warn">110만?</div>
-            </div>
+        <!-- 2단계: 아직 매출 미입력 -->
+        <div class="step-calc-bar">
+          <div class="sc-item">
+            <div class="sc-label">영업개시금</div>
+            <div class="sc-val">630,000원</div>
+          </div>
+          <div class="sc-op">+</div>
+          <div class="sc-item">
+            <div class="sc-label">이 단계 — 현금매출</div>
+            <div class="sc-val dim">입력 전</div>
+          </div>
+          <div class="sc-op sc-eq">=</div>
+          <div class="sc-item">
+            <div class="sc-label">금고예상</div>
+            <div class="sc-val dim">?</div>
           </div>
         </div>
       </div>
 
       <div class="step-nav">
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">개시</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle active">2</div>
-          <div class="step-label active">매출</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle">3</div>
-          <div class="step-label">현금</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle">4</div>
-          <div class="step-label">이동</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle">5</div>
-          <div class="step-label">금고</div>
-        </div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">개시</div></div>
+        <div class="step-dot"><div class="step-circle active">2</div><div class="step-lbl active">매출</div></div>
+        <div class="step-dot"><div class="step-circle">3</div><div class="step-lbl">현금</div></div>
+        <div class="step-dot"><div class="step-circle">4</div><div class="step-lbl">이동</div></div>
+        <div class="step-dot"><div class="step-circle">5</div><div class="step-lbl">금고</div></div>
       </div>
 
       <div class="settle-body">
         <div class="step-heading">오늘 매출 입력</div>
-        <div class="step-desc">POS 마감 장표를 촬영하면 자동으로 숫자를 읽어옵니다.<br>확인 후 틀린 숫자만 수정하세요.</div>
+        <div class="step-desc">POS 마감 장표를 촬영하면 AI가 숫자를 자동으로 읽어옵니다.</div>
 
-        <!-- 촬영 버튼 (가장 크게, 가장 위) -->
+        <!-- 촬영 버튼 (화면의 중심) -->
         <button class="cam-btn">
-          <span class="cam-btn-icon">📸</span>
+          <span class="cam-icon">📸</span>
           <div>
-            <div>POS 장표 촬영</div>
-            <div class="cam-btn-sub">찍으면 AI가 자동으로 숫자를 읽어요</div>
+            <div class="cam-text-main">POS 장표 촬영하기</div>
+            <div class="cam-text-sub">찍으면 AI가 숫자를 자동으로 읽어드려요</div>
           </div>
         </button>
-        <div class="manual-link">▼ 수기로 직접 입력하기</div>
 
-        <!-- AI 인식 결과 -->
+        <!-- 수기입력 링크 — 아주 작게 -->
+        <div class="manual-link"><u>수기로 직접 입력하기</u></div>
+
+        <!-- 처음엔 입력 영역 없음 → 촬영 후 나타남 -->
+        <div style="text-align:center; padding:20px 0; color:#ccc; font-size:12px; font-weight:600;">
+          📸 촬영하면 아래에 결과가 나타납니다
+        </div>
+      </div>
+
+      <div class="settle-footer">
+        <button class="btn-prev">← 이전</button>
+        <button class="btn-next" style="opacity:0.4;" disabled>현금 상세 →</button>
+      </div>
+    </div>
+    <div class="change-note">▲ 처음 상태 — 촬영 전에는 입력 영역 없음</div>
+  </div>
+
+
+  <!-- ===== PANEL 2b: 매출 입력 — AI 분석 후 ===== -->
+  <div class="panel-wrapper">
+    <span class="panel-label">2단계 — 매출 입력 (AI 분석 후)</span>
+    <div class="phone">
+      <div class="settle-topbar">
+        <div class="topbar-title-row">
+          <span class="topbar-label">마감정산</span>
+          <span class="topbar-date">2026. 6. 24 (화)</span>
+        </div>
+        <!-- AI 인식 후: 현금매출 채워짐 -->
+        <div class="step-calc-bar">
+          <div class="sc-item">
+            <div class="sc-label">영업개시금</div>
+            <div class="sc-val">630,000원</div>
+          </div>
+          <div class="sc-op">+</div>
+          <div class="sc-item">
+            <div class="sc-label">현금매출 (입력 중)</div>
+            <div class="sc-val ok">470,000원</div>
+          </div>
+          <div class="sc-op sc-eq">=</div>
+          <div class="sc-item">
+            <div class="sc-label">금고예상 (잠정)</div>
+            <div class="sc-val warn">1,100,000원?</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-nav">
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">개시</div></div>
+        <div class="step-dot"><div class="step-circle active">2</div><div class="step-lbl active">매출</div></div>
+        <div class="step-dot"><div class="step-circle">3</div><div class="step-lbl">현금</div></div>
+        <div class="step-dot"><div class="step-circle">4</div><div class="step-lbl">이동</div></div>
+        <div class="step-dot"><div class="step-circle">5</div><div class="step-lbl">금고</div></div>
+      </div>
+
+      <div class="settle-body">
+        <div class="step-heading">오늘 매출 입력</div>
+        <div class="step-desc">AI가 읽어온 숫자를 확인하세요. 틀린 칸만 수정하면 됩니다.</div>
+
+        <!-- AI 결과 카드 (촬영 후 등장) -->
         <div class="ai-result">
-          <div class="ai-result-header">✅ AI 인식 완료 — 숫자 확인 후 수정하세요</div>
-          <div class="ai-result-row">
-            <div class="ai-result-label">🟢 현금</div>
-            <input class="ai-result-val editable" value="320,000" style="width:110px;border:1px solid #bfdbfe;border-radius:6px;padding:3px 8px;font-size:14px;font-weight:800;color:#1d4ed8;background:#f0f9ff;text-align:right;">
+          <div class="ai-header">✅ AI 인식 완료 — 확인 후 틀린 숫자만 수정하세요</div>
+          <div class="ai-row">
+            <div class="ai-lbl">🟢 현금</div>
+            <input class="ai-input" value="320,000">
           </div>
-          <div class="ai-result-row">
-            <div class="ai-result-label">🟢 현금영수증</div>
-            <input class="ai-result-val editable" value="150,000" style="width:110px;border:1px solid #bfdbfe;border-radius:6px;padding:3px 8px;font-size:14px;font-weight:800;color:#1d4ed8;background:#f0f9ff;text-align:right;">
+          <div class="ai-row">
+            <div class="ai-lbl">🟢 현금영수증</div>
+            <input class="ai-input" value="150,000">
           </div>
-          <div class="ai-result-row">
-            <div class="ai-result-label">💳 카드</div>
-            <input class="ai-result-val editable" value="980,000" style="width:110px;border:1px solid #bfdbfe;border-radius:6px;padding:3px 8px;font-size:14px;font-weight:800;color:#1d4ed8;background:#f0f9ff;text-align:right;">
+          <div class="ai-row">
+            <div class="ai-lbl">💳 카드</div>
+            <input class="ai-input" value="980,000">
           </div>
-          <div class="ai-result-row">
-            <div class="ai-result-label">기타</div>
-            <input class="ai-result-val editable" value="0" style="width:110px;border:1px solid #bfdbfe;border-radius:6px;padding:3px 8px;font-size:14px;font-weight:800;color:#1d4ed8;background:#f0f9ff;text-align:right;">
+          <div class="ai-row">
+            <div class="ai-lbl">기타</div>
+            <input class="ai-input" value="0">
           </div>
         </div>
 
         <div class="section-total">
-          <span class="section-total-label">오늘 매출 합계</span>
-          <span class="section-total-val">1,450,000원</span>
+          <span class="st-label">오늘 매출 합계</span>
+          <span class="st-val">1,450,000원</span>
         </div>
+
+        <!-- 수기입력 링크 — AI 결과 뜬 후에도 작게 유지 -->
+        <div class="manual-link" style="margin-top:8px;"><u>수기로 직접 다시 입력하기</u></div>
       </div>
 
       <div class="settle-footer">
@@ -759,6 +546,7 @@
         <button class="btn-next">현금 상세 →</button>
       </div>
     </div>
+    <div class="change-note">▲ AI 분석 후 — 결과 카드가 나타나고 수정 가능</div>
   </div>
 
 
@@ -767,105 +555,73 @@
     <span class="panel-label">3단계 — 현금 상세 확인</span>
     <div class="phone">
       <div class="settle-topbar">
-        <div class="settle-date-row">
-          <span class="settle-date-label">마감 정산</span>
-          <span class="settle-date-val">2026년 6월 24일 (화)</span>
+        <div class="topbar-title-row">
+          <span class="topbar-label">마감정산</span>
+          <span class="topbar-date">2026. 6. 24 (화)</span>
         </div>
-        <div class="calc-bar">
-          <div class="calc-bar-title">실시간 계산</div>
-          <div class="calc-formula">
-            <div class="calc-item">
-              <div class="calc-item-label">영업개시</div>
-              <div class="calc-item-val">63만</div>
-            </div>
-            <div class="calc-op">+</div>
-            <div class="calc-item">
-              <div class="calc-item-label">현금매출</div>
-              <div class="calc-item-val">47만</div>
-            </div>
-            <div class="calc-op">−</div>
-            <div class="calc-item">
-              <div class="calc-item-label">지출</div>
-              <div class="calc-item-val dim">—</div>
-            </div>
-            <div class="calc-op">−</div>
-            <div class="calc-item">
-              <div class="calc-item-label">통장이체</div>
-              <div class="calc-item-val dim">—</div>
-            </div>
-            <div class="calc-op calc-eq">=</div>
-            <div class="calc-item">
-              <div class="calc-item-label">금고예상</div>
-              <div class="calc-item-val warn">110만?</div>
-            </div>
+        <!-- 3단계: POS 현금 vs 상세 검증 -->
+        <div class="step-calc-bar">
+          <div class="sc-item">
+            <div class="sc-label">POS 현금 (앞 단계 입력)</div>
+            <div class="sc-val">470,000원</div>
+          </div>
+          <div class="sc-op sc-eq">vs</div>
+          <div class="sc-item">
+            <div class="sc-label">상세 합계 (이 단계 입력)</div>
+            <div class="sc-val ok">470,000원 ✅</div>
           </div>
         </div>
       </div>
 
       <div class="step-nav">
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">개시</div>
-        </div>
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">매출</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle active">3</div>
-          <div class="step-label active">현금</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle">4</div>
-          <div class="step-label">이동</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle">5</div>
-          <div class="step-label">금고</div>
-        </div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">개시</div></div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">매출</div></div>
+        <div class="step-dot"><div class="step-circle active">3</div><div class="step-lbl active">현금</div></div>
+        <div class="step-dot"><div class="step-circle">4</div><div class="step-lbl">이동</div></div>
+        <div class="step-dot"><div class="step-circle">5</div><div class="step-lbl">금고</div></div>
       </div>
 
       <div class="settle-body">
         <div class="step-heading">현금 상세 확인</div>
-        <div class="step-desc">현금 매출이 어떻게 들어왔는지 상세를 적으세요.<br>합계가 POS와 일치하면 ✅ 표시됩니다.</div>
+        <div class="step-desc">현금 매출이 어떻게 들어왔는지 종류별로 적으세요.<br>합계가 POS와 맞으면 ✅ 표시됩니다.</div>
 
         <div class="card">
           <div class="card-title">현금 유입 상세</div>
           <div class="input-row">
-            <div class="input-label"><div class="dot dot-green"></div>실제 현금</div>
+            <div class="input-lbl"><div class="dot dot-green"></div>실제 현금</div>
             <input class="input-val" value="270,000">
           </div>
           <div class="input-row">
-            <div class="input-label"><div class="dot dot-blue"></div>QR 결제</div>
+            <div class="input-lbl"><div class="dot dot-blue"></div>QR 결제</div>
             <input class="input-val" value="50,000">
           </div>
           <div class="input-row">
-            <div class="input-label"><div class="dot dot-purple"></div>계좌 이체</div>
-            <input class="input-val" value="0">
+            <div class="input-lbl"><div class="dot dot-purple"></div>계좌 이체</div>
+            <input class="input-val" value="150,000">
           </div>
         </div>
 
-        <!-- 검증 결과 -->
+        <!-- 일치 -->
         <div class="verify-card verify-ok">
           <div class="verify-icon">✅</div>
-          <div class="verify-text">
-            <div class="verify-title">POS 현금과 일치</div>
-            <div class="verify-sub">POS 현금 470,000 = 상세 합계 470,000 — 맞아요</div>
+          <div class="verify-text-area">
+            <div class="v-title">POS 현금과 일치</div>
+            <div class="v-sub">POS 470,000원 = 상세 합계 470,000원</div>
           </div>
         </div>
 
-        <!-- 불일치 예시 (주석처럼 보여주기) -->
-        <div class="verify-card verify-bad" style="opacity:0.6;">
+        <!-- 불일치 예시 (흐리게) -->
+        <div class="verify-card verify-bad" style="opacity:0.55;">
           <div class="verify-icon">❌</div>
-          <div class="verify-text">
-            <div class="verify-title bad">차액 발생 (예시)</div>
-            <div class="verify-sub">POS 현금 470,000 ≠ 상세 합계 350,000 — 12만원 차이</div>
+          <div class="verify-text-area">
+            <div class="v-title bad">차액 발생 시 이런 표시 (예시)</div>
+            <div class="v-sub">POS 470,000 ≠ 상세 합계 350,000 — 120,000원 차이</div>
           </div>
         </div>
 
         <div class="info-box">
-          💡 QR/이체도 금고에 들어오는 현금이에요.<br>
-          상세 합계 ≠ POS 현금이면 입력 오류를 먼저 찾아보세요.
+          💡 QR·이체도 금고로 들어오는 현금입니다.<br>
+          상세 합계 ≠ POS 현금이면 입력 오류를 먼저 확인하세요.
         </div>
       </div>
 
@@ -882,91 +638,71 @@
     <span class="panel-label">4단계 — 통장 입금 · 현금 지출</span>
     <div class="phone">
       <div class="settle-topbar">
-        <div class="settle-date-row">
-          <span class="settle-date-label">마감 정산</span>
-          <span class="settle-date-val">2026년 6월 24일 (화)</span>
+        <div class="topbar-title-row">
+          <span class="topbar-label">마감정산</span>
+          <span class="topbar-date">2026. 6. 24 (화)</span>
         </div>
-        <div class="calc-bar">
-          <div class="calc-bar-title">실시간 계산</div>
-          <div class="calc-formula">
-            <div class="calc-item">
-              <div class="calc-item-label">영업개시</div>
-              <div class="calc-item-val">63만</div>
-            </div>
-            <div class="calc-op">+</div>
-            <div class="calc-item">
-              <div class="calc-item-label">현금매출</div>
-              <div class="calc-item-val">47만</div>
-            </div>
-            <div class="calc-op">−</div>
-            <div class="calc-item">
-              <div class="calc-item-label">지출</div>
-              <div class="calc-item-val ok">8만</div>
-            </div>
-            <div class="calc-op">−</div>
-            <div class="calc-item">
-              <div class="calc-item-label">통장이체</div>
-              <div class="calc-item-val ok">50만</div>
-            </div>
-            <div class="calc-op calc-eq">=</div>
-            <div class="calc-item">
-              <div class="calc-item-label">금고예상</div>
-              <div class="calc-item-val ok">52만</div>
-            </div>
+        <!-- 4단계: 금고에서 나간 총액 + 잔여 예상 -->
+        <div class="step-calc-bar">
+          <div class="sc-item">
+            <div class="sc-label">금고 들어온 합계</div>
+            <div class="sc-val">1,100,000원</div>
+          </div>
+          <div class="sc-op">−</div>
+          <div class="sc-item">
+            <div class="sc-label">이동·지출 합계</div>
+            <div class="sc-val warn">580,000원</div>
+          </div>
+          <div class="sc-op sc-eq">=</div>
+          <div class="sc-item">
+            <div class="sc-label">금고예상 잔액</div>
+            <div class="sc-val ok">520,000원</div>
           </div>
         </div>
       </div>
 
       <div class="step-nav">
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">개시</div>
-        </div>
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">매출</div>
-        </div>
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">현금</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle active">4</div>
-          <div class="step-label active">이동</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle">5</div>
-          <div class="step-label">금고</div>
-        </div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">개시</div></div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">매출</div></div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">현금</div></div>
+        <div class="step-dot"><div class="step-circle active">4</div><div class="step-lbl active">이동</div></div>
+        <div class="step-dot"><div class="step-circle">5</div><div class="step-lbl">금고</div></div>
       </div>
 
       <div class="settle-body">
         <div class="step-heading">통장 입금 · 현금 지출</div>
-        <div class="step-desc">금고에서 돈이 나간 내역을 적으세요.<br>통장에 넣은 것, 현금으로 쓴 것.</div>
+        <div class="step-desc">금고에서 나간 내역을 적으세요.</div>
 
+        <!-- 통장 입금: 고정 1행 (추가 불가) -->
         <div class="card">
           <div class="card-title">🏧 통장 입금 (금고 → 통장)</div>
           <div class="deduct-row">
             <div class="deduct-badge badge-bank">통장</div>
-            <div class="deduct-memo">매출금 입금 — 홍길동</div>
-            <div class="deduct-amt minus">−500,000</div>
+            <input style="flex:1;border:1px solid #e0e0e0;border-radius:6px;padding:4px 7px;font-size:11px;color:#444;" value="매출금 입금 — 홍길동" placeholder="메모">
+            <input style="width:90px;border:1px solid #e0e0e0;border-radius:6px;padding:4px 7px;font-size:12px;font-weight:800;text-align:right;" value="500,000">
           </div>
-          <button class="add-row-btn">+ 통장 입금 추가</button>
+          <div class="bank-fixed-note">통장 입금은 하루 1건</div>
         </div>
 
+        <!-- 현금 지출: 여러 행 추가 가능 -->
         <div class="card">
           <div class="card-title">💵 현금 지출 (금고 → 사용)</div>
           <div class="deduct-row">
-            <div class="deduct-badge badge-cash">현금지출</div>
+            <div class="deduct-badge badge-cash">지출</div>
             <div class="deduct-memo">식자재 구입비</div>
-            <div class="deduct-amt minus">−80,000</div>
+            <div class="deduct-amt minus">−50,000</div>
+          </div>
+          <div class="deduct-row">
+            <div class="deduct-badge badge-cash">지출</div>
+            <div class="deduct-memo">소모품 구매</div>
+            <div class="deduct-amt minus">−30,000</div>
           </div>
           <button class="add-row-btn">+ 현금 지출 추가</button>
         </div>
 
         <div class="section-total">
-          <span class="section-total-label">금고에서 나간 합계</span>
-          <span class="section-total-val">−580,000원</span>
+          <span class="st-label">금고에서 나간 합계</span>
+          <span class="st-val">−580,000원</span>
         </div>
       </div>
 
@@ -975,127 +711,121 @@
         <button class="btn-next">금고 계수하기 →</button>
       </div>
     </div>
+    <div class="change-note">▲ 통장 입금 = 고정 1행 (추가 버튼 없음) · 지출만 여러 행 추가 가능</div>
   </div>
 
 
-  <!-- ===== PANEL 5: 금고 계수 + 저장 ===== -->
+  <!-- ===== PANEL 5: 금고 계수 + 마감 저장 ===== -->
   <div class="panel-wrapper">
     <span class="panel-label">5단계 — 금고 계수 + 마감 저장</span>
     <div class="phone">
       <div class="settle-topbar">
-        <div class="settle-date-row">
-          <span class="settle-date-label">마감 정산</span>
-          <span class="settle-date-val">2026년 6월 24일 (화)</span>
+        <div class="topbar-title-row">
+          <span class="topbar-label">마감정산</span>
+          <span class="topbar-date">2026. 6. 24 (화)</span>
         </div>
-        <div class="calc-bar">
-          <div class="calc-bar-title">실시간 계산</div>
-          <div class="calc-formula">
-            <div class="calc-item">
-              <div class="calc-item-label">영업개시</div>
-              <div class="calc-item-val">63만</div>
-            </div>
-            <div class="calc-op">+</div>
-            <div class="calc-item">
-              <div class="calc-item-label">현금매출</div>
-              <div class="calc-item-val">47만</div>
-            </div>
-            <div class="calc-op">−</div>
-            <div class="calc-item">
-              <div class="calc-item-label">지출+이체</div>
-              <div class="calc-item-val">58만</div>
-            </div>
-            <div class="calc-op calc-eq">=</div>
-            <div class="calc-item">
-              <div class="calc-item-label">장부잔액</div>
-              <div class="calc-item-val ok">52만</div>
-            </div>
+        <!-- 5단계: 장부 vs 실계수 — 원 단위 전체 표시 -->
+        <div class="step-calc-bar">
+          <div class="sc-item">
+            <div class="sc-label">장부 잔액 (앞 단계 계산)</div>
+            <div class="sc-val">520,000원</div>
+          </div>
+          <div class="sc-op sc-eq">vs</div>
+          <div class="sc-item">
+            <div class="sc-label">실계수 합계 (지금 세는 중)</div>
+            <div class="sc-val ok">520,000원</div>
+          </div>
+          <div class="sc-divider"></div>
+          <div class="sc-item">
+            <div class="sc-label">차액</div>
+            <div class="sc-val ok">0원 🎯</div>
           </div>
         </div>
       </div>
 
       <div class="step-nav">
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">개시</div>
-        </div>
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">매출</div>
-        </div>
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">현금</div>
-        </div>
-        <div class="step-dot done-line">
-          <div class="step-circle done">✓</div>
-          <div class="step-label done">이동</div>
-        </div>
-        <div class="step-dot">
-          <div class="step-circle active">5</div>
-          <div class="step-label active">금고</div>
-        </div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">개시</div></div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">매출</div></div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">현금</div></div>
+        <div class="step-dot done-line"><div class="step-circle done">✓</div><div class="step-lbl done">이동</div></div>
+        <div class="step-dot"><div class="step-circle active">5</div><div class="step-lbl active">금고</div></div>
       </div>
 
       <div class="settle-body">
         <div class="step-heading">금고 계수</div>
-        <div class="step-desc">실제 금고에 있는 지폐·동전을 세어서 수량을 입력하세요.</div>
+        <div class="step-desc">금고에 있는 지폐·동전 수량을 세어 입력하세요.<br>입력할수록 위에서 실시간으로 차액이 바뀝니다.</div>
 
         <div class="vault-grid">
           <div class="vault-item">
-            <div class="vault-denom">50,000원</div>
+            <div class="vault-denom">50,000원권</div>
             <div class="vault-input-row">
-              <input class="vault-input" value="10"> <span class="vault-unit">장</span>
+              <input class="vault-input" value="10"><span class="vault-unit">장</span>
             </div>
             <div class="vault-sub">= 500,000원</div>
           </div>
           <div class="vault-item">
-            <div class="vault-denom">10,000원</div>
+            <div class="vault-denom">10,000원권</div>
             <div class="vault-input-row">
-              <input class="vault-input" value="2"> <span class="vault-unit">장</span>
+              <input class="vault-input" value="2"><span class="vault-unit">장</span>
             </div>
             <div class="vault-sub">= 20,000원</div>
           </div>
           <div class="vault-item">
-            <div class="vault-denom">5,000원</div>
+            <div class="vault-denom">5,000원권</div>
             <div class="vault-input-row">
-              <input class="vault-input" value="0"> <span class="vault-unit">장</span>
+              <input class="vault-input" value="0"><span class="vault-unit">장</span>
             </div>
             <div class="vault-sub">= 0원</div>
           </div>
           <div class="vault-item">
-            <div class="vault-denom">1,000원</div>
+            <div class="vault-denom">1,000원권</div>
             <div class="vault-input-row">
-              <input class="vault-input" value="0"> <span class="vault-unit">장</span>
+              <input class="vault-input" value="0"><span class="vault-unit">장</span>
             </div>
             <div class="vault-sub">= 0원</div>
           </div>
           <div class="vault-item">
-            <div class="vault-denom">500원</div>
+            <div class="vault-denom">500원 동전</div>
             <div class="vault-input-row">
-              <input class="vault-input" value="0"> <span class="vault-unit">개</span>
+              <input class="vault-input" value="0"><span class="vault-unit">개</span>
             </div>
             <div class="vault-sub">= 0원</div>
           </div>
           <div class="vault-item">
-            <div class="vault-denom">100원</div>
+            <div class="vault-denom">100원 동전</div>
             <div class="vault-input-row">
-              <input class="vault-input" value="0"> <span class="vault-unit">개</span>
+              <input class="vault-input" value="0"><span class="vault-unit">개</span>
+            </div>
+            <div class="vault-sub">= 0원</div>
+          </div>
+          <div class="vault-item">
+            <div class="vault-denom">50원 동전</div>
+            <div class="vault-input-row">
+              <input class="vault-input" value="0"><span class="vault-unit">개</span>
+            </div>
+            <div class="vault-sub">= 0원</div>
+          </div>
+          <div class="vault-item">
+            <div class="vault-denom">10원 동전</div>
+            <div class="vault-input-row">
+              <input class="vault-input" value="0"><span class="vault-unit">개</span>
             </div>
             <div class="vault-sub">= 0원</div>
           </div>
         </div>
 
-        <div class="section-total" style="margin-bottom:12px;">
-          <span class="section-total-label">실계수 합계</span>
-          <span class="section-total-val">520,000원</span>
+        <!-- 실계수 합계 바 -->
+        <div class="vault-total-bar">
+          <span class="vtb-label">실계수 합계</span>
+          <span class="vtb-val">520,000원</span>
         </div>
 
-        <!-- 최종 차이 -->
+        <!-- 최종 차액 카드 -->
         <div class="final-diff ok">
-          <div class="final-diff-icon">🎯</div>
-          <div class="final-diff-title">장부 = 실계수 — 정확해요!</div>
-          <div class="final-diff-num" style="color:#15803d;">차액 0원</div>
-          <div class="final-diff-sub">장부잔액 520,000 = 실계수 520,000</div>
+          <div class="fd-icon">🎯</div>
+          <div class="fd-title">장부 = 실계수 — 정확해요!</div>
+          <div class="fd-num" style="color:#15803d;">차액 0원</div>
+          <div class="fd-sub">장부 520,000원 = 실계수 520,000원</div>
         </div>
       </div>
 
@@ -1104,6 +834,7 @@
         <button class="btn-save">✅ 마감 저장하기</button>
       </div>
     </div>
+    <div class="change-note">▲ 상단 바 = 원 단위 전체 표시 (천원·백원·십원 누락 없음) · 입력할수록 실시간 갱신</div>
   </div>
 
 </div><!-- /panel-row -->
