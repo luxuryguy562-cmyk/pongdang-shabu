@@ -2673,10 +2673,11 @@ function openReVendorPicker(){
   const cnt=k=>active.filter(v=>(v.kind||'vendor')===k).length;
   const typeBtn=(k,emoji,label)=>`<button type="button" class="btn btn-secondary" style="text-align:left;padding:15px 14px;display:flex;justify-content:space-between;align-items:center;" data-action="reVendorPickKind|${k}"><span style="font-size:15px;font-weight:700;">${emoji} ${label}</span><span style="font-size:12px;color:var(--gray-500);">${cnt(k)}곳 ›</span></button>`;
   box.innerHTML =
-      `<button type="button" class="btn btn-secondary" style="text-align:left;padding:13px 14px;font-weight:700;color:var(--gray-600);${_reVendorVal===''?'border:1.5px solid var(--toss-blue);color:var(--toss-blue);':''}" data-action="pickReVendor|">🚫 거래처 없음 · 직접구매</button>`
-    + typeBtn('vendor','🏪','거래처')
+      typeBtn('vendor','🏪','거래처')
     + typeBtn('mart','🛒','마트')
-    + typeBtn('online','🌐','온라인');
+    + typeBtn('online','🌐','온라인')
+    // "거래처 없음·직접구매"는 맨 아래 — 진짜 일회성 직접구매(직원 회식·경조사)용 (2026-06-24 사장님)
+    + `<button type="button" class="btn btn-secondary" style="text-align:left;padding:13px 14px;margin-top:6px;font-weight:700;color:var(--gray-500);${_reVendorVal===''?'border:1.5px solid var(--toss-blue);color:var(--toss-blue);':''}" data-action="pickReVendor|">🚫 거래처 없음 · 직접구매 <span style="font-weight:500;font-size:11px;">(일회성)</span></button>`;
   openSheet('reVendorPickSheet');
 }
 function reVendorPickKind(kind){
@@ -2686,9 +2687,30 @@ function reVendorPickKind(kind){
   const list=(typeof vendors!=='undefined'?vendors:[]).filter(v=>(v.kind||'vendor')===kind && v.is_active!==false)
     .sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
   const back=`<button type="button" class="btn btn-secondary" style="text-align:left;padding:11px 14px;font-weight:700;color:var(--toss-blue);" data-action="openReVendorPicker">‹ 종류 다시 선택</button>`;
-  if(!list.length){ box.innerHTML=back+`<div style="text-align:center;padding:22px;color:var(--gray-500);font-size:13px;">등록된 ${label}가 없어요.</div>`; return; }
+  const addBtn=`<button type="button" class="btn btn-secondary" style="text-align:center;padding:13px;margin-top:4px;font-weight:700;color:var(--toss-blue);" data-action="addReVendorInline|${kind}">➕ 새 ${label} 추가</button>`;
+  if(!list.length){ box.innerHTML=back+`<div style="text-align:center;padding:18px;color:var(--gray-500);font-size:13px;">등록된 ${label}가 없어요.</div>`+addBtn; return; }
   const rowBtn=v=>`<button type="button" class="btn btn-secondary" style="text-align:left;padding:13px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;${String(_reVendorVal)===String(v.id)?'border:1.5px solid var(--toss-blue);color:var(--toss-blue);':''}" data-action="pickReVendor|${v.id}"><span style="font-size:14px;font-weight:700;">${esc(v.name)}</span><span style="font-size:11px;color:var(--gray-500);flex-shrink:0;">${esc(v.category||label)}</span></button>`;
-  box.innerHTML=back+list.map(rowBtn).join('');
+  box.innerHTML=back+list.map(rowBtn).join('')+addBtn;
+}
+// 새 거래처/마트/온라인 즉석 추가 (이름만) — 수정 picker에서 호출. 등록 후 바로 선택 (2026-06-24, addMartInline 패턴)
+async function addReVendorInline(kind){
+  if(!currentStore) return;
+  const k=(kind==='online'||kind==='mart')?kind:'vendor';
+  const label=k==='online'?'온라인 플랫폼':(k==='mart'?'마트':'거래처');
+  const name=(prompt(`새 ${label} 이름을 입력하세요`)||'').trim();
+  if(!name) return;
+  setLoad(true,`${label} 추가 중...`);
+  // 같은 이름+종류 이미 있으면 그걸 선택 (중복 방지)
+  const {data:exist}=await sb.from('vendors').select('id').eq('store_id',currentStore.id).eq('kind',k).eq('name',name).maybeSingle();
+  let vid=exist?.id;
+  if(!vid){
+    const {data:ins,error}=await sb.from('vendors').insert({store_id:currentStore.id,name,kind:k,is_active:true}).select('id').single();
+    if(error){ setLoad(false); return toast(`${label} 추가 실패`,'error'); }
+    vid=ins.id;
+    if(typeof loadVendors==='function') await loadVendors(); // 전역 vendors 캐시 갱신
+  }
+  setLoad(false);
+  pickReVendor(vid); // 추가 후 바로 선택 + 시트 닫기
 }
 function pickReVendor(val){
   _setReVendor(val==null?'':String(val));
