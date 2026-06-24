@@ -1342,3 +1342,57 @@ function initRealtimeAndBadge(){
 // 앱이 다시 보일 때(다른 화면/앱 갔다 옴) 배지 갱신 — 실시간 폴백
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof refreshJoinBadge==='function') refreshJoinBadge(); });
 
+// ─── 새 기능: 기간 선택 피커 (거래처 상세 · 지출카테고리 공통) ───
+let periodPickerCtx = null; // 'vendorOrder' | 'catReceipt'
+
+function openPeriodPicker(ctx){
+  periodPickerCtx = ctx;
+  const now = new Date();
+  const curM = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  let fromInit = curM, toInit = curM;
+  if(ctx === 'vendorOrder'){
+    fromInit = (typeof vOrderRangeFrom!=='undefined' && vOrderRangeFrom) ? vOrderRangeFrom
+             : (typeof vOrderCurrentMonth!=='undefined' ? vOrderCurrentMonth : curM);
+    toInit   = (typeof vOrderRangeTo!=='undefined' && vOrderRangeTo) ? vOrderRangeTo : fromInit;
+  } else if(ctx === 'catReceipt'){
+    fromInit = (typeof catReceiptRangeFrom!=='undefined' && catReceiptRangeFrom) ? catReceiptRangeFrom
+             : (typeof catReceiptMonth!=='undefined' ? catReceiptMonth : curM);
+    toInit   = (typeof catReceiptRangeTo!=='undefined' && catReceiptRangeTo) ? catReceiptRangeTo : fromInit;
+  }
+  const fromEl = document.getElementById('periodPickerFrom');
+  const toEl   = document.getElementById('periodPickerTo');
+  if(fromEl) fromEl.value = fromInit;
+  if(toEl)   toEl.value   = toInit;
+  openSheet('periodPickerSheet');
+}
+
+function applyPeriodQuick(preset){
+  const now = new Date();
+  const y = now.getFullYear(), mo = now.getMonth()+1;
+  const thisM = `${y}-${String(mo).padStart(2,'0')}`;
+  let from = thisM, to = thisM;
+  if(preset === 'thisMonth'){
+    from = to = thisM;
+  } else if(preset === 'lastMonth'){
+    const d = new Date(y, mo-2, 1);
+    from = to = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  } else if(preset === '3months'){
+    const d = new Date(y, mo-3, 1);
+    from = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    to = thisM;
+  }
+  closeAllSheets();
+  if(periodPickerCtx === 'vendorOrder' && typeof _applyVOrderPeriod==='function') _applyVOrderPeriod(from, to);
+  else if(periodPickerCtx === 'catReceipt' && typeof _applyCatReceiptPeriod==='function') _applyCatReceiptPeriod(from, to);
+}
+
+function applyPeriodRange(){
+  const from = document.getElementById('periodPickerFrom')?.value;
+  const to   = document.getElementById('periodPickerTo')?.value;
+  if(!from || !to){ alert('시작월과 종료월을 모두 선택해주세요.'); return; }
+  if(from > to){ alert('시작월이 종료월보다 늦습니다.'); return; }
+  closeAllSheets();
+  if(periodPickerCtx === 'vendorOrder' && typeof _applyVOrderPeriod==='function') _applyVOrderPeriod(from, to);
+  else if(periodPickerCtx === 'catReceipt' && typeof _applyCatReceiptPeriod==='function') _applyCatReceiptPeriod(from, to);
+}
+
