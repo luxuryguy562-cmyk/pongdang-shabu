@@ -2665,16 +2665,30 @@ function _initReVendor(vid, vname){
   if(vname){ const v=list.find(x=>x.name===vname); if(v) return _setReVendor(String(v.id)); return _setReVendor('keep:'+vname); }
   _setReVendor('');
 }
+// 거래처 picker = 2단계 (종류 먼저 → 그 종류 목록). 분석 흐름과 동일 루틴 (2026-06-24 사장님: 다 섞이면 못 찾음)
 function openReVendorPicker(){
   const box=document.getElementById('reVendorPickList'); if(!box) return;
-  // 거래종료(is_active===false)만 제외 — 영수증은 거래처·온라인·마트 어디서든 올 수 있어 전 종류 포함 (2026-06-24 사장님)
-  const list=(typeof vendors!=='undefined'?vendors:[]).filter(v=>v.is_active!==false)
-    .sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
-  const rowBtn=(val,label,sub,on)=>`<button type="button" class="btn btn-secondary" style="text-align:left;padding:13px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;${on?'border:1.5px solid var(--toss-blue);color:var(--toss-blue);':''}" data-action="pickReVendor|${val}"><span style="font-size:14px;font-weight:700;">${esc(label)}</span>${sub?`<span style="font-size:11px;color:var(--gray-500);flex-shrink:0;">${esc(sub)}</span>`:''}</button>`;
-  let html=rowBtn('','거래처 없음 · 직접구매','', _reVendorVal==='');
-  list.forEach(v=>{ html+=rowBtn(String(v.id), v.name, v.category||'', String(_reVendorVal)===String(v.id)); });
-  box.innerHTML=html;
+  const ttl=document.getElementById('reVendorPickTitle'); if(ttl) ttl.textContent='거래처 선택';
+  const active=(typeof vendors!=='undefined'?vendors:[]).filter(v=>v.is_active!==false);
+  const cnt=k=>active.filter(v=>(v.kind||'vendor')===k).length;
+  const typeBtn=(k,emoji,label)=>`<button type="button" class="btn btn-secondary" style="text-align:left;padding:15px 14px;display:flex;justify-content:space-between;align-items:center;" data-action="reVendorPickKind|${k}"><span style="font-size:15px;font-weight:700;">${emoji} ${label}</span><span style="font-size:12px;color:var(--gray-500);">${cnt(k)}곳 ›</span></button>`;
+  box.innerHTML =
+      `<button type="button" class="btn btn-secondary" style="text-align:left;padding:13px 14px;font-weight:700;color:var(--gray-600);${_reVendorVal===''?'border:1.5px solid var(--toss-blue);color:var(--toss-blue);':''}" data-action="pickReVendor|">🚫 거래처 없음 · 직접구매</button>`
+    + typeBtn('vendor','🏪','거래처')
+    + typeBtn('mart','🛒','마트')
+    + typeBtn('online','🌐','온라인');
   openSheet('reVendorPickSheet');
+}
+function reVendorPickKind(kind){
+  const box=document.getElementById('reVendorPickList'); if(!box) return;
+  const label=kind==='online'?'온라인':(kind==='mart'?'마트':'거래처');
+  const ttl=document.getElementById('reVendorPickTitle'); if(ttl) ttl.textContent=label+' 선택';
+  const list=(typeof vendors!=='undefined'?vendors:[]).filter(v=>(v.kind||'vendor')===kind && v.is_active!==false)
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  const back=`<button type="button" class="btn btn-secondary" style="text-align:left;padding:11px 14px;font-weight:700;color:var(--toss-blue);" data-action="openReVendorPicker">‹ 종류 다시 선택</button>`;
+  if(!list.length){ box.innerHTML=back+`<div style="text-align:center;padding:22px;color:var(--gray-500);font-size:13px;">등록된 ${label}가 없어요.</div>`; return; }
+  const rowBtn=v=>`<button type="button" class="btn btn-secondary" style="text-align:left;padding:13px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;${String(_reVendorVal)===String(v.id)?'border:1.5px solid var(--toss-blue);color:var(--toss-blue);':''}" data-action="pickReVendor|${v.id}"><span style="font-size:14px;font-weight:700;">${esc(v.name)}</span><span style="font-size:11px;color:var(--gray-500);flex-shrink:0;">${esc(v.category||label)}</span></button>`;
+  box.innerHTML=back+list.map(rowBtn).join('');
 }
 function pickReVendor(val){
   _setReVendor(val==null?'':String(val));
