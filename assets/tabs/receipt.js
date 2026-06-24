@@ -2631,6 +2631,8 @@ function openReceiptEdit(id){
   document.getElementById('reDate').value=r.receipt_date||ymdLocal(new Date());
   _populateReVendorSelect(r.vendor_id||'', r.vendor||''); // 거래처 = 등록 리스트에서 선택 (FK, 2026-06-24)
   document.getElementById('reItem').value=r.item||'';
+  const _specEl=document.getElementById('reSpec'); if(_specEl) _specEl.value=r.spec||'';
+  const _ogEl=document.getElementById('reOrigin'); if(_ogEl) _ogEl.value=r.origin||'';
   // 단가 = 금액 ÷ 수량 (부가세 폐기 2026-06-24 → 공급가=금액, 전 화면 동일 공식)
   const _q=parseFloat(r.qty)||0, _t=r.total_price||0;
   const _u=(_q>0 && _t) ? Math.round(_t/_q) : (parseInt(r.unit_price)||0);
@@ -2693,6 +2695,8 @@ async function saveReceiptEdit(){
   if(_vSel.startsWith('keep:')) vendor=_vSel.slice(5);
   else if(_vSel){ const _v=(typeof vendors!=='undefined'?vendors:[]).find(v=>String(v.id)===String(_vSel)); if(_v){ vendor=_v.name; vendorId=_v.id; } }
   const item=document.getElementById('reItem').value.trim();
+  const spec=(document.getElementById('reSpec')?.value||'').trim()||null;
+  const origin=(document.getElementById('reOrigin')?.value||'').trim()||null;
   const unitPrice=parseInt((document.getElementById('reUnitPrice').value||'').replace(/[^0-9]/g,''),10)||null;
   const qtyRaw=(document.getElementById('reQty').value||'').replace(/[^0-9.]/g,'');
   const qty=qtyRaw?parseFloat(qtyRaw):null;
@@ -2719,7 +2723,7 @@ async function saveReceiptEdit(){
   }
   setLoad(true,'저장 중...');
   const {error}=await sb.from('receipts').update({
-    receipt_date:date,vendor,vendor_id:vendorId,item,total_price:amount,
+    receipt_date:date,vendor,vendor_id:vendorId,item,spec,origin,total_price:amount,
     unit_price:unitPrice,qty:qty, // 부가세(tax_amount) 폐기 — 화면서 안 받음. 기존 DB값은 보존(건드리지 않음)
     category:cat||null,category_id:resolveRcpCatId(cat),
     note
