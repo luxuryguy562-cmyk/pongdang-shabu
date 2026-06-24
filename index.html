@@ -1268,8 +1268,8 @@
 <div id="settleCont" class="container">
   <div id="settleInput">
 
-    <!-- ① 고정 상단 바 -->
-    <div id="settleWizardBar" style="position:sticky;top:0;z-index:50;background:linear-gradient(135deg,#1a1a2e,#16213e);padding:10px 16px 8px;margin:0 -16px 0;">
+    <!-- ① 고정 상단 바 (단계별 실시간 수치) -->
+    <div id="settleWizardBar" style="position:sticky;top:0;z-index:50;background:linear-gradient(135deg,#1a1a2e,#16213e);padding:10px 16px 8px;margin:0 -14px 0;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:700;letter-spacing:0.5px;">마감정산</span>
         <span id="swBarDate" style="font-size:13px;font-weight:800;color:#fff;">-</span>
@@ -1277,24 +1277,15 @@
       <div id="swBarContent" style="background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 10px;min-height:38px;display:flex;align-items:center;"></div>
     </div>
 
-    <!-- ② 단계 진행 표시 -->
-    <div style="display:flex;align-items:center;padding:16px 8px 4px;gap:0;">
-      <div id="swDot1" style="width:28px;height:28px;border-radius:50%;background:#0050FF;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;box-shadow:0 0 0 3px rgba(0,80,255,0.2);">1</div>
-      <div id="swLine1" style="flex:1;height:2px;background:#e5e7eb;transition:background 0.2s;"></div>
-      <div id="swDot2" style="width:28px;height:28px;border-radius:50%;background:#e5e7eb;color:#999;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;">2</div>
-      <div id="swLine2" style="flex:1;height:2px;background:#e5e7eb;transition:background 0.2s;"></div>
-      <div id="swDot3" style="width:28px;height:28px;border-radius:50%;background:#e5e7eb;color:#999;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;">3</div>
-      <div id="swLine3" style="flex:1;height:2px;background:#e5e7eb;transition:background 0.2s;"></div>
-      <div id="swDot4" style="width:28px;height:28px;border-radius:50%;background:#e5e7eb;color:#999;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;">4</div>
-    </div>
-    <div style="display:flex;align-items:flex-start;padding:0 0 12px;gap:0;">
-      <div style="width:28px;text-align:center;flex-shrink:0;margin-left:8px;"><span id="swLbl1" style="font-size:9px;font-weight:700;color:#0050FF;white-space:nowrap;">매출</span></div>
-      <div style="flex:1;"></div>
-      <div style="width:28px;text-align:center;flex-shrink:0;"><span id="swLbl2" style="font-size:9px;font-weight:700;color:#bbb;white-space:nowrap;">현금상세</span></div>
-      <div style="flex:1;"></div>
-      <div style="width:28px;text-align:center;flex-shrink:0;"><span id="swLbl3" style="font-size:9px;font-weight:700;color:#bbb;white-space:nowrap;">입금·지출</span></div>
-      <div style="flex:1;"></div>
-      <div style="width:28px;text-align:center;flex-shrink:0;margin-right:8px;"><span id="swLbl4" style="font-size:9px;font-weight:700;color:#bbb;white-space:nowrap;">금고계수</span></div>
+    <!-- ② 단계 진행 표시 (얇은 프로그레스 바) -->
+    <div style="padding:14px 0 0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span id="swStepLabel" style="font-size:11px;font-weight:700;color:var(--toss-text-4);">매출 입력</span>
+        <span id="swStepCount" style="font-size:11px;font-weight:700;color:var(--toss-text-4);">1 / 4</span>
+      </div>
+      <div style="height:3px;background:#f0f0f0;border-radius:3px;overflow:hidden;">
+        <div id="swProgress" style="height:3px;background:#0050FF;border-radius:3px;transition:width 0.35s cubic-bezier(.4,0,.2,1);width:25%;"></div>
+      </div>
     </div>
 
     <!-- ─ 숨긴 호환 요소들 (recalcSettle2 등이 여전히 이 ID에 씀) ─ -->
@@ -1303,66 +1294,60 @@
     <span id="settleBankTotal" style="display:none;">0원</span>
     <span id="settleEtcTotal" style="display:none;">0원</span>
     <span id="settleDeductTotal" style="display:none;">0원</span>
-    <div id="cashVerify" style="display:none;">
-      <span id="cvPosSum">0원</span>
-      <span id="cvDetailSum">0원</span>
-      <div id="cvResult">-</div>
-    </div>
-    <div id="diffRow" style="display:none;">
-      <span id="calcBook">0원</span>
-      <span id="calcVault">0원</span>
-      <span id="calcDiff">-</span>
-    </div>
+    <div id="cashVerify" style="display:none;"><span id="cvPosSum">0원</span><span id="cvDetailSum">0원</span><div id="cvResult">-</div></div>
+    <div id="diffRow" style="display:none;"><span id="calcBook">0원</span><span id="calcVault">0원</span><span id="calcDiff">-</span></div>
     <span id="vaultTotal" style="display:none;">0원</span>
 
-    <!-- 날짜 선택 (관리자만 — initSettleDate가 isManager이면 block으로 바꿈) -->
-    <div class="settle-card-group" id="settleDateGroup" style="display:none;">
+    <!-- 날짜 선택 (관리자만 — initSettleDate가 block으로 변경) -->
+    <div class="settle-card-group" id="settleDateGroup" style="display:none;margin-top:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="card-title" style="margin-bottom:0;">정산 날짜</div>
-        <span style="font-size:11px;color:var(--gray-400);" id="settleDateStatus">관리자 전용</span>
+        <div class="card-title" style="margin-bottom:0;padding-bottom:0;">정산 날짜</div>
+        <span style="font-size:11px;color:var(--toss-text-4);" id="settleDateStatus">관리자 전용</span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;margin-bottom:4px;">
         <button class="btn btn-secondary btn-sm" data-action="moveSettleDate|-1">‹</button>
         <input type="date" id="settleDatePicker" class="input-field" style="flex:1;text-align:center;font-size:15px;font-weight:700;padding:10px;margin-bottom:0;">
         <button class="btn btn-secondary btn-sm" data-action="moveSettleDate|1">›</button>
       </div>
     </div>
 
-    <!-- ③ 1단계: POS 촬영 + 매출 수기 입력 -->
+    <!-- ③ 1단계: POS 촬영 → 매출 입력 -->
     <div id="swStep1">
+      <div class="sw-step-header">
+        <span class="sw-emoji">📸</span>
+        <h2 class="sw-title">오늘 POS 장표를<br>찍어볼게요</h2>
+        <p class="sw-sub">AI가 매출을 자동으로 읽어드릴게요</p>
+      </div>
       <div class="settle-card-group">
-        <div class="card-title">POS 마감 장표</div>
-        <p class="card-sub">사진을 찍으면 AI가 자동으로 매출을 인식합니다</p>
-        <img id="posPreview" style="width:100%;display:none;border-radius:12px;margin-bottom:12px;">
-        <div id="posUploadGroup" class="action-group" style="margin-top:0;padding-bottom:12px;">
-          <label class="btn btn-primary" style="flex:1;padding:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+        <img id="posPreview" style="width:100%;display:none;border-radius:12px;margin:8px 0;">
+        <div id="posUploadGroup" style="display:flex;gap:10px;margin:8px 0 4px;">
+          <label style="flex:1;padding:18px 10px;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;background:#0050FF;color:#fff;border-radius:16px;">
             📸 촬영<input type="file" accept="image/*" capture="environment" style="display:none" data-change="handlePosImg|this">
           </label>
-          <label class="btn btn-secondary" style="flex:1;padding:14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+          <label style="flex:1;padding:18px 10px;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;background:var(--toss-line);color:var(--toss-text-2);border-radius:16px;">
             🖼 업로드<input type="file" accept="image/*" style="display:none" data-change="handlePosImg|this">
           </label>
         </div>
-        <div id="posAiGroup" style="display:none;" class="action-group">
-          <button class="btn btn-primary" style="flex:4;padding:14px;font-size:13px;" data-action="runPosAI">✨ AI 인식</button>
-          <button class="btn btn-secondary" style="flex:1;padding:14px;" data-action="resetPosImg">취소</button>
+        <div id="posAiGroup" style="display:none;gap:10px;margin:8px 0 4px;">
+          <button style="flex:4;padding:18px;font-size:15px;font-weight:800;border:none;background:#0050FF;color:#fff;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;" data-action="runPosAI">✨ AI 인식</button>
+          <button style="flex:1;padding:18px;font-size:15px;border:none;background:var(--toss-line);color:var(--toss-text-3);border-radius:16px;cursor:pointer;" data-action="resetPosImg">취소</button>
         </div>
-        <div style="text-align:right;margin-top:2px;">
-          <button id="swManualToggle" onclick="document.getElementById('swManualGroup').style.display='block';this.style.display='none';" style="background:none;border:none;font-size:11px;color:var(--gray-400);cursor:pointer;padding:4px 0;">✏️ 수기 입력</button>
+        <div style="text-align:center;padding:10px 0 4px;">
+          <button id="swManualToggle" onclick="document.getElementById('swManualGroup').style.display='block';this.style.display='none';" style="border:none;background:var(--toss-line);color:var(--toss-text-3);font-size:13px;font-weight:700;cursor:pointer;padding:8px 18px;border-radius:99px;">✏️ 직접 입력할게요</button>
         </div>
       </div>
       <div id="swManualGroup" style="display:none;">
         <div class="settle-card-group">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div class="card-title" style="margin-bottom:0;">매출</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+            <div class="card-title" style="margin-bottom:0;padding:12px 0 4px;">POS 매출</div>
             <label class="btn btn-secondary btn-sm" style="cursor:pointer;font-size:11px;padding:6px 10px;">
               📎 엑셀<input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="salesFileInput">
             </label>
           </div>
-          <p class="card-sub">포스기 장표 기준으로 입력하세요</p>
-          <div class="settle-item dot-green"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-          <div class="settle-item dot-orange"><span class="si-icon">🧾</span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-          <div class="settle-item dot-blue"><span class="si-icon">💳</span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-          <div class="settle-item dot-gray"><span class="si-icon">📲</span><span class="si-label">기타결제</span><input type="text" class="s-input" id="siPosEtc" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+          <div class="settle-item dot-green"><span class="si-icon"></span><span class="si-label">현금</span><input type="text" class="s-input" id="siPosCash" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+          <div class="settle-item dot-orange"><span class="si-icon"></span><span class="si-label">현금영수증</span><input type="text" class="s-input" id="siPosCashReceipt" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+          <div class="settle-item dot-blue"><span class="si-icon"></span><span class="si-label">신용카드</span><input type="text" class="s-input" id="siPosCard" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+          <div class="settle-item dot-gray"><span class="si-icon"></span><span class="si-label">기타결제</span><input type="text" class="s-input" id="siPosEtc" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
           <div class="settle-summary">
             <span class="ss-label">매출 합계</span>
             <span class="ss-val" id="calcSalesTotal">0원</span>
@@ -1371,37 +1356,48 @@
       </div>
     </div>
 
-    <!-- ④ 2단계: 현금 상세 (검증은 상단 바에서) -->
+    <!-- ④ 2단계: 현금 상세 -->
     <div id="swStep2" style="display:none;">
+      <div class="sw-step-header">
+        <span class="sw-emoji">💵</span>
+        <h2 class="sw-title">현금은 어떻게<br>받으셨나요?</h2>
+        <p class="sw-sub">POS 현금 합계를 방식별로 나눠주세요</p>
+      </div>
       <div class="settle-card-group">
-        <div class="card-title">현금 상세</div>
-        <p class="card-sub">실제 받은 현금의 방식을 구분해주세요</p>
-        <div class="settle-item dot-green"><span class="si-icon">💵</span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-        <div class="settle-item dot-purple"><span class="si-icon">📱</span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
-        <div class="settle-item dot-blue"><span class="si-icon">🏦</span><span class="si-label">계좌이체</span><input type="text" class="s-input" id="siCashTransfer" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+        <div class="settle-item dot-green"><span class="si-icon"></span><span class="si-label">현금</span><input type="text" class="s-input" id="siCashCash" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+        <div class="settle-item dot-purple"><span class="si-icon"></span><span class="si-label">QR</span><input type="text" class="s-input" id="siCashQr" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
+        <div class="settle-item dot-blue"><span class="si-icon"></span><span class="si-label">계좌이체</span><input type="text" class="s-input" id="siCashTransfer" placeholder="0" inputmode="numeric" data-input="onSInput|this" data-change="recalcSettle2"></div>
       </div>
     </div>
 
-    <!-- ⑤ 3단계: 통장입금(1행고정) + 현금지출(멀티행) -->
+    <!-- ⑤ 3단계: 통장입금 + 현금지출 -->
     <div id="swStep3" style="display:none;">
+      <div class="sw-step-header">
+        <span class="sw-emoji">🏧</span>
+        <h2 class="sw-title">금고에서 나간 돈이<br>있었나요?</h2>
+        <p class="sw-sub">통장 입금과 현금 지출을 입력해주세요</p>
+      </div>
       <div class="settle-card-group">
-        <div class="card-title">🏧 통장 입금</div>
+        <div class="card-title">통장 입금</div>
         <p class="card-sub">금고 현금을 통장으로 옮긴 돈 (지출 아닌 이동).<br>👤 입금자는 로그인한 사람 자동 — 다르면 탭해서 바꿔요.</p>
         <div id="settleDeductBankRows"></div>
       </div>
       <div class="settle-card-group">
-        <div class="card-title">💵 현금 지출</div>
+        <div class="card-title">현금 지출</div>
         <p class="card-sub">금고에서 현금으로 나간 돈. 들어온 경우는 + 토글.<br>🏷️ 지출 분류를 고르면 대시보드 지출 그래프에 자동 반영돼요.</p>
         <div id="settleDeductEtcRows"></div>
         <button class="add-item-btn" data-action="addSettleDeductRow|etc|0|" style="margin-top:8px;">+ 현금 지출 추가</button>
       </div>
     </div>
 
-    <!-- ⑥ 4단계: 금고 계수 (차액은 상단 바에서) -->
+    <!-- ⑥ 4단계: 금고 계수 -->
     <div id="swStep4" style="display:none;">
+      <div class="sw-step-header">
+        <span class="sw-emoji">🔢</span>
+        <h2 class="sw-title">금고 안을<br>세어볼게요</h2>
+        <p class="sw-sub">권종별로 장수를 입력해주세요</p>
+      </div>
       <div class="settle-card-group">
-        <div class="card-title">금고 계수</div>
-        <p class="card-sub">금고 안의 화폐를 권종별로 세어 입력하세요</p>
         <div class="vault-grid">
           <div class="vault-item"><label>50,000원</label><input type="number" data-unit="50000" class="v-input" placeholder="0"></div>
           <div class="vault-item"><label>10,000원</label><input type="number" data-unit="10000" class="v-input" placeholder="0"></div>
@@ -1412,18 +1408,20 @@
           <div class="vault-item"><label>50원</label><input type="number" data-unit="50" class="v-input" placeholder="0"></div>
           <div class="vault-item"><label>10원</label><input type="number" data-unit="10" class="v-input" placeholder="0"></div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;border-top:1px solid var(--gray-200);margin-top:8px;">
-          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">실계수 합계</span>
-          <span id="swVaultSum" style="font-size:18px;font-weight:800;color:var(--blue);">0원</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 0 0;border-top:1px solid var(--toss-line);margin-top:10px;">
+          <span style="font-size:14px;font-weight:700;color:var(--toss-text-2);">실계수 합계</span>
+          <span id="swVaultSum" style="font-size:22px;font-weight:900;color:var(--toss-blue-strong);font-variant-numeric:tabular-nums;letter-spacing:-0.5px;">0원</span>
         </div>
       </div>
     </div>
 
-    <!-- ⑦ 하단 네비게이션 -->
-    <div style="display:flex;gap:8px;padding:8px 0 20px;">
-      <button id="swPrevBtn" class="btn btn-secondary" style="flex:1;padding:16px;font-size:15px;display:none;" onclick="settleWizardPrev()">‹ 이전</button>
-      <button id="swNextBtn" class="btn btn-primary" style="flex:2;padding:16px;font-size:15px;" onclick="settleWizardNext()">다음 ›</button>
-      <button id="swSaveBtn" class="btn btn-primary" style="flex:2;padding:16px;font-size:16px;border-radius:16px;display:none;" data-action="finishSettlement2">마감 저장하기</button>
+    <!-- ⑦ 하단 네비게이션 (sticky) -->
+    <div id="swNavBar" style="position:sticky;bottom:0;background:#fff;padding:12px 0 20px;margin:8px -14px -14px;padding-left:14px;padding-right:14px;border-top:1px solid var(--toss-line);">
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button id="swPrevBtn" onclick="settleWizardPrev()" style="width:56px;height:56px;flex-shrink:0;border:none;background:var(--toss-line);color:var(--toss-text-2);border-radius:16px;font-size:22px;cursor:pointer;display:none;align-items:center;justify-content:center;font-weight:700;">←</button>
+        <button id="swNextBtn" onclick="settleWizardNext()" style="flex:1;height:56px;border:none;background:#0050FF;color:#fff;border-radius:16px;font-size:17px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;letter-spacing:-0.3px;">다음</button>
+        <button id="swSaveBtn" data-action="finishSettlement2" style="flex:1;height:56px;border:none;background:#0050FF;color:#fff;border-radius:16px;font-size:17px;font-weight:800;cursor:pointer;display:none;align-items:center;justify-content:center;letter-spacing:-0.3px;">마감 저장하기</button>
+      </div>
     </div>
 
   </div>
@@ -3517,7 +3515,7 @@
 <script src="assets/tabs/receipt.js?v=20260624j"></script>
 <script src="assets/tabs/attendance.js?v=20260624a"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
-<script src="assets/tabs/settlement.js?v=20260624a"></script>
+<script src="assets/tabs/settlement.js?v=20260624b"></script>
 <script src="assets/tabs/dashboard.js?v=20260622b"></script>
 <script src="assets/tabs/sidemenu.js?v=20260624b"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>

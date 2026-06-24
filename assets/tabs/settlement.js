@@ -16,14 +16,13 @@ function _renderSettleStep(){
   if(prevBtn) prevBtn.style.display=_swStep>1?'flex':'none';
   if(nextBtn) nextBtn.style.display=_swStep<4?'flex':'none';
   if(saveBtn) saveBtn.style.display=_swStep===4?'flex':'none';
-  for(let i=1;i<=4;i++){
-    const dot=document.getElementById('swDot'+i);const lbl=document.getElementById('swLbl'+i);
-    if(!dot) continue;
-    if(i<_swStep){dot.style.background='#22c55e';dot.style.color='#fff';dot.textContent='✓';dot.style.boxShadow='';if(lbl)lbl.style.color='#22c55e';}
-    else if(i===_swStep){dot.style.background='#0050FF';dot.style.color='#fff';dot.textContent=String(i);dot.style.boxShadow='0 0 0 3px rgba(0,80,255,0.2)';if(lbl)lbl.style.color='#0050FF';}
-    else{dot.style.background='#e5e7eb';dot.style.color='#999';dot.textContent=String(i);dot.style.boxShadow='';if(lbl)lbl.style.color='#bbb';}
-  }
-  for(let i=1;i<=3;i++){const line=document.getElementById('swLine'+i);if(line)line.style.background=i<_swStep?'#22c55e':'#e5e7eb';}
+  const prog=document.getElementById('swProgress');
+  if(prog) prog.style.width=(_swStep/4*100)+'%';
+  const sc=document.getElementById('swStepCount');
+  if(sc) sc.textContent=_swStep+' / 4';
+  const sl=document.getElementById('swStepLabel');
+  const stepLabels=['매출 입력','현금 상세','입금·지출','금고 계수'];
+  if(sl) sl.textContent=stepLabels[_swStep-1];
   _updateSwBarDate();
   _updateSwTopbar();
 }
