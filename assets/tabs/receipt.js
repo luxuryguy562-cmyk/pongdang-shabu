@@ -1058,7 +1058,8 @@ function _rcpSumCardRender(rowSum, rowTax, cnt){
     else if(ok){ okLine = `✅ 영수증 원본과 일치 · ${cnt}개 품목${diff>0?` (${fmt(diff)}원 반올림)`:''}`; }
     else { cls += ' danger'; okLine = `⚠️ 영수증 원본 ${fmt(printedSum)}원과 ${fmt(diff)}원 차이 (${diffPct.toFixed(1)}%) — 확인`; }
   }
-  const vatLine = rowTax>0
+  // 공급가+부가세 줄은 품목이 있으면 항상 표시 (면세 영수증도 "공급가 X + 부가세 0" — 사장님 호소: 왜 안 나오냐. 2026-06-24)
+  const vatLine = cnt>0
     ? `<div style="font-size:12px;color:var(--toss-text-3);font-weight:600;margin-top:3px;">공급가 ${fmt(rowSupply)} + 부가세 ${fmt(rowTax)}</div>`
     : '';
   let warnLine = '';
@@ -1369,8 +1370,10 @@ async function runAI() {
         const currentU = parseInt(it.unitPrice)||0;
         const currentQ = parseFloat(it.qty)||0;
         const mathOk = currentU > 0 && currentQ > 0 && Math.abs(Math.round(currentU*currentQ)-sp) <= Math.max(100,sp*0.005);
-        // 산수 맞고 단가도 과거 등록값 = 신뢰, 통과
-        if(mathOk && rcpPastPriceMap.has(currentU)) return;
+        // 단가×수량=금액 산수가 맞으면 AI가 명세서를 제대로 읽은 것 → 그대로 신뢰, 통과.
+        //   ⚠️ 옛 코드는 단가가 과거에 없으면 재쪼개기 → 명세서 박스수량(1)을 과거 다른 구매로 멋대로 분할(쑥갓 24,000→8,000×3,
+        //   적근대 13,000→6,500×2 등 엑셀 명세서 오작동). 산수 깨진 행(진짜 오독)만 아래에서 교정. (2026-06-24 사장님 호소)
+        if(mathOk) return;
         // Case A: 단가는 과거 등록값인데 산수 틀림 = 수량만 오독 → 수량 역산
         if(!mathOk && currentU > 0 && rcpPastPriceMap.has(currentU)){
           const ratio = sp / currentU;
