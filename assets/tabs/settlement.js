@@ -4,6 +4,72 @@
 // ── 마감정산 로직 ──
 // ─── 정산 날짜 선택 (관리자용) ───
 let _isEditingSettle=false; // editSettlement(수정) 진입 시 true — 자동날짜가 수정 날짜를 덮는 경쟁 방지 (2026-06-16)
+
+// ─── 새 기능: 마감정산 단계 마법사 (2026-06-24) ───
+let _swStep = 1;
+
+function _renderSettleStep(){
+  for(let i=1;i<=4;i++){const el=document.getElementById('swStep'+i);if(el)el.style.display=(i===_swStep)?'block':'none';}
+  const prevBtn=document.getElementById('swPrevBtn');
+  const nextBtn=document.getElementById('swNextBtn');
+  const saveBtn=document.getElementById('swSaveBtn');
+  if(prevBtn) prevBtn.style.display=_swStep>1?'flex':'none';
+  if(nextBtn) nextBtn.style.display=_swStep<4?'flex':'none';
+  if(saveBtn) saveBtn.style.display=_swStep===4?'flex':'none';
+  for(let i=1;i<=4;i++){
+    const dot=document.getElementById('swDot'+i);const lbl=document.getElementById('swLbl'+i);
+    if(!dot) continue;
+    if(i<_swStep){dot.style.background='#22c55e';dot.style.color='#fff';dot.textContent='✓';dot.style.boxShadow='';if(lbl)lbl.style.color='#22c55e';}
+    else if(i===_swStep){dot.style.background='#0050FF';dot.style.color='#fff';dot.textContent=String(i);dot.style.boxShadow='0 0 0 3px rgba(0,80,255,0.2)';if(lbl)lbl.style.color='#0050FF';}
+    else{dot.style.background='#e5e7eb';dot.style.color='#999';dot.textContent=String(i);dot.style.boxShadow='';if(lbl)lbl.style.color='#bbb';}
+  }
+  for(let i=1;i<=3;i++){const line=document.getElementById('swLine'+i);if(line)line.style.background=i<_swStep?'#22c55e':'#e5e7eb';}
+  _updateSwBarDate();
+  _updateSwTopbar();
+}
+function settleWizardNext(){
+  if(_swStep<4){_swStep++;_renderSettleStep();const c=document.getElementById('settleCont');if(c)c.scrollTop=0;}
+}
+function settleWizardPrev(){
+  if(_swStep>1){_swStep--;_renderSettleStep();const c=document.getElementById('settleCont');if(c)c.scrollTop=0;}
+}
+function _updateSwBarDate(){
+  const el=document.getElementById('swBarDate');if(!el)return;
+  const dateStr=document.getElementById('settleDatePicker')?.value;
+  if(!dateStr){el.textContent='-';return;}
+  const d=new Date(dateStr+'T00:00:00');
+  el.textContent=(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+'일월화수목금토'[d.getDay()]+')';
+}
+function _updateSwTopbar(){
+  const tb=document.getElementById('swBarContent');if(!tb)return;
+  const opening=gv('siOpening');
+  const posCash=gv('siPosCash'),posCR=gv('siPosCashReceipt');
+  const cashCash=gv('siCashCash'),cashQr=gv('siCashQr'),cashTr=gv('siCashTransfer');
+  const _ded=getSettleDeductTotals();
+  const fmtW=n=>fmt(n)+'원';
+  const scItem=(lbl,val,color)=>`<div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;"><span style="font-size:9px;color:rgba(255,255,255,0.45);font-weight:700;white-space:nowrap;">${lbl}</span><span style="font-size:12px;font-weight:900;color:${color};font-variant-numeric:tabular-nums;">${fmtW(val)}</span></div>`;
+  const scOp=t=>`<span style="font-size:13px;color:rgba(255,255,255,0.3);padding:0 2px;flex-shrink:0;">${t}</span>`;
+  const row=`display:flex;align-items:center;justify-content:space-between;width:100%;gap:2px;`;
+  if(_swStep===1){
+    const posSum=posCash+posCR;const presumed=opening+posSum;
+    tb.innerHTML=`<div style="${row}">${scItem('영업개시',opening,'#fff')}${scOp('+')}${scItem('POS현금+현영',posSum,posSum>0?'#4ade80':'rgba(255,255,255,0.5)')}${scOp('=')}${scItem('금고예상(잠정)',presumed,'rgba(255,255,255,0.8)')}</div>`;
+  }else if(_swStep===2){
+    const posSum=posCash+posCR;const detailSum=cashCash+cashQr+cashTr;
+    const ok=posSum>0&&posSum===detailSum;const bad=posSum>0&&detailSum>0&&posSum!==detailSum;
+    const statusHtml=ok?`<span style="font-size:11px;color:#4ade80;font-weight:800;flex-shrink:0;">✅ 일치</span>`:bad?`<span style="font-size:11px;color:#f87171;font-weight:800;flex-shrink:0;">❌ ${(detailSum-posSum>0?'+':'')+fmt(detailSum-posSum)}원</span>`:'';
+    tb.innerHTML=`<div style="${row}">${scItem('POS현금+현영',posSum,'#fff')}${scOp('vs')}${scItem('상세합계',detailSum,ok?'#4ade80':'rgba(255,255,255,0.7)')}${statusHtml}</div>`;
+  }else if(_swStep===3){
+    const book=opening+cashCash-_ded.etcSum-_ded.bankSum;
+    tb.innerHTML=`<div style="${row}">${scItem('금고합계',opening+cashCash,'#fff')}${scOp('−')}${scItem('이동·지출',_ded.total,'rgba(255,255,255,0.7)')}${scOp('=')}${scItem('금고예상잔액',book,book>0?'#4ade80':'rgba(255,255,255,0.5)')}</div>`;
+  }else if(_swStep===4){
+    let vault=0;document.querySelectorAll('.v-input').forEach(i=>vault+=parseInt(i.dataset.unit)*(parseInt(i.value)||0));
+    const book=opening+cashCash-_ded.etcSum-_ded.bankSum;
+    const diff=vault-book;const diffOk=vault>0&&diff===0;const diffBad=vault>0&&diff!==0;
+    tb.innerHTML=`<div style="${row}">${scItem('장부잔액',book,'#fff')}${scOp('vs')}${scItem('실계수',vault,diffOk?'#4ade80':'rgba(255,255,255,0.7)')}<div style="width:1px;height:28px;background:rgba(255,255,255,0.12);flex-shrink:0;"></div><div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;"><span style="font-size:9px;color:rgba(255,255,255,0.45);font-weight:700;">차액</span><span style="font-size:12px;font-weight:900;color:${diffOk?'#4ade80':diffBad?'#f87171':'rgba(255,255,255,0.5)'};font-variant-numeric:tabular-nums;">${vault===0?'입력 중':diffOk?'0원 🎯':((diff>0?'+':'')+fmtW(diff))}</span></div></div>`;
+    const vs=document.getElementById('swVaultSum');if(vs)vs.textContent=fmtW(vault);
+  }
+}
+
 function initSettleDate(){
   const picker=document.getElementById('settleDatePicker');
   const group=document.getElementById('settleDateGroup');
@@ -11,6 +77,7 @@ function initSettleDate(){
   const bizToday=bizDateStr(new Date());
   picker.value=bizToday;
   picker.max=bizToday; // 미래(영업일 기준) 차단
+  _renderSettleStep(); // 마법사 초기 상태 렌더링
   if(isManager){
     group.style.display='block';
     picker.addEventListener('change',function(){
@@ -158,6 +225,9 @@ async function runPosAI(){
     fill('siPosCard',parsed.card);
     fill('siPosEtc',parsed.other);
     recalcSettle2();
+    // AI 인식 후 수기 입력창 자동 노출 (값 확인·수정 가능하게)
+    const mg=document.getElementById('swManualGroup');const mt=document.getElementById('swManualToggle');
+    if(mg) mg.style.display='block';if(mt) mt.style.display='none';
 
     // 인식 결과 안내
     const total=parseInt(parsed.total)||0;
@@ -273,6 +343,7 @@ function recalcSettle2(){
   }
 
   refreshSaveButtonState(diff);
+  if(typeof _updateSwTopbar==='function') _updateSwTopbar();
 }
 // 차액 0이면 저장 버튼 초록 강조 (sticky 차액 패널과 동기)
 function refreshSaveButtonState(diff){
@@ -720,6 +791,10 @@ function resetSettleView(){
   if(bankCont){bankCont.innerHTML='';addSettleDeductRow('bank',0,'');}
   if(etcCont){etcCont.innerHTML='';addSettleDeductRow('etc',0,'');}
   const statusEl=document.getElementById('settleDateStatus');if(statusEl)statusEl.innerText='관리자 전용';
+  // 마법사 초기화 — 1단계, 수기입력 숨김
+  const mg=document.getElementById('swManualGroup');const mt=document.getElementById('swManualToggle');
+  if(mg) mg.style.display='none';if(mt) mt.style.display='';
+  _swStep=1;if(typeof _renderSettleStep==='function') _renderSettleStep();
 }
 async function finishSettlement2(){
   if(!guardStore()) return;
@@ -1098,6 +1173,10 @@ async function editSettlement(dateStr, silent){
   const statusEl=document.getElementById('settleDateStatus');
   if(statusEl) statusEl.innerText='기존 데이터 수정 중';
   recalcSettle2();
+  // 마법사: 수정 시 매출 입력창 보이게 + 1단계로 리셋
+  const mg=document.getElementById('swManualGroup');const mt=document.getElementById('swManualToggle');
+  if(mg) mg.style.display='block';if(mt) mt.style.display='none';
+  _swStep=1;if(typeof _renderSettleStep==='function') _renderSettleStep();
   if(!silent) toast('정산 데이터를 불러왔어요. 수정 후 저장하세요.','success');
 }
 async function deleteSettlement(dateStr){
