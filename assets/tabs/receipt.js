@@ -1374,6 +1374,15 @@ async function runAI() {
         //   ⚠️ 옛 코드는 단가가 과거에 없으면 재쪼개기 → 명세서 박스수량(1)을 과거 다른 구매로 멋대로 분할(쑥갓 24,000→8,000×3,
         //   적근대 13,000→6,500×2 등 엑셀 명세서 오작동). 산수 깨진 행(진짜 오독)만 아래에서 교정. (2026-06-24 사장님 호소)
         if(mathOk) return;
+        // 단가 칸이 비어있으면(명세서 단가 공란) = 박스 수량 그대로, 단가=금액÷수량. 과거 단가로 쪼개지 않음.
+        //   ⚠️ 이게 쑥갓 24,000→8,000×3 변조의 진짜 원인. 단가 0이라 위 산수체크를 못 지나 Case B로 빠져 과거 8,000을 빌려옴.
+        //   박스 수량(AI가 박스칸에서 읽은 q, 없으면 1)을 신뢰. (2026-06-24 사장님 호소 — 엑셀 명세서)
+        if(currentU <= 0){
+          const q = currentQ > 0 ? currentQ : 1;
+          it.qty = q;
+          it.unitPrice = Math.round(sp / q);
+          return;
+        }
         // Case A: 단가는 과거 등록값인데 산수 틀림 = 수량만 오독 → 수량 역산
         if(!mathOk && currentU > 0 && rcpPastPriceMap.has(currentU)){
           const ratio = sp / currentU;
