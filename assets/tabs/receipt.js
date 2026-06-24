@@ -1210,6 +1210,8 @@ async function runAI() {
     const receiptTotalSum = Array.isArray(raw) ? null : (raw?.total_sum || null);
     const receiptSupplySum = Array.isArray(raw) ? null : (raw?.total_supply || null); // 세전 공급가액 소계 (세액 별도 양식)
     const receiptTaxSum = Array.isArray(raw) ? null : (raw?.total_tax || null);       // 세액 소계
+    const receiptFreeSum = Array.isArray(raw) ? 0 : (parseInt(raw?.total_free)||0);     // 하단 [면세] 칸
+    const receiptTaxableSum = Array.isArray(raw) ? 0 : (parseInt(raw?.total_taxable)||0); // 하단 [과세] 칸
     const pageInfo = (raw && raw.page_info && typeof raw.page_info.total==='number') ? raw.page_info : null;
     const respDate = (!Array.isArray(raw) && raw?.date) ? raw.date : null;
     const respVendor = (!Array.isArray(raw) && raw?.vendor) ? raw.vendor : '';
@@ -1258,8 +1260,16 @@ async function runAI() {
     if(isVendorModeAI && !isLiquorModeAI) _rcpVendorQtyFix(list);
     // 부가세 처리 (주류 제외): 품목마다 따로 — 과세 품목만 ÷11, 면세는 0. 영수증에 줄별 세액이 찍혀 있으면 그 값 그대로.
     //   ⚠️ 과세합 분배(나눠 넣기) 금지 — 비엔나 혼자 과세인데 연근에 부가세 나눠 넣던 사고 (2026-06-23 사장님 지적)
-    // 명세서 "공급가액 = 합계"(세액 0/공란) = 전액 면세 거래 → ÷11 금지, 전 품목 면세 강제 (육류·야채 등. 영수증 표시 최우선, 2026-06-24 사장님 호소)
-    const _noVatDoc = receiptSupplySum>0 && receiptTotalSum>0 && Math.abs(receiptSupplySum-receiptTotalSum) <= Math.max(100, receiptTotalSum*0.005);
+    // 전액 면세 거래 판정 → ÷11 금지, 전 품목 면세 강제 (육류·야채 등. 영수증 표시 최우선, dev_lessons #4123 빙산)
+    //   진실 = 영수증 하단 [면세]/[과세] 칸 + 공급가액=합계. AI 품목 분류(냉동 정육을 과세 오판 등) 무시. (2026-06-24 사장님 호소)
+    const _docTotal = receiptTotalSum>0 ? receiptTotalSum : list.reduce((s,it)=>s+(parseInt(it.totalPrice)||0),0);
+    const _vTol = Math.max(100, _docTotal*0.005);
+    const _noVatDoc = _docTotal>0 && (
+      // ① 하단 면세 칸 ≈ 합계 & 과세 칸 ≈ 0 = 전액 면세 명세서
+      (receiptFreeSum>0 && Math.abs(receiptFreeSum-_docTotal)<=_vTol && receiptTaxableSum<=_vTol) ||
+      // ② 공급가액 소계 ≈ 합계 (세액 0 = 부가세 미부과)
+      (receiptSupplySum>0 && Math.abs(receiptSupplySum-_docTotal)<=_vTol)
+    );
     const _forceAllFree = lst => lst.forEach(it=>{ it.isTaxFree=true; it.taxAmount=0; it.supplyPrice=parseInt(it.totalPrice)||0; });
     const _hadPrintedTax = list.some(it=>(parseInt(it.taxAmount)||0)>0);
     if(!isLiquorModeAI){
@@ -1722,6 +1732,8 @@ function _rcpMergePages(raws){
   merged.total_sum = pick('total_sum');
   merged.total_supply = pick('total_supply');
   merged.total_tax = pick('total_tax');
+  merged.total_free = pick('total_free');       // 하단 면세 칸 (전액 면세 판정용)
+  merged.total_taxable = pick('total_taxable'); // 하단 과세 칸
   merged.deposit_in = pick('deposit_in');   // 주류 보증금 (요약 페이지 우선)
   merged.deposit_out = pick('deposit_out');
   const _pTotals = objs.map(o=>o.page_info?.total).filter(t=>typeof t==='number');

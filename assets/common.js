@@ -194,6 +194,8 @@ function buildReceiptPrompt({isVendorMode=true, isOnlineMode=false, isLiquorMode
 function _rcpCommonRespTail(){
   return `  "total_supply": 세전 공급가액 소계(정수). 행마다 세액 칸이 별도인 양식만, 아니면 null,
   "total_tax": 세액 소계(정수). 없으면 null,
+  "total_free": 하단 [면세]·[면세물품] 칸 합계(정수). 거래명세서 하단에 과세/면세 칸이 있으면 반드시 면세 칸 값, 없으면 null,
+  "total_taxable": 하단 [과세]·[과세물품] 칸 합계(정수). 과세 칸 값, 없으면 null,
   "total_sum": 이번 거래 결제합(세후,정수,없으면 null) — 금일합계>합계액>총합계액>결제금액. ⚠️전미수·전잔액·당일입금·현잔액·누계·채권 = 무시(이번 거래분 아님),
   "multi_receipt": 사진 여러 장이 서로 다른 거래처·합계의 독립 영수증이면 true (같은 영수증 연속 페이지 Page N/M면 false). 사진 1장이면 false,
   "page_info": {"current":현재페이지,"total":총페이지수} — 영수증에 "Page (N/M)" 인쇄 시. 없으면 {"current":1,"total":1}`;
@@ -208,6 +210,7 @@ function _rcpCommonRules(){
 - [영수증 검산] 모든 items의 p 합(할인 음수 포함) = total_sum(실제 낸 돈: 내실금액·신용액·결제금액·금일합계). 안 맞으면 할인을 빠뜨렸거나(합계구역 할인 누락) 두 번 넣은 것(인라인+요약 중복) — 위 [할인 한 번만]으로 다시 맞춰라.
 - [요약 페이지] 품목 행 없이 합계·소계만 인쇄된 페이지(연속 명세서의 마지막 장 등)는 items에 아무 행도 만들지 마라 — total_sum·total_supply·total_tax만 읽어라.
 - [세액 별도 양식] 행에 공급가·세액·합계 칸 따로면: p=합계(세후) 칸, t=세액 칸, total_supply=공급가액 소계, total_tax=세액 소계, total_sum=총합계액(세후). 세액 칸 없으면 t=0 + total_supply·total_tax=null
+- [과세/면세 칸 — 반드시 읽어라] 거래명세서 하단 구석에 [과세]·[면세]·[청구액] 칸이 있으면(작고 흐려도) 꼭 읽어 total_taxable·total_free에 담아라. ⚠️면세 칸에 금액이 잡혔으면 그 거래 품목은 면세(f=true)다 — 품목명(육류·냉동 등)으로 과세 추측하지 말고 이 칸을 따르라.
 - [함정] total_sum·total_supply에 전미수·전잔액·당일입금·현잔액·누계·채권 절대 X. "이번 거래분(금일)"만
 - 숫자 쉼표·원 제거, 빈배열 X
 - 흐릿해도 근접 추정 (숫자 칸만 — 품목명은 창작 금지, 위 규칙)
