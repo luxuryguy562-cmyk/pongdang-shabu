@@ -2629,7 +2629,7 @@ function openReceiptEdit(id){
   rcpEditingId=r.id;
   rcpEditingCategory=r.category||'';
   document.getElementById('reDate').value=r.receipt_date||ymdLocal(new Date());
-  _populateReVendorSelect(r.vendor_id||'', r.vendor||''); // 거래처 = 등록 리스트에서 선택 (FK, 2026-06-24)
+  _initReVendor(r.vendor_id||'', r.vendor||''); // 거래처 = 바텀시트 선택 (FK, 2026-06-24)
   document.getElementById('reItem').value=r.item||'';
   const _specEl=document.getElementById('reSpec'); if(_specEl) _specEl.value=r.spec||'';
   const _ogEl=document.getElementById('reOrigin'); if(_ogEl) _ogEl.value=r.origin||'';
@@ -2646,18 +2646,39 @@ function openReceiptEdit(id){
   document.querySelectorAll('input[name="reNote"]').forEach(i=>{i.checked=(i.value===noteVal);});
   openSheet('receiptEditSheet');
 }
-// 거래처 FK 드롭다운 채움 — 등록된 거래처에서 선택 (미등록 옛 거래처명도 보존, 2026-06-24)
-function _populateReVendorSelect(vid, vname){
-  const sel=document.getElementById('reVendor'); if(!sel) return;
-  const list=(typeof vendors!=='undefined' && Array.isArray(vendors)) ? vendors : [];
-  let opts='<option value="">(거래처 없음 · 직접구매)</option>', matched=false;
-  list.forEach(v=>{
-    const on=(vid && String(v.id)===String(vid)) || (!vid && vname && v.name===vname);
-    if(on) matched=true;
-    opts+=`<option value="${v.id}"${on?' selected':''}>${esc(v.name)}${v.is_active===false?' (거래종료)':''}</option>`;
-  });
-  if(!matched && vname) opts+=`<option value="keep:${esc(vname)}" selected>${esc(vname)} (미등록)</option>`;
-  sel.innerHTML=opts;
+// 거래처 FK = 바텀시트 선택 (2026-06-24 select→바텀시트). 값은 #reVendorVal(hidden), 표시는 #reVendorBtn.
+//   val 형식: vendor.id | "keep:이름"(미등록 옛 거래처) | ""(거래처 없음·직접구매)
+let _reVendorVal='';
+function _setReVendor(val){
+  _reVendorVal = val||'';
+  const btn=document.getElementById('reVendorBtn'); const h=document.getElementById('reVendorVal');
+  if(h) h.value=_reVendorVal;
+  let label='거래처 없음 · 직접구매';
+  if(_reVendorVal.startsWith('keep:')) label=_reVendorVal.slice(5)+' (미등록)';
+  else if(_reVendorVal){ const v=(typeof vendors!=='undefined'?vendors:[]).find(x=>String(x.id)===String(_reVendorVal)); if(v) label=v.name; }
+  if(btn) btn.innerHTML=`${esc(label)} <span style="color:var(--gray-400);flex-shrink:0;">▾</span>`;
+}
+// 진입 시 현재 거래처 세팅 (vendor_id 우선, 없으면 이름으로 매칭, 그래도 없으면 미등록 보존)
+function _initReVendor(vid, vname){
+  const list=(typeof vendors!=='undefined'?vendors:[]);
+  if(vid && list.find(v=>String(v.id)===String(vid))) return _setReVendor(String(vid));
+  if(vname){ const v=list.find(x=>x.name===vname); if(v) return _setReVendor(String(v.id)); return _setReVendor('keep:'+vname); }
+  _setReVendor('');
+}
+function openReVendorPicker(){
+  const box=document.getElementById('reVendorPickList'); if(!box) return;
+  // 거래종료(is_active===false)만 제외 — 영수증은 거래처·온라인·마트 어디서든 올 수 있어 전 종류 포함 (2026-06-24 사장님)
+  const list=(typeof vendors!=='undefined'?vendors:[]).filter(v=>v.is_active!==false)
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  const rowBtn=(val,label,sub,on)=>`<button type="button" class="btn btn-secondary" style="text-align:left;padding:13px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;${on?'border:1.5px solid var(--toss-blue);color:var(--toss-blue);':''}" data-action="pickReVendor|${val}"><span style="font-size:14px;font-weight:700;">${esc(label)}</span>${sub?`<span style="font-size:11px;color:var(--gray-500);flex-shrink:0;">${esc(sub)}</span>`:''}</button>`;
+  let html=rowBtn('','거래처 없음 · 직접구매','', _reVendorVal==='');
+  list.forEach(v=>{ html+=rowBtn(String(v.id), v.name, v.category||'', String(_reVendorVal)===String(v.id)); });
+  box.innerHTML=html;
+  openSheet('reVendorPickSheet');
+}
+function pickReVendor(val){
+  _setReVendor(val==null?'':String(val));
+  closeSheet('reVendorPickSheet');
 }
 // 단가·수량 입력 → 합계 자동계산 (합계 직접 입력 전까지만). 부가세 폐기(2026-06-24) → 단가×수량=합계
 function onReEditUnitQty(el){
@@ -2689,8 +2710,8 @@ function openReceiptEditCat(){
 async function saveReceiptEdit(){
   if(!guardStore()||!rcpEditingId) return;
   const date=document.getElementById('reDate').value;
-  // 거래처 = FK 드롭다운. value가 vendor.id면 그 거래처(이름·FK 동기화), "keep:이름"이면 미등록 옛 이름 보존, ""면 직접구매(없음)
-  const _vSel=document.getElementById('reVendor').value||'';
+  // 거래처 = 바텀시트 선택값. vendor.id면 그 거래처(이름·FK 동기화), "keep:이름"이면 미등록 옛 이름 보존, ""면 직접구매(없음)
+  const _vSel=document.getElementById('reVendorVal')?.value||'';
   let vendor='', vendorId=null;
   if(_vSel.startsWith('keep:')) vendor=_vSel.slice(5);
   else if(_vSel){ const _v=(typeof vendors!=='undefined'?vendors:[]).find(v=>String(v.id)===String(_vSel)); if(_v){ vendor=_v.name; vendorId=_v.id; } }
