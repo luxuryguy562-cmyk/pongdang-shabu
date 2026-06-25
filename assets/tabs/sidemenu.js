@@ -4949,10 +4949,21 @@ function _expHubMkCard(cardId, action, iconId, title, amtText, color){
 }
 // 거래처별 보기 (별도 화면 expHubVendorCont): vendors + vendor_orders + receipts(vendor_id) 이번달 합계
 //   nav('expHubVendor') → 이 함수 호출 (common.js actions 매핑). 2026-06-11 목업 ⑦: 3열 카드 → 세로 리스트
+// 거래처별 화면 종류 탭 상태 — 첫 진입 기본 '거래처'(외상·월말결제 관리가 핵심). (2026-06-25)
+let _expHubVendorKind = 'vendor';
+function _vendorKindOf(v){ return v.kind==='mart' ? 'mart' : (v.kind==='online' ? 'online' : 'vendor'); }
+// 탭 클릭 → 종류 바꿔 리스트 다시 그림 (data-action 라우터가 호출)
+function switchVendorKindTab(kind){
+  _expHubVendorKind = (kind==='online'||kind==='mart') ? kind : 'vendor';
+  if(typeof renderExpHubVendorView==='function') renderExpHubVendorView();
+}
 async function renderExpHubVendorView(){
   if(!guardStore()) return;
   const grid = document.getElementById('expHubVendorList');
   if(!grid) return;
+  // 현재 종류 탭에 active 표시 동기화 (탭 클릭 없이 호출돼도 일치)
+  const _tabs=document.getElementById('expHubVendorKindTabs');
+  if(_tabs) _tabs.querySelectorAll('.sub-tab').forEach(b=> b.classList.toggle('active', b.getAttribute('data-kind')===_expHubVendorKind));
   grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>';
   try {
     // 2026-06-21 통합: 옛 거래처 관리 화면(vendorsCont) 진입 경로 소실 → 이 화면 하나로 합침.
@@ -4961,16 +4972,19 @@ async function renderExpHubVendorView(){
     const ym = new Date().toISOString().slice(0,7); // YYYY-MM
     const _moLbl=document.getElementById('expHubVendorMonthLbl');
     if(_moLbl) _moLbl.textContent=parseInt(ym.slice(5,7),10)+'월';
-    // 전체 거래처 (종류 무관 — 거래처/마트/온라인 다 표시). 활성 거래처 우선, 거래종료는 뒤로.
-    const all = (vendors||[]).slice().sort((a,b)=>{
-      const aa=(a.is_active===false)?1:0, ab=(b.is_active===false)?1:0;
-      if(aa!==ab) return aa-ab; // 활성 먼저
-      const ta=vendorMonthTotals[a.id]?.total||0, tb=vendorMonthTotals[b.id]?.total||0;
-      if(tb!==ta) return tb-ta; // 이번달 많이 쓴 순
-      return (a.name||'').localeCompare(b.name||''); // 0원끼리는 이름순
-    });
+    // 선택된 종류 탭(거래처/온라인/마트)만 필터. 활성 거래처 우선, 거래종료는 뒤로.
+    const all = (vendors||[]).slice()
+      .filter(v=> _vendorKindOf(v)===_expHubVendorKind)
+      .sort((a,b)=>{
+        const aa=(a.is_active===false)?1:0, ab=(b.is_active===false)?1:0;
+        if(aa!==ab) return aa-ab; // 활성 먼저
+        const ta=vendorMonthTotals[a.id]?.total||0, tb=vendorMonthTotals[b.id]?.total||0;
+        if(tb!==ta) return tb-ta; // 이번달 많이 쓴 순
+        return (a.name||'').localeCompare(b.name||''); // 0원끼리는 이름순
+      });
     if(!all.length){
-      grid.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;line-height:1.6;">등록된 거래처가 없습니다.<br>위 <b>＋ 추가</b>로 거래처를 등록하세요.</div>`;
+      const _kLbl = _expHubVendorKind==='online' ? '온라인' : (_expHubVendorKind==='mart' ? '마트' : '거래처');
+      grid.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;line-height:1.6;">등록된 ${_kLbl}이(가) 없습니다.<br>위 <b>＋ 추가</b>로 등록하세요.</div>`;
       return;
     }
     let html = '';
