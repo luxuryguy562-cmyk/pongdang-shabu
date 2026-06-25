@@ -987,6 +987,12 @@
     <div class="exp-group-label" style="margin:0;">🏪 거래처 관리 <span class="exp-group-hint"><span id="expHubVendorMonthLbl">이번달</span> 많이 쓴 순</span></div>
     <button type="button" class="btn btn-primary btn-sm" style="flex:0 0 auto;padding:8px 14px;font-size:13px;font-weight:700;" data-action="openAddVendorSheet|vendor">＋ 추가</button>
   </div>
+  <!-- 종류 탭: 거래처(외상·월말결제)/온라인/마트 분리 — 섞이면 월말 거래처 확인 불편 (2026-06-25 사장님) -->
+  <div class="sub-tabs" id="expHubVendorKindTabs">
+    <button type="button" class="sub-tab active" data-kind="vendor" data-action="switchVendorKindTab|vendor">🏪 거래처</button>
+    <button type="button" class="sub-tab" data-kind="online" data-action="switchVendorKindTab|online">🌐 온라인</button>
+    <button type="button" class="sub-tab" data-kind="mart" data-action="switchVendorKindTab|mart">🛒 마트</button>
+  </div>
   <div class="exp-cat-list" id="expHubVendorList"></div>
 </div>
 
@@ -3509,7 +3515,7 @@
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260624c"></script>
 <script src="assets/tabs/dashboard.js?v=20260622b"></script>
-<script src="assets/tabs/sidemenu.js?v=20260624c"></script>
+<script src="assets/tabs/sidemenu.js?v=20260625a"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 </body>
 </html>
