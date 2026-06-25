@@ -2037,10 +2037,10 @@ function v17RenderMonthDetail(){
     <div class="md-hero">
       <div class="md-hero-lb">${progressLabel}</div>
       <div class="md-hero-amt">${v17FmtNoWon(cur.s)}<span class="won">원</span></div>
-      <div class="md-hero-row">
-        <div class="md-cell"><div class="k">지출</div><div class="v">${v17FmtNoWon(cur.e)}원</div></div>
-        <div class="md-cell"><div class="k">순수익</div><div class="v">${v17FmtNoWonSigned(profit)}원</div></div>
-        <div class="md-cell"><div class="k">수익률</div><div class="v">${profit>=0?'+':''}${profitPctSale.toFixed(0)}%</div></div>
+      <div class="md-hero-stats">
+        <div class="md-stat"><span class="k">지출</span><span class="v">${v17FmtNoWon(cur.e)}원</span></div>
+        <div class="md-stat"><span class="k">순수익</span><span class="v">${v17FmtNoWonSigned(profit)}원</span></div>
+        <div class="md-stat"><span class="k">수익률</span><span class="v">${profit>=0?'+':''}${profitPctSale.toFixed(0)}%</span></div>
       </div>
     </div>`;
 
@@ -2092,6 +2092,7 @@ function v17RenderMonthDetail(){
   const detailPanelHtml = sortedCats.length>0 ? `
     <div class="v17-detail-panel" data-rest-detail="mth" style="display:block;">
       <div class="pan-ttl">카테고리별 지출 (전체)</div>
+      <div class="v17-detail-head"><span class="h-nm">카테고리</span><span class="h-amt">금액</span><span class="h-pct">매출대비</span><span class="h-mom">전월대비</span></div>
       ${detailRowsHtml}
       <div class="v17-detail-sum">
         <span class="lb">합계</span>
