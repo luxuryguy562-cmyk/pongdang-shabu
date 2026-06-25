@@ -4,6 +4,24 @@
 
 ---
 
+## [2026-06-25] 거래처별 종류 탭 + 주류·음료를 식자재 하위로
+
+**1. 거래처별 화면 종류 탭** (PR #801 main)
+- 거래처 관리 상단에 탭 3개(🏪거래처/🌐온라인/🛒마트). 외상·월말결제 거래처를 즉시결제(온라인·마트)와 분리.
+- 기본 탭=거래처. 종류 없는 거래처는 거래처 탭 포함(지출 누락 방지). 기존 .sub-tabs 재사용, DB 변경 0.
+- 코드: index.html(탭 바) + sidemenu.js `_expHubVendorKind`/`switchVendorKindTab`/`_vendorKindOf` + `renderExpHubVendorView` 필터.
+
+**2. 주류·음료 → 식자재 하위 카테고리** (DB 데이터만, 코드 0줄)
+- 3에이전트 병렬 조사 + DB 실측: 집계 전부 parent_id 자동 롤업, 주류·음료 자식 0개(손자 위험 없음), 이름 기반 맵 안 깨짐 → parent_id UPDATE만으로 충분 검증.
+- 실행(승인): `UPDATE expense_categories SET parent_id='a521efc8-...'(식자재) WHERE id IN (주류 cbd1193b, 음료 469d67ae)`. 롤백=parent_id NULL.
+- 검증: 식자재 펼침 = 주류101만·음료106만·육류924만·야채312만·공산품1079만·미분류0 (앱 화면 확인). 합계 보존.
+- 순서는 카테고리 관리 ☰ 드래그(sort_order)로 사장님이 직접 조정 가능.
+
+**3. AI 프롬프트 예시 형식 통일** (PR #802 main)
+- common.js 프롬프트 예시 `"c":"주류"` 4곳 → `"식자재>주류"`(실제 catList 형식과 일치). 예시 보존, 기능 영향 0.
+
+---
+
 ## [2026-06-19] 🔐 매장 간 데이터 격리 보안 완성 (RLS) — 사장님 "다 잠가"/"bc 다 해"
 
 **문제**: anon(공개 publishable key) 코드 노출 + RLS `USING(true)`(무조건 통과) → 누구나 전 매장 데이터 읽기/쓰기/삭제 가능. SaaS 치명.
