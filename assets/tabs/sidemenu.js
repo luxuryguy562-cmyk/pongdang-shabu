@@ -3824,17 +3824,60 @@ function resolveCatPair(catName){
 // ══════════════════════════════════════════
 let loginSelectedEmp=null, pinBuffer='', _loginBusy=false;
 
-// ─── 로그인 화면 (2026-06-26 전화번호+PIN 방식으로 전환) ───
+// ─── 로그인 화면 (2026-06-26 표준 재설계: 전화번호 단계 → PIN 단계 분리) ───
+// 기기가 사용자를 기억하면(pd_last_phone 있음) → PIN만. 없으면 → 전화번호부터.
+let _loginPhone=''; // 현재 로그인 시도 중인 전화번호 (PIN 단계에서 사용)
+
 function showLoginScreen(){
   document.getElementById('loginOverlay').style.display='flex';
   document.body.style.overflow='hidden';
   document.querySelector('.bottom-nav').style.display='none';
   document.querySelector('.header').style.display='none';
+  const saved=(localStorage.getItem('pd_last_phone')||'').replace(/[^0-9]/g,'');
+  if(saved.length>=10){
+    _loginPhone=saved;
+    showPinStep();
+  }else{
+    showPhoneStep();
+  }
+}
+// [화면 B] 전화번호 입력 화면
+function showPhoneStep(){
+  document.getElementById('loginStepPhone').style.display='block';
+  document.getElementById('loginStepPin').style.display='none';
   resetPinPad();
-  document.getElementById('loginMsg').innerText='';
-  // 이전에 입력했던 전화번호 복원 (재로그인 편의)
+  const m=document.getElementById('loginPhoneMsg'); if(m) m.innerText='';
   const ph=document.getElementById('loginPhoneInput');
-  if(ph){ ph.value=localStorage.getItem('pd_last_phone')||''; }
+  if(ph){ ph.value=localStorage.getItem('pd_last_phone')||''; setTimeout(()=>ph.focus(),100); }
+}
+// [화면 A] PIN 입력 화면 (전화번호는 _loginPhone 사용, 끝 4자리만 흐리게 표시)
+function showPinStep(){
+  document.getElementById('loginStepPhone').style.display='none';
+  document.getElementById('loginStepPin').style.display='block';
+  resetPinPad();
+  const m=document.getElementById('loginMsg'); if(m) m.innerText='';
+  const lbl=document.getElementById('loginPinPhone');
+  if(lbl){ const p=_loginPhone||''; lbl.innerText = p ? ('···'+p.slice(-4)+' 님') : ''; }
+}
+// 전화번호 입력 후 "다음" → PIN 화면으로
+function phoneNext(){
+  const phRaw=(document.getElementById('loginPhoneInput')?.value||'').replace(/[^0-9]/g,'');
+  const m=document.getElementById('loginPhoneMsg');
+  if(!phRaw||phRaw.length<10){ if(m) m.innerText='전화번호를 정확히 입력해주세요'; return; }
+  _loginPhone=phRaw;
+  if(m) m.innerText='';
+  showPinStep();
+}
+// "다른 계정으로 로그인" → 전화번호 화면으로 (기억 해제)
+function switchAccount(){
+  _loginPhone='';
+  localStorage.removeItem('pd_last_phone');
+  const ph=document.getElementById('loginPhoneInput'); if(ph) ph.value='';
+  showPhoneStep();
+}
+// 구글 로그인 (준비 중 — OAuth 등록 후 활성화)
+function loginGoogle(){
+  toast('구글 로그인은 곧 연결됩니다. 지금은 전화번호로 로그인해주세요.','warn');
 }
 // ═══════════════════════════════════════════════════════════════
 // Phase 1-A1: 신규 매장 가입 플로우 (2026-04-24)
@@ -4450,15 +4493,12 @@ function renderPinDots(){
 }
 function resetPinPad(){ pinBuffer=''; renderPinDots(); }
 function pinPress(n){
-  if(_loginBusy||pinBuffer.length>=8) return; // 최대 8자리
+  if(_loginBusy||pinBuffer.length>=4) return; // PIN 4자리 (표준)
   pinBuffer+=String(n);
   renderPinDots();
   const msgEl=document.getElementById('loginMsg'); if(msgEl) msgEl.innerText='';
-  // 4자리 도달 시 전화번호가 채워져 있으면 자동 로그인 (기존 4자리 PIN 사용 직원 편의)
-  if(pinBuffer.length===4){
-    const ph=(document.getElementById('loginPhoneInput')?.value||'').replace(/[^0-9]/g,'');
-    if(ph.length>=10) submitLogin();
-  }
+  // 4자리 도달 → 자동 로그인 (전화번호는 _loginPhone에 이미 확정됨)
+  if(pinBuffer.length===4 && _loginPhone.length>=10){ submitLogin(); }
 }
 function pinDelete(){
   if(_loginBusy) return;
@@ -4467,13 +4507,13 @@ function pinDelete(){
 }
 function onLoginNameChange(){ resetPinPad(); const m=document.getElementById('loginMsg'); if(m) m.innerText=''; }
 
-// ─── 전화번호+PIN 로그인 (2026-06-26 전면 전환 — 매장/이름 불필요) ───
+// ─── 전화번호+PIN 로그인 (2026-06-26 표준 재설계 — 전화번호는 _loginPhone에서) ───
 async function submitLogin(){
-  const phRaw=(document.getElementById('loginPhoneInput')?.value||'').replace(/[^0-9]/g,'');
+  const phRaw=(_loginPhone||'').replace(/[^0-9]/g,'');
   const pinVal=pinBuffer;
   const msgEl=document.getElementById('loginMsg');
-  if(!phRaw||phRaw.length<10){msgEl.innerText='전화번호를 입력해주세요';shakeLogin();return;}
-  if(!pinVal||pinVal.length<4){msgEl.innerText='PIN 4자리 이상 입력해주세요';shakeLogin();return;}
+  if(!phRaw||phRaw.length<10){msgEl.innerText='전화번호를 다시 입력해주세요';shakeLogin();switchAccount();return;}
+  if(!pinVal||pinVal.length<4){msgEl.innerText='PIN 4자리를 입력해주세요';shakeLogin();return;}
   _loginBusy=true;
   msgEl.innerText='확인 중…';
   let res;
@@ -4506,8 +4546,14 @@ function shakeLogin(){
   setTimeout(()=>el.style.animation='',300);
 }
 // 물리 키보드 숫자 입력 → PIN 키패드 (PC 테스트용)
+// ⚠️ PIN 화면이 보일 때만 동작. 전화번호 입력칸 타이핑 시 PIN 오염 방지 (2026-06-26 버그 수정)
 document.addEventListener('keydown',e=>{
   if(document.getElementById('loginOverlay').style.display==='none') return;
+  // PIN 단계가 아니면(전화번호 단계) 무시 — 전화번호 칸 입력이 PIN으로 새는 버그 차단
+  if(document.getElementById('loginStepPin')?.style.display==='none') return;
+  // 입력칸(input)에 포커스가 있으면 무시
+  const ae=document.activeElement;
+  if(ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA')) return;
   if(e.key>='0'&&e.key<='9'){ pinPress(parseInt(e.key,10)); }
   else if(e.key==='Backspace'){ pinDelete(); }
 });

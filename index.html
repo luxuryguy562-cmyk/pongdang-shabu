@@ -162,7 +162,7 @@
   </defs>
 </svg>
 
-<!-- PIN 로그인 화면 (2026-06-26 전화번호+PIN 방식으로 전환) -->
+<!-- 로그인 화면 (2026-06-26 표준 재설계: 전화번호 단계 → PIN 단계 분리) -->
 <div id="loginOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
   <!-- 브랜드 -->
   <div style="text-align:center;margin-bottom:36px;">
@@ -172,41 +172,67 @@
     </div>
   </div>
 
-  <!-- 전화번호 + PIN 입력 -->
   <div id="loginFormArea" style="width:100%;max-width:320px;">
-    <input type="tel" id="loginPhoneInput" class="input-field" placeholder="전화번호 (숫자만)"
-      style="text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;letter-spacing:2px;"
-      maxlength="11" inputmode="numeric">
-    <div style="text-align:center;font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:18px;">PIN 번호를 눌러주세요</div>
-    <!-- PIN 점 (최대 6자리 표시) -->
-    <div id="pinDots" style="display:flex;justify-content:center;gap:16px;margin-bottom:26px;">
-      <span class="pin-dot"></span>
-      <span class="pin-dot"></span>
-      <span class="pin-dot"></span>
-      <span class="pin-dot"></span>
-      <span class="pin-dot"></span>
-      <span class="pin-dot"></span>
+
+    <!-- ── [화면 B] 전화번호 입력 (새 기기 / 다른 계정) ── -->
+    <div id="loginStepPhone" style="display:none;">
+      <div style="text-align:center;font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">전화번호로 시작</div>
+      <div style="text-align:center;font-size:13px;color:var(--gray-600);margin-bottom:20px;">로그인할 전화번호를 입력해주세요</div>
+      <input type="tel" id="loginPhoneInput" class="input-field" placeholder="전화번호 (숫자만)"
+        style="text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:16px;letter-spacing:2px;"
+        maxlength="11" inputmode="numeric">
+      <button class="btn btn-primary" style="width:100%;padding:16px;font-size:16px;font-weight:800;border-radius:14px;" data-action="phoneNext">다음</button>
+      <div id="loginPhoneMsg" style="margin-top:14px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+      <!-- 소셜 로그인 -->
+      <div style="display:flex;align-items:center;gap:10px;margin:22px 0 18px;">
+        <div style="flex:1;height:1px;background:var(--gray-200);"></div>
+        <span style="font-size:12px;color:var(--gray-500);">또는</span>
+        <div style="flex:1;height:1px;background:var(--gray-200);"></div>
+      </div>
+      <button class="btn" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:14px;background:#fff;color:#1f1f1f;border:1px solid var(--gray-300);display:flex;align-items:center;justify-content:center;gap:8px;" data-action="loginGoogle">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.02-3.7H.96v2.34A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.98 10.72a5.4 5.4 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.02-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.94l3.02 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+        구글로 시작
+      </button>
     </div>
-    <!-- 숫자 키패드 (아이폰식) -->
-    <div id="pinPad">
-      <button type="button" class="pin-key" data-action="pinPress|1">1</button>
-      <button type="button" class="pin-key" data-action="pinPress|2">2</button>
-      <button type="button" class="pin-key" data-action="pinPress|3">3</button>
-      <button type="button" class="pin-key" data-action="pinPress|4">4</button>
-      <button type="button" class="pin-key" data-action="pinPress|5">5</button>
-      <button type="button" class="pin-key" data-action="pinPress|6">6</button>
-      <button type="button" class="pin-key" data-action="pinPress|7">7</button>
-      <button type="button" class="pin-key" data-action="pinPress|8">8</button>
-      <button type="button" class="pin-key" data-action="pinPress|9">9</button>
-      <span></span>
-      <button type="button" class="pin-key" data-action="pinPress|0">0</button>
-      <button type="button" class="pin-key pin-del" data-action="pinDelete">⌫</button>
+
+    <!-- ── [화면 A] PIN 입력 (기기가 기억하는 사용자) ── -->
+    <div id="loginStepPin" style="display:none;">
+      <div id="loginPinPhone" style="text-align:center;font-size:13px;color:var(--gray-500);font-weight:600;margin-bottom:6px;"></div>
+      <div style="text-align:center;font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;">PIN 번호를 눌러주세요</div>
+      <!-- PIN 점 (4자리) -->
+      <div id="pinDots" style="display:flex;justify-content:center;gap:18px;margin-bottom:26px;">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+      </div>
+      <!-- 숫자 키패드 (아이폰식) -->
+      <div id="pinPad">
+        <button type="button" class="pin-key" data-action="pinPress|1">1</button>
+        <button type="button" class="pin-key" data-action="pinPress|2">2</button>
+        <button type="button" class="pin-key" data-action="pinPress|3">3</button>
+        <button type="button" class="pin-key" data-action="pinPress|4">4</button>
+        <button type="button" class="pin-key" data-action="pinPress|5">5</button>
+        <button type="button" class="pin-key" data-action="pinPress|6">6</button>
+        <button type="button" class="pin-key" data-action="pinPress|7">7</button>
+        <button type="button" class="pin-key" data-action="pinPress|8">8</button>
+        <button type="button" class="pin-key" data-action="pinPress|9">9</button>
+        <span></span>
+        <button type="button" class="pin-key" data-action="pinPress|0">0</button>
+        <button type="button" class="pin-key pin-del" data-action="pinDelete">⌫</button>
+      </div>
+      <div id="loginMsg" style="margin-top:18px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+      <!-- 다른 계정으로 (= 전화번호 화면으로) -->
+      <div style="margin-top:16px;text-align:center;">
+        <button class="btn-text" style="font-size:13px;color:var(--gray-500);background:none;border:none;text-decoration:underline;cursor:pointer;" data-action="switchAccount">다른 계정으로 로그인</button>
+      </div>
     </div>
-    <div id="loginMsg" style="margin-top:18px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+
   </div>
+
   <!-- 신규 가입 안내 -->
   <div style="margin-top:28px;text-align:center;">
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">아직 계정이 없으신가요?</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">처음 사용하시나요?</div>
     <button class="btn btn-primary" style="padding:12px 24px;font-size:14px;font-weight:800;border-radius:12px;" data-action="openJoin">가입하기</button>
   </div>
 </div>
@@ -3616,7 +3642,7 @@
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260624c"></script>
 <script src="assets/tabs/dashboard.js?v=20260625b"></script>
-<script src="assets/tabs/sidemenu.js?v=20260625a"></script>
+<script src="assets/tabs/sidemenu.js?v=20260626a"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 </body>
 </html>
