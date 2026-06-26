@@ -211,7 +211,7 @@ function _rcpCommonRules(){
 - [함정] total_sum·total_supply에 전미수·전잔액·당일입금·현잔액·누계·채권 절대 X. "이번 거래분(금일)"만
 - 숫자 쉼표·원 제거, 빈배열 X
 - 흐릿해도 근접 추정 (숫자 칸만 — 품목명은 창작 금지, 위 규칙)
-- [면세/과세 = 영수증 표시 최우선] 영수증에 면세 표시가 있으면 무조건 f=true(면세): ①품목명 앞 * 또는 ※ 기호 ②"면세" 글자 ③하단 "면세합/면세물품" 합계에 잡힌 품목. 이 영수증 표시가 품목 성격(식품/비품) 판단보다 절대 우선 — 종량제봉투·도서 등 비식품도 영수증에 면세 표시면 면세(true). 반대로 "과세합/과세물품"에 잡혔으면 f=false. 단 금액(p)은 인쇄값 그대로(면세표시가 p를 바꾸지 않음).
+- [면세/과세 — f] 영수증에 면세 표시(*·면세합 등)면 f=true, 과세면 f=false. 불확실하면 f 생략. (참고용 — 앱은 부가세 자동계산 안 함. 2026-06-24)
 - [규격 표준형] spec의 중량·용량 단위는 소문자로 통일(kg·g·ml·l). 포장 꼬리표 "/EA"·"/PAC"·"/BOX"는 제거. 예) "1KG/PAC"→"1kg", "500G/EA"→"500g", "700ML"→"700ml". 단 제조사·괄호 상세가 붙은 복합 규격(예 "1.3KG(30G*약43EA)")은 단위만 소문자로 바꾸고 나머지는 그대로.
 - [원산지는 og로 분리] 영수증 어디든(품명 앞뒤·괄호·※주석·쉼표) 산지(국내산·외국산·중국산·미국산·수입산 등)가 보이면 반드시 og로 빼고 i(품목명)에서는 제거. "재료명:산지"로 적힌 것도 og로(예 "돈육:국내산"). 원재료가 여럿이면 쉼표로 og에 다 담아라(예 og="닭고기:국내산, 돈지방:국내산"). ⚠️산지 표기가 전혀 없으면 og=null — 없는 산지를 지어내지 마라.`;
 }
@@ -261,7 +261,7 @@ ${_rcpCommonRules()}
 - 합계행·소계(매출합계·공급가액·부가세 소계 등)·용기보증금행·빈용기보증금행 = items 제외 (deposit_in·deposit_out·total_sum으로만)
 
 [예시 — 주류 거래명세서 형태 (가공 숫자)]
-{"date":"2026-06-09","items":[{"i":"참이슬","spec":"(유)","og":null,"u":72000,"q":2,"p":79200,"t":7200,"f":false,"c":"주류"},{"i":"카스","spec":"(유)","og":null,"u":110000,"q":3,"p":121000,"t":11000,"f":false,"c":"주류"},{"i":"탄산가스","spec":null,"og":null,"u":null,"q":1,"p":0,"t":0,"f":true,"c":"주류"}],"deposit_in":150000,"deposit_out":120000,"total_supply":182000,"total_tax":18200,"total_sum":230200}
+{"date":"2026-06-09","items":[{"i":"참이슬","spec":"(유)","og":null,"u":72000,"q":2,"p":79200,"t":7200,"f":false,"c":"식자재>주류"},{"i":"카스","spec":"(유)","og":null,"u":110000,"q":3,"p":121000,"t":11000,"f":false,"c":"식자재>주류"},{"i":"탄산가스","spec":null,"og":null,"u":null,"q":1,"p":0,"t":0,"f":true,"c":"식자재>주류"}],"deposit_in":150000,"deposit_out":120000,"total_supply":182000,"total_tax":18200,"total_sum":230200}
 (참이슬 p=72000+7200=79200. 용기대 칸 제외. deposit_in=용기보증금 소계 150,000. deposit_out=빈용기보증금 120,000. total_sum=거래대금합계 230,200 = 매출합계 350,200 − 빈용기 120,000)`;
 }
 
@@ -323,7 +323,7 @@ ${_rcpCommonRules()}
 (돈목살 = 11Box·90.54kg → 박스 q=11이면 9400×11=10만 ≠ 851076, 중량 q=90.54면 9400×90.54≈851076 → q=90.54. 박스 무시, 중량을 q로)
 
 [예시 — C/S 명세서 (수량C/S·수량EA 칸 둘 다 존재)]
-{"items":[{"i":"칠성사이다","spec":"355ml캔(업소) 24CSR","og":null,"u":19000,"q":4,"p":76000,"t":0,"f":false,"c":"주류"}],"total_sum":76000}
+{"items":[{"i":"칠성사이다","spec":"355ml캔(업소) 24CSR","og":null,"u":19000,"q":4,"p":76000,"t":0,"f":false,"c":"식자재>주류"}],"total_sum":76000}
 (수량C/S=4·수량EA=96·출고가=19,000·금액=76,000 → q=4. 19,000×4=76,000 ✅. EA=96은 24본×4케이스=낱개수이므로 q 절대 X)`;
 }
 
@@ -1341,4 +1341,58 @@ function initRealtimeAndBadge(){
 }
 // 앱이 다시 보일 때(다른 화면/앱 갔다 옴) 배지 갱신 — 실시간 폴백
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof refreshJoinBadge==='function') refreshJoinBadge(); });
+
+// ─── 새 기능: 기간 선택 피커 (거래처 상세 · 지출카테고리 공통) ───
+let periodPickerCtx = null; // 'vendorOrder' | 'catReceipt'
+
+function openPeriodPicker(ctx){
+  periodPickerCtx = ctx;
+  const now = new Date();
+  const curM = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  let fromInit = curM, toInit = curM;
+  if(ctx === 'vendorOrder'){
+    fromInit = (typeof vOrderRangeFrom!=='undefined' && vOrderRangeFrom) ? vOrderRangeFrom
+             : (typeof vOrderCurrentMonth!=='undefined' ? vOrderCurrentMonth : curM);
+    toInit   = (typeof vOrderRangeTo!=='undefined' && vOrderRangeTo) ? vOrderRangeTo : fromInit;
+  } else if(ctx === 'catReceipt'){
+    fromInit = (typeof catReceiptRangeFrom!=='undefined' && catReceiptRangeFrom) ? catReceiptRangeFrom
+             : (typeof catReceiptMonth!=='undefined' ? catReceiptMonth : curM);
+    toInit   = (typeof catReceiptRangeTo!=='undefined' && catReceiptRangeTo) ? catReceiptRangeTo : fromInit;
+  }
+  const fromEl = document.getElementById('periodPickerFrom');
+  const toEl   = document.getElementById('periodPickerTo');
+  if(fromEl) fromEl.value = fromInit;
+  if(toEl)   toEl.value   = toInit;
+  openSheet('periodPickerSheet');
+}
+
+function applyPeriodQuick(preset){
+  const now = new Date();
+  const y = now.getFullYear(), mo = now.getMonth()+1;
+  const thisM = `${y}-${String(mo).padStart(2,'0')}`;
+  let from = thisM, to = thisM;
+  if(preset === 'thisMonth'){
+    from = to = thisM;
+  } else if(preset === 'lastMonth'){
+    const d = new Date(y, mo-2, 1);
+    from = to = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  } else if(preset === '3months'){
+    const d = new Date(y, mo-3, 1);
+    from = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    to = thisM;
+  }
+  closeAllSheets();
+  if(periodPickerCtx === 'vendorOrder' && typeof _applyVOrderPeriod==='function') _applyVOrderPeriod(from, to);
+  else if(periodPickerCtx === 'catReceipt' && typeof _applyCatReceiptPeriod==='function') _applyCatReceiptPeriod(from, to);
+}
+
+function applyPeriodRange(){
+  const from = document.getElementById('periodPickerFrom')?.value;
+  const to   = document.getElementById('periodPickerTo')?.value;
+  if(!from || !to){ alert('시작월과 종료월을 모두 선택해주세요.'); return; }
+  if(from > to){ alert('시작월이 종료월보다 늦습니다.'); return; }
+  closeAllSheets();
+  if(periodPickerCtx === 'vendorOrder' && typeof _applyVOrderPeriod==='function') _applyVOrderPeriod(from, to);
+  else if(periodPickerCtx === 'catReceipt' && typeof _applyCatReceiptPeriod==='function') _applyCatReceiptPeriod(from, to);
+}
 

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>날짜 필터 UX — 변경 전/후</title>
+<style>
+  :root{
+    --blue:#3182F6;--blue-light:#EDF4FF;
+    --text-1:#191F28;--text-3:#6B7684;--text-4:#8B95A1;
+    --line:#F2F4F6;--line-2:#E5E8EB;
+    --green:#0B8A4F;--green-bg:#E4F7EE;
+    --red:#C0392B;--red-bg:#FFE9E9;
+    --card-shadow:0 4px 14px rgba(20,40,80,.07),0 1px 3px rgba(20,40,80,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#EEF1F5;font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:var(--text-1);padding:16px;}
+  h1{font-size:18px;text-align:center;margin:4px 0 4px;}
+  .sub{text-align:center;font-size:13px;color:var(--text-3);margin-bottom:20px;line-height:1.6;}
+  .wrap{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;align-items:flex-start;}
+  .panel{flex:1 1 300px;max-width:360px;}
+  .ph{font-size:13px;font-weight:800;padding:8px 14px;border-radius:10px;margin-bottom:10px;text-align:center;}
+  .ph-bad{background:var(--red-bg);color:var(--red);}
+  .ph-good{background:var(--green-bg);color:var(--green);}
+  .ph-neutral{background:#E8EEFF;color:#2956C8;}
+  .screen{background:#EEF1F5;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:0;}
+  .note{font-size:12px;line-height:1.7;color:var(--text-3);padding:6px 4px 0;}
+  .bad{color:var(--red);font-weight:700;}
+  .good{color:var(--green);font-weight:700;}
+
+  /* ── 공통 앱 헤더 ── */
+  .app-back{display:flex;align-items:center;gap:6px;padding:10px 0 8px;font-size:15px;font-weight:700;}
+  .back-btn{font-size:20px;color:var(--text-3);margin-right:2px;}
+  .app-back .edit-btn{margin-left:auto;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;background:var(--line);color:var(--text-3);border:none;cursor:pointer;font-family:inherit;}
+  .cat-chip{font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;background:var(--blue-light);color:var(--blue);display:inline-block;margin-left:6px;}
+
+  /* ── 날짜 네비 바 ── */
+  .date-nav{display:flex;align-items:center;gap:6px;padding:8px 0 6px;}
+  .nav-arrow{width:32px;height:32px;border:none;border-radius:50%;background:var(--line);color:var(--text-3);font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .nav-month{flex:1;text-align:center;font-size:15px;font-weight:800;color:var(--text-1);}
+  .nav-month.clickable{cursor:pointer;padding:6px 10px;border-radius:8px;background:#fff;border:1.5px solid var(--line-2);}
+  .range-btn{font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;background:var(--blue-light);color:var(--blue);border:none;cursor:pointer;white-space:nowrap;}
+  .range-btn.active{background:var(--blue);color:#fff;}
+
+  /* ── 기간 합계 카드 ── */
+  .period-total{background:#fff;border-radius:14px;box-shadow:var(--card-shadow);padding:14px 16px;margin-bottom:8px;}
+  .pt-label{font-size:11px;font-weight:700;color:var(--text-4);margin-bottom:4px;}
+  .pt-amount{font-size:22px;font-weight:800;color:var(--text-1);}
+  .pt-sub{font-size:12px;color:var(--text-3);margin-top:3px;}
+  .pt-row{display:flex;align-items:flex-end;justify-content:space-between;}
+
+  /* ── 거래 목록 ── */
+  .day-header{font-size:12px;font-weight:700;color:var(--text-3);padding:10px 0 5px;border-bottom:1px solid var(--line-2);display:flex;justify-content:space-between;}
+  .receipt-row{background:#fff;border-radius:12px;box-shadow:var(--card-shadow);padding:12px 14px;margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .receipt-icon{width:36px;height:36px;border-radius:10px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .receipt-info{flex:1;}
+  .receipt-name{font-size:14px;font-weight:700;}
+  .receipt-sub{font-size:11px;color:var(--text-3);margin-top:2px;}
+  .receipt-amt{font-size:14px;font-weight:800;color:var(--text-1);}
+  .receipt-arrow{font-size:16px;color:var(--text-4);}
+
+  /* ── 전체기간 버튼 (before) ── */
+  .old-period-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;padding:8px 14px;border-radius:10px;background:#fff;border:1.5px solid var(--line-2);color:var(--text-1);cursor:pointer;margin-bottom:8px;}
+
+  /* ── 기간 선택 바텀시트 (3번 패널) ── */
+  .sheet-mock{background:#fff;border-radius:20px 20px 0 0;padding:16px;box-shadow:0 -4px 20px rgba(0,0,0,.10);}
+  .sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--line-2);margin:0 auto 14px;}
+  .sheet-title{font-size:17px;font-weight:800;margin-bottom:14px;}
+  .quick-btns{display:flex;gap:8px;margin-bottom:16px;}
+  .q-btn{flex:1;padding:10px 6px;border-radius:10px;background:var(--line);color:var(--text-3);border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;}
+  .q-btn.on{background:var(--blue-light);color:var(--blue);}
+  .range-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+  .range-input{flex:1;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:10px;font-size:14px;font-weight:700;text-align:center;background:#fff;color:var(--text-1);}
+  .range-input.active{border-color:var(--blue);color:var(--blue);}
+  .range-dash{font-size:16px;color:var(--text-4);font-weight:700;}
+  .confirm-btn{width:100%;padding:15px;border-radius:14px;background:var(--blue);color:#fff;border:none;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;}
+
+  /* ── 카테고리 지출 화면 (4번 패널) ── */
+  .section-title{font-size:15px;font-weight:800;padding:8px 0 6px;display:flex;align-items:center;gap:8px;}
+  .section-title .emoji{font-size:20px;}
+  .cat-row{background:#fff;border-radius:12px;box-shadow:var(--card-shadow);padding:12px 14px;margin-top:6px;display:flex;align-items:center;gap:10px;}
+  .cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .cat-name{flex:1;font-size:14px;font-weight:700;}
+  .cat-amt{font-size:14px;font-weight:800;}
+  .cat-bar-wrap{height:4px;background:var(--line);border-radius:2px;margin-top:5px;}
+  .cat-bar{height:4px;border-radius:2px;background:var(--blue);}
+</style>
+</head>
+<body>
+
+<h1>날짜 필터 UX — 변경 전/후</h1>
+<div class="sub">거래처 상세 + 지출관리, 월 네비·기간 검색 통일</div>
+
+<div class="wrap">
+
+  <!-- ① 변경 전: 거래처 상세 -->
+  <div class="panel">
+    <div class="ph ph-bad">① 변경 전 — 거래처 상세</div>
+    <div class="screen">
+      <div class="app-back">
+        <span class="back-btn">‹</span>에이젯시스템
+        <span class="cat-chip">육류</span>
+        <button class="edit-btn">편집</button>
+      </div>
+
+      <!-- 문제: 전체기간 버튼만 있고 월 네비 없음 -->
+      <button class="old-period-btn">📅 전체 기간 ▾</button>
+
+      <div class="day-header"><span>2026. 06. 17</span><span style="color:var(--red)">1,879,400원</span></div>
+      <div class="receipt-row">
+        <div class="receipt-icon">🧾</div>
+        <div class="receipt-info">
+          <div class="receipt-name">에이젯시스템</div>
+          <div class="receipt-sub">품목 1개</div>
+        </div>
+        <div class="receipt-amt">885,276원</div>
+        <div class="receipt-arrow">›</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-icon">🧾</div>
+        <div class="receipt-info">
+          <div class="receipt-name">에이젯시스템</div>
+          <div class="receipt-sub">품목 2개</div>
+        </div>
+        <div class="receipt-amt">994,124원</div>
+        <div class="receipt-arrow">›</div>
+      </div>
+
+      <div class="day-header" style="margin-top:8px;"><span>2026. 05. 22</span><span style="color:var(--red)">720,000원</span></div>
+      <div class="receipt-row">
+        <div class="receipt-icon">🧾</div>
+        <div class="receipt-info">
+          <div class="receipt-name">에이젯시스템</div>
+          <div class="receipt-sub">품목 3개</div>
+        </div>
+        <div class="receipt-amt">720,000원</div>
+        <div class="receipt-arrow">›</div>
+      </div>
+
+      <div class="note">
+        <span class="bad">문제 3가지:</span><br>
+        ① 이전달 보려면 버튼 클릭 → 피커 열기 → 월 선택 → 완료 (매번 반복)<br>
+        ② <b>총 구매액</b>이 상단에 안 보임 (스크롤해야 파악)<br>
+        ③ "전체 기간" 버튼이 기간 필터인지 단일날짜인지 불명확
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 변경 후: 거래처 상세 -->
+  <div class="panel">
+    <div class="ph ph-good">② 변경 후 — 거래처 상세</div>
+    <div class="screen">
+      <div class="app-back">
+        <span class="back-btn">‹</span>에이젯시스템
+        <span class="cat-chip">육류</span>
+        <button class="edit-btn">편집</button>
+      </div>
+
+      <!-- 월 네비 + 기간 선택 버튼 -->
+      <div class="date-nav">
+        <button class="nav-arrow">‹</button>
+        <div class="nav-month clickable">2026년 6월</div>
+        <button class="nav-arrow">›</button>
+        <button class="range-btn">📅 기간</button>
+      </div>
+
+      <!-- 기간 합계 카드 (상단 고정) -->
+      <div class="period-total">
+        <div class="pt-label">2026년 6월 총 구매액</div>
+        <div class="pt-row">
+          <div class="pt-amount">1,879,400원</div>
+          <div style="font-size:12px;color:var(--text-3);">3건</div>
+        </div>
+        <div class="pt-sub">전월 대비 <span style="color:var(--red);font-weight:700;">↑ 159,400원</span></div>
+      </div>
+
+      <div class="day-header"><span>2026. 06. 17</span><span style="color:var(--red)">1,879,400원</span></div>
+      <div class="receipt-row">
+        <div class="receipt-icon">🧾</div>
+        <div class="receipt-info">
+          <div class="receipt-name">에이젯시스템</div>
+          <div class="receipt-sub">품목 1개</div>
+        </div>
+        <div class="receipt-amt">885,276원</div>
+        <div class="receipt-arrow">›</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-icon">🧾</div>
+        <div class="receipt-info">
+          <div class="receipt-name">에이젯시스템</div>
+          <div class="receipt-sub">품목 2개</div>
+        </div>
+        <div class="receipt-amt">994,124원</div>
+        <div class="receipt-arrow">›</div>
+      </div>
+
+      <div class="note">
+        <span class="good">개선 3가지:</span><br>
+        ① <b>&lt; &gt;</b> 버튼으로 한 달씩 이동 (한 번 클릭)<br>
+        ② 기간 합계 상단 고정 — 즉시 파악<br>
+        ③ 📅 기간 버튼으로 직접 범위 설정 가능
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 기간 선택 바텀시트 -->
+  <div class="panel">
+    <div class="ph ph-neutral">③ 📅 기간 버튼 클릭 시 바텀시트</div>
+    <div class="screen" style="padding:0;">
+      <!-- 어두운 배경 표현 -->
+      <div style="background:rgba(0,0,0,.3);border-radius:16px 16px 0 0;padding:16px;min-height:80px;display:flex;align-items:flex-end;">
+        <div style="font-size:12px;color:rgba(255,255,255,.5);width:100%;text-align:center;">배경 (현재 화면)</div>
+      </div>
+      <div class="sheet-mock">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">기간 선택</div>
+
+        <!-- 빠른 선택 버튼 -->
+        <div style="font-size:11px;font-weight:700;color:var(--text-4);margin-bottom:7px;">빠른 선택</div>
+        <div class="quick-btns">
+          <button class="q-btn on">이번달</button>
+          <button class="q-btn">지난달</button>
+          <button class="q-btn">3개월</button>
+          <button class="q-btn">직접 입력</button>
+        </div>
+
+        <!-- 직접 입력 (직접 입력 선택 시 표시) -->
+        <div style="font-size:11px;font-weight:700;color:var(--text-4);margin-bottom:7px;">직접 입력</div>
+        <div class="range-row">
+          <div class="range-input active">2026년 5월</div>
+          <div class="range-dash">~</div>
+          <div class="range-input">2026년 6월</div>
+        </div>
+
+        <button class="confirm-btn">선택 완료</button>
+      </div>
+    </div>
+    <div class="note" style="padding:6px 4px 0;">
+      <span style="font-weight:700;color:#2956C8;">빠른 버튼:</span><br>
+      이번달 / 지난달 / 3개월 → 클릭 1번<br>
+      직접 입력 → 시작월~종료월 드럼 피커로 선택<br>
+      <br>
+      범위 설정 후 날짜 네비 표시 예시:<br>
+      <code style="background:#F2F4F6;padding:2px 6px;border-radius:4px;font-size:12px;">2026년 5월~6월</code>
+    </div>
+  </div>
+
+  <!-- ④ 변경 후: 지출관리 카테고리 -->
+  <div class="panel">
+    <div class="ph ph-good">④ 변경 후 — 지출관리 카테고리</div>
+    <div class="screen">
+      <div class="app-back"><span class="back-btn">‹</span>지출관리</div>
+
+      <!-- 동일한 날짜 네비 바 -->
+      <div class="date-nav">
+        <button class="nav-arrow">‹</button>
+        <div class="nav-month clickable">2026년 6월</div>
+        <button class="nav-arrow">›</button>
+        <button class="range-btn">📅 기간</button>
+      </div>
+
+      <!-- 식자재 섹션 -->
+      <div class="section-title"><span class="emoji">🥬</span>식자재</div>
+      <div class="cat-row">
+        <div class="cat-dot" style="background:#3182F6;"></div>
+        <div style="flex:1;">
+          <div class="cat-name">웰스토리</div>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:80%;"></div></div>
+        </div>
+        <div class="cat-amt">73,251원</div>
+        <div class="receipt-arrow">›</div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-dot" style="background:#56C8A0;"></div>
+        <div style="flex:1;">
+          <div class="cat-name">논산농협 하나로마트</div>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:35%;background:#56C8A0;"></div></div>
+        </div>
+        <div class="cat-amt">8,000원</div>
+        <div class="receipt-arrow">›</div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-dot" style="background:#F4A621;"></div>
+        <div style="flex:1;">
+          <div class="cat-name">광성탑마트</div>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:60%;background:#F4A621;"></div></div>
+        </div>
+        <div class="cat-amt">35,650원</div>
+        <div class="receipt-arrow">›</div>
+      </div>
+
+      <div class="note">
+        <span class="good">지출관리도 동일 패턴:</span><br>
+        ① <b>거래처 상세</b>와 같은 월 네비 + 기간 버튼<br>
+        ② 사장님이 한 번 익히면 앱 전체에서 동일하게 사용<br>
+        ③ 기간 설정 시 카테고리별 합산도 해당 기간으로 필터
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

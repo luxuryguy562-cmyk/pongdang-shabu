@@ -411,9 +411,11 @@ async function openVendorDetail(vendorId){
   //   nav('vendors')가 자동 vendorTab('list')를 부르지만 vendorList는 숨김 → 바로 아래 vendorTab('orders')로 상세 패널 전환.
   nav('vendors');
   currentVendorDetailId=vendorId; // 주문 입력 시 이 거래처 고정용
-  // 거래처 상세 진입 시 월 필터 초기화 → loadVendorOrders가 전체 기간으로 조회
-  const vOrderEl=document.getElementById('vOrderMonth');
-  if(vOrderEl) vOrderEl.innerText='-';
+  // 거래처 상세 진입 시 월 필터 = 이번달로 초기화
+  vOrderPeriodMode='month'; vOrderRangeFrom=vOrderRangeTo=null;
+  const _now=new Date();
+  vOrderCurrentMonth=`${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}`;
+  _renderVOrderMonthNav();
   // 2026-05-15: 다른 거래처 주문이 잠깐 깜빡이던 버그 fix —
   // sel.value 먼저 set 후 vendorTab(orders) 호출 (자동 loadVendorOrders가 올바른 vendorId 사용)
   const sel=document.getElementById('orderVendorFilter');
@@ -889,6 +891,17 @@ function refreshVendorHandledCategories(selectedIds){
   box.innerHTML=html||'<div style="font-size:13px;color:var(--gray-500);padding:8px;">선택할 카테고리가 없습니다</div>';
 }
 // 대분류 [전체] 체크 → 그 그룹 소분류 일괄 토글
+// 거래처 부가세 구분 (과세/면세/혼합) 선택 — 세그먼트 토글 + 숨은 값 (2026-06-24, 나중 세금계산서용)
+function setVendorVat(type){
+  const t=(type==='taxable'||type==='free'||type==='mixed')?type:'';
+  const h=document.getElementById('vendorVatType'); if(h) h.value=t;
+  document.querySelectorAll('#vendorVatSeg .vvat-btn').forEach(b=>{
+    const on=(b.getAttribute('data-action')||'').endsWith('|'+t) && t!=='';
+    b.style.background=on?'#fff':'transparent';
+    b.style.color=on?'var(--toss-blue, #3182F6)':'var(--gray-600)';
+    b.style.boxShadow=on?'0 1px 4px rgba(20,40,80,.1)':'none';
+  });
+}
 function vendorCatToggleAll(el){
   const ids=(el.dataset.children||'').split(',').filter(Boolean);
   const box=document.getElementById('vendorHandledCats');
@@ -923,6 +936,7 @@ function openAddVendorSheet(kind){
   document.getElementById('editVendorId').value='';
   // 업체정보 초기화 (신규 추가)
   document.getElementById('vendorBizNoInput').value='';
+  setVendorVat(''); // 부가세 구분 초기화
   _renderVendorAccountRows([]);
   _renderVendorContactRows([]);
   const delBtn=document.getElementById('vendorDeleteBtn');
@@ -974,6 +988,7 @@ function openEditVendorSheet(id){
       : (v.category_id ? [v.category_id] : []);
     refreshVendorHandledCategories(handled);
   }
+  setVendorVat(v.vat_type||''); // 부가세 구분 복원 (과세/면세/혼합)
   openSheet('addVendorSheet');
 }
 // ─── 업체정보: 계좌·연락처 동적 행 (2026-06-09) ───
@@ -1038,9 +1053,10 @@ async function saveVendor(){
   const accounts=_collectVendorAccounts();
   const contacts=_collectVendorContacts();
   let payload;
+  const vatType=document.getElementById('vendorVatType')?.value||null; // 과세/면세/혼합 (나중에 세금계산서용, 2026-06-24)
   if(kind==='online'){
     // 온라인 플랫폼 = 취급품목 없이 자율. 카테고리는 영수증 품목별로 정해짐
-    payload={name,kind:'online',category:null,category_id:null,handled_category_ids:[],biz_no,accounts,contacts};
+    payload={name,kind:'online',category:null,category_id:null,handled_category_ids:[],vat_type:vatType,biz_no,accounts,contacts};
   } else {
     // 취급품목 체크 수집 (leaf id 배열)
     const handledIds=Array.from(document.querySelectorAll('#vendorHandledCats .vhc:checked')).map(c=>c.value);
@@ -1049,7 +1065,7 @@ async function saveVendor(){
     const category_id=handledIds[0];
     const cat=(expCategories||[]).find(c=>c.id===category_id);
     const categoryText=cat?.vendor_category||cat?.name||'';
-    payload={name,kind:'vendor',category:categoryText,category_id,handled_category_ids:handledIds,biz_no,accounts,contacts};
+    payload={name,kind:'vendor',category:categoryText,category_id,handled_category_ids:handledIds,vat_type:vatType,biz_no,accounts,contacts};
   }
   setLoad(true,'저장 중...');
   const{error}=eid
@@ -1095,17 +1111,74 @@ async function toggleVendor(id,active){
   const msg=active?'거래처를 재개하시겠습니까?':'거래종료 처리하시겠습니까?\n(기존 거래내역은 유지됩니다)';
   if(!confirm(msg))return;await sb.from('vendors').update({is_active:active}).eq('id',id).eq('store_id',currentStore.id);await loadVendors();
 }
+// ─── 새 기능: 거래처 주문 월 네비게이션 (2026-06-24) ───
+let vOrderCurrentMonth = (()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;})();
+let vOrderPeriodMode = 'month'; // 'month' | 'range'
+let vOrderRangeFrom  = null;    // 'YYYY-MM' | null
+let vOrderRangeTo    = null;    // 'YYYY-MM' | null
+
+function _vOrderPeriodLabel(){
+  if(vOrderPeriodMode==='range' && vOrderRangeFrom && vOrderRangeTo){
+    const [fy,fm]=vOrderRangeFrom.split('-').map(Number);
+    const [ty,tm]=vOrderRangeTo.split('-').map(Number);
+    if(fy===ty && fm===tm) return `${fy}년 ${fm}월`;
+    return `${fy}년 ${fm}월 ~ ${ty}년 ${tm}월`;
+  }
+  const [y,m]=vOrderCurrentMonth.split('-').map(Number);
+  return `${y}년 ${m}월`;
+}
+
+function _renderVOrderMonthNav(){
+  const el=document.getElementById('vOrderMonth');
+  if(el) el.innerText=_vOrderPeriodLabel();
+}
+
+function moveVendorOrderMonth(dir){
+  vOrderPeriodMode='month';
+  vOrderRangeFrom=vOrderRangeTo=null;
+  const d=new Date(vOrderCurrentMonth+'-01');
+  d.setMonth(d.getMonth()+Number(dir));
+  if(Number(dir)>0){
+    const now=new Date();
+    const curYm=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const newYm=d.toISOString().slice(0,7);
+    if(newYm>curYm){ toast('아직 오지 않은 달이에요','info'); return; }
+  }
+  vOrderCurrentMonth=d.toISOString().slice(0,7);
+  _renderVOrderMonthNav();
+  loadVendorOrders();
+}
+
+function _applyVOrderPeriod(from, to){
+  if(from===to){
+    vOrderPeriodMode='month'; vOrderCurrentMonth=from; vOrderRangeFrom=vOrderRangeTo=null;
+  } else {
+    vOrderPeriodMode='range'; vOrderRangeFrom=from; vOrderRangeTo=to;
+  }
+  _renderVOrderMonthNav();
+  loadVendorOrders();
+}
+
 async function loadVendorOrders(){
   if(!guardStore())return;
-  const ms=(document.getElementById('vOrderMonth')?.innerText||'-').trim();
-  // '-' 또는 '전체 기간' = 날짜 필터 없이 전체 조회 (거래처 상세 진입 기본값)
-  const allPeriod=(ms==='-'||ms==='전체 기간');
-  const vOrderEl=document.getElementById('vOrderMonth');
-  if(allPeriod && vOrderEl) vOrderEl.innerText='전체 기간';
+  // 기간 계산 — 단월 또는 범위
+  let dateStart, dateEnd;
+  if(vOrderPeriodMode==='range' && vOrderRangeFrom && vOrderRangeTo){
+    const [ty,tm]=vOrderRangeTo.split('-').map(Number);
+    const lastDay=new Date(ty,tm,0).getDate();
+    dateStart=vOrderRangeFrom+'-01';
+    dateEnd  =vOrderRangeTo  +'-'+String(lastDay).padStart(2,'0');
+  } else {
+    const [y,m]=vOrderCurrentMonth.split('-').map(Number);
+    const lastDay=new Date(y,m,0).getDate();
+    dateStart=vOrderCurrentMonth+'-01';
+    dateEnd  =vOrderCurrentMonth+'-'+String(lastDay).padStart(2,'0');
+  }
+  _renderVOrderMonthNav();
   // 거래처 상세 진입(currentVendorDetailId) 시 그 거래처로 필터.
   // ⚠️온라인 거래처(쿠팡)는 orderVendorFilter 드롭다운 옵션에 없어 sel.value가 빈 채로 남음 →
   //   상세 진입이면 currentVendorDetailId 우선 (2026-06-09)
-  const vendorId = (typeof currentVendorDetailId!=='undefined' && currentVendorDetailId)
+  const vendorId=(typeof currentVendorDetailId!=='undefined' && currentVendorDetailId)
     ? currentVendorDetailId
     : (document.getElementById('orderVendorFilter')?.value||'');
   const listEl=document.getElementById('orderListData');
@@ -1114,12 +1187,8 @@ async function loadVendorOrders(){
   let rq=sb.from('receipts')
     .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty,seq,spec,origin')
     .eq('store_id',currentStore.id).eq('note','정상').not('vendor_id','is',null)
-    .order('receipt_date',{ascending:false});
-  if(!allPeriod){
-    const [y,m]=ms.split('-').map(Number);
-    const lastDay=new Date(y,m,0).getDate();
-    rq=rq.gte('receipt_date',ms+'-01').lte('receipt_date',ms+'-'+String(lastDay).padStart(2,'0'));
-  }
+    .order('receipt_date',{ascending:false})
+    .gte('receipt_date',dateStart).lte('receipt_date',dateEnd);
   if(vendorId) rq=rq.eq('vendor_id',vendorId);
   const {data,error}=await rq;
   if(error){
@@ -1128,6 +1197,15 @@ async function loadVendorOrders(){
   }
   rcpRecords=data||[];
   const norm=rcpRecords.map(r=>_normalizeExpenseRow(r,'receipt'));
+  // 기간 합계 카드 갱신
+  const cardEl=document.getElementById('vendorOrderSummaryCard');
+  if(cardEl){
+    const total=norm.reduce((s,r)=>s+(r.amount||0),0);
+    document.getElementById('vendorOrderSummaryPeriod').textContent=_vOrderPeriodLabel();
+    document.getElementById('vendorOrderSummaryAmt').textContent=fmt(total)+'원';
+    document.getElementById('vendorOrderSummaryCount').textContent=norm.length+'건';
+    cardEl.style.display='block';
+  }
   if(!norm.length){
     document.getElementById('orderListData').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>등록된 영수증이 없습니다</p></div>';
     return;
@@ -2622,18 +2700,14 @@ function confirmDate(){
   const y=getPV('pYear'),m=getPV('pMonth'),d=getPV('pDay');
   const str=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   const monthStr=str.slice(0,7);
-  const targets={att:'vDate',sched:'vSchedDate',schedConfirmDate:'vSchedConfirmDate',orderMonth:'vOrderMonth'};
+  const targets={att:'vDate',sched:'vSchedDate',schedConfirmDate:'vSchedConfirmDate'};
   const targetId=targets[datePickerCtx];
   if(targetId){
     const el=document.getElementById(targetId);
-    if(el){
-      el.innerText=datePickerCtx==='orderMonth'?monthStr:str;
-      el.classList.remove('empty');
-    }
+    if(el){ el.innerText=str; el.classList.remove('empty'); }
   }
   // 'att' (사후 등록 시트)는 시트가 열려 있어야 하므로 dateSheet만 닫음
   if(datePickerCtx==='att') closeSheet('dateSheet'); else closeAllSheets();
-  if(datePickerCtx==='orderMonth') loadVendorOrders();
 }
 function openTimePicker(ctx){
   timePickerCtx=ctx;
@@ -4831,10 +4905,21 @@ function _expHubMkCard(cardId, action, iconId, title, amtText, color){
 }
 // 거래처별 보기 (별도 화면 expHubVendorCont): vendors + vendor_orders + receipts(vendor_id) 이번달 합계
 //   nav('expHubVendor') → 이 함수 호출 (common.js actions 매핑). 2026-06-11 목업 ⑦: 3열 카드 → 세로 리스트
+// 거래처별 화면 종류 탭 상태 — 첫 진입 기본 '거래처'(외상·월말결제 관리가 핵심). (2026-06-25)
+let _expHubVendorKind = 'vendor';
+function _vendorKindOf(v){ return v.kind==='mart' ? 'mart' : (v.kind==='online' ? 'online' : 'vendor'); }
+// 탭 클릭 → 종류 바꿔 리스트 다시 그림 (data-action 라우터가 호출)
+function switchVendorKindTab(kind){
+  _expHubVendorKind = (kind==='online'||kind==='mart') ? kind : 'vendor';
+  if(typeof renderExpHubVendorView==='function') renderExpHubVendorView();
+}
 async function renderExpHubVendorView(){
   if(!guardStore()) return;
   const grid = document.getElementById('expHubVendorList');
   if(!grid) return;
+  // 현재 종류 탭에 active 표시 동기화 (탭 클릭 없이 호출돼도 일치)
+  const _tabs=document.getElementById('expHubVendorKindTabs');
+  if(_tabs) _tabs.querySelectorAll('.sub-tab').forEach(b=> b.classList.toggle('active', b.getAttribute('data-kind')===_expHubVendorKind));
   grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px;">불러오는 중...</div>';
   try {
     // 2026-06-21 통합: 옛 거래처 관리 화면(vendorsCont) 진입 경로 소실 → 이 화면 하나로 합침.
@@ -4843,16 +4928,19 @@ async function renderExpHubVendorView(){
     const ym = new Date().toISOString().slice(0,7); // YYYY-MM
     const _moLbl=document.getElementById('expHubVendorMonthLbl');
     if(_moLbl) _moLbl.textContent=parseInt(ym.slice(5,7),10)+'월';
-    // 전체 거래처 (종류 무관 — 거래처/마트/온라인 다 표시). 활성 거래처 우선, 거래종료는 뒤로.
-    const all = (vendors||[]).slice().sort((a,b)=>{
-      const aa=(a.is_active===false)?1:0, ab=(b.is_active===false)?1:0;
-      if(aa!==ab) return aa-ab; // 활성 먼저
-      const ta=vendorMonthTotals[a.id]?.total||0, tb=vendorMonthTotals[b.id]?.total||0;
-      if(tb!==ta) return tb-ta; // 이번달 많이 쓴 순
-      return (a.name||'').localeCompare(b.name||''); // 0원끼리는 이름순
-    });
+    // 선택된 종류 탭(거래처/온라인/마트)만 필터. 활성 거래처 우선, 거래종료는 뒤로.
+    const all = (vendors||[]).slice()
+      .filter(v=> _vendorKindOf(v)===_expHubVendorKind)
+      .sort((a,b)=>{
+        const aa=(a.is_active===false)?1:0, ab=(b.is_active===false)?1:0;
+        if(aa!==ab) return aa-ab; // 활성 먼저
+        const ta=vendorMonthTotals[a.id]?.total||0, tb=vendorMonthTotals[b.id]?.total||0;
+        if(tb!==ta) return tb-ta; // 이번달 많이 쓴 순
+        return (a.name||'').localeCompare(b.name||''); // 0원끼리는 이름순
+      });
     if(!all.length){
-      grid.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;line-height:1.6;">등록된 거래처가 없습니다.<br>위 <b>＋ 추가</b>로 거래처를 등록하세요.</div>`;
+      const _kLbl = _expHubVendorKind==='online' ? '온라인' : (_expHubVendorKind==='mart' ? '마트' : '거래처');
+      grid.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--gray-400);font-size:13px;line-height:1.6;">등록된 ${_kLbl}이(가) 없습니다.<br>위 <b>＋ 추가</b>로 등록하세요.</div>`;
       return;
     }
     let html = '';
@@ -4865,9 +4953,11 @@ async function renderExpHubVendorView(){
       const closedTag = (v.is_active===false) ? ' · 거래종료' : '';
       const sub = kindLabel + (cnt ? ' · '+cnt+'건' : ' · 이번달 없음') + closedTag;
       const amtTxt = fmt(t?.total||0) + '원';
+      // 종류별 아이콘·색 — 거래처🏪(파랑)·마트🛒(노랑)·온라인🌐(초록). 지출등록 첫화면과 통일 (2026-06-24 사장님: 구분 약함)
+      const kindIc = v.kind==='mart' ? {e:'🛒',bg:'#FEF3C7'} : (v.kind==='online' ? {e:'🌐',bg:'#DCFCE7'} : {e:'🏪',bg:'#EDF4FF'});
       // 행 클릭 = 거래처 상세(영수증 목록·등록 화면) / ✏️ = 거래처 편집 시트 (data-stop으로 행 클릭 차단)
       html += `<div class="exp-cat-row${v.is_active===false?' is-inactive':''}" data-vendor-id="${esc(v.id)}" data-action="openVendorDetail|${esc(v.id)}" style="cursor:pointer;">
-        <span class="ecr-icon"><svg><use href="#i-building"/></svg></span>
+        <span class="ecr-icon" style="background:${kindIc.bg};font-size:20px;">${kindIc.e}</span>
         <span class="ecr-body">
           <span class="ecr-title">${esc(v.name)}</span>
           <span class="ecr-sub">${esc(sub)}</span>
