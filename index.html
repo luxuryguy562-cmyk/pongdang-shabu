@@ -28,7 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260625b">
+<link rel="stylesheet" href="assets/styles.css?v=20260626b">
 </head>
 <body>
 
@@ -1602,11 +1602,11 @@
         <button type="button" class="t7-nav t7-nav-next" id="dashTopNavNext" data-action="topCardDayMove|1" data-stop="1" disabled>›</button>
       </div>
       <div class="t7-amt-row">
-        <div class="t7-sales-col">
+        <div class="t7-sales-col t7-sales-col--tap" data-action="dashGoStage|today-detail" data-stop="1">
           <span class="t7-sales-lb">매출</span>
           <div id="dashTopSalesAmt" class="t7-amt">0<span class="won">원</span></div>
         </div>
-        <button type="button" class="t7-detail-link" data-action="dashGoStage|today-detail" data-stop="1">자세히 ›</button>
+        <button type="button" id="dashSnapPinBtn" class="dash-snap-pin-btn" style="display:none;" onclick="openSnapSheet()">📍</button>
       </div>
       <div id="dashTopSalesUpdated" class="t7-time" style="display:none;" title="강제 갱신">방금 갱신됨 <span class="refresh">↻</span></div>
       <div id="dashTopSalesProfitExpense" class="t7-rows" style="display:none;">
@@ -1631,10 +1631,6 @@
           <span id="dashTopProfitAmt" class="r-amt green">0원</span>
           <span class="r-go"></span>
         </div>
-      </div>
-      <!-- 중간 기록 버튼 (스냅샷 없을 때 오늘만 노출) -->
-      <div id="dashSnapAddWrap" style="display:none;padding:10px 0 4px;text-align:center;">
-        <button type="button" class="dash-snap-add-btn" onclick="openSnapSheet()">📍 중간 매출 기록하기</button>
       </div>
       <!-- 어디에 썼나 (오늘 카드 안 통합 — 2026-06-03 A안). 거래처 많으면 이 안에서만 스크롤 -->
       <div id="dashTopVendorSection" class="t7-ve-section" style="display:none;">
@@ -3677,7 +3673,7 @@
 <script src="assets/tabs/attendance.js?v=20260624a"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260626a"></script>
-<script src="assets/tabs/dashboard.js?v=20260626a"></script>
+<script src="assets/tabs/dashboard.js?v=20260626b"></script>
 <script src="assets/tabs/sidemenu.js?v=20260626b"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 

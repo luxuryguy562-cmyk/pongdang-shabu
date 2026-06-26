@@ -348,23 +348,23 @@ function renderTodaySnapshot(dayStr, dayExp){
   const _todayStr = ymdLocal(new Date());
   const isTodayShown = (dayStr === _todayStr);
   const snapRow    = document.getElementById('dashSnapRow');
-  const snapAddWrap = document.getElementById('dashSnapAddWrap');
+  const snapPinBtn = document.getElementById('dashSnapPinBtn');
   const profitEl   = document.getElementById('dashTopProfitAmt');
   const profitDot  = document.getElementById('dashTopProfitDot');
   const profitLb   = document.getElementById('dashTopProfitLb');
   const profitDelta = document.getElementById('dashTopProfitDelta');
-  if(!snapRow || !snapAddWrap) return;
+  if(!snapRow) return;
 
   if(!isTodayShown || _snapCache === null){
     // 오늘이 아니거나 스냅샷 없음 → 중간기록 행 숨김
     snapRow.style.display = 'none';
-    snapAddWrap.style.display = isTodayShown ? '' : 'none';
+    if(snapPinBtn) snapPinBtn.style.display = isTodayShown ? '' : 'none';
     return;
   }
 
   // 스냅샷 있음
   snapRow.style.display = '';
-  snapAddWrap.style.display = 'none';
+  if(snapPinBtn) snapPinBtn.style.display = 'none';
 
   const amt = _snapCache.amount;
   const ts = _snapCache.updated_at || _snapCache.recorded_at;
