@@ -51,18 +51,36 @@ Deno.serve(async (req: Request) => {
     if (!isManager) return json({ ok: false, error: "권한 없음" });
     const storeId = requester.store_id;
 
-    if (action === "issue") {
-      const { data: existing } = await admin.from("store_join_codes")
-        .select("code").eq("store_id", storeId).eq("is_active", true).limit(1).maybeSingle();
-      if (existing) return json({ ok: true, code: existing.code });
+    // 7일 만료 코드 발급 (옛 코드 비활성화 후 새로) — 공통 헬퍼
+    async function freshCode() {
+      // 살아있는 옛 코드 전부 비활성화 (한 매장 = 활성 코드 1개 유지)
+      await admin.from("store_join_codes").update({ is_active: false }).eq("store_id", storeId).eq("is_active", true);
+      const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7일 후
       for (let i = 0; i < 5; i++) {
         const code = genCode();
         const { error } = await admin.from("store_join_codes")
-          .insert({ store_id: storeId, code, created_by: requester.id });
-        if (!error) return json({ ok: true, code });
+          .insert({ store_id: storeId, code, created_by: requester.id, expires_at: exp });
+        if (!error) return json({ ok: true, code, expires_at: exp });
         if ((error as any).code !== "23505") throw error;
       }
       return json({ ok: false, error: "코드 발급 실패 — 다시 시도해주세요" });
+    }
+
+    if (action === "issue") {
+      // 살아있고 + 아직 안 만료된 코드면 그대로 재사용
+      const { data: existing } = await admin.from("store_join_codes")
+        .select("code, expires_at").eq("store_id", storeId).eq("is_active", true)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (existing && existing.expires_at && new Date(existing.expires_at) > new Date()) {
+        return json({ ok: true, code: existing.code, expires_at: existing.expires_at });
+      }
+      // 없거나 만료됨 → 새 7일 코드
+      return await freshCode();
+    }
+
+    // 사장이 "코드 새로 만들기" 누름 — 옛 코드 즉시 폐기 + 새 7일 코드
+    if (action === "reissue") {
+      return await freshCode();
     }
 
     if (action === "list_codes") {
