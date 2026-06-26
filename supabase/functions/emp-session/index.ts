@@ -37,7 +37,8 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ ok: false, error: "POST만 허용" }, 405);
 
   try {
-    const { token, action } = await req.json();
+    const body = await req.json();
+    const { token, action } = body;
     if (!token) return json({ ok: false, error: "증표 없음" }, 400);
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -45,6 +46,32 @@ Deno.serve(async (req: Request) => {
     if (action === "logout") {
       await admin.from("emp_sessions").delete().eq("token", token);
       return json({ ok: true });
+    }
+
+    // ─── 투잡 매장 전환 — 같은 person이 속한 다른 매장으로 스위치, 새 JWT 발급 ───
+    if (action === "switch_store") {
+      const targetEmpId = body.employee_id;
+      if (!targetEmpId) return json({ ok: false, error: "employee_id 없음" }, 400);
+      const { data: sw } = await admin.from("emp_sessions").select("*").eq("token", token).maybeSingle();
+      if (!sw) return json({ ok: false, error: "세션 없음" });
+      if (new Date(sw.expires_at) < new Date()) {
+        await admin.from("emp_sessions").delete().eq("token", token);
+        return json({ ok: false, error: "세션 만료" });
+      }
+      const personId = sw.person_id;
+      if (!personId) return json({ ok: false, error: "본인 인증 불가" });
+      // 대상 직원이 본인 소속인지 확인
+      const { data: targetEmp } = await admin.from("employees")
+        .select("*").eq("id", targetEmpId).eq("person_id", personId).eq("is_active", true).maybeSingle();
+      if (!targetEmp) return json({ ok: false, error: "전환 권한 없음" });
+      // 같은 사람의 모든 매장
+      const { data: emps } = await admin.from("employees")
+        .select("*").eq("person_id", personId).eq("is_active", true);
+      const { data: personRow } = await admin.from("persons")
+        .select("id, name, phone").eq("id", personId).maybeSingle();
+      // 세션 last_used_at 갱신
+      await admin.from("emp_sessions").update({ last_used_at: new Date().toISOString() }).eq("token", token);
+      return await restoreStoreMode(admin, personRow, emps || [targetEmp], sw, token, targetEmp);
     }
 
     const { data: sess } = await admin.from("emp_sessions").select("*").eq("token", token).maybeSingle();

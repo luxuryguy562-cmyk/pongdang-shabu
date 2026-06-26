@@ -5383,6 +5383,9 @@ function completeLogin(loginResult){
   localStorage.setItem('pd_auth_level',authLevel);
   applyPermissionUI();
   try{ localStorage.removeItem('pd_rcp_return'); }catch(e){}
+  // 투잡 목록 저장 + 모드 배너 갱신 (직원만 — 관리자는 헤더로 구분)
+  _loginStores = stores;
+  if(!isManager) updateModeBanner(stores, emp);
   if(authLevel==='franchise_admin') nav('franchiseHome');
   else {
     if(isManager) _routeManagerHome();
@@ -5391,6 +5394,80 @@ function completeLogin(loginResult){
   }
   if(!isManager) setTimeout(()=>showDeviceStatusPopup(emp),400);
   if(typeof initRealtimeAndBadge==='function') initRealtimeAndBadge();
+}
+
+// ─── 새 기능: 모드 띠(배너) 갱신 (2026-06-26 투잡 지원) ───
+// 직원 로그인 후 근태 화면 상단에 파란띠(단일매장) / 인디고띠(투잡) 표시.
+// 관리자·사장은 배너 없음 (헤더 매장명으로 구분).
+function updateModeBanner(stores, emp){
+  const bannerS=document.getElementById('storeModeBanner');
+  const bannerD=document.getElementById('duoJobBanner');
+  if(!bannerS||!bannerD) return;
+  // 관리자 / 사장 → 둘 다 숨김
+  if(isManager){ bannerS.style.display='none'; bannerD.style.display='none'; return; }
+  const empStores=(stores||[]);
+  if(empStores.length<=1){
+    // 단일 매장 → 파란 띠
+    bannerD.style.display='none';
+    const nameEl=document.getElementById('storeBannerName');
+    if(nameEl) nameEl.innerText=currentStore?.name||'내 매장';
+    bannerS.style.display='';
+  } else {
+    // 투잡 → 인디고 띠
+    bannerS.style.display='none';
+    renderDuoJobStoreList(empStores, emp?.id||'');
+    bannerD.style.display='';
+  }
+}
+// 투잡 매장 목록 렌더 (현재 매장 = 활성 버튼, 나머지 = 전환 버튼)
+function renderDuoJobStoreList(stores, currentEmpId){
+  const el=document.getElementById('duoJobStoreList'); if(!el) return;
+  el.innerHTML=(stores||[]).map(s=>{
+    const isActive=s.employee_id===currentEmpId;
+    return `<button class="btn ${isActive?'btn-primary':'btn-secondary'} btn-full"
+      style="margin-bottom:6px;padding:11px 14px;font-size:13px;font-weight:800;border-radius:12px;${isActive?'cursor:default;opacity:1;':''}"
+      ${isActive?'disabled':(`data-action="switchDuoStore|${s.employee_id}"`)}>
+      ${isActive?'✅ ':'🔄 '}${s.store_name}${isActive?' (지금 여기)':' 으로 전환'}
+    </button>`;
+  }).join('');
+}
+// 투잡 전환 — 선택 매장의 JWT 재발급 후 currentEmp/currentStore/배너 갱신
+let _switchDuoBusy=false;
+async function switchDuoStore(employeeId){
+  if(_switchDuoBusy) return;
+  const targetStore=_loginStores.find(s=>s.employee_id===employeeId);
+  if(!targetStore){ toast('전환할 매장을 찾을 수 없어요','warn'); return; }
+  if(targetStore.employee_id===currentEmp?.id) return; // 이미 이 매장
+  _switchDuoBusy=true;
+  toast(targetStore.store_name+' 전환 중...','info');
+  try{
+    const token=localStorage.getItem('pd_token')||'';
+    const{data,error}=await sb.functions.invoke('emp-session',{body:{token,action:'switch_store',employee_id:employeeId}});
+    if(error||!data?.ok) throw new Error(data?.error||'전환 실패');
+    // JWT 재발급 (RLS 격리 — attendance_logs 등 직접 쿼리 대비)
+    if(data.session?.access_token){
+      try{ await sb.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token}); }catch(_e){}
+    }
+    // 상태 갱신
+    currentEmp=data.emp;
+    currentStore={id:currentEmp.store_id,name:targetStore.store_name};
+    localStorage.setItem('pd_store',JSON.stringify(currentStore));
+    const hStore=document.getElementById('headerStore'); if(hStore) hStore.innerText=targetStore.store_name;
+    authLevel=currentEmp?.auth_level||'staff';
+    if(authLevel==='staff'&&currentEmp?.is_manager) authLevel='store_manager';
+    recalcPermissions();
+    localStorage.setItem('pd_emp',currentEmp.id);
+    localStorage.setItem('pd_auth_level',authLevel);
+    // 배너 갱신 (현재 매장 버튼 활성화)
+    renderDuoJobStoreList(_loginStores, currentEmp.id);
+    // 근태 데이터 재로드
+    if(typeof initAttDate==='function') initAttDate();
+    toast(targetStore.store_name+' 전환됐어요','success');
+  }catch(e){
+    toast('전환 실패 — 다시 시도해주세요','error');
+  }finally{
+    _switchDuoBusy=false;
+  }
 }
 
 // ─── 종 배지 갱신 — 가입+근무신청+공과금 미납 전체 카운트 (2026-06-15 단일화) ───
@@ -5520,6 +5597,11 @@ function _resetUserState(){
     });
     // 캐시 키별 클리어 (SWR cacheSet 사용처) — 사용자 권한 따라 결과 다를 수 있음
     if(typeof cacheInvalidate === 'function') cacheInvalidate('');
+    // 투잡 목록 초기화 (다음 completeLogin에서 다시 채움)
+    _loginStores = [];
+    // 모드 배너 숨기기
+    const _sb=document.getElementById('storeModeBanner'); if(_sb) _sb.style.display='none';
+    const _db=document.getElementById('duoJobBanner'); if(_db) _db.style.display='none';
   }catch(e){ console.warn('[_resetUserState]', e.message); }
 }
 function doLogout(){
