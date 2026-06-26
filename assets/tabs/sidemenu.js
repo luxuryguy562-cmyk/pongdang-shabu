@@ -1969,6 +1969,23 @@ async function mergeEmployeePrivate(){
 
 // ─── 새 기능: 직원 초대(매장 코드) + 가입 대기 승인 — 직원관리 화면 (2026-06-09) ───
 let _inviteCode='';
+let _inviteExpiresAt=null; // 초대 코드 만료 시각 (ISO, 2026-06-26 7일 만료)
+// 만료 시각 → 사람이 읽는 안내 + 색상 (D-day 임박 시 주황/빨강)
+function renderInviteExpiry(){
+  const el=document.getElementById('inviteExpiry');
+  if(!el) return;
+  if(!_inviteExpiresAt){ el.innerText='유효기간: 무기한'; el.style.color='#CFE0FF'; return; }
+  const now=new Date(), exp=new Date(_inviteExpiresAt);
+  const ms=exp-now;
+  if(ms<=0){ el.innerText='⚠️ 만료됨 — 새로 만들어주세요'; el.style.color='#FFD2D2'; return; }
+  const days=Math.floor(ms/(24*60*60*1000));
+  const hours=Math.floor((ms%(24*60*60*1000))/(60*60*1000));
+  let txt;
+  if(days>=1) txt=`${days}일 ${hours}시간 후 만료`;
+  else txt=`⏰ ${hours}시간 후 만료 (곧 만료돼요)`;
+  el.innerText=txt;
+  el.style.color=days>=2?'#CFE0FF':'#FFE0B2'; // 2일 미만이면 주황 강조
+}
 // ─── 새 기능: 알림 시트 (종 🔔, 2026-06-15) — 가입신청·근무신청·공과금미납 모음 ───
 async function openNotifSheet(){
   if(!isManager||!currentStore){ return; }
@@ -2013,9 +2030,13 @@ async function loadJoinAdmin(){
   if(!isManager) return;
   const token=localStorage.getItem('pd_token'); if(!token) return;
   try{
-    // 1) 매장 코드 발급/조회 (고정 — 이미 있으면 그대로)
+    // 1) 매장 코드 발급/조회 (7일 만료 — 살아있고 안 만료면 그대로, 아니면 새로)
     const{data:cd}=await sb.functions.invoke('store-join-admin',{body:{token,action:'issue'}});
-    if(cd?.ok&&cd.code){ _inviteCode=cd.code; const el=document.getElementById('inviteCodeText'); if(el) el.innerText=cd.code; }
+    if(cd?.ok&&cd.code){
+      _inviteCode=cd.code; _inviteExpiresAt=cd.expires_at||null;
+      const el=document.getElementById('inviteCodeText'); if(el) el.innerText=cd.code;
+      renderInviteExpiry();
+    }
     // 2) 가입 대기 목록
     const{data:pj}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}});
     const rows = pj?.ok ? (pj.rows||[]) : [];
@@ -2053,7 +2074,28 @@ function toggleInviteCard(){
 }
 function _inviteShareText(){
   const store=currentStore?.name||'우리 매장';
-  return `[${store}] 직원 가입 안내\n1. 아래 앱에서 '가입하기'\n2. 매장 코드 입력: ${_inviteCode}\n👉 https://pongdang-shabu.pages.dev`;
+  let expLine='';
+  if(_inviteExpiresAt){
+    const exp=new Date(_inviteExpiresAt);
+    const mm=exp.getMonth()+1, dd=exp.getDate();
+    expLine=`\n(코드는 ${mm}월 ${dd}일까지 유효)`;
+  }
+  return `[${store}] 직원 가입 안내\n1. 아래 앱에서 '가입하기'\n2. 매장 코드 입력: ${_inviteCode}${expLine}\n👉 https://pongdang-shabu.pages.dev`;
+}
+// 코드 새로 만들기 — 옛 코드 즉시 폐기 + 새 7일 코드 (사장이 코드 유출 의심 시)
+async function reissueInviteCode(){
+  if(!confirm('코드를 새로 만들까요?\n지금 코드는 즉시 폐기되고, 이미 공유한 직원은 새 코드로 다시 받아야 해요.')) return;
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'새 코드 만드는 중...');
+  try{
+    const{data,error}=await sb.functions.invoke('store-join-admin',{body:{token,action:'reissue'}});
+    if(error||!data?.ok){ alert(data?.error||'코드 발급 실패'); return; }
+    _inviteCode=data.code; _inviteExpiresAt=data.expires_at||null;
+    const el=document.getElementById('inviteCodeText'); if(el) el.innerText=data.code;
+    renderInviteExpiry();
+    toast('새 코드 '+data.code+' 만들었어요','success');
+  }catch(_e){ alert('네트워크 오류'); }
+  finally{ setLoad(false); }
 }
 async function shareInviteCode(){
   if(!_inviteCode){ alert('코드를 불러오는 중이에요. 잠시 후 다시 시도해주세요.'); return; }

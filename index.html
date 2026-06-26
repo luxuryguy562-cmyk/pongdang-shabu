@@ -2057,13 +2057,16 @@
         <div style="background:linear-gradient(135deg,#0050FF,#3B7BFF);border-radius:16px;padding:20px 16px;text-align:center;margin-bottom:12px;">
           <div style="font-size:12px;color:#CFE0FF;font-weight:700;margin-bottom:8px;">우리 매장 가입 코드</div>
           <div id="inviteCodeText" style="font-size:34px;font-weight:900;color:#fff;letter-spacing:6px;">······</div>
+          <div id="inviteExpiry" style="font-size:12px;color:#CFE0FF;font-weight:600;margin-top:8px;">유효기간 확인 중…</div>
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-primary" style="flex:1;padding:13px;font-size:14px;font-weight:800;" data-action="shareInviteCode">💬 공유하기</button>
           <button class="btn btn-secondary" style="flex:1;padding:13px;font-size:14px;font-weight:800;" data-action="copyInviteCode">📋 복사</button>
         </div>
+        <button class="btn btn-secondary btn-full" style="margin-top:8px;padding:12px;font-size:13px;font-weight:700;color:var(--gray-600);" data-action="reissueInviteCode">🔄 코드 새로 만들기 (옛 코드는 즉시 폐기)</button>
         <div style="font-size:12px;color:var(--gray-600);line-height:1.6;margin-top:12px;">
-          이 코드를 직원에게 알려주세요. 직원이 <b>가입 → 코드 입력</b>하면 위 <b>가입 대기</b>에 떠요. 승인하면 출근부에 등록돼요.
+          이 코드를 직원에게 알려주세요. 직원이 <b>가입 → 코드 입력</b>하면 위 <b>가입 대기</b>에 떠요. 승인하면 출근부에 등록돼요.<br>
+          <b>보안을 위해 코드는 7일 후 만료</b>돼요. 만료되면 자동으로 새 코드가 만들어져요.
         </div>
       </div>
     </div>
