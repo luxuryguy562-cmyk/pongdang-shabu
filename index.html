@@ -1117,6 +1117,28 @@
 
 <!-- ══ [2] 근태관리 ══ -->
 <div id="attendanceCont" class="container">
+  <!-- 모드 띠: 파란띠(단일매장) / 인디고띠(투잡) — 직원(staff) 전용, 관리자·사장·개인모드는 숨김 -->
+  <div id="storeModeBanner" style="display:none;">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">🏪</span>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:800;color:#1d4ed8;" id="storeBannerName">내 매장</div>
+        <div style="font-size:11px;color:#2563eb;margin-top:2px;">급여·주휴수당이 자동으로 계산돼요.</div>
+      </div>
+    </div>
+  </div>
+  <div id="duoJobBanner" style="display:none;">
+    <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:14px;padding:13px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:20px;">🔀</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:800;color:#3730a3;">투잡 모드</div>
+          <div style="font-size:11px;color:#4338ca;margin-top:2px;">두 매장에서 일하고 있어요.</div>
+        </div>
+      </div>
+      <div id="duoJobStoreList"></div>
+    </div>
+  </div>
   <!-- ── 직원 홈 = 행동 허브 (staff-only): 우상단 내 급여 버튼 ── -->
   <div id="empHomeSummary" class="dash-hello" style="display:none;">
     <h1>안녕하세요, <span id="empHomeName">-</span>님 👋</h1>
