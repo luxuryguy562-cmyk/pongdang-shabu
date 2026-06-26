@@ -5343,17 +5343,18 @@ function completeLogin(loginResult){
 
   // ── 개인 모드: 매장 연결 전 (급여 계산 없음, 개인 근태만) ──
   if(mode==='personal'){
-    currentEmp=null; authLevel='personal';
-    _resetUserState();
+    _resetUserState();                 // 이전 매장 잔재 청소 (있다면)
+    currentEmp=null; currentStore=null; authLevel='personal';
+    window._personalPerson=person||null;
     document.getElementById('headerUser').innerText=(person?.name)||'나';
+    const hStore=document.getElementById('headerStore'); if(hStore) hStore.style.display='none'; // 개인 모드 = 매장 없음
     document.getElementById('loginOverlay').style.display='none';
     document.body.style.overflow='';
-    document.querySelector('.bottom-nav').style.display='flex';
+    document.querySelector('.bottom-nav').style.display='none'; // 개인 모드 = 하단 매장 탭 없음
     document.querySelector('.header').style.display='flex';
     localStorage.setItem('pd_auth_level','personal');
     localStorage.removeItem('pd_emp');
-    // 개인 모드 홈 — 지금은 근태 탭으로, Task #7에서 전용 UI 구현
-    nav('attendance');
+    showPersonalHome();
     return;
   }
 
@@ -5366,7 +5367,7 @@ function completeLogin(loginResult){
     currentStore={id:emp.store_id,name:storeName};
     localStorage.setItem('pd_store',JSON.stringify(currentStore));
     const hStore=document.getElementById('headerStore');
-    if(hStore) hStore.innerText=storeName;
+    if(hStore){ hStore.innerText=storeName; hStore.style.display=''; } // 개인 모드에서 숨겼을 수 있어 복원
   }
   authLevel=emp.auth_level||'staff';
   if(authLevel==='staff'&&emp.is_manager) authLevel='store_manager';

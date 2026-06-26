@@ -1595,3 +1595,155 @@ function empPayDay(ds){
   renderEmpPayCalendar();
 }
 
+// ══════════════════════════════════════════
+// 📒 개인 모드 (매장 연결 전) — 2026-06-26
+// store_id 없음 → personal-attendance 서버함수로 출퇴근. 급여 계산 안 함(회계 단일 진실 유지).
+// 매장 모드 근태(attendance_logs)와 완전 분리 = 충돌·잔재 0.
+// ══════════════════════════════════════════
+let _pClockTimer=null;
+let _pLogMonth=new Date().toISOString().slice(0,7);
+let _pTodayRow=null;
+let _pBusy=false;
+
+// 개인 모드 홈 화면 표시 (completeLogin에서 호출)
+function showPersonalHome(){
+  document.querySelectorAll('.container').forEach(c=>c.classList.remove('active'));
+  const c=document.getElementById('personalHomeCont'); if(c) c.classList.add('active');
+  window.scrollTo(0,0);
+  loadPersonalHome();
+}
+async function loadPersonalHome(){
+  const person=window._personalPerson||{};
+  const nm=document.getElementById('pHomeName'); if(nm) nm.innerText=person.name||'';
+  const dt=document.getElementById('pHomeDate');
+  if(dt){ const t=new Date(); const dow=['일','월','화','수','목','금','토'][t.getDay()];
+    dt.innerText=`${t.getMonth()+1}월 ${t.getDate()}일 (${dow})`; }
+  _startPClock();
+  _pLogMonth=new Date().toISOString().slice(0,7);
+  await loadPersonalToday();
+  await loadPersonalLog();
+}
+function _startPClock(){
+  if(_pClockTimer) clearInterval(_pClockTimer);
+  const upd=()=>{ const el=document.getElementById('pNowTime'); if(el) el.innerText=new Date().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}); };
+  upd(); _pClockTimer=setInterval(upd,30000);
+}
+// 개인 모드 서버함수 호출 공통 래퍼 (세션 토큰으로 본인 확인)
+async function _pInvoke(action, extra){
+  const token=localStorage.getItem('pd_token')||'';
+  if(!token) return {ok:false,error:'세션 없음'};
+  try{
+    const{data,error}=await sb.functions.invoke('personal-attendance',{body:{token,action,...(extra||{})}});
+    if(error) throw error;
+    return data||{ok:false,error:'응답 없음'};
+  }catch(_e){ return {ok:false,error:'네트워크 오류 — 잠시 후 다시 시도해주세요'}; }
+}
+// 오늘 기록 로드 → 출퇴근 카드 갱신
+async function loadPersonalToday(){
+  const today=ymdLocal(new Date());
+  const res=await _pInvoke('list',{work_date:{from:today,to:today}});
+  _pTodayRow=(res.ok && res.rows && res.rows.length)?res.rows[0]:null;
+  renderPersonalStatus(_pTodayRow);
+}
+function renderPersonalStatus(row){
+  const card=document.getElementById('pStatusCard');
+  const badge=document.getElementById('pStatusBadge');
+  const meta=document.getElementById('pStatusMeta');
+  const inBtn=document.getElementById('pBtnCheckIn');
+  const outBtn=document.getElementById('pBtnCheckOut');
+  if(!card) return;
+  card.classList.remove('before','during','after');
+  if(meta) meta.classList.remove('grid');
+  const fmtT=d=>d.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
+  if(!row || !row.app_in){
+    card.classList.add('before');
+    if(badge) badge.innerText='⚪ 아직 출근 안 했어요';
+    if(meta) meta.innerHTML='';
+    if(inBtn){ inBtn.style.display=''; inBtn.disabled=false; }
+    if(outBtn) outBtn.style.display='none';
+  } else if(row.app_in && !row.app_out){
+    card.classList.add('during');
+    const inT=new Date(row.app_in);
+    const elapsedMin=Math.max(0,Math.round((new Date()-inT)/60000));
+    const eh=Math.floor(elapsedMin/60), em=elapsedMin%60;
+    if(badge) badge.innerText=`🔵 근무 중  ${eh>0?eh+'시간 ':''}${em}분 째`;
+    if(meta){ meta.classList.add('grid');
+      meta.innerHTML=`<div class="cell"><div class="lbl">출근</div><div class="vl">${fmtT(inT)}</div></div>
+        <div class="cell"><div class="lbl">경과</div><div class="vl">${eh>0?eh+'h ':''}${em}m</div></div>`; }
+    if(inBtn) inBtn.style.display='none';
+    if(outBtn){ outBtn.style.display=''; outBtn.disabled=false; }
+  } else {
+    card.classList.add('after');
+    const inT=new Date(row.app_in), outT=new Date(row.app_out);
+    const work=row.total_work_min||0, wh=Math.floor(work/60), wm=work%60;
+    if(badge) badge.innerText=`🟢 오늘 수고하셨어요  ${wh}시간 ${wm}분`;
+    if(meta){ meta.classList.add('grid');
+      meta.innerHTML=`<div class="cell"><div class="lbl">근무</div><div class="vl">${fmtT(inT)}~${fmtT(outT)}</div></div>
+        <div class="cell"><div class="lbl">총 시간</div><div class="vl">${wh}시간 ${wm}분</div></div>`; }
+    if(inBtn) inBtn.style.display='none';
+    if(outBtn) outBtn.style.display='none';
+  }
+}
+// 개인 출근 찍기
+async function personalClockIn(){
+  if(_pBusy) return; _pBusy=true;
+  const btn=document.getElementById('pBtnCheckIn'); if(btn) btn.disabled=true;
+  const res=await _pInvoke('clock_in',{});
+  _pBusy=false;
+  if(!res.ok){ toast(res.error||'출근 처리 실패','warn'); if(btn) btn.disabled=false; return; }
+  toast('출근 찍었어요 🟢','success');
+  await loadPersonalToday(); await loadPersonalLog();
+}
+// 개인 퇴근 찍기
+async function personalClockOut(){
+  if(_pBusy) return; _pBusy=true;
+  const btn=document.getElementById('pBtnCheckOut'); if(btn) btn.disabled=true;
+  const res=await _pInvoke('clock_out',{});
+  _pBusy=false;
+  if(!res.ok){ toast(res.error||'퇴근 처리 실패','warn'); if(btn) btn.disabled=false; return; }
+  toast('퇴근 찍었어요 🔴 수고하셨어요','success');
+  await loadPersonalToday(); await loadPersonalLog();
+}
+// 일지 월 이동
+function movePersonalMonth(dir){
+  const [y,m]=_pLogMonth.split('-').map(Number);
+  const d=new Date(y,m-1+dir,1);
+  _pLogMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  loadPersonalLog();
+}
+// 일지 목록 로드 (해당 월)
+async function loadPersonalLog(){
+  const lbl=document.getElementById('pLogMonth');
+  if(lbl){ const [y,m]=_pLogMonth.split('-'); lbl.innerText=`${y}.${m}`; }
+  const [y,m]=_pLogMonth.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const from=`${_pLogMonth}-01`, to=`${_pLogMonth}-${String(lastDay).padStart(2,'0')}`;
+  const res=await _pInvoke('list',{work_date:{from,to}});
+  renderPersonalLog(res.ok?(res.rows||[]):[]);
+}
+function renderPersonalLog(rows){
+  const box=document.getElementById('pLogList'); if(!box) return;
+  if(!rows.length){
+    box.innerHTML=`<div style="text-align:center;padding:24px 0;color:var(--gray-500);font-size:13px;line-height:1.6;">이번 달 기록이 없어요.<br>출근을 찍으면 여기에 쌓여요.</div>`;
+    return;
+  }
+  const days=['일','월','화','수','목','금','토'];
+  box.innerHTML=rows.map(r=>{
+    const dt=new Date(r.work_date+'T00:00:00');
+    const inT=r.app_in?new Date(r.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'-';
+    const outT=r.app_out?new Date(r.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'근무 중';
+    const totalStr=r.total_work_min!=null?fmtHourDecimal(r.total_work_min):'-';
+    const merged=r.merged_at?`<span style="font-size:10px;font-weight:800;color:var(--blue);background:var(--gray-100);border-radius:8px;padding:2px 7px;white-space:nowrap;">매장 반영</span>`:'';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--gray-100);">
+      <div style="width:58px;font-size:12px;font-weight:800;color:var(--gray-700);flex-shrink:0;">${dt.getMonth()+1}/${dt.getDate()} (${days[dt.getDay()]})</div>
+      <div style="flex:1;font-size:13px;color:var(--gray-700);">${inT} ~ ${outT}</div>
+      <div style="font-size:13px;font-weight:800;color:var(--text);">${totalStr}</div>
+      ${merged}
+    </div>`;
+  }).join('');
+}
+// 매장에 연결하기 — Task #8(초대코드+편입승인)에서 join-store 세션토큰 확장과 함께 완성 예정
+function openConnectStore(){
+  toast('매장 코드 연결은 곧 켜져요. 사장님께 코드를 미리 받아두세요.','info');
+}
+
