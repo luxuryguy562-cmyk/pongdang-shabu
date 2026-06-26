@@ -261,7 +261,7 @@ ${_rcpCommonRules()}
 - 합계행·소계(매출합계·공급가액·부가세 소계 등)·용기보증금행·빈용기보증금행 = items 제외 (deposit_in·deposit_out·total_sum으로만)
 
 [예시 — 주류 거래명세서 형태 (가공 숫자)]
-{"date":"2026-06-09","items":[{"i":"참이슬","spec":"(유)","og":null,"u":72000,"q":2,"p":79200,"t":7200,"f":false,"c":"주류"},{"i":"카스","spec":"(유)","og":null,"u":110000,"q":3,"p":121000,"t":11000,"f":false,"c":"주류"},{"i":"탄산가스","spec":null,"og":null,"u":null,"q":1,"p":0,"t":0,"f":true,"c":"주류"}],"deposit_in":150000,"deposit_out":120000,"total_supply":182000,"total_tax":18200,"total_sum":230200}
+{"date":"2026-06-09","items":[{"i":"참이슬","spec":"(유)","og":null,"u":72000,"q":2,"p":79200,"t":7200,"f":false,"c":"식자재>주류"},{"i":"카스","spec":"(유)","og":null,"u":110000,"q":3,"p":121000,"t":11000,"f":false,"c":"식자재>주류"},{"i":"탄산가스","spec":null,"og":null,"u":null,"q":1,"p":0,"t":0,"f":true,"c":"식자재>주류"}],"deposit_in":150000,"deposit_out":120000,"total_supply":182000,"total_tax":18200,"total_sum":230200}
 (참이슬 p=72000+7200=79200. 용기대 칸 제외. deposit_in=용기보증금 소계 150,000. deposit_out=빈용기보증금 120,000. total_sum=거래대금합계 230,200 = 매출합계 350,200 − 빈용기 120,000)`;
 }
 
@@ -323,7 +323,7 @@ ${_rcpCommonRules()}
 (돈목살 = 11Box·90.54kg → 박스 q=11이면 9400×11=10만 ≠ 851076, 중량 q=90.54면 9400×90.54≈851076 → q=90.54. 박스 무시, 중량을 q로)
 
 [예시 — C/S 명세서 (수량C/S·수량EA 칸 둘 다 존재)]
-{"items":[{"i":"칠성사이다","spec":"355ml캔(업소) 24CSR","og":null,"u":19000,"q":4,"p":76000,"t":0,"f":false,"c":"주류"}],"total_sum":76000}
+{"items":[{"i":"칠성사이다","spec":"355ml캔(업소) 24CSR","og":null,"u":19000,"q":4,"p":76000,"t":0,"f":false,"c":"식자재>주류"}],"total_sum":76000}
 (수량C/S=4·수량EA=96·출고가=19,000·금액=76,000 → q=4. 19,000×4=76,000 ✅. EA=96은 24본×4케이스=낱개수이므로 q 절대 X)`;
 }
 
@@ -437,6 +437,7 @@ let currentEmp = null, isManager = false, isOwner = false;
 // auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
 let authLevel = 'staff';       // 화면에 적용되는 권한 (DB 실제 권한)
 let _myWorkMode = false;       // '내 근무' 모드 (관리자가 본인 직원 화면 볼 때, 2026-06-15) — 화면만, DB권한 불변
+let _loginStores = [];         // 투잡 지원: 로그인 시 받은 전체 매장 목록 [{employee_id,store_id,store_name,auth_level,is_manager}]
 // 직급 화면권한 설정(role_permissions)이 있으면 관리자 (어떤 직급이든 설정하면 관리자급 권한)
 function _roleIsManager(){
   if(!currentEmp || !currentEmp.role) return false;

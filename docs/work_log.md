@@ -4,6 +4,39 @@
 
 ---
 
+## [2026-06-26] 🚧 직원 단독 사용 + 매장 연결 전후 전체 설계 구현 (진행 중)
+
+브랜치: `claude/gifted-thompson-3q3fp6`. 목업 login_final_v2(17화면) 기반 실제 구현 착수.
+
+### ✅ 완료
+1. **DB 변경** — `personal_attendance_logs` / `attendance_modification_requests` 신설, `emp_sessions` + `persons` 컬럼 추가
+2. **서버함수 4개 배포 완료** — emp-login(전화+PIN) / emp-session(개인모드) / personal-attendance / merge-personal
+3. **로그인 화면 전환** — index.html + sidemenu.js: 매장+이름+PIN → 전화번호+PIN. completeLogin 개인/매장 모드 분기.
+
+### ⏳ 남음 (프론트)
+- 가입 플로우 보강: "혼자 시작하기" 버튼(개인 모드 스킵), PIN 5자리+ 허용
+- 개인 모드 홈(회색 띠) + 매장 모드 전환(파란/인디고 띠) + 투잡 전환 UI
+- 사장: 초대링크 7일 만료 + 편입승인 팝업 + 근무시간 수정승인 화면
+- saveEditAttendance(attendance.js:1241) → 수정요청 생성으로
+
+---
+
+## [2026-06-25] 거래처별 종류 탭 + 주류·음료를 식자재 하위로
+
+**1. 거래처별 화면 종류 탭** (PR #801 main)
+- 거래처 관리 상단에 탭 3개(🏪거래처/🌐온라인/🛒마트). 외상·월말결제 거래처를 즉시결제(온라인·마트)와 분리.
+- 기본 탭=거래처. 종류 없는 거래처는 거래처 탭 포함(지출 누락 방지). 기존 .sub-tabs 재사용, DB 변경 0.
+- 코드: index.html(탭 바) + sidemenu.js `_expHubVendorKind`/`switchVendorKindTab`/`_vendorKindOf` + `renderExpHubVendorView` 필터.
+
+**2. 주류·음료 → 식자재 하위 카테고리** (DB 데이터만, 코드 0줄)
+- 실행(승인): `UPDATE expense_categories SET parent_id='a521efc8-...'(식자재) WHERE id IN (주류 cbd1193b, 음료 469d67ae)`. 롤백=parent_id NULL.
+- 검증: 식자재 펼침 = 주류101만·음료106만·육류924만·야채312만·공산품1079만·미분류0 (앱 화면 확인). 합계 보존.
+
+**3. AI 프롬프트 예시 형식 통일** (PR #802 main)
+- common.js 프롬프트 예시 `"c":"주류"` 4곳 → `"식자재>주류"`(실제 catList 형식과 일치).
+
+---
+
 ## [2026-06-19] 🔐 매장 간 데이터 격리 보안 완성 (RLS) — 사장님 "다 잠가"/"bc 다 해"
 
 **문제**: anon(공개 publishable key) 코드 노출 + RLS `USING(true)`(무조건 통과) → 누구나 전 매장 데이터 읽기/쓰기/삭제 가능. SaaS 치명.

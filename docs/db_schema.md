@@ -137,13 +137,59 @@ franchises (프랜차이즈/브랜드)
 | updated_at | |
 - ⚠️ 원본이 아직 `employees`에도 있음. **2단계에서 employees 7컬럼 제거 = 진짜 차단**.
 
-### emp_sessions (2026-06-09 신설 — 자동로그인 증표)
+### emp_sessions (2026-06-09 신설 — 자동로그인 증표 / 2026-06-26 개인 모드 지원)
 | 컬럼 | 용도 |
 |------|------|
 | token (text PK) | 세션 토큰 |
-| employee_id (FK→employees CASCADE), store_id | |
+| employee_id (FK→employees CASCADE, **nullable** 2026-06-26) | 매장 직원 세션. 개인 모드면 NULL |
+| store_id (**nullable** 2026-06-26) | 매장 세션. 개인 모드면 NULL |
+| person_id (uuid, FK→persons CASCADE, 2026-06-26 추가) | 개인 모드 세션 = person 기준. 매장 직원 세션은 NULL일 수도 |
 | created_at, last_used_at, expires_at (90일) | |
 - RLS 차단(service_role만). `emp-session` Edge Function이 검증.
+- **개인 모드 세션** = `person_id` 채움 + `employee_id`/`store_id` NULL (매장 연결 전 단독 사용).
+
+### personal_attendance_logs (2026-06-26 신설 — 개인 근태 기록, 매장 연결 전)
+직원이 사장 연결 없이 혼자 찍는 "나의 근무 일지". 매장 도장(store_id) 없음 = person 기준.
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | |
+| person_id (uuid, FK→persons CASCADE) | 누구 기록 (식별자) |
+| work_date (date) | 근무일 |
+| app_in, app_out (timestamptz) | 출/퇴근 |
+| rest_min (int, default 0) | 휴게(분) |
+| total_work_min (int) | 총 근무(분, 급여 계산은 안 함 — 시급 없음) |
+| note (text) | 메모 |
+| merged_store_id (uuid, nullable) | 매장 편입되면 어느 매장으로 갔는지 |
+| merged_attendance_id (uuid, nullable) | 편입된 attendance_logs 행 id |
+| merged_at (timestamptz, nullable) | 편입 시각 (NULL=아직 개인 기록) |
+| created_at, updated_at | |
+| UNIQUE(person_id, work_date) | 하루 1행 |
+- RLS ENABLE, **정책 0개**(service_role만). `personal-attendance` Edge Function 경유.
+
+### attendance_modification_requests (2026-06-26 신설 — 근무시간 수정 직원 승인)
+사장이 **이미 근무한** 출퇴근 시간을 수정하면 즉시 반영 X → 직원 승인 후 반영. (시간 줄이기 = 직원 급여 타격 방어)
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | |
+| attendance_log_id (uuid, FK→attendance_logs CASCADE) | 수정 대상 출근부 행 |
+| store_id, employee_id | 매장/직원 |
+| requested_by (uuid, nullable) | 수정 요청한 사장 |
+| orig_app_in/out, orig_rest_min, orig_total_work_min, orig_calculated_wage | 변경 전(직원이 비교) |
+| new_app_in/out, new_rest_min, new_total_work_min, new_calculated_wage | 변경 후(사장 요청값) |
+| status (text, default 'pending') | pending / approved / rejected |
+| reason (text) | 사장이 적은 수정 사유 |
+| decided_at (timestamptz) | 직원 결정 시각 |
+| created_at | |
+- RLS ENABLE. 승인 시 new_* 값을 attendance_logs에 반영(Edge Function 또는 앱 경유).
+
+### persons (2026-06-26 PIN 무차별 대입 방어 컬럼 추가)
+> 위 persons 표에 아래 3컬럼 추가 (전화+PIN 로그인 brute force 방어, 점진적 잠금).
+| 컬럼 | 용도 |
+|------|------|
+| pin_fail_count (int, default 0) | 연속 PIN 실패 횟수 (5회 도달 시 잠금 발동) |
+| pin_lock_stage (int, default 0) | 잠금 단계 (0=없음, 1=1분, 2=5분, 3+=10분) |
+| pin_lock_until (timestamptz, nullable) | 잠금 해제 시각. now()보다 미래면 로그인 거부 |
+- 로직: 5회 연속 틀림 → stage++ → 단계별(1분/5분/10분) 잠금 + fail_count 리셋. 성공 시 전부 0 리셋. (`emp-login`)
 
 ### employees_backup_20260609
 2026-06-09 보안작업 직전 `employees` 전체 스냅샷 (롤백용).

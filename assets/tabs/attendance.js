@@ -32,6 +32,8 @@ function initAttDate(){
   if(currentStore) loadTodayRecord();
   // 직원 홈 요약 (이번 달 번 돈 + 다음 근무 + 이번 주)
   renderEmpHome();
+  // 직원: 대기 중인 근무시간 수정 요청 배너 로드
+  loadModRequests();
 }
 
 // ─── 새 기능: 직원 근무 신청 승인 (사장만, 2026-06-15) ───
@@ -1253,14 +1255,24 @@ async function saveEditAttendance(){
   const appOut=outStr?new Date(outStr):null;
   if(appOut&&appOut<=appIn) return toast('퇴근 일시가 출근보다 빠릅니다. 확인해주세요.','error');
   const w=await calcWageData(empId,appIn,appOut,date,restMin);
-  setLoad(true,'수정 중...');
-  const payload={app_in:appIn.toISOString(),app_out:appOut?.toISOString()||null,rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage};
-  const{error}=await sb.from('attendance_logs').update(payload).eq('id',attId).eq('store_id',currentStore.id);
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'수정 요청 중...');
+  // 직접 DB 수정 대신 직원 확인 요청 — attend-modify 서버함수로 전송 (직원 승인 후 반영)
+  const{data,error}=await sb.functions.invoke('attend-modify',{body:{
+    token, action:'submit',
+    attendance_log_id:attId,
+    new_app_in:appIn.toISOString(),
+    new_app_out:appOut?.toISOString()||null,
+    new_rest_min:w.restMin,
+    new_total_work_min:w.totalMin,
+    new_calculated_wage:w.wage,
+    reason:null
+  }});
   setLoad(false);
-  if(error) return errToast('수정', error);
-  toast('근태 기록 수정됐어요','success');
-  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance'); // 실시간
-  closeAllSheets();loadAttList();
+  if(error||!data?.ok) return toast('수정 요청 실패 — '+(data?.error||'다시 시도해주세요'),'error');
+  toast('✅ 직원에게 확인 요청을 보냈어요. 직원이 승인하면 반영돼요.','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+  closeAllSheets(); loadAttList();
 }
 async function deleteAttendance(){
   const attId=document.getElementById('editAttId').value;
@@ -1593,5 +1605,382 @@ function empPayDay(ds){
     <div style="display:flex;align-items:center;gap:10px;padding:5px 0;"><span style="width:52px;font-size:12px;color:var(--gray-600);font-weight:700;">⏱️ 시간</span><b style="font-size:14px;">${fmtHourDecimal(r.total_work_min||0)}${rest}</b></div>
   </div>`;
   renderEmpPayCalendar();
+}
+
+// ══════════════════════════════════════════
+// 📒 개인 모드 (매장 연결 전) — 2026-06-26
+// store_id 없음 → personal-attendance 서버함수로 출퇴근. 급여 계산 안 함(회계 단일 진실 유지).
+// 매장 모드 근태(attendance_logs)와 완전 분리 = 충돌·잔재 0.
+// ══════════════════════════════════════════
+let _pClockTimer=null;
+let _pLogMonth=new Date().toISOString().slice(0,7);
+let _pTodayRow=null;
+let _pBusy=false;
+
+// 개인 모드 홈 화면 표시 (completeLogin에서 호출)
+function showPersonalHome(){
+  document.querySelectorAll('.container').forEach(c=>c.classList.remove('active'));
+  const c=document.getElementById('personalHomeCont'); if(c) c.classList.add('active');
+  window.scrollTo(0,0);
+  loadPersonalHome();
+}
+async function loadPersonalHome(){
+  const person=window._personalPerson||{};
+  const nm=document.getElementById('pHomeName'); if(nm) nm.innerText=person.name||'';
+  const dt=document.getElementById('pHomeDate');
+  if(dt){ const t=new Date(); const dow=['일','월','화','수','목','금','토'][t.getDay()];
+    dt.innerText=`${t.getMonth()+1}월 ${t.getDate()}일 (${dow})`; }
+  _startPClock();
+  _pLogMonth=new Date().toISOString().slice(0,7);
+  await loadPersonalToday();
+  await loadPersonalLog();
+}
+function _startPClock(){
+  if(_pClockTimer) clearInterval(_pClockTimer);
+  const upd=()=>{ const el=document.getElementById('pNowTime'); if(el) el.innerText=new Date().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}); };
+  upd(); _pClockTimer=setInterval(upd,30000);
+}
+// 개인 모드 서버함수 호출 공통 래퍼 (세션 토큰으로 본인 확인)
+async function _pInvoke(action, extra){
+  const token=localStorage.getItem('pd_token')||'';
+  if(!token) return {ok:false,error:'세션 없음'};
+  try{
+    const{data,error}=await sb.functions.invoke('personal-attendance',{body:{token,action,...(extra||{})}});
+    if(error) throw error;
+    return data||{ok:false,error:'응답 없음'};
+  }catch(_e){ return {ok:false,error:'네트워크 오류 — 잠시 후 다시 시도해주세요'}; }
+}
+// 오늘 기록 로드 → 출퇴근 카드 갱신
+async function loadPersonalToday(){
+  const today=ymdLocal(new Date());
+  const res=await _pInvoke('list',{work_date:{from:today,to:today}});
+  _pTodayRow=(res.ok && res.rows && res.rows.length)?res.rows[0]:null;
+  renderPersonalStatus(_pTodayRow);
+}
+function renderPersonalStatus(row){
+  const card=document.getElementById('pStatusCard');
+  const badge=document.getElementById('pStatusBadge');
+  const meta=document.getElementById('pStatusMeta');
+  const inBtn=document.getElementById('pBtnCheckIn');
+  const outBtn=document.getElementById('pBtnCheckOut');
+  if(!card) return;
+  card.classList.remove('before','during','after');
+  if(meta) meta.classList.remove('grid');
+  const fmtT=d=>d.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
+  if(!row || !row.app_in){
+    card.classList.add('before');
+    if(badge) badge.innerText='⚪ 아직 출근 안 했어요';
+    if(meta) meta.innerHTML='';
+    if(inBtn){ inBtn.style.display=''; inBtn.disabled=false; }
+    if(outBtn) outBtn.style.display='none';
+  } else if(row.app_in && !row.app_out){
+    card.classList.add('during');
+    const inT=new Date(row.app_in);
+    const elapsedMin=Math.max(0,Math.round((new Date()-inT)/60000));
+    const eh=Math.floor(elapsedMin/60), em=elapsedMin%60;
+    if(badge) badge.innerText=`🔵 근무 중  ${eh>0?eh+'시간 ':''}${em}분 째`;
+    if(meta){ meta.classList.add('grid');
+      meta.innerHTML=`<div class="cell"><div class="lbl">출근</div><div class="vl">${fmtT(inT)}</div></div>
+        <div class="cell"><div class="lbl">경과</div><div class="vl">${eh>0?eh+'h ':''}${em}m</div></div>`; }
+    if(inBtn) inBtn.style.display='none';
+    if(outBtn){ outBtn.style.display=''; outBtn.disabled=false; }
+  } else {
+    card.classList.add('after');
+    const inT=new Date(row.app_in), outT=new Date(row.app_out);
+    const work=row.total_work_min||0, wh=Math.floor(work/60), wm=work%60;
+    if(badge) badge.innerText=`🟢 오늘 수고하셨어요  ${wh}시간 ${wm}분`;
+    if(meta){ meta.classList.add('grid');
+      meta.innerHTML=`<div class="cell"><div class="lbl">근무</div><div class="vl">${fmtT(inT)}~${fmtT(outT)}</div></div>
+        <div class="cell"><div class="lbl">총 시간</div><div class="vl">${wh}시간 ${wm}분</div></div>`; }
+    if(inBtn) inBtn.style.display='none';
+    if(outBtn) outBtn.style.display='none';
+  }
+}
+// 개인 출근 찍기
+async function personalClockIn(){
+  if(_pBusy) return; _pBusy=true;
+  const btn=document.getElementById('pBtnCheckIn'); if(btn) btn.disabled=true;
+  const res=await _pInvoke('clock_in',{});
+  _pBusy=false;
+  if(!res.ok){ toast(res.error||'출근 처리 실패','warn'); if(btn) btn.disabled=false; return; }
+  toast('출근 찍었어요 🟢','success');
+  await loadPersonalToday(); await loadPersonalLog();
+}
+// 개인 퇴근 찍기
+async function personalClockOut(){
+  if(_pBusy) return; _pBusy=true;
+  const btn=document.getElementById('pBtnCheckOut'); if(btn) btn.disabled=true;
+  const res=await _pInvoke('clock_out',{});
+  _pBusy=false;
+  if(!res.ok){ toast(res.error||'퇴근 처리 실패','warn'); if(btn) btn.disabled=false; return; }
+  toast('퇴근 찍었어요 🔴 수고하셨어요','success');
+  await loadPersonalToday(); await loadPersonalLog();
+}
+// 일지 월 이동
+function movePersonalMonth(dir){
+  const [y,m]=_pLogMonth.split('-').map(Number);
+  const d=new Date(y,m-1+dir,1);
+  _pLogMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  loadPersonalLog();
+}
+// 일지 목록 로드 (해당 월)
+async function loadPersonalLog(){
+  const lbl=document.getElementById('pLogMonth');
+  if(lbl){ const [y,m]=_pLogMonth.split('-'); lbl.innerText=`${y}.${m}`; }
+  const [y,m]=_pLogMonth.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const from=`${_pLogMonth}-01`, to=`${_pLogMonth}-${String(lastDay).padStart(2,'0')}`;
+  const res=await _pInvoke('list',{work_date:{from,to}});
+  renderPersonalLog(res.ok?(res.rows||[]):[]);
+}
+function renderPersonalLog(rows){
+  const box=document.getElementById('pLogList'); if(!box) return;
+  if(!rows.length){
+    box.innerHTML=`<div style="text-align:center;padding:24px 0;color:var(--gray-500);font-size:13px;line-height:1.6;">이번 달 기록이 없어요.<br>출근을 찍으면 여기에 쌓여요.</div>`;
+    return;
+  }
+  const days=['일','월','화','수','목','금','토'];
+  box.innerHTML=rows.map(r=>{
+    const dt=new Date(r.work_date+'T00:00:00');
+    const inT=r.app_in?new Date(r.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'-';
+    const outT=r.app_out?new Date(r.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'근무 중';
+    const totalStr=r.total_work_min!=null?fmtHourDecimal(r.total_work_min):'-';
+    const merged=r.merged_at?`<span style="font-size:10px;font-weight:800;color:var(--blue);background:var(--gray-100);border-radius:8px;padding:2px 7px;white-space:nowrap;">매장 반영</span>`:'';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--gray-100);">
+      <div style="width:58px;font-size:12px;font-weight:800;color:var(--gray-700);flex-shrink:0;">${dt.getMonth()+1}/${dt.getDate()} (${days[dt.getDay()]})</div>
+      <div style="flex:1;font-size:13px;color:var(--gray-700);">${inT} ~ ${outT}</div>
+      <div style="font-size:13px;font-weight:800;color:var(--text);">${totalStr}</div>
+      ${merged}
+    </div>`;
+  }).join('');
+}
+// 매장에 연결하기 — Task #8(초대코드+편입승인)에서 join-store 세션토큰 확장과 함께 완성 예정
+function openConnectStore(){
+  toast('매장 코드 연결은 곧 켜져요. 사장님께 코드를 미리 받아두세요.','info');
+}
+
+// ─── 새 기능: 근무시간 수정 요청 — 직원 확인 (2026-06-26) ───
+// 사장이 saveEditAttendance()로 수정 요청 → attend-modify 서버함수 저장 → 직원이 아래로 확인·승인·거절
+let _modRequests=[];
+
+async function loadModRequests(){
+  if(!currentStore||!currentEmp||isManager) return;
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  try{
+    const{data}=await sb.functions.invoke('attend-modify',{body:{token,action:'list_pending'}});
+    _modRequests=(data?.rows||[]);
+  }catch(_e){ _modRequests=[]; }
+  renderModRequestBanner();
+}
+
+function renderModRequestBanner(){
+  const el=document.getElementById('attModReqBanner'); if(!el) return;
+  if(!_modRequests.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML=`<div style="background:#fffbeb;border:1.5px solid #fbbf24;border-radius:14px;padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:14px;" data-action="openModRequestSheet">
+    <span style="font-size:20px;">✏️</span>
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:800;color:#92400e;">근무시간 수정 요청 ${_modRequests.length}건</div>
+      <div style="font-size:11px;color:#b45309;margin-top:2px;">사장님이 수정 요청했어요. 탭해서 확인하세요.</div>
+    </div>
+    <span style="font-size:18px;color:#92400e;">›</span>
+  </div>`;
+}
+
+function openModRequestSheet(){
+  renderModRequestList();
+  openSheet('attModReqSheet');
+}
+
+function renderModRequestList(){
+  const box=document.getElementById('attModReqList'); if(!box) return;
+  if(!_modRequests.length){
+    box.innerHTML=`<div style="text-align:center;padding:32px 0;color:var(--gray-500);font-size:13px;">확인할 수정 요청이 없어요.</div>`;
+    return;
+  }
+  const fmtTime=ts=>{if(!ts)return'-';const d=new Date(ts);return d.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});};
+  const fmtDate=ts=>{if(!ts)return'?';const d=new Date(ts);return d.toLocaleDateString('ko',{month:'short',day:'numeric',weekday:'short'});};
+  box.innerHTML=_modRequests.map(r=>{
+    const workDate=fmtDate(r.orig_app_in);
+    const origIn=fmtTime(r.orig_app_in), origOut=fmtTime(r.orig_app_out);
+    const newIn=fmtTime(r.new_app_in), newOut=fmtTime(r.new_app_out);
+    const origWage=(r.orig_calculated_wage||0).toLocaleString('ko-KR');
+    const newWage=(r.new_calculated_wage||0).toLocaleString('ko-KR');
+    const diff=(r.new_calculated_wage||0)-(r.orig_calculated_wage||0);
+    const wageTag=diff===0?''
+      :(diff>0?`<span style="font-size:11px;font-weight:800;color:var(--success);">+${diff.toLocaleString('ko-KR')}원</span>`
+              :`<span style="font-size:11px;font-weight:800;color:var(--danger);">${diff.toLocaleString('ko-KR')}원</span>`);
+    return `<div style="background:var(--gray-100);border-radius:14px;padding:15px;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:10px;">${workDate}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div style="background:#fff;border-radius:10px;padding:10px;border:1px solid var(--gray-200);">
+          <div style="font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:5px;">현재 기록</div>
+          <div style="font-size:12px;color:var(--gray-700);">출근 <b>${origIn}</b></div>
+          <div style="font-size:12px;color:var(--gray-700);">퇴근 <b>${origOut}</b></div>
+          <div style="font-size:12px;font-weight:800;color:var(--gray-700);margin-top:4px;">${origWage}원</div>
+        </div>
+        <div style="background:#eff6ff;border-radius:10px;padding:10px;border:1.5px solid var(--blue);">
+          <div style="font-size:10px;color:var(--blue);font-weight:700;margin-bottom:5px;">수정 요청</div>
+          <div style="font-size:12px;color:var(--gray-700);">출근 <b>${newIn}</b></div>
+          <div style="font-size:12px;color:var(--gray-700);">퇴근 <b>${newOut}</b></div>
+          <div style="font-size:12px;font-weight:800;color:var(--blue);margin-top:4px;">${newWage}원 ${wageTag}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-danger btn-sm" style="flex:1;padding:12px 0;" data-action="rejectModRequest|${r.id}">거절</button>
+        <button class="btn btn-primary btn-sm" style="flex:2;padding:12px 0;" data-action="approveModRequest|${r.id}">✅ 승인</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveModRequest(requestId){
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'승인 중...');
+  const{data}=await sb.functions.invoke('attend-modify',{body:{token,action:'approve',request_id:requestId}});
+  setLoad(false);
+  if(!data?.ok) return toast('승인 실패 — '+(data?.error||'다시 시도해주세요'),'error');
+  toast('근무시간 수정 승인됐어요','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+  _modRequests=_modRequests.filter(r=>r.id!==requestId);
+  if(!_modRequests.length){ closeAllSheets(); renderModRequestBanner(); }
+  else { renderModRequestList(); renderModRequestBanner(); }
+}
+
+async function rejectModRequest(requestId){
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'처리 중...');
+  const{data}=await sb.functions.invoke('attend-modify',{body:{token,action:'reject',request_id:requestId}});
+  setLoad(false);
+  if(!data?.ok) return toast('거절 실패 — '+(data?.error||'다시 시도해주세요'),'error');
+  toast('수정 요청 거절했어요','info');
+  _modRequests=_modRequests.filter(r=>r.id!==requestId);
+  if(!_modRequests.length){ closeAllSheets(); renderModRequestBanner(); }
+  else { renderModRequestList(); renderModRequestBanner(); }
+}
+
+// ══════════════════════════════════════════
+// 개인기록 편입 검토 (사장) — 2026-06-26
+//  · 직원 연결 승인 직후, 그 직원이 혼자 찍은 당월 개인기록을 사장이 검토 → 출근부 편입
+//  · 급여는 calcWageData(앱 단일 함수)로 계산 → 회계 단일 진실(헌법 7-7) 유지
+//  · merge-personal 엣지함수: preview(당월 미편입 목록) / mark_merged(편입 완료 표시)
+// ══════════════════════════════════════════
+let _mpState={empId:null,personId:null,personName:'',month:'',rows:[]};
+let _mpSelected=new Set(); // 체크된 personal_attendance_logs.id
+let _mpClosedDates=new Set(); // 정산 마감된 날짜(work_date) — 경고용
+
+// 직원 승인 직후/직원 상세에서 호출 — 당월 개인기록 있으면 편입 시트 열기
+//  · notifyEmpty=true (직원 상세 버튼 진입) → 기록 없으면 안내 토스트
+//  · notifyEmpty=false (승인 직후 자동) → 기록 없으면 조용히 종료
+async function openMergePersonalReview(personId, personName, opts){
+  const notifyEmpty=!!(opts&&opts.notifyEmpty);
+  if(!personId || !currentStore){ if(notifyEmpty) toast('개인 기록을 확인할 수 없어요','warn'); return; }
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  const month=new Date().toISOString().slice(0,7);
+  if(notifyEmpty) setLoad(true,'개인 기록 확인...');
+  let res;
+  try{
+    const{data,error}=await sb.functions.invoke('merge-personal',{body:{token,action:'preview',person_id:personId,month}});
+    if(error) throw error;
+    res=data;
+  }catch(_e){ if(notifyEmpty){ setLoad(false); toast('조회 실패 — 다시 시도해주세요','error'); } return; }
+  if(notifyEmpty) setLoad(false);
+  if(!res||!res.ok){ if(notifyEmpty) toast(res?.error||'조회 실패','warn'); return; }
+  const rows=res.rows||[];
+  if(!rows.length){ if(notifyEmpty) toast('이번 달 편입할 개인 기록이 없어요','info'); return; }
+  _mpState={empId:res.employee_id,personId,personName:personName||'직원',month,rows};
+  // 정산 마감된 날짜 표시용 — 당월 settlements 조회 (있으면 경고)
+  _mpClosedDates=new Set();
+  try{
+    const [y,m]=month.split('-').map(Number);
+    const lastDay=new Date(y,m,0).getDate();
+    const{data:setRows}=await sb.from('settlements').select('settle_date')
+      .eq('store_id',currentStore.id).gte('settle_date',month+'-01').lte('settle_date',`${month}-${String(lastDay).padStart(2,'0')}`);
+    (setRows||[]).forEach(s=>_mpClosedDates.add(s.settle_date));
+  }catch(_e){/* 마감 조회 실패는 경고만 생략 */}
+  // 기본 선택: 이미 출근부에 있는 날(already_in_store) 제외하고 전부 체크
+  _mpSelected=new Set(rows.filter(r=>!r.already_in_store).map(r=>r.id));
+  document.getElementById('mpName').innerText=_mpState.personName;
+  renderMergePersonalList();
+  openSheet('mergePersonalSheet');
+}
+function renderMergePersonalList(){
+  const box=document.getElementById('mpList'); if(!box) return;
+  const days=['일','월','화','수','목','금','토'];
+  box.innerHTML=_mpState.rows.map(r=>{
+    const dt=new Date(r.work_date+'T00:00:00');
+    const inT=r.app_in?new Date(r.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'-';
+    const outT=r.app_out?new Date(r.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'근무 중';
+    const totalStr=r.total_work_min!=null?fmtHourDecimal(r.total_work_min):'-';
+    const checked=_mpSelected.has(r.id);
+    const dup=r.already_in_store;
+    const closed=_mpClosedDates.has(r.work_date);
+    // 이미 출근부에 있으면 체크 불가(회색). 정산 마감일이면 ⚠️ 경고(체크는 가능)
+    const lockNote=dup
+      ? `<span style="font-size:10px;font-weight:800;color:var(--gray-500);background:var(--gray-100);border-radius:8px;padding:2px 7px;white-space:nowrap;">이미 등록됨</span>`
+      : (closed?`<span style="font-size:10px;font-weight:800;color:var(--warn);white-space:nowrap;">⚠️ 정산 마감일</span>`:'');
+    const opacity=dup?'opacity:.5;':'';
+    const action=dup?'':`data-action="toggleMergeRow|${r.id}"`;
+    const box2=dup
+      ? `<span style="width:22px;height:22px;flex-shrink:0;"></span>`
+      : `<span style="width:22px;height:22px;border-radius:6px;border:2px solid ${checked?'var(--blue)':'var(--gray-300)'};background:${checked?'var(--blue)':'#fff'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;">${checked?'✓':''}</span>`;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid var(--gray-100);${opacity}" ${action}>
+      ${box2}
+      <div style="width:58px;font-size:12px;font-weight:800;color:var(--gray-700);flex-shrink:0;">${dt.getMonth()+1}/${dt.getDate()} (${days[dt.getDay()]})</div>
+      <div style="flex:1;font-size:13px;color:var(--gray-700);">${inT} ~ ${outT}</div>
+      <div style="font-size:13px;font-weight:800;color:var(--text);">${totalStr}</div>
+      ${lockNote}
+    </div>`;
+  }).join('');
+  const cntEl=document.getElementById('mpSelCount'); if(cntEl) cntEl.innerText=_mpSelected.size+'건 선택';
+}
+function toggleMergeRow(personalId){
+  if(_mpSelected.has(personalId)) _mpSelected.delete(personalId);
+  else _mpSelected.add(personalId);
+  renderMergePersonalList();
+}
+function toggleMergeAll(){
+  // 편입 가능한(이미 등록 안 된) 행 기준 전체선택/해제 토글
+  const selectable=_mpState.rows.filter(r=>!r.already_in_store).map(r=>r.id);
+  const allOn=selectable.every(id=>_mpSelected.has(id));
+  _mpSelected=allOn?new Set():new Set(selectable);
+  renderMergePersonalList();
+}
+async function confirmMergePersonal(){
+  const picks=_mpState.rows.filter(r=>_mpSelected.has(r.id) && !r.already_in_store);
+  if(!picks.length){ toast('넣을 기록을 선택하세요','warn'); return; }
+  if(!_mpState.empId){ toast('직원 정보를 찾을 수 없어요','error'); return; }
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'출근부에 넣는 중...');
+  const merges=[]; let failN=0;
+  for(const r of picks){
+    try{
+      const appIn=r.app_in?new Date(r.app_in):null;
+      const appOut=r.app_out?new Date(r.app_out):null;
+      if(!appIn){ failN++; continue; } // 출근 시각 없으면 편입 불가
+      const w=await calcWageData(_mpState.empId, appIn, appOut, r.work_date, r.rest_min!=null?r.rest_min:null);
+      const{data:ins,error}=await sb.from('attendance_logs').insert({
+        store_id:currentStore.id, employee_id:_mpState.empId, work_date:r.work_date,
+        app_in:appIn.toISOString(), app_out:appOut?appOut.toISOString():null,
+        rest_min:w.restMin, total_work_min:w.totalMin, night_min:w.nightMin,
+        weekend_flag:w.isWeekend, calculated_wage:w.wage, caps_match_status:'개인편입'
+      }).select('id').single();
+      if(error){ failN++; continue; }
+      merges.push({personal_id:r.id, attendance_id:ins?.id||null});
+    }catch(_e){ failN++; }
+  }
+  // 편입 완료 표시 (개인기록에 merged_at 박음 → 직원 일지에 '매장 반영' 뱃지)
+  if(merges.length){
+    try{ await sb.functions.invoke('merge-personal',{body:{token,action:'mark_merged',merges}}); }catch(_e){}
+  }
+  setLoad(false);
+  if(merges.length){
+    toast(`${merges.length}건 출근부에 넣었어요${failN?` (${failN}건 실패)`:''}`,'success');
+    if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+    if(typeof loadAttList==='function') loadAttList();
+  } else {
+    toast('편입 실패 — 다시 시도해주세요','error');
+  }
+  closeAllSheets();
 }
 
