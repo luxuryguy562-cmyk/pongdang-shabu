@@ -2913,6 +2913,25 @@
   <button class="btn btn-danger btn-full" style="margin-top:8px;padding:12px;" data-action="deleteAttendance">이 기록 삭제</button>
 </div>
 
+<!-- 개인기록 편입 검토 (사장) — 직원이 연결 전 혼자 찍은 기록을 출근부에 편입 (2026-06-26) -->
+<div class="sheet" id="mergePersonalSheet" style="max-height:85vh;overflow-y:auto;">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">📒 <span id="mpName">직원</span>님의 개인 근무 기록</div>
+  <div style="font-size:12px;color:var(--gray-600);line-height:1.6;margin-bottom:12px;">
+    연결 전 혼자 찍은 기록이에요. 검토 후 <b>출근부에 넣으면 급여가 계산</b>돼요.<br>
+    이번 달 기록만 보여요. 이상한 날은 빼고 넣은 뒤 직원에게 확인하세요.
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px;">
+    <button class="btn btn-secondary btn-sm" style="padding:7px 12px;font-size:12px;font-weight:700;" data-action="toggleMergeAll">전체 선택/해제</button>
+    <span id="mpSelCount" style="font-size:12px;color:var(--gray-600);font-weight:700;">0건 선택</span>
+  </div>
+  <div id="mpList" style="margin-bottom:14px;"></div>
+  <div class="action-group">
+    <button class="btn btn-secondary" style="flex:1;padding:15px;" data-action="closeAllSheets">나중에</button>
+    <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="confirmMergePersonal">✅ 선택한 기록 출근부에 넣기</button>
+  </div>
+</div>
+
 <!-- 출퇴근 사후 등록 (관리자) -->
 <div class="sheet" id="attManualSheet">
   <div class="sheet-handle"></div>

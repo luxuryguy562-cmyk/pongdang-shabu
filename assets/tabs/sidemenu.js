@@ -2059,7 +2059,7 @@ function renderPendingJoins(rows){
     const phFmt=ph.replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3');
     return `<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid rgba(0,0,0,.06);">
       <div style="flex:1;"><div style="font-size:14px;font-weight:800;color:var(--text);">${nm}</div><div style="font-size:12px;color:var(--gray-600);">${phFmt}</div></div>
-      <button class="btn btn-primary btn-sm" style="padding:8px 12px;font-size:13px;" data-action="approveJoin|${r.id}">승인</button>
+      <button class="btn btn-primary btn-sm" style="padding:8px 12px;font-size:13px;" data-action="approveJoin|${r.id}|${r.person_id||''}|${nm}">승인</button>
       <button class="btn btn-secondary btn-sm" style="padding:8px 12px;font-size:13px;color:var(--gray-500);" data-action="rejectJoin|${r.id}">거절</button>
     </div>`;
   }).join('');
@@ -2112,7 +2112,7 @@ async function copyInviteCode(){
   try{ await navigator.clipboard.writeText(_inviteCode); alert('코드 '+_inviteCode+' 복사했어요.'); }
   catch(_e){ alert('코드: '+_inviteCode); }
 }
-async function approveJoin(pendingId){
+async function approveJoin(pendingId, personId, personName){
   const token=localStorage.getItem('pd_token'); if(!token) return;
   setLoad(true,'승인 중...');
   try{
@@ -2121,8 +2121,22 @@ async function approveJoin(pendingId){
     await loadEmployees(); // 직원 목록 + 대기 목록 새로고침
     if(typeof refreshJoinBadge==='function') refreshJoinBadge();
     if(typeof broadcastStoreChange==='function') broadcastStoreChange('approve'); // 다른 기기도 갱신
+    setLoad(false);
+    // 승인 직후 — 그 직원이 연결 전 혼자 찍은 당월 개인기록 있으면 편입 검토 시트 (2026-06-26)
+    if(personId && typeof openMergePersonalReview==='function'){
+      await openMergePersonalReview(personId, personName||'직원');
+    }
   }catch(_e){ alert('네트워크 오류'); }
   finally{ setLoad(false); }
+}
+// 직원 상세에서 "개인 근무 기록 검토" — 미편입 개인기록 시트 (없으면 안내)
+async function reviewPersonalRecords(empId){
+  const e=employees.find(x=>x.id===empId);
+  if(!e||!e.person_id){ toast('이 직원은 개인 기록이 없어요','info'); return; }
+  closeAllSheets();
+  if(typeof openMergePersonalReview==='function'){
+    await openMergePersonalReview(e.person_id, e.name, {notifyEmpty:true});
+  }
 }
 async function rejectJoin(pendingId){
   if(!confirm('이 가입 신청을 거절할까요?')) return;
@@ -2278,6 +2292,7 @@ function openEmpDetailSheet(empId){
       ${(()=>{const bd=e.birth_date?new Date(e.birth_date):null;const today=new Date();if(!bd)return'';let age=today.getFullYear()-bd.getFullYear();if(today.getMonth()<bd.getMonth()||(today.getMonth()===bd.getMonth()&&today.getDate()<bd.getDate()))age--;return age<18?docPill(e.doc_minor_consent,'🔞 법정동의서'):''})()}
     </div>
     ${pinSection}
+    ${(isManager&&e.person_id)?`<button class="btn btn-secondary btn-full" style="margin-top:8px;padding:13px;font-size:13px;font-weight:700;" data-action="reviewPersonalRecords|${e.id}">📒 개인 근무 기록 검토 (출근부 편입)</button>`:''}
     ${editBtn}
   `;
   openSheet('empDetailSheet');
