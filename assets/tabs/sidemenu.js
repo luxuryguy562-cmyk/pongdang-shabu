@@ -3925,6 +3925,45 @@ async function joinEnterCode(){
   finally{ if(btn) btn.disabled=false; }
 }
 
+// ─── 매장 없이 혼자 시작 (개인 모드) — 2026-06-26 ───
+// 가입 3단계(complete-signup)에서 사람(person) 계정이 이미 만들어짐.
+// 매장 코드를 건너뛰면 = 개인 모드. 방금 만든 전화+PIN으로 바로 로그인.
+async function joinStartSolo(){
+  const phone=joinState.phone, pin=joinState.pin;
+  const msgEl=document.getElementById('joinCodeMsg'); if(msgEl) msgEl.innerText='';
+  // PIN 정보가 없으면(이미 가입된 사람이 매장만 추가하려던 경우) → 로그인 화면으로 안내
+  if(!phone || !pin || pin.length<4){
+    closeJoin();
+    if(phone) localStorage.setItem('pd_last_phone', phone);
+    showLoginScreen();
+    return;
+  }
+  // 방금 만든 전화+PIN으로 개인 모드 로그인
+  let res;
+  try{
+    const{data,error}=await sb.functions.invoke('emp-login',{body:{phone, pin}});
+    if(error) throw error;
+    res=data;
+  }catch(_e){
+    // 자동 로그인 실패 시 로그인 화면으로 폴백 (직원이 직접 PIN 입력)
+    closeJoin();
+    localStorage.setItem('pd_last_phone', phone);
+    showLoginScreen();
+    return;
+  }
+  if(!res || !res.ok){
+    closeJoin();
+    localStorage.setItem('pd_last_phone', phone);
+    showLoginScreen();
+    return;
+  }
+  localStorage.setItem('pd_last_phone', phone);
+  if(res.token) localStorage.setItem('pd_token', res.token);
+  if(res.session&&res.session.access_token){ try{ await sb.auth.setSession({access_token:res.session.access_token,refresh_token:res.session.refresh_token}); }catch(_e){} }
+  closeJoin();
+  completeLogin(res); // mode가 personal이면 개인 모드 홈으로
+}
+
 function openSignup(){
   signupState = { step:0, type:'personal' };
   document.getElementById('signupOverlay').style.display='block';
