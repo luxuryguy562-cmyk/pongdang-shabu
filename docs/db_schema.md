@@ -497,6 +497,10 @@ RLS: enabled, policy `scr_all` USING(true) WITH CHECK(store_id IS NOT NULL) — 
 >
 > ⚠️ **2026-06-10 추가** (vendors): `handled_category_ids JSONB` (취급품목 목록 — leaf 카테고리 id 배열). 거래처 영수증 AI 분석 시 이 목록만 카테고리 후보로 전달(후보 좁힘 → 정확도↑·검수↓). 1개면 AI 분류 생략·고정. 마이그레이션: `add_vendors_handled_category_ids_20260610` (ADD COLUMN + 기존 category_id를 `jsonb_build_array(category_id)`로 복사 = 기존 동작 보존). 롤백: `ALTER TABLE vendors DROP COLUMN handled_category_ids;`. 취급품목 후보 필터 = `category_type='expense' AND data_source IN ('composite','vendor_orders','receipts') AND is_active` (인건비·공과금·고정비·세금·마케팅·매출 제외, **비품(receipts) 포함**). 온라인·마트 모드는 미사용(전체 자율).
 >
+> ⚠️ **2026-06-24 추가** (vendors): `vat_type TEXT` (CHECK in 'taxable'/'free'/'mixed', nullable). 거래처 부가세 구분 — 과세/면세/혼합. **영수증 부가세 자동계산(÷11·면세과세 판정)은 이 날짜로 전면 폐기** (빙산 #4123 종결). 부가세는 나중에 세금계산서(홈택스) 연동 시 이 칸 참고. 거래처 편집 시트 세그먼트(setVendorVat) → saveVendor 수집, openEditVendorSheet 복원. 마이그레이션 `add_vendor_vat_type`. 롤백 `ALTER TABLE vendors DROP COLUMN vat_type;`.
+>
+> ⚠️ **2026-06-24 정책 변경** (receipts): `tax_amount`·`is_tax_free` 컬럼 **유지하나 화면 표시·자동도출 폐기**. 영수증 분석/내역/수정 전 화면이 **총액(total_price)만** 표시. tax_amount는 영수증에 실제 찍힌 세액만 저장(거의 0), ÷11 자동생성 안 함. 단가 = **금액÷수량**으로 전 화면 통일(옛 세전 공급가÷수량 폐기).
+>
 > **calcExpense 매칭 (2026-05-15 PR #120 갈아엎기)**:
 > - `vendor_orders` source 카테고리: `o.vendors?.category_id === cat.id` (FK 직접)
 > - `composite` 카테고리(식자재): `[cat.id, ...children.ids]` 매칭 (대분류면 자식 ids 포함)

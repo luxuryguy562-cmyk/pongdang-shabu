@@ -250,6 +250,9 @@ td .c-cBtn.empty{color:var(--gray-400);font-weight:400;background:var(--gray-50)
 .vault-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
 .vault-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--gray-100);border-radius:12px;}
 .vault-item label{font-size:13px;font-weight:600;color:var(--gray-600);}
+/* ─ 마감정산 마법사 단계 타이틀 (2026-06-24) */
+.sw-step-title{font-size:18px;font-weight:900;color:var(--toss-text-1);letter-spacing:-.5px;padding:14px 0 12px;line-height:1.35;}
+.sw-step-title small{display:block;font-size:12px;font-weight:500;color:var(--toss-text-4);margin-top:3px;letter-spacing:0;}
 .vault-item input{width:50px;border:none;background:transparent;font-size:16px;font-weight:700;text-align:right;outline:none;color:var(--text);}
 
 /* ─ 정산 리스트/카드 */
@@ -1167,33 +1170,56 @@ details.rcl-store[open] .rcl-acc-chev{transform:rotate(90deg);}
 .v17-detail-btn:active{background:var(--gray-50);}
 .v17-detail-btn .arr{transition:transform .2s;}
 .v17-detail-btn.open .arr{transform:rotate(180deg);}
-.v17-detail-panel{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:10px;margin-bottom:10px;}
-.v17-detail-panel .pan-ttl{font-size:11px;font-weight:800;color:var(--gray-700);padding:0 6px 8px;border-bottom:1px solid var(--gray-100);margin-bottom:4px;}
-.v17-detail-row{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:7px 6px;font-size:12px;}
-.v17-detail-row + .v17-detail-row{border-top:1px solid var(--gray-50);}
-.v17-detail-row .nm-side{display:flex;align-items:center;gap:6px;min-width:0;}
-.v17-detail-row .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.v17-detail-row .nm{font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.v17-detail-row .amt{font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.2px;text-align:right;min-width:88px;}
-.v17-detail-row .pct{font-weight:800;color:var(--gray-600);font-variant-numeric:tabular-nums;text-align:right;min-width:42px;}
-.v17-detail-row .mom{font-size:10px;font-weight:700;min-width:30px;text-align:right;}
+/* 2026-06-25 갈아엎기: 엑셀 그리드(세로 구분선) + 제목 가운데 + 줄 배경 간트바 (사장님 디자인) */
+.v17-detail-panel{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:0;margin-bottom:10px;overflow:hidden;}
+.v17-detail-panel .pan-ttl{font-size:12px;font-weight:800;color:var(--text);padding:13px 14px 11px;border-bottom:none;margin:0;}
+/* 제목 행 — 4칸 전부 가운데정렬 + 세로 구분선 */
+.v17-detail-head{display:grid;grid-template-columns:1fr 112px 64px 60px;background:#F7F8FA;border-top:1px solid #EEF1F4;border-bottom:1px solid var(--gray-200);}
+.v17-detail-head span{font-size:10px;font-weight:800;color:#6B7684;white-space:nowrap;padding:9px 6px;display:flex;align-items:center;justify-content:center;border-right:1px solid #EEF1F4;min-width:0;}
+.v17-detail-head span:last-child{border-right:none;}
+/* 데이터 행 — 줄 배경을 비율만큼 색칠(간트바). 배경은 인라인 style로 주입 */
+.v17-detail-row{display:grid;grid-template-columns:1fr 112px 64px 60px;align-items:stretch;font-size:12px;border-top:1px solid #F2F4F6;}
+.v17-detail-row>*{display:flex;align-items:center;justify-content:center;padding:12px 6px;border-right:1px solid #EEF1F4;min-width:0;}
+.v17-detail-row>*:last-child{border-right:none;}
+.v17-detail-row .nm-side{justify-content:flex-start;gap:6px;}
+.v17-detail-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.v17-detail-row .nm{font-weight:700;color:#191F28;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.v17-detail-row .amt{justify-content:flex-end;font-weight:800;color:#191F28;font-variant-numeric:tabular-nums;letter-spacing:-0.2px;}
+.v17-detail-row .pct{font-weight:800;color:#333D4B;font-variant-numeric:tabular-nums;}
+.v17-detail-row .mom{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;}
 .v17-detail-row .mom.up{color:#EF4444;}
 .v17-detail-row .mom.dn{color:#10B981;}
 .v17-detail-row .mom.same{color:var(--gray-400);}
-.v17-detail-sum{margin-top:6px;padding:8px 6px;border-top:2px solid var(--gray-200);display:grid;grid-template-columns:1fr auto auto;gap:8px;font-size:12px;font-weight:900;color:var(--text);}
-.v17-detail-sum .lb{color:var(--gray-700);}
-.v17-detail-sum .amt{text-align:right;font-variant-numeric:tabular-nums;}
-.v17-detail-sum .pct{text-align:right;font-variant-numeric:tabular-nums;color:#EF4444;}
-/* v17 월 보기 — 소분류 행 (2026-06-03) */
+.v17-detail-sum{display:grid;grid-template-columns:1fr 112px 64px 60px;background:#F7F8FA;border-top:2px solid var(--gray-200);font-size:12px;font-weight:900;color:var(--text);}
+.v17-detail-sum>*{display:flex;align-items:center;justify-content:center;padding:13px 6px;border-right:1px solid #EEF1F4;}
+.v17-detail-sum>*:last-child{border-right:none;}
+.v17-detail-sum .lb{justify-content:flex-start;color:var(--gray-700);}
+.v17-detail-sum .amt{justify-content:flex-end;font-variant-numeric:tabular-nums;}
+.v17-detail-sum .pct{font-variant-numeric:tabular-nums;color:#EF4444;}
+/* v17 월 보기 — 소분류 행 (2026-06-03 / 2026-06-25 그리드화) */
 .v17-detail-row.has-child{cursor:pointer;}
-.v17-detail-row.has-child:active{background:var(--gray-50);}
 .v17-detail-row .v17-sub-toggle{font-size:9px;color:var(--gray-400);margin-left:4px;}
-.v17-detail-child-row{grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:3px 6px 3px 22px;font-size:11px;border-top:1px solid var(--gray-50);}
-.v17-detail-child-row .nm-side{display:flex;align-items:center;gap:5px;min-width:0;}
-.v17-detail-child-row .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.v17-detail-child-row{display:grid;grid-template-columns:1fr 112px 64px 60px;align-items:stretch;font-size:11px;border-top:1px solid #F6F7F9;background:#FCFDFE;}
+.v17-detail-child-row>*{display:flex;align-items:center;justify-content:center;padding:8px 6px;border-right:1px solid #F2F4F6;min-width:0;}
+.v17-detail-child-row>*:last-child{border-right:none;}
+.v17-detail-child-row .nm-side{justify-content:flex-start;gap:5px;padding-left:20px;}
+.v17-detail-child-row .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .v17-detail-child-row .nm{font-weight:600;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.v17-detail-child-row .amt{font-weight:700;color:var(--gray-600);font-variant-numeric:tabular-nums;text-align:right;min-width:88px;}
-.v17-detail-child-row .pct{font-weight:600;color:var(--gray-400);font-variant-numeric:tabular-nums;text-align:right;min-width:42px;}
+.v17-detail-child-row .amt{justify-content:flex-end;font-weight:700;color:var(--gray-600);font-variant-numeric:tabular-nums;}
+.v17-detail-child-row .pct{font-weight:600;color:var(--gray-400);font-variant-numeric:tabular-nums;}
+/* 전월대비 증감 카드 (2026-06-25 — 표 사이 메모 느낌 탈출, 상황별 강조색) */
+.md-mom{background:#fff;border-radius:14px;border-left:4px solid #EF4444;padding:14px 16px;box-shadow:0 2px 10px rgba(20,40,80,.05);margin-bottom:10px;}
+.md-mom.good{border-left-color:#10B981;}
+.md-mom .mm-t{font-size:11px;font-weight:700;color:#8B95A1;margin-bottom:10px;}
+.md-mom .mm-chips{display:flex;gap:8px;}
+.md-mom .mm-chip{flex:1;background:#F8F9FB;border-radius:10px;padding:10px 12px;text-align:center;}
+.md-mom .mm-chip .k{font-size:11px;color:#8B95A1;font-weight:700;}
+.md-mom .mm-chip .v{font-size:18px;font-weight:900;margin-top:3px;font-variant-numeric:tabular-nums;}
+.md-mom .mm-chip .v .good{color:#10B981;}
+.md-mom .mm-chip .v .bad{color:#EF4444;}
+.md-mom .mm-chip .v .same{color:var(--gray-400);}
+.md-mom .mm-cmt{margin-top:11px;border-radius:10px;padding:10px 12px;font-size:12.5px;font-weight:700;line-height:1.5;background:#FEF2F2;color:#B91C1C;}
+.md-mom.good .mm-cmt{background:#F0FDF4;color:#15803D;}
 /* 7줄: 전월 동일 대비 (옛 .wk-mom 재사용) */
 /* 끼임 안내 박스 (1주차) */
 .cross-note{font-size:11px;color:#854D0E;font-weight:700;background:#FEF9C3;padding:8px 10px;border-radius:8px;margin-bottom:8px;line-height:1.5;border-left:3px solid #F59E0B;}
@@ -1209,10 +1235,12 @@ details.rcl-store[open] .rcl-acc-chev{transform:rotate(90deg);}
 .md-hero .md-hero-lb{font-size:12.5px;font-weight:700;opacity:.88;margin-bottom:8px;letter-spacing:-0.3px;}
 .md-hero .md-hero-amt{font-size:29px;font-weight:800;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .md-hero .md-hero-amt .won{font-size:18px;opacity:.85;margin-left:2px;font-weight:700;}
-.md-hero .md-hero-row{display:flex;gap:8px;margin-top:14px;}
-.md-hero .md-cell{flex:1;background:rgba(255,255,255,0.15);border-radius:11px;padding:10px 12px;}
-.md-hero .md-cell .k{font-size:10.5px;opacity:.85;font-weight:600;margin-bottom:3px;}
-.md-hero .md-cell .v{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+/* 2026-06-25 세로 3줄 — 가로 3칸은 8자리 금액에서 "원"이 줄바꿈됨(사장님 호소) */
+.md-hero .md-hero-stats{margin-top:14px;background:rgba(255,255,255,0.13);border-radius:12px;padding:2px 14px;}
+.md-hero .md-stat{display:flex;justify-content:space-between;align-items:center;padding:10px 0;}
+.md-hero .md-stat + .md-stat{border-top:1px solid rgba(255,255,255,0.20);}
+.md-hero .md-stat .k{font-size:12.5px;opacity:.9;font-weight:600;letter-spacing:-0.2px;}
+.md-hero .md-stat .v{font-size:15.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;white-space:nowrap;}
 /* 2. 예상마감 */
 .md-fc{background:var(--white);border-radius:16px;padding:16px 18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(20,40,80,0.04);}
 .md-fc .md-fc-ttl{font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;}
