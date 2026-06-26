@@ -3850,14 +3850,13 @@ function showPhoneStep(){
   const ph=document.getElementById('loginPhoneInput');
   if(ph){ ph.value=localStorage.getItem('pd_last_phone')||''; setTimeout(()=>ph.focus(),100); }
 }
-// [화면 A] PIN 입력 화면 (전화번호는 _loginPhone 사용, 끝 4자리만 흐리게 표시)
+// [화면 A] PIN 입력 화면 (전화번호는 _loginPhone 사용 — 화면엔 번호 표시 안 함)
 function showPinStep(){
   document.getElementById('loginStepPhone').style.display='none';
   document.getElementById('loginStepPin').style.display='block';
   resetPinPad();
   const m=document.getElementById('loginMsg'); if(m) m.innerText='';
-  const lbl=document.getElementById('loginPinPhone');
-  if(lbl){ const p=_loginPhone||''; lbl.innerText = p ? ('···'+p.slice(-4)+' 님') : ''; }
+  const lbl=document.getElementById('loginPinPhone'); if(lbl) lbl.style.display='none';
 }
 // 전화번호 입력 후 "다음" → PIN 화면으로
 function phoneNext(){
