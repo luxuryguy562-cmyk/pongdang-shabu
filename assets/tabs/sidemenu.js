@@ -2418,7 +2418,7 @@ async function saveEmployee(){
     pin:pinVal,
     id_number:idNumRaw,
     birth_date:birthDate,
-    phone:document.getElementById('empPhoneInput').value.trim()||null,
+    phone:(document.getElementById('empPhoneInput').value||'').replace(/[^0-9]/g,'')||null, // 하이픈 제거 후 저장 (로그인 전화번호와 형식 통일 — 2026-06-26)
     address:document.getElementById('empAddressInput').value.trim()||null,
     bank_name:document.getElementById('empBankInput').value.trim()||null,
     account_number:document.getElementById('empAccountInput').value.trim()||null
