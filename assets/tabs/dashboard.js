@@ -397,7 +397,6 @@ function openSnapSheet(){
     if(_snapCache) inp.value = _snapCache.amount.toLocaleString();
   }
   openSheet('snapSheet');
-  setTimeout(()=>{ if(inp) inp.focus(); }, 350);
 }
 
 async function saveSnapshot(){
