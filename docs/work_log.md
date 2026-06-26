@@ -4,6 +4,36 @@
 
 ---
 
+## [2026-06-26] 🚧 직원 단독 사용 + 매장 연결 전후 전체 설계 구현 (진행 중)
+
+브랜치: `claude/gifted-thompson-3q3fp6`. 목업 login_final_v2(17화면) 기반 실제 구현 착수.
+
+### ✅ 완료 (DB + 서버함수)
+1. **DB 변경 (실행승인 받음)** — migration `personal_attendance_and_solo_mode`
+   - `personal_attendance_logs` 신설 (개인 근태, store_id 없이 person 기준)
+   - `attendance_modification_requests` 신설 (사장 근무시간 수정 → 직원 승인) + store_isolation RLS 정책
+   - `emp_sessions`: person_id 추가, employee_id/store_id nullable (개인 모드 세션)
+   - `persons`: pin_fail_count/pin_lock_stage/pin_lock_until (PIN 무차별 대입 점진적 잠금 1/5/10분)
+2. **서버함수 5개 작성 (배포 대기 — esbuild 문법통과)**
+   - `emp-login`: 전화+PIN 재설계. persons.pin 우선 + employee_private.pin 레거시 fallback. 개인/매장/투잡 모드. 점진적 잠금. 옛 store+name 하위호환.
+   - `emp-session`: 개인 모드(person_id 세션) 복원 + 그 사이 매장 승인되면 자동 승격.
+   - `personal-attendance`: 개인 근태 출퇴근/조회/수정/삭제(편입된 건 삭제금지).
+   - `merge-personal`: 사장 권한 확인 후 당월 개인기록 preview + mark_merged(편입표시). 급여계산은 앱 calcWageData(회계 단일진실).
+
+### ⏳ 남음 (프론트 — 다음 단계)
+- ⚠️ **배포 실행승인 필요**: emp-login, emp-session, personal-attendance, merge-personal (deploy_edge_function 🔴)
+- index.html 로그인 화면: 매장+이름+PIN → **전화+PIN**으로 (submitLogin sidemenu.js:4341)
+- 기존 가입 플로우(joinOverlay) 보강: 4단계 매장코드를 **"혼자 시작(개인모드)" 스킵 옵션** 추가. PIN 5자리 허용.
+- 개인 모드 홈(회색 띠) + 매장 모드 전환(파란/인디고 띠) + 투잡 전환 UI
+- 사장: 초대링크 7일 만료 + 편입승인 팝업 + 근무시간 수정승인 화면
+- saveEditAttendance(attendance.js:1241) → 즉시반영 대신 수정요청 생성으로
+
+### 핵심 설계 결정
+- PIN 단일진실 = 미정리(레거시 employee_private.pin 14명, persons.pin 1명). emp-login이 양쪽 봄 → 기존직원 로그인 안 깨짐.
+- 편입/수정승인 급여계산 = 앱 calcWageData (calculated_wage는 저장된 진실값, 화면들이 그대로 합산).
+
+---
+
 ## [2026-06-19] 🔐 매장 간 데이터 격리 보안 완성 (RLS) — 사장님 "다 잠가"/"bc 다 해"
 
 **문제**: anon(공개 publishable key) 코드 노출 + RLS `USING(true)`(무조건 통과) → 누구나 전 매장 데이터 읽기/쓰기/삭제 가능. SaaS 치명.
