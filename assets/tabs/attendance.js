@@ -1747,3 +1747,128 @@ function openConnectStore(){
   toast('매장 코드 연결은 곧 켜져요. 사장님께 코드를 미리 받아두세요.','info');
 }
 
+// ══════════════════════════════════════════
+// 개인기록 편입 검토 (사장) — 2026-06-26
+//  · 직원 연결 승인 직후, 그 직원이 혼자 찍은 당월 개인기록을 사장이 검토 → 출근부 편입
+//  · 급여는 calcWageData(앱 단일 함수)로 계산 → 회계 단일 진실(헌법 7-7) 유지
+//  · merge-personal 엣지함수: preview(당월 미편입 목록) / mark_merged(편입 완료 표시)
+// ══════════════════════════════════════════
+let _mpState={empId:null,personId:null,personName:'',month:'',rows:[]};
+let _mpSelected=new Set(); // 체크된 personal_attendance_logs.id
+let _mpClosedDates=new Set(); // 정산 마감된 날짜(work_date) — 경고용
+
+// 직원 승인 직후/직원 상세에서 호출 — 당월 개인기록 있으면 편입 시트 열기
+//  · notifyEmpty=true (직원 상세 버튼 진입) → 기록 없으면 안내 토스트
+//  · notifyEmpty=false (승인 직후 자동) → 기록 없으면 조용히 종료
+async function openMergePersonalReview(personId, personName, opts){
+  const notifyEmpty=!!(opts&&opts.notifyEmpty);
+  if(!personId || !currentStore){ if(notifyEmpty) toast('개인 기록을 확인할 수 없어요','warn'); return; }
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  const month=new Date().toISOString().slice(0,7);
+  if(notifyEmpty) setLoad(true,'개인 기록 확인...');
+  let res;
+  try{
+    const{data,error}=await sb.functions.invoke('merge-personal',{body:{token,action:'preview',person_id:personId,month}});
+    if(error) throw error;
+    res=data;
+  }catch(_e){ if(notifyEmpty){ setLoad(false); toast('조회 실패 — 다시 시도해주세요','error'); } return; }
+  if(notifyEmpty) setLoad(false);
+  if(!res||!res.ok){ if(notifyEmpty) toast(res?.error||'조회 실패','warn'); return; }
+  const rows=res.rows||[];
+  if(!rows.length){ if(notifyEmpty) toast('이번 달 편입할 개인 기록이 없어요','info'); return; }
+  _mpState={empId:res.employee_id,personId,personName:personName||'직원',month,rows};
+  // 정산 마감된 날짜 표시용 — 당월 settlements 조회 (있으면 경고)
+  _mpClosedDates=new Set();
+  try{
+    const [y,m]=month.split('-').map(Number);
+    const lastDay=new Date(y,m,0).getDate();
+    const{data:setRows}=await sb.from('settlements').select('settle_date')
+      .eq('store_id',currentStore.id).gte('settle_date',month+'-01').lte('settle_date',`${month}-${String(lastDay).padStart(2,'0')}`);
+    (setRows||[]).forEach(s=>_mpClosedDates.add(s.settle_date));
+  }catch(_e){/* 마감 조회 실패는 경고만 생략 */}
+  // 기본 선택: 이미 출근부에 있는 날(already_in_store) 제외하고 전부 체크
+  _mpSelected=new Set(rows.filter(r=>!r.already_in_store).map(r=>r.id));
+  document.getElementById('mpName').innerText=_mpState.personName;
+  renderMergePersonalList();
+  openSheet('mergePersonalSheet');
+}
+function renderMergePersonalList(){
+  const box=document.getElementById('mpList'); if(!box) return;
+  const days=['일','월','화','수','목','금','토'];
+  box.innerHTML=_mpState.rows.map(r=>{
+    const dt=new Date(r.work_date+'T00:00:00');
+    const inT=r.app_in?new Date(r.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'-';
+    const outT=r.app_out?new Date(r.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'근무 중';
+    const totalStr=r.total_work_min!=null?fmtHourDecimal(r.total_work_min):'-';
+    const checked=_mpSelected.has(r.id);
+    const dup=r.already_in_store;
+    const closed=_mpClosedDates.has(r.work_date);
+    // 이미 출근부에 있으면 체크 불가(회색). 정산 마감일이면 ⚠️ 경고(체크는 가능)
+    const lockNote=dup
+      ? `<span style="font-size:10px;font-weight:800;color:var(--gray-500);background:var(--gray-100);border-radius:8px;padding:2px 7px;white-space:nowrap;">이미 등록됨</span>`
+      : (closed?`<span style="font-size:10px;font-weight:800;color:var(--warn);white-space:nowrap;">⚠️ 정산 마감일</span>`:'');
+    const opacity=dup?'opacity:.5;':'';
+    const action=dup?'':`data-action="toggleMergeRow|${r.id}"`;
+    const box2=dup
+      ? `<span style="width:22px;height:22px;flex-shrink:0;"></span>`
+      : `<span style="width:22px;height:22px;border-radius:6px;border:2px solid ${checked?'var(--blue)':'var(--gray-300)'};background:${checked?'var(--blue)':'#fff'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;">${checked?'✓':''}</span>`;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid var(--gray-100);${opacity}" ${action}>
+      ${box2}
+      <div style="width:58px;font-size:12px;font-weight:800;color:var(--gray-700);flex-shrink:0;">${dt.getMonth()+1}/${dt.getDate()} (${days[dt.getDay()]})</div>
+      <div style="flex:1;font-size:13px;color:var(--gray-700);">${inT} ~ ${outT}</div>
+      <div style="font-size:13px;font-weight:800;color:var(--text);">${totalStr}</div>
+      ${lockNote}
+    </div>`;
+  }).join('');
+  const cntEl=document.getElementById('mpSelCount'); if(cntEl) cntEl.innerText=_mpSelected.size+'건 선택';
+}
+function toggleMergeRow(personalId){
+  if(_mpSelected.has(personalId)) _mpSelected.delete(personalId);
+  else _mpSelected.add(personalId);
+  renderMergePersonalList();
+}
+function toggleMergeAll(){
+  // 편입 가능한(이미 등록 안 된) 행 기준 전체선택/해제 토글
+  const selectable=_mpState.rows.filter(r=>!r.already_in_store).map(r=>r.id);
+  const allOn=selectable.every(id=>_mpSelected.has(id));
+  _mpSelected=allOn?new Set():new Set(selectable);
+  renderMergePersonalList();
+}
+async function confirmMergePersonal(){
+  const picks=_mpState.rows.filter(r=>_mpSelected.has(r.id) && !r.already_in_store);
+  if(!picks.length){ toast('넣을 기록을 선택하세요','warn'); return; }
+  if(!_mpState.empId){ toast('직원 정보를 찾을 수 없어요','error'); return; }
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'출근부에 넣는 중...');
+  const merges=[]; let failN=0;
+  for(const r of picks){
+    try{
+      const appIn=r.app_in?new Date(r.app_in):null;
+      const appOut=r.app_out?new Date(r.app_out):null;
+      if(!appIn){ failN++; continue; } // 출근 시각 없으면 편입 불가
+      const w=await calcWageData(_mpState.empId, appIn, appOut, r.work_date, r.rest_min!=null?r.rest_min:null);
+      const{data:ins,error}=await sb.from('attendance_logs').insert({
+        store_id:currentStore.id, employee_id:_mpState.empId, work_date:r.work_date,
+        app_in:appIn.toISOString(), app_out:appOut?appOut.toISOString():null,
+        rest_min:w.restMin, total_work_min:w.totalMin, night_min:w.nightMin,
+        weekend_flag:w.isWeekend, calculated_wage:w.wage, caps_match_status:'개인편입'
+      }).select('id').single();
+      if(error){ failN++; continue; }
+      merges.push({personal_id:r.id, attendance_id:ins?.id||null});
+    }catch(_e){ failN++; }
+  }
+  // 편입 완료 표시 (개인기록에 merged_at 박음 → 직원 일지에 '매장 반영' 뱃지)
+  if(merges.length){
+    try{ await sb.functions.invoke('merge-personal',{body:{token,action:'mark_merged',merges}}); }catch(_e){}
+  }
+  setLoad(false);
+  if(merges.length){
+    toast(`${merges.length}건 출근부에 넣었어요${failN?` (${failN}건 실패)`:''}`,'success');
+    if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+    if(typeof loadAttList==='function') loadAttList();
+  } else {
+    toast('편입 실패 — 다시 시도해주세요','error');
+  }
+  closeAllSheets();
+}
+
