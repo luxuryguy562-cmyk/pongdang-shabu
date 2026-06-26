@@ -162,29 +162,26 @@
   </defs>
 </svg>
 
-<!-- PIN 로그인 화면 -->
+<!-- PIN 로그인 화면 (2026-06-26 전화번호+PIN 방식으로 전환) -->
 <div id="loginOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
-  <!-- 브랜드 + 매장명 -->
+  <!-- 브랜드 -->
   <div style="text-align:center;margin-bottom:36px;">
     <div class="logo-row" style="justify-content:center;gap:12px;">
       <span class="logo-mark" style="width:56px;height:56px;font-size:28px;border-radius:14px;">₩</span>
       <span style="font-size:32px;font-weight:900;color:var(--text);letter-spacing:-1.2px;">캐쉬플로우</span>
     </div>
-    <div style="font-size:15px;color:var(--gray-700);margin-top:10px;font-weight:700;" id="loginStoreName">매장을 먼저 선택하세요</div>
   </div>
 
-  <!-- 매장 미선택 시: 매장 선택 큰 버튼 강조 -->
-  <button id="loginStoreBigBtn" class="btn btn-primary btn-full" style="max-width:320px;padding:16px;font-size:15px;font-weight:800;border-radius:14px;display:none;" data-action="openStoreSheet">🏪 매장 선택하기</button>
-
-  <!-- 이름(드롭다운) + PIN 입력 — 매장 선택 후 활성 -->
-  <div id="loginFormArea" style="width:100%;max-width:320px;opacity:0.4;pointer-events:none;">
-    <select id="loginNameInput" class="input-field" data-change="onLoginNameChange"
-      style="text-align:center;font-size:16px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:10px;appearance:auto;">
-      <option value="">직원 선택</option>
-    </select>
-    <div style="text-align:center;font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:18px;">비밀번호 4자리를 눌러주세요</div>
-    <!-- PIN 점 4개 (아이폰식) -->
-    <div id="pinDots" style="display:flex;justify-content:center;gap:20px;margin-bottom:26px;">
+  <!-- 전화번호 + PIN 입력 -->
+  <div id="loginFormArea" style="width:100%;max-width:320px;">
+    <input type="tel" id="loginPhoneInput" class="input-field" placeholder="전화번호 (숫자만)"
+      style="text-align:center;font-size:18px;font-weight:700;padding:16px;border-radius:14px;margin-bottom:12px;letter-spacing:2px;"
+      maxlength="11" inputmode="numeric">
+    <div style="text-align:center;font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:18px;">PIN 번호를 눌러주세요</div>
+    <!-- PIN 점 (최대 6자리 표시) -->
+    <div id="pinDots" style="display:flex;justify-content:center;gap:16px;margin-bottom:26px;">
+      <span class="pin-dot"></span>
+      <span class="pin-dot"></span>
       <span class="pin-dot"></span>
       <span class="pin-dot"></span>
       <span class="pin-dot"></span>
@@ -206,10 +203,6 @@
       <button type="button" class="pin-key pin-del" data-action="pinDelete">⌫</button>
     </div>
     <div id="loginMsg" style="margin-top:18px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
-  </div>
-  <!-- 매장 변경 (매장 선택 후 작게 표시) -->
-  <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-    <button id="loginStoreBtn" class="btn btn-secondary" style="padding:10px 16px;font-size:11px;color:var(--gray-400);display:none;" data-action="openStoreSheet">매장 변경</button>
   </div>
   <!-- 신규 가입 안내 -->
   <div style="margin-top:28px;text-align:center;">

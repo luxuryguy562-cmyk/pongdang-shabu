@@ -3693,61 +3693,17 @@ function resolveCatPair(catName){
 // ══════════════════════════════════════════
 let loginSelectedEmp=null, pinBuffer='', _loginBusy=false;
 
-// ─── 로그인 화면 ───
-// 단일 진입 경로: 매장 선택 → 직원 드롭다운 → PIN → 자동 로그인 (헌법 1-6에 따라 2026-05-05 갈아엎음)
+// ─── 로그인 화면 (2026-06-26 전화번호+PIN 방식으로 전환) ───
 function showLoginScreen(){
   document.getElementById('loginOverlay').style.display='flex';
   document.body.style.overflow='hidden';
   document.querySelector('.bottom-nav').style.display='none';
   document.querySelector('.header').style.display='none';
-  // 드롭박스 직원 목록 채우기 (모든 활성 직원 — owner도 포함)
-  // 정렬: 사장(owner) > 팀장 > 점장 > 매니저 > 아르바이트 + 기타, 같은 직급 내 가나다
-  const nameSelect=document.getElementById('loginNameInput');
-  const lastLoginName=localStorage.getItem('pd_last_name')||'';
-  if(nameSelect){
-    const sortKey=(e)=>{
-      if(e.auth_level==='owner') return 0;
-      if(e.role==='팀장') return 1;
-      if(e.role==='점장') return 2;
-      if(e.role==='매니저') return 3;
-      return 4; // 아르바이트 + 기타(시급제/null)
-    };
-    const active=employees.filter(e=>e.is_active).sort((a,b)=>{
-      const k=sortKey(a)-sortKey(b);
-      return k!==0 ? k : (a.name||'').localeCompare(b.name||'','ko');
-    });
-    // 직급별 배지: 👑 사장 / ⭐ 팀장 / 🔑 점장 / 📋 매니저 / (아르바이트·기타는 없음)
-    const roleBadge=(e)=>{
-      if(e.auth_level==='owner') return '👑';
-      if(e.role==='팀장') return '⭐';
-      if(e.role==='점장') return '🔑';
-      if(e.role==='매니저') return '📋';
-      return '';
-    };
-    nameSelect.innerHTML='<option value="">직원 선택</option>'+active.map(e=>{
-      const badge=roleBadge(e);
-      const role=e.role?' ('+e.role+')':'';
-      return `<option value="${e.name}"${e.name===lastLoginName?' selected':''}>${badge?badge+' ':''}${e.name}${role}</option>`;
-    }).join('');
-  }
   resetPinPad();
   document.getElementById('loginMsg').innerText='';
-  if(currentStore){
-    document.getElementById('loginStoreName').innerText=currentStore.name;
-  } else {
-    document.getElementById('loginStoreName').innerText='매장을 먼저 선택하세요';
-  }
-  // 매장 선택 여부에 따라 영역 토글:
-  //   매장 미선택 → 큰 파란 "매장 선택하기" 버튼 강조 + 직원/PIN 흐리게
-  //   매장 선택   → 직원/PIN 활성 + "매장 변경" 작은 버튼만 노출
-  const needStore=!currentStore;
-  const formArea=document.getElementById('loginFormArea');
-  if(formArea){
-    formArea.style.opacity = needStore ? '0.4' : '1';
-    formArea.style.pointerEvents = needStore ? 'none' : '';
-  }
-  document.getElementById('loginStoreBigBtn').style.display = needStore ? 'block' : 'none';
-  document.getElementById('loginStoreBtn').style.display = needStore ? 'none' : 'inline-block';
+  // 이전에 입력했던 전화번호 복원 (재로그인 편의)
+  const ph=document.getElementById('loginPhoneInput');
+  if(ph){ ph.value=localStorage.getItem('pd_last_phone')||''; }
 }
 // ═══════════════════════════════════════════════════════════════
 // Phase 1-A1: 신규 매장 가입 플로우 (2026-04-24)
@@ -4324,11 +4280,15 @@ function renderPinDots(){
 }
 function resetPinPad(){ pinBuffer=''; renderPinDots(); }
 function pinPress(n){
-  if(_loginBusy||pinBuffer.length>=4) return;
+  if(_loginBusy||pinBuffer.length>=8) return; // 최대 8자리
   pinBuffer+=String(n);
   renderPinDots();
   const msgEl=document.getElementById('loginMsg'); if(msgEl) msgEl.innerText='';
-  if(pinBuffer.length===4) submitLogin();
+  // 4자리 도달 시 전화번호가 채워져 있으면 자동 로그인 (기존 4자리 PIN 사용 직원 편의)
+  if(pinBuffer.length===4){
+    const ph=(document.getElementById('loginPhoneInput')?.value||'').replace(/[^0-9]/g,'');
+    if(ph.length>=10) submitLogin();
+  }
 }
 function pinDelete(){
   if(_loginBusy) return;
@@ -4337,20 +4297,18 @@ function pinDelete(){
 }
 function onLoginNameChange(){ resetPinPad(); const m=document.getElementById('loginMsg'); if(m) m.innerText=''; }
 
-// ─── 이름+PIN 로그인 — 2026-06-09 서버 검증으로 전환 (PIN 비교를 휴대폰 → 서버로) ───
+// ─── 전화번호+PIN 로그인 (2026-06-26 전면 전환 — 매장/이름 불필요) ───
 async function submitLogin(){
-  const nameVal=(document.getElementById('loginNameInput')?.value||'').trim();
+  const phRaw=(document.getElementById('loginPhoneInput')?.value||'').replace(/[^0-9]/g,'');
   const pinVal=pinBuffer;
   const msgEl=document.getElementById('loginMsg');
-  if(!nameVal){msgEl.innerText='직원을 선택하세요';resetPinPad();shakeLogin();return;}
-  if(!pinVal||pinVal.length!==4){msgEl.innerText='PIN 4자리를 입력하세요';shakeLogin();return;}
-  if(!currentStore){msgEl.innerText='매장을 먼저 선택하세요';resetPinPad();shakeLogin();return;}
-  // 서버(emp-login)에서 PIN 검증 — 다른 직원 PIN·개인정보가 휴대폰에 절대 안 내려옴
+  if(!phRaw||phRaw.length<10){msgEl.innerText='전화번호를 입력해주세요';shakeLogin();return;}
+  if(!pinVal||pinVal.length<4){msgEl.innerText='PIN 4자리 이상 입력해주세요';shakeLogin();return;}
   _loginBusy=true;
   msgEl.innerText='확인 중…';
   let res;
   try{
-    const{data,error}=await sb.functions.invoke('emp-login',{body:{store_id:currentStore.id,name:nameVal,pin:pinVal}});
+    const{data,error}=await sb.functions.invoke('emp-login',{body:{phone:phRaw,pin:pinVal}});
     if(error) throw error;
     res=data;
   }catch(_e){
@@ -4363,14 +4321,12 @@ async function submitLogin(){
     msgEl.innerText=(res&&res.error)||'로그인에 실패했어요';
     resetPinPad();shakeLogin();return;
   }
-  // 다음 로그인 시 이름 기억 + 로그인 증표(세션 토큰) 저장 → 자동 로그인용
   _loginBusy=false;
-  localStorage.setItem('pd_last_name',nameVal);
+  localStorage.setItem('pd_last_phone',phRaw);
   if(res.token) localStorage.setItem('pd_token',res.token);
-  // 매장 격리용 신분증을 supabase 클라이언트에 부착 → RLS가 이 매장 것만 보여줌 (새 기능)
   if(res.session&&res.session.access_token){ try{ await sb.auth.setSession({access_token:res.session.access_token,refresh_token:res.session.refresh_token}); }catch(_e){} }
   resetPinPad();
-  completeLogin(res.emp);
+  completeLogin(res); // 전체 응답 전달 (mode: "personal"|"store")
 }
 // 로그인 폼 영역 흔들기
 function shakeLogin(){
@@ -5245,16 +5201,48 @@ async function _routeManagerHome(){
   nav(go);
 }
 
-function completeLogin(emp){
+// loginResult: emp-login/emp-session 전체 응답 { ok, mode, emp, person, token, session, stores }
+// 하위호환: emp 객체가 직접 넘어오는 경우(옛 코드 잔재)도 처리
+function completeLogin(loginResult){
+  let emp=null, mode='store', stores=[], person=null;
+  if(loginResult && loginResult.mode){
+    mode=loginResult.mode; emp=loginResult.emp||null;
+    stores=loginResult.stores||[]; person=loginResult.person||null;
+  } else {
+    emp=loginResult; // 레거시: completeLogin(emp) 직접 호출
+  }
+
+  // ── 개인 모드: 매장 연결 전 (급여 계산 없음, 개인 근태만) ──
+  if(mode==='personal'){
+    currentEmp=null; authLevel='personal';
+    _resetUserState();
+    document.getElementById('headerUser').innerText=(person?.name)||'나';
+    document.getElementById('loginOverlay').style.display='none';
+    document.body.style.overflow='';
+    document.querySelector('.bottom-nav').style.display='flex';
+    document.querySelector('.header').style.display='flex';
+    localStorage.setItem('pd_auth_level','personal');
+    localStorage.removeItem('pd_emp');
+    // 개인 모드 홈 — 지금은 근태 탭으로, Task #7에서 전용 UI 구현
+    nav('attendance');
+    return;
+  }
+
+  // ── 매장 모드 ──
   currentEmp=emp;
-  // auth_level 기반 권한 (is_manager와 동기화)
+  // 로그인 결과에서 currentStore 설정 (매장 선택 없이 로그인 → 서버 응답에서 매장 정보 받음)
+  if(emp&&emp.store_id){
+    const storeInList=stores.find(s=>s.employee_id===emp.id);
+    const storeName=storeInList?.store_name||currentStore?.name||'내 매장';
+    currentStore={id:emp.store_id,name:storeName};
+    localStorage.setItem('pd_store',JSON.stringify(currentStore));
+    const hStore=document.getElementById('headerStore');
+    if(hStore) hStore.innerText=storeName;
+  }
   authLevel=emp.auth_level||'staff';
   if(authLevel==='staff'&&emp.is_manager) authLevel='store_manager';
-  // 권한 준 직원(매니저급, 사장·본사 아님)은 근무화면부터 시작 → 관리화면은 헤더 전환버튼으로 (사장님 2026-06-19)
-  // 사장(owner)·본사(franchise_admin)는 기존대로 관리 모드 시작. 일반 직원은 어차피 근무 화면뿐.
   _myWorkMode = isRealManager() && !['owner','franchise_admin'].includes(authLevel);
   recalcPermissions();
-  // 2026-05-25 사장님 호소: 직원 전환 시 옛 필터·일자·캐시 잔재 → 잘못된 직원 데이터 노출
   _resetUserState();
   document.getElementById('headerUser').innerText=emp.name;
   document.getElementById('loginOverlay').style.display='none';
@@ -5264,19 +5252,14 @@ function completeLogin(emp){
   localStorage.setItem('pd_emp',emp.id);
   localStorage.setItem('pd_auth_level',authLevel);
   applyPermissionUI();
-  // 옛 영수증 복귀값 잔재 제거 (저장이 더는 reload 안 함 — 2026-06-08 in-page 전환으로 폐기)
   try{ localStorage.removeItem('pd_rcp_return'); }catch(e){}
-  // 로그인 후 첫 화면: 본사→본사 홈, 관리자→(매장 2개+면 내 매장들 / 1개면 대시보드), 직원→근태
   if(authLevel==='franchise_admin') nav('franchiseHome');
   else {
-    if(isManager) _routeManagerHome();   // 매장 2개+면 '내 매장들' 먼저, 1개면 바로 대시보드 (멀티매장 2026-06-19)
+    if(isManager) _routeManagerHome();
     else nav('attendance');
-    // 나머지 데이터 백그라운드 로드 (화면 차단 없이) — loadEmployees로 직원 전체 복원(로그인 전엔 이름만 로드했으므로)
     Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
   }
-  // 기기 등록 상태 팝업 (staff만 — 관리자는 여러 기기 사용 가능하므로 스킵)
   if(!isManager) setTimeout(()=>showDeviceStatusPopup(emp),400);
-  // 실시간 구독 + 가입 알림 종 배지 (매니저만 배지)
   if(typeof initRealtimeAndBadge==='function') initRealtimeAndBadge();
 }
 
@@ -8148,16 +8131,14 @@ document.addEventListener('DOMContentLoaded', async()=>{
 
   initAttDate();recalcSettle2();
 
-  // 매장 복원: 로그인에 필요한 것만 먼저 로드 (직원목록)
+  // 매장 복원: 저장된 매장 정보로 헤더 표시 (로그인 후 completeLogin에서도 재설정됨)
   const savedStore=localStorage.getItem('pd_store');
   if(savedStore){
     const s=JSON.parse(savedStore);currentStore=s;
     document.getElementById('headerStore').innerText=s.name;
-    // 로그인 증표 있으면 신분증 살아있음 → 직접 조회. 없으면(로그아웃 상태) RLS에 막혀
-    // 직원목록 0명이 되므로 공개 통로(login-meta)로 이름만 받아 로그인 드롭다운을 채움.
+    // 증표 있으면 직원 목록 미리 로드 (자동 로그인 성공 시 바로 사용)
     if(localStorage.getItem('pd_token')) await loadEmployees();
-    else await loadLoginNames();
-    // 나머지는 로그인 후 백그라운드 로드
+    // 증표 없으면(로그아웃 상태): 아무것도 로드 안 함. 전화+PIN 로그인 후 로드.
   }
 
   // ─── 대시보드: 주차 접기/펼치기 + 일별 카테고리 펼침 (Phase 2 후 DOM 없음 → null safe) ───
@@ -8348,14 +8329,13 @@ document.addEventListener('DOMContentLoaded', async()=>{
   });
 
   // 로그인 복원: 저장된 증표(세션 토큰)로 서버에서 본인 확인 → 자동 로그인
-  // (PIN 없이 복원하되, 본인 민감정보는 서버가 증표 확인 후에만 내려줌 — 2026-06-09 서버화)
+  // (2026-06-26: currentStore 없어도 복원 — 개인 모드는 매장 없이 로그인)
   const savedToken=localStorage.getItem('pd_token');
-  if(savedToken&&currentStore){
+  if(savedToken){
     sb.functions.invoke('emp-session',{body:{token:savedToken}}).then(async ({data,error})=>{
-      if(!error&&data&&data.ok&&data.emp){
-        // 자동 로그인 복원 시에도 매장 신분증 부착 (새 기능)
+      if(!error&&data&&data.ok){
         if(data.session&&data.session.access_token){ try{ await sb.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token}); }catch(_e){} }
-        completeLogin(data.emp);
+        completeLogin(data); // 전체 응답 전달 (mode: "personal"|"store")
       }
       else { localStorage.removeItem('pd_token'); localStorage.removeItem('pd_emp'); showLoginScreen(); }
     }).catch(()=>{ localStorage.removeItem('pd_token'); localStorage.removeItem('pd_emp'); showLoginScreen(); });
