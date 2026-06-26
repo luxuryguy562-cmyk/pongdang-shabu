@@ -1139,6 +1139,8 @@
       <div id="duoJobStoreList"></div>
     </div>
   </div>
+  <!-- ── 근무시간 수정 요청 배너 (직원 전용 — 사장이 수정 요청 보내면 여기 뜸) ── -->
+  <div id="attModReqBanner" style="display:none;"></div>
   <!-- ── 직원 홈 = 행동 허브 (staff-only): 우상단 내 급여 버튼 ── -->
   <div id="empHomeSummary" class="dash-hello" style="display:none;">
     <h1>안녕하세요, <span id="empHomeName">-</span>님 👋</h1>
@@ -2911,6 +2913,16 @@
     <button class="btn btn-primary" style="flex:2;padding:15px;" data-action="saveEditAttendance">저장</button>
   </div>
   <button class="btn btn-danger btn-full" style="margin-top:8px;padding:12px;" data-action="deleteAttendance">이 기록 삭제</button>
+</div>
+
+<!-- 근무시간 수정 요청 확인 (직원) — 사장이 보낸 수정 요청을 직원이 승인·거절 (2026-06-26) -->
+<div class="sheet" id="attModReqSheet" style="max-height:85vh;overflow-y:auto;">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">✏️ 근무시간 수정 요청</div>
+  <div style="font-size:12px;color:var(--gray-600);line-height:1.6;margin-bottom:16px;">
+    사장님이 수정 요청한 내용이에요. 현재 기록과 비교하고 <b>승인</b>하면 바뀌고, <b>거절</b>하면 그대로예요.
+  </div>
+  <div id="attModReqList"></div>
 </div>
 
 <!-- 개인기록 편입 검토 (사장) — 직원이 연결 전 혼자 찍은 기록을 출근부에 편입 (2026-06-26) -->

@@ -32,6 +32,8 @@ function initAttDate(){
   if(currentStore) loadTodayRecord();
   // 직원 홈 요약 (이번 달 번 돈 + 다음 근무 + 이번 주)
   renderEmpHome();
+  // 직원: 대기 중인 근무시간 수정 요청 배너 로드
+  loadModRequests();
 }
 
 // ─── 새 기능: 직원 근무 신청 승인 (사장만, 2026-06-15) ───
@@ -1253,14 +1255,24 @@ async function saveEditAttendance(){
   const appOut=outStr?new Date(outStr):null;
   if(appOut&&appOut<=appIn) return toast('퇴근 일시가 출근보다 빠릅니다. 확인해주세요.','error');
   const w=await calcWageData(empId,appIn,appOut,date,restMin);
-  setLoad(true,'수정 중...');
-  const payload={app_in:appIn.toISOString(),app_out:appOut?.toISOString()||null,rest_min:w.restMin,total_work_min:w.totalMin,weekend_flag:w.isWeekend,calculated_wage:w.wage};
-  const{error}=await sb.from('attendance_logs').update(payload).eq('id',attId).eq('store_id',currentStore.id);
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'수정 요청 중...');
+  // 직접 DB 수정 대신 직원 확인 요청 — attend-modify 서버함수로 전송 (직원 승인 후 반영)
+  const{data,error}=await sb.functions.invoke('attend-modify',{body:{
+    token, action:'submit',
+    attendance_log_id:attId,
+    new_app_in:appIn.toISOString(),
+    new_app_out:appOut?.toISOString()||null,
+    new_rest_min:w.restMin,
+    new_total_work_min:w.totalMin,
+    new_calculated_wage:w.wage,
+    reason:null
+  }});
   setLoad(false);
-  if(error) return errToast('수정', error);
-  toast('근태 기록 수정됐어요','success');
-  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance'); // 실시간
-  closeAllSheets();loadAttList();
+  if(error||!data?.ok) return toast('수정 요청 실패 — '+(data?.error||'다시 시도해주세요'),'error');
+  toast('✅ 직원에게 확인 요청을 보냈어요. 직원이 승인하면 반영돼요.','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+  closeAllSheets(); loadAttList();
 }
 async function deleteAttendance(){
   const attId=document.getElementById('editAttId').value;
@@ -1745,6 +1757,106 @@ function renderPersonalLog(rows){
 // 매장에 연결하기 — Task #8(초대코드+편입승인)에서 join-store 세션토큰 확장과 함께 완성 예정
 function openConnectStore(){
   toast('매장 코드 연결은 곧 켜져요. 사장님께 코드를 미리 받아두세요.','info');
+}
+
+// ─── 새 기능: 근무시간 수정 요청 — 직원 확인 (2026-06-26) ───
+// 사장이 saveEditAttendance()로 수정 요청 → attend-modify 서버함수 저장 → 직원이 아래로 확인·승인·거절
+let _modRequests=[];
+
+async function loadModRequests(){
+  if(!currentStore||!currentEmp||isManager) return;
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  try{
+    const{data}=await sb.functions.invoke('attend-modify',{body:{token,action:'list_pending'}});
+    _modRequests=(data?.rows||[]);
+  }catch(_e){ _modRequests=[]; }
+  renderModRequestBanner();
+}
+
+function renderModRequestBanner(){
+  const el=document.getElementById('attModReqBanner'); if(!el) return;
+  if(!_modRequests.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML=`<div style="background:#fffbeb;border:1.5px solid #fbbf24;border-radius:14px;padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:14px;" data-action="openModRequestSheet">
+    <span style="font-size:20px;">✏️</span>
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:800;color:#92400e;">근무시간 수정 요청 ${_modRequests.length}건</div>
+      <div style="font-size:11px;color:#b45309;margin-top:2px;">사장님이 수정 요청했어요. 탭해서 확인하세요.</div>
+    </div>
+    <span style="font-size:18px;color:#92400e;">›</span>
+  </div>`;
+}
+
+function openModRequestSheet(){
+  renderModRequestList();
+  openSheet('attModReqSheet');
+}
+
+function renderModRequestList(){
+  const box=document.getElementById('attModReqList'); if(!box) return;
+  if(!_modRequests.length){
+    box.innerHTML=`<div style="text-align:center;padding:32px 0;color:var(--gray-500);font-size:13px;">확인할 수정 요청이 없어요.</div>`;
+    return;
+  }
+  const fmtTime=ts=>{if(!ts)return'-';const d=new Date(ts);return d.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});};
+  const fmtDate=ts=>{if(!ts)return'?';const d=new Date(ts);return d.toLocaleDateString('ko',{month:'short',day:'numeric',weekday:'short'});};
+  box.innerHTML=_modRequests.map(r=>{
+    const workDate=fmtDate(r.orig_app_in);
+    const origIn=fmtTime(r.orig_app_in), origOut=fmtTime(r.orig_app_out);
+    const newIn=fmtTime(r.new_app_in), newOut=fmtTime(r.new_app_out);
+    const origWage=(r.orig_calculated_wage||0).toLocaleString('ko-KR');
+    const newWage=(r.new_calculated_wage||0).toLocaleString('ko-KR');
+    const diff=(r.new_calculated_wage||0)-(r.orig_calculated_wage||0);
+    const wageTag=diff===0?''
+      :(diff>0?`<span style="font-size:11px;font-weight:800;color:var(--success);">+${diff.toLocaleString('ko-KR')}원</span>`
+              :`<span style="font-size:11px;font-weight:800;color:var(--danger);">${diff.toLocaleString('ko-KR')}원</span>`);
+    return `<div style="background:var(--gray-100);border-radius:14px;padding:15px;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:10px;">${workDate}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div style="background:#fff;border-radius:10px;padding:10px;border:1px solid var(--gray-200);">
+          <div style="font-size:10px;color:var(--gray-500);font-weight:700;margin-bottom:5px;">현재 기록</div>
+          <div style="font-size:12px;color:var(--gray-700);">출근 <b>${origIn}</b></div>
+          <div style="font-size:12px;color:var(--gray-700);">퇴근 <b>${origOut}</b></div>
+          <div style="font-size:12px;font-weight:800;color:var(--gray-700);margin-top:4px;">${origWage}원</div>
+        </div>
+        <div style="background:#eff6ff;border-radius:10px;padding:10px;border:1.5px solid var(--blue);">
+          <div style="font-size:10px;color:var(--blue);font-weight:700;margin-bottom:5px;">수정 요청</div>
+          <div style="font-size:12px;color:var(--gray-700);">출근 <b>${newIn}</b></div>
+          <div style="font-size:12px;color:var(--gray-700);">퇴근 <b>${newOut}</b></div>
+          <div style="font-size:12px;font-weight:800;color:var(--blue);margin-top:4px;">${newWage}원 ${wageTag}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-danger btn-sm" style="flex:1;padding:12px 0;" data-action="rejectModRequest|${r.id}">거절</button>
+        <button class="btn btn-primary btn-sm" style="flex:2;padding:12px 0;" data-action="approveModRequest|${r.id}">✅ 승인</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveModRequest(requestId){
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'승인 중...');
+  const{data}=await sb.functions.invoke('attend-modify',{body:{token,action:'approve',request_id:requestId}});
+  setLoad(false);
+  if(!data?.ok) return toast('승인 실패 — '+(data?.error||'다시 시도해주세요'),'error');
+  toast('근무시간 수정 승인됐어요','success');
+  if(typeof broadcastStoreChange==='function') broadcastStoreChange('attendance');
+  _modRequests=_modRequests.filter(r=>r.id!==requestId);
+  if(!_modRequests.length){ closeAllSheets(); renderModRequestBanner(); }
+  else { renderModRequestList(); renderModRequestBanner(); }
+}
+
+async function rejectModRequest(requestId){
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  setLoad(true,'처리 중...');
+  const{data}=await sb.functions.invoke('attend-modify',{body:{token,action:'reject',request_id:requestId}});
+  setLoad(false);
+  if(!data?.ok) return toast('거절 실패 — '+(data?.error||'다시 시도해주세요'),'error');
+  toast('수정 요청 거절했어요','info');
+  _modRequests=_modRequests.filter(r=>r.id!==requestId);
+  if(!_modRequests.length){ closeAllSheets(); renderModRequestBanner(); }
+  else { renderModRequestList(); renderModRequestBanner(); }
 }
 
 // ══════════════════════════════════════════
