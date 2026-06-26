@@ -2028,6 +2028,8 @@ function v17RenderMonthDetail(){
   const {cur, prev, profit, expPctNum, progressDays, fcSale, fcProfit, profitPctSale} = st;
   const cats = ctx.cats || [];
   const sortedCats = [...cats].sort((a,b)=>(cur.byCat[b.key]||0)-(cur.byCat[a.key]||0)).filter(c=>(cur.byCat[c.key]||0)>0);
+  // 간트바 기준 = 가장 큰 카테고리 금액 (그 줄이 100% 채워짐)
+  const _maxCatV = sortedCats.length ? (cur.byCat[sortedCats[0].key]||0) : 0;
 
   // ── 1. 큰 요약 (히어로) ──
   const progressLabel = ctx.IS_CURRENT
@@ -2073,7 +2075,10 @@ function v17RenderMonthDetail(){
     const hasChild=children.length>0;
     const subToggle=hasChild?`<span class="v17-sub-toggle" id="v17SubTog_${c.key}">▼</span>`:'';
     const clickAttr=hasChild?`data-action="toggleMonthCatChildren|${c.key}"`:'';
-    detailRowsHtml += `<div class="v17-detail-row${hasChild?' has-child':''}" ${clickAttr}>
+    // 줄 배경 = 그 카테고리 색을 비율(최대 대비)만큼 옅게 채움 → 줄 자체가 간트바
+    const _w = _maxCatV>0 ? (v/_maxCatV*100).toFixed(1) : 0;
+    const _bg = `linear-gradient(90deg, ${c.color}2b 0%, ${c.color}2b ${_w}%, transparent ${_w}%)`;
+    detailRowsHtml += `<div class="v17-detail-row${hasChild?' has-child':''}" style="background:${_bg}" ${clickAttr}>
       <div class="nm-side"><span class="dot" style="background:${c.color};"></span><span class="nm">${c.name}${warnIcon}</span>${subToggle}</div>
       <span class="amt">${v17FmtNoWon(v)}원</span>
       <span class="pct">${pct.toFixed(1)}%</span>
@@ -2098,6 +2103,7 @@ function v17RenderMonthDetail(){
         <span class="lb">합계</span>
         <span class="amt">${v17FmtNoWon(cur.e)}원</span>
         <span class="pct">${expPctNum}%</span>
+        <span></span>
       </div>
     </div>` : '';
 
@@ -2110,10 +2116,17 @@ function v17RenderMonthDetail(){
     const dS = prev.s>0 ? Math.round((cur.s-prev.s)/prev.s*100) : 0;
     const dE = prev.e>0 ? Math.round((cur.e-prev.e)/prev.e*100) : 0;
     const comment = v17MomComment(dS, dE);
-    momHtml = `<div class="wk-mom">
-      <div class="mom-lb">전월 동일(${compareLabel}) 대비 증감률</div>
-      <div class="mom-line">매출 ${sI||'━'} · 지출 ${eI||'━'}</div>
-      ${comment?`<div class="mom-comment">${comment}</div>`:''}
+    // 강조색 — 매출↓(지출 안 줄고) 또는 지출↑(매출 안 늘고) = 빨강(주의), 그 외 = 초록(양호)
+    const _sCat = Math.abs(dS)<=3?'same':(dS>0?'up':'down');
+    const _eCat = Math.abs(dE)<=3?'same':(dE>0?'up':'down');
+    const _bad = (_sCat==='down' && _eCat!=='down') || (_eCat==='up' && _sCat!=='up');
+    momHtml = `<div class="md-mom${_bad?'':' good'}">
+      <div class="mm-t">${_bad?'📉':'📈'} 전월 동일(${compareLabel}) 대비 증감률</div>
+      <div class="mm-chips">
+        <div class="mm-chip"><div class="k">매출</div><div class="v">${sI||'<span class="same">━</span>'}</div></div>
+        <div class="mm-chip"><div class="k">지출</div><div class="v">${eI||'<span class="same">━</span>'}</div></div>
+      </div>
+      ${comment?`<div class="mm-cmt">${comment}</div>`:''}
     </div>`;
   }
 
