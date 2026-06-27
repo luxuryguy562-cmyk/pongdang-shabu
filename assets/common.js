@@ -1323,14 +1323,20 @@ function _rtRefreshActive(){
   clearTimeout(_rtRefreshTimer);
   _rtRefreshTimer=setTimeout(()=>{ try{ if(typeof cacheInvalidate==='function') cacheInvalidate(''); fn(true); }catch(e){} }, 600); // 캐시 비우고 최신 로드, 디바운스
 }
+let _rtBadgeTimer=null, _rtJoinAdminTimer=null; // 실시간 신호 묶음 처리용 (2026-06-27 호출 최적화)
 function onStoreRealtime(payload){
   const k=payload&&payload.kind;
   // 모든 변경에 종 배지 갱신 (가입·근무신청·승인 등 — 2026-06-16 사장님: 전부 실시간)
-  if(typeof refreshJoinBadge==='function') refreshJoinBadge();
-  // 직원관리 화면이면 가입 대기 목록도 갱신
+  // 신호가 몰릴 때 호출 폭증 방지 — 0.6초 묶음 처리(디바운스). _rtRefreshActive와 동일 패턴 (2026-06-27)
+  clearTimeout(_rtBadgeTimer);
+  _rtBadgeTimer=setTimeout(()=>{ try{ if(typeof refreshJoinBadge==='function') refreshJoinBadge(); }catch(e){} }, 600);
+  // 직원관리 화면이면 가입 대기 목록도 갱신 (동일 디바운스)
   if(k==='join'||k==='approve'||k==='reject'){
-    const staffCont=document.getElementById('staffCont');
-    if(staffCont&&staffCont.classList.contains('active')&&typeof loadJoinAdmin==='function') loadJoinAdmin();
+    clearTimeout(_rtJoinAdminTimer);
+    _rtJoinAdminTimer=setTimeout(()=>{
+      const staffCont=document.getElementById('staffCont');
+      if(staffCont&&staffCont.classList.contains('active')&&typeof loadJoinAdmin==='function'){ try{ loadJoinAdmin(); }catch(e){} }
+    }, 600);
   }
   // 보던 화면 자동 갱신 (지출·매출·정산·거래처·근태·개시마감)
   _rtRefreshActive();
