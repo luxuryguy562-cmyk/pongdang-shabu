@@ -2042,7 +2042,8 @@ async function loadJoinAdmin(){
     const rows = pj?.ok ? (pj.rows||[]) : [];
     renderPendingJoins(rows);
     // 종 배지 동기화 — 가입만 세지 말고 전체 기준(refreshJoinBadge)으로 통일 (2026-06-15)
-    if(typeof refreshJoinBadge==='function') refreshJoinBadge();
+    // 방금 받은 가입대기 수(rows.length)를 넘겨 store-join-admin 중복 조회 생략 (2026-06-27 호출 최적화)
+    if(typeof refreshJoinBadge==='function') refreshJoinBadge(rows.length);
   }catch(_e){}
 }
 function renderPendingJoins(rows){
@@ -2145,8 +2146,7 @@ async function rejectJoin(pendingId){
   try{
     const{data,error}=await sb.functions.invoke('store-join-admin',{body:{token,action:'reject',pending_id:pendingId}});
     if(error||!data?.ok){ alert(data?.error||'거절 실패'); return; }
-    await loadJoinAdmin();
-    if(typeof refreshJoinBadge==='function') refreshJoinBadge();
+    await loadJoinAdmin(); // 내부에서 종 배지까지 갱신함 (중복 호출 제거 2026-06-27)
     if(typeof broadcastStoreChange==='function') broadcastStoreChange('reject');
   }catch(_e){ alert('네트워크 오류'); }
   finally{ setLoad(false); }
@@ -5575,13 +5575,15 @@ async function switchDuoStore(employeeId){
 // ─── 종 배지 갱신 — 가입+근무신청+공과금 미납 전체 카운트 (2026-06-15 단일화) ───
 // 옛 버그: 가입 신청만 세서 근무신청 배지를 덮어 지움 → 확인 안 해도 숫자 사라짐.
 // 처리(승인/납부)하기 전까지 배지 유지되도록 모든 미처리 건 합산. openNotifSheet와 동일 기준.
-async function refreshJoinBadge(){
+// preJoinN: 호출자가 이미 가입대기 수를 알면 넘겨줌 → store-join-admin 중복 조회 생략 (2026-06-27 호출 최적화)
+async function refreshJoinBadge(preJoinN){
   const badge=document.getElementById('headerBellBadge');
   if(!badge) return;
   if(!isManager || !currentStore){ badge.style.display='none'; return; }
   const sid=currentStore.id, ym=fcThisYm();
   let joinN=0, schedN=0, billN=0;
-  try{ const token=localStorage.getItem('pd_token'); const{data:pj}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}}); joinN=(pj?.rows||[]).length; }catch(_){}
+  if(typeof preJoinN==='number'){ joinN=preJoinN; } // 이미 받은 값 재활용 (서버 호출 X)
+  else { try{ const token=localStorage.getItem('pd_token'); const{data:pj}=await sb.functions.invoke('store-join-admin',{body:{token,action:'list_pending'}}); joinN=(pj?.rows||[]).length; }catch(_){} }
   try{ const{data}=await sb.from('work_schedules').select('id').eq('store_id',sid).eq('status','희망'); schedN=(data||[]).length; }catch(_){}
   try{
     const[r1,r2]=await Promise.all([
