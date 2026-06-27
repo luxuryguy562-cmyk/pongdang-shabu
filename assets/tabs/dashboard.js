@@ -319,12 +319,121 @@ function renderTopCardForDay(dayStr){
     }
   }
 
+  // 스냅샷 렌더 (오늘이면 캐시 사용, 오늘 아니면 버튼 숨김)
+  renderTodaySnapshot(dayStr, dayExp);
+
   // 네비 버튼 상태 — ‹ 과거는 항상 가능(월 넘김), › 미래(오늘 이후)만 막기
   const prevBtn = document.getElementById('dashTopNavPrev');
   const nextBtn = document.getElementById('dashTopNavNext');
   if(prevBtn) prevBtn.disabled = false;
   if(nextBtn) nextBtn.disabled = (dayStr >= _todayStr);
 }
+// ─── 새 기능: 중간 매출 기록 (2026-06-26) ───
+// daily_snapshots 표 — store_id + snapshot_date UNIQUE. 오늘 기준만 표시.
+let _snapCache = null; // { amount, recorded_at } or null
+
+async function loadTodaySnapshot(){
+  if(!currentStore) return null;
+  const today = ymdLocal(new Date());
+  const { data } = await sb.from('daily_snapshots')
+    .select('amount,recorded_at,updated_at')
+    .eq('store_id', currentStore.id)
+    .eq('snapshot_date', today)
+    .maybeSingle();
+  _snapCache = data || null;
+  return _snapCache;
+}
+
+function renderTodaySnapshot(dayStr, dayExp){
+  const _todayStr = ymdLocal(new Date());
+  const isTodayShown = (dayStr === _todayStr);
+  const snapRow    = document.getElementById('dashSnapRow');
+  const snapPinBtn = document.getElementById('dashSnapPinBtn');
+  const profitEl   = document.getElementById('dashTopProfitAmt');
+  const profitDot  = document.getElementById('dashTopProfitDot');
+  const profitLb   = document.getElementById('dashTopProfitLb');
+  const profitDelta = document.getElementById('dashTopProfitDelta');
+  if(!snapRow) return;
+
+  if(!isTodayShown || _snapCache === null){
+    // 오늘이 아니거나 스냅샷 없음 → 중간기록 행 숨김
+    snapRow.style.display = 'none';
+    if(snapPinBtn) snapPinBtn.style.display = isTodayShown ? '' : 'none';
+    return;
+  }
+
+  // 스냅샷 있음
+  snapRow.style.display = '';
+  if(snapPinBtn) snapPinBtn.style.display = 'none';
+
+  const amt = _snapCache.amount;
+  const ts = _snapCache.updated_at || _snapCache.recorded_at;
+  const d = new Date(ts);
+  const hhmm = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  document.getElementById('dashSnapAmt').textContent = fmt(amt) + '원';
+  document.getElementById('dashSnapTime').textContent = hhmm + ' 기준 · 공식 매출 아님';
+
+  // 수익 행 → 임시 수익 (스냅샷 - 지출)
+  if(profitEl){
+    const tmpProfit = amt - (dayExp || 0);
+    const isPos = tmpProfit >= 0;
+    profitEl.textContent = (isPos ? '+' : '-') + fmt(Math.abs(tmpProfit)) + '원';
+    profitEl.className = 'r-amt';
+    profitEl.style.cssText = 'color:#D97706;text-align:right;font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;';
+    if(profitDot){ profitDot.style.background='#F59E0B'; profitDot.className='dot'; }
+    if(profitDelta){ profitDelta.textContent = ''; }
+    // 수익 라벨에 임시 태그 추가
+    if(profitLb){
+      profitLb.innerHTML = '수익<span style="font-size:9.5px;font-weight:800;color:#D97706;background:#FEF3C7;border-radius:5px;padding:1px 5px;margin-left:4px;letter-spacing:.1px;">임시</span>';
+    }
+  }
+}
+
+function openSnapSheet(){
+  const inp = document.getElementById('snapAmtInput');
+  if(inp){
+    inp.value = _snapCache ? String(_snapCache.amount) : '';
+    // 숫자 포맷 표시
+    if(_snapCache) inp.value = _snapCache.amount.toLocaleString();
+  }
+  openSheet('snapSheet');
+}
+
+async function saveSnapshot(){
+  if(!currentStore){ toast('매장을 먼저 선택해주세요','error'); return; }
+  const inp = document.getElementById('snapAmtInput');
+  const raw = inp ? inp.value.replace(/,/g,'') : '';
+  const amt = parseInt(raw, 10);
+  if(isNaN(amt) || amt <= 0){ toast('금액을 입력해주세요','error'); return; }
+
+  setLoad(true, '저장 중...');
+  const today = ymdLocal(new Date());
+  const { error } = await sb.from('daily_snapshots').upsert({
+    store_id: currentStore.id,
+    snapshot_date: today,
+    amount: amt,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'store_id,snapshot_date' });
+  setLoad(false);
+
+  if(error){ toast('저장 실패: ' + error.message, 'error'); return; }
+  _snapCache = { amount: amt, recorded_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  closeSheet('snapSheet');
+  toast('중간 매출 기록 저장됨', 'success');
+
+  // 카드 즉시 갱신
+  const dayExp = (() => {
+    if(_topCardCtx && _topCardDay){
+      const d = _topCardDay.slice(8);
+      return (_topCardCtx.dailyExpTotal[d] || 0);
+    }
+    return 0;
+  })();
+  const peEl = document.getElementById('dashTopSalesProfitExpense');
+  if(peEl) peEl.style.display = 'block';
+  renderTodaySnapshot(_topCardDay || ymdLocal(new Date()), dayExp);
+}
+
 // 거래처별 지출 더보기 토글 — 구 카드용 (호환 유지)
 function toggleVendorMore(btn){
   toggleVendorMoreSheet(btn);
@@ -1351,7 +1460,13 @@ async function loadDashboard(force){
         _initDay = lastSaleDay ? ym+'-'+String(lastSaleDay).padStart(2,'0') : ym+'-'+String(lastDay).padStart(2,'0');
       }
       _pendingTopCardDay=null;
-      renderTopCardForDay(_initDay);
+      // 오늘 스냅샷 미리 로드 후 카드 렌더 (이번 달에서만 의미있음)
+      if(isCurMonth){
+        loadTodaySnapshot().then(()=>{ renderTopCardForDay(_initDay); });
+      } else {
+        _snapCache = null;
+        renderTopCardForDay(_initDay);
+      }
 
       // ─── today-detail 드릴다운 컨텍스트 (모든 달) ───
       try {
