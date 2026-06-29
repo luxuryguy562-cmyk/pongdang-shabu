@@ -748,8 +748,11 @@ function nav(tab, el) {
     const subBtn = document.querySelector(`#${tab}Cont .sub-tab[data-sub="${subTab}"]`);
     if (subBtn) subBtn.click();
   }
-  // 내 매장들·본사 홈 화면: 하단 관리자 탭 숨기기 / 그 외: 권한 기준 복원
+  // 내 매장들·본사 홈 화면: 하단 바 통째로 숨기기 (매장 안 고른 상태 — 탭 누르면 엉뚱한 매장 진입 방지)
+  //  · 개별 항목 숨김은 applyPermissionUI/applyRoleTabLimit과 충돌해 다시 보였음 → 컨테이너 통째 toggle로 견고화 (2026-06-29)
   const _noNavTabs = tab === 'myStores' || tab === 'franchiseHome' || authLevel === 'franchise_admin';
+  const _bn = document.querySelector('.bottom-nav');
+  if(_bn) _bn.style.display = _noNavTabs ? 'none' : 'flex';
   document.querySelectorAll('.bottom-nav .nav-item.manager-only').forEach(el => {
     el.style.display = _noNavTabs ? 'none' : (isManager ? '' : 'none');
   });
