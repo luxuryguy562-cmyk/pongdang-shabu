@@ -581,6 +581,7 @@
         <span><svg class="icon-inline"><use href="#i-download"/></svg>자료 다운로드</span><span class="side-arrow">›</span>
       </div>
       <div class="side-group-body">
+        <div class="side-item" data-action="openTxExportSheet">거래내역 (지출·매출)</div>
         <div class="side-item" data-action="openLaborExportSheet">노무 제출 양식</div>
       </div>
     </div>
@@ -2405,6 +2406,44 @@
   </div>
 </div>
 
+<!-- ─── 새 기능: 거래내역 엑셀 다운로드 시트 (2026-06-29) ─── -->
+<div class="sheet-overlay" id="txExportSheet">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title"><svg class="icon-inline"><use href="#i-download"/></svg>거래내역 다운로드</div>
+    <p style="font-size:12px;color:var(--gray-500);margin:0 0 14px;">고른 달의 거래를 엑셀 1개로 — 취소·반품도 사유와 함께 표기</p>
+
+    <!-- 월 선택 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--gray-100);border-radius:12px;padding:10px 14px;margin-bottom:14px;">
+      <button class="btn btn-secondary btn-sm" data-action="moveTxExportMonth|-1" style="padding:6px 10px;">◀</button>
+      <div id="txMonthLabel" style="font-size:16px;font-weight:800;">2026-06</div>
+      <button class="btn btn-secondary btn-sm" data-action="moveTxExportMonth|1" style="padding:6px 10px;">▶</button>
+    </div>
+
+    <!-- 시트 선택 (체크박스 4종) -->
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">어떤 시트가 필요하세요?</div>
+    <label class="lx-check" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:8px;cursor:pointer;">
+      <input type="checkbox" id="txOptList" checked style="width:18px;height:18px;">
+      <div style="flex:1;"><div style="font-size:14px;font-weight:700;">거래내역 (전체)</div><div style="font-size:11px;color:var(--gray-500);">영수증·거래처주문·통장/카드 한 줄씩 (취소 포함)</div></div>
+    </label>
+    <label class="lx-check" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:8px;cursor:pointer;">
+      <input type="checkbox" id="txOptVendor" checked style="width:18px;height:18px;">
+      <div style="flex:1;"><div style="font-size:14px;font-weight:700;">거래처별</div><div style="font-size:11px;color:var(--gray-500);">거래처마다 며칠 얼마 결제 + 소계</div></div>
+    </label>
+    <label class="lx-check" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:8px;cursor:pointer;">
+      <input type="checkbox" id="txOptVendorItem" checked style="width:18px;height:18px;">
+      <div style="flex:1;"><div style="font-size:14px;font-weight:700;">거래처 · 품목별</div><div style="font-size:11px;color:var(--gray-500);">거래처별로 품목 수량·금액 집계</div></div>
+    </label>
+    <label class="lx-check" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gray-100);border-radius:12px;margin-bottom:14px;cursor:pointer;">
+      <input type="checkbox" id="txOptSales" checked style="width:18px;height:18px;">
+      <div style="flex:1;"><div style="font-size:14px;font-weight:700;">매출</div><div style="font-size:11px;color:var(--gray-500);">마감 그대로 (결제수단별 + 현금 분해)</div></div>
+    </label>
+
+    <button class="btn btn-primary btn-full" data-action="downloadTxExport" style="padding:14px;font-size:15px;">⬇️ 선택 항목 다운로드</button>
+    <button class="btn btn-secondary btn-full" data-action="closeAllSheets" style="margin-top:8px;padding:12px;font-size:13px;">취소</button>
+  </div>
+</div>
+
 <!-- 기기 등록 상태 팝업 (로그인 시 자동 표시) -->
 <div class="sheet-overlay" id="deviceStatusSheet">
   <div class="sheet">
@@ -3711,7 +3750,7 @@
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260629a"></script>
 <script src="assets/tabs/dashboard.js?v=20260626c"></script>
-<script src="assets/tabs/sidemenu.js?v=20260629c"></script>
+<script src="assets/tabs/sidemenu.js?v=20260629d"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 
 <!-- 중간 매출 기록 시트 (2026-06-26) -->
