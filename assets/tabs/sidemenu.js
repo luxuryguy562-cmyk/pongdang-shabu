@@ -2536,6 +2536,22 @@ async function refreshPushUI(){
   stEl.innerText=txt;
   tgEl.innerText=label;
   tgEl.style.display=(st==='denied'||st==='unsupported')?'none':'';
+  // 테스트 발송 버튼은 알림 켜진 경우만 표시
+  const testBtn=document.getElementById('btn-push-test');
+  if(testBtn) testBtn.style.display=(st==='on')?'':'none';
+}
+// 테스트 알림 발송 (내 매장 구독 기기로)
+async function sendTestPush(){
+  if(typeof getPushStatus==='function'){
+    const st=await getPushStatus();
+    if(st!=='on'){ alert('먼저 알림을 켜주세요.'); return; }
+  }
+  try{
+    const { data, error } = await sb.functions.invoke('send-push', { body:{ payload:{ title:'캐쉬플로우 🔔', body:'테스트 알림입니다. 잘 도착했어요!', url:'/' } } });
+    if(error){ console.error('[push] 테스트 발송 실패', error); alert('테스트 발송에 실패했습니다.'); return; }
+    if(typeof toast==='function') toast(`테스트 알림 발송 (${(data&&data.sent)||0}건)`,'success');
+    else alert(`테스트 알림 발송 (${(data&&data.sent)||0}건)`);
+  }catch(e){ console.error('[push] 테스트 발송 오류', e); alert('테스트 발송 오류'); }
 }
 // 알림 켜기/끄기 토글
 async function togglePush(){

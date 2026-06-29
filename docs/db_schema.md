@@ -809,6 +809,31 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 
 ---
 
+## app_secrets (서버 전용 비밀값 — 2026-06-29 신설)
+
+> VAPID 비밀키 등 서버만 알아야 할 값. RLS 켜고 **정책 0개 = anon·authenticated 완전 차단**. service_role(서버 함수)만 RLS 우회 접근.
+
+| 컬럼 | 설명 |
+|---|---|
+| key (text PK) | 비밀값 이름 (vapid_public / vapid_private / vapid_subject) |
+| value (text) | 값 |
+| updated_at (timestamptz) | |
+
+- 현재 보관: `vapid_public`, `vapid_private`, `vapid_subject`(mailto:)
+- 읽는 곳: Edge Function `send-push`만 (service_role)
+- 롤백: `DROP TABLE public.app_secrets;`
+
+---
+
+## Edge Functions (서버 함수)
+
+| 함수 | 역할 |
+|---|---|
+| `switch-store` | 매장 전환 시 권한 확인 후 그 매장 세션(JWT) 발급 |
+| `send-push` (2026-06-29) | 푸시 알림 발송. 호출자 JWT의 store_id 구독에만 발송. service_role 호출 시 body.store_id 지정 가능(자동 발송용). 코드: `supabase/functions/send-push/index.ts` |
+
+---
+
 ## 성능 색인 (2026-06-16 — 외래키 38개 색인 추가)
 
 > 배경: 사장님 "홈 7초" 호소 → 성능권고(advisors) 116건 측정. `store_id` 등 외래키에 색인 없는 표 19개 = 데이터 누적 시 풀스캔. 마이그레이션 `add_missing_fk_indexes`로 일괄 추가.
