@@ -37,9 +37,34 @@ function _renderSettleStep(){
   }
   _updateSwBarDate();
   _updateSwTopbar();
+  if(_swStep===1) _renderSnapWarn();
 }
 function settleWizardNext(){
   if(_swStep<4){_swStep++;_renderSettleStep();const c=document.getElementById('settleCont');if(c)c.scrollTop=0;}
+}
+// ─── 새 기능: 중간 기록 경고 (2026-06-26) ───
+function _renderSnapWarn(){
+  const warnEl = document.getElementById('swSnapWarn');
+  if(!warnEl) return;
+  // _snapCache는 dashboard.js에서 관리. 오늘 마감 날짜가 아니면 경고 숨김
+  const dateStr = document.getElementById('settleDatePicker')?.value;
+  const todayStr = typeof ymdLocal === 'function' ? ymdLocal(new Date()) : new Date().toLocaleDateString('sv-SE');
+  if(!dateStr || dateStr !== todayStr || typeof _snapCache === 'undefined' || !_snapCache){
+    warnEl.style.display = 'none'; return;
+  }
+  const snapAmt = _snapCache.amount;
+  const posTotal = (typeof gv === 'function')
+    ? gv('siPosCash') + gv('siPosCashReceipt') + gv('siPosCard') + gv('siPosEtc')
+    : 0;
+  if(posTotal > 0 && posTotal < snapAmt){
+    warnEl.style.display = '';
+    const snapEl = document.getElementById('swSnapWarnSnap');
+    const posEl  = document.getElementById('swSnapWarnPos');
+    if(snapEl) snapEl.textContent = (typeof fmt==='function' ? fmt(snapAmt) : snapAmt.toLocaleString()) + '원';
+    if(posEl)  posEl.textContent  = (typeof fmt==='function' ? fmt(posTotal) : posTotal.toLocaleString()) + '원';
+  } else {
+    warnEl.style.display = 'none';
+  }
 }
 function settleWizardPrev(){
   if(_swStep>1){_swStep--;_renderSettleStep();const c=document.getElementById('settleCont');if(c)c.scrollTop=0;}
@@ -315,6 +340,7 @@ function recalcSettle2(){
   // 매출합계 (POS 매출 4칸)
   const salesTotal=posCash+posCR+posCard+posEtc;
   document.getElementById('calcSalesTotal').innerText=fmt(salesTotal)+'원';
+  _renderSnapWarn(); // 중간 기록 경고 갱신
 
   // 현금 검증: POS(현금+현금영수증) vs 상세(현금+QR+이체)
   const posSum=posCash+posCR;

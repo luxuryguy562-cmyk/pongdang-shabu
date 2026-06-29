@@ -4,6 +4,42 @@
 
 ---
 
+## [2026-06-29] 로그인 속도 개선 + 부팅 가림막 (앞사람 화면 비침 제거)
+
+브랜치: `claude/admiring-fermat-4jw3gt`. 사장님 호소: "로그인 또 느려졌고, 블라드 로그아웃→이송은 로그인 시 블라드 근태 화면이 비쳤다가 홈으로 들어감."
+
+### 원인 (코드 확인)
+- `_routeManagerHome`이 매장 개수만 알려고 무거운 `my-stores`(매장 전체 한 달 순익 18쿼리 계산)를 매번 호출 + 끝날 때까지 화면 안 띄움 → 매장 1개 사장님도 매번 대기 (느림).
+- `completeLogin`이 화면 정하기 전에 앱을 먼저 노출 → 라우팅(async) 끝나기 전까지 앞사람/기본 화면이 로딩(92% 불투명) 뒤로 비침.
+
+### 해결
+1. **부팅 가림막** `#bootSplash`(로고+스피너, z7000, index.html) — 기본 표시. `showBootSplash`/`hideBootSplash`(common.js). `completeLogin` 시작 시 띄우고 라우팅 끝난 뒤(`_routeManagerHome().finally`) 걷음. `showLoginScreen`/개인모드/직원/franchise 각각 걷음.
+2. **라우팅 속도** — `_routeManagerHome`: 매장 개수를 `localStorage pd_multi_store` 캐시로 즉시 판단 → 화면 바로. 무거운 my-stores는 `_refreshMultiStoreFlag`로 백그라운드 갱신. 기억 없는 첫 로그인만 1회 정확 확인. `loadMyStores`·`doLogout`도 캐시 동기화/비움.
+3. 기본 active 컨테이너 receiptCont→dashboardCont (재시작 시 기본 화면 홈, 앞서 적용).
+
+### 영향
+- 들어가는 화면·권한·매장 격리 전부 그대로. 보여주는 순서·타이밍만 정리.
+- 파일: index.html, assets/common.js, assets/tabs/sidemenu.js.
+
+---
+
+## [2026-06-26] 🚧 직원 단독 사용 + 매장 연결 전후 전체 설계 구현 (진행 중)
+
+브랜치: `claude/gifted-thompson-3q3fp6`. 목업 login_final_v2(17화면) 기반 실제 구현 착수.
+
+### ✅ 완료
+1. **DB 변경** — `personal_attendance_logs` / `attendance_modification_requests` 신설, `emp_sessions` + `persons` 컬럼 추가
+2. **서버함수 4개 배포 완료** — emp-login(전화+PIN) / emp-session(개인모드) / personal-attendance / merge-personal
+3. **로그인 화면 전환** — index.html + sidemenu.js: 매장+이름+PIN → 전화번호+PIN. completeLogin 개인/매장 모드 분기.
+
+### ⏳ 남음 (프론트)
+- 가입 플로우 보강: "혼자 시작하기" 버튼(개인 모드 스킵), PIN 5자리+ 허용
+- 개인 모드 홈(회색 띠) + 매장 모드 전환(파란/인디고 띠) + 투잡 전환 UI
+- 사장: 초대링크 7일 만료 + 편입승인 팝업 + 근무시간 수정승인 화면
+- saveEditAttendance(attendance.js:1241) → 수정요청 생성으로
+
+---
+
 ## [2026-06-25] 거래처별 종류 탭 + 주류·음료를 식자재 하위로
 
 **1. 거래처별 화면 종류 탭** (PR #801 main)
@@ -12,13 +48,11 @@
 - 코드: index.html(탭 바) + sidemenu.js `_expHubVendorKind`/`switchVendorKindTab`/`_vendorKindOf` + `renderExpHubVendorView` 필터.
 
 **2. 주류·음료 → 식자재 하위 카테고리** (DB 데이터만, 코드 0줄)
-- 3에이전트 병렬 조사 + DB 실측: 집계 전부 parent_id 자동 롤업, 주류·음료 자식 0개(손자 위험 없음), 이름 기반 맵 안 깨짐 → parent_id UPDATE만으로 충분 검증.
 - 실행(승인): `UPDATE expense_categories SET parent_id='a521efc8-...'(식자재) WHERE id IN (주류 cbd1193b, 음료 469d67ae)`. 롤백=parent_id NULL.
 - 검증: 식자재 펼침 = 주류101만·음료106만·육류924만·야채312만·공산품1079만·미분류0 (앱 화면 확인). 합계 보존.
-- 순서는 카테고리 관리 ☰ 드래그(sort_order)로 사장님이 직접 조정 가능.
 
 **3. AI 프롬프트 예시 형식 통일** (PR #802 main)
-- common.js 프롬프트 예시 `"c":"주류"` 4곳 → `"식자재>주류"`(실제 catList 형식과 일치). 예시 보존, 기능 영향 0.
+- common.js 프롬프트 예시 `"c":"주류"` 4곳 → `"식자재>주류"`(실제 catList 형식과 일치).
 
 ---
 

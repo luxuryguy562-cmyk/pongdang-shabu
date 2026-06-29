@@ -437,6 +437,7 @@ let currentEmp = null, isManager = false, isOwner = false;
 // auth_level: 'owner' | 'franchise_admin' | 'store_manager' | 'staff'
 let authLevel = 'staff';       // 화면에 적용되는 권한 (DB 실제 권한)
 let _myWorkMode = false;       // '내 근무' 모드 (관리자가 본인 직원 화면 볼 때, 2026-06-15) — 화면만, DB권한 불변
+let _loginStores = [];         // 투잡 지원: 로그인 시 받은 전체 매장 목록 [{employee_id,store_id,store_name,auth_level,is_manager}]
 // 직급 화면권한 설정(role_permissions)이 있으면 관리자 (어떤 직급이든 설정하면 관리자급 권한)
 function _roleIsManager(){
   if(!currentEmp || !currentEmp.role) return false;
@@ -627,6 +628,10 @@ function errToast(action, err){
   const detail=msg?` ${String(msg).slice(0,60)}`:'';
   toast(action+'하지 못했어요'+tag+detail+(tag||detail?'':' 잠시 후 다시 시도해주세요'),'error',7000);
 }
+// ─── 부팅 가림막 (로고) 켜기/끄기 — 화면 전환 중 앞 화면 비침 방지 (2026-06-29) ───
+function showBootSplash(){ const s=document.getElementById('bootSplash'); if(s) s.style.display='flex'; }
+function hideBootSplash(){ const s=document.getElementById('bootSplash'); if(s) s.style.display='none'; }
+
 const setLoad = (on, t='처리 중...', scanImg=false) => {
   const ld=document.getElementById('loading');
   ld.style.display = on ? 'flex' : 'none';
@@ -1070,6 +1075,8 @@ async function loadMyStores(){
     if(!data || !data.ok) throw new Error((data && data.error) || '불러오기 실패');
 
     const stores = Array.isArray(data.stores) ? data.stores : [];
+    // 매장 개수 기억 — 다음 로그인 라우팅 즉시 판단용 (2026-06-29 속도)
+    try{ localStorage.setItem('pd_multi_store', stores.length >= 2 ? '1' : '0'); }catch(_e){}
     const totalRev = Number(data.total_revenue)||0;
     const totalProfit = Number(data.total_profit)||0;
 
@@ -1322,14 +1329,20 @@ function _rtRefreshActive(){
   clearTimeout(_rtRefreshTimer);
   _rtRefreshTimer=setTimeout(()=>{ try{ if(typeof cacheInvalidate==='function') cacheInvalidate(''); fn(true); }catch(e){} }, 600); // 캐시 비우고 최신 로드, 디바운스
 }
+let _rtBadgeTimer=null, _rtJoinAdminTimer=null; // 실시간 신호 묶음 처리용 (2026-06-27 호출 최적화)
 function onStoreRealtime(payload){
   const k=payload&&payload.kind;
   // 모든 변경에 종 배지 갱신 (가입·근무신청·승인 등 — 2026-06-16 사장님: 전부 실시간)
-  if(typeof refreshJoinBadge==='function') refreshJoinBadge();
-  // 직원관리 화면이면 가입 대기 목록도 갱신
+  // 신호가 몰릴 때 호출 폭증 방지 — 0.6초 묶음 처리(디바운스). _rtRefreshActive와 동일 패턴 (2026-06-27)
+  clearTimeout(_rtBadgeTimer);
+  _rtBadgeTimer=setTimeout(()=>{ try{ if(typeof refreshJoinBadge==='function') refreshJoinBadge(); }catch(e){} }, 600);
+  // 직원관리 화면이면 가입 대기 목록도 갱신 (동일 디바운스)
   if(k==='join'||k==='approve'||k==='reject'){
-    const staffCont=document.getElementById('staffCont');
-    if(staffCont&&staffCont.classList.contains('active')&&typeof loadJoinAdmin==='function') loadJoinAdmin();
+    clearTimeout(_rtJoinAdminTimer);
+    _rtJoinAdminTimer=setTimeout(()=>{
+      const staffCont=document.getElementById('staffCont');
+      if(staffCont&&staffCont.classList.contains('active')&&typeof loadJoinAdmin==='function'){ try{ loadJoinAdmin(); }catch(e){} }
+    }, 600);
   }
   // 보던 화면 자동 갱신 (지출·매출·정산·거래처·근태·개시마감)
   _rtRefreshActive();

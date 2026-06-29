@@ -503,6 +503,21 @@ async function loadCatReceiptData(){
   catReceiptParentId = (catParent && catReceiptMode && catReceiptMode.startsWith('cat:')) ? catParent.id : null;
   titleEl.textContent = title;
   iconEl.textContent = iconEmoji;
+  // 수동 입력 카테고리(세금·마케팅 — 거래처·품목 없는 지출) → 간단 입력 버튼 노출 (2026-06-29)
+  //   기타는 '기타 지출'(품목 폼) 흐름 사용 → 제외 (사장님 명시: 세금·마케팅만)
+  const _manBtn = document.getElementById('catRcpManualBtn');
+  if(_manBtn){
+    const _isManual = catParent && catParent.data_source==='manual' && (catParent.name!=='기타') && catReceiptMode.startsWith('cat:');
+    if(_isManual){
+      _manualExpCat = { id:catParent.id, name:catParent.name };
+      _manBtn.style.display='';
+      const _lb=document.getElementById('catRcpManualBtnLabel');
+      if(_lb) _lb.textContent='✏️ '+catParent.name+' 입력';
+    } else {
+      _manualExpCat = null;
+      _manBtn.style.display='none';
+    }
+  }
   body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
   _renderCatReceiptMonthNav();
   // 기간 계산 — 단월 또는 범위
@@ -520,7 +535,7 @@ async function loadCatReceiptData(){
   //  · 직구 모드 = receipts only (vendor_orders는 항상 vendor_id 있음 — 매칭 X)
   //  · 카테고리 모드 = receipts(category_id IN ids) + vendor_orders(vendors.category_id IN ids)
   let rq = sb.from('receipts')
-    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty,seq,spec,origin')
+    .select('id,receipt_date,vendor,vendor_id,item,total_price,category,category_id,input_method,note,receipt_group_id,unit_price,qty,seq,spec,origin,created_by,cancelled_by,cancelled_at')
     .eq('store_id', currentStore.id)
     .gte('receipt_date', start).lte('receipt_date', end)
     .order('receipt_date', {ascending:false});
@@ -836,6 +851,47 @@ function openManualReceiptShortcut(){
   _rcpKeepOnEnter = true; // 수동 모드 세팅 진입 — 재진입 초기화 스킵
   nav('receipt');
   setTimeout(()=>setRcpMode('manual'), 60);
+}
+
+// ─── 새 기능: 수동 지출 간단 입력 (세금·마케팅 — 거래처 없는 지출, 2026-06-29) ───
+// 거래처·품목·규격 없이 날짜+금액+메모만. receipts에 한 줄로 저장 → 카테고리 합계·대시보드·정산에 그대로 반영.
+let _manualExpCat = null; // {id, name} — loadCatReceiptData가 채움
+function openManualExpSheet(){
+  if(!_manualExpCat){ toast('카테고리를 찾을 수 없어요','error'); return; }
+  const t=document.getElementById('manualExpTitle'); if(t) t.textContent=_manualExpCat.name+' 입력';
+  const d=document.getElementById('manualExpDate');
+  if(d){ const n=new Date(); d.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
+  const a=document.getElementById('manualExpAmt'); if(a) a.value='';
+  const m=document.getElementById('manualExpMemo'); if(m) m.value='';
+  openSheet('manualExpSheet');
+}
+async function saveManualExp(){
+  if(!currentStore){ toast('매장을 먼저 선택해주세요','error'); return; }
+  if(!_manualExpCat){ toast('카테고리를 찾을 수 없어요','error'); return; }
+  const dateV=(document.getElementById('manualExpDate')||{}).value||'';
+  const amtRaw=((document.getElementById('manualExpAmt')||{}).value||'').replace(/[^0-9]/g,'');
+  const amt=parseInt(amtRaw,10);
+  const memo=((document.getElementById('manualExpMemo')||{}).value||'').trim();
+  if(!dateV){ toast('날짜를 선택해주세요','error'); return; }
+  if(isNaN(amt)||amt<=0){ toast('금액을 입력해주세요','error'); return; }
+  setLoad(true,'저장 중...');
+  const { error } = await sb.from('receipts').insert({
+    store_id: currentStore.id,
+    receipt_date: dateV,
+    total_price: amt,
+    category_id: _manualExpCat.id,
+    category: _manualExpCat.name,
+    item: memo || _manualExpCat.name,
+    vendor_id: null,
+    input_method: 'manual',
+    note: '정상',
+    is_deposit: false
+  });
+  setLoad(false);
+  if(error){ toast('저장 실패: '+error.message,'error'); return; }
+  closeSheet('manualExpSheet');
+  toast(_manualExpCat.name+' 기록됐어요','success');
+  if(typeof loadCatReceiptData==='function') loadCatReceiptData();
 }
 
 // 카테고리 화면에서 [📸 영수증 사진] 또는 [✏️ 수동 입력] 버튼 → 영수증 탭으로 이동
@@ -2104,7 +2160,8 @@ async function saveReceipt(){
       category:cat||null,category_id:category_id||null,
       input_method: rcpInputMethod || null,
       receipt_group_id: groupId,
-      note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상'
+      note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상',
+      created_by: (currentEmp&&currentEmp.id)||null // 등록자 기록 (2026-06-29)
     };
   });
   // 사전 가드: 정상 행에 분류번호(category_id) 없으면 저장 차단 (사장님 명시 2026-06-16: 분류 없거나 번호 안 잡히면 지출 저장 X)
@@ -2222,7 +2279,7 @@ async function loadReceiptList(){
   const lastDay=new Date(y,m,0).getDate();
   const start=rcpListMonth+'-01', end=rcpListMonth+'-'+String(lastDay).padStart(2,'0');
   const {data,error}=await sb.from('receipts')
-    .select('id,receipt_date,vendor,item,unit_price,qty,total_price,category,category_id,note,receipt_group_id,input_method,vendor_id,created_at,seq,spec,origin')
+    .select('id,receipt_date,vendor,item,unit_price,qty,total_price,category,category_id,note,receipt_group_id,input_method,vendor_id,created_at,seq,spec,origin,created_by,cancelled_by,cancelled_at')
     .eq('store_id',currentStore.id)
     .gte('receipt_date',start).lte('receipt_date',end)
     .order('receipt_date',{ascending:false})
@@ -2305,7 +2362,10 @@ function _normalizeExpenseRow(row, source){
     note:row.note||'정상',
     memo:'',
     seq:(row.seq!=null)?row.seq:null, // 품목 순서(분석 순서). 옛 영수증은 null
-    category:row.category||null // 품목별 분류 (2026-06-10 기록 표시용)
+    category:row.category||null, // 품목별 분류 (2026-06-10 기록 표시용)
+    _createdBy:row.created_by||null, // 등록자 id (2026-06-29)
+    _cancelledBy:row.cancelled_by||null, // 취소자 id
+    _cancelledAt:row.cancelled_at||null // 취소 시각 (값=취소됨)
   };
 }
 
@@ -2514,6 +2574,19 @@ function _rclFilterName(filter){
 
 // 거래처 그룹 카드 1장 (_groupExpenseRows 그룹 → 행형 카드)
 // 카드 헤더 클릭·액션은 기존 로직 유지: receipt=그룹 편집 / order=✏🗑 / mydata=✏
+// 직원 id → 이름 (현재 로그인·직원목록·없으면 '직원') — 등록자/취소자 표시용 (2026-06-29)
+function _empNameById(id){
+  if(!id) return '';
+  if(typeof currentEmp==='object' && currentEmp && currentEmp.id===id) return currentEmp.name||'나';
+  if(typeof employees!=='undefined' && Array.isArray(employees)){
+    const e=employees.find(x=>x&&x.id===id); if(e) return e.name||'직원';
+  }
+  return '직원';
+}
+// 취소 시각 → "6/29" 짧은 표기
+function _rcpShortDate(ts){
+  try{ const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()}`; }catch(_e){ return ''; }
+}
 function _rclStoreCardHtml(g){
   const isOrder=g.source==='order', isMydata=g.source==='mydata';
   let icon;
@@ -2521,7 +2594,9 @@ function _rclStoreCardHtml(g){
   else if(isOrder) icon='🏪';
   else icon=(g.inputMethod==='photo'?'📸':(g.inputMethod==='manual'?'✏️':'🧾'));
   const subBits=[`품목 ${g.rows.length}개`];
-  if(g.hasErr) subBits.push('일부 오답');
+  // 취소·반품·오답 건수 표시 (2026-06-29)
+  const _offN=g.rows.filter(r=>r.note!=='정상').length;
+  if(_offN) subBits.push(`<span style="color:var(--danger);font-weight:800;">취소 ${_offN}건</span>`);
   // 2026-06-20 아코디언: 헤더(summary)=펼치기/접기 전용. 편집·삭제는 펼친 영역 하단으로 이동 (헤더 클릭 충돌 방지)
   let cardActs='';
   if(isMydata){
@@ -2536,8 +2611,9 @@ function _rclStoreCardHtml(g){
     cardActs=`<div class="rcl-cardacts"><button type="button" class="btn btn-secondary" data-action="openReceiptGroupEdit|${editKey}">✏ 묶음 편집</button></div>`;
   }
   const itemsHtml=g.rows.map(r=>{
+    const isOff=r.note!=='정상'; // 취소·반품·오답 = 합계 제외 + 줄긋기
     const cls=['rcl-item'];
-    if(r.note!=='정상') cls.push('err');
+    if(isOff) cls.push('err');
     if(r._origin&&r._origin._suspect) cls.push('suspect');
     const clickAction=r._source==='order'
       ? `openEditOrderSheet|${r.id}`
@@ -2551,10 +2627,21 @@ function _rclStoreCardHtml(g){
     const _listQ=parseFloat(r.qty)||0;
     const _listU=(hasQty && _listQ>0 && r.amount) ? Math.round(r.amount/_listQ) : (r.unit||0);
     const calcTxt=_listU?(hasQty?`${fmt(_listU)} × ${esc(String(r.qty))}`:fmt(_listU)):'';
-    const badge=_expBadgeHtml(r.category);
+    // 취소·반품 행 = 빨간 사유 배지(글자로 사유 구분), 정상 = 분류 배지 (2026-06-29)
+    const badge=isOff?`<span class="badge-reason">${esc(r.note)}</span>`:_expBadgeHtml(r.category);
+    // 누가·언제 취소 + 되돌리기 (영수증만, 취소시각 있을 때만)
+    let cancelMeta='';
+    if(isOff && r._source==='receipt'){
+      const who=_empNameById(r._cancelledBy);
+      const when=r._cancelledAt?_rcpShortDate(r._cancelledAt):'';
+      const metaTxt=[who,when].filter(Boolean).join(' · ');
+      const undoBtn=isManager?`<button type="button" class="rcl-undo" data-action="undoCancelReceipt|${r.id}">↩ 되돌리기</button>`:'';
+      if(metaTxt||undoBtn) cancelMeta=`<div class="rcl-cancelmeta">${metaTxt?`<span>취소 ${esc(metaTxt)}</span>`:'<span></span>'}${undoBtn}</div>`;
+    }
     return `<div class="${cls.join(' ')}" data-action="${clickAction}">`
       +`<div class="r1"><span class="nm" title="${itemTitle}">${esc(itemRaw)}${memoFlag}</span>${badge?`<span class="bw">${badge}</span>`:''}</div>`
       +`<div class="r2"><span class="calc">${calcTxt}</span><span class="amt">${fmt(r.amount||0)}원</span></div>`
+      +cancelMeta
       +`</div>`;
   }).join('');
   // 거래처명 없는 영수증 = '직접 구매' (칩 필터 이름과 통일)
@@ -2644,6 +2731,12 @@ function openReceiptEdit(id){
   document.getElementById('reCatBtn').innerHTML=(r.category?'🏷️ '+getCatLabel(r.category,''):'미분류 ▸');
   const noteVal=(r.note==='정상')?'정상':'오답';
   document.querySelectorAll('input[name="reNote"]').forEach(i=>{i.checked=(i.value===noteVal);});
+  // 등록자 표시 (2026-06-29) — 누가 등록했는지
+  const _cbEl=document.getElementById('reCreatedBy');
+  if(_cbEl){
+    const who=_empNameById(r.created_by);
+    _cbEl.innerText = who ? `✏️ 등록: ${who}` : '';
+  }
   openSheet('receiptEditSheet');
 }
 // 거래처 FK = 바텀시트 선택 (2026-06-24 select→바텀시트). 값은 #reVendorVal(hidden), 표시는 #reVendorBtn.
@@ -2809,16 +2902,89 @@ async function saveReceiptEdit(){
   _refreshAfterExpenseChange();
 }
 
+// ─── 영수증 취소 (2026-06-29) — 삭제 대신 소프트 취소: 사유·취소자·시각 기록, 행 보존 ───
+const CANCEL_REASONS=[
+  {g:'취소', items:['중복 입력','잘못 입력','주문 착오','거래 취소']},
+  {g:'반품', items:['불량/하자','오배송','수량 반품']}
+];
+let _cancelReasonResolve=null;
+function pickCancelReason(){
+  return new Promise(res=>{
+    _cancelReasonResolve=res;
+    const box=document.getElementById('cancelReasonList');
+    if(box){
+      box.innerHTML=CANCEL_REASONS.map(grp=>
+        `<div class="crs-grp">${grp.g}</div>`
+        +grp.items.map(it=>`<button type="button" class="crs-btn" data-action="chooseCancelReason|${grp.g} · ${it}">${it}</button>`).join('')
+      ).join('')
+      +`<button type="button" class="crs-btn crs-etc" data-action="chooseCancelReason|기타">기타 (직접 입력)</button>`;
+    }
+    openSheet('cancelReasonSheet');
+  });
+}
+function chooseCancelReason(reason){
+  let val=reason;
+  if(reason==='기타'){
+    const t=prompt('취소 사유를 입력하세요 (예: 중복 결제)');
+    if(t==null||!t.trim()) return; // 입력 취소 = 시트 유지
+    val='기타 · '+t.trim();
+  }
+  closeSheet('cancelReasonSheet');
+  if(_cancelReasonResolve){ _cancelReasonResolve(val); _cancelReasonResolve=null; }
+}
+function closeCancelReason(){
+  closeSheet('cancelReasonSheet');
+  if(_cancelReasonResolve){ _cancelReasonResolve(null); _cancelReasonResolve=null; }
+}
+// 지난달 거래 취소 경고 (그 달 정산·지출 소급 변경)
+function _confirmPastMonthCancel(dateStr){
+  if(!dateStr) return true;
+  const now=new Date(), curYm=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const ym=String(dateStr).slice(0,7);
+  if(ym && ym<curYm){
+    const mo=parseInt(ym.slice(5,7),10);
+    return confirm(`이 거래는 ${mo}월 것입니다.\n취소하면 ${mo}월 정산·지출 숫자가 바뀝니다.\n\n계속할까요?`);
+  }
+  return true;
+}
+
 async function deleteReceiptRow(){
   if(!guardStore()||!rcpEditingId) return;
-  if(!confirm('이 영수증을 삭제할까요? 되돌릴 수 없어요.')) return;
-  setLoad(true,'삭제 중...');
-  const {error}=await sb.from('receipts').delete().eq('id',rcpEditingId).eq('store_id',currentStore.id);
+  if(!isManager){ toast('취소는 관리자만 할 수 있어요','warn'); return; }
+  if(!_confirmPastMonthCancel(document.getElementById('reDate')?.value||'')) return;
+  const reason=await pickCancelReason();
+  if(!reason) return; // 사유 안 고르면 중단
+  setLoad(true,'취소 처리 중...');
+  const {error}=await sb.from('receipts').update({
+    note:reason,
+    cancelled_by:(currentEmp&&currentEmp.id)||null,
+    cancelled_at:new Date().toISOString()
+  }).eq('id',rcpEditingId).eq('store_id',currentStore.id);
   setLoad(false);
-  if(error) return errToast('삭제', error);
-  toast('삭제됐어요','success');
+  if(error) return errToast('취소', error);
+  toast('취소 처리됐어요 (기록은 남아요)','success');
   closeSheet('receiptEditSheet');
   rcpEditingId=null;rcpEditingCategory='';
+  if(document.getElementById('catReceiptCont')?.classList.contains('active')){
+    await loadCatReceiptData();
+  } else {
+    await loadReceiptList();
+  }
+  _refreshAfterExpenseChange();
+}
+
+// 취소 되돌리기 (note='정상' 복구) — 관리자만
+async function undoCancelReceipt(id){
+  if(!guardStore()||!id) return;
+  if(!isManager){ toast('관리자만 할 수 있어요','warn'); return; }
+  if(!confirm('취소를 되돌릴까요? 다시 정상 거래로 합계에 들어갑니다.')) return;
+  setLoad(true,'되돌리는 중...');
+  const {error}=await sb.from('receipts').update({
+    note:'정상', cancelled_by:null, cancelled_at:null
+  }).eq('id',id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('되돌리기', error);
+  toast('되돌렸어요','success');
   if(document.getElementById('catReceiptCont')?.classList.contains('active')){
     await loadCatReceiptData();
   } else {
@@ -3018,7 +3184,8 @@ async function saveReceiptGroupEdit(){
       unit_price:r.unitPrice||null, qty:r.qty||null,
       total_price:r.amount, category:r.cat||null, category_id:r.catId||null,
       note:r.note, receipt_group_id:groupId,
-      spec:r.spec||null, origin:r.origin||null, seq:r._seq
+      spec:r.spec||null, origin:r.origin||null, seq:r._seq,
+      created_by:(currentEmp&&currentEmp.id)||null // 등록자 기록 (2026-06-29)
     }));
     const {error}=await sb.from('receipts').insert(payload);
     if(error){ setLoad(false); return errToast('저장(추가)', error); }
@@ -3052,34 +3219,29 @@ async function saveReceiptGroupEdit(){
 }
 async function deleteReceiptGroup(editKey){
   if(!guardStore()) return;
+  if(!isManager){ toast('취소는 관리자만 할 수 있어요','warn'); return; }
   const k=_parseEditKey(editKey); if(!k) return;
   let records=[];
   if(k.type==='grp') records=rcpRecords.filter(r=>r.receipt_group_id===k.id);
   else if(k.type==='rec') records=rcpRecords.filter(r=>String(r.id)===String(k.id));
   if(!records.length) return;
   const n=records.length;
-  if(!confirm(`이 영수증의 ${n}개 행 전부 삭제할까요? 되돌릴 수 없어요.`)) return;
-  // 삭제될 영수증 item 목록 추출 (B안: 고아 학습 노트 정리용)
-  const deletedItems = records.map(r=>r.item).filter(Boolean);
-  setLoad(true,'삭제 중...');
+  // 지난달 경고 (그룹의 날짜 기준)
+  if(!_confirmPastMonthCancel(records[0]?.receipt_date||'')) return;
+  const reason=await pickCancelReason();
+  if(!reason) return; // 사유 안 고르면 중단
+  setLoad(true,'취소 처리 중...');
+  const patch={ note:reason, cancelled_by:(currentEmp&&currentEmp.id)||null, cancelled_at:new Date().toISOString() };
   let error=null;
   if(k.type==='grp'){
-    ({error}=await sb.from('receipts').delete().eq('receipt_group_id',k.id).eq('store_id',currentStore.id));
+    ({error}=await sb.from('receipts').update(patch).eq('receipt_group_id',k.id).eq('store_id',currentStore.id));
   } else {
-    ({error}=await sb.from('receipts').delete().eq('id',k.id).eq('store_id',currentStore.id));
-  }
-  if(error){ setLoad(false); return errToast('삭제', error); }
-  // B안: 영수증 삭제 후 고아 학습 노트 자동 정리 (관리자 대시보드 명세 — dev_lessons #96 연계)
-  let cleanupResult = { cleaned: 0, kept: 0, cleanedKeywords: [] };
-  if(typeof cleanupOrphanRulesByItems === 'function' && deletedItems.length){
-    try { cleanupResult = await cleanupOrphanRulesByItems(deletedItems); } catch(e){ console.warn('[B안 cleanup]', e); }
+    ({error}=await sb.from('receipts').update(patch).eq('id',k.id).eq('store_id',currentStore.id));
   }
   setLoad(false);
-  let msg = `${n}개 행 삭제됐어요`;
-  if(cleanupResult.cleaned > 0){
-    msg += `\n+ 학습 노트 ${cleanupResult.cleaned}개도 같이 정리됨 (${cleanupResult.cleanedKeywords.slice(0,3).join(', ')}${cleanupResult.cleanedKeywords.length>3?' 외':''})`;
-  }
-  toast(msg,'success');
+  if(error) return errToast('취소', error);
+  // 소프트 취소라 행이 남음 → 학습 노트는 건드리지 않음 (옛 하드삭제 시절 고아 정리 로직 제거)
+  toast(`${n}개 행 취소 처리됐어요 (기록은 남아요)`,'success');
   if(document.getElementById('catReceiptCont')?.classList.contains('active')){
     await loadCatReceiptData();
   } else {

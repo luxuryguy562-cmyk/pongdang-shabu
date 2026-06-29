@@ -137,13 +137,59 @@ franchises (프랜차이즈/브랜드)
 | updated_at | |
 - ⚠️ 원본이 아직 `employees`에도 있음. **2단계에서 employees 7컬럼 제거 = 진짜 차단**.
 
-### emp_sessions (2026-06-09 신설 — 자동로그인 증표)
+### emp_sessions (2026-06-09 신설 — 자동로그인 증표 / 2026-06-26 개인 모드 지원)
 | 컬럼 | 용도 |
 |------|------|
 | token (text PK) | 세션 토큰 |
-| employee_id (FK→employees CASCADE), store_id | |
+| employee_id (FK→employees CASCADE, **nullable** 2026-06-26) | 매장 직원 세션. 개인 모드면 NULL |
+| store_id (**nullable** 2026-06-26) | 매장 세션. 개인 모드면 NULL |
+| person_id (uuid, FK→persons CASCADE, 2026-06-26 추가) | 개인 모드 세션 = person 기준. 매장 직원 세션은 NULL일 수도 |
 | created_at, last_used_at, expires_at (90일) | |
 - RLS 차단(service_role만). `emp-session` Edge Function이 검증.
+- **개인 모드 세션** = `person_id` 채움 + `employee_id`/`store_id` NULL (매장 연결 전 단독 사용).
+
+### personal_attendance_logs (2026-06-26 신설 — 개인 근태 기록, 매장 연결 전)
+직원이 사장 연결 없이 혼자 찍는 "나의 근무 일지". 매장 도장(store_id) 없음 = person 기준.
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | |
+| person_id (uuid, FK→persons CASCADE) | 누구 기록 (식별자) |
+| work_date (date) | 근무일 |
+| app_in, app_out (timestamptz) | 출/퇴근 |
+| rest_min (int, default 0) | 휴게(분) |
+| total_work_min (int) | 총 근무(분, 급여 계산은 안 함 — 시급 없음) |
+| note (text) | 메모 |
+| merged_store_id (uuid, nullable) | 매장 편입되면 어느 매장으로 갔는지 |
+| merged_attendance_id (uuid, nullable) | 편입된 attendance_logs 행 id |
+| merged_at (timestamptz, nullable) | 편입 시각 (NULL=아직 개인 기록) |
+| created_at, updated_at | |
+| UNIQUE(person_id, work_date) | 하루 1행 |
+- RLS ENABLE, **정책 0개**(service_role만). `personal-attendance` Edge Function 경유.
+
+### attendance_modification_requests (2026-06-26 신설 — 근무시간 수정 직원 승인)
+사장이 **이미 근무한** 출퇴근 시간을 수정하면 즉시 반영 X → 직원 승인 후 반영. (시간 줄이기 = 직원 급여 타격 방어)
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | |
+| attendance_log_id (uuid, FK→attendance_logs CASCADE) | 수정 대상 출근부 행 |
+| store_id, employee_id | 매장/직원 |
+| requested_by (uuid, nullable) | 수정 요청한 사장 |
+| orig_app_in/out, orig_rest_min, orig_total_work_min, orig_calculated_wage | 변경 전(직원이 비교) |
+| new_app_in/out, new_rest_min, new_total_work_min, new_calculated_wage | 변경 후(사장 요청값) |
+| status (text, default 'pending') | pending / approved / rejected |
+| reason (text) | 사장이 적은 수정 사유 |
+| decided_at (timestamptz) | 직원 결정 시각 |
+| created_at | |
+- RLS ENABLE. 승인 시 new_* 값을 attendance_logs에 반영(Edge Function 또는 앱 경유).
+
+### persons (2026-06-26 PIN 무차별 대입 방어 컬럼 추가)
+> 위 persons 표에 아래 3컬럼 추가 (전화+PIN 로그인 brute force 방어, 점진적 잠금).
+| 컬럼 | 용도 |
+|------|------|
+| pin_fail_count (int, default 0) | 연속 PIN 실패 횟수 (5회 도달 시 잠금 발동) |
+| pin_lock_stage (int, default 0) | 잠금 단계 (0=없음, 1=1분, 2=5분, 3+=10분) |
+| pin_lock_until (timestamptz, nullable) | 잠금 해제 시각. now()보다 미래면 로그인 거부 |
+- 로직: 5회 연속 틀림 → stage++ → 단계별(1분/5분/10분) 잠금 + fail_count 리셋. 성공 시 전부 0 리셋. (`emp-login`)
 
 ### employees_backup_20260609
 2026-06-09 보안작업 직전 `employees` 전체 스냅샷 (롤백용).
@@ -358,7 +404,10 @@ RLS: enabled, policy `scr_all` USING(true) WITH CHECK(store_id IS NOT NULL) — 
 | **is_deposit** (boolean, 2026-06-09) | 보증금 행 여부. true=보증금 입금/회수 행(매입비 집계 제외), false=일반 품목. 주류 영수증 용기보증금 분리용. 기본값 false. 마이그레이션 `add_is_deposit_to_receipts` |
 | **spec** (text, 2026-06-08) | 규격·포장 규격 (예 "F0용 슬라이스 1kg", "500g"). AI가 i에서 분리 추출. 직구·옛 영수증 NULL. 마이그레이션 `add_receipts_spec_origin_20260608`. **2026-06-21 규격 표준형 통일**: 단위 소문자(kg·g·ml·l), 포장 꼬리표 "/EA"·"/PAC"·"/BOX" 제거 (1KG/PAC→1kg). 기존 DB 단순 패턴 101건 일괄 정규화 + 프롬프트 [규격 표준형] 규칙 박음 |
 | **origin** (text, 2026-06-08) | 원산지 (예 "외국산", "국내산", "돈육:국내산"). AI가 분리 추출. **2026-06-21 정책 변경**: 옛 규칙(쉼표로 품명에 섞인 산지는 item에 그대로 두고 origin=NULL)을 폐기 → 영수증 어디든 산지가 보이면 origin으로 분리(품명에서 제거). 원재료 여럿이면 쉼표로 origin에 다 담음. 과거 데이터는 백필 안 함(앞으로 분석분만). 직구·옛 영수증 NULL |
-| note | 정상/오답/반품 등 |
+| note | 정상/오답/반품/취소 사유 등. **`note != '정상'` = 합계 전면 제외 + 줄긋기** (모든 집계가 `eq('note','정상')`로 거름). 취소·반품 시 사유 문자열 저장 (예: '취소·중복입력', '반품·불량'). 2026-06-29 취소 기능이 이 칸 재활용 |
+| **created_by** (uuid, nullable, 2026-06-29) | 영수증 등록한 직원(employees.id). 저장 시 currentEmp.id 박음. 옛 영수증 NULL. 마이그레이션 `add_receipts_audit_cancel_columns_20260629` |
+| **cancelled_by** (uuid, nullable, 2026-06-29) | 취소·반품 처리한 직원(employees.id). 관리자만 취소 가능 |
+| **cancelled_at** (timestamptz, nullable, 2026-06-29) | 취소·반품 시각. NULL=정상, 값=취소됨. 되돌리기 시 NULL로 복구. 롤백 `ALTER TABLE receipts DROP COLUMN created_by, DROP COLUMN cancelled_by, DROP COLUMN cancelled_at;` |
 | **seq** (int, 2026-06-09) | 영수증 내 품목 순서(분석 순서, 0부터). 한 영수증의 created_at은 모두 동일 + id는 uuid라 순서 정보가 없어 기록 표시 시 품목이 매번 섞이던 버그 해결. 저장 시 행 인덱스 박음. 옛 영수증 NULL(원래 순서 유지). 마이그레이션 `ALTER TABLE receipts ADD COLUMN seq INT;` 롤백 `ALTER TABLE receipts DROP COLUMN seq;` |
 | created_at | 등록일시 |
 
