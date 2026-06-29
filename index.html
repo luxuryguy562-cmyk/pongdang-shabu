@@ -162,6 +162,15 @@
   </defs>
 </svg>
 
+<!-- 부팅 가림막 (로고) — 로그인 복원·화면 전환 중 앞사람 화면 비침 방지 (2026-06-29) -->
+<div id="bootSplash" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:7000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div class="logo-row" style="justify-content:center;gap:12px;">
+    <span class="logo-mark" style="width:56px;height:56px;font-size:28px;border-radius:14px;">₩</span>
+    <span style="font-size:32px;font-weight:900;color:var(--text);letter-spacing:-1.2px;">캐쉬플로우</span>
+  </div>
+  <div class="spinner"></div>
+</div>
+
 <!-- 로그인 화면 (2026-06-26 표준 재설계: 전화번호 단계 → PIN 단계 분리) -->
 <div id="loginOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
   <!-- 브랜드 -->
@@ -3662,7 +3671,7 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260627a"></script>
+<script src="assets/common.js?v=20260629a"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
   <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>
@@ -3674,7 +3683,7 @@
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260626a"></script>
 <script src="assets/tabs/dashboard.js?v=20260626c"></script>
-<script src="assets/tabs/sidemenu.js?v=20260627a"></script>
+<script src="assets/tabs/sidemenu.js?v=20260629a"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 
 <!-- 중간 매출 기록 시트 (2026-06-26) -->

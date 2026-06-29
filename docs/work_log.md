@@ -4,6 +4,25 @@
 
 ---
 
+## [2026-06-29] 로그인 속도 개선 + 부팅 가림막 (앞사람 화면 비침 제거)
+
+브랜치: `claude/admiring-fermat-4jw3gt`. 사장님 호소: "로그인 또 느려졌고, 블라드 로그아웃→이송은 로그인 시 블라드 근태 화면이 비쳤다가 홈으로 들어감."
+
+### 원인 (코드 확인)
+- `_routeManagerHome`이 매장 개수만 알려고 무거운 `my-stores`(매장 전체 한 달 순익 18쿼리 계산)를 매번 호출 + 끝날 때까지 화면 안 띄움 → 매장 1개 사장님도 매번 대기 (느림).
+- `completeLogin`이 화면 정하기 전에 앱을 먼저 노출 → 라우팅(async) 끝나기 전까지 앞사람/기본 화면이 로딩(92% 불투명) 뒤로 비침.
+
+### 해결
+1. **부팅 가림막** `#bootSplash`(로고+스피너, z7000, index.html) — 기본 표시. `showBootSplash`/`hideBootSplash`(common.js). `completeLogin` 시작 시 띄우고 라우팅 끝난 뒤(`_routeManagerHome().finally`) 걷음. `showLoginScreen`/개인모드/직원/franchise 각각 걷음.
+2. **라우팅 속도** — `_routeManagerHome`: 매장 개수를 `localStorage pd_multi_store` 캐시로 즉시 판단 → 화면 바로. 무거운 my-stores는 `_refreshMultiStoreFlag`로 백그라운드 갱신. 기억 없는 첫 로그인만 1회 정확 확인. `loadMyStores`·`doLogout`도 캐시 동기화/비움.
+3. 기본 active 컨테이너 receiptCont→dashboardCont (재시작 시 기본 화면 홈, 앞서 적용).
+
+### 영향
+- 들어가는 화면·권한·매장 격리 전부 그대로. 보여주는 순서·타이밍만 정리.
+- 파일: index.html, assets/common.js, assets/tabs/sidemenu.js.
+
+---
+
 ## [2026-06-26] 🚧 직원 단독 사용 + 매장 연결 전후 전체 설계 구현 (진행 중)
 
 브랜치: `claude/gifted-thompson-3q3fp6`. 목업 login_final_v2(17화면) 기반 실제 구현 착수.
