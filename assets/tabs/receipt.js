@@ -2189,6 +2189,22 @@ async function saveReceipt(){
   const {error}=await sb.from('receipts').insert(cleaned);
   setLoad(false);
   if(error) return errToast('저장', error);
+  // ─── 새 기능: 지출 등록 푸시 알림 (2026-06-29) ───
+  // 신규 영수증 저장 성공 시 폰으로 거래처·금액·분류 요약. 보증금/오답 행 제외.
+  try{
+    const _nr = cleaned.filter(r=>r.note==='정상' && !r.is_deposit);
+    const _expTotal = _nr.reduce((s,r)=>s+(r.total_price||0),0);
+    if(_expTotal>0){
+      const _vn = (_nr.find(r=>r.vendor)||{}).vendor || '거래처';
+      const _cs = [...new Set(_nr.map(r=>r.category).filter(Boolean))];
+      const _cl = _cs.length ? (_cs.length===1 ? _cs[0] : `${_cs[0]} 외 ${_cs.length-1}`) : '';
+      const _big = _expTotal>=100000;
+      sb.functions.invoke('send-push', { body:{ payload:{
+        title: _big ? '큰 지출 등록 ⚠️' : '지출 등록 🧾',
+        body: `${_vn} ${fmt(_expTotal)}원${_cl?` · ${_cl}`:''}`, url:'/'
+      } } }).catch(e=>console.warn('[push] 지출 알림 실패', e));
+    }
+  }catch(_){}
   // 영수증 품목 자동 학습 폐기 (2026-06-04) — 짧은 키워드 오염 방지. 분류·품목명은 AI가 직접 판단.
   const successMsg='저장됐어요';
   // 진입 컨텍스트 따라 흐름 분기 — 새로고침 없이 in-page로 그 화면 복귀 (2026-06-08 홈 깜빡임 제거)
@@ -2650,7 +2666,15 @@ function _rclStoreCardHtml(g){
       +`</div>`;
   }).join('');
   // 거래처명 없는 영수증 = '직접 구매' (칩 필터 이름과 통일)
-  const cardName=g.vendor||((!isOrder&&!isMydata)?'직접 구매':'(거래처 없음)');
+  //   단, 세금·마케팅 간단 입력(data_source='manual' 카테고리 — 거래처 없는 지출)은 '직접 구매' 대신 분류명으로 (2026-06-29)
+  //   마트 직접구매(식자재 등 receipts 소스)는 그대로 '직접 구매' 유지 — data_source 조회로 구분
+  const _firstR = g.rows && g.rows[0];
+  const _manualCatObj = (_firstR && _firstR.category && !_firstR.vendor_id && _firstR.input_method==='manual')
+    ? (expCategories||[]).find(c=>c.name===_firstR.category && !c.parent_id && (c.category_type||'expense')==='expense' && c.data_source==='manual')
+    : null;
+  const _isManualCat = !isOrder && !isMydata && !!_manualCatObj;
+  // 묶음 제목 = 세목/항목(품목 item). 예: '건강보험'. 비었으면 분류명 폴백 (2026-06-29 사장님)
+  const cardName = g.vendor || (_isManualCat ? (_firstR.item || _firstR.category) : ((!isOrder&&!isMydata)?'직접 구매':'(거래처 없음)'));
   // 헤더(summary) 탭 = 펼치기/접기. 품목·편집은 펼쳐야 보임 (사장님 호소 2026-06-20: "묶음이 뭔지 모르겠음")
   return `<details class="rcl-store"><summary class="rcl-storehd">`
     +`<div class="ic">${icon}</div>`

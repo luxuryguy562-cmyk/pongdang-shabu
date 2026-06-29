@@ -21,13 +21,19 @@ function pushSupported(){
 }
 
 // 현재 구독 상태: 'unsupported' | 'denied' | 'on' | 'off'
+// 'on' = 이 기기로 "현재 매장"이 구독돼 있음 (한 폰 여러 매장 — 매장별 판정)
 async function getPushStatus(){
   if(!pushSupported()) return 'unsupported';
   if(Notification.permission === 'denied') return 'denied';
   try{
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
-    return sub ? 'on' : 'off';
+    if(!sub) return 'off';
+    if(typeof currentStore === 'undefined' || !currentStore) return 'off';
+    // 이 기기(endpoint)로 현재 매장이 구독됐는지 DB 확인
+    const { data } = await sb.from('push_subscriptions').select('id')
+      .eq('endpoint', sub.endpoint).eq('store_id', currentStore.id).eq('enabled', true).maybeSingle();
+    return data ? 'on' : 'off';
   }catch(_){ return 'off'; }
 }
 
@@ -63,7 +69,7 @@ async function enablePushNotifications(){
       user_agent: (navigator.userAgent || '').slice(0, 250),
       enabled: true,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'endpoint' });
+    }, { onConflict: 'endpoint,store_id' });
     if(error){ console.error('[push] 저장 실패', error); alert('알림 등록에 실패했습니다.'); return false; }
     return true;
   }catch(e){
@@ -73,14 +79,21 @@ async function enablePushNotifications(){
   }
 }
 
-// 알림 끄기 (성공 시 true)
+// 알림 끄기 (현재 매장만 — 한 폰 여러 매장)
 async function disablePushNotifications(){
   try{
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
-    if(sub){
-      try{ await sb.from('push_subscriptions').update({ enabled:false, updated_at:new Date().toISOString() }).eq('endpoint', sub.endpoint); }catch(_){}
-      try{ await sub.unsubscribe(); }catch(_){}
+    if(sub && typeof currentStore !== 'undefined' && currentStore){
+      // 1) 현재 매장 구독만 끔 (다른 매장 구독은 유지)
+      try{ await sb.from('push_subscriptions').update({ enabled:false, updated_at:new Date().toISOString() })
+        .eq('endpoint', sub.endpoint).eq('store_id', currentStore.id); }catch(_){}
+      // 2) 이 기기에 살아있는 다른 매장 구독이 없을 때만 브라우저 구독 자체 해제
+      try{
+        const { data:others } = await sb.from('push_subscriptions').select('id')
+          .eq('endpoint', sub.endpoint).eq('enabled', true).limit(1);
+        if(!others || !others.length){ await sub.unsubscribe(); }
+      }catch(_){}
     }
     return true;
   }catch(e){ console.error('[push] 끄기 오류', e); return false; }

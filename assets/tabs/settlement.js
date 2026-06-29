@@ -675,6 +675,13 @@ async function saveOpening(){
   setLoad(false);
   if(error) return errToast('영업개시 저장', error);
   toast(isEdit?'영업개시 수정 완료':'영업개시 보고 완료','success');
+  // ─── 새 기능: 영업 개시 푸시 알림 (2026-06-29) — 오늘 개시만 (과거 수정 제외) ───
+  if(!isEdit){
+    try{
+      const _openBody = `개시 금고 ${fmt(actual)}원${diff!==0?` (전일 마감 대비 ${diff>0?'+':''}${fmt(diff)}원 ⚠️ 확인)`:''}`;
+      sb.functions.invoke('send-push', { body:{ payload:{ title:'영업 개시 🟢', body:_openBody, url:'/' } } }).catch(e=>console.warn('[push] 개시 알림 실패', e));
+    }catch(_){}
+  }
   // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
   if(typeof nav==='function') nav('busHub');
 }
@@ -918,6 +925,21 @@ async function finishSettlement2(){
       title:`${_dateLabel} 마감 완료 ${diff===0?'✅':'⚠️'}`,
       body:_pushBody, url:'/'
     } } }).catch(e=>console.warn('[push] 마감 알림 발송 실패', e));
+  }catch(_){}
+  // ─── 새 기능: 마감 직후 퇴근 미기록 직원 알림 (2026-06-29) ───
+  // 그날 출근(app_in/caps_in)했는데 퇴근(app_out/caps_out) 둘 다 없는 직원 → 별도 알림.
+  try{
+    const { data:_att } = await sb.from('attendance_logs')
+      .select('app_in,caps_in,app_out,caps_out,employees(name)')
+      .eq('store_id',currentStore.id).eq('work_date',settleDate);
+    const _noOut = (_att||[]).filter(a=>(a.app_in||a.caps_in)&&!a.app_out&&!a.caps_out);
+    if(_noOut.length){
+      const _names = _noOut.map(a=>(a.employees&&a.employees.name)||'직원').join('·');
+      sb.functions.invoke('send-push', { body:{ payload:{
+        title:`퇴근 미기록 ⏰ ${_noOut.length}명`,
+        body:`${_names} — 퇴근 기록이 없어요. 퇴근 시간을 입력해 주세요.`, url:'/'
+      } } }).catch(e=>console.warn('[push] 퇴근미기록 알림 실패', e));
+    }
   }catch(_){}
   // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
   resetSettleView();
