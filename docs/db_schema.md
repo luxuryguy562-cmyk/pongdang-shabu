@@ -888,8 +888,10 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 | push-night-1 | `0 13 * * *` | 22:00 | 오늘 마감 미완료 |
 | push-night-2 | `30 14 * * *` | 23:30 | 마감 미완료 2차 |
 | push-morning | `0 0 * * *` | 09:00 | 어제 마감 빠짐 + 어제 퇴근 미기록 |
+| push-after-close | `*/10 * * * *` | 매 10분 | 마감 후 ~20분 지났는데 퇴근 미기록 (1회, settlements.noout_notified로 중복방지) |
 - extension: `pg_cron`, `pg_net`. 인증: app_secrets.cron_secret (헤더 x-cron-secret).
-- 롤백: `SELECT cron.unschedule('push-night-1'); SELECT cron.unschedule('push-night-2'); SELECT cron.unschedule('push-morning');`
+- 롤백: `SELECT cron.unschedule('push-night-1'); SELECT cron.unschedule('push-night-2'); SELECT cron.unschedule('push-morning'); SELECT cron.unschedule('push-after-close');`
+- `settlements.noout_notified` (bool, 2026-06-29): 마감 후 퇴근 미기록 알림 1회 발송 여부. 퇴근 알림은 마감 직후 X → 마감 후 ~20분(after-close cron).
 
 ---
 
