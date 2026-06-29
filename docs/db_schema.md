@@ -836,14 +836,14 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 
 ## push_subscriptions (푸시 알림 구독 — 2026-06-29 신설)
 
-> 누가·어느 기기로 알림 받을지 저장. 사장님이 설정 화면 "🔔 알림 켜기" 누르면 한 행 생성(기기당 1행).
+> 누가·어느 기기로 알림 받을지 저장. **한 기기(endpoint)가 여러 매장 구독 가능** (매니저 여러 매장 관리 — 2026-06-29 UNIQUE(endpoint)→UNIQUE(endpoint,store_id) 변경).
 
 | 컬럼 | 설명 |
 |---|---|
 | id (uuid PK) | |
 | store_id (uuid, FK→stores CASCADE) | 매장 격리 |
 | employee_id (uuid, FK→employees SET NULL) | 누구 기기인지 (선택) |
-| endpoint (text, UNIQUE) | 브라우저 푸시 구독 주소 (기기 고유) |
+| endpoint (text) | 브라우저 푸시 구독 주소 (기기 고유). **UNIQUE(endpoint, store_id)** = 기기당 매장별 1행 |
 | p256dh (text) | 메시지 암호화 공개키 |
 | auth (text) | 메시지 인증 비밀값 |
 | user_agent (text) | 기기/브라우저 (관리용) |
