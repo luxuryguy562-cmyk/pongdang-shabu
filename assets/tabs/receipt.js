@@ -858,20 +858,24 @@ function openManualReceiptShortcut(){
 let _manualExpCat = null; // {id, name} — loadCatReceiptData가 채움
 function openManualExpSheet(){
   if(!_manualExpCat){ toast('카테고리를 찾을 수 없어요','error'); return; }
-  const t=document.getElementById('manualExpTitle'); if(t) t.textContent=_manualExpCat.name+' 입력';
+  const nm=_manualExpCat.name;
+  const t=document.getElementById('manualExpTitle'); if(t) t.textContent=nm+' 입력';
+  // 세목/항목 라벨·예시 — 세금은 '세목'(건강보험 등), 그 외는 '항목'
+  const lb=document.getElementById('manualExpItemLabel'); if(lb) lb.textContent = (nm==='세금') ? '세목' : '항목';
+  const it=document.getElementById('manualExpItem');
+  if(it){ it.value=''; it.placeholder = (nm==='세금') ? '예: 건강보험, 고용보험, 부가세' : '예: 광고비, 행사비, 홍보물'; }
   const d=document.getElementById('manualExpDate');
   if(d){ const n=new Date(); d.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
   const a=document.getElementById('manualExpAmt'); if(a) a.value='';
-  const m=document.getElementById('manualExpMemo'); if(m) m.value='';
   openSheet('manualExpSheet');
 }
 async function saveManualExp(){
   if(!currentStore){ toast('매장을 먼저 선택해주세요','error'); return; }
   if(!_manualExpCat){ toast('카테고리를 찾을 수 없어요','error'); return; }
   const dateV=(document.getElementById('manualExpDate')||{}).value||'';
+  const itemV=((document.getElementById('manualExpItem')||{}).value||'').trim();
   const amtRaw=((document.getElementById('manualExpAmt')||{}).value||'').replace(/[^0-9]/g,'');
   const amt=parseInt(amtRaw,10);
-  const memo=((document.getElementById('manualExpMemo')||{}).value||'').trim();
   if(!dateV){ toast('날짜를 선택해주세요','error'); return; }
   if(isNaN(amt)||amt<=0){ toast('금액을 입력해주세요','error'); return; }
   setLoad(true,'저장 중...');
@@ -881,7 +885,7 @@ async function saveManualExp(){
     total_price: amt,
     category_id: _manualExpCat.id,
     category: _manualExpCat.name,
-    item: memo || _manualExpCat.name,
+    item: itemV || _manualExpCat.name, // 세목/항목 = 품목(item) 자리에 저장
     vendor_id: null,
     input_method: 'manual',
     note: '정상',
@@ -1842,7 +1846,7 @@ function buildReceiptRow(i={}) {
       <div class="ric-l1">
         <input type="text" class="c-i" value="${esc(i.item||'')}" placeholder="보증금" style="flex:1">
         <input type="text" class="c-p" inputmode="numeric" value="${depAmt}" data-input="onReceiptAmountInput|this" style="width:90px">
-        <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
+        <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="인식 오류/제외">×</button>
       </div>
       <input type="hidden" class="c-d" value="${i.date||ymdLocal(new Date())}">
       <input type="hidden" class="c-v" value="${esc(i.vendor||'')}">
@@ -1909,7 +1913,7 @@ function buildReceiptRow(i={}) {
       <input type="hidden" class="c-t" value="${_tax||0}">
     </div>`;
   return `<div class="rcp-item-card${suspectCls}${nameSuspectCls}" id="row-${idx}" data-cat="${cat}" data-cat-id="${catId}" data-orig-item="${origItem}" data-manual="${i._manual?'1':''}">
-    <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="오답/삭제">×</button>
+    <button class="ric-x x-btn" data-action="openReasonSheet|${idx}" title="인식 오류/제외">×</button>
     <div class="ric-l1">
       ${nameSuspectMark}
       <div class="ric-name-inner">
@@ -2160,7 +2164,7 @@ async function saveReceipt(){
       category:cat||null,category_id:category_id||null,
       input_method: rcpInputMethod || null,
       receipt_group_id: groupId,
-      note:tr.classList.contains('row-off')?(tr.dataset.reason||'오답'):'정상',
+      note:tr.classList.contains('row-off')?(tr.dataset.reason||'인식 오류'):'정상',
       created_by: (currentEmp&&currentEmp.id)||null // 등록자 기록 (2026-06-29)
     };
   });
@@ -2262,6 +2266,7 @@ let rcpListMonth=(new Date()).toISOString().slice(0,7); // YYYY-MM
 let rcpRecords=[];                                      // 현재 월 영수증 배열
 let rcpEditingId=null;                                  // 편집 중 id
 let rcpEditingCategory='';                              // 편집 중 카테고리 (대분류>소분류)
+let rcpEditingCancel=null;                              // 편집 중 행이 취소건이면 {note} 보존 (편집해도 취소 사유 안 날아가게 — 2026-06-29)
 
 function rcpTab(tab,el){
   document.querySelectorAll('#receiptCont .sub-tab').forEach(t=>t.classList.remove('active'));
@@ -2745,13 +2750,20 @@ function openReceiptEdit(id){
   // 단가×수량이 합계와 맞으면 자동계산 허용(수량 수정 편의), 안 맞으면(OCR 오독·할인) 합계 보호 → 단가만 고침
   _reEditAmountManual = _t>0 && !(_u>0 && _q>0 && Math.round(_u*_q)===_t);
   document.getElementById('reCatBtn').innerHTML=(r.category?'🏷️ '+getCatLabel(r.category,''):'미분류 ▸');
-  const noteVal=(r.note==='정상')?'정상':'오답';
+  // 취소건이면 사유 보존 (편집·저장해도 취소 상태·사유 유지 — 2026-06-29)
+  rcpEditingCancel = r.cancelled_at ? {note:r.note} : null;
+  const noteVal=(r.note==='정상')?'정상':'인식 오류';
   document.querySelectorAll('input[name="reNote"]').forEach(i=>{i.checked=(i.value===noteVal);});
-  // 등록자 표시 (2026-06-29) — 누가 등록했는지
+  // 등록자 + 취소 안내 (2026-06-29)
   const _cbEl=document.getElementById('reCreatedBy');
   if(_cbEl){
     const who=_empNameById(r.created_by);
-    _cbEl.innerText = who ? `✏️ 등록: ${who}` : '';
+    let txt = who ? `✏️ 등록: ${who}` : '';
+    if(rcpEditingCancel){
+      const cwho=_empNameById(r.cancelled_by);
+      txt += (txt?'   ·   ':'') + `🚫 취소됨${cwho?' ('+cwho+')':''} — 되돌리려면 목록의 '되돌리기'`;
+    }
+    _cbEl.innerText = txt;
   }
   openSheet('receiptEditSheet');
 }
@@ -2867,7 +2879,8 @@ async function saveReceiptEdit(){
   const qtyRaw=(document.getElementById('reQty').value||'').replace(/[^0-9.]/g,'');
   const qty=qtyRaw?parseFloat(qtyRaw):null;
   const amount=unFmt(document.getElementById('reAmount').value)||0;
-  const note=document.querySelector('input[name="reNote"]:checked')?.value||'정상';
+  // 취소건이면 라디오 무시하고 취소 사유 보존 (cancelled_at/by는 update 대상이 아니라 DB에 그대로 남음) — 2026-06-29
+  const note=rcpEditingCancel ? rcpEditingCancel.note : (document.querySelector('input[name="reNote"]:checked')?.value||'정상');
   const cat=rcpEditingCategory||'';
   if(!date) return toast('날짜를 입력하세요','warn');
   if(!amount&&note==='정상') return toast('금액을 입력하세요','warn');
@@ -2908,7 +2921,7 @@ async function saveReceiptEdit(){
 
   toast('저장됐어요','success');
   closeSheet('receiptEditSheet');
-  rcpEditingId=null;rcpEditingCategory='';
+  rcpEditingId=null;rcpEditingCategory='';rcpEditingCancel=null;
   // 활성 컨테이너 기준 새로고침 (catReceiptCont 또는 기본 영수증 기록 내역)
   if(document.getElementById('catReceiptCont')?.classList.contains('active')){
     await loadCatReceiptData();
@@ -2980,7 +2993,27 @@ async function deleteReceiptRow(){
   if(error) return errToast('취소', error);
   toast('취소 처리됐어요 (기록은 남아요)','success');
   closeSheet('receiptEditSheet');
-  rcpEditingId=null;rcpEditingCategory='';
+  rcpEditingId=null;rcpEditingCategory='';rcpEditingCancel=null;
+  if(document.getElementById('catReceiptCont')?.classList.contains('active')){
+    await loadCatReceiptData();
+  } else {
+    await loadReceiptList();
+  }
+  _refreshAfterExpenseChange();
+}
+
+// 취소 되돌리기 (note='정상' 복구) — 관리자만
+async function undoCancelReceipt(id){
+  if(!guardStore()||!id) return;
+  if(!isManager){ toast('관리자만 할 수 있어요','warn'); return; }
+  if(!confirm('취소를 되돌릴까요? 다시 정상 거래로 합계에 들어갑니다.')) return;
+  setLoad(true,'되돌리는 중...');
+  const {error}=await sb.from('receipts').update({
+    note:'정상', cancelled_by:null, cancelled_at:null
+  }).eq('id',id).eq('store_id',currentStore.id);
+  setLoad(false);
+  if(error) return errToast('되돌리기', error);
+  toast('되돌렸어요','success');
   if(document.getElementById('catReceiptCont')?.classList.contains('active')){
     await loadCatReceiptData();
   } else {
@@ -3073,7 +3106,7 @@ function renderRgeTable(){
     const _rgeU=(_rgeQ>0 && row.amount) ? Math.round(row.amount/_rgeQ) : (parseInt(row.unitPrice)||0);
     html+=`<div class="rcp-item-card${offCls}" id="rge-row-${idx}">
       <div class="ric-l1">
-        <button type="button" class="ric-x x-btn" style="${off?'background:#E5E8EB;color:#8B95A1;':'background:#FFE5E5;color:#DC2626;'}" data-action="toggleRgeRowOff|${idx}" title="오답/정상 토글">×</button>
+        <button type="button" class="ric-x x-btn" style="${off?'background:#E5E8EB;color:#8B95A1;':'background:#FFE5E5;color:#DC2626;'}" data-action="toggleRgeRowOff|${idx}" title="인식 오류/정상 토글">×</button>
         <input type="text" class="c-i" value="${esc(row.item)}" placeholder="품목" data-input="setRgeRowField|${idx}|item|this">
         <input type="text" class="c-p" inputmode="numeric" value="${fmt(row.amount)}" data-input="setRgeRowAmount|${idx}|this">
       </div>
@@ -3133,8 +3166,8 @@ function toggleRgeRowOff(idx){
   const i=parseInt(idx,10);
   if(!rgeRows[i]) return;
   if(rgeRows[i].note==='정상'){
-    // 오답으로 토글 → 사유 시트 (기존 reasonSheet 재활용)
-    rgeRows[i].note='오답';
+    // 인식 오류로 토글 → 사유 시트 (기존 reasonSheet 재활용)
+    rgeRows[i].note='인식 오류';
   } else {
     rgeRows[i].note='정상';
   }

@@ -848,7 +848,7 @@
           <input type="radio" name="reNote" value="정상" checked style="width:16px;height:16px;"> 정상
         </label>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-          <input type="radio" name="reNote" value="오답" style="width:16px;height:16px;"> 오답 (집계 제외)
+          <input type="radio" name="reNote" value="인식 오류" style="width:16px;height:16px;"> 인식 오류 (집계 제외)
         </label>
       </div>
     </div>
@@ -893,11 +893,11 @@
       <span style="font-size:12px;font-weight:700;color:#8B95A1;">합계</span>
       <span id="rgeTotalAmt" style="font-size:18px;font-weight:900;color:#191F28;letter-spacing:-0.5px;">0원</span>
     </div>
-    <div style="font-size:12px;color:#8B95A1;margin-bottom:6px;">📦 품목 — 품목명·금액 탭해서 수정, × = 오답 처리</div>
+    <div style="font-size:12px;color:#8B95A1;margin-bottom:6px;">📦 품목 — 품목명·금액 탭해서 수정, × = 인식 오류 처리</div>
     <div id="rgeTable"></div>
     <div class="add-row-btn" data-action="addRgeRow">＋ 품목 추가</div>
     <div style="padding:8px 0;font-size:11px;color:var(--gray-500);line-height:1.5;">
-      💡 정상 행만 합계·집계에 들어가요. × 누르면 오답 처리(집계 제외).
+      💡 정상 행만 합계·집계에 들어가요. × 누르면 인식 오류 처리(집계 제외).
     </div>
     <div style="display:flex;gap:8px;margin-top:4px;">
       <button class="btn btn-danger" style="padding:14px 16px;font-size:13px;" data-action="deleteReceiptGroupFromSheet">🚫 거래 취소</button>
@@ -3414,7 +3414,7 @@
   <div class="sheet-title">이 항목, 합계에서 뺄까요?</div>
   <div class="reason-sub">고르면 이 항목이 <b>합계(집계)에서 빠져요</b>. 삭제는 아니에요 — '다시 포함하기'로 언제든 되돌릴 수 있어요.</div>
   <div class="reason-item" data-action="selectReason|부가세 제외">부가세 줄이라서 (중복 합산 방지)</div>
-  <div class="reason-item" data-action="selectReason|합계 오답">금액(합계)을 잘못 읽음</div>
+  <div class="reason-item" data-action="selectReason|합계 잘못 읽음">금액(합계)을 잘못 읽음</div>
   <div class="reason-item" data-action="selectReason|글자 깨짐">글자가 깨져서 알아볼 수 없음</div>
   <div class="reason-item" data-action="selectReason|중복 항목">똑같은 항목이 중복됨</div>
   <div class="reason-item cancel" data-action="selectReason|cancel">↩️ 다시 포함하기 (되돌리기)</div>
@@ -3749,18 +3749,18 @@
       <button class="sheet-close" data-action="closeSheet|manualExpSheet">✕</button>
     </div>
     <div style="padding:4px 20px 8px;">
-      <p style="font-size:12.5px;color:#8B95A1;font-weight:500;margin-bottom:16px;letter-spacing:-.2px;">거래처·품목 없이 금액만 빠르게 기록해요.</p>
+      <p style="font-size:12.5px;color:#8B95A1;font-weight:500;margin-bottom:16px;letter-spacing:-.2px;">거래처 없이 항목·금액만 빠르게 기록해요.</p>
       <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;">날짜</label>
       <input type="date" id="manualExpDate" style="width:100%;border:1px solid #E5E8EB;border-radius:12px;padding:13px 14px;font-size:15px;margin-bottom:14px;outline:none;box-sizing:border-box;">
+      <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;"><span id="manualExpItemLabel">세목</span></label>
+      <input type="text" id="manualExpItem" placeholder="예: 건강보험, 고용보험, 부가세"
+        style="width:100%;border:1px solid #E5E8EB;border-radius:12px;padding:13px 14px;font-size:15px;margin-bottom:14px;outline:none;box-sizing:border-box;">
       <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;">금액</label>
-      <div style="background:#F2F4F6;border-radius:12px;padding:13px 14px;display:flex;align-items:baseline;gap:4px;margin-bottom:14px;">
+      <div style="background:#F2F4F6;border-radius:12px;padding:13px 14px;display:flex;align-items:baseline;gap:4px;margin-bottom:18px;">
         <span style="font-size:18px;font-weight:700;color:#B0B8C1;">₩</span>
         <input type="tel" id="manualExpAmt" inputmode="numeric" placeholder="0"
           style="flex:1;border:none;background:transparent;font-size:24px;font-weight:800;color:#191F28;letter-spacing:-.5px;outline:none;text-align:right;font-variant-numeric:tabular-nums;">
       </div>
-      <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;">메모 (선택)</label>
-      <input type="text" id="manualExpMemo" placeholder="예: 부가세, 종합소득세, 광고비"
-        style="width:100%;border:1px solid #E5E8EB;border-radius:12px;padding:13px 14px;font-size:15px;margin-bottom:18px;outline:none;box-sizing:border-box;">
       <button type="button" onclick="saveManualExp()"
         style="width:100%;padding:16px;background:#3182F6;border:none;border-radius:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;letter-spacing:-.3px;">
         저장하기
