@@ -836,14 +836,14 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 
 ## push_subscriptions (푸시 알림 구독 — 2026-06-29 신설)
 
-> 누가·어느 기기로 알림 받을지 저장. 사장님이 설정 화면 "🔔 알림 켜기" 누르면 한 행 생성(기기당 1행).
+> 누가·어느 기기로 알림 받을지 저장. **한 기기(endpoint)가 여러 매장 구독 가능** (매니저 여러 매장 관리 — 2026-06-29 UNIQUE(endpoint)→UNIQUE(endpoint,store_id) 변경).
 
 | 컬럼 | 설명 |
 |---|---|
 | id (uuid PK) | |
 | store_id (uuid, FK→stores CASCADE) | 매장 격리 |
 | employee_id (uuid, FK→employees SET NULL) | 누구 기기인지 (선택) |
-| endpoint (text, UNIQUE) | 브라우저 푸시 구독 주소 (기기 고유) |
+| endpoint (text) | 브라우저 푸시 구독 주소 (기기 고유). **UNIQUE(endpoint, store_id)** = 기기당 매장별 1행 |
 | p256dh (text) | 메시지 암호화 공개키 |
 | auth (text) | 메시지 인증 비밀값 |
 | user_agent (text) | 기기/브라우저 (관리용) |
@@ -868,8 +868,8 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 | value (text) | 값 |
 | updated_at (timestamptz) | |
 
-- 현재 보관: `vapid_public`, `vapid_private`, `vapid_subject`(mailto:)
-- 읽는 곳: Edge Function `send-push`만 (service_role)
+- 현재 보관: `vapid_public`, `vapid_private`, `vapid_subject`(mailto:), `cron_secret`(시간 알람 인증)
+- 읽는 곳: Edge Function `send-push`·`check-reminders` (service_role)
 - 롤백: `DROP TABLE public.app_secrets;`
 
 ---
@@ -879,7 +879,19 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 | 함수 | 역할 |
 |---|---|
 | `switch-store` | 매장 전환 시 권한 확인 후 그 매장 세션(JWT) 발급 |
-| `send-push` (2026-06-29) | 푸시 알림 발송. 호출자 JWT의 store_id 구독에만 발송. service_role 호출 시 body.store_id 지정 가능(자동 발송용). 코드: `supabase/functions/send-push/index.ts` |
+| `send-push` (2026-06-29) | 푸시 알림 발송. 호출자 JWT의 store_id 구독에만 발송. service_role 호출 시 body.store_id 지정 가능(자동 발송용). 제목에 매장명 자동 prefix. 코드: `supabase/functions/send-push/index.ts` |
+| `check-reminders` (2026-06-29) | 시간 자동 알림. verify_jwt=false + x-cron-secret 인증. mode=night(오늘 마감 미완료)/morning(어제 마감 빠짐+어제 퇴근 미기록). pg_cron이 호출, send-push로 발송. 코드: `supabase/functions/check-reminders/index.ts` |
+
+### pg_cron 시간 알람 (2026-06-29)
+| job | 스케줄(UTC) | KST | 동작 |
+|---|---|---|---|
+| push-night-1 | `0 13 * * *` | 22:00 | 오늘 마감 미완료 |
+| push-night-2 | `30 14 * * *` | 23:30 | 마감 미완료 2차 |
+| push-morning | `0 0 * * *` | 09:00 | 어제 마감 빠짐 + 어제 퇴근 미기록 |
+| push-after-close | `*/10 * * * *` | 매 10분 | 마감 후 ~20분 지났는데 퇴근 미기록 (1회, settlements.noout_notified로 중복방지) |
+- extension: `pg_cron`, `pg_net`. 인증: app_secrets.cron_secret (헤더 x-cron-secret).
+- 롤백: `SELECT cron.unschedule('push-night-1'); SELECT cron.unschedule('push-night-2'); SELECT cron.unschedule('push-morning'); SELECT cron.unschedule('push-after-close');`
+- `settlements.noout_notified` (bool, 2026-06-29): 마감 후 퇴근 미기록 알림 1회 발송 여부. 퇴근 알림은 마감 직후 X → 마감 후 ~20분(after-close cron).
 
 ---
 

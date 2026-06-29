@@ -926,6 +926,8 @@ async function finishSettlement2(){
       body:_pushBody, url:'/'
     } } }).catch(e=>console.warn('[push] 마감 알림 발송 실패', e));
   }catch(_){}
+  // 퇴근 미기록 알림은 마감 직후 X (직원이 마감 후 퇴근 찍음). 마감 후 ~20분 뒤
+  // check-reminders(after-close, 매 10분 cron)가 체크해서 발송. (사장님 2026-06-29)
   // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
   resetSettleView();
   if(typeof nav==='function') nav('busHub');

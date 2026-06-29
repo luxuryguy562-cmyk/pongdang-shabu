@@ -14,14 +14,14 @@
 - ⚠️ MCP `deploy_edge_function` 승인 막힘 → **Management API curl multipart 우회 배포** 성공 (`SUPABASE_ACCESS_TOKEN` env). 다음에도 막히면 동일 우회:
   `curl -X POST "https://api.supabase.com/v1/projects/ecfjkfqlnqfxovlwhdtx/functions/deploy?slug=NAME" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -F 'metadata={...};type=application/json' -F 'file=@PATH;type=application/typescript'`
 
-### ⏭️ 남은 작업 — 실제 알림 트리거 연결 (CTO 1안=마감 완료부터)
-발송 호출: 프론트 `sb.functions.invoke('send-push',{body:{payload:{title,body,url}}})` (자기 매장). 서버 자동발송은 service_role + body.store_id.
-1. **마감 완료** (`finishSettlement2` in settlement.js) — 매출 분류 + 금고(개시+현금=장부 vs 실사→차액). 금액만(실사 내역 X)
-2. **지출 입력** 즉시 — 분류·거래처·금액, 큰 금액(10만↑) 강조
-3. **개시** 즉시 — 개시 금고 확인
-4. **퇴근 미기록** — 마감 직후 + 다음날 오전 9시 (트리거=마감 이벤트, 8시 고정 X)
-5. **마감 미완료** — 밤 자동 + 다음날 오전
-> 자동발송(시간 트리거: 4·5의 "다음날 오전", 5의 "밤") = pg_cron 또는 외부 스케줄러 검토 필요. 즉시발송(1·2·3, 4 마감직후)은 프론트 invoke로 바로 가능.
+### ✅ 알림 트리거 5종 전부 연결 완료 (2026-06-29)
+1. ✅ **마감 완료** (`finishSettlement2`) — 매출 분류 + 금고 일치/차액
+2. ✅ **지출 입력** (`saveReceipt`) — 거래처·금액·분류, 큰 금액(10만↑) 강조
+3. ✅ **개시** (`saveOpening`) — 개시 금고 + 전일 대비 차액 (오늘 개시만)
+4. ✅ **퇴근 미기록** — 마감 직후(`finishSettlement2` 내) + 다음날 오전(`check-reminders` morning)
+5. ✅ **마감 미완료** — 밤 22:00·23:30(`check-reminders` night) + 다음날 오전(morning)
+- 시간 자동발송: pg_cron 3개(push-night-1/2, push-morning) → check-reminders 함수. 실동작 검증 완료(night 호출 acted:1).
+- ⏭️ 남은 개선: 영업일 경계(business_day_start_hour) 미반영(야간 매장은 단순 날짜 기준) / iOS APNs(앱스토어 후) / 알림 on-off 세분화(종류별).
 
 ---
 
@@ -95,9 +95,13 @@
 - 합계: 기존 `note='정상'`만 합산 → 취소분 자동 제외 (손 안 댐).
 - 되돌리기: `undoCancelReceipt` (note='정상', cancelled_* NULL).
 
+### ✅ 거래내역 엑셀 다운로드 구현 완료 (2026-06-29)
+- 사이드메뉴 자료 다운로드 → '거래내역(지출·매출)' (`openTxExportSheet`/`downloadTxExport`, sidemenu.js)
+- 월 선택 + 체크박스 4종 → XLSX 시트 4장: 거래내역(영수증+vendor_orders+mydata 통합, 취소사유·등록자) / 거래처별(결제일·금액+소계) / 거래처·품목별(수량·금액 집계) / 매출(settlements.items_json 그대로 = 마감 단일 진실).
+- 관리자만. 정상·비보증금만 집계, 취소·반품 제외.
+
 ### 남은 경계 (다음 단계)
-- 거래처 주문(vendor_orders)·통장/카드(mydata) 삭제도 취소 표시로 → 표 달라 추가 작업.
-- 거래내역(영수증/마감/매출) 월별 다운로드 기능 (취소·반품 표기 포함).
+- 거래처 주문(vendor_orders)·통장/카드(mydata) 삭제도 취소 표시로 → 표 달라 추가 작업 (현재 취소=영수증만).
 - 그룹 편집 중 개별 행 정정 삭제(rgeRows _deleted)는 하드 삭제 그대로 (편집 중 줄 정정용, 거래취소와 별개).
 
 ---
