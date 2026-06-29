@@ -848,7 +848,7 @@
           <input type="radio" name="reNote" value="정상" checked style="width:16px;height:16px;"> 정상
         </label>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-          <input type="radio" name="reNote" value="오답" style="width:16px;height:16px;"> 오답 (집계 제외)
+          <input type="radio" name="reNote" value="인식 오류" style="width:16px;height:16px;"> 인식 오류 (집계 제외)
         </label>
       </div>
     </div>
@@ -893,11 +893,11 @@
       <span style="font-size:12px;font-weight:700;color:#8B95A1;">합계</span>
       <span id="rgeTotalAmt" style="font-size:18px;font-weight:900;color:#191F28;letter-spacing:-0.5px;">0원</span>
     </div>
-    <div style="font-size:12px;color:#8B95A1;margin-bottom:6px;">📦 품목 — 품목명·금액 탭해서 수정, × = 오답 처리</div>
+    <div style="font-size:12px;color:#8B95A1;margin-bottom:6px;">📦 품목 — 품목명·금액 탭해서 수정, × = 인식 오류 처리</div>
     <div id="rgeTable"></div>
     <div class="add-row-btn" data-action="addRgeRow">＋ 품목 추가</div>
     <div style="padding:8px 0;font-size:11px;color:var(--gray-500);line-height:1.5;">
-      💡 정상 행만 합계·집계에 들어가요. × 누르면 오답 처리(집계 제외).
+      💡 정상 행만 합계·집계에 들어가요. × 누르면 인식 오류 처리(집계 제외).
     </div>
     <div style="display:flex;gap:8px;margin-top:4px;">
       <button class="btn btn-danger" style="padding:14px 16px;font-size:13px;" data-action="deleteReceiptGroupFromSheet">🚫 거래 취소</button>
@@ -3414,7 +3414,7 @@
   <div class="sheet-title">이 항목, 합계에서 뺄까요?</div>
   <div class="reason-sub">고르면 이 항목이 <b>합계(집계)에서 빠져요</b>. 삭제는 아니에요 — '다시 포함하기'로 언제든 되돌릴 수 있어요.</div>
   <div class="reason-item" data-action="selectReason|부가세 제외">부가세 줄이라서 (중복 합산 방지)</div>
-  <div class="reason-item" data-action="selectReason|합계 오답">금액(합계)을 잘못 읽음</div>
+  <div class="reason-item" data-action="selectReason|합계 잘못 읽음">금액(합계)을 잘못 읽음</div>
   <div class="reason-item" data-action="selectReason|글자 깨짐">글자가 깨져서 알아볼 수 없음</div>
   <div class="reason-item" data-action="selectReason|중복 항목">똑같은 항목이 중복됨</div>
   <div class="reason-item cancel" data-action="selectReason|cancel">↩️ 다시 포함하기 (되돌리기)</div>
@@ -3709,7 +3709,7 @@
 <script src="assets/tabs/receipt.js?v=20260629c"></script>
 <script src="assets/tabs/attendance.js?v=20260624a"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
-<script src="assets/tabs/settlement.js?v=20260626a"></script>
+<script src="assets/tabs/settlement.js?v=20260629b"></script>
 <script src="assets/tabs/dashboard.js?v=20260626c"></script>
 <script src="assets/tabs/sidemenu.js?v=20260629c"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
