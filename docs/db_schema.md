@@ -868,8 +868,8 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 | value (text) | 값 |
 | updated_at (timestamptz) | |
 
-- 현재 보관: `vapid_public`, `vapid_private`, `vapid_subject`(mailto:)
-- 읽는 곳: Edge Function `send-push`만 (service_role)
+- 현재 보관: `vapid_public`, `vapid_private`, `vapid_subject`(mailto:), `cron_secret`(시간 알람 인증)
+- 읽는 곳: Edge Function `send-push`·`check-reminders` (service_role)
 - 롤백: `DROP TABLE public.app_secrets;`
 
 ---
@@ -879,7 +879,17 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 | 함수 | 역할 |
 |---|---|
 | `switch-store` | 매장 전환 시 권한 확인 후 그 매장 세션(JWT) 발급 |
-| `send-push` (2026-06-29) | 푸시 알림 발송. 호출자 JWT의 store_id 구독에만 발송. service_role 호출 시 body.store_id 지정 가능(자동 발송용). 코드: `supabase/functions/send-push/index.ts` |
+| `send-push` (2026-06-29) | 푸시 알림 발송. 호출자 JWT의 store_id 구독에만 발송. service_role 호출 시 body.store_id 지정 가능(자동 발송용). 제목에 매장명 자동 prefix. 코드: `supabase/functions/send-push/index.ts` |
+| `check-reminders` (2026-06-29) | 시간 자동 알림. verify_jwt=false + x-cron-secret 인증. mode=night(오늘 마감 미완료)/morning(어제 마감 빠짐+어제 퇴근 미기록). pg_cron이 호출, send-push로 발송. 코드: `supabase/functions/check-reminders/index.ts` |
+
+### pg_cron 시간 알람 (2026-06-29)
+| job | 스케줄(UTC) | KST | 동작 |
+|---|---|---|---|
+| push-night-1 | `0 13 * * *` | 22:00 | 오늘 마감 미완료 |
+| push-night-2 | `30 14 * * *` | 23:30 | 마감 미완료 2차 |
+| push-morning | `0 0 * * *` | 09:00 | 어제 마감 빠짐 + 어제 퇴근 미기록 |
+- extension: `pg_cron`, `pg_net`. 인증: app_secrets.cron_secret (헤더 x-cron-secret).
+- 롤백: `SELECT cron.unschedule('push-night-1'); SELECT cron.unschedule('push-night-2'); SELECT cron.unschedule('push-morning');`
 
 ---
 
