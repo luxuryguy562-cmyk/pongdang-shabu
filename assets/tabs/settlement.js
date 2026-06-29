@@ -675,6 +675,13 @@ async function saveOpening(){
   setLoad(false);
   if(error) return errToast('영업개시 저장', error);
   toast(isEdit?'영업개시 수정 완료':'영업개시 보고 완료','success');
+  // ─── 새 기능: 영업 개시 푸시 알림 (2026-06-29) — 오늘 개시만 (과거 수정 제외) ───
+  if(!isEdit){
+    try{
+      const _openBody = `개시 금고 ${fmt(actual)}원${diff!==0?` (전일 마감 대비 ${diff>0?'+':''}${fmt(diff)}원 ⚠️ 확인)`:''}`;
+      sb.functions.invoke('send-push', { body:{ payload:{ title:'영업 개시 🟢', body:_openBody, url:'/' } } }).catch(e=>console.warn('[push] 개시 알림 실패', e));
+    }catch(_){}
+  }
   // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
   if(typeof nav==='function') nav('busHub');
 }

@@ -2189,6 +2189,22 @@ async function saveReceipt(){
   const {error}=await sb.from('receipts').insert(cleaned);
   setLoad(false);
   if(error) return errToast('저장', error);
+  // ─── 새 기능: 지출 등록 푸시 알림 (2026-06-29) ───
+  // 신규 영수증 저장 성공 시 폰으로 거래처·금액·분류 요약. 보증금/오답 행 제외.
+  try{
+    const _nr = cleaned.filter(r=>r.note==='정상' && !r.is_deposit);
+    const _expTotal = _nr.reduce((s,r)=>s+(r.total_price||0),0);
+    if(_expTotal>0){
+      const _vn = (_nr.find(r=>r.vendor)||{}).vendor || '거래처';
+      const _cs = [...new Set(_nr.map(r=>r.category).filter(Boolean))];
+      const _cl = _cs.length ? (_cs.length===1 ? _cs[0] : `${_cs[0]} 외 ${_cs.length-1}`) : '';
+      const _big = _expTotal>=100000;
+      sb.functions.invoke('send-push', { body:{ payload:{
+        title: _big ? '큰 지출 등록 ⚠️' : '지출 등록 🧾',
+        body: `${_vn} ${fmt(_expTotal)}원${_cl?` · ${_cl}`:''}`, url:'/'
+      } } }).catch(e=>console.warn('[push] 지출 알림 실패', e));
+    }
+  }catch(_){}
   // 영수증 품목 자동 학습 폐기 (2026-06-04) — 짧은 키워드 오염 방지. 분류·품목명은 AI가 직접 판단.
   const successMsg='저장됐어요';
   // 진입 컨텍스트 따라 흐름 분기 — 새로고침 없이 in-page로 그 화면 복귀 (2026-06-08 홈 깜빡임 제거)
