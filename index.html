@@ -2627,6 +2627,16 @@
     <button class="btn btn-success btn-full" data-action="testCrawlerLogin">🔗 로그인 테스트</button>
     <button class="btn btn-primary btn-full" data-action="saveUpsSettings">저장</button>
   </div>
+
+  <!-- ─── 새 기능: 푸시 알림 (2026-06-29) ─── -->
+  <div class="card">
+    <div class="card-title">🔔 알림</div>
+    <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">마감·정산·근태 등을 휴대폰 알림으로 받습니다. 앱을 열지 않아도 도착해요.</p>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">푸시 알림</div><div class="setting-sub" id="sv-push-status">확인 중…</div></div>
+      <div class="setting-val" id="sv-push-toggle" data-action="togglePush">설정</div>
+    </div>
+  </div>
 </div>
 
 <!-- ══ SHEETS ══ -->
@@ -3504,6 +3514,7 @@
 </div>
 
 <script src="assets/common.js?v=20260625a"></script>
+<script src="assets/push.js?v=20260629a"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
   <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>
@@ -3515,7 +3526,7 @@
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260624c"></script>
 <script src="assets/tabs/dashboard.js?v=20260625b"></script>
-<script src="assets/tabs/sidemenu.js?v=20260625a"></script>
+<script src="assets/tabs/sidemenu.js?v=20260629a"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 </body>
 </html>

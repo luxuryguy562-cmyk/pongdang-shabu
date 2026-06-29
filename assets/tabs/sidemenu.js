@@ -2514,7 +2514,45 @@ async function loadAllSettings(){
   const uscEl=document.getElementById('si-ups-store-code');if(uscEl)uscEl.value=settings.ups_store_code||'';
   const uidEl=document.getElementById('si-ups-id');if(uidEl)uidEl.value=settings.ups_id||'';
   const upwEl=document.getElementById('si-ups-pw');if(upwEl)upwEl.value=settings.ups_pw||'';
+  // 푸시 알림 상태 표시 (2026-06-29)
+  if(typeof refreshPushUI==='function') refreshPushUI();
 }
+
+// ─── 새 기능: 푸시 알림 설정 UI (2026-06-29) ───
+// 알림 켜짐/꺼짐 상태에 따라 설정 화면 라벨·버튼 갱신
+async function refreshPushUI(){
+  const stEl=document.getElementById('sv-push-status');
+  const tgEl=document.getElementById('sv-push-toggle');
+  if(!stEl||!tgEl) return;
+  if(typeof getPushStatus!=='function'){ stEl.innerText='이 기기 미지원'; tgEl.style.display='none'; return; }
+  const st=await getPushStatus();
+  const map={
+    on:        ['켜짐 ✅','끄기'],
+    off:       ['꺼짐','켜기'],
+    denied:    ['차단됨 (휴대폰 브라우저 설정에서 알림 허용 필요)','—'],
+    unsupported:['이 기기는 미지원 (아이폰은 홈 화면 추가 후)','—'],
+  };
+  const [txt,label]=map[st]||map.off;
+  stEl.innerText=txt;
+  tgEl.innerText=label;
+  tgEl.style.display=(st==='denied'||st==='unsupported')?'none':'';
+}
+// 알림 켜기/끄기 토글
+async function togglePush(){
+  if(typeof getPushStatus!=='function') return;
+  const st=await getPushStatus();
+  if(st==='unsupported'||st==='denied'){ await refreshPushUI(); return; }
+  if(st==='on'){
+    if(!confirm('알림을 끌까요?')) return;
+    await disablePushNotifications();
+    if(typeof toast==='function') toast('알림을 껐어요','success');
+  } else {
+    const ok=await enablePushNotifications();
+    if(ok && typeof toast==='function') toast('알림이 켜졌어요','success');
+  }
+  await refreshPushUI();
+}
+
 function openSettingEdit(key,label,suffix){
   document.getElementById('settingEditTitle').innerText=label+' 변경';
   document.getElementById('settingEditInput').value=settings[key]!=null?settings[key]:'';
