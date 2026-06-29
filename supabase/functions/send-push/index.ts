@@ -49,9 +49,15 @@ Deno.serve(async (req) => {
     }
     webpush.setVapidDetails(sm.vapid_subject || "mailto:admin@example.com", sm.vapid_public, sm.vapid_private);
 
+    // 매장명 조회 (알림 제목에 표시 — 어느 매장 알림인지 구분)
+    const { data: store } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
+    const storeName = (store && store.name) ? store.name : "캐쉬플로우";
+
     // 해당 매장 구독 로드
     const { data: subs } = await supabase.from("push_subscriptions").select("*").eq("store_id", storeId).eq("enabled", true);
-    const payload = JSON.stringify(body.payload || { title: "캐쉬플로우", body: "테스트 알림이에요 🔔" });
+    const p = body.payload || {};
+    const title = p.title ? `${storeName} · ${p.title}` : storeName;
+    const payload = JSON.stringify({ ...p, title, body: p.body || "테스트 알림이에요 🔔" });
 
     let sent = 0, failed = 0;
     for (const s of subs || []) {
