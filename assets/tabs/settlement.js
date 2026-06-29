@@ -902,6 +902,23 @@ async function finishSettlement2(){
   } else {
     toast('마감 저장됐어요','success');
   }
+  // ─── 새 기능: 마감 완료 푸시 알림 (2026-06-29) ───
+  // 저장 성공 후 폰으로 매출·금고 요약 발송. 실패해도 마감은 됐으니 무음 처리.
+  try{
+    const _saleParts=[];
+    if((items.pos_card||0)>0) _saleParts.push(`카드 ${fmt(items.pos_card)}`);
+    if((items.pos_cash||0)>0) _saleParts.push(`현금 ${fmt(items.pos_cash)}`);
+    if((items.pos_cash_receipt||0)>0) _saleParts.push(`현금영수증 ${fmt(items.pos_cash_receipt)}`);
+    if((items.pos_etc||0)>0) _saleParts.push(`기타 ${fmt(items.pos_etc)}`);
+    const _vaultLine = diff===0
+      ? `금고 ${fmt(vault)}원 ✅ 일치`
+      : `금고 실사 ${fmt(vault)} / 장부 ${fmt(book)} → 차액 ${diff>0?'+':''}${fmt(diff)}원 ⚠️ 확인 필요`;
+    const _pushBody = `매출 ${fmt(salesTotal)}원${_saleParts.length?` (${_saleParts.join('·')})`:''}\n${_vaultLine}`;
+    sb.functions.invoke('send-push', { body:{ payload:{
+      title:`${_dateLabel} 마감 완료 ${diff===0?'✅':'⚠️'}`,
+      body:_pushBody, url:'/'
+    } } }).catch(e=>console.warn('[push] 마감 알림 발송 실패', e));
+  }catch(_){}
   // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
   resetSettleView();
   if(typeof nav==='function') nav('busHub');
