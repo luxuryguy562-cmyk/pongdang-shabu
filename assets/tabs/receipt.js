@@ -2673,7 +2673,8 @@ function _rclStoreCardHtml(g){
     ? (expCategories||[]).find(c=>c.name===_firstR.category && !c.parent_id && (c.category_type||'expense')==='expense' && c.data_source==='manual')
     : null;
   const _isManualCat = !isOrder && !isMydata && !!_manualCatObj;
-  const cardName = g.vendor || (_isManualCat ? _firstR.category : ((!isOrder&&!isMydata)?'직접 구매':'(거래처 없음)'));
+  // 묶음 제목 = 세목/항목(품목 item). 예: '건강보험'. 비었으면 분류명 폴백 (2026-06-29 사장님)
+  const cardName = g.vendor || (_isManualCat ? (_firstR.item || _firstR.category) : ((!isOrder&&!isMydata)?'직접 구매':'(거래처 없음)'));
   // 헤더(summary) 탭 = 펼치기/접기. 품목·편집은 펼쳐야 보임 (사장님 호소 2026-06-20: "묶음이 뭔지 모르겠음")
   return `<details class="rcl-store"><summary class="rcl-storehd">`
     +`<div class="ic">${icon}</div>`
