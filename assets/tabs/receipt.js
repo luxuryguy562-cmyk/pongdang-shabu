@@ -503,6 +503,21 @@ async function loadCatReceiptData(){
   catReceiptParentId = (catParent && catReceiptMode && catReceiptMode.startsWith('cat:')) ? catParent.id : null;
   titleEl.textContent = title;
   iconEl.textContent = iconEmoji;
+  // 수동 입력 카테고리(세금·마케팅 — 거래처·품목 없는 지출) → 간단 입력 버튼 노출 (2026-06-29)
+  //   기타는 '기타 지출'(품목 폼) 흐름 사용 → 제외 (사장님 명시: 세금·마케팅만)
+  const _manBtn = document.getElementById('catRcpManualBtn');
+  if(_manBtn){
+    const _isManual = catParent && catParent.data_source==='manual' && (catParent.name!=='기타') && catReceiptMode.startsWith('cat:');
+    if(_isManual){
+      _manualExpCat = { id:catParent.id, name:catParent.name };
+      _manBtn.style.display='';
+      const _lb=document.getElementById('catRcpManualBtnLabel');
+      if(_lb) _lb.textContent='✏️ '+catParent.name+' 입력';
+    } else {
+      _manualExpCat = null;
+      _manBtn.style.display='none';
+    }
+  }
   body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px;">불러오는 중...</div>';
   _renderCatReceiptMonthNav();
   // 기간 계산 — 단월 또는 범위
@@ -836,6 +851,47 @@ function openManualReceiptShortcut(){
   _rcpKeepOnEnter = true; // 수동 모드 세팅 진입 — 재진입 초기화 스킵
   nav('receipt');
   setTimeout(()=>setRcpMode('manual'), 60);
+}
+
+// ─── 새 기능: 수동 지출 간단 입력 (세금·마케팅 — 거래처 없는 지출, 2026-06-29) ───
+// 거래처·품목·규격 없이 날짜+금액+메모만. receipts에 한 줄로 저장 → 카테고리 합계·대시보드·정산에 그대로 반영.
+let _manualExpCat = null; // {id, name} — loadCatReceiptData가 채움
+function openManualExpSheet(){
+  if(!_manualExpCat){ toast('카테고리를 찾을 수 없어요','error'); return; }
+  const t=document.getElementById('manualExpTitle'); if(t) t.textContent=_manualExpCat.name+' 입력';
+  const d=document.getElementById('manualExpDate');
+  if(d){ const n=new Date(); d.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
+  const a=document.getElementById('manualExpAmt'); if(a) a.value='';
+  const m=document.getElementById('manualExpMemo'); if(m) m.value='';
+  openSheet('manualExpSheet');
+}
+async function saveManualExp(){
+  if(!currentStore){ toast('매장을 먼저 선택해주세요','error'); return; }
+  if(!_manualExpCat){ toast('카테고리를 찾을 수 없어요','error'); return; }
+  const dateV=(document.getElementById('manualExpDate')||{}).value||'';
+  const amtRaw=((document.getElementById('manualExpAmt')||{}).value||'').replace(/[^0-9]/g,'');
+  const amt=parseInt(amtRaw,10);
+  const memo=((document.getElementById('manualExpMemo')||{}).value||'').trim();
+  if(!dateV){ toast('날짜를 선택해주세요','error'); return; }
+  if(isNaN(amt)||amt<=0){ toast('금액을 입력해주세요','error'); return; }
+  setLoad(true,'저장 중...');
+  const { error } = await sb.from('receipts').insert({
+    store_id: currentStore.id,
+    receipt_date: dateV,
+    total_price: amt,
+    category_id: _manualExpCat.id,
+    category: _manualExpCat.name,
+    item: memo || _manualExpCat.name,
+    vendor_id: null,
+    input_method: 'manual',
+    note: '정상',
+    is_deposit: false
+  });
+  setLoad(false);
+  if(error){ toast('저장 실패: '+error.message,'error'); return; }
+  closeSheet('manualExpSheet');
+  toast(_manualExpCat.name+' 기록됐어요','success');
+  if(typeof loadCatReceiptData==='function') loadCatReceiptData();
 }
 
 // 카테고리 화면에서 [📸 영수증 사진] 또는 [✏️ 수동 입력] 버튼 → 영수증 탭으로 이동
