@@ -34,7 +34,9 @@ self.addEventListener('push', (event) => {
     body: d.body || '',
     icon: d.icon || '/icon-192.png',
     badge: '/icon-192.png',
-    tag: d.tag || undefined,                 // 같은 tag = 이전 알림 덮어씀 (중복 방지)
+    // tag 없으면 매번 고유값 → 연속 알림이 서로 덮어쓰지 않음 (마감+퇴근 동시 도착 대비)
+    tag: d.tag || ('cf-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
+    renotify: true,
     data: { url: d.url || '/' },
     requireInteraction: !!d.requireInteraction, // true면 사용자가 닫을 때까지 유지
   };
