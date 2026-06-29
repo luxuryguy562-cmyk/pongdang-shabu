@@ -628,6 +628,10 @@ function errToast(action, err){
   const detail=msg?` ${String(msg).slice(0,60)}`:'';
   toast(action+'하지 못했어요'+tag+detail+(tag||detail?'':' 잠시 후 다시 시도해주세요'),'error',7000);
 }
+// ─── 부팅 가림막 (로고) 켜기/끄기 — 화면 전환 중 앞 화면 비침 방지 (2026-06-29) ───
+function showBootSplash(){ const s=document.getElementById('bootSplash'); if(s) s.style.display='flex'; }
+function hideBootSplash(){ const s=document.getElementById('bootSplash'); if(s) s.style.display='none'; }
+
 const setLoad = (on, t='처리 중...', scanImg=false) => {
   const ld=document.getElementById('loading');
   ld.style.display = on ? 'flex' : 'none';
@@ -1071,6 +1075,8 @@ async function loadMyStores(){
     if(!data || !data.ok) throw new Error((data && data.error) || '불러오기 실패');
 
     const stores = Array.isArray(data.stores) ? data.stores : [];
+    // 매장 개수 기억 — 다음 로그인 라우팅 즉시 판단용 (2026-06-29 속도)
+    try{ localStorage.setItem('pd_multi_store', stores.length >= 2 ? '1' : '0'); }catch(_e){}
     const totalRev = Number(data.total_revenue)||0;
     const totalProfit = Number(data.total_profit)||0;
 

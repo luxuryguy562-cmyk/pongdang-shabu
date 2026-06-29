@@ -2571,7 +2571,61 @@ async function loadAllSettings(){
   const uscEl=document.getElementById('si-ups-store-code');if(uscEl)uscEl.value=settings.ups_store_code||'';
   const uidEl=document.getElementById('si-ups-id');if(uidEl)uidEl.value=settings.ups_id||'';
   const upwEl=document.getElementById('si-ups-pw');if(upwEl)upwEl.value=settings.ups_pw||'';
+  // 푸시 알림 상태 표시 (2026-06-29)
+  if(typeof refreshPushUI==='function') refreshPushUI();
 }
+
+// ─── 새 기능: 푸시 알림 설정 UI (2026-06-29) ───
+// 알림 켜짐/꺼짐 상태에 따라 설정 화면 라벨·버튼 갱신
+async function refreshPushUI(){
+  const stEl=document.getElementById('sv-push-status');
+  const tgEl=document.getElementById('sv-push-toggle');
+  if(!stEl||!tgEl) return;
+  if(typeof getPushStatus!=='function'){ stEl.innerText='이 기기 미지원'; tgEl.style.display='none'; return; }
+  const st=await getPushStatus();
+  const map={
+    on:        ['켜짐 ✅','끄기'],
+    off:       ['꺼짐','켜기'],
+    denied:    ['차단됨 (휴대폰 브라우저 설정에서 알림 허용 필요)','—'],
+    unsupported:['이 기기는 미지원 (아이폰은 홈 화면 추가 후)','—'],
+  };
+  const [txt,label]=map[st]||map.off;
+  stEl.innerText=txt;
+  tgEl.innerText=label;
+  tgEl.style.display=(st==='denied'||st==='unsupported')?'none':'';
+  // 테스트 발송 버튼은 알림 켜진 경우만 표시
+  const testBtn=document.getElementById('btn-push-test');
+  if(testBtn) testBtn.style.display=(st==='on')?'':'none';
+}
+// 테스트 알림 발송 (내 매장 구독 기기로)
+async function sendTestPush(){
+  if(typeof getPushStatus==='function'){
+    const st=await getPushStatus();
+    if(st!=='on'){ alert('먼저 알림을 켜주세요.'); return; }
+  }
+  try{
+    const { data, error } = await sb.functions.invoke('send-push', { body:{ payload:{ title:'테스트 알림 🔔', body:'잘 도착했어요! 알림이 정상 작동합니다.', url:'/' } } });
+    if(error){ console.error('[push] 테스트 발송 실패', error); alert('테스트 발송에 실패했습니다.'); return; }
+    if(typeof toast==='function') toast(`테스트 알림 발송 (${(data&&data.sent)||0}건)`,'success');
+    else alert(`테스트 알림 발송 (${(data&&data.sent)||0}건)`);
+  }catch(e){ console.error('[push] 테스트 발송 오류', e); alert('테스트 발송 오류'); }
+}
+// 알림 켜기/끄기 토글
+async function togglePush(){
+  if(typeof getPushStatus!=='function') return;
+  const st=await getPushStatus();
+  if(st==='unsupported'||st==='denied'){ await refreshPushUI(); return; }
+  if(st==='on'){
+    if(!confirm('알림을 끌까요?')) return;
+    await disablePushNotifications();
+    if(typeof toast==='function') toast('알림을 껐어요','success');
+  } else {
+    const ok=await enablePushNotifications();
+    if(ok && typeof toast==='function') toast('알림이 켜졌어요','success');
+  }
+  await refreshPushUI();
+}
+
 function openSettingEdit(key,label,suffix){
   document.getElementById('settingEditTitle').innerText=label+' 변경';
   document.getElementById('settingEditInput').value=settings[key]!=null?settings[key]:'';
@@ -3829,6 +3883,7 @@ let loginSelectedEmp=null, pinBuffer='', _loginBusy=false;
 let _loginPhone=''; // 현재 로그인 시도 중인 전화번호 (PIN 단계에서 사용)
 
 function showLoginScreen(){
+  hideBootSplash(); // 로그인 화면 보여야 하므로 가림막 걷기 (2026-06-29)
   document.getElementById('loginOverlay').style.display='flex';
   document.body.style.overflow='hidden';
   document.querySelector('.bottom-nav').style.display='none';
@@ -5417,24 +5472,49 @@ function loadMyInfo(){
 }
 
 // 로그인 후 관리자 첫 화면 — 매장 2개 이상이면 '내 매장들' 먼저, 1개면 바로 대시보드 (멀티매장, 2026-06-19)
+// 2026-06-29 속도 개선: 무거운 my-stores(매장 전체 순익 계산)를 화면 앞에서 뺌.
+//   매장 개수는 지난번 기억(localStorage pd_multi_store)으로 즉시 라우팅 → 화면 바로 뜸.
+//   기억 없는 첫 로그인만 정확히 확인(1회 느림), 그 뒤로는 캐시로 즉시 + 뒤에서 자가 갱신.
 async function _routeManagerHome(){
+  const cached = localStorage.getItem('pd_multi_store'); // '1' | '0' | null
+  if(cached !== null){
+    // 기억 있음 → 즉시 라우팅 (빠름). 실제 개수는 뒤에서 조용히 갱신.
+    const isMulti = cached === '1';
+    if(isMulti) document.querySelectorAll('.multi-store-only').forEach(el=>{ el.style.display=''; });
+    nav(isMulti ? 'myStores' : 'dashboard');
+    _refreshMultiStoreFlag();
+    return;
+  }
+  // 기억 없음(이 기기 첫 로그인) → 정확히 확인 후 라우팅 (한 번만 느림)
   setLoad(true, '불러오는 중...');
-  let go = 'dashboard';
+  let isMulti = false;
   try{
     const { data } = await sb.functions.invoke('my-stores', { body:{} });
-    if(data && data.ok && Array.isArray(data.stores) && data.stores.length >= 2){
-      go = 'myStores';
-      // 매장 2개+ → 사이드메뉴 '내 매장들' 입구 노출 (매장 안에서도 매장 현황으로 돌아갈 수 있게)
-      document.querySelectorAll('.multi-store-only').forEach(el=>{ el.style.display=''; });
-    }
+    if(data && data.ok && Array.isArray(data.stores) && data.stores.length >= 2) isMulti = true;
   }catch(e){ console.warn('[routeManagerHome]', e); }
   setLoad(false);
-  nav(go);
+  try{ localStorage.setItem('pd_multi_store', isMulti ? '1' : '0'); }catch(_e){}
+  if(isMulti) document.querySelectorAll('.multi-store-only').forEach(el=>{ el.style.display=''; });
+  nav(isMulti ? 'myStores' : 'dashboard');
+}
+
+// 뒤에서 조용히 실제 매장 수 확인 → 캐시·'내 매장들' 입구 갱신 (화면 안 막음, 2026-06-29)
+//   매장이 늘거나 줄면 다음 로그인 라우팅이 자동으로 맞춰짐. 지금 화면은 안 바꿔 깜빡임 방지.
+async function _refreshMultiStoreFlag(){
+  try{
+    const { data } = await sb.functions.invoke('my-stores', { body:{} });
+    if(data && data.ok && Array.isArray(data.stores)){
+      const isMulti = data.stores.length >= 2;
+      try{ localStorage.setItem('pd_multi_store', isMulti ? '1' : '0'); }catch(_e){}
+      document.querySelectorAll('.multi-store-only').forEach(el=>{ el.style.display = isMulti ? '' : 'none'; });
+    }
+  }catch(e){ console.warn('[refreshMultiStoreFlag]', e); }
 }
 
 // loginResult: emp-login/emp-session 전체 응답 { ok, mode, emp, person, token, session, stores }
 // 하위호환: emp 객체가 직접 넘어오는 경우(옛 코드 잔재)도 처리
 function completeLogin(loginResult){
+  showBootSplash(); // 화면 정해질 때까지 가림막 — 앞사람 화면 비침 방지 (2026-06-29)
   let emp=null, mode='store', stores=[], person=null;
   if(loginResult && loginResult.mode){
     mode=loginResult.mode; emp=loginResult.emp||null;
@@ -5457,6 +5537,7 @@ function completeLogin(loginResult){
     localStorage.setItem('pd_auth_level','personal');
     localStorage.removeItem('pd_emp');
     showPersonalHome();
+    hideBootSplash(); // 개인 홈 준비됨 → 가림막 걷기
     return;
   }
 
@@ -5488,10 +5569,11 @@ function completeLogin(loginResult){
   // 투잡 목록 저장 + 모드 배너 갱신 (직원만 — 관리자는 헤더로 구분)
   _loginStores = stores;
   if(!isManager) updateModeBanner(stores, emp);
-  if(authLevel==='franchise_admin') nav('franchiseHome');
+  // 화면 정해지면 가림막 걷기 (라우팅 끝난 뒤 = 앞사람 화면 안 비침, 2026-06-29)
+  if(authLevel==='franchise_admin'){ nav('franchiseHome'); hideBootSplash(); }
   else {
-    if(isManager) _routeManagerHome();
-    else nav('attendance');
+    if(isManager){ _routeManagerHome().finally(hideBootSplash); }
+    else { nav('attendance'); hideBootSplash(); }
     Promise.all([loadEmployees(),loadAllSettings(),loadVendors(),loadFixedCosts(),loadExpCategories()]).then(()=>recalcSettle2());
   }
   if(!isManager) setTimeout(()=>showDeviceStatusPopup(emp),400);
@@ -5723,6 +5805,7 @@ function doLogout(){
   // 매장 신분증도 폐기 (다음 사람이 남 매장으로 못 들어가게) — 새 기능
   try{ sb.auth.signOut(); }catch(_e){}
   localStorage.removeItem('pd_emp');
+  localStorage.removeItem('pd_multi_store'); // 매장 개수 기억 비움 — 다음 사람 로그인 시 새로 판단 (2026-06-29)
   // 모든 컨테이너 내용 초기화 (이전 세션 데이터 잔류 방지)
   document.querySelectorAll('.container').forEach(c=>{c.classList.remove('active');});
   document.getElementById('attendanceCont').classList.add('active');

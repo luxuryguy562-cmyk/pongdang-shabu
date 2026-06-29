@@ -162,6 +162,15 @@
   </defs>
 </svg>
 
+<!-- 부팅 가림막 (로고) — 로그인 복원·화면 전환 중 앞사람 화면 비침 방지 (2026-06-29) -->
+<div id="bootSplash" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:7000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div class="logo-row" style="justify-content:center;gap:12px;">
+    <span class="logo-mark" style="width:56px;height:56px;font-size:28px;border-radius:14px;">₩</span>
+    <span style="font-size:32px;font-weight:900;color:var(--text);letter-spacing:-1.2px;">캐쉬플로우</span>
+  </div>
+  <div class="spinner"></div>
+</div>
+
 <!-- 로그인 화면 (2026-06-26 표준 재설계: 전화번호 단계 → PIN 단계 분리) -->
 <div id="loginOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
   <!-- 브랜드 -->
@@ -1047,6 +1056,8 @@
     </button>
     <button class="btn btn-secondary" style="flex:1;padding:12px;font-size:13px;font-weight:700;" data-action="openCatReceiptInput|manual">✏️ 수동 입력</button>
   </div>
+  <!-- 수동 입력 카테고리(세금·마케팅 — 거래처 없는 지출) 간단 입력 버튼 (2026-06-29) -->
+  <button type="button" id="catRcpManualBtn" style="display:none;width:100%;padding:13px;margin-bottom:14px;background:#3182F6;border:none;border-radius:12px;font-size:14px;font-weight:800;color:#fff;cursor:pointer;" onclick="openManualExpSheet()"><span id="catRcpManualBtnLabel">✏️ 입력</span></button>
   <!-- 옛 거래방법 시트 버튼 — 거래처 필터칩으로 대체, hide-not-delete (2026-06-11 행형 통일) -->
   <div style="display:none;">
     <button class="btn btn-secondary" style="flex:1;padding:10px 12px;font-size:13px;text-align:left;display:flex;justify-content:space-between;align-items:center;" data-action="openCatReceiptFilterSheet">
@@ -2758,6 +2769,17 @@
     <button class="btn btn-success btn-full" data-action="testCrawlerLogin">🔗 로그인 테스트</button>
     <button class="btn btn-primary btn-full" data-action="saveUpsSettings">저장</button>
   </div>
+
+  <!-- ─── 새 기능: 푸시 알림 (2026-06-29) ─── -->
+  <div class="card">
+    <div class="card-title">🔔 알림</div>
+    <p style="font-size:12px;color:var(--gray-600);margin:0 0 14px;">마감·정산·근태 등을 휴대폰 알림으로 받습니다. 앱을 열지 않아도 도착해요.</p>
+    <div class="setting-row" style="cursor:default;">
+      <div><div class="setting-label">푸시 알림</div><div class="setting-sub" id="sv-push-status">확인 중…</div></div>
+      <div class="setting-val" id="sv-push-toggle" data-action="togglePush">설정</div>
+    </div>
+    <button class="btn btn-secondary btn-full" id="btn-push-test" data-action="sendTestPush" style="margin-top:10px;display:none;">📨 테스트 알림 보내기</button>
+  </div>
 </div>
 
 <!-- ══ SHEETS ══ -->
@@ -3676,7 +3698,8 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260627a"></script>
+<script src="assets/common.js?v=20260629a"></script>
+<script src="assets/push.js?v=20260629a"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
   <div style="color:#fff;font-size:12px;font-weight:600;opacity:0.6;">눌러서 닫기</div>
@@ -3686,9 +3709,9 @@
 <script src="assets/tabs/receipt.js?v=20260629b"></script>
 <script src="assets/tabs/attendance.js?v=20260624a"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
-<script src="assets/tabs/settlement.js?v=20260626a"></script>
+<script src="assets/tabs/settlement.js?v=20260629a"></script>
 <script src="assets/tabs/dashboard.js?v=20260626c"></script>
-<script src="assets/tabs/sidemenu.js?v=20260627a"></script>
+<script src="assets/tabs/sidemenu.js?v=20260629c"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 
 <!-- 중간 매출 기록 시트 (2026-06-26) -->
@@ -3713,6 +3736,34 @@
       <button type="button" onclick="saveSnapshot()"
         style="width:100%;padding:16px;background:#3182F6;border:none;border-radius:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;letter-spacing:-.3px;">
         기록 저장
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 수동 지출 간단 입력 시트 (세금·마케팅 — 거래처 없는 지출, 2026-06-29) -->
+<div class="sheet-overlay" id="manualExpSheet">
+  <div class="sheet sheet-content" style="max-height:72vh;">
+    <div class="sheet-header">
+      <div class="sheet-title" id="manualExpTitle">세금 입력</div>
+      <button class="sheet-close" data-action="closeSheet|manualExpSheet">✕</button>
+    </div>
+    <div style="padding:4px 20px 8px;">
+      <p style="font-size:12.5px;color:#8B95A1;font-weight:500;margin-bottom:16px;letter-spacing:-.2px;">거래처 없이 항목·금액만 빠르게 기록해요.</p>
+      <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;">날짜</label>
+      <input type="date" id="manualExpDate" style="width:100%;border:1px solid #E5E8EB;border-radius:12px;padding:13px 14px;font-size:15px;margin-bottom:14px;outline:none;box-sizing:border-box;">
+      <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;"><span id="manualExpItemLabel">세목</span></label>
+      <input type="text" id="manualExpItem" placeholder="예: 건강보험, 고용보험, 부가세"
+        style="width:100%;border:1px solid #E5E8EB;border-radius:12px;padding:13px 14px;font-size:15px;margin-bottom:14px;outline:none;box-sizing:border-box;">
+      <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;">금액</label>
+      <div style="background:#F2F4F6;border-radius:12px;padding:13px 14px;display:flex;align-items:baseline;gap:4px;margin-bottom:18px;">
+        <span style="font-size:18px;font-weight:700;color:#B0B8C1;">₩</span>
+        <input type="tel" id="manualExpAmt" inputmode="numeric" placeholder="0"
+          style="flex:1;border:none;background:transparent;font-size:24px;font-weight:800;color:#191F28;letter-spacing:-.5px;outline:none;text-align:right;font-variant-numeric:tabular-nums;">
+      </div>
+      <button type="button" onclick="saveManualExp()"
+        style="width:100%;padding:16px;background:#3182F6;border:none;border-radius:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;letter-spacing:-.3px;">
+        저장하기
       </button>
     </div>
   </div>
