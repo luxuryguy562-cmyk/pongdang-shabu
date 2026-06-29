@@ -28,7 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
-<link rel="stylesheet" href="assets/styles.css?v=20260626c">
+<link rel="stylesheet" href="assets/styles.css?v=20260629a">
 </head>
 <body>
 
@@ -801,6 +801,7 @@
       <div class="sheet-title">영수증 수정</div>
       <button class="sheet-close" data-action="closeSheet|receiptEditSheet">✕</button>
     </div>
+    <div id="reCreatedBy" style="font-size:11.5px;color:var(--gray-500);padding:0 0 8px;"></div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100);">
       <span style="font-size:12px;color:var(--gray-600);width:56px;">📅 날짜</span>
       <input type="date" id="reDate" style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
@@ -852,7 +853,7 @@
       </div>
     </div>
     <div class="action-group" style="margin-top:16px;">
-      <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="deleteReceiptRow">🗑 삭제</button>
+      <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="deleteReceiptRow">🚫 거래 취소</button>
       <button class="btn btn-primary" style="flex:2;padding:14px;" data-action="saveReceiptEdit">💾 저장</button>
     </div>
   </div>
@@ -899,7 +900,7 @@
       💡 정상 행만 합계·집계에 들어가요. × 누르면 오답 처리(집계 제외).
     </div>
     <div style="display:flex;gap:8px;margin-top:4px;">
-      <button class="btn btn-danger" style="padding:14px 16px;font-size:13px;" data-action="deleteReceiptGroupFromSheet">🗑 삭제</button>
+      <button class="btn btn-danger" style="padding:14px 16px;font-size:13px;" data-action="deleteReceiptGroupFromSheet">🚫 거래 취소</button>
       <button class="btn btn-primary" style="flex:1;padding:14px;" data-action="saveReceiptGroupEdit">💾 저장</button>
     </div>
   </div>
@@ -3406,6 +3407,19 @@
   <div class="reason-item cancel" data-action="selectReason|cancel">↩️ 다시 포함하기 (되돌리기)</div>
 </div>
 
+<!-- 거래 취소 사유 선택 (2026-06-29) — 저장된 영수증 삭제=취소 -->
+<div class="sheet-overlay" id="cancelReasonSheet" style="z-index:6000;">
+  <div class="sheet sheet-content" style="max-height:80vh;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">취소 사유를 골라주세요</div>
+      <button class="sheet-close" data-action="closeCancelReason">✕</button>
+    </div>
+    <div class="reason-sub">고른 사유와 함께 <b>"취소됨"으로 기록</b>돼요. 삭제가 아니라 흔적이 남고, '되돌리기'로 복구할 수 있어요.</div>
+    <div id="cancelReasonList" class="crs-list"></div>
+  </div>
+</div>
+
 <!-- 설정값 편집 -->
 <div class="sheet" id="settingEditSheet">
   <div class="sheet-handle"></div>
@@ -3678,7 +3692,7 @@
   <img id="imgFullSrc" style="max-width:90%;max-height:72vh;object-fit:contain;border-radius:12px;">
   <button style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:30px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;" data-action="closeImgFullPreview">닫기</button>
 </div>
-<script src="assets/tabs/receipt.js?v=20260624j"></script>
+<script src="assets/tabs/receipt.js?v=20260629a"></script>
 <script src="assets/tabs/attendance.js?v=20260624a"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260626a"></script>
