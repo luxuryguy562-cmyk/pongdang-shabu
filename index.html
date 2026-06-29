@@ -3694,7 +3694,7 @@
   <img id="imgFullSrc" style="max-width:90%;max-height:72vh;object-fit:contain;border-radius:12px;">
   <button style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:30px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;" data-action="closeImgFullPreview">닫기</button>
 </div>
-<script src="assets/tabs/receipt.js?v=20260629a"></script>
+<script src="assets/tabs/receipt.js?v=20260629b"></script>
 <script src="assets/tabs/attendance.js?v=20260624a"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260626a"></script>
@@ -3737,18 +3737,18 @@
       <button class="sheet-close" data-action="closeSheet|manualExpSheet">✕</button>
     </div>
     <div style="padding:4px 20px 8px;">
-      <p style="font-size:12.5px;color:#8B95A1;font-weight:500;margin-bottom:16px;letter-spacing:-.2px;">거래처·품목 없이 금액만 빠르게 기록해요.</p>
+      <p style="font-size:12.5px;color:#8B95A1;font-weight:500;margin-bottom:16px;letter-spacing:-.2px;">거래처 없이 항목·금액만 빠르게 기록해요.</p>
       <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;">날짜</label>
       <input type="date" id="manualExpDate" style="width:100%;border:1px solid #E5E8EB;border-radius:12px;padding:13px 14px;font-size:15px;margin-bottom:14px;outline:none;box-sizing:border-box;">
+      <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;"><span id="manualExpItemLabel">세목</span></label>
+      <input type="text" id="manualExpItem" placeholder="예: 건강보험, 고용보험, 부가세"
+        style="width:100%;border:1px solid #E5E8EB;border-radius:12px;padding:13px 14px;font-size:15px;margin-bottom:14px;outline:none;box-sizing:border-box;">
       <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;">금액</label>
-      <div style="background:#F2F4F6;border-radius:12px;padding:13px 14px;display:flex;align-items:baseline;gap:4px;margin-bottom:14px;">
+      <div style="background:#F2F4F6;border-radius:12px;padding:13px 14px;display:flex;align-items:baseline;gap:4px;margin-bottom:18px;">
         <span style="font-size:18px;font-weight:700;color:#B0B8C1;">₩</span>
         <input type="tel" id="manualExpAmt" inputmode="numeric" placeholder="0"
           style="flex:1;border:none;background:transparent;font-size:24px;font-weight:800;color:#191F28;letter-spacing:-.5px;outline:none;text-align:right;font-variant-numeric:tabular-nums;">
       </div>
-      <label style="display:block;font-size:12px;font-weight:700;color:#505967;margin-bottom:6px;">메모 (선택)</label>
-      <input type="text" id="manualExpMemo" placeholder="예: 부가세, 종합소득세, 광고비"
-        style="width:100%;border:1px solid #E5E8EB;border-radius:12px;padding:13px 14px;font-size:15px;margin-bottom:18px;outline:none;box-sizing:border-box;">
       <button type="button" onclick="saveManualExp()"
         style="width:100%;padding:16px;background:#3182F6;border:none;border-radius:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;letter-spacing:-.3px;">
         저장하기

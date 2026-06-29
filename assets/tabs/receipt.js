@@ -858,20 +858,24 @@ function openManualReceiptShortcut(){
 let _manualExpCat = null; // {id, name} — loadCatReceiptData가 채움
 function openManualExpSheet(){
   if(!_manualExpCat){ toast('카테고리를 찾을 수 없어요','error'); return; }
-  const t=document.getElementById('manualExpTitle'); if(t) t.textContent=_manualExpCat.name+' 입력';
+  const nm=_manualExpCat.name;
+  const t=document.getElementById('manualExpTitle'); if(t) t.textContent=nm+' 입력';
+  // 세목/항목 라벨·예시 — 세금은 '세목'(건강보험 등), 그 외는 '항목'
+  const lb=document.getElementById('manualExpItemLabel'); if(lb) lb.textContent = (nm==='세금') ? '세목' : '항목';
+  const it=document.getElementById('manualExpItem');
+  if(it){ it.value=''; it.placeholder = (nm==='세금') ? '예: 건강보험, 고용보험, 부가세' : '예: 광고비, 행사비, 홍보물'; }
   const d=document.getElementById('manualExpDate');
   if(d){ const n=new Date(); d.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
   const a=document.getElementById('manualExpAmt'); if(a) a.value='';
-  const m=document.getElementById('manualExpMemo'); if(m) m.value='';
   openSheet('manualExpSheet');
 }
 async function saveManualExp(){
   if(!currentStore){ toast('매장을 먼저 선택해주세요','error'); return; }
   if(!_manualExpCat){ toast('카테고리를 찾을 수 없어요','error'); return; }
   const dateV=(document.getElementById('manualExpDate')||{}).value||'';
+  const itemV=((document.getElementById('manualExpItem')||{}).value||'').trim();
   const amtRaw=((document.getElementById('manualExpAmt')||{}).value||'').replace(/[^0-9]/g,'');
   const amt=parseInt(amtRaw,10);
-  const memo=((document.getElementById('manualExpMemo')||{}).value||'').trim();
   if(!dateV){ toast('날짜를 선택해주세요','error'); return; }
   if(isNaN(amt)||amt<=0){ toast('금액을 입력해주세요','error'); return; }
   setLoad(true,'저장 중...');
@@ -881,7 +885,7 @@ async function saveManualExp(){
     total_price: amt,
     category_id: _manualExpCat.id,
     category: _manualExpCat.name,
-    item: memo || _manualExpCat.name,
+    item: itemV || _manualExpCat.name, // 세목/항목 = 품목(item) 자리에 저장
     vendor_id: null,
     input_method: 'manual',
     note: '정상',
