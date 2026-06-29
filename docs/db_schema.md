@@ -834,6 +834,55 @@ RPC: `vote_global_hint(p_vendor_item_id, p_category_name)` — 충돌 시 vote_c
 
 ---
 
+## push_subscriptions (푸시 알림 구독 — 2026-06-29 신설)
+
+> 누가·어느 기기로 알림 받을지 저장. 사장님이 설정 화면 "🔔 알림 켜기" 누르면 한 행 생성(기기당 1행).
+
+| 컬럼 | 설명 |
+|---|---|
+| id (uuid PK) | |
+| store_id (uuid, FK→stores CASCADE) | 매장 격리 |
+| employee_id (uuid, FK→employees SET NULL) | 누구 기기인지 (선택) |
+| endpoint (text, UNIQUE) | 브라우저 푸시 구독 주소 (기기 고유) |
+| p256dh (text) | 메시지 암호화 공개키 |
+| auth (text) | 메시지 인증 비밀값 |
+| user_agent (text) | 기기/브라우저 (관리용) |
+| enabled (bool, default true) | 알림 켜짐/꺼짐 |
+| created_at / updated_at (timestamptz) | |
+
+- RLS: `store_isolation` (기존 표와 동일 — JWT app_metadata.store_id 매칭)
+- 색인: `idx_push_sub_store` (store_id, enabled=true 부분 색인)
+- 발송: 서버 함수 `send-push`가 service_role로 읽어 web-push 발송 (VAPID 비밀키는 서버 함수 환경변수)
+- 프론트: `assets/push.js` (구독 등록/해제), `sw.js` (수신·표시)
+- 롤백: `DROP TABLE public.push_subscriptions;`
+
+---
+
+## app_secrets (서버 전용 비밀값 — 2026-06-29 신설)
+
+> VAPID 비밀키 등 서버만 알아야 할 값. RLS 켜고 **정책 0개 = anon·authenticated 완전 차단**. service_role(서버 함수)만 RLS 우회 접근.
+
+| 컬럼 | 설명 |
+|---|---|
+| key (text PK) | 비밀값 이름 (vapid_public / vapid_private / vapid_subject) |
+| value (text) | 값 |
+| updated_at (timestamptz) | |
+
+- 현재 보관: `vapid_public`, `vapid_private`, `vapid_subject`(mailto:)
+- 읽는 곳: Edge Function `send-push`만 (service_role)
+- 롤백: `DROP TABLE public.app_secrets;`
+
+---
+
+## Edge Functions (서버 함수)
+
+| 함수 | 역할 |
+|---|---|
+| `switch-store` | 매장 전환 시 권한 확인 후 그 매장 세션(JWT) 발급 |
+| `send-push` (2026-06-29) | 푸시 알림 발송. 호출자 JWT의 store_id 구독에만 발송. service_role 호출 시 body.store_id 지정 가능(자동 발송용). 코드: `supabase/functions/send-push/index.ts` |
+
+---
+
 ## 성능 색인 (2026-06-16 — 외래키 38개 색인 추가)
 
 > 배경: 사장님 "홈 7초" 호소 → 성능권고(advisors) 116건 측정. `store_id` 등 외래키에 색인 없는 표 19개 = 데이터 누적 시 풀스캔. 마이그레이션 `add_missing_fk_indexes`로 일괄 추가.

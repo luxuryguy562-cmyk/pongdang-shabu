@@ -2571,7 +2571,61 @@ async function loadAllSettings(){
   const uscEl=document.getElementById('si-ups-store-code');if(uscEl)uscEl.value=settings.ups_store_code||'';
   const uidEl=document.getElementById('si-ups-id');if(uidEl)uidEl.value=settings.ups_id||'';
   const upwEl=document.getElementById('si-ups-pw');if(upwEl)upwEl.value=settings.ups_pw||'';
+  // 푸시 알림 상태 표시 (2026-06-29)
+  if(typeof refreshPushUI==='function') refreshPushUI();
 }
+
+// ─── 새 기능: 푸시 알림 설정 UI (2026-06-29) ───
+// 알림 켜짐/꺼짐 상태에 따라 설정 화면 라벨·버튼 갱신
+async function refreshPushUI(){
+  const stEl=document.getElementById('sv-push-status');
+  const tgEl=document.getElementById('sv-push-toggle');
+  if(!stEl||!tgEl) return;
+  if(typeof getPushStatus!=='function'){ stEl.innerText='이 기기 미지원'; tgEl.style.display='none'; return; }
+  const st=await getPushStatus();
+  const map={
+    on:        ['켜짐 ✅','끄기'],
+    off:       ['꺼짐','켜기'],
+    denied:    ['차단됨 (휴대폰 브라우저 설정에서 알림 허용 필요)','—'],
+    unsupported:['이 기기는 미지원 (아이폰은 홈 화면 추가 후)','—'],
+  };
+  const [txt,label]=map[st]||map.off;
+  stEl.innerText=txt;
+  tgEl.innerText=label;
+  tgEl.style.display=(st==='denied'||st==='unsupported')?'none':'';
+  // 테스트 발송 버튼은 알림 켜진 경우만 표시
+  const testBtn=document.getElementById('btn-push-test');
+  if(testBtn) testBtn.style.display=(st==='on')?'':'none';
+}
+// 테스트 알림 발송 (내 매장 구독 기기로)
+async function sendTestPush(){
+  if(typeof getPushStatus==='function'){
+    const st=await getPushStatus();
+    if(st!=='on'){ alert('먼저 알림을 켜주세요.'); return; }
+  }
+  try{
+    const { data, error } = await sb.functions.invoke('send-push', { body:{ payload:{ title:'캐쉬플로우 🔔', body:'테스트 알림입니다. 잘 도착했어요!', url:'/' } } });
+    if(error){ console.error('[push] 테스트 발송 실패', error); alert('테스트 발송에 실패했습니다.'); return; }
+    if(typeof toast==='function') toast(`테스트 알림 발송 (${(data&&data.sent)||0}건)`,'success');
+    else alert(`테스트 알림 발송 (${(data&&data.sent)||0}건)`);
+  }catch(e){ console.error('[push] 테스트 발송 오류', e); alert('테스트 발송 오류'); }
+}
+// 알림 켜기/끄기 토글
+async function togglePush(){
+  if(typeof getPushStatus!=='function') return;
+  const st=await getPushStatus();
+  if(st==='unsupported'||st==='denied'){ await refreshPushUI(); return; }
+  if(st==='on'){
+    if(!confirm('알림을 끌까요?')) return;
+    await disablePushNotifications();
+    if(typeof toast==='function') toast('알림을 껐어요','success');
+  } else {
+    const ok=await enablePushNotifications();
+    if(ok && typeof toast==='function') toast('알림이 켜졌어요','success');
+  }
+  await refreshPushUI();
+}
+
 function openSettingEdit(key,label,suffix){
   document.getElementById('settingEditTitle').innerText=label+' 변경';
   document.getElementById('settingEditInput').value=settings[key]!=null?settings[key]:'';
