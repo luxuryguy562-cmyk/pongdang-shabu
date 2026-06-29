@@ -926,21 +926,8 @@ async function finishSettlement2(){
       body:_pushBody, url:'/'
     } } }).catch(e=>console.warn('[push] 마감 알림 발송 실패', e));
   }catch(_){}
-  // ─── 새 기능: 마감 직후 퇴근 미기록 직원 알림 (2026-06-29) ───
-  // 그날 출근(app_in/caps_in)했는데 퇴근(app_out/caps_out) 둘 다 없는 직원 → 별도 알림.
-  try{
-    const { data:_att } = await sb.from('attendance_logs')
-      .select('app_in,caps_in,app_out,caps_out,employees(name)')
-      .eq('store_id',currentStore.id).eq('work_date',settleDate);
-    const _noOut = (_att||[]).filter(a=>(a.app_in||a.caps_in)&&!a.app_out&&!a.caps_out);
-    if(_noOut.length){
-      const _names = _noOut.map(a=>(a.employees&&a.employees.name)||'직원').join('·');
-      sb.functions.invoke('send-push', { body:{ payload:{
-        title:`퇴근 미기록 ⏰ ${_noOut.length}명`,
-        body:`${_names} — 퇴근 기록이 없어요. 퇴근 시간을 입력해 주세요.`, url:'/'
-      } } }).catch(e=>console.warn('[push] 퇴근미기록 알림 실패', e));
-    }
-  }catch(_){}
+  // 퇴근 미기록 알림은 마감 직후 X (직원이 마감 후 퇴근 찍음). 마감 후 ~20분 뒤
+  // check-reminders(after-close, 매 10분 cron)가 체크해서 발송. (사장님 2026-06-29)
   // 2026-06-01: 기록조회 서브탭 제거 → 저장 후 개시마감 첫화면(차액 표)로 이동
   resetSettleView();
   if(typeof nav==='function') nav('busHub');
