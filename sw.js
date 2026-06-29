@@ -1,31 +1,55 @@
-// 캐쉬플로우 Service Worker — 자살 모드 (2026-05-22)
-// 사장님 호소: "바텀시트 나오기 전 모양" — 옛 SW가 수개월 옛 index.html 캐시 잡고 있음
-// 이 SW는 옛 SW를 대체한 후 자기 자신 + 모든 캐시 즉시 삭제
+// 캐쉬플로우 Service Worker — 푸시 알림 (2026-06-29)
+// ⚠️ 캐시는 절대 잡지 않는다 (옛 캐시 문제 재발 방지 — 사장님 "바텀시트 나오기 전 모양" 호소).
+// 역할: 푸시 알림 수신·표시 전용. fetch 가로채기 없음 = 네트워크 직행.
 
 self.addEventListener('install', (event) => {
-  // 옛 SW 즉시 교체
+  // 새 SW 즉시 활성화
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    // 1. 모든 캐시 삭제
+    // 과거 캐시 잔재 제거 (이 SW는 캐시를 만들지 않지만, 옛 SW가 남긴 것 청소)
     try {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
     } catch (_) {}
-    // 2. 자기 자신 unregister
-    try {
-      await self.registration.unregister();
-    } catch (_) {}
-    // 3. 모든 클라이언트 강제 새로고침
-    try {
-      const clients = await self.clients.matchAll({ type: 'window' });
-      clients.forEach(c => {
-        try { c.navigate(c.url); } catch (_) {}
-      });
-    } catch (_) {}
+    // 현재 열린 페이지들을 이 SW가 즉시 제어 (다음 새로고침 없이 푸시 수신 가능)
+    try { await self.clients.claim(); } catch (_) {}
   })());
 });
 
-// fetch는 가로채지 않음 — 네트워크로 직행 (SW 없는 상태와 동일)
+// fetch 가로채지 않음 — 네트워크로 직행 (SW 없는 상태와 동일, 캐시 문제 원천 차단)
+
+// ─── 푸시 수신 → 알림 표시 ───
+self.addEventListener('push', (event) => {
+  let d = {};
+  try {
+    d = event.data ? event.data.json() : {};
+  } catch (_) {
+    d = { title: '캐쉬플로우', body: event.data ? event.data.text() : '' };
+  }
+  const title = d.title || '캐쉬플로우';
+  const opts = {
+    body: d.body || '',
+    icon: d.icon || '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: d.tag || undefined,                 // 같은 tag = 이전 알림 덮어씀 (중복 방지)
+    data: { url: d.url || '/' },
+    requireInteraction: !!d.requireInteraction, // true면 사용자가 닫을 때까지 유지
+  };
+  event.waitUntil(self.registration.showNotification(title, opts));
+});
+
+// ─── 알림 클릭 → 앱 열기/포커스 ───
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of all) {
+      if ('focus' in c) { try { c.focus(); return; } catch (_) {} }
+    }
+    if (self.clients.openWindow) return self.clients.openWindow(url);
+  })());
+});
