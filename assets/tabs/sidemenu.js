@@ -2604,7 +2604,7 @@ async function sendTestPush(){
     if(st!=='on'){ alert('먼저 알림을 켜주세요.'); return; }
   }
   try{
-    const { data, error } = await sb.functions.invoke('send-push', { body:{ payload:{ title:'캐쉬플로우 🔔', body:'테스트 알림입니다. 잘 도착했어요!', url:'/' } } });
+    const { data, error } = await sb.functions.invoke('send-push', { body:{ payload:{ title:'테스트 알림 🔔', body:'잘 도착했어요! 알림이 정상 작동합니다.', url:'/' } } });
     if(error){ console.error('[push] 테스트 발송 실패', error); alert('테스트 발송에 실패했습니다.'); return; }
     if(typeof toast==='function') toast(`테스트 알림 발송 (${(data&&data.sent)||0}건)`,'success');
     else alert(`테스트 알림 발송 (${(data&&data.sent)||0}건)`);
