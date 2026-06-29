@@ -404,7 +404,10 @@ RLS: enabled, policy `scr_all` USING(true) WITH CHECK(store_id IS NOT NULL) — 
 | **is_deposit** (boolean, 2026-06-09) | 보증금 행 여부. true=보증금 입금/회수 행(매입비 집계 제외), false=일반 품목. 주류 영수증 용기보증금 분리용. 기본값 false. 마이그레이션 `add_is_deposit_to_receipts` |
 | **spec** (text, 2026-06-08) | 규격·포장 규격 (예 "F0용 슬라이스 1kg", "500g"). AI가 i에서 분리 추출. 직구·옛 영수증 NULL. 마이그레이션 `add_receipts_spec_origin_20260608`. **2026-06-21 규격 표준형 통일**: 단위 소문자(kg·g·ml·l), 포장 꼬리표 "/EA"·"/PAC"·"/BOX" 제거 (1KG/PAC→1kg). 기존 DB 단순 패턴 101건 일괄 정규화 + 프롬프트 [규격 표준형] 규칙 박음 |
 | **origin** (text, 2026-06-08) | 원산지 (예 "외국산", "국내산", "돈육:국내산"). AI가 분리 추출. **2026-06-21 정책 변경**: 옛 규칙(쉼표로 품명에 섞인 산지는 item에 그대로 두고 origin=NULL)을 폐기 → 영수증 어디든 산지가 보이면 origin으로 분리(품명에서 제거). 원재료 여럿이면 쉼표로 origin에 다 담음. 과거 데이터는 백필 안 함(앞으로 분석분만). 직구·옛 영수증 NULL |
-| note | 정상/오답/반품 등 |
+| note | 정상/오답/반품/취소 사유 등. **`note != '정상'` = 합계 전면 제외 + 줄긋기** (모든 집계가 `eq('note','정상')`로 거름). 취소·반품 시 사유 문자열 저장 (예: '취소·중복입력', '반품·불량'). 2026-06-29 취소 기능이 이 칸 재활용 |
+| **created_by** (uuid, nullable, 2026-06-29) | 영수증 등록한 직원(employees.id). 저장 시 currentEmp.id 박음. 옛 영수증 NULL. 마이그레이션 `add_receipts_audit_cancel_columns_20260629` |
+| **cancelled_by** (uuid, nullable, 2026-06-29) | 취소·반품 처리한 직원(employees.id). 관리자만 취소 가능 |
+| **cancelled_at** (timestamptz, nullable, 2026-06-29) | 취소·반품 시각. NULL=정상, 값=취소됨. 되돌리기 시 NULL로 복구. 롤백 `ALTER TABLE receipts DROP COLUMN created_by, DROP COLUMN cancelled_by, DROP COLUMN cancelled_at;` |
 | **seq** (int, 2026-06-09) | 영수증 내 품목 순서(분석 순서, 0부터). 한 영수증의 created_at은 모두 동일 + id는 uuid라 순서 정보가 없어 기록 표시 시 품목이 매번 섞이던 버그 해결. 저장 시 행 인덱스 박음. 옛 영수증 NULL(원래 순서 유지). 마이그레이션 `ALTER TABLE receipts ADD COLUMN seq INT;` 롤백 `ALTER TABLE receipts DROP COLUMN seq;` |
 | created_at | 등록일시 |
 
