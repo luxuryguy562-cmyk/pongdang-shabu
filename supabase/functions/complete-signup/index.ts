@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
     if (!token) return json({ ok: false, error: "증표 없음" }, 400);
     const nm = (name || "").trim();
     if (!nm) return json({ ok: false, error: "이름을 입력해주세요" }, 400);
-    if (!/^[0-9]{4,6}$/.test(String(pin || ""))) return json({ ok: false, error: "PIN은 숫자 4~6자리" }, 400);
+    if (!/^[0-9]{6}$/.test(String(pin || ""))) return json({ ok: false, error: "PIN은 숫자 6자리" }, 400);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
