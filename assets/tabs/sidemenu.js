@@ -2990,7 +2990,7 @@ function openTxExportSheet(){
   closeSideMenu();
   txExportYm=new Date().toISOString().slice(0,7);
   const lbl=document.getElementById('txMonthLabel'); if(lbl) lbl.innerText=txExportYm;
-  ['txOptPivot','txOptList','txOptSales'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true;});
+  ['txOptPivot','txOptList','txOptVendor','txOptSales'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true;});
   openSheet('txExportSheet');
 }
 function moveTxExportMonth(dir){
@@ -3022,8 +3022,9 @@ async function downloadTxExport(){
   if(typeof XLSX==='undefined') return toast('엑셀 라이브러리 로드 안 됨','error');
   const optPivot=document.getElementById('txOptPivot')?.checked;
   const optList=document.getElementById('txOptList')?.checked;
+  const optVendor=document.getElementById('txOptVendor')?.checked;
   const optSales=document.getElementById('txOptSales')?.checked;
-  if(!optPivot&&!optList&&!optSales) return toast('1개 이상 선택하세요','warn');
+  if(!optPivot&&!optList&&!optVendor&&!optSales) return toast('1개 이상 선택하세요','warn');
   setLoad(true,'데이터 조회 중...');
   try{
     const ym=txExportYm, sid=currentStore.id;
@@ -3110,6 +3111,26 @@ async function downloadTxExport(){
       all.forEach(x=>{ aoa.push([x.date,x.vendor,x.kind,x.cat,x.sub,x.item,x.unit,x.qty,x.amount,x.pay,x.status,x.who]); if(x.status==='정상') sum+=x.amount; });
       aoa.push([]); aoa.push(['','','','','','','','정상 합계',sum,'(취소·반품 제외)','','']);
       const wsL=XLSX.utils.aoa_to_sheet(aoa); _xlStyle(wsL,{head:[2]}); XLSX.utils.book_append_sheet(wb, wsL, '항목별 거래내역');
+    }
+
+    // ③ 거래처별 — 거래처마다 일자별 합계 + 거래처 소계 (정상·비보증금)
+    if(optVendor){
+      const vd={};
+      const addV=(vn,date,amt)=>{ if(!amt) return; vd[vn]=vd[vn]||{}; vd[vn][date]=vd[vn][date]||{amt:0,cnt:0}; vd[vn][date].amt+=amt; vd[vn][date].cnt++; };
+      receipts.forEach(r=>{ if(r.note!=='정상'||r.is_deposit) return; addV(rv(r), r.receipt_date, r.total_price||0); });
+      orders.forEach(o=>{ addV(vName(o), o.order_date, o.amount||0); });
+      myd.forEach(m=>{ addV((m.merchant_name||m.description||'-').trim()||'-', m.tx_date, Math.abs(m.amount||0)); });
+      const vTot={}; Object.keys(vd).forEach(v=>{ vTot[v]=Object.values(vd[v]).reduce((a,d)=>a+d.amt,0); });
+      const vKeys=Object.keys(vd).sort((a,b)=>vTot[b]-vTot[a]);
+      const aoa=[[`${ym} 거래처별 (일자별 합계·소계) — ${currentStore.name||''}`],[],['거래처','결제일','건수','금액(원)']];
+      let gAmt=0,gCnt=0;
+      vKeys.forEach(v=>{
+        const dates=Object.keys(vd[v]).sort(); let vAmt=0,vCnt=0;
+        dates.forEach(d=>{ aoa.push([v,d,vd[v][d].cnt,vd[v][d].amt]); vAmt+=vd[v][d].amt; vCnt+=vd[v][d].cnt; });
+        aoa.push(['└ '+v+' 소계','',vCnt,vAmt]); gAmt+=vAmt; gCnt+=vCnt;
+      });
+      aoa.push([]); aoa.push(['전체 합계','',gCnt,gAmt]);
+      const wsV=XLSX.utils.aoa_to_sheet(aoa); _xlStyle(wsV,{head:[2]}); XLSX.utils.book_append_sheet(wb, wsV, '거래처별');
     }
 
     // ③ 매출 — 마감 그대로 (결제수단별 매출 + 현금 분해)
