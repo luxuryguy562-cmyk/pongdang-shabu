@@ -191,30 +191,6 @@ Deno.serve(async (req: Request) => {
       await admin.from("persons").update(_resetPatch).eq("id", person.id);
     }
 
-    // 5.5) 기기 신뢰 확인 — 처음 보는 기기면 문자 인증(OTP) 요구 (토스식, 2026-06-30)
-    //  - 기존 직원(신뢰 기기 0개) = 첫 로그인 기기 자동 신뢰(grandfather) → 아무도 안 잠김
-    //  - 신뢰된 기기 = 조용히 통과 / 새 기기 + 유효한 문자증표(otp_token) = 신뢰 등록 후 통과
-    //  - 새 기기 + 증표 없음 = need_otp 반환 (프론트가 문자 인증 진행 후 재호출)
-    const deviceId = String(body.device_id || "").slice(0, 200);
-    if (deviceId) {
-      const { data: dev } = await admin.from("trusted_devices")
-        .select("id").eq("person_id", person.id).eq("device_id", deviceId).maybeSingle();
-      if (dev) {
-        await admin.from("trusted_devices").update({ last_seen_at: new Date().toISOString() }).eq("id", dev.id);
-      } else {
-        const { count } = await admin.from("trusted_devices")
-          .select("id", { count: "exact", head: true }).eq("person_id", person.id);
-        let trust = (count || 0) === 0; // 신뢰 기기 0개 = 기존 직원 → 첫 기기 자동 신뢰
-        if (!trust && body.otp_token) {
-          // 문자 인증 증표 검증 (verify-otp가 발급한 것, 본인·미만료)
-          const { data: tok } = await admin.from("signup_tokens").select("person_id, expires_at").eq("token", body.otp_token).maybeSingle();
-          if (tok && tok.person_id === person.id && new Date(tok.expires_at) >= new Date()) trust = true;
-        }
-        if (!trust) return json({ ok: false, need_otp: true, error: "처음 보는 기기예요. 문자 인증이 필요해요." });
-        await admin.from("trusted_devices").insert({ person_id: person.id, device_id: deviceId });
-      }
-    }
-
     // 6) 결과 조립 (개인/매장/투잡)
     const result = await buildLoginResult(admin, person, empsAll || []);
     return json(result);
