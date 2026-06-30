@@ -3013,7 +3013,7 @@ async function downloadTxExport(){
     const endD=new Date(ym+'-01'); endD.setMonth(endD.getMonth()+1);
     const endIncl=new Date(endD.getTime()-86400000).toISOString().slice(0,10); // 그 달 말일
     const [rcpRes, ordRes, mydRes, setRes, empRes, catRes] = await Promise.all([
-      sb.from('receipts').select('receipt_date,vendor,item,category_id,total_price,unit_price,qty,note,created_by,is_deposit').eq('store_id',sid).gte('receipt_date',start).lte('receipt_date',endIncl).order('receipt_date'),
+      sb.from('receipts').select('receipt_date,vendor,item,category_id,total_price,unit_price,qty,note,created_by,is_deposit,input_method').eq('store_id',sid).gte('receipt_date',start).lte('receipt_date',endIncl).order('receipt_date'),
       sb.from('vendor_orders').select('order_date,item,amount,quantity,unit_price,vendors(name,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',endIncl).order('order_date'),
       sb.from('mydata_transactions').select('tx_date,amount,description,merchant_name,sub_category,category_id').eq('store_id',sid).lt('amount',0).gte('tx_date',start).lte('tx_date',endIncl).order('tx_date'),
       sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',endIncl).order('settle_date'),
@@ -3038,12 +3038,13 @@ async function downloadTxExport(){
 
     // ① 장부 총정리 (교차표) — 거래처 × 카테고리(대분류 묶음 + 세부 + 대분류합계). 정상·비보증금만
     if(optPivot){
-      const cells={}, rowTot={}, majors={};
+      const cells={}, rowTot={}, majors={}, vMajorTot={};
       const addCell=(vn,catId,amt)=>{
         if(!amt) return;
         const r=resolveCat(catId); const sub=r.sub||'_single'; const ck=r.mName+''+sub;
         cells[vn]=cells[vn]||{}; cells[vn][ck]=(cells[vn][ck]||0)+amt;
         rowTot[vn]=(rowTot[vn]||0)+amt;
+        vMajorTot[vn]=vMajorTot[vn]||{}; vMajorTot[vn][r.mName]=(vMajorTot[vn][r.mName]||0)+amt;
         const mi=majors[r.mName]=majors[r.mName]||{subTot:{},total:0,hasSub:false};
         mi.total+=amt; mi.subTot[sub]=(mi.subTot[sub]||0)+amt; if(r.sub!==null) mi.hasSub=true;
       };
@@ -3072,7 +3073,7 @@ async function downloadTxExport(){
       }
       const aoa=[[`${ym} 장부 총정리 (거래처 × 카테고리) — ${currentStore.name||''}`],[],grpRow,subRow];
       const vKeys=Object.keys(cells).sort((a,b)=>rowTot[b]-rowTot[a]);
-      vKeys.forEach(v=>{ const row=[v,rowTot[v]]; cols.forEach(c=>{ const val=c.isTot?majors[c.group].total:(cells[v][c.ck]||0); row.push(val||''); }); aoa.push(row); });
+      vKeys.forEach(v=>{ const row=[v,rowTot[v]]; cols.forEach(c=>{ const val=c.isTot?((vMajorTot[v]&&vMajorTot[v][c.group])||0):(cells[v][c.ck]||0); row.push(val||''); }); aoa.push(row); });
       const totRow=['합계', vKeys.reduce((a,v)=>a+rowTot[v],0)]; cols.forEach(c=>totRow.push(c.total||0)); aoa.push(totRow);
       const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!merges']=merges;
       XLSX.utils.book_append_sheet(wb, ws, '장부 총정리');
@@ -3081,7 +3082,7 @@ async function downloadTxExport(){
     // ② 항목별 거래내역 (평평한 리스트) — 칸 다 쪼갬, 날짜순, 취소 포함
     if(optList){
       const all=[];
-      receipts.forEach(r=>{ const c=resolveCat(r.category_id); all.push({date:r.receipt_date,vendor:r.vendor||'직접구매',kind:'영수증',cat:c.mName,sub:c.sub||'',item:r.item||'',unit:r.unit_price||'',qty:(r.qty!=null?r.qty:''),amount:r.total_price||0,pay:'영수증',status:(r.note==='정상'?'정상':(r.note||'취소')),who:empName(r.created_by)}); });
+      receipts.forEach(r=>{ const c=resolveCat(r.category_id); all.push({date:r.receipt_date,vendor:r.vendor||'직접구매',kind:(r.input_method==='manual'?'직접입력':'영수증'),cat:c.mName,sub:c.sub||'',item:r.item||'',unit:r.unit_price||'',qty:(r.qty!=null?r.qty:''),amount:r.total_price||0,pay:'영수증',status:(r.note==='정상'?'정상':(r.note||'취소')),who:empName(r.created_by)}); });
       orders.forEach(o=>{ const c=resolveCat(o.vendors&&o.vendors.category_id); all.push({date:o.order_date,vendor:vName(o),kind:'거래처',cat:c.mName,sub:c.sub||'',item:o.item||'',unit:o.unit_price||'',qty:(o.quantity!=null?o.quantity:''),amount:o.amount||0,pay:'거래처',status:'정상',who:''}); });
       myd.forEach(m=>{ const c=resolveCat(m.category_id); all.push({date:m.tx_date,vendor:(m.merchant_name||m.description||'-').trim()||'-',kind:'통장/카드',cat:c.mName,sub:(m.sub_category||c.sub||''),item:m.sub_category||m.description||'',unit:'',qty:'',amount:Math.abs(m.amount||0),pay:'통장/카드',status:'정상',who:''}); });
       all.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
