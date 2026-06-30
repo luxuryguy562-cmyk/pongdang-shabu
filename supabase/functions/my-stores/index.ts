@@ -80,7 +80,7 @@ function calcStoreNetProfit(ctx: {
   employees: any[];       // 이 매장 employees
   expCategories: any[];   // 이 매장 expense_categories
   vendorOrders: any[];    // 당월 vendor_orders (vendors 조인)
-  receipts: any[];        // 당월 receipts (note='정상', is_deposit=false)
+  receipts: any[];        // 당월 receipts (note='정상' — 보증금 포함, 2026-06-30 주문금액 기준)
   attLogs: any[];         // 당월 attendance_logs
   schedules: any[];       // 당월 work_schedules
   fixedCosts: any[];      // fixed_costs (활성)
@@ -428,7 +428,7 @@ Deno.serve(async (req: Request) => {
       admin.from("employees").select("id,store_id,wage_type,monthly_wage,base_wage,hire_date,resign_date,is_active").in("store_id", storeIds),
       admin.from("expense_categories").select("id,store_id,name,parent_id,data_source,category_type,is_active").in("store_id", storeIds),
       admin.from("vendor_orders").select("store_id,amount,order_date,vendors(category_id)").in("store_id", storeIds).gte("order_date", start).lte("order_date", end),
-      admin.from("receipts").select("store_id,total_price,category_id,receipt_date").in("store_id", storeIds).eq("note", "정상").eq("is_deposit", false).gte("receipt_date", start).lte("receipt_date", end),
+      admin.from("receipts").select("store_id,total_price,category_id,receipt_date").in("store_id", storeIds).eq("note", "정상").gte("receipt_date", start).lte("receipt_date", end),
       admin.from("attendance_logs").select("store_id,work_date,total_work_min,calculated_wage,employee_id").in("store_id", storeIds).gte("work_date", start).lte("work_date", end),
       admin.from("work_schedules").select("store_id,employee_id,work_date,is_off,status").in("store_id", storeIds).gte("work_date", start).lte("work_date", end),
       admin.from("fixed_costs").select("id,store_id,estimated_monthly,is_active,category").in("store_id", storeIds),
