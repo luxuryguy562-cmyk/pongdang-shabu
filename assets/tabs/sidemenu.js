@@ -3042,6 +3042,7 @@ async function downloadTxExport(){
     if(!receipts.length && !orders.length && !myd.length && !settles.length){ setLoad(false); return toast('해당 월에 데이터가 없습니다','warn'); }
     const empName=id=>{ if(!id) return ''; const e=emps.find(x=>x.id===id); return e?(e.name||'직원'):'직원'; };
     const vName=o=>(o.vendors&&o.vendors.name)||'거래처';
+    const rv=r=>r.vendor||(r.input_method==='manual'?'직접입력':'직접구매'); // 거래처 없으면 직접입력/직접구매 구분
     // 카테고리 트리 (대분류·소분류)
     const catMap={}; cats.forEach(c=>catMap[c.id]={name:c.name,parent:c.parent_id});
     const hasChild=new Set(); cats.forEach(c=>{ if(c.parent_id) hasChild.add(c.parent_id); });
@@ -3066,7 +3067,7 @@ async function downloadTxExport(){
         const mi=majors[r.mName]=majors[r.mName]||{subTot:{},total:0,hasSub:false};
         mi.total+=amt; mi.subTot[sub]=(mi.subTot[sub]||0)+amt; if(r.sub!==null) mi.hasSub=true;
       };
-      receipts.forEach(r=>{ if(r.note!=='정상'||r.is_deposit) return; addCell(r.vendor||'직접구매', r.category_id, r.total_price||0); });
+      receipts.forEach(r=>{ if(r.note!=='정상'||r.is_deposit) return; addCell(rv(r), r.category_id, r.total_price||0); });
       orders.forEach(o=>{ addCell(vName(o), o.vendors&&o.vendors.category_id, o.amount||0); });
       myd.forEach(m=>{ addCell((m.merchant_name||m.description||'-').trim()||'-', m.category_id, Math.abs(m.amount||0)); });
       const majorList=Object.entries(majors).sort((a,b)=>b[1].total-a[1].total);
@@ -3100,7 +3101,7 @@ async function downloadTxExport(){
     // ② 항목별 거래내역 (평평한 리스트) — 칸 다 쪼갬, 날짜순, 취소 포함
     if(optList){
       const all=[];
-      receipts.forEach(r=>{ const c=resolveCat(r.category_id); all.push({date:r.receipt_date,vendor:r.vendor||'직접구매',kind:(r.input_method==='manual'?'직접입력':'영수증'),cat:c.mName,sub:c.sub||'',item:r.item||'',unit:r.unit_price||'',qty:(r.qty!=null?r.qty:''),amount:r.total_price||0,pay:'영수증',status:(r.note==='정상'?'정상':(r.note||'취소')),who:empName(r.created_by)}); });
+      receipts.forEach(r=>{ const c=resolveCat(r.category_id); all.push({date:r.receipt_date,vendor:rv(r),kind:(r.input_method==='manual'?'직접입력':'영수증'),cat:c.mName,sub:c.sub||'',item:r.item||'',unit:r.unit_price||'',qty:(r.qty!=null?r.qty:''),amount:r.total_price||0,pay:'영수증',status:(r.note==='정상'?'정상':(r.note||'취소')),who:empName(r.created_by)}); });
       orders.forEach(o=>{ const c=resolveCat(o.vendors&&o.vendors.category_id); all.push({date:o.order_date,vendor:vName(o),kind:'거래처',cat:c.mName,sub:c.sub||'',item:o.item||'',unit:o.unit_price||'',qty:(o.quantity!=null?o.quantity:''),amount:o.amount||0,pay:'거래처',status:'정상',who:''}); });
       myd.forEach(m=>{ const c=resolveCat(m.category_id); all.push({date:m.tx_date,vendor:(m.merchant_name||m.description||'-').trim()||'-',kind:'통장/카드',cat:c.mName,sub:(m.sub_category||c.sub||''),item:m.sub_category||m.description||'',unit:'',qty:'',amount:Math.abs(m.amount||0),pay:'통장/카드',status:'정상',who:''}); });
       all.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
