@@ -2998,6 +2998,24 @@ function moveTxExportMonth(dir){
   txExportYm=d.toISOString().slice(0,7);
   const lbl=document.getElementById('txMonthLabel'); if(lbl) lbl.innerText=txExportYm;
 }
+// 엑셀 셀 서식 — 천단위 콤마 + 헤더 색 + 테두리 + 열너비 (xlsx-js-style, 2026-06-29)
+function _xlStyle(ws, opt){
+  opt=opt||{}; const headRows=new Set(opt.head||[]);
+  const ref=ws['!ref']; if(!ref) return;
+  const R=XLSX.utils.decode_range(ref);
+  const thin={style:'thin',color:{rgb:'E5E8EB'}};
+  for(let r=R.s.r;r<=R.e.r;r++){
+    for(let c=R.s.c;c<=R.e.c;c++){
+      const cell=ws[XLSX.utils.encode_cell({r,c})]; if(!cell) continue;
+      const st={border:{top:thin,bottom:thin,left:thin,right:thin}};
+      if(typeof cell.v==='number'){ cell.z='#,##0'; st.alignment={horizontal:'right'}; }
+      if(r===0){ st.font={bold:true,sz:13}; }
+      else if(headRows.has(r)){ st.fill={patternType:'solid',fgColor:{rgb:'107C41'}}; st.font={color:{rgb:'FFFFFF'},bold:true}; st.alignment={horizontal:'center',vertical:'center'}; }
+      cell.s=st;
+    }
+  }
+  const cols=[]; for(let c=R.s.c;c<=R.e.c;c++) cols.push({wch: c===0?20:13}); ws['!cols']=cols;
+}
 async function downloadTxExport(){
   if(!guardStore()) return;
   if(!isManager) return toast('관리자만 다운로드할 수 있습니다.','warn');
@@ -3075,7 +3093,7 @@ async function downloadTxExport(){
       const vKeys=Object.keys(cells).sort((a,b)=>rowTot[b]-rowTot[a]);
       vKeys.forEach(v=>{ const row=[v,rowTot[v]]; cols.forEach(c=>{ const val=c.isTot?((vMajorTot[v]&&vMajorTot[v][c.group])||0):(cells[v][c.ck]||0); row.push(val||''); }); aoa.push(row); });
       const totRow=['합계', vKeys.reduce((a,v)=>a+rowTot[v],0)]; cols.forEach(c=>totRow.push(c.total||0)); aoa.push(totRow);
-      const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!merges']=merges;
+      const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!merges']=merges; _xlStyle(ws,{head:[2,3]});
       XLSX.utils.book_append_sheet(wb, ws, '장부 총정리');
     }
 
@@ -3090,7 +3108,7 @@ async function downloadTxExport(){
       let sum=0;
       all.forEach(x=>{ aoa.push([x.date,x.vendor,x.kind,x.cat,x.sub,x.item,x.unit,x.qty,x.amount,x.pay,x.status,x.who]); if(x.status==='정상') sum+=x.amount; });
       aoa.push([]); aoa.push(['','','','','','','','정상 합계',sum,'(취소·반품 제외)','','']);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '항목별 거래내역');
+      const wsL=XLSX.utils.aoa_to_sheet(aoa); _xlStyle(wsL,{head:[2]}); XLSX.utils.book_append_sheet(wb, wsL, '항목별 거래내역');
     }
 
     // ③ 매출 — 마감 그대로 (결제수단별 매출 + 현금 분해)
@@ -3106,7 +3124,7 @@ async function downloadTxExport(){
         t.cash+=cash;t.cr+=cr;t.card+=card;t.etc+=etc;t.sum+=sum;t.dc+=dc;t.qr+=qr;t.tr+=tr;
       });
       aoa.push([]); aoa.push(['월 합계',t.cash,t.cr,t.card,t.etc,t.sum,'│',t.dc,t.qr,t.tr]);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '매출');
+      const wsS=XLSX.utils.aoa_to_sheet(aoa); _xlStyle(wsS,{head:[2]}); XLSX.utils.book_append_sheet(wb, wsS, '매출');
     }
 
     const safeName=(currentStore.name||'매장').replace(/[\\/:*?"<>|]/g,'_');
