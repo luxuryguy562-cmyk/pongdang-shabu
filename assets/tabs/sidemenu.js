@@ -4082,6 +4082,7 @@ function showLoginScreen(){
 function showPhoneStep(){
   document.getElementById('loginStepPhone').style.display='block';
   document.getElementById('loginStepPin').style.display='none';
+  const _o=document.getElementById('loginStepOtp'); if(_o) _o.style.display='none';
   resetPinPad();
   const m=document.getElementById('loginPhoneMsg'); if(m) m.innerText='';
   const ph=document.getElementById('loginPhoneInput');
@@ -4091,6 +4092,7 @@ function showPhoneStep(){
 function showPinStep(){
   document.getElementById('loginStepPhone').style.display='none';
   document.getElementById('loginStepPin').style.display='block';
+  const _o=document.getElementById('loginStepOtp'); if(_o) _o.style.display='none';
   resetPinPad();
   const m=document.getElementById('loginMsg'); if(m) m.innerText='';
   const lbl=document.getElementById('loginPinPhone'); if(lbl) lbl.style.display='none';
@@ -4752,9 +4754,10 @@ async function submitLogin(){
   if(!pinVal||pinVal.length<4){msgEl.innerText='PIN 4자리를 입력해주세요';shakeLogin();return;}
   _loginBusy=true;
   msgEl.innerText='확인 중…';
+  const devId=await getDeviceFingerprint(); // 기기 신뢰용 (토스식 새 기기 문자인증)
   let res;
   try{
-    const{data,error}=await sb.functions.invoke('emp-login',{body:{phone:phRaw,pin:pinVal}});
+    const{data,error}=await sb.functions.invoke('emp-login',{body:{phone:phRaw,pin:pinVal,device_id:devId,otp_token:_loginOtpToken||undefined}});
     if(error) throw error;
     res=data;
   }catch(_e){
@@ -4762,17 +4765,93 @@ async function submitLogin(){
     msgEl.innerText='로그인 처리 중 오류가 났어요. 잠시 후 다시 시도해주세요.';
     resetPinPad();shakeLogin();return;
   }
+  // 처음 보는 기기 → 문자 인증 단계로 (PIN은 맞았음. 본인 폰 확인만 추가)
+  if(res&&res.need_otp){
+    _loginBusy=false;
+    _pendingLoginPin=pinVal; // 인증 후 재로그인에 쓸 PIN 보관
+    startLoginOtp(phRaw);
+    return;
+  }
   if(!res||!res.ok){
     _loginBusy=false;
     msgEl.innerText=(res&&res.error)||'로그인에 실패했어요';
     resetPinPad();shakeLogin();return;
   }
   _loginBusy=false;
+  _loginOtpToken=''; _pendingLoginPin=''; // 기기 인증 증표 1회용 소진
   localStorage.setItem('pd_last_phone',phRaw);
   if(res.token) localStorage.setItem('pd_token',res.token);
   if(res.session&&res.session.access_token){ try{ await sb.auth.setSession({access_token:res.session.access_token,refresh_token:res.session.refresh_token}); }catch(_e){} }
   resetPinPad();
   completeLogin(res); // 전체 응답 전달 (mode: "personal"|"store")
+}
+// ─── 새 기능: 새 기기 문자 인증 (토스식) 2026-06-30 ───
+// PIN이 맞아도 처음 보는 기기면 본인 폰으로 한 번만 문자 인증. 인증되면 그 기기는 영구 신뢰(다음부턴 PIN만).
+let _loginOtpToken=''; // 인증 성공 시 받은 문자증표 (재로그인에 동봉)
+let _pendingLoginPin=''; // 인증 후 자동 재로그인에 쓸 PIN
+let _loginOtpTimer=null;
+async function startLoginOtp(phRaw){
+  showLoginOtpStep(phRaw);
+  const msg=document.getElementById('loginOtpMsg'); if(msg) msg.innerText='문자를 보내고 있어요…';
+  try{
+    const{data,error}=await sb.functions.invoke('send-otp',{body:{phone:phRaw}});
+    if(error||!data?.ok){ if(msg) msg.innerText=(data&&data.error)||'문자 발송 실패 — 다시 시도해주세요'; return; }
+    if(msg) msg.innerText='';
+    _startLoginOtpTimer(300);
+    setTimeout(()=>{ const o=document.getElementById('loginOtpInput'); if(o) o.focus(); },120);
+  }catch(_e){ if(msg) msg.innerText='네트워크 오류 — 다시 시도해주세요'; }
+}
+function showLoginOtpStep(phRaw){
+  document.getElementById('loginStepPhone').style.display='none';
+  document.getElementById('loginStepPin').style.display='none';
+  document.getElementById('loginStepOtp').style.display='block';
+  const echo=document.getElementById('loginOtpEcho'); if(echo) echo.innerText=phRaw;
+  const inp=document.getElementById('loginOtpInput'); if(inp) inp.value='';
+  _renderLoginOtpBoxes('');
+  const m=document.getElementById('loginOtpMsg'); if(m) m.innerText='';
+}
+function _renderLoginOtpBoxes(val){
+  val=val||'';
+  document.querySelectorAll('#loginOtpBoxes .otp-cell').forEach((b,i)=>{
+    b.innerText=val[i]||''; b.classList.toggle('on', i<val.length);
+  });
+}
+function _startLoginOtpTimer(sec){
+  if(_loginOtpTimer) clearInterval(_loginOtpTimer);
+  let left=sec; const el=document.getElementById('loginOtpTimer');
+  const tick=()=>{
+    if(left<=0){ clearInterval(_loginOtpTimer); _loginOtpTimer=null; if(el) el.innerText='시간 만료 — 다시 받아주세요'; return; }
+    const m=Math.floor(left/60), s=left%60;
+    if(el) el.innerText=`남은 시간 ${m}:${String(s).padStart(2,'0')}`;
+    left--;
+  };
+  tick(); _loginOtpTimer=setInterval(tick,1000);
+}
+function loginOtpInput(el){
+  const v=(el.value||'').replace(/[^0-9]/g,'').slice(0,6);
+  el.value=v; _renderLoginOtpBoxes(v);
+  if(v.length===6) loginVerifyOtp(v);
+}
+async function loginVerifyOtp(code){
+  const msg=document.getElementById('loginOtpMsg'); if(msg) msg.innerText='확인 중…';
+  const phRaw=(_loginPhone||'').replace(/[^0-9]/g,'');
+  try{
+    const{data,error}=await sb.functions.invoke('verify-otp',{body:{phone:phRaw, code}});
+    if(error||!data?.ok){ if(msg) msg.innerText=(data&&data.error)||'인증번호가 달라요'; const i=document.getElementById('loginOtpInput'); if(i) i.value=''; _renderLoginOtpBoxes(''); return; }
+    _loginOtpToken=data.token||''; // 이 증표로 기기 신뢰 등록
+    if(_loginOtpTimer){ clearInterval(_loginOtpTimer); _loginOtpTimer=null; }
+    // 인증 성공 → PIN 화면 복귀 후 보관한 PIN으로 자동 재로그인 (사용자 추가 입력 없음)
+    showPinStep();
+    pinBuffer=_pendingLoginPin||''; renderPinDots();
+    submitLogin();
+  }catch(_e){ if(msg) msg.innerText='네트워크 오류 — 다시 시도해주세요'; }
+}
+// 문자 인증 화면에서 "다른 번호로" → 전화번호 화면
+function loginOtpCancel(){
+  if(_loginOtpTimer){ clearInterval(_loginOtpTimer); _loginOtpTimer=null; }
+  _loginOtpToken=''; _pendingLoginPin='';
+  document.getElementById('loginStepOtp').style.display='none';
+  switchAccount();
 }
 // 로그인 폼 영역 흔들기
 function shakeLogin(){
