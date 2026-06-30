@@ -2990,7 +2990,7 @@ function openTxExportSheet(){
   closeSideMenu();
   txExportYm=new Date().toISOString().slice(0,7);
   const lbl=document.getElementById('txMonthLabel'); if(lbl) lbl.innerText=txExportYm;
-  ['txOptList','txOptVendor','txOptVendorItem','txOptSales'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true;});
+  ['txOptPivot','txOptList','txOptVendor','txOptSales'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true;});
   openSheet('txExportSheet');
 }
 function moveTxExportMonth(dir){
@@ -2998,76 +2998,142 @@ function moveTxExportMonth(dir){
   txExportYm=d.toISOString().slice(0,7);
   const lbl=document.getElementById('txMonthLabel'); if(lbl) lbl.innerText=txExportYm;
 }
+// 엑셀 셀 서식 — 천단위 콤마 + 헤더 색 + 테두리 + 열너비 (xlsx-js-style, 2026-06-29)
+function _xlStyle(ws, opt){
+  opt=opt||{}; const headRows=new Set(opt.head||[]);
+  const ref=ws['!ref']; if(!ref) return;
+  const R=XLSX.utils.decode_range(ref);
+  const thin={style:'thin',color:{rgb:'E5E8EB'}};
+  for(let r=R.s.r;r<=R.e.r;r++){
+    for(let c=R.s.c;c<=R.e.c;c++){
+      const cell=ws[XLSX.utils.encode_cell({r,c})]; if(!cell) continue;
+      const st={border:{top:thin,bottom:thin,left:thin,right:thin}};
+      if(typeof cell.v==='number'){ cell.z='#,##0'; st.alignment={horizontal:'right'}; }
+      if(r===0){ st.font={bold:true,sz:13}; }
+      else if(headRows.has(r)){ st.fill={patternType:'solid',fgColor:{rgb:'107C41'}}; st.font={color:{rgb:'FFFFFF'},bold:true}; st.alignment={horizontal:'center',vertical:'center'}; }
+      cell.s=st;
+    }
+  }
+  const cols=[]; for(let c=R.s.c;c<=R.e.c;c++) cols.push({wch: c===0?20:13}); ws['!cols']=cols;
+}
 async function downloadTxExport(){
   if(!guardStore()) return;
   if(!isManager) return toast('관리자만 다운로드할 수 있습니다.','warn');
   if(typeof XLSX==='undefined') return toast('엑셀 라이브러리 로드 안 됨','error');
+  const optPivot=document.getElementById('txOptPivot')?.checked;
   const optList=document.getElementById('txOptList')?.checked;
   const optVendor=document.getElementById('txOptVendor')?.checked;
-  const optVI=document.getElementById('txOptVendorItem')?.checked;
   const optSales=document.getElementById('txOptSales')?.checked;
-  if(!optList&&!optVendor&&!optVI&&!optSales) return toast('1개 이상 선택하세요','warn');
+  if(!optPivot&&!optList&&!optVendor&&!optSales) return toast('1개 이상 선택하세요','warn');
   setLoad(true,'데이터 조회 중...');
   try{
     const ym=txExportYm, sid=currentStore.id;
     const start=ym+'-01';
     const endD=new Date(ym+'-01'); endD.setMonth(endD.getMonth()+1);
     const endIncl=new Date(endD.getTime()-86400000).toISOString().slice(0,10); // 그 달 말일
-    const [rcpRes, ordRes, mydRes, setRes, empRes] = await Promise.all([
-      sb.from('receipts').select('receipt_date,vendor,item,category,total_price,note,created_by,qty,is_deposit').eq('store_id',sid).gte('receipt_date',start).lte('receipt_date',endIncl).order('receipt_date'),
-      sb.from('vendor_orders').select('order_date,item,amount,quantity,vendors(name)').eq('store_id',sid).gte('order_date',start).lte('order_date',endIncl).order('order_date'),
-      sb.from('mydata_transactions').select('tx_date,amount,description,merchant_name,sub_category').eq('store_id',sid).lt('amount',0).gte('tx_date',start).lte('tx_date',endIncl).order('tx_date'),
+    const [rcpRes, ordRes, mydRes, setRes, empRes, catRes] = await Promise.all([
+      sb.from('receipts').select('receipt_date,vendor,item,category_id,total_price,unit_price,qty,note,created_by,is_deposit,input_method').eq('store_id',sid).gte('receipt_date',start).lte('receipt_date',endIncl).order('receipt_date'),
+      sb.from('vendor_orders').select('order_date,item,amount,quantity,unit_price,vendors(name,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',endIncl).order('order_date'),
+      sb.from('mydata_transactions').select('tx_date,amount,description,merchant_name,sub_category,category_id').eq('store_id',sid).lt('amount',0).gte('tx_date',start).lte('tx_date',endIncl).order('tx_date'),
       sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',endIncl).order('settle_date'),
-      sb.from('employees').select('id,name').eq('store_id',sid)
+      sb.from('employees').select('id,name').eq('store_id',sid),
+      sb.from('expense_categories').select('id,name,parent_id').eq('store_id',sid)
     ]);
-    const receipts=rcpRes.data||[], orders=ordRes.data||[], myd=mydRes.data||[], settles=setRes.data||[], emps=empRes.data||[];
+    const receipts=rcpRes.data||[], orders=ordRes.data||[], myd=mydRes.data||[], settles=setRes.data||[], emps=empRes.data||[], cats=catRes.data||[];
     if(!receipts.length && !orders.length && !myd.length && !settles.length){ setLoad(false); return toast('해당 월에 데이터가 없습니다','warn'); }
     const empName=id=>{ if(!id) return ''; const e=emps.find(x=>x.id===id); return e?(e.name||'직원'):'직원'; };
     const vName=o=>(o.vendors&&o.vendors.name)||'거래처';
+    const rv=r=>r.vendor||(r.input_method==='manual'?'직접입력':'직접구매'); // 거래처 없으면 직접입력/직접구매 구분
+    // 카테고리 트리 (대분류·소분류)
+    const catMap={}; cats.forEach(c=>catMap[c.id]={name:c.name,parent:c.parent_id});
+    const hasChild=new Set(); cats.forEach(c=>{ if(c.parent_id) hasChild.add(c.parent_id); });
+    function resolveCat(catId){
+      const n=catId&&catMap[catId];
+      if(!n) return {mName:'기타', sub:null};
+      if(n.parent&&catMap[n.parent]) return {mName:catMap[n.parent].name, sub:n.name};
+      if(hasChild.has(catId)) return {mName:n.name, sub:'기타'};
+      return {mName:n.name, sub:null};
+    }
     const wb=XLSX.utils.book_new();
 
-    // ① 거래내역 (전체) — 영수증·거래처·통장카드 통합, 취소 포함
+    // ① 장부 총정리 (교차표) — 거래처 × 카테고리(대분류 묶음 + 세부 + 대분류합계). 정상·비보증금만
+    if(optPivot){
+      const cells={}, rowTot={}, majors={}, vMajorTot={};
+      const addCell=(vn,catId,amt)=>{
+        if(!amt) return;
+        const r=resolveCat(catId); const sub=r.sub||'_single'; const ck=r.mName+''+sub;
+        cells[vn]=cells[vn]||{}; cells[vn][ck]=(cells[vn][ck]||0)+amt;
+        rowTot[vn]=(rowTot[vn]||0)+amt;
+        vMajorTot[vn]=vMajorTot[vn]||{}; vMajorTot[vn][r.mName]=(vMajorTot[vn][r.mName]||0)+amt;
+        const mi=majors[r.mName]=majors[r.mName]||{subTot:{},total:0,hasSub:false};
+        mi.total+=amt; mi.subTot[sub]=(mi.subTot[sub]||0)+amt; if(r.sub!==null) mi.hasSub=true;
+      };
+      receipts.forEach(r=>{ if(r.note!=='정상'||r.is_deposit) return; addCell(rv(r), r.category_id, r.total_price||0); });
+      orders.forEach(o=>{ addCell(vName(o), o.vendors&&o.vendors.category_id, o.amount||0); });
+      myd.forEach(m=>{ addCell((m.merchant_name||m.description||'-').trim()||'-', m.category_id, Math.abs(m.amount||0)); });
+      const majorList=Object.entries(majors).sort((a,b)=>b[1].total-a[1].total);
+      const cols=[];
+      majorList.forEach(([mName,mi])=>{
+        if(!mi.hasSub){ cols.push({ck:mName+'_single',label:mName,group:mName,total:mi.total,single:true}); }
+        else {
+          const subs=Object.keys(mi.subTot).sort((a,b)=>mi.subTot[b]-mi.subTot[a]);
+          subs.forEach(s=>cols.push({ck:mName+''+s,label:(s==='_single'?'기타':s),group:mName,total:mi.subTot[s],single:false}));
+          cols.push({ck:'__T__'+mName,label:mName+' 합계',group:mName,total:mi.total,single:false,isTot:true});
+        }
+      });
+      const grpRow=['거래처','합계'], subRow=['',''];
+      const merges=[{s:{r:2,c:0},e:{r:3,c:0}},{s:{r:2,c:1},e:{r:3,c:1}}];
+      let gi=0;
+      while(gi<cols.length){
+        const g=cols[gi].group; let j=gi; while(j<cols.length&&cols[j].group===g) j++;
+        const startC=2+gi, endC=2+j-1;
+        if(cols[gi].single){ grpRow.push(g); subRow.push(''); merges.push({s:{r:2,c:startC},e:{r:3,c:startC}}); }
+        else { for(let k=gi;k<j;k++){ grpRow.push(k===gi?g:''); subRow.push(cols[k].label); } merges.push({s:{r:2,c:startC},e:{r:2,c:endC}}); }
+        gi=j;
+      }
+      const aoa=[[`${ym} 장부 총정리 (거래처 × 카테고리) — ${currentStore.name||''}`],[],grpRow,subRow];
+      const vKeys=Object.keys(cells).sort((a,b)=>rowTot[b]-rowTot[a]);
+      vKeys.forEach(v=>{ const row=[v,rowTot[v]]; cols.forEach(c=>{ const val=c.isTot?((vMajorTot[v]&&vMajorTot[v][c.group])||0):(cells[v][c.ck]||0); row.push(val||''); }); aoa.push(row); });
+      const totRow=['합계', vKeys.reduce((a,v)=>a+rowTot[v],0)]; cols.forEach(c=>totRow.push(c.total||0)); aoa.push(totRow);
+      const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!merges']=merges; _xlStyle(ws,{head:[2,3]});
+      XLSX.utils.book_append_sheet(wb, ws, '장부 총정리');
+    }
+
+    // ② 항목별 거래내역 (평평한 리스트) — 칸 다 쪼갬, 날짜순, 취소 포함
     if(optList){
       const all=[];
-      receipts.forEach(r=>all.push({date:r.receipt_date,kind:'영수증',vendor:r.vendor||'직접구매',item:r.item||'',cat:r.category||'',amount:r.total_price||0,status:(r.note==='정상'?'정상':(r.note||'취소')),who:empName(r.created_by),normal:(r.note==='정상'&&!r.is_deposit)}));
-      orders.forEach(o=>all.push({date:o.order_date,kind:'거래처',vendor:vName(o),item:o.item||'',cat:'',amount:o.amount||0,status:'정상',who:'',normal:true}));
-      myd.forEach(m=>all.push({date:m.tx_date,kind:'통장/카드',vendor:(m.merchant_name||m.description||'').trim()||'-',item:m.sub_category||'',cat:'',amount:Math.abs(m.amount||0),status:'정상',who:'',normal:true}));
+      receipts.forEach(r=>{ const c=resolveCat(r.category_id); all.push({date:r.receipt_date,vendor:rv(r),kind:(r.input_method==='manual'?'직접입력':'영수증'),cat:c.mName,sub:c.sub||'',item:r.item||'',unit:r.unit_price||'',qty:(r.qty!=null?r.qty:''),amount:r.total_price||0,pay:'영수증',status:(r.note==='정상'?'정상':(r.note||'취소')),who:empName(r.created_by)}); });
+      orders.forEach(o=>{ const c=resolveCat(o.vendors&&o.vendors.category_id); all.push({date:o.order_date,vendor:vName(o),kind:'거래처',cat:c.mName,sub:c.sub||'',item:o.item||'',unit:o.unit_price||'',qty:(o.quantity!=null?o.quantity:''),amount:o.amount||0,pay:'거래처',status:'정상',who:''}); });
+      myd.forEach(m=>{ const c=resolveCat(m.category_id); all.push({date:m.tx_date,vendor:(m.merchant_name||m.description||'-').trim()||'-',kind:'통장/카드',cat:c.mName,sub:(m.sub_category||c.sub||''),item:m.sub_category||m.description||'',unit:'',qty:'',amount:Math.abs(m.amount||0),pay:'통장/카드',status:'정상',who:''}); });
       all.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-      const aoa=[[`${ym} 거래내역 — ${currentStore.name||''}`],[],['날짜','구분','거래처','품목','분류','금액(원)','상태','등록자']];
+      const aoa=[[`${ym} 항목별 거래내역 — ${currentStore.name||''}`],[],['날짜','거래처','구분','카테고리','세부','품목','단가','수량','금액(원)','결제','상태','등록']];
       let sum=0;
-      all.forEach(x=>{ aoa.push([x.date,x.kind,x.vendor,x.item,x.cat,x.amount,x.status,x.who]); if(x.normal) sum+=x.amount; });
-      aoa.push([]); aoa.push(['','','','','정상 합계',sum,'(취소·반품·보증금 제외)','']);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '거래내역');
+      all.forEach(x=>{ aoa.push([x.date,x.vendor,x.kind,x.cat,x.sub,x.item,x.unit,x.qty,x.amount,x.pay,x.status,x.who]); if(x.status==='정상') sum+=x.amount; });
+      aoa.push([]); aoa.push(['','','','','','','','정상 합계',sum,'(취소·반품 제외)','','']);
+      const wsL=XLSX.utils.aoa_to_sheet(aoa); _xlStyle(wsL,{head:[2]}); XLSX.utils.book_append_sheet(wb, wsL, '항목별 거래내역');
     }
 
-    // ② 거래처별 — 며칠 얼마 결제 + 거래처 소계 (정상·비보증금만)
+    // ③ 거래처별 — 거래처마다 일자별 합계 + 거래처 소계 (정상·비보증금)
     if(optVendor){
-      const vmap={};
-      receipts.forEach(r=>{ if(r.note!=='정상'||r.is_deposit||!r.vendor) return; (vmap[r.vendor]=vmap[r.vendor]||[]).push({date:r.receipt_date,amount:r.total_price||0}); });
-      orders.forEach(o=>{ const v=vName(o); (vmap[v]=vmap[v]||[]).push({date:o.order_date,amount:o.amount||0}); });
-      const aoa=[[`${ym} 거래처별 — ${currentStore.name||''}`],[],['거래처','결제일','금액(원)']];
-      let grand=0;
-      Object.keys(vmap).sort().forEach(v=>{
-        const list=vmap[v].sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-        let sub=0; list.forEach(x=>{ aoa.push([v,x.date,x.amount]); sub+=x.amount; });
-        aoa.push([`└ ${v} 소계`, `${list.length}건`, sub]); grand+=sub;
+      const vd={};
+      const addV=(vn,date,amt)=>{ if(!amt) return; vd[vn]=vd[vn]||{}; vd[vn][date]=vd[vn][date]||{amt:0,cnt:0}; vd[vn][date].amt+=amt; vd[vn][date].cnt++; };
+      receipts.forEach(r=>{ if(r.note!=='정상'||r.is_deposit) return; addV(rv(r), r.receipt_date, r.total_price||0); });
+      orders.forEach(o=>{ addV(vName(o), o.order_date, o.amount||0); });
+      myd.forEach(m=>{ addV((m.merchant_name||m.description||'-').trim()||'-', m.tx_date, Math.abs(m.amount||0)); });
+      const vTot={}; Object.keys(vd).forEach(v=>{ vTot[v]=Object.values(vd[v]).reduce((a,d)=>a+d.amt,0); });
+      const vKeys=Object.keys(vd).sort((a,b)=>vTot[b]-vTot[a]);
+      const aoa=[[`${ym} 거래처별 (일자별 합계·소계) — ${currentStore.name||''}`],[],['거래처','결제일','건수','금액(원)']];
+      let gAmt=0,gCnt=0;
+      vKeys.forEach(v=>{
+        const dates=Object.keys(vd[v]).sort(); let vAmt=0,vCnt=0;
+        dates.forEach(d=>{ aoa.push([v,d,vd[v][d].cnt,vd[v][d].amt]); vAmt+=vd[v][d].amt; vCnt+=vd[v][d].cnt; });
+        aoa.push(['└ '+v+' 소계','',vCnt,vAmt]); gAmt+=vAmt; gCnt+=vCnt;
       });
-      aoa.push([]); aoa.push(['전체 합계','',grand]);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '거래처별');
+      aoa.push([]); aoa.push(['전체 합계','',gCnt,gAmt]);
+      const wsV=XLSX.utils.aoa_to_sheet(aoa); _xlStyle(wsV,{head:[2]}); XLSX.utils.book_append_sheet(wb, wsV, '거래처별');
     }
 
-    // ③ 거래처·품목별 — 거래처별 품목 수량·금액 집계 (정상·비보증금만)
-    if(optVI){
-      const map={};
-      const add=(v,it,qty,amt)=>{ const k=v+''+it; if(!map[k]) map[k]={v,it,qty:0,amt:0,cnt:0}; map[k].qty+=qty; map[k].amt+=amt; map[k].cnt++; };
-      receipts.forEach(r=>{ if(r.note!=='정상'||r.is_deposit||!r.vendor) return; add(r.vendor, r.item||'(품목없음)', parseFloat(r.qty)||0, r.total_price||0); });
-      orders.forEach(o=>{ add(vName(o), o.item||'(품목없음)', parseFloat(o.quantity)||0, o.amount||0); });
-      const aoa=[[`${ym} 거래처·품목별 — ${currentStore.name||''}`],[],['거래처','품목','수량합','금액합(원)','건수']];
-      Object.values(map).sort((a,b)=> a.v.localeCompare(b.v) || (b.amt-a.amt)).forEach(x=> aoa.push([x.v,x.it,x.qty||'',x.amt,x.cnt]));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '거래처·품목별');
-    }
-
-    // ④ 매출 — 마감 그대로 (결제수단별 매출 + 현금 분해)
+    // ③ 매출 — 마감 그대로 (결제수단별 매출 + 현금 분해)
     if(optSales){
       const aoa=[[`${ym} 매출 — ${currentStore.name||''}`],[],
         ['날짜','현금','현금영수증','신용카드','기타결제','매출합계','│','순수현금','QR','계좌이체']];
@@ -3080,11 +3146,11 @@ async function downloadTxExport(){
         t.cash+=cash;t.cr+=cr;t.card+=card;t.etc+=etc;t.sum+=sum;t.dc+=dc;t.qr+=qr;t.tr+=tr;
       });
       aoa.push([]); aoa.push(['월 합계',t.cash,t.cr,t.card,t.etc,t.sum,'│',t.dc,t.qr,t.tr]);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '매출');
+      const wsS=XLSX.utils.aoa_to_sheet(aoa); _xlStyle(wsS,{head:[2]}); XLSX.utils.book_append_sheet(wb, wsS, '매출');
     }
 
     const safeName=(currentStore.name||'매장').replace(/[\\/:*?"<>|]/g,'_');
-    const filename=`거래내역_${safeName}_${ym}.xlsx`;
+    const filename=`거래장부_${safeName}_${ym}.xlsx`;
     XLSX.writeFile(wb, filename);
     setLoad(false);
     toast(`📥 ${filename} 다운로드 완료`,'success',3500);

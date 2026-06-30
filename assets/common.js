@@ -1314,7 +1314,8 @@ function subscribeStoreRealtime(storeId){
   }catch(e){ console.warn('[realtime] subscribe 실패', e); }
 }
 function broadcastStoreChange(kind, extra){
-  try{ if(_storeChannel) _storeChannel.send({ type:'broadcast', event:'change', payload:Object.assign({kind:kind}, extra||{}) }); }catch(e){}
+  // 채널이 실제 연결(joined)됐을 때만 송신 — 미연결 시 supabase-js가 REST 폴백하며 경고 띄움 (2026-06-29)
+  try{ if(_storeChannel && _storeChannel.state==='joined') _storeChannel.send({ type:'broadcast', event:'change', payload:Object.assign({kind:kind}, extra||{}) }); }catch(e){}
 }
 // 운영 데이터 변경 시 자동 갱신할 화면 → 로더 (시트 안 떠있을 때만)
 const _RT_REFRESH = { dashboard:'loadDashboard', sales:'loadSalesDaily', vendors:'loadVendors', attendance:'loadAttList', busHub:'loadBusHubData' };

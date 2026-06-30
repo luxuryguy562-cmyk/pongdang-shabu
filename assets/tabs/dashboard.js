@@ -264,6 +264,17 @@ function renderTopCardForDay(dayStr){
   topModeEl.innerHTML = _subDot + `<span class="t7-sub-tx">${subLabel}</span>`;
   topModeEl.className = 't7-day-sub' + (_isLive ? ' live' : '');
 
+  // 수익 행 baseline 리셋 — 중간기록 임시(amber) 인라인·라벨 잔재 제거 (2026-06-29)
+  //   renderTodaySnapshot이 마감 전에만 임시로 덮어쓰고, 마감되면 여기 공식값이 그대로 남게.
+  (function(){
+    const _pe=document.getElementById('dashTopProfitAmt');
+    const _pd=document.getElementById('dashTopProfitDot');
+    const _pl=document.getElementById('dashTopProfitLb');
+    if(_pe) _pe.style.cssText='';
+    if(_pd) _pd.style.background='';
+    if(_pl) _pl.textContent='수익';
+  })();
+
   if(saleAmt > 0){
     topAmtEl.classList.remove('empty');
     topAmtEl.innerHTML = fmt(saleAmt) + '<span class="won">원</span>';
@@ -319,8 +330,8 @@ function renderTopCardForDay(dayStr){
     }
   }
 
-  // 스냅샷 렌더 (오늘이면 캐시 사용, 오늘 아니면 버튼 숨김)
-  renderTodaySnapshot(dayStr, dayExp);
+  // 스냅샷 렌더 (오늘이면 캐시 사용, 오늘 아니면 버튼 숨김) — saleAmt>0(마감/입력)이면 중간기록 숨김
+  renderTodaySnapshot(dayStr, dayExp, saleAmt);
 
   // 네비 버튼 상태 — ‹ 과거는 항상 가능(월 넘김), › 미래(오늘 이후)만 막기
   const prevBtn = document.getElementById('dashTopNavPrev');
@@ -344,9 +355,10 @@ async function loadTodaySnapshot(){
   return _snapCache;
 }
 
-function renderTodaySnapshot(dayStr, dayExp){
+function renderTodaySnapshot(dayStr, dayExp, saleAmt){
   const _todayStr = ymdLocal(new Date());
   const isTodayShown = (dayStr === _todayStr);
+  const hasOfficial = (saleAmt || 0) > 0; // 공식 매출(마감·입력)됨
   const snapRow    = document.getElementById('dashSnapRow');
   const snapPinBtn = document.getElementById('dashSnapPinBtn');
   const profitEl   = document.getElementById('dashTopProfitAmt');
@@ -355,14 +367,16 @@ function renderTodaySnapshot(dayStr, dayExp){
   const profitDelta = document.getElementById('dashTopProfitDelta');
   if(!snapRow) return;
 
-  if(!isTodayShown || _snapCache === null){
-    // 오늘이 아니거나 스냅샷 없음 → 중간기록 행 숨김
+  // 마감(공식 매출 있음)되면 중간기록 줄·핀 버튼 모두 숨김 + 임시 수익 안 씀(공식 수익 유지).
+  //   중간기록 시간·금액은 '매출 자세히' 화면(today-detail)에서 확인. (2026-06-29 사장님)
+  if(!isTodayShown || _snapCache === null || hasOfficial){
     snapRow.style.display = 'none';
-    if(snapPinBtn) snapPinBtn.style.display = isTodayShown ? '' : 'none';
-    return;
+    // 핀 버튼(중간 매출 기록하기) = 오늘 + 마감 전 + 스냅샷 없을 때만 노출 (입력 유도)
+    if(snapPinBtn) snapPinBtn.style.display = (isTodayShown && !hasOfficial && _snapCache === null) ? '' : 'none';
+    return; // 수익은 renderTopCardForDay가 설정한 공식값 그대로 (baseline 리셋됨)
   }
 
-  // 스냅샷 있음
+  // 여기 도달 = 오늘 + 스냅샷 있음 + 마감 전 → 임시(amber) 표시
   snapRow.style.display = '';
   if(snapPinBtn) snapPinBtn.style.display = 'none';
 
@@ -499,6 +513,20 @@ function renderTodayDetailForDay(dayStr){
       _ddPeRow.style.display = 'none';
     }
   }
+  // 중간 기록 — 오늘 + 스냅샷 있으면 시간·금액 표시 (마감 후에도 여기서 확인, 2026-06-29)
+  const _ddSnap = document.getElementById('dashTodayDetailSnap');
+  if(_ddSnap){
+    if(isToday && typeof _snapCache !== 'undefined' && _snapCache){
+      const _sts = _snapCache.updated_at || _snapCache.recorded_at;
+      const _sd = new Date(_sts);
+      const _shhmm = String(_sd.getHours()).padStart(2,'0') + ':' + String(_sd.getMinutes()).padStart(2,'0');
+      _ddSnap.style.display = '';
+      _ddSnap.innerHTML = `🕒 중간 기록 ${_shhmm} 기준 · <b style="color:#D97706;">${fmt(_snapCache.amount)}원</b> <span style="color:#B0B8C1;font-weight:500;">(공식 매출 아님)</span>`;
+    } else {
+      _ddSnap.style.display = 'none';
+    }
+  }
+
   // 결제수단별 — 해당일 settle 행
   const _row = (ctx.settle||[]).find(s=>s.date?.slice(8)===d);
   renderTodayPaymentMethods(_row, _amt);
