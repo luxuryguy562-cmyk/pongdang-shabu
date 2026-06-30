@@ -2382,8 +2382,8 @@ async function saveEmployee(){
   const name=document.getElementById('empNameInput').value.trim();
   if(!name)return toast('이름을 입력하세요.','warn');
   const pinVal=document.getElementById('empPinInput').value.trim()||null;
-  // PIN 필수 검증 (4자리 숫자)
-  if(!pinVal||!/^\d{4}$/.test(pinVal)) return toast('PIN 4자리 숫자를 입력하세요.','warn');
+  // PIN 필수 검증 (6자리 숫자)
+  if(!pinVal||!/^\d{6}$/.test(pinVal)) return toast('PIN 6자리 숫자를 입력하세요.','warn');
   // 급여 종류 + 금액 검증
   const wageType=document.getElementById('empWageType').value||'hourly';
   const baseWage=unFmt(document.getElementById('empWageInput').value)||10030;
@@ -4224,9 +4224,9 @@ function joinSelectRole(role){
   }
 }
 function joinPinPress(n){
-  if(joinState.pin.length>=4) return;
+  if(joinState.pin.length>=6) return;
   joinState.pin+=String(n); _renderJoinPinDots();
-  if(joinState.pin.length===4) joinSetNamePin();
+  if(joinState.pin.length===6) joinSetNamePin();
 }
 function joinPinDelete(){ joinState.pin=joinState.pin.slice(0,-1); _renderJoinPinDots(); }
 function _renderJoinPinDots(){
@@ -4236,7 +4236,7 @@ async function joinSetNamePin(){
   const name=document.getElementById('joinName').value.trim();
   const msgEl=document.getElementById('joinNameMsg'); if(msgEl) msgEl.innerText='';
   if(!name){ if(msgEl) msgEl.innerText='이름을 입력해주세요'; joinState.pin=''; _renderJoinPinDots(); return; }
-  if(joinState.pin.length!==4){ if(msgEl) msgEl.innerText='비밀번호 4자리를 눌러주세요'; return; }
+  if(joinState.pin.length!==6){ if(msgEl) msgEl.innerText='비밀번호 6자리를 눌러주세요'; return; }
   try{
     const{data,error}=await sb.functions.invoke('complete-signup',{body:{token:joinState.token, name, pin:joinState.pin}});
     if(error||!data?.ok){ if(msgEl) msgEl.innerText=data?.error||'저장 실패'; joinState.pin=''; _renderJoinPinDots(); return; }
@@ -4270,7 +4270,7 @@ async function joinStartSolo(){
   const phone=joinState.phone, pin=joinState.pin;
   const msgEl=document.getElementById('joinCodeMsg'); if(msgEl) msgEl.innerText='';
   // PIN 정보가 없으면(이미 가입된 사람이 매장만 추가하려던 경우) → 로그인 화면으로 안내
-  if(!phone || !pin || pin.length<4){
+  if(!phone || !pin || pin.length<6){
     closeJoin();
     if(phone) localStorage.setItem('pd_last_phone', phone);
     showLoginScreen();
@@ -4731,12 +4731,12 @@ function renderPinDots(){
 }
 function resetPinPad(){ pinBuffer=''; renderPinDots(); }
 function pinPress(n){
-  if(_loginBusy||pinBuffer.length>=4) return; // PIN 4자리 (표준)
+  if(_loginBusy||pinBuffer.length>=6) return; // PIN 6자리 (표준)
   pinBuffer+=String(n);
   renderPinDots();
   const msgEl=document.getElementById('loginMsg'); if(msgEl) msgEl.innerText='';
-  // 4자리 도달 → 자동 로그인 (전화번호는 _loginPhone에 이미 확정됨)
-  if(pinBuffer.length===4 && _loginPhone.length>=10){ submitLogin(); }
+  // 6자리 도달 → 자동 로그인 (전화번호는 _loginPhone에 이미 확정됨)
+  if(pinBuffer.length===6 && _loginPhone.length>=10){ submitLogin(); }
 }
 function pinDelete(){
   if(_loginBusy) return;
@@ -4751,7 +4751,7 @@ async function submitLogin(){
   const pinVal=pinBuffer;
   const msgEl=document.getElementById('loginMsg');
   if(!phRaw||phRaw.length<10){msgEl.innerText='전화번호를 다시 입력해주세요';shakeLogin();switchAccount();return;}
-  if(!pinVal||pinVal.length<4){msgEl.innerText='PIN 4자리를 입력해주세요';shakeLogin();return;}
+  if(!pinVal||pinVal.length<6){msgEl.innerText='PIN 6자리를 입력해주세요';shakeLogin();return;}
   _loginBusy=true;
   msgEl.innerText='확인 중…';
   const devId=await getDeviceFingerprint(); // 기기 신뢰용 (토스식 새 기기 문자인증)
