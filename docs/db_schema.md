@@ -148,6 +148,19 @@ franchises (프랜차이즈/브랜드)
 - RLS 차단(service_role만). `emp-session` Edge Function이 검증.
 - **개인 모드 세션** = `person_id` 채움 + `employee_id`/`store_id` NULL (매장 연결 전 단독 사용).
 
+### trusted_devices (2026-06-30 신설 — 새 기기 문자 인증 / 토스식 기기 신뢰)
+PIN이 맞아도 **처음 보는 기기**에서 로그인하면 본인 폰으로 문자 인증 1회 후 그 기기를 신뢰 등록. 이후엔 PIN만으로 통과.
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | |
+| person_id (uuid, FK→persons CASCADE) | 사람(계정) |
+| device_id (text) | 기기 식별자 (localStorage `pd_device_id` UUID = `getDeviceFingerprint()` 결과) |
+| created_at, last_seen_at (timestamptz) | 신뢰 시각 / 마지막 사용 |
+| UNIQUE(person_id, device_id) | 같은 사람+기기 중복 방지 |
+- 색인: `idx_trusted_devices_person`. RLS 차단(service_role만) — `emp-login` Edge Function이 검증.
+- **grandfather**: 신뢰 기기가 0개인 사람(기존 직원)은 첫 로그인 기기를 자동 신뢰 → 문자 인증 없이 통과(잠금 없음).
+- 새 기기 + 유효한 문자증표(`signup_tokens`, verify-otp 발급)면 신뢰 등록. 증표 없으면 emp-login이 `need_otp` 반환.
+
 ### personal_attendance_logs (2026-06-26 신설 — 개인 근태 기록, 매장 연결 전)
 직원이 사장 연결 없이 혼자 찍는 "나의 근무 일지". 매장 도장(store_id) 없음 = person 기준.
 | 컬럼 | 용도 |
