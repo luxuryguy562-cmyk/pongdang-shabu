@@ -53,14 +53,21 @@ Deno.serve(async (req) => {
     const { data: store } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
     const storeName = (store && store.name) ? store.name : "캐쉬플로우";
 
-    // 해당 매장 구독 로드
-    const { data: subs } = await supabase.from("push_subscriptions").select("*").eq("store_id", storeId).eq("enabled", true);
+    // 해당 매장 구독 로드 (+ 직원 권한)
+    const { data: subs } = await supabase.from("push_subscriptions").select("*, employees(auth_level)").eq("store_id", storeId).eq("enabled", true);
+    // 대상: 기본 'manager'(관리자급, staff 제외) / 'all'(전체). 매장 관리·매출·금고 알림은 직원(staff)에게 안 감.
+    const audience = body.audience || "manager";
+    const targetSubs = (subs || []).filter((s: any) => {
+      if (audience === "all") return true;
+      const lvl = s.employees ? s.employees.auth_level : null;
+      return lvl !== "staff"; // owner/store_manager/franchise_admin/null 포함, staff 제외
+    });
     const p = body.payload || {};
     const title = p.title ? `${storeName} · ${p.title}` : storeName;
     const payload = JSON.stringify({ ...p, title, body: p.body || "테스트 알림이에요 🔔" });
 
     let sent = 0, failed = 0;
-    for (const s of subs || []) {
+    for (const s of targetSubs) {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
         sent++;
@@ -73,7 +80,7 @@ Deno.serve(async (req) => {
         }
       }
     }
-    return new Response(JSON.stringify({ sent, failed, total: (subs || []).length }), { headers: { ...CORS, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ sent, failed, total: targetSubs.length }), { headers: { ...CORS, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...CORS, "Content-Type": "application/json" } });
   }
