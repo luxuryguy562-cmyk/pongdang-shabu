@@ -11,6 +11,13 @@ const CORS = {
 function json(b: unknown, s = 200) {
   return new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 }
+// PIN 암호화 — HMAC-SHA256(pin, PIN_SECRET). 비밀키는 서버에만 있어 DB 유출돼도 PIN 복원 불가 (2026-06-30)
+async function hashPin(pin: string): Promise<string> {
+  const secret = Deno.env.get("PIN_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(String(pin)));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -29,7 +36,8 @@ Deno.serve(async (req: Request) => {
     if (!st) return json({ ok: false, error: "인증을 다시 받아주세요" });
     if (new Date(st.expires_at) < new Date()) return json({ ok: false, error: "인증이 만료됐어요. 다시 받아주세요" });
 
-    const { error: ue } = await admin.from("persons").update({ name: nm, pin: String(pin) }).eq("id", st.person_id);
+    const pinHash = await hashPin(String(pin)); // 평문 대신 암호화 저장
+    const { error: ue } = await admin.from("persons").update({ name: nm, pin: pinHash }).eq("id", st.person_id);
     if (ue) throw ue;
 
     return json({ ok: true, person_id: st.person_id });

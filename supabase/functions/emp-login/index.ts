@@ -21,6 +21,13 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 }
 function normPhone(p: string) { return (p || "").replace(/[^0-9]/g, ""); }
+// PIN 암호화 — HMAC-SHA256(pin, PIN_SECRET). 저장은 암호화, 비교 시 입력도 같이 암호화해 대조 (2026-06-30)
+async function hashPin(pin: string): Promise<string> {
+  const secret = Deno.env.get("PIN_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(String(pin)));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 function lockMinutesFor(stage: number) { return LOCK_MINUTES[Math.min(stage, LOCK_MINUTES.length) - 1]; }
 
 // ─── 매장 격리용 Supabase Auth 신분증(세션) 발급 ───
@@ -157,8 +164,10 @@ Deno.serve(async (req: Request) => {
       if (pr && pr.length) expectedPin = String(pr[0].pin);
     }
 
-    // 4) PIN 비교
-    const match = !!expectedPin && expectedPin === pin;
+    // 4) PIN 비교 — 옛 평문 + 새 암호화 둘 다 인정 (무잠금 전환)
+    const pinHashed = await hashPin(pin);
+    const matchedPlain = !!expectedPin && expectedPin === pin;       // 옛 평문 PIN (업그레이드 대상)
+    const match = matchedPlain || (!!expectedPin && expectedPin === pinHashed);
     if (!match) {
       // 실패 누적 → 5회 도달 시 점진적 잠금
       const fail = (person.pin_fail_count || 0) + 1;
@@ -172,9 +181,14 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: `전화번호 또는 PIN이 일치하지 않습니다 (남은 시도 ${MAX_TRIES - fail}회)` });
     }
 
-    // 5) 성공 — 잠금 카운터 전부 리셋
+    // 5) 성공 — 잠금 카운터 리셋 + 옛 평문 PIN이면 암호화로 자동 업그레이드 (한 번 로그인하면 평문 사라짐)
+    const _resetPatch: any = {};
     if (person.pin_fail_count || person.pin_lock_stage || person.pin_lock_until) {
-      await admin.from("persons").update({ pin_fail_count: 0, pin_lock_stage: 0, pin_lock_until: null }).eq("id", person.id);
+      _resetPatch.pin_fail_count = 0; _resetPatch.pin_lock_stage = 0; _resetPatch.pin_lock_until = null;
+    }
+    if (matchedPlain) _resetPatch.pin = pinHashed; // 평문 → 암호화 업그레이드
+    if (Object.keys(_resetPatch).length) {
+      await admin.from("persons").update(_resetPatch).eq("id", person.id);
     }
 
     // 6) 결과 조립 (개인/매장/투잡)
