@@ -68,7 +68,8 @@ Deno.serve(async (req) => {
         failed++;
         const code = e?.statusCode;
         if (code === 404 || code === 410) {
-          await supabase.from("push_subscriptions").update({ enabled: false }).eq("endpoint", s.endpoint);
+          // 죽은 구독만 끔 — endpoint+store_id로 한정 (한 폰 여러 매장: 다른 매장 구독은 유지)
+          await supabase.from("push_subscriptions").update({ enabled: false }).eq("endpoint", s.endpoint).eq("store_id", storeId);
         }
       }
     }
