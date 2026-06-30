@@ -982,8 +982,11 @@ async function openStoreSheet() {
   // 검색 입력창 비우고 시작
   const searchEl = document.getElementById('storeSearchInput');
   if(searchEl) searchEl.value = '';
-  // 이미 받아둔 목록 있으면 즉시 보여줌(재오픈 빠름), 없으면 '불러오는 중' 표시 → 빈 화면 방지
   const listEl = document.getElementById('storeList');
+  // 로그인된 사용자 = 본인이 속한 매장만 (전체매장 노출 차단, 권한검증 전환). 미로그인 = 공개 목록.
+  const _myStores = (typeof _loginStores!=='undefined' && Array.isArray(_loginStores)) ? _loginStores : [];
+  if(currentEmp && _myStores.length){ renderMyStoreList(_myStores); return; }
+  // 이미 받아둔 목록 있으면 즉시 보여줌(재오픈 빠름), 없으면 '불러오는 중' 표시 → 빈 화면 방지
   if(_storeListCache.length){ renderStoreList(_storeListCache); }
   else if(listEl){ listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>매장 목록 불러오는 중…</p></div>'; }
   // 로그인 전이라 신분증 없음 → 공개 통로(login-meta)로 매장 목록만 안전하게 받음 (RLS 잠금 후에도 동작)
@@ -991,6 +994,18 @@ async function openStoreSheet() {
   try{ const {data} = await sb.functions.invoke('login-meta',{body:{action:'stores'}}); if(data&&data.ok) list = data.stores||[]; }catch(_e){}
   if(list.length){ _storeListCache = list; }
   renderStoreList(_storeListCache);
+}
+// 로그인된 사용자의 본인 매장 목록 (투잡이면 여러 개, 단일이면 1개) — 권한검증 경유 전환
+function renderMyStoreList(stores){
+  const listEl = document.getElementById('storeList'); if(!listEl) return;
+  listEl.innerHTML = stores.map(s=>{
+    const active = currentStore && currentStore.id===s.store_id;
+    const nm = (s.store_name||'매장').replace(/</g,'&lt;');
+    return `<div class="store-item" data-action="enterStoreFromList|${s.store_id}|${s.store_name}">
+      <div class="store-dot" style="${active?'background:var(--blue);':''}"></div>
+      <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;">${nm}${active?' <span style="font-size:11px;color:var(--blue);font-weight:600;">· 현재</span>':''}</div></div>
+    </div>`;
+  }).join('');
 }
 function renderStoreList(stores){
   const listEl = document.getElementById('storeList');
@@ -1244,14 +1259,16 @@ async function loadEmpSettings(){
   const listEl = document.getElementById('empSettingsWorkplaces');
   if(!currentEmp){ return; }
   if(nameEl) nameEl.textContent = currentEmp.name || '—';
-  if(phoneEl) phoneEl.textContent = currentEmp.phone || '—';
+  // 전화번호 = 사람(persons) 계정에 있음 (가입 직원은 employees엔 없음). 로그인 시 받은 person.phone 사용
+  const _phone = (window._loginPerson && window._loginPerson.phone) || currentEmp.phone || '—';
+  if(phoneEl) phoneEl.textContent = _phone;
   if(!listEl) return;
   try {
-    // 직원이 연결된 매장 목록 조회 (employees 테이블에서 본인 레코드의 store 정보)
+    // 직원이 연결된 매장 목록 — person_id 기준 (가입 직원은 employees.phone 비어있음, 2026-06-30 수정)
     const { data, error } = await sb
       .from('employees')
       .select('stores(id,name)')
-      .eq('phone', currentEmp.phone)
+      .eq('person_id', currentEmp.person_id)
       .eq('is_active', true);
     if(error) throw error;
     if(!data || data.length === 0){

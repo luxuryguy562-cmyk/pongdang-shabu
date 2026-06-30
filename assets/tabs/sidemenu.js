@@ -5724,6 +5724,7 @@ function completeLogin(loginResult){
   }
 
   // ── 매장 모드 ──
+  window._loginPerson=person||null; // 설정 화면 전화번호 표시용 (persons.phone)
   currentEmp=emp;
   // 로그인 결과에서 currentStore 설정 (매장 선택 없이 로그인 → 서버 응답에서 매장 정보 받음)
   if(emp&&emp.store_id){
