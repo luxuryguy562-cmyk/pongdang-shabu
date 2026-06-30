@@ -78,6 +78,15 @@ Deno.serve(async (req: Request) => {
     // 사장님 종 배지 즉시 갱신
     await broadcast(jc.store_id, "join");
 
+    // 사장님에게 푸시 알림 (매장 연결 신청 — 2026-06-29) — 실패해도 신청엔 영향 없음
+    try {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ store_id: jc.store_id, payload: { title: "매장 연결 신청 🔔", body: `${person.name}님이 매장 연결을 신청했어요. 승인해 주세요.`, url: "/" } }),
+      });
+    } catch (_e) { /* 푸시 실패 무시 */ }
+
     const { data: store } = await admin.from("stores").select("name").eq("id", jc.store_id).maybeSingle();
     return json({ ok: true, store_name: store?.name || "매장", status: "pending" });
   } catch (_e) {
