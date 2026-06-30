@@ -208,8 +208,10 @@
     <div id="loginStepPin" style="display:none;">
       <div id="loginPinPhone" style="text-align:center;font-size:13px;color:var(--gray-500);font-weight:600;margin-bottom:6px;"></div>
       <div style="text-align:center;font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;">PIN 번호를 눌러주세요</div>
-      <!-- PIN 점 (4자리) -->
-      <div id="pinDots" style="display:flex;justify-content:center;gap:18px;margin-bottom:26px;">
+      <!-- PIN 점 (6자리) -->
+      <div id="pinDots" style="display:flex;justify-content:center;gap:14px;margin-bottom:26px;">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
         <span class="pin-dot"></span>
         <span class="pin-dot"></span>
         <span class="pin-dot"></span>
@@ -234,6 +236,24 @@
       <!-- 다른 계정으로 (= 전화번호 화면으로) -->
       <div style="margin-top:16px;text-align:center;">
         <button class="btn-text" style="font-size:13px;color:var(--gray-500);background:none;border:none;text-decoration:underline;cursor:pointer;" data-action="switchAccount">다른 계정으로 로그인</button>
+      </div>
+    </div>
+
+    <!-- ── [화면 C] 새 기기 문자 인증 (처음 보는 휴대폰·PC에서 로그인 시 1회) ── -->
+    <div id="loginStepOtp" style="display:none;">
+      <div style="text-align:center;font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">처음 보는 기기예요</div>
+      <div style="text-align:center;font-size:13px;color:var(--gray-600);margin-bottom:4px;">본인 확인을 위해 문자 인증을 한 번만 해주세요</div>
+      <div style="text-align:center;font-size:13px;color:var(--gray-500);font-weight:600;margin-bottom:18px;"><span id="loginOtpEcho"></span> 로 발송</div>
+      <input type="tel" id="loginOtpInput" inputmode="numeric" maxlength="6" oninput="loginOtpInput(this)"
+        style="position:absolute;left:-9999px;opacity:0;" autocomplete="one-time-code">
+      <div id="loginOtpBoxes" style="display:flex;justify-content:center;gap:8px;margin-bottom:16px;" onclick="document.getElementById('loginOtpInput').focus()">
+        <span class="otp-cell"></span><span class="otp-cell"></span><span class="otp-cell"></span>
+        <span class="otp-cell"></span><span class="otp-cell"></span><span class="otp-cell"></span>
+      </div>
+      <div id="loginOtpTimer" style="text-align:center;font-size:12px;color:var(--gray-500);min-height:16px;"></div>
+      <div id="loginOtpMsg" style="margin-top:10px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+      <div style="margin-top:14px;text-align:center;">
+        <button class="btn-text" style="font-size:13px;color:var(--gray-500);background:none;border:none;text-decoration:underline;cursor:pointer;" data-action="loginOtpCancel">다른 번호로 로그인</button>
       </div>
     </div>
 
@@ -430,9 +450,9 @@
       <div style="font-size:22px;font-weight:900;margin-bottom:16px;">이름과 비밀번호</div>
       <input id="joinName" class="input-field" type="text" placeholder="이름"
         style="padding:16px;font-size:16px;font-weight:700;border-radius:14px;margin-bottom:16px;text-align:center;">
-      <div style="text-align:center;font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:8px;">로그인 비밀번호 4자리</div>
-      <div id="joinPinDots" style="display:flex;justify-content:center;gap:18px;margin-bottom:22px;">
-        <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+      <div style="text-align:center;font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:8px;">로그인 비밀번호 6자리</div>
+      <div id="joinPinDots" style="display:flex;justify-content:center;gap:14px;margin-bottom:22px;">
+        <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
       </div>
       <div id="joinPinPad">
         <button type="button" class="pin-key" data-action="joinPinPress|1">1</button>
@@ -1915,9 +1935,38 @@
     <!-- 내 정보 -->
     <div style="margin-bottom:20px;">
       <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:8px;">내 정보</div>
+      <div style="background:var(--gray-100);border-radius:12px;overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:1px solid var(--gray-200);">
+          <span style="font-size:13px;color:var(--gray-600);">이름</span>
+          <span style="font-size:14px;font-weight:700;" id="empSettingsName">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;">
+          <span style="font-size:13px;color:var(--gray-600);">전화번호</span>
+          <span style="font-size:14px;font-weight:700;" id="empSettingsPhone">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 내 급여·신상 정보 (직원 본인 입력 — 2026-06-30) -->
+    <div style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gray-500);">급여·신상 정보</div>
+        <span id="myInfoBadge" style="display:none;font-size:11px;font-weight:800;color:var(--danger);background:var(--danger-light);padding:3px 8px;border-radius:7px;">입력 필요</span>
+      </div>
       <div style="background:var(--gray-100);border-radius:12px;padding:14px 16px;">
-        <div style="font-size:14px;font-weight:700;" id="empSettingsName">—</div>
-        <div style="font-size:12px;color:var(--gray-600);margin-top:2px;" id="empSettingsPhone">—</div>
+        <div style="font-size:11px;color:var(--gray-600);margin-bottom:10px;line-height:1.5;">급여 지급·4대보험 신고에 쓰여요. 사장님께만 안전하게 전달됩니다.</div>
+        <label class="emp-label">은행명</label>
+        <input id="myBank" class="input-field" type="text" placeholder="예: 국민은행" style="margin-bottom:10px;">
+        <label class="emp-label">계좌번호</label>
+        <input id="myAccount" class="input-field" type="text" inputmode="numeric" placeholder="- 없이 숫자만" style="margin-bottom:10px;">
+        <label class="emp-label">주민/외국인등록번호</label>
+        <input id="myIdNum" class="input-field" type="text" placeholder="앞 6자리-뒤 7자리" style="margin-bottom:10px;">
+        <label class="emp-label">생년월일</label>
+        <input id="myBirth" class="input-field" type="date" style="margin-bottom:10px;">
+        <label class="emp-label">주소</label>
+        <input id="myAddr" class="input-field" type="text" placeholder="주소" style="margin-bottom:14px;">
+        <button class="btn btn-primary btn-full" data-action="saveMyInfo">저장</button>
+        <div style="font-size:11px;color:var(--gray-500);text-align:center;margin-top:10px;">📎 근로계약서·보건증 등 서류 제출은 곧 추가됩니다.</div>
       </div>
     </div>
 
@@ -2972,8 +3021,8 @@
     <option value="아르바이트">아르바이트</option>
   </select>
   <div class="emp-label" style="font-size:11px;color:var(--gray-600);margin-bottom:9px;">점장·팀장·매니저 = 관리자 권한 / 아르바이트 = 일반 직원 (직급이 곧 권한)</div>
-  <label class="emp-label">PIN (4자리) *</label>
-  <input id="empPinInput" class="input-field" placeholder="••••" type="password" inputmode="numeric" maxlength="4">
+  <label class="emp-label">PIN (6자리) *</label>
+  <input id="empPinInput" class="input-field" placeholder="••••••" type="password" inputmode="numeric" maxlength="6">
   <label class="emp-label">캡스 사용자ID</label>
   <input id="empCapsIdInput" class="input-field" placeholder="CAPS ID" type="text">
   <label class="emp-label">입사일</label>
@@ -3739,7 +3788,7 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260629c"></script>
+<script src="assets/common.js?v=20260630b"></script>
 <script src="assets/push.js?v=20260629b"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
@@ -3752,7 +3801,7 @@
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260629d"></script>
 <script src="assets/tabs/dashboard.js?v=20260629a"></script>
-<script src="assets/tabs/sidemenu.js?v=20260629i"></script>
+<script src="assets/tabs/sidemenu.js?v=20260630d"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 
 <!-- 중간 매출 기록 시트 (2026-06-26) -->

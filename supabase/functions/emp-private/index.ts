@@ -34,7 +34,23 @@ Deno.serve(async (req: Request) => {
       .select("id, store_id, auth_level, is_manager").eq("id", sess.employee_id).maybeSingle();
     if (!requester) return json({ ok: false, error: "요청자 없음" });
 
-    // 2) 매니저 권한 확인
+    // ── 본인 정보 통로 (매니저 권한 불필요, 본인 것만) — 2026-06-30 직원 셀프 등록 ──
+    const SELF_FIELDS = ["id_number", "bank_name", "account_number", "address", "birth_date"]; // pin·phone 제외(가입에서 처리)
+    if (action === "get_self") {
+      const { data: r } = await admin.from("employee_private")
+        .select("id_number, bank_name, account_number, address, birth_date")
+        .eq("employee_id", requester.id).maybeSingle();
+      return json({ ok: true, row: r || {} });
+    }
+    if (action === "save_self") {
+      const row: any = { employee_id: requester.id, store_id: requester.store_id, updated_at: new Date().toISOString() };
+      for (const f of SELF_FIELDS) if (data && f in data) row[f] = data[f];
+      const { error: se } = await admin.from("employee_private").upsert(row, { onConflict: "employee_id" });
+      if (se) throw se;
+      return json({ ok: true });
+    }
+
+    // 2) 매니저 권한 확인 (아래 list/save 는 매니저 전용)
     const isManager = MANAGER_LEVELS.includes(requester.auth_level) || requester.is_manager === true;
     if (!isManager) return json({ ok: false, error: "권한 없음" });
     const storeId = requester.store_id;
