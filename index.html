@@ -1927,6 +1927,29 @@
       </div>
     </div>
 
+    <!-- 내 급여·신상 정보 (직원 본인 입력 — 2026-06-30) -->
+    <div style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gray-500);">급여·신상 정보</div>
+        <span id="myInfoBadge" style="display:none;font-size:11px;font-weight:800;color:var(--danger);background:var(--danger-light);padding:3px 8px;border-radius:7px;">입력 필요</span>
+      </div>
+      <div style="background:var(--gray-100);border-radius:12px;padding:14px 16px;">
+        <div style="font-size:11px;color:var(--gray-600);margin-bottom:10px;line-height:1.5;">급여 지급·4대보험 신고에 쓰여요. 사장님께만 안전하게 전달됩니다.</div>
+        <label class="emp-label">은행명</label>
+        <input id="myBank" class="input-field" type="text" placeholder="예: 국민은행" style="margin-bottom:10px;">
+        <label class="emp-label">계좌번호</label>
+        <input id="myAccount" class="input-field" type="text" inputmode="numeric" placeholder="- 없이 숫자만" style="margin-bottom:10px;">
+        <label class="emp-label">주민/외국인등록번호</label>
+        <input id="myIdNum" class="input-field" type="text" placeholder="앞 6자리-뒤 7자리" style="margin-bottom:10px;">
+        <label class="emp-label">생년월일</label>
+        <input id="myBirth" class="input-field" type="date" style="margin-bottom:10px;">
+        <label class="emp-label">주소</label>
+        <input id="myAddr" class="input-field" type="text" placeholder="주소" style="margin-bottom:14px;">
+        <button class="btn btn-primary btn-full" data-action="saveMyInfo">저장</button>
+        <div style="font-size:11px;color:var(--gray-500);text-align:center;margin-top:10px;">📎 근로계약서·보건증 등 서류 제출은 곧 추가됩니다.</div>
+      </div>
+    </div>
+
     <!-- 연결된 근무처 -->
     <div style="margin-bottom:20px;">
       <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:8px;">연결된 근무처</div>
@@ -3745,7 +3768,7 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260630a"></script>
+<script src="assets/common.js?v=20260630b"></script>
 <script src="assets/push.js?v=20260629b"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">

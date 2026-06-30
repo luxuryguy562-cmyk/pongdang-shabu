@@ -1287,6 +1287,21 @@ async function loadEmpSettings(){
     if(listEl) listEl.innerHTML = '<div class="ms-empty">불러오기 실패</div>';
     console.error('[loadEmpSettings]', e);
   }
+  // 내 급여·신상 정보 프리필 (본인 통로 get_self) — 2026-06-30
+  try{
+    const token = localStorage.getItem('pd_token');
+    if(token){
+      const { data: si } = await sb.functions.invoke('emp-private', { body:{ token, action:'get_self' } });
+      const r = (si && si.ok && si.row) ? si.row : {};
+      const setv=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
+      setv('myBank', r.bank_name); setv('myAccount', r.account_number);
+      setv('myIdNum', r.id_number); setv('myBirth', r.birth_date); setv('myAddr', r.address);
+      // 핵심 항목(계좌·주민번호) 비었으면 "입력 필요" 배지
+      const badge=document.getElementById('myInfoBadge');
+      if(badge) badge.style.display = (r.bank_name && r.account_number && r.id_number) ? 'none' : '';
+    }
+  }catch(_e){ /* 프리필 실패 무시 */ }
+
   // 승인 대기 중인 연결 요청 조회
   const pendingEl = document.getElementById('empSettingsPending');
   const pendingSection = document.getElementById('empSettingsPendingSection');
@@ -1311,6 +1326,29 @@ async function loadEmpSettings(){
       }
     } catch(e){ console.warn('[empSettings pending]', e); }
   }
+}
+
+// ─── 직원 본인 급여·신상 정보 저장 (emp-private save_self) — 2026-06-30 ───
+async function saveMyInfo(){
+  const token = localStorage.getItem('pd_token');
+  if(!token){ toast('로그인이 필요해요','warn'); return; }
+  const gv=id=>(document.getElementById(id)?.value||'').trim();
+  const data={
+    bank_name: gv('myBank')||null,
+    account_number: gv('myAccount').replace(/[^0-9]/g,'')||null,
+    id_number: gv('myIdNum')||null,
+    birth_date: gv('myBirth')||null,
+    address: gv('myAddr')||null
+  };
+  setLoad(true,'저장 중...');
+  try{
+    const { data:res, error } = await sb.functions.invoke('emp-private', { body:{ token, action:'save_self', data } });
+    setLoad(false);
+    if(error || !res?.ok){ toast('저장 실패','error'); return; }
+    toast('저장됐어요','success');
+    const badge=document.getElementById('myInfoBadge');
+    if(badge) badge.style.display = (data.bank_name && data.account_number && data.id_number) ? 'none' : '';
+  }catch(e){ setLoad(false); toast('저장 실패','error'); }
 }
 
 // ─── 직원 설정 — 새 근무처 연결 버튼 ───
