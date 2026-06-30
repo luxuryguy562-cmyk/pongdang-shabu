@@ -963,13 +963,41 @@ function openMyInfoSheet() {
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">생년월일</span><span style="font-size:13px;font-weight:700;">${emp.birth_date||'-'}</span></div>
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">은행/계좌</span><span style="font-size:13px;font-weight:700;">${emp.bank_name||'-'} ${emp.account_number?maskAccount(emp.account_number):''}</span></div>
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">시급</span><span style="font-size:13px;font-weight:700;">${fmt(emp.base_wage)}원</span></div>
-      <div class="action-group" style="margin-top:16px;">
+      <button class="btn btn-secondary btn-full" style="margin-top:16px;padding:14px;" data-action="openChangePinSheet">🔒 비밀번호 변경</button>
+      <div class="action-group" style="margin-top:9px;">
         ${isManager?`<button class="btn btn-secondary" style="flex:1;padding:14px;" data-action="editEmpAfterClose|${emp.id}">✏️ 수정</button>`:''}
         <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="doLogout">로그아웃</button>
       </div>`;
   }
   document.getElementById('myInfoContent').innerHTML = html;
   openSheet('myInfoSheet');
+}
+// ─── 새 기능: 본인 PIN 변경 (현재 PIN 확인 후 새 PIN 암호화 저장) 2026-06-30 ───
+function openChangePinSheet(){
+  ['cpOld','cpNew','cpNew2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const m=document.getElementById('cpMsg'); if(m) m.innerText='';
+  if(typeof closeAllSheets==='function') closeAllSheets();
+  openSheet('changePinSheet');
+}
+async function saveNewPin(){
+  const oldP=(document.getElementById('cpOld').value||'').trim();
+  const nP=(document.getElementById('cpNew').value||'').trim();
+  const nP2=(document.getElementById('cpNew2').value||'').trim();
+  const m=document.getElementById('cpMsg');
+  const fail=t=>{ if(m) m.innerText=t; };
+  if(!/^\d{6}$/.test(oldP)) return fail('현재 PIN 6자리를 입력하세요');
+  if(!/^\d{6}$/.test(nP)) return fail('새 PIN 6자리를 입력하세요');
+  if(nP!==nP2) return fail('새 PIN이 서로 달라요');
+  if(nP===oldP) return fail('현재 PIN과 다른 번호로 정해주세요');
+  const token=localStorage.getItem('pd_token');
+  if(!token) return fail('다시 로그인 후 시도해주세요');
+  fail('변경 중…');
+  try{
+    const{data,error}=await sb.functions.invoke('change-pin',{body:{token,old_pin:oldP,new_pin:nP}});
+    if(error||!data?.ok) return fail((data&&data.error)||'변경 실패');
+    if(typeof closeAllSheets==='function') closeAllSheets();
+    if(typeof toast==='function') toast('🔒 PIN을 바꿨어요','success');
+  }catch(_e){ fail('네트워크 오류 — 다시 시도해주세요'); }
 }
 // doLogout는 PIN 로그인 섹션에서 정의됨
 
