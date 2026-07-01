@@ -636,7 +636,7 @@
   <!-- 개인 모드 nav: 홈 / 커뮤니티 / 더보기 (매장 연결 전) -->
   <div class="nav-item personal-only" data-tab="personalHome" data-action="nav|personalHome|this" style="display:none;"><span class="ni"><svg><use href="#i-home"/></svg></span>홈</div>
   <div class="nav-item personal-only" data-tab="empCommunity" data-action="nav|empCommunity|this" style="display:none;"><span class="ni"><svg><use href="#i-community"/></svg></span>커뮤니티</div>
-  <div class="nav-item personal-only" data-action="openMyInfoSheet" style="display:none;"><span class="ni"><svg><use href="#i-settings"/></svg></span>더보기</div>
+  <div class="nav-item personal-only" data-tab="empSettings" data-action="nav|empSettings|this" style="display:none;"><span class="ni"><svg><use href="#i-settings"/></svg></span>설정</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -1969,8 +1969,13 @@
       </div>
     </div>
 
+    <!-- 개인 모드 안내 (매장 연결 전) -->
+    <div id="empPersonalNote" style="display:none;background:#EEF4FF;border:1px solid #C7DBFF;border-radius:12px;padding:14px 16px;margin-bottom:20px;font-size:12px;color:var(--gray-700);line-height:1.6;">
+      아직 매장에 연결되지 않았어요. 아래 <b>새 근무처 연결하기</b>로 사장님 매장 코드를 넣으면 급여 계좌·서류 등록이 열려요.
+    </div>
+
     <!-- 내 급여·신상 정보 (직원 본인 입력 — 2026-06-30) -->
-    <div style="margin-bottom:20px;">
+    <div id="empSalarySection" style="margin-bottom:20px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <div style="font-size:12px;font-weight:700;color:var(--gray-500);">급여·신상 정보</div>
         <span id="myInfoBadge" style="display:none;font-size:11px;font-weight:800;color:var(--danger);background:var(--danger-light);padding:3px 8px;border-radius:7px;">입력 필요</span>
@@ -2011,8 +2016,9 @@
     <div style="font-size:11px;color:var(--gray-500);text-align:center;">사장님에게 매장 코드를 받아 연결하세요.</div>
   </div>
 
-  <!-- 로그아웃 -->
+  <!-- 비밀번호 변경 + 로그아웃 -->
   <div class="card" style="margin-top:12px;">
+    <button class="btn btn-secondary btn-full" style="margin-bottom:10px;" data-action="openChangePinSheet">🔒 비밀번호 변경</button>
     <button class="btn btn-secondary btn-full" style="color:var(--danger);border-color:var(--danger);" data-action="doLogout">로그아웃</button>
   </div>
 </div>
@@ -3828,7 +3834,7 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260701a"></script>
+<script src="assets/common.js?v=20260701b"></script>
 <script src="assets/push.js?v=20260629b"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">

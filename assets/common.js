@@ -1310,7 +1310,37 @@ async function loadEmpSettings(){
   const nameEl = document.getElementById('empSettingsName');
   const phoneEl = document.getElementById('empSettingsPhone');
   const listEl = document.getElementById('empSettingsWorkplaces');
-  if(!currentEmp){ return; }
+  const salarySec = document.getElementById('empSalarySection');
+  const pNote = document.getElementById('empPersonalNote');
+  // ── 개인 모드 (매장 연결 전) — 급여·신상 구획은 숨기고 안내, 근무처는 비움 ──
+  if(!currentEmp){
+    const pp = (typeof window!=='undefined') ? window._personalPerson : null;
+    if(nameEl) nameEl.textContent = (pp && pp.name) || '—';
+    if(phoneEl) phoneEl.textContent = (pp && pp.phone) || '—';
+    if(salarySec) salarySec.style.display = 'none';   // 저장할 매장(직원) 없음 → 연결 후
+    if(pNote) pNote.style.display = '';
+    if(listEl) listEl.innerHTML = '<div class="ms-empty">아직 연결된 근무처가 없어요.</div>';
+    // 승인 대기 중인 연결 요청 (개인 세션 토큰)
+    const pendingEl = document.getElementById('empSettingsPending');
+    const pendingSection = document.getElementById('empSettingsPendingSection');
+    if(pendingEl && pendingSection){
+      try{
+        const token = localStorage.getItem('pd_token');
+        const { data: pd } = await sb.functions.invoke('join-store', { body: { token, action: 'list_my_pending' } });
+        const rows = pd?.rows || [];
+        if(rows.length){
+          pendingEl.innerHTML = rows.map(r => `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--orange,#f97316);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">${(r.stores?.name||'매').slice(0,1)}</div>
+            <div><div style="font-size:14px;font-weight:700;">${r.stores?.name||'매장'}</div><div style="font-size:11px;color:var(--gray-500);">사장님 승인 대기 중</div></div>
+          </div>`).join('');
+          pendingSection.style.display = '';
+        } else { pendingSection.style.display = 'none'; }
+      }catch(_e){}
+    }
+    return;
+  }
+  if(salarySec) salarySec.style.display = '';   // 매장 모드 = 급여 구획 노출
+  if(pNote) pNote.style.display = 'none';
   if(nameEl) nameEl.textContent = currentEmp.name || '—';
   // 전화번호 = 사람(persons) 계정에 있음 (가입 직원은 employees엔 없음). 로그인 시 받은 person.phone 사용
   const _phone = (window._loginPerson && window._loginPerson.phone) || currentEmp.phone || '—';
@@ -1406,6 +1436,8 @@ async function saveMyInfo(){
 
 // ─── 직원 설정 — 새 근무처 연결 버튼 ───
 function openJoinStore(){
+  // 개인 모드(매장 연결 전) = 로그인 세션으로 코드 연결 (2026-07-01). 매장 모드 = 기존 가입 오버레이(투잡 추가)
+  if(!currentEmp && typeof openConnectStore==='function'){ openConnectStore(); return; }
   const ov = document.getElementById('joinOverlay');
   if(ov){ ov.style.display='block'; }
 }
