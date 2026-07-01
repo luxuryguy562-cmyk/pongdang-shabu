@@ -413,7 +413,7 @@ function openAttManualSheet(date, empId){
   }
   // 날짜
   const dateEl = document.getElementById('vDate');
-  if(dateEl){ dateEl.innerText = date || new Date().toISOString().slice(0,10); dateEl.classList.remove('empty'); }
+  if(dateEl){ dateEl.innerText = date || ymdLocal(new Date()); dateEl.classList.remove('empty'); }
   // 시간 리셋
   ['vStart','vEnd'].forEach(id=>{
     const el = document.getElementById(id);
@@ -664,7 +664,7 @@ async function calcWageData(empId, appIn, appOut, date, restMinOverride){
   return{restMin,isWeekend,totalMin,nightMin,wage};
 }
 // 근태 조회 월 상태 (F안 통합: attAllMonth 단일)
-let attAllMonth = new Date().toISOString().slice(0,7);
+let attAllMonth = ymLocal(new Date());
 // ─── 새 기능: 근태 전체조회 E안 (월 캘린더 + 일별 간트) ───
 let attAllSelectedDate = null;
 let attAllDayMap = {};
@@ -704,7 +704,7 @@ function calcMonthlyProratedWages(ym){
   const [y,m] = ym.split('-').map(Number);
   const lastDay = new Date(y,m,0).getDate();
   const today = new Date();
-  const isCurMonth = today.toISOString().slice(0,7) === ym;
+  const isCurMonth = ymLocal(today) === ym;
   const passedDays = isCurMonth ? today.getDate() : lastDay;
   const result = [];
   const monthlyEmps = (employees||[]).filter(e=>e.is_active && e.wage_type==='monthly' && e.monthly_wage>0);
@@ -794,7 +794,7 @@ function fmtMan(won){
 function moveAttMonth(dir, mode){
   // F안 통합: mode 인자 무시, attAllMonth 단일 사용
   const d = new Date(attAllMonth+'-01'); d.setMonth(d.getMonth()+dir);
-  attAllMonth = d.toISOString().slice(0,7);
+  attAllMonth = ymLocal(d);
   const lbl=document.getElementById('vAllMonth'); if(lbl) lbl.innerText=attAllMonth;
   attAllSelectedDate=null;
   loadAttList();
@@ -941,7 +941,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
   // 선택일: 다른 달이면 리셋, 비었으면 오늘(이번달+데이터) > 가장 최근 근무일
   if(attAllSelectedDate && !attAllSelectedDate.startsWith(monthStr)) attAllSelectedDate = null;
   if(!attAllSelectedDate){
-    const todayStr = new Date().toISOString().slice(0,10);
+    const todayStr = ymdLocal(new Date());
     if(todayStr.startsWith(monthStr) && attAllDayMap[todayStr]) attAllSelectedDate = todayStr;
     else {
       const dates = Object.keys(attAllDayMap).sort();
@@ -961,7 +961,7 @@ function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
   const [y,m] = monthStr.split('-').map(Number);
   const lastDay  = new Date(y,m,0).getDate();
   const startDow = new Date(y,m-1,1).getDay(); // 0=일
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = ymdLocal(new Date());
   const dows = ['일','월','화','수','목','금','토'];
   let html = '<div class="att-cal">';
   dows.forEach((d,i)=>{
@@ -1167,7 +1167,7 @@ function renderAttDayDetail(date, logs, isSingleView){
   });
 
   // 계획만 있고 실제 없는 직원 (결근) = 빗금 전용 행
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = ymdLocal(new Date());
   const isPast = date < todayStr;
   planRows.forEach(p=>{
     if(!p.employee_id) return;
@@ -1531,7 +1531,7 @@ async function loadEmpPay(){
 function renderEmpPay(){
   const d=_empPayCalMonth, y=d.getFullYear(), mo=d.getMonth();
   const mk=`${y}-${String(mo+1).padStart(2,'0')}`;
-  const nowMonth=new Date().toISOString().slice(0,7);
+  const nowMonth=ymLocal(new Date());
   let total=0, min=0, days=0;
   _empPayLogs.forEach(r=>{ if(_empMonthKey(r.work_date)===mk){ total+=r.calculated_wage||0; min+=r.total_work_min||0; if((r.total_work_min||0)>0||(r.calculated_wage||0)>0) days++; } });
   // 주휴수당 계산 (해당 월 기록+계획 slice해서 calcMonthlyHolidayPay 재사용)
@@ -1555,7 +1555,7 @@ function renderEmpPayCalendar(){
   const dayMap={};
   _empPayLogs.forEach(r=>{ if(_empMonthKey(r.work_date)===mk) dayMap[r.work_date]={min:r.total_work_min||0,wage:r.calculated_wage||0,in:r.app_in,out:r.app_out}; });
   const startDow=new Date(y,mo,1).getDay(), daysIn=new Date(y,mo+1,0).getDate();
-  const todayStr=new Date().toISOString().slice(0,10);
+  const todayStr=ymdLocal(new Date());
   let html='<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><tr>';
   ['일','월','화','수','목','금','토'].forEach((w,i)=>{ const c=i===0?'var(--danger)':i===6?'#1E88E5':'var(--gray-400)'; html+=`<th style="font-size:11px;color:${c};font-weight:700;padding-bottom:6px;">${w}</th>`; });
   html+='</tr><tr>';
@@ -1613,7 +1613,7 @@ function empPayDay(ds){
 // 매장 모드 근태(attendance_logs)와 완전 분리 = 충돌·잔재 0.
 // ══════════════════════════════════════════
 let _pClockTimer=null;
-let _pLogMonth=new Date().toISOString().slice(0,7);
+let _pLogMonth=ymLocal(new Date());
 let _pTodayRow=null;
 let _pBusy=false;
 
@@ -1631,9 +1631,10 @@ async function loadPersonalHome(){
   if(dt){ const t=new Date(); const dow=['일','월','화','수','목','금','토'][t.getDay()];
     dt.innerText=`${t.getMonth()+1}월 ${t.getDate()}일 (${dow})`; }
   _startPClock();
-  _pLogMonth=new Date().toISOString().slice(0,7);
+  _pLogMonth=ymLocal(new Date());
   await loadPersonalToday();
   await loadPersonalLog();
+  loadPersonalPending(); // 승인 대기 배너 (연결 신청 후)
 }
 function _startPClock(){
   if(_pClockTimer) clearInterval(_pClockTimer);
@@ -1754,9 +1755,51 @@ function renderPersonalLog(rows){
     </div>`;
   }).join('');
 }
-// 매장에 연결하기 — Task #8(초대코드+편입승인)에서 join-store 세션토큰 확장과 함께 완성 예정
+// ─── 매장에 연결하기 (개인 모드 → 매장 코드 입력 → 연결 신청) 2026-07-01 완성 ───
 function openConnectStore(){
-  toast('매장 코드 연결은 곧 켜져요. 사장님께 코드를 미리 받아두세요.','info');
+  const el=document.getElementById('connectCode'); if(el) el.value='';
+  const m=document.getElementById('connectMsg'); if(m) m.innerText='';
+  openSheet('connectStoreSheet');
+  setTimeout(()=>{ const c=document.getElementById('connectCode'); if(c) c.focus(); },150);
+}
+async function submitConnectStore(){
+  const code=(document.getElementById('connectCode').value||'').trim();
+  const m=document.getElementById('connectMsg');
+  if(!code){ if(m) m.innerText='매장 코드를 입력해주세요'; return; }
+  const token=localStorage.getItem('pd_token');
+  if(!token){ if(m) m.innerText='다시 로그인 후 시도해주세요'; return; }
+  if(m) m.innerText='신청 중…';
+  try{
+    const{data,error}=await sb.functions.invoke('join-store',{body:{token,code}});
+    if(error||!data?.ok){ if(m) m.innerText=(data&&data.error)||'연결에 실패했어요'; return; }
+    if(typeof closeAllSheets==='function') closeAllSheets();
+    toast(`🏪 ${data.store_name||'매장'} 연결 신청 완료 — 사장님 승인 대기 중`,'success');
+    loadPersonalPending(); // 승인 대기 배너 갱신
+  }catch(_e){ if(m) m.innerText='네트워크 오류 — 다시 시도해주세요'; }
+}
+// 승인 대기 상태 확인 → 배너 표시/숨김 (개인 홈)
+async function loadPersonalPending(){
+  const box=document.getElementById('pPendingBox');
+  const btn=document.getElementById('pConnectBtn');
+  const hint=document.getElementById('pConnectHint');
+  if(!box) return;
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  let rows=[];
+  try{
+    const{data}=await sb.functions.invoke('join-store',{body:{token,action:'list_my_pending'}});
+    if(data&&data.ok&&data.rows) rows=data.rows;
+  }catch(_e){}
+  if(rows.length){
+    const nm=rows[0]?.stores?.name||'매장';
+    const se=document.getElementById('pPendingStore'); if(se) se.innerText=nm;
+    box.style.display='block';
+    if(btn) btn.style.display='none';
+    if(hint) hint.style.display='none';
+  }else{
+    box.style.display='none';
+    if(btn) btn.style.display='';
+    if(hint) hint.style.display='';
+  }
 }
 
 // ─── 새 기능: 근무시간 수정 요청 — 직원 확인 (2026-06-26) ───
@@ -1876,7 +1919,7 @@ async function openMergePersonalReview(personId, personName, opts){
   const notifyEmpty=!!(opts&&opts.notifyEmpty);
   if(!personId || !currentStore){ if(notifyEmpty) toast('개인 기록을 확인할 수 없어요','warn'); return; }
   const token=localStorage.getItem('pd_token'); if(!token) return;
-  const month=new Date().toISOString().slice(0,7);
+  const month=ymLocal(new Date());
   if(notifyEmpty) setLoad(true,'개인 기록 확인...');
   let res;
   try{
