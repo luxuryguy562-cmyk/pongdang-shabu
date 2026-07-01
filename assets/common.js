@@ -735,7 +735,6 @@ function nav(tab, el) {
     sales: loadSalesDaily,
     opening: loadOpeningPage,
     myinfo: loadMyInfo,
-    personalHome: (typeof loadPersonalHome==='function'?loadPersonalHome:null),
     empPay: loadEmpPay,
     empSched: loadEmpSched,
     busHub: loadBusHubData,
@@ -902,7 +901,6 @@ function applyPermissionUI() {
       else el.style.display = isManager ? '' : 'none';
     }
     else if(el.classList.contains('staff-only')) el.style.display = (!isManager && currentEmp) ? '' : 'none';
-    else if(el.classList.contains('personal-only')) el.style.display = 'none'; // 개인 모드 전용 — 매장 모드선 숨김
     else el.style.display='';
   });
   // 내 정보 배지 업데이트

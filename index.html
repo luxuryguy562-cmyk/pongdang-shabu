@@ -1324,57 +1324,6 @@
   </div>
 </div>
 
-<!-- ══ 📒 개인 모드 홈 (매장 연결 전 직원, 2026-06-26) ══ -->
-<!-- store_id 없음 → personal-attendance 서버함수로 출퇴근. 급여 계산 안 함. 회색 띠로 구분. -->
-<div id="personalHomeCont" class="container">
-  <!-- 회색 띠: 개인 모드 안내 -->
-  <div style="background:var(--gray-100);border:1px solid var(--gray-200);border-radius:14px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
-    <span style="font-size:20px;">📒</span>
-    <div style="flex:1;">
-      <div style="font-size:13px;font-weight:800;color:var(--gray-700);">개인 모드</div>
-      <div style="font-size:11px;color:var(--gray-600);margin-top:2px;">매장에 연결하면 급여가 자동으로 계산돼요.</div>
-    </div>
-  </div>
-  <!-- 인사말 -->
-  <div class="dash-hello">
-    <h1>안녕하세요, <span id="pHomeName">-</span>님 👋</h1>
-    <p id="pHomeDate">-</p>
-  </div>
-  <!-- 출퇴근 카드 -->
-  <div class="card">
-    <div id="pStatusCard" class="att-status-card before">
-      <div class="att-status-time" id="pNowTime">--:--</div>
-      <div class="att-status-badge" id="pStatusBadge">⚪ 아직 출근 안 했어요</div>
-      <div class="att-status-action">
-        <button class="btn btn-primary att-big-btn" id="pBtnCheckIn" data-action="personalClockIn">🟢 출근 찍기</button>
-        <button class="btn btn-danger att-big-btn" id="pBtnCheckOut" data-action="personalClockOut" style="display:none;">🔴 퇴근 찍기</button>
-      </div>
-      <div class="att-status-meta" id="pStatusMeta"></div>
-    </div>
-  </div>
-  <!-- 나의 근무 일지 (이번 달) -->
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div class="card-title" style="margin:0;">나의 근무 일지</div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <button class="btn btn-secondary btn-sm" data-action="movePersonalMonth|-1">‹</button>
-        <div style="font-size:13px;font-weight:700;min-width:64px;text-align:center;" id="pLogMonth">-</div>
-        <button class="btn btn-secondary btn-sm" data-action="movePersonalMonth|1">›</button>
-      </div>
-    </div>
-    <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px;line-height:1.5;">나만 보는 기록이에요. 매장 연결 후 사장님이 검토하면 급여에 반영돼요.</div>
-    <div id="pLogList"></div>
-  </div>
-  <!-- 승인 대기 배너 (연결 신청 후 사장 승인 전) -->
-  <div id="pPendingBox" style="display:none;background:#EEF4FF;border:1px solid #C7DBFF;border-radius:14px;padding:15px;margin-top:4px;">
-    <div style="font-size:14px;font-weight:800;color:var(--blue);">🕓 <span id="pPendingStore">매장</span> 승인 대기 중</div>
-    <div style="font-size:12px;color:var(--gray-600);margin-top:5px;line-height:1.6;">사장님이 승인하면 매장 직원으로 연결돼요.<br>승인 후 다시 로그인하면 급여·근무표가 보여요.</div>
-  </div>
-  <!-- 매장 연결하기 -->
-  <button id="pConnectBtn" class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;margin-top:4px;" data-action="openConnectStore">🏪 매장에 연결하기</button>
-  <div id="pConnectHint" style="font-size:11px;color:var(--gray-500);text-align:center;margin-top:10px;line-height:1.6;">사장님께 받은 매장 코드를 넣으면<br>지금까지 쓴 일지가 급여로 이어져요.</div>
-</div>
-
 <!-- ══ 매장 코드 입력 시트 (개인 모드 → 매장 연결) ══ -->
 <div class="sheet" id="connectStoreSheet">
   <div class="sheet-handle"></div>

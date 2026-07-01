@@ -1638,35 +1638,8 @@ function empPayDay(ds){
 // store_id 없음 → personal-attendance 서버함수로 출퇴근. 급여 계산 안 함(회계 단일 진실 유지).
 // 매장 모드 근태(attendance_logs)와 완전 분리 = 충돌·잔재 0.
 // ══════════════════════════════════════════
-let _pClockTimer=null;
 let _pLogMonth=ymLocal(new Date());
-let _pTodayRow=null;
 let _pBusy=false;
-
-// 개인 모드 홈 화면 표시 (completeLogin에서 호출)
-function showPersonalHome(){
-  document.querySelectorAll('.container').forEach(c=>c.classList.remove('active'));
-  const c=document.getElementById('personalHomeCont'); if(c) c.classList.add('active');
-  window.scrollTo(0,0);
-  loadPersonalHome();
-}
-async function loadPersonalHome(){
-  const person=window._personalPerson||{};
-  const nm=document.getElementById('pHomeName'); if(nm) nm.innerText=person.name||'';
-  const dt=document.getElementById('pHomeDate');
-  if(dt){ const t=new Date(); const dow=['일','월','화','수','목','금','토'][t.getDay()];
-    dt.innerText=`${t.getMonth()+1}월 ${t.getDate()}일 (${dow})`; }
-  _startPClock();
-  _pLogMonth=ymLocal(new Date());
-  await loadPersonalToday();
-  await loadPersonalLog();
-  loadPersonalPending(); // 승인 대기 배너 (연결 신청 후)
-}
-function _startPClock(){
-  if(_pClockTimer) clearInterval(_pClockTimer);
-  const upd=()=>{ const el=document.getElementById('pNowTime'); if(el) el.innerText=new Date().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}); };
-  upd(); _pClockTimer=setInterval(upd,30000);
-}
 // 개인 모드 서버함수 호출 공통 래퍼 (세션 토큰으로 본인 확인)
 async function _pInvoke(action, extra){
   const token=localStorage.getItem('pd_token')||'';
@@ -1676,52 +1649,6 @@ async function _pInvoke(action, extra){
     if(error) throw error;
     return data||{ok:false,error:'응답 없음'};
   }catch(_e){ return {ok:false,error:'네트워크 오류 — 잠시 후 다시 시도해주세요'}; }
-}
-// 오늘 기록 로드 → 출퇴근 카드 갱신
-async function loadPersonalToday(){
-  const today=ymdLocal(new Date());
-  const res=await _pInvoke('list',{work_date:{from:today,to:today}});
-  _pTodayRow=(res.ok && res.rows && res.rows.length)?res.rows[0]:null;
-  renderPersonalStatus(_pTodayRow);
-}
-function renderPersonalStatus(row){
-  const card=document.getElementById('pStatusCard');
-  const badge=document.getElementById('pStatusBadge');
-  const meta=document.getElementById('pStatusMeta');
-  const inBtn=document.getElementById('pBtnCheckIn');
-  const outBtn=document.getElementById('pBtnCheckOut');
-  if(!card) return;
-  card.classList.remove('before','during','after');
-  if(meta) meta.classList.remove('grid');
-  const fmtT=d=>d.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
-  if(!row || !row.app_in){
-    card.classList.add('before');
-    if(badge) badge.innerText='⚪ 아직 출근 안 했어요';
-    if(meta) meta.innerHTML='';
-    if(inBtn){ inBtn.style.display=''; inBtn.disabled=false; }
-    if(outBtn) outBtn.style.display='none';
-  } else if(row.app_in && !row.app_out){
-    card.classList.add('during');
-    const inT=new Date(row.app_in);
-    const elapsedMin=Math.max(0,Math.round((new Date()-inT)/60000));
-    const eh=Math.floor(elapsedMin/60), em=elapsedMin%60;
-    if(badge) badge.innerText=`🔵 근무 중  ${eh>0?eh+'시간 ':''}${em}분 째`;
-    if(meta){ meta.classList.add('grid');
-      meta.innerHTML=`<div class="cell"><div class="lbl">출근</div><div class="vl">${fmtT(inT)}</div></div>
-        <div class="cell"><div class="lbl">경과</div><div class="vl">${eh>0?eh+'h ':''}${em}m</div></div>`; }
-    if(inBtn) inBtn.style.display='none';
-    if(outBtn){ outBtn.style.display=''; outBtn.disabled=false; }
-  } else {
-    card.classList.add('after');
-    const inT=new Date(row.app_in), outT=new Date(row.app_out);
-    const work=row.total_work_min||0, wh=Math.floor(work/60), wm=work%60;
-    if(badge) badge.innerText=`🟢 오늘 수고하셨어요  ${wh}시간 ${wm}분`;
-    if(meta){ meta.classList.add('grid');
-      meta.innerHTML=`<div class="cell"><div class="lbl">근무</div><div class="vl">${fmtT(inT)}~${fmtT(outT)}</div></div>
-        <div class="cell"><div class="lbl">총 시간</div><div class="vl">${wh}시간 ${wm}분</div></div>`; }
-    if(inBtn) inBtn.style.display='none';
-    if(outBtn) outBtn.style.display='none';
-  }
 }
 // 개인 출근 찍기 (공용 홈에서 checkIn이 위임 — 공용 카드/일지 갱신)
 async function personalClockIn(){
