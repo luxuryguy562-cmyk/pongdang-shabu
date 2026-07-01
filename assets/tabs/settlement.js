@@ -995,7 +995,7 @@ async function loadSettleList(){
   }
   // 이번달 통합 추적 합 (시트 상단에서 사용)
   const calcOpDiff = (op) => op ? ((op.actual_total||0) - (op.previous_close_total||0)) : 0;
-  const nowYM = (new Date()).toISOString().slice(0,7);
+  const nowYM = ymLocal(new Date());
   const opMap={};
   (openings||[]).forEach(r=>{ opMap[r.opening_date]=r; });
   let sumOp=0, sumSt=0, sumAbs=0;

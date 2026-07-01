@@ -267,7 +267,7 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 
 // ─── 새 기능: 카테고리별 영수증 목록 (직구·식자재·비품·기타 진입 공통) ───
 let catReceiptMode = null;   // 'direct' | 'food' | 'supplies' | 'etc'
-let catReceiptMonth = (new Date()).toISOString().slice(0,7);
+let catReceiptMonth = ymLocal(new Date());
 let catReceiptPeriodMode = 'month'; // 'month' | 'range'
 let catReceiptRangeFrom  = null;    // 'YYYY-MM' | null
 let catReceiptRangeTo    = null;    // 'YYYY-MM' | null
@@ -300,10 +300,10 @@ function moveCatReceiptMonth(dir){
   if(Number(dir)>0){
     const now=new Date();
     const curYm=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const newYm=d.toISOString().slice(0,7);
+    const newYm=ymLocal(d);
     if(newYm>curYm){ if(typeof toast==='function') toast('아직 오지 않은 달이에요','info'); return; }
   }
-  catReceiptMonth=d.toISOString().slice(0,7);
+  catReceiptMonth=ymLocal(d);
   _renderCatReceiptMonthNav();
   loadCatReceiptData();
 }
@@ -2262,7 +2262,7 @@ async function saveReceipt(){
 // ══════════════════════════════════════════
 // 영수증 기록 내역 + 편집 (2026-04-24)
 // ══════════════════════════════════════════
-let rcpListMonth=(new Date()).toISOString().slice(0,7); // YYYY-MM
+let rcpListMonth=ymLocal(new Date()); // YYYY-MM
 let rcpRecords=[];                                      // 현재 월 영수증 배열
 let rcpEditingId=null;                                  // 편집 중 id
 let rcpEditingCategory='';                              // 편집 중 카테고리 (대분류>소분류)
