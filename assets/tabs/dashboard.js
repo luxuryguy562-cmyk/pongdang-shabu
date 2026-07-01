@@ -655,7 +655,7 @@ async function loadDashboard(force){
       const _upsKey=`upsCheck_${sid}`;
       let _upsCached=cacheGet(_upsKey, 300000);
       if(_upsCached===null){
-        const _y3=new Date(today.getTime()-3*24*3600e3).toISOString().slice(0,10);
+        const _y3=ymdLocal(new Date(today.getTime()-3*24*3600e3));
         const{data:_upsCheck}=await sb.from('daily_sales').select('sale_date').eq('store_id',sid).gte('sale_date',_y3).limit(1);
         _upsCached=(_upsCheck&&_upsCheck.length>0)?'ups':'settle';
         cacheSet(_upsKey, _upsCached);
@@ -1648,7 +1648,7 @@ async function loadDashboard(force){
       // 휴게 미부여(8h+인데 확정 휴게 없음) / 상시근로자 추정(연인원÷가동일수) — 당월 근태, 사장 제외
       const _attRows=((attRes2&&attRes2.data)||[]).filter(r=>!_ownerIds.has(r.employee_id));
       // 휴게 미부여: 최근 7일 긴 근무 중 확정 휴게 없는 건 (노이즈는 알림 '지우기'로 관리)
-      const _7agoStr=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+      const _7agoStr=ymdLocal(new Date(Date.now()-7*86400000));
       const _noRestShifts=_attRows.filter(r=>(r.total_work_min||0)>=480 && r.work_date>=_7agoStr && !(r.rest_start && r.rest_end && r.rest_status==='확정')).length;
       const _byDate={};
       _attRows.forEach(r=>{ if(r.work_date&&r.employee_id){ (_byDate[r.work_date]=_byDate[r.work_date]||new Set()).add(r.employee_id); } });
