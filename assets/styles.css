@@ -2015,3 +2015,11 @@ details.rcl-store[open] .rcl-acc-chev{transform:rotate(90deg);}
 .ms-empty{text-align:center;padding:28px 16px;color:var(--gray-400);font-size:13px;line-height:1.6;}
 .ms-actions{display:flex;gap:10px;margin-top:14px;}
 .ms-actions .btn{flex:1;}
+
+/* ── 개인 모드(매장 연결 전) 강제 게이팅 — 통합 홈에서 매장 요소 깜빡임(FOUC) 방지 2026-07-01 ── */
+body.mode-personal #storeModeBanner,
+body.mode-personal #duoJobBanner,
+body.mode-personal #attModReqBanner,
+body.mode-personal #empHomeActions,
+body.mode-personal #attendanceCont .sub-tabs,
+body.mode-personal #attCardTitle{ display:none !important; }
