@@ -963,13 +963,41 @@ function openMyInfoSheet() {
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">생년월일</span><span style="font-size:13px;font-weight:700;">${emp.birth_date||'-'}</span></div>
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">은행/계좌</span><span style="font-size:13px;font-weight:700;">${emp.bank_name||'-'} ${emp.account_number?maskAccount(emp.account_number):''}</span></div>
       <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">시급</span><span style="font-size:13px;font-weight:700;">${fmt(emp.base_wage)}원</span></div>
-      <div class="action-group" style="margin-top:16px;">
+      <button class="btn btn-secondary btn-full" style="margin-top:16px;padding:14px;" data-action="openChangePinSheet">🔒 비밀번호 변경</button>
+      <div class="action-group" style="margin-top:9px;">
         ${isManager?`<button class="btn btn-secondary" style="flex:1;padding:14px;" data-action="editEmpAfterClose|${emp.id}">✏️ 수정</button>`:''}
         <button class="btn btn-danger" style="flex:1;padding:14px;" data-action="doLogout">로그아웃</button>
       </div>`;
   }
   document.getElementById('myInfoContent').innerHTML = html;
   openSheet('myInfoSheet');
+}
+// ─── 새 기능: 본인 PIN 변경 (현재 PIN 확인 후 새 PIN 암호화 저장) 2026-06-30 ───
+function openChangePinSheet(){
+  ['cpOld','cpNew','cpNew2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const m=document.getElementById('cpMsg'); if(m) m.innerText='';
+  if(typeof closeAllSheets==='function') closeAllSheets();
+  openSheet('changePinSheet');
+}
+async function saveNewPin(){
+  const oldP=(document.getElementById('cpOld').value||'').trim();
+  const nP=(document.getElementById('cpNew').value||'').trim();
+  const nP2=(document.getElementById('cpNew2').value||'').trim();
+  const m=document.getElementById('cpMsg');
+  const fail=t=>{ if(m) m.innerText=t; };
+  if(!/^\d{6}$/.test(oldP)) return fail('현재 PIN 6자리를 입력하세요');
+  if(!/^\d{6}$/.test(nP)) return fail('새 PIN 6자리를 입력하세요');
+  if(nP!==nP2) return fail('새 PIN이 서로 달라요');
+  if(nP===oldP) return fail('현재 PIN과 다른 번호로 정해주세요');
+  const token=localStorage.getItem('pd_token');
+  if(!token) return fail('다시 로그인 후 시도해주세요');
+  fail('변경 중…');
+  try{
+    const{data,error}=await sb.functions.invoke('change-pin',{body:{token,old_pin:oldP,new_pin:nP}});
+    if(error||!data?.ok) return fail((data&&data.error)||'변경 실패');
+    if(typeof closeAllSheets==='function') closeAllSheets();
+    if(typeof toast==='function') toast('🔒 PIN을 바꿨어요','success');
+  }catch(_e){ fail('네트워크 오류 — 다시 시도해주세요'); }
 }
 // doLogout는 PIN 로그인 섹션에서 정의됨
 
@@ -982,8 +1010,11 @@ async function openStoreSheet() {
   // 검색 입력창 비우고 시작
   const searchEl = document.getElementById('storeSearchInput');
   if(searchEl) searchEl.value = '';
-  // 이미 받아둔 목록 있으면 즉시 보여줌(재오픈 빠름), 없으면 '불러오는 중' 표시 → 빈 화면 방지
   const listEl = document.getElementById('storeList');
+  // 로그인된 사용자 = 본인이 속한 매장만 (전체매장 노출 차단, 권한검증 전환). 미로그인 = 공개 목록.
+  const _myStores = (typeof _loginStores!=='undefined' && Array.isArray(_loginStores)) ? _loginStores : [];
+  if(currentEmp && _myStores.length){ renderMyStoreList(_myStores); return; }
+  // 이미 받아둔 목록 있으면 즉시 보여줌(재오픈 빠름), 없으면 '불러오는 중' 표시 → 빈 화면 방지
   if(_storeListCache.length){ renderStoreList(_storeListCache); }
   else if(listEl){ listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>매장 목록 불러오는 중…</p></div>'; }
   // 로그인 전이라 신분증 없음 → 공개 통로(login-meta)로 매장 목록만 안전하게 받음 (RLS 잠금 후에도 동작)
@@ -991,6 +1022,18 @@ async function openStoreSheet() {
   try{ const {data} = await sb.functions.invoke('login-meta',{body:{action:'stores'}}); if(data&&data.ok) list = data.stores||[]; }catch(_e){}
   if(list.length){ _storeListCache = list; }
   renderStoreList(_storeListCache);
+}
+// 로그인된 사용자의 본인 매장 목록 (투잡이면 여러 개, 단일이면 1개) — 권한검증 경유 전환
+function renderMyStoreList(stores){
+  const listEl = document.getElementById('storeList'); if(!listEl) return;
+  listEl.innerHTML = stores.map(s=>{
+    const active = currentStore && currentStore.id===s.store_id;
+    const nm = (s.store_name||'매장').replace(/</g,'&lt;');
+    return `<div class="store-item" data-action="enterStoreFromList|${s.store_id}|${s.store_name}">
+      <div class="store-dot" style="${active?'background:var(--blue);':''}"></div>
+      <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;">${nm}${active?' <span style="font-size:11px;color:var(--blue);font-weight:600;">· 현재</span>':''}</div></div>
+    </div>`;
+  }).join('');
 }
 function renderStoreList(stores){
   const listEl = document.getElementById('storeList');
@@ -1244,14 +1287,16 @@ async function loadEmpSettings(){
   const listEl = document.getElementById('empSettingsWorkplaces');
   if(!currentEmp){ return; }
   if(nameEl) nameEl.textContent = currentEmp.name || '—';
-  if(phoneEl) phoneEl.textContent = currentEmp.phone || '—';
+  // 전화번호 = 사람(persons) 계정에 있음 (가입 직원은 employees엔 없음). 로그인 시 받은 person.phone 사용
+  const _phone = (window._loginPerson && window._loginPerson.phone) || currentEmp.phone || '—';
+  if(phoneEl) phoneEl.textContent = _phone;
   if(!listEl) return;
   try {
-    // 직원이 연결된 매장 목록 조회 (employees 테이블에서 본인 레코드의 store 정보)
+    // 직원이 연결된 매장 목록 — person_id 기준 (가입 직원은 employees.phone 비어있음, 2026-06-30 수정)
     const { data, error } = await sb
       .from('employees')
       .select('stores(id,name)')
-      .eq('phone', currentEmp.phone)
+      .eq('person_id', currentEmp.person_id)
       .eq('is_active', true);
     if(error) throw error;
     if(!data || data.length === 0){
@@ -1270,6 +1315,21 @@ async function loadEmpSettings(){
     if(listEl) listEl.innerHTML = '<div class="ms-empty">불러오기 실패</div>';
     console.error('[loadEmpSettings]', e);
   }
+  // 내 급여·신상 정보 프리필 (본인 통로 get_self) — 2026-06-30
+  try{
+    const token = localStorage.getItem('pd_token');
+    if(token){
+      const { data: si } = await sb.functions.invoke('emp-private', { body:{ token, action:'get_self' } });
+      const r = (si && si.ok && si.row) ? si.row : {};
+      const setv=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
+      setv('myBank', r.bank_name); setv('myAccount', r.account_number);
+      setv('myIdNum', r.id_number); setv('myBirth', r.birth_date); setv('myAddr', r.address);
+      // 핵심 항목(계좌·주민번호) 비었으면 "입력 필요" 배지
+      const badge=document.getElementById('myInfoBadge');
+      if(badge) badge.style.display = (r.bank_name && r.account_number && r.id_number) ? 'none' : '';
+    }
+  }catch(_e){ /* 프리필 실패 무시 */ }
+
   // 승인 대기 중인 연결 요청 조회
   const pendingEl = document.getElementById('empSettingsPending');
   const pendingSection = document.getElementById('empSettingsPendingSection');
@@ -1294,6 +1354,29 @@ async function loadEmpSettings(){
       }
     } catch(e){ console.warn('[empSettings pending]', e); }
   }
+}
+
+// ─── 직원 본인 급여·신상 정보 저장 (emp-private save_self) — 2026-06-30 ───
+async function saveMyInfo(){
+  const token = localStorage.getItem('pd_token');
+  if(!token){ toast('로그인이 필요해요','warn'); return; }
+  const gv=id=>(document.getElementById(id)?.value||'').trim();
+  const data={
+    bank_name: gv('myBank')||null,
+    account_number: gv('myAccount').replace(/[^0-9]/g,'')||null,
+    id_number: gv('myIdNum')||null,
+    birth_date: gv('myBirth')||null,
+    address: gv('myAddr')||null
+  };
+  setLoad(true,'저장 중...');
+  try{
+    const { data:res, error } = await sb.functions.invoke('emp-private', { body:{ token, action:'save_self', data } });
+    setLoad(false);
+    if(error || !res?.ok){ toast('저장 실패','error'); return; }
+    toast('저장됐어요','success');
+    const badge=document.getElementById('myInfoBadge');
+    if(badge) badge.style.display = (data.bank_name && data.account_number && data.id_number) ? 'none' : '';
+  }catch(e){ setLoad(false); toast('저장 실패','error'); }
 }
 
 // ─── 직원 설정 — 새 근무처 연결 버튼 ───

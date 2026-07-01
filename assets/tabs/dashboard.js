@@ -687,11 +687,11 @@ async function loadDashboard(force){
           :sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',pStart).lte('date',pEnd),
         // ── 일별 카테고리(아래) + 가마감 지출 집계 공유 ──
         sb.from('vendor_orders').select('id,order_group_id,amount,order_date,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-        sb.from('receipts').select('id,receipt_group_id,total_price,category_id,receipt_date,vendor_id,vendor,vendors(name)').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
+        sb.from('receipts').select('id,receipt_group_id,total_price,category_id,receipt_date,vendor_id,vendor,vendors(name)').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
         sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id,rest_start,rest_end,rest_status').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
         // ── 전월 일별 식자재/영수증/인건비 ──
         sb.from('vendor_orders').select('order_date,amount').eq('store_id',sid).gte('order_date',pStart).lte('order_date',pEnd),
-        sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',pStart).lte('receipt_date',pEnd),
+        sb.from('receipts').select('receipt_date,total_price').eq('store_id',sid).eq('note','정상').gte('receipt_date',pStart).lte('receipt_date',pEnd),
         sb.from('attendance_logs').select('work_date,total_work_min,calculated_wage,employee_id').eq('store_id',sid).gte('work_date',pStart).lte('work_date',pEnd),
         sb.from('settlements').select('settle_date,items_json').eq('store_id',sid).gte('settle_date',start).lte('settle_date',end),
         // ── 당월 근무계획 (주휴수당 결근 차감 판정용 — 2026-06-17 직원 급여화면과 두 화면 통일) ──
@@ -2141,8 +2141,9 @@ function v17RenderMonthCard(){
   }
 
   // ── 월 요약 카드 — 홈 항상 노출. 흑자/적자·매출·수익 핵심 (2026-06-15 역할 분리: 숫자=월요약 / 조언=AI매니저) ──
+  // 카드 전체를 탭하면 월 상세로 진입 — 예상 띠(fcHtml)가 숨는 월말·월초에도 입구 항상 보장 (2026-06-30 버그 수정)
   el.innerHTML = `
-      <div class="v17-card-v6">
+      <div class="v17-card-v6" data-action="dashGoStage|month-detail" style="cursor:pointer;">
         ${fcHtml}
         <div class="v6-ttl-row">
           <div class="v6-ttl"><b>${ctx.TARGET_MONTH}월</b>${progressDays}일 진행</div>
@@ -2159,6 +2160,7 @@ function v17RenderMonthCard(){
             <div class="m6-mr"><span class="k">수익</span><span class="v ${profit>=0?'green':'red'}">${v17FmtNoWonSigned(profit)}원</span></div>
           </div>
         </div>
+        <div style="text-align:center;margin-top:11px;padding-top:10px;border-top:1px solid var(--gray-100);font-size:13px;font-weight:700;color:var(--gray-500);">월 상세 보기 ›</div>
       </div>`;
 }
 

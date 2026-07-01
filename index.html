@@ -17,9 +17,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="캐쉬플로우">
-<link rel="apple-touch-icon" href="icon.svg">
-<link rel="icon" type="image/svg+xml" href="icon.svg">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png?v=20260630">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=20260630">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=20260630">
 
 <!-- Pretendard 폰트 (토스/카뱅/당근 표준) — dev_lessons #57 톤 통일 일환 -->
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -165,7 +165,7 @@
 <!-- 부팅 가림막 (로고) — 로그인 복원·화면 전환 중 앞사람 화면 비침 방지 (2026-06-29) -->
 <div id="bootSplash" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:7000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
   <div class="logo-row" style="justify-content:center;gap:12px;">
-    <span class="logo-mark" style="width:56px;height:56px;font-size:28px;border-radius:14px;">₩</span>
+    <img src="icon-192.png?v=20260630" alt="캐쉬플로우" style="width:56px;height:56px;border-radius:14px;flex-shrink:0;">
     <span style="font-size:32px;font-weight:900;color:var(--text);letter-spacing:-1.2px;">캐쉬플로우</span>
   </div>
   <div class="spinner"></div>
@@ -176,7 +176,7 @@
   <!-- 브랜드 -->
   <div style="text-align:center;margin-bottom:36px;">
     <div class="logo-row" style="justify-content:center;gap:12px;">
-      <span class="logo-mark" style="width:56px;height:56px;font-size:28px;border-radius:14px;">₩</span>
+      <img src="icon-192.png?v=20260630" alt="캐쉬플로우" style="width:56px;height:56px;border-radius:14px;flex-shrink:0;">
       <span style="font-size:32px;font-weight:900;color:var(--text);letter-spacing:-1.2px;">캐쉬플로우</span>
     </div>
   </div>
@@ -208,8 +208,10 @@
     <div id="loginStepPin" style="display:none;">
       <div id="loginPinPhone" style="text-align:center;font-size:13px;color:var(--gray-500);font-weight:600;margin-bottom:6px;"></div>
       <div style="text-align:center;font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;">PIN 번호를 눌러주세요</div>
-      <!-- PIN 점 (4자리) -->
-      <div id="pinDots" style="display:flex;justify-content:center;gap:18px;margin-bottom:26px;">
+      <!-- PIN 점 (6자리) -->
+      <div id="pinDots" style="display:flex;justify-content:center;gap:14px;margin-bottom:26px;">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
         <span class="pin-dot"></span>
         <span class="pin-dot"></span>
         <span class="pin-dot"></span>
@@ -234,6 +236,24 @@
       <!-- 다른 계정으로 (= 전화번호 화면으로) -->
       <div style="margin-top:16px;text-align:center;">
         <button class="btn-text" style="font-size:13px;color:var(--gray-500);background:none;border:none;text-decoration:underline;cursor:pointer;" data-action="switchAccount">다른 계정으로 로그인</button>
+      </div>
+    </div>
+
+    <!-- ── [화면 C] 새 기기 문자 인증 (처음 보는 휴대폰·PC에서 로그인 시 1회) ── -->
+    <div id="loginStepOtp" style="display:none;">
+      <div style="text-align:center;font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">처음 보는 기기예요</div>
+      <div style="text-align:center;font-size:13px;color:var(--gray-600);margin-bottom:4px;">본인 확인을 위해 문자 인증을 한 번만 해주세요</div>
+      <div style="text-align:center;font-size:13px;color:var(--gray-500);font-weight:600;margin-bottom:18px;"><span id="loginOtpEcho"></span> 로 발송</div>
+      <input type="tel" id="loginOtpInput" inputmode="numeric" maxlength="6" oninput="loginOtpInput(this)"
+        style="position:absolute;left:-9999px;opacity:0;" autocomplete="one-time-code">
+      <div id="loginOtpBoxes" style="display:flex;justify-content:center;gap:8px;margin-bottom:16px;" onclick="document.getElementById('loginOtpInput').focus()">
+        <span class="otp-cell"></span><span class="otp-cell"></span><span class="otp-cell"></span>
+        <span class="otp-cell"></span><span class="otp-cell"></span><span class="otp-cell"></span>
+      </div>
+      <div id="loginOtpTimer" style="text-align:center;font-size:12px;color:var(--gray-500);min-height:16px;"></div>
+      <div id="loginOtpMsg" style="margin-top:10px;font-size:13px;color:var(--danger);min-height:20px;text-align:center;"></div>
+      <div style="margin-top:14px;text-align:center;">
+        <button class="btn-text" style="font-size:13px;color:var(--gray-500);background:none;border:none;text-decoration:underline;cursor:pointer;" data-action="loginOtpCancel">다른 번호로 로그인</button>
       </div>
     </div>
 
@@ -430,9 +450,9 @@
       <div style="font-size:22px;font-weight:900;margin-bottom:16px;">이름과 비밀번호</div>
       <input id="joinName" class="input-field" type="text" placeholder="이름"
         style="padding:16px;font-size:16px;font-weight:700;border-radius:14px;margin-bottom:16px;text-align:center;">
-      <div style="text-align:center;font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:8px;">로그인 비밀번호 4자리</div>
-      <div id="joinPinDots" style="display:flex;justify-content:center;gap:18px;margin-bottom:22px;">
-        <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+      <div style="text-align:center;font-size:13px;color:var(--gray-600);font-weight:600;margin-bottom:8px;">로그인 비밀번호 6자리</div>
+      <div id="joinPinDots" style="display:flex;justify-content:center;gap:14px;margin-bottom:22px;">
+        <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
       </div>
       <div id="joinPinPad">
         <button type="button" class="pin-key" data-action="joinPinPress|1">1</button>
@@ -499,7 +519,7 @@
 <!-- 헤더 -->
 <div class="header">
   <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-    <div class="header-title logo-row" style="cursor:pointer;" data-action="navHome"><span class="logo-mark" style="width:26px;height:26px;font-size:13px;">₩</span><span>캐쉬플로우</span></div>
+    <div class="header-title logo-row" style="cursor:pointer;" data-action="navHome"><img src="icon-192.png?v=20260630" alt="" style="width:26px;height:26px;border-radius:7px;flex-shrink:0;"><span>캐쉬플로우</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:6px;">
     <div class="header-store" id="headerStore" data-action="openStoreSheet">매장 선택</div>
@@ -1147,7 +1167,7 @@
     <div style="width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;">🏪</div>
     <div style="flex:1;font-size:14px;font-weight:800;">매장 변경 / 추가</div><span style="color:var(--gray-400);font-size:18px;">›</span>
   </div>
-  <div id="myInfoPinBtn" style="display:flex;align-items:center;gap:12px;background:var(--gray-100);border-radius:14px;padding:15px;margin-bottom:9px;cursor:pointer;" data-action="openMyInfoSheet">
+  <div id="myInfoPinBtn" style="display:flex;align-items:center;gap:12px;background:var(--gray-100);border-radius:14px;padding:15px;margin-bottom:9px;cursor:pointer;" data-action="openChangePinSheet">
     <div style="width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;">🔒</div>
     <div style="flex:1;font-size:14px;font-weight:800;">비밀번호 변경</div><span style="color:var(--gray-400);font-size:18px;">›</span>
   </div>
@@ -1915,9 +1935,38 @@
     <!-- 내 정보 -->
     <div style="margin-bottom:20px;">
       <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:8px;">내 정보</div>
+      <div style="background:var(--gray-100);border-radius:12px;overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:1px solid var(--gray-200);">
+          <span style="font-size:13px;color:var(--gray-600);">이름</span>
+          <span style="font-size:14px;font-weight:700;" id="empSettingsName">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;">
+          <span style="font-size:13px;color:var(--gray-600);">전화번호</span>
+          <span style="font-size:14px;font-weight:700;" id="empSettingsPhone">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 내 급여·신상 정보 (직원 본인 입력 — 2026-06-30) -->
+    <div style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gray-500);">급여·신상 정보</div>
+        <span id="myInfoBadge" style="display:none;font-size:11px;font-weight:800;color:var(--danger);background:var(--danger-light);padding:3px 8px;border-radius:7px;">입력 필요</span>
+      </div>
       <div style="background:var(--gray-100);border-radius:12px;padding:14px 16px;">
-        <div style="font-size:14px;font-weight:700;" id="empSettingsName">—</div>
-        <div style="font-size:12px;color:var(--gray-600);margin-top:2px;" id="empSettingsPhone">—</div>
+        <div style="font-size:11px;color:var(--gray-600);margin-bottom:10px;line-height:1.5;">급여 지급·4대보험 신고에 쓰여요. 사장님께만 안전하게 전달됩니다.</div>
+        <label class="emp-label">은행명</label>
+        <input id="myBank" class="input-field" type="text" placeholder="예: 국민은행" style="margin-bottom:10px;">
+        <label class="emp-label">계좌번호</label>
+        <input id="myAccount" class="input-field" type="text" inputmode="numeric" placeholder="- 없이 숫자만" style="margin-bottom:10px;">
+        <label class="emp-label">주민/외국인등록번호</label>
+        <input id="myIdNum" class="input-field" type="text" placeholder="앞 6자리-뒤 7자리" style="margin-bottom:10px;">
+        <label class="emp-label">생년월일</label>
+        <input id="myBirth" class="input-field" type="date" style="margin-bottom:10px;">
+        <label class="emp-label">주소</label>
+        <input id="myAddr" class="input-field" type="text" placeholder="주소" style="margin-bottom:14px;">
+        <button class="btn btn-primary btn-full" data-action="saveMyInfo">저장</button>
+        <div style="font-size:11px;color:var(--gray-500);text-align:center;margin-top:10px;">📎 근로계약서·보건증 등 서류 제출은 곧 추가됩니다.</div>
       </div>
     </div>
 
@@ -2829,6 +2878,24 @@
 <!-- 내 정보 -->
 <div class="sheet" id="myInfoSheet"><div class="sheet-handle"></div><div id="myInfoContent"></div></div>
 
+<!-- ══ 비밀번호(PIN) 변경 시트 ══ -->
+<div class="sheet" id="changePinSheet">
+  <div class="sheet-handle"></div>
+  <div style="font-size:18px;font-weight:900;margin-bottom:6px;">🔒 비밀번호 변경</div>
+  <div style="font-size:13px;color:var(--gray-600);margin-bottom:18px;">숫자 6자리로 새 비밀번호를 정해주세요.</div>
+  <label class="emp-label">현재 비밀번호</label>
+  <input id="cpOld" class="input-field" type="password" inputmode="numeric" maxlength="6" placeholder="숫자 6자리" style="margin-bottom:12px;">
+  <label class="emp-label">새 비밀번호</label>
+  <input id="cpNew" class="input-field" type="password" inputmode="numeric" maxlength="6" placeholder="숫자 6자리" style="margin-bottom:12px;">
+  <label class="emp-label">새 비밀번호 확인</label>
+  <input id="cpNew2" class="input-field" type="password" inputmode="numeric" maxlength="6" placeholder="한 번 더 입력" style="margin-bottom:14px;">
+  <div id="cpMsg" style="font-size:13px;color:var(--danger);min-height:18px;text-align:center;margin-bottom:8px;"></div>
+  <div class="action-group">
+    <button class="btn btn-secondary" style="flex:1;padding:14px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:1;padding:14px;" data-action="saveNewPin">변경</button>
+  </div>
+</div>
+
 <!-- 매장 선택 -->
 <div class="sheet" id="storeSheet">
   <div class="sheet-handle"></div>
@@ -2972,8 +3039,8 @@
     <option value="아르바이트">아르바이트</option>
   </select>
   <div class="emp-label" style="font-size:11px;color:var(--gray-600);margin-bottom:9px;">점장·팀장·매니저 = 관리자 권한 / 아르바이트 = 일반 직원 (직급이 곧 권한)</div>
-  <label class="emp-label">PIN (4자리) *</label>
-  <input id="empPinInput" class="input-field" placeholder="••••" type="password" inputmode="numeric" maxlength="4">
+  <label class="emp-label">PIN (6자리) *</label>
+  <input id="empPinInput" class="input-field" placeholder="••••••" type="password" inputmode="numeric" maxlength="6">
   <label class="emp-label">캡스 사용자ID</label>
   <input id="empCapsIdInput" class="input-field" placeholder="CAPS ID" type="text">
   <label class="emp-label">입사일</label>
@@ -3739,7 +3806,7 @@
   </div>
 </div>
 
-<script src="assets/common.js?v=20260629c"></script>
+<script src="assets/common.js?v=20260630c"></script>
 <script src="assets/push.js?v=20260629b"></script>
 <!-- 영수증 사진 전체화면 미리보기 오버레이 -->
 <div id="imgFullOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;" data-action="closeImgFullPreview">
@@ -3751,8 +3818,8 @@
 <script src="assets/tabs/attendance.js?v=20260624a"></script>
 <script src="assets/tabs/schedule.js?v=20260622b"></script>
 <script src="assets/tabs/settlement.js?v=20260629d"></script>
-<script src="assets/tabs/dashboard.js?v=20260629a"></script>
-<script src="assets/tabs/sidemenu.js?v=20260629j"></script>
+<script src="assets/tabs/dashboard.js?v=20260630a"></script>
+<script src="assets/tabs/sidemenu.js?v=20260630f"></script>
 <script src="assets/tabs/accuracy_lab.js?v=20260622b"></script>
 
 <!-- 중간 매출 기록 시트 (2026-06-26) -->

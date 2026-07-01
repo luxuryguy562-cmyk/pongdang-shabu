@@ -148,6 +148,19 @@ franchises (프랜차이즈/브랜드)
 - RLS 차단(service_role만). `emp-session` Edge Function이 검증.
 - **개인 모드 세션** = `person_id` 채움 + `employee_id`/`store_id` NULL (매장 연결 전 단독 사용).
 
+### trusted_devices (2026-06-30 신설 — 새 기기 문자 인증 / 토스식 기기 신뢰)
+PIN이 맞아도 **처음 보는 기기**에서 로그인하면 본인 폰으로 문자 인증 1회 후 그 기기를 신뢰 등록. 이후엔 PIN만으로 통과.
+| 컬럼 | 용도 |
+|------|------|
+| id (uuid, PK) | |
+| person_id (uuid, FK→persons CASCADE) | 사람(계정) |
+| device_id (text) | 기기 식별자 (localStorage `pd_device_id` UUID = `getDeviceFingerprint()` 결과) |
+| created_at, last_seen_at (timestamptz) | 신뢰 시각 / 마지막 사용 |
+| UNIQUE(person_id, device_id) | 같은 사람+기기 중복 방지 |
+- 색인: `idx_trusted_devices_person`. RLS 차단(service_role만) — `emp-login` Edge Function이 검증.
+- **grandfather**: 신뢰 기기가 0개인 사람(기존 직원)은 첫 로그인 기기를 자동 신뢰 → 문자 인증 없이 통과(잠금 없음).
+- 새 기기 + 유효한 문자증표(`signup_tokens`, verify-otp 발급)면 신뢰 등록. 증표 없으면 emp-login이 `need_otp` 반환.
+
 ### personal_attendance_logs (2026-06-26 신설 — 개인 근태 기록, 매장 연결 전)
 직원이 사장 연결 없이 혼자 찍는 "나의 근무 일지". 매장 도장(store_id) 없음 = person 기준.
 | 컬럼 | 용도 |
@@ -401,7 +414,7 @@ RLS: enabled, policy `scr_all` USING(true) WITH CHECK(store_id IS NOT NULL) — 
 | **supply_price** (int, 2026-06-04) | 공급가(세전) = total_price − tax_amount. 옛 영수증 NULL |
 | **tax_amount** (int, 2026-06-04) | 행 세액(부가세). 인쇄된 세액만, 없거나 면세면 0. 부가세 역산 안 함 |
 | **is_tax_free** (boolean, 2026-06-04) | 면세 여부. true=면세(육류·야채 등 미가공 농축수산물), false=과세, NULL=옛 영수증. 의제매입세액공제 집계용. 마이그레이션 `add_receipts_is_tax_free_20260604` |
-| **is_deposit** (boolean, 2026-06-09) | 보증금 행 여부. true=보증금 입금/회수 행(매입비 집계 제외), false=일반 품목. 주류 영수증 용기보증금 분리용. 기본값 false. 마이그레이션 `add_is_deposit_to_receipts` |
+| **is_deposit** (boolean, 2026-06-09) | 보증금 행 여부. true=보증금 입금/회수 행, false=일반 품목. 주류 영수증 용기보증금 표시·OCR 분리용. 기본값 false. 마이그레이션 `add_is_deposit_to_receipts` ⚠️ **2026-06-30 사장님 결정: 보증금도 지출 집계에 포함**(주문금액=실지불액 기준). 표시 분리 용도로만 남고, 매입비/순익 집계에서 제외하지 않음. |
 | **spec** (text, 2026-06-08) | 규격·포장 규격 (예 "F0용 슬라이스 1kg", "500g"). AI가 i에서 분리 추출. 직구·옛 영수증 NULL. 마이그레이션 `add_receipts_spec_origin_20260608`. **2026-06-21 규격 표준형 통일**: 단위 소문자(kg·g·ml·l), 포장 꼬리표 "/EA"·"/PAC"·"/BOX" 제거 (1KG/PAC→1kg). 기존 DB 단순 패턴 101건 일괄 정규화 + 프롬프트 [규격 표준형] 규칙 박음 |
 | **origin** (text, 2026-06-08) | 원산지 (예 "외국산", "국내산", "돈육:국내산"). AI가 분리 추출. **2026-06-21 정책 변경**: 옛 규칙(쉼표로 품명에 섞인 산지는 item에 그대로 두고 origin=NULL)을 폐기 → 영수증 어디든 산지가 보이면 origin으로 분리(품명에서 제거). 원재료 여럿이면 쉼표로 origin에 다 담음. 과거 데이터는 백필 안 함(앞으로 분석분만). 직구·옛 영수증 NULL |
 | note | 정상/오답/반품/취소 사유 등. **`note != '정상'` = 합계 전면 제외 + 줄긋기** (모든 집계가 `eq('note','정상')`로 거름). 취소·반품 시 사유 문자열 저장 (예: '취소·중복입력', '반품·불량'). 2026-06-29 취소 기능이 이 칸 재활용 |
