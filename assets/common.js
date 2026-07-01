@@ -721,6 +721,7 @@ function nav(tab, el) {
     sales: loadSalesDaily,
     opening: loadOpeningPage,
     myinfo: loadMyInfo,
+    personalHome: (typeof loadPersonalHome==='function'?loadPersonalHome:null),
     empPay: loadEmpPay,
     empSched: loadEmpSched,
     busHub: loadBusHubData,
@@ -882,6 +883,7 @@ function applyPermissionUI() {
       else el.style.display = isManager ? '' : 'none';
     }
     else if(el.classList.contains('staff-only')) el.style.display = (!isManager && currentEmp) ? '' : 'none';
+    else if(el.classList.contains('personal-only')) el.style.display = 'none'; // 개인 모드 전용 — 매장 모드선 숨김
     else el.style.display='';
   });
   // 내 정보 배지 업데이트
@@ -944,6 +946,24 @@ function openMyInfoHub() {
 function openMyInfoSheet() {
   const emp = currentEmp;
   let html = '';
+  const pPerson = (typeof window!=='undefined') ? window._personalPerson : null;
+  if (!emp && pPerson) {
+    // 개인 모드 — 매장 연결 전. 본인 정보 + 비밀번호 변경 + 로그아웃
+    html = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+        <div class="emp-avatar">${(pPerson.name||'?').charAt(0)}</div>
+        <div><div style="font-size:19px;font-weight:800;">${pPerson.name||'나'}</div>
+          <div style="margin-top:4px;"><span class="badge badge-blue">개인 모드</span></div>
+        </div>
+      </div>
+      <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">전화번호</span><span style="font-size:13px;font-weight:700;">${pPerson.phone||'-'}</span></div>
+      <div style="font-size:12px;color:var(--gray-500);margin:10px 2px 0;line-height:1.6;">매장에 연결하면 급여·근무표가 열려요.</div>
+      <button class="btn btn-secondary btn-full" style="margin-top:16px;padding:14px;" data-action="openChangePinSheet">🔒 비밀번호 변경</button>
+      <button class="btn btn-danger btn-full" style="margin-top:9px;padding:14px;" data-action="doLogout">로그아웃</button>`;
+    document.getElementById('myInfoContent').innerHTML = html;
+    openSheet('myInfoSheet');
+    return;
+  }
   if (!emp) {
     html = `<div style="font-size:18px;font-weight:800;margin-bottom:8px;">개발 모드</div>
       <p style="font-size:13px;color:var(--gray-600);">로그인 없이 관리자 권한으로 진입 중입니다.</p>

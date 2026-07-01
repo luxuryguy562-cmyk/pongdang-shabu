@@ -5793,7 +5793,13 @@ function completeLogin(loginResult){
     const hStore=document.getElementById('headerStore'); if(hStore) hStore.style.display='none'; // 개인 모드 = 매장 없음
     document.getElementById('loginOverlay').style.display='none';
     document.body.style.overflow='';
-    document.querySelector('.bottom-nav').style.display='none'; // 개인 모드 = 하단 매장 탭 없음
+    // 개인 모드 하단 네비 — 홈/커뮤니티/더보기만 노출 (매장 탭은 숨김) 2026-07-01
+    const _bnP=document.querySelector('.bottom-nav');
+    if(_bnP){
+      _bnP.style.display='flex';
+      _bnP.querySelectorAll('.nav-item').forEach(el=>{ el.style.display='none'; el.classList.remove('active'); });
+      _bnP.querySelectorAll('.nav-item.personal-only').forEach((el,i)=>{ el.style.display=''; if(i===0) el.classList.add('active'); });
+    }
     document.querySelector('.header').style.display='flex';
     localStorage.setItem('pd_auth_level','personal');
     localStorage.removeItem('pd_emp');
