@@ -498,7 +498,7 @@ function goStoreFromMenu(){
   const ov=document.getElementById('overlay'); if(ov) ov.style.display='none';
   setTimeout(()=>{ if(typeof openStoreSheet==='function') openStoreSheet(); }, 40);
 }
-let dashMonthStr = new Date().toISOString().slice(0,7);
+let dashMonthStr = ymLocal(new Date());
 let schedEmpId = null;
 let chartInstances = {};
 
@@ -830,6 +830,11 @@ function cacheInvalidate(prefix){
 function ymdLocal(date){
   const d=date instanceof Date?date:new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+// 한국 시간 기준 '년-월' (toISOString은 UTC라 월 경계에서 하루 어긋나 버그 — 2026-07-01)
+function ymLocal(date){
+  const d=date instanceof Date?date:new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 // ─── 새 기능: 영업일 기준 날짜 (2026-06-16) ───
 // store_settings.business_day_start_hour(영업일 시작 시각, 기본 6시) 전에 입력/마감하면 전날 영업으로 침.

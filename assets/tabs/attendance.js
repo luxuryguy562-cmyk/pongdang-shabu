@@ -664,7 +664,7 @@ async function calcWageData(empId, appIn, appOut, date, restMinOverride){
   return{restMin,isWeekend,totalMin,nightMin,wage};
 }
 // 근태 조회 월 상태 (F안 통합: attAllMonth 단일)
-let attAllMonth = new Date().toISOString().slice(0,7);
+let attAllMonth = ymLocal(new Date());
 // ─── 새 기능: 근태 전체조회 E안 (월 캘린더 + 일별 간트) ───
 let attAllSelectedDate = null;
 let attAllDayMap = {};
@@ -704,7 +704,7 @@ function calcMonthlyProratedWages(ym){
   const [y,m] = ym.split('-').map(Number);
   const lastDay = new Date(y,m,0).getDate();
   const today = new Date();
-  const isCurMonth = today.toISOString().slice(0,7) === ym;
+  const isCurMonth = ymLocal(today) === ym;
   const passedDays = isCurMonth ? today.getDate() : lastDay;
   const result = [];
   const monthlyEmps = (employees||[]).filter(e=>e.is_active && e.wage_type==='monthly' && e.monthly_wage>0);
@@ -794,7 +794,7 @@ function fmtMan(won){
 function moveAttMonth(dir, mode){
   // F안 통합: mode 인자 무시, attAllMonth 단일 사용
   const d = new Date(attAllMonth+'-01'); d.setMonth(d.getMonth()+dir);
-  attAllMonth = d.toISOString().slice(0,7);
+  attAllMonth = ymLocal(d);
   const lbl=document.getElementById('vAllMonth'); if(lbl) lbl.innerText=attAllMonth;
   attAllSelectedDate=null;
   loadAttList();
@@ -1531,7 +1531,7 @@ async function loadEmpPay(){
 function renderEmpPay(){
   const d=_empPayCalMonth, y=d.getFullYear(), mo=d.getMonth();
   const mk=`${y}-${String(mo+1).padStart(2,'0')}`;
-  const nowMonth=new Date().toISOString().slice(0,7);
+  const nowMonth=ymLocal(new Date());
   let total=0, min=0, days=0;
   _empPayLogs.forEach(r=>{ if(_empMonthKey(r.work_date)===mk){ total+=r.calculated_wage||0; min+=r.total_work_min||0; if((r.total_work_min||0)>0||(r.calculated_wage||0)>0) days++; } });
   // 주휴수당 계산 (해당 월 기록+계획 slice해서 calcMonthlyHolidayPay 재사용)
@@ -1613,7 +1613,7 @@ function empPayDay(ds){
 // 매장 모드 근태(attendance_logs)와 완전 분리 = 충돌·잔재 0.
 // ══════════════════════════════════════════
 let _pClockTimer=null;
-let _pLogMonth=new Date().toISOString().slice(0,7);
+let _pLogMonth=ymLocal(new Date());
 let _pTodayRow=null;
 let _pBusy=false;
 
@@ -1631,7 +1631,7 @@ async function loadPersonalHome(){
   if(dt){ const t=new Date(); const dow=['일','월','화','수','목','금','토'][t.getDay()];
     dt.innerText=`${t.getMonth()+1}월 ${t.getDate()}일 (${dow})`; }
   _startPClock();
-  _pLogMonth=new Date().toISOString().slice(0,7);
+  _pLogMonth=ymLocal(new Date());
   await loadPersonalToday();
   await loadPersonalLog();
   loadPersonalPending(); // 승인 대기 배너 (연결 신청 후)
@@ -1919,7 +1919,7 @@ async function openMergePersonalReview(personId, personName, opts){
   const notifyEmpty=!!(opts&&opts.notifyEmpty);
   if(!personId || !currentStore){ if(notifyEmpty) toast('개인 기록을 확인할 수 없어요','warn'); return; }
   const token=localStorage.getItem('pd_token'); if(!token) return;
-  const month=new Date().toISOString().slice(0,7);
+  const month=ymLocal(new Date());
   if(notifyEmpty) setLoad(true,'개인 기록 확인...');
   let res;
   try{

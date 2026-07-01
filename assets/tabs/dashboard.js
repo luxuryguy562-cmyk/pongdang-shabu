@@ -5,12 +5,11 @@ function moveDashMonth(dir){
   const d=new Date(dashMonthStr+'-01');d.setMonth(d.getMonth()+dir);
   // 미래 월 차단 (오늘이 속한 월까지만 이동 가능)
   if(dir>0){
-    const now=new Date();
-    const curYm=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const newYm=d.toISOString().slice(0,7);
+    const curYm=ymLocal(new Date());
+    const newYm=ymLocal(d);
     if(newYm>curYm){ toast('아직 오지 않은 달이에요','info'); return; }
   }
-  dashMonthStr=d.toISOString().slice(0,7);
+  dashMonthStr=ymLocal(d);
   loadDashboard();
 }
 function destroyChart(id){
@@ -30,7 +29,7 @@ function dashGoStage(stage){
   if(!stage) stage = 'home';
   // 홈 복귀 시 항상 이번 달로 (홈 월요약 = 이번 달 고정. 세부화면에서 과거 봤어도 홈은 현재월)
   if(stage==='home' && typeof dashMonthStr!=='undefined'){
-    const nowYm=new Date().toISOString().slice(0,7);
+    const nowYm=ymLocal(new Date());
     if(dashMonthStr!==nowYm){ dashMonthStr=nowYm; loadDashboard(); }
   }
   const stages = document.querySelectorAll('#dashboardCont .dash-stage');
@@ -630,7 +629,7 @@ async function loadDashboard(force){
     const lastDay=new Date(y,mo,0).getDate();
     const start=ym+'-01',end=ym+'-'+String(lastDay).padStart(2,'0');
     const today=new Date();
-    const passedDays=today.toISOString().slice(0,7)===ym?today.getDate():lastDay;
+    const passedDays=ymLocal(today)===ym?today.getDate():lastDay;
     const isCurrent=passedDays<lastDay;
 
     // ── 전월 기간 계산 ──
@@ -1423,7 +1422,7 @@ async function loadDashboard(force){
     destroyChart('dailyChart');
 
     // ─── 매출 통합 카드 (매출+지출+순수익) — 모든 달에서 표시, 날짜 커서로 위·아래 연동 (2026-06-03) ─── //
-    const isCurMonth=today.toISOString().slice(0,7)===dashMonthStr;
+    const isCurMonth=ymLocal(today)===dashMonthStr;
     const topCard=document.getElementById('dashTopSalesCard');
     {
       // 전월 일별 지출 맵 (% 비교용, 변동성 큰 vendor/receipt/attendance만)
