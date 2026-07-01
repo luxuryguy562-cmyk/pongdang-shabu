@@ -633,6 +633,10 @@
   <div class="nav-item staff-only" data-tab="empPay" data-action="goEmpSched|this" style="display:none;"><span class="ni"><svg><use href="#i-wallet"/></svg></span>내 급여</div>
   <div class="nav-item staff-only" data-tab="empCommunity" data-action="nav|empCommunity|this" style="display:none;"><span class="ni"><svg><use href="#i-community"/></svg></span>커뮤니티</div>
   <div class="nav-item staff-only" data-tab="empSettings" data-action="nav|empSettings|this" style="display:none;"><span class="ni"><svg><use href="#i-settings"/></svg></span>설정</div>
+  <!-- 개인 모드 nav: 홈 / 커뮤니티 / 더보기 (매장 연결 전) -->
+  <div class="nav-item personal-only" data-tab="personalHome" data-action="nav|personalHome|this" style="display:none;"><span class="ni"><svg><use href="#i-home"/></svg></span>홈</div>
+  <div class="nav-item personal-only" data-tab="empCommunity" data-action="nav|empCommunity|this" style="display:none;"><span class="ni"><svg><use href="#i-community"/></svg></span>커뮤니티</div>
+  <div class="nav-item personal-only" data-action="openMyInfoSheet" style="display:none;"><span class="ni"><svg><use href="#i-settings"/></svg></span>더보기</div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -1331,9 +1335,27 @@
     <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px;line-height:1.5;">나만 보는 기록이에요. 매장 연결 후 사장님이 검토하면 급여에 반영돼요.</div>
     <div id="pLogList"></div>
   </div>
+  <!-- 승인 대기 배너 (연결 신청 후 사장 승인 전) -->
+  <div id="pPendingBox" style="display:none;background:#EEF4FF;border:1px solid #C7DBFF;border-radius:14px;padding:15px;margin-top:4px;">
+    <div style="font-size:14px;font-weight:800;color:var(--blue);">🕓 <span id="pPendingStore">매장</span> 승인 대기 중</div>
+    <div style="font-size:12px;color:var(--gray-600);margin-top:5px;line-height:1.6;">사장님이 승인하면 매장 직원으로 연결돼요.<br>승인 후 다시 로그인하면 급여·근무표가 보여요.</div>
+  </div>
   <!-- 매장 연결하기 -->
-  <button class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;margin-top:4px;" data-action="openConnectStore">🏪 매장에 연결하기</button>
-  <div style="font-size:11px;color:var(--gray-500);text-align:center;margin-top:10px;line-height:1.6;">사장님께 받은 매장 코드를 넣으면<br>지금까지 쓴 일지가 급여로 이어져요.</div>
+  <button id="pConnectBtn" class="btn btn-primary btn-full" style="padding:16px;font-size:15px;font-weight:800;border-radius:14px;margin-top:4px;" data-action="openConnectStore">🏪 매장에 연결하기</button>
+  <div id="pConnectHint" style="font-size:11px;color:var(--gray-500);text-align:center;margin-top:10px;line-height:1.6;">사장님께 받은 매장 코드를 넣으면<br>지금까지 쓴 일지가 급여로 이어져요.</div>
+</div>
+
+<!-- ══ 매장 코드 입력 시트 (개인 모드 → 매장 연결) ══ -->
+<div class="sheet" id="connectStoreSheet">
+  <div class="sheet-handle"></div>
+  <div style="font-size:18px;font-weight:900;margin-bottom:6px;">🏪 매장에 연결하기</div>
+  <div style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">사장님께 받은 매장 코드를 입력하세요.</div>
+  <input id="connectCode" class="input-field" type="text" inputmode="latin" autocapitalize="characters" maxlength="12" placeholder="매장 코드" style="margin-bottom:12px;text-align:center;font-size:18px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">
+  <div id="connectMsg" style="font-size:13px;color:var(--danger);min-height:18px;text-align:center;margin-bottom:8px;"></div>
+  <div class="action-group">
+    <button class="btn btn-secondary" style="flex:1;padding:14px;" data-action="closeAllSheets">취소</button>
+    <button class="btn btn-primary" style="flex:1;padding:14px;" data-action="submitConnectStore">연결 신청</button>
+  </div>
 </div>
 
 <!-- ══ [3.5] 영업개시 보고 ══ -->
