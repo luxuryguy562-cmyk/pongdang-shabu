@@ -413,7 +413,7 @@ function openAttManualSheet(date, empId){
   }
   // 날짜
   const dateEl = document.getElementById('vDate');
-  if(dateEl){ dateEl.innerText = date || new Date().toISOString().slice(0,10); dateEl.classList.remove('empty'); }
+  if(dateEl){ dateEl.innerText = date || ymdLocal(new Date()); dateEl.classList.remove('empty'); }
   // 시간 리셋
   ['vStart','vEnd'].forEach(id=>{
     const el = document.getElementById(id);
@@ -941,7 +941,7 @@ async function loadAttList(/* allMode 인자는 무시 — F안 통합 */){
   // 선택일: 다른 달이면 리셋, 비었으면 오늘(이번달+데이터) > 가장 최근 근무일
   if(attAllSelectedDate && !attAllSelectedDate.startsWith(monthStr)) attAllSelectedDate = null;
   if(!attAllSelectedDate){
-    const todayStr = new Date().toISOString().slice(0,10);
+    const todayStr = ymdLocal(new Date());
     if(todayStr.startsWith(monthStr) && attAllDayMap[todayStr]) attAllSelectedDate = todayStr;
     else {
       const dates = Object.keys(attAllDayMap).sort();
@@ -961,7 +961,7 @@ function renderAttCalendar(monthStr, dayMap, selectedDate, isSingleView){
   const [y,m] = monthStr.split('-').map(Number);
   const lastDay  = new Date(y,m,0).getDate();
   const startDow = new Date(y,m-1,1).getDay(); // 0=일
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = ymdLocal(new Date());
   const dows = ['일','월','화','수','목','금','토'];
   let html = '<div class="att-cal">';
   dows.forEach((d,i)=>{
@@ -1167,7 +1167,7 @@ function renderAttDayDetail(date, logs, isSingleView){
   });
 
   // 계획만 있고 실제 없는 직원 (결근) = 빗금 전용 행
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = ymdLocal(new Date());
   const isPast = date < todayStr;
   planRows.forEach(p=>{
     if(!p.employee_id) return;
@@ -1555,7 +1555,7 @@ function renderEmpPayCalendar(){
   const dayMap={};
   _empPayLogs.forEach(r=>{ if(_empMonthKey(r.work_date)===mk) dayMap[r.work_date]={min:r.total_work_min||0,wage:r.calculated_wage||0,in:r.app_in,out:r.app_out}; });
   const startDow=new Date(y,mo,1).getDay(), daysIn=new Date(y,mo+1,0).getDate();
-  const todayStr=new Date().toISOString().slice(0,10);
+  const todayStr=ymdLocal(new Date());
   let html='<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><tr>';
   ['일','월','화','수','목','금','토'].forEach((w,i)=>{ const c=i===0?'var(--danger)':i===6?'#1E88E5':'var(--gray-400)'; html+=`<th style="font-size:11px;color:${c};font-weight:700;padding-bottom:6px;">${w}</th>`; });
   html+='</tr><tr>';

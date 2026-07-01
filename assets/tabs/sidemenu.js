@@ -2957,7 +2957,7 @@ async function downloadLaborExport(){
     const ym=laborExportYm;
     const start=ym+'-01';
     const endD=new Date(ym+'-01');endD.setMonth(endD.getMonth()+1);
-    const end=endD.toISOString().slice(0,10);
+    const end=ymdLocal(endD);
     // 전체 직원(퇴사자 포함) + 해당월 근태 + 특별수당 동시 조회
     // ⚠️ is_active 필터 제거 — 그 달 일한 직원은 퇴사해도 노무 기록에 남아야 함 (데이터 무결성, 헌법 10조)
     const[{data:allEmps},{data:logs},{data:sw}]=await Promise.all([
@@ -3050,7 +3050,7 @@ async function downloadTxExport(){
     const ym=txExportYm, sid=currentStore.id;
     const start=ym+'-01';
     const endD=new Date(ym+'-01'); endD.setMonth(endD.getMonth()+1);
-    const endIncl=new Date(endD.getTime()-86400000).toISOString().slice(0,10); // 그 달 말일
+    const endIncl=ymdLocal(new Date(endD.getTime()-86400000)); // 그 달 말일
     const [rcpRes, ordRes, mydRes, setRes, empRes, catRes] = await Promise.all([
       sb.from('receipts').select('receipt_date,vendor,item,category_id,total_price,unit_price,qty,note,created_by,is_deposit,input_method').eq('store_id',sid).gte('receipt_date',start).lte('receipt_date',endIncl).order('receipt_date'),
       sb.from('vendor_orders').select('order_date,item,amount,quantity,unit_price,vendors(name,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',endIncl).order('order_date'),
@@ -3188,7 +3188,7 @@ function buildAttendanceSheet(ym, emps, logs){
   const rows=[[`${ym} 출퇴근부 — ${currentStore?.name||''}`],[],header];
   // 월 1일~말일
   const dates=[];const sd=new Date(ym+'-01');const ed=new Date(ym+'-01');ed.setMonth(ed.getMonth()+1);
-  for(let d=new Date(sd); d<ed; d.setDate(d.getDate()+1)){dates.push(d.toISOString().slice(0,10));}
+  for(let d=new Date(sd); d<ed; d.setDate(d.getDate()+1)){dates.push(ymdLocal(d));}
   const dayNames=['일','월','화','수','목','금','토'];
   // 직원별로 묶고, 날짜순 정렬
   emps.forEach(e=>{
@@ -4899,7 +4899,7 @@ function devLogin(){ toast('개발모드가 비활성화됐어요.','warn'); }
 async function loadBusHubData(){
   if(!currentStore) return;
   const sid=currentStore.id;
-  const today=new Date().toISOString().slice(0,10);
+  const today=ymdLocal(new Date());
   const ym=today.slice(0,7);
   const [y,m]=ym.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
@@ -4948,8 +4948,8 @@ async function loadDiffTable(){
   const startD=target;
   const lastOfMonth=new Date(target.getFullYear(),target.getMonth()+1,0);
   const endD=(_diffTableMonthOffset===0)?today:lastOfMonth;
-  const startDate=startD.toISOString().slice(0,10);
-  const endDate=endD.toISOString().slice(0,10);
+  const startDate=ymdLocal(startD);
+  const endDate=ymdLocal(endD);
   const monthChip=document.getElementById('diffTableMonthChip');
   if(monthChip){
     monthChip.textContent=`${target.getFullYear()}.${String(target.getMonth()+1).padStart(2,'0')}`;
@@ -5138,7 +5138,7 @@ async function loadRoyaltyPage(){
   }
   const oldestStart=months[11]+'-01';
   const newest=new Date(now.getFullYear(),now.getMonth()+1,0);
-  const newestEnd=newest.toISOString().slice(0,10);
+  const newestEnd=ymdLocal(newest);
 
   // 3) sales_daily 12개월 매출
   const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',oldestStart).lte('date',newestEnd);
@@ -5209,7 +5209,7 @@ async function loadCardFeePage(){
   }
   const oldestStart=months[11]+'-01';
   const newest=new Date(now.getFullYear(),now.getMonth()+1,0);
-  const newestEnd=newest.toISOString().slice(0,10);
+  const newestEnd=ymdLocal(newest);
 
   // 3) sales_daily 12개월 — 카드 결제분만 합산 (legacy_key='card' 결제수단)
   const{data:sd}=await sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',oldestStart).lte('date',newestEnd);
