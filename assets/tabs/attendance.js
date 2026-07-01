@@ -1634,6 +1634,7 @@ async function loadPersonalHome(){
   _pLogMonth=ymLocal(new Date());
   await loadPersonalToday();
   await loadPersonalLog();
+  loadPersonalPending(); // 승인 대기 배너 (연결 신청 후)
 }
 function _startPClock(){
   if(_pClockTimer) clearInterval(_pClockTimer);
@@ -1754,9 +1755,51 @@ function renderPersonalLog(rows){
     </div>`;
   }).join('');
 }
-// 매장에 연결하기 — Task #8(초대코드+편입승인)에서 join-store 세션토큰 확장과 함께 완성 예정
+// ─── 매장에 연결하기 (개인 모드 → 매장 코드 입력 → 연결 신청) 2026-07-01 완성 ───
 function openConnectStore(){
-  toast('매장 코드 연결은 곧 켜져요. 사장님께 코드를 미리 받아두세요.','info');
+  const el=document.getElementById('connectCode'); if(el) el.value='';
+  const m=document.getElementById('connectMsg'); if(m) m.innerText='';
+  openSheet('connectStoreSheet');
+  setTimeout(()=>{ const c=document.getElementById('connectCode'); if(c) c.focus(); },150);
+}
+async function submitConnectStore(){
+  const code=(document.getElementById('connectCode').value||'').trim();
+  const m=document.getElementById('connectMsg');
+  if(!code){ if(m) m.innerText='매장 코드를 입력해주세요'; return; }
+  const token=localStorage.getItem('pd_token');
+  if(!token){ if(m) m.innerText='다시 로그인 후 시도해주세요'; return; }
+  if(m) m.innerText='신청 중…';
+  try{
+    const{data,error}=await sb.functions.invoke('join-store',{body:{token,code}});
+    if(error||!data?.ok){ if(m) m.innerText=(data&&data.error)||'연결에 실패했어요'; return; }
+    if(typeof closeAllSheets==='function') closeAllSheets();
+    toast(`🏪 ${data.store_name||'매장'} 연결 신청 완료 — 사장님 승인 대기 중`,'success');
+    loadPersonalPending(); // 승인 대기 배너 갱신
+  }catch(_e){ if(m) m.innerText='네트워크 오류 — 다시 시도해주세요'; }
+}
+// 승인 대기 상태 확인 → 배너 표시/숨김 (개인 홈)
+async function loadPersonalPending(){
+  const box=document.getElementById('pPendingBox');
+  const btn=document.getElementById('pConnectBtn');
+  const hint=document.getElementById('pConnectHint');
+  if(!box) return;
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  let rows=[];
+  try{
+    const{data}=await sb.functions.invoke('join-store',{body:{token,action:'list_my_pending'}});
+    if(data&&data.ok&&data.rows) rows=data.rows;
+  }catch(_e){}
+  if(rows.length){
+    const nm=rows[0]?.stores?.name||'매장';
+    const se=document.getElementById('pPendingStore'); if(se) se.innerText=nm;
+    box.style.display='block';
+    if(btn) btn.style.display='none';
+    if(hint) hint.style.display='none';
+  }else{
+    box.style.display='none';
+    if(btn) btn.style.display='';
+    if(hint) hint.style.display='';
+  }
 }
 
 // ─── 새 기능: 근무시간 수정 요청 — 직원 확인 (2026-06-26) ───

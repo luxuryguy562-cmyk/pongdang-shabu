@@ -721,6 +721,7 @@ function nav(tab, el) {
     sales: loadSalesDaily,
     opening: loadOpeningPage,
     myinfo: loadMyInfo,
+    personalHome: (typeof loadPersonalHome==='function'?loadPersonalHome:null),
     empPay: loadEmpPay,
     empSched: loadEmpSched,
     busHub: loadBusHubData,
@@ -887,6 +888,7 @@ function applyPermissionUI() {
       else el.style.display = isManager ? '' : 'none';
     }
     else if(el.classList.contains('staff-only')) el.style.display = (!isManager && currentEmp) ? '' : 'none';
+    else if(el.classList.contains('personal-only')) el.style.display = 'none'; // 개인 모드 전용 — 매장 모드선 숨김
     else el.style.display='';
   });
   // 내 정보 배지 업데이트
@@ -949,6 +951,24 @@ function openMyInfoHub() {
 function openMyInfoSheet() {
   const emp = currentEmp;
   let html = '';
+  const pPerson = (typeof window!=='undefined') ? window._personalPerson : null;
+  if (!emp && pPerson) {
+    // 개인 모드 — 매장 연결 전. 본인 정보 + 비밀번호 변경 + 로그아웃
+    html = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+        <div class="emp-avatar">${(pPerson.name||'?').charAt(0)}</div>
+        <div><div style="font-size:19px;font-weight:800;">${pPerson.name||'나'}</div>
+          <div style="margin-top:4px;"><span class="badge badge-blue">개인 모드</span></div>
+        </div>
+      </div>
+      <div class="my-info-row"><span style="font-size:13px;color:var(--gray-600);font-weight:600;">전화번호</span><span style="font-size:13px;font-weight:700;">${pPerson.phone||'-'}</span></div>
+      <div style="font-size:12px;color:var(--gray-500);margin:10px 2px 0;line-height:1.6;">매장에 연결하면 급여·근무표가 열려요.</div>
+      <button class="btn btn-secondary btn-full" style="margin-top:16px;padding:14px;" data-action="openChangePinSheet">🔒 비밀번호 변경</button>
+      <button class="btn btn-danger btn-full" style="margin-top:9px;padding:14px;" data-action="doLogout">로그아웃</button>`;
+    document.getElementById('myInfoContent').innerHTML = html;
+    openSheet('myInfoSheet');
+    return;
+  }
   if (!emp) {
     html = `<div style="font-size:18px;font-weight:800;margin-bottom:8px;">개발 모드</div>
       <p style="font-size:13px;color:var(--gray-600);">로그인 없이 관리자 권한으로 진입 중입니다.</p>
@@ -1290,7 +1310,37 @@ async function loadEmpSettings(){
   const nameEl = document.getElementById('empSettingsName');
   const phoneEl = document.getElementById('empSettingsPhone');
   const listEl = document.getElementById('empSettingsWorkplaces');
-  if(!currentEmp){ return; }
+  const salarySec = document.getElementById('empSalarySection');
+  const pNote = document.getElementById('empPersonalNote');
+  // ── 개인 모드 (매장 연결 전) — 급여·신상 구획은 숨기고 안내, 근무처는 비움 ──
+  if(!currentEmp){
+    const pp = (typeof window!=='undefined') ? window._personalPerson : null;
+    if(nameEl) nameEl.textContent = (pp && pp.name) || '—';
+    if(phoneEl) phoneEl.textContent = (pp && pp.phone) || '—';
+    if(salarySec) salarySec.style.display = 'none';   // 저장할 매장(직원) 없음 → 연결 후
+    if(pNote) pNote.style.display = '';
+    if(listEl) listEl.innerHTML = '<div class="ms-empty">아직 연결된 근무처가 없어요.</div>';
+    // 승인 대기 중인 연결 요청 (개인 세션 토큰)
+    const pendingEl = document.getElementById('empSettingsPending');
+    const pendingSection = document.getElementById('empSettingsPendingSection');
+    if(pendingEl && pendingSection){
+      try{
+        const token = localStorage.getItem('pd_token');
+        const { data: pd } = await sb.functions.invoke('join-store', { body: { token, action: 'list_my_pending' } });
+        const rows = pd?.rows || [];
+        if(rows.length){
+          pendingEl.innerHTML = rows.map(r => `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--orange,#f97316);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">${(r.stores?.name||'매').slice(0,1)}</div>
+            <div><div style="font-size:14px;font-weight:700;">${r.stores?.name||'매장'}</div><div style="font-size:11px;color:var(--gray-500);">사장님 승인 대기 중</div></div>
+          </div>`).join('');
+          pendingSection.style.display = '';
+        } else { pendingSection.style.display = 'none'; }
+      }catch(_e){}
+    }
+    return;
+  }
+  if(salarySec) salarySec.style.display = '';   // 매장 모드 = 급여 구획 노출
+  if(pNote) pNote.style.display = 'none';
   if(nameEl) nameEl.textContent = currentEmp.name || '—';
   // 전화번호 = 사람(persons) 계정에 있음 (가입 직원은 employees엔 없음). 로그인 시 받은 person.phone 사용
   const _phone = (window._loginPerson && window._loginPerson.phone) || currentEmp.phone || '—';
@@ -1386,6 +1436,8 @@ async function saveMyInfo(){
 
 // ─── 직원 설정 — 새 근무처 연결 버튼 ───
 function openJoinStore(){
+  // 개인 모드(매장 연결 전) = 로그인 세션으로 코드 연결 (2026-07-01). 매장 모드 = 기존 가입 오버레이(투잡 추가)
+  if(!currentEmp && typeof openConnectStore==='function'){ openConnectStore(); return; }
   const ov = document.getElementById('joinOverlay');
   if(ov){ ov.style.display='block'; }
 }
