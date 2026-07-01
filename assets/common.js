@@ -458,6 +458,14 @@ function isRealManager(){ return ['owner','franchise_admin','store_manager'].inc
 function isStoreConnected(){ return !!(currentEmp && currentStore); }
 // 로그인은 됐으나 매장 연결 전(개인 모드)인가?
 function isPersonalMode(){ return !isStoreConnected() && !!(window._personalPerson || authLevel==='personal'); }
+// 개인 모드 하단 네비 = 직원 네비(staff-only) 그대로 쓰되 '내 급여'만 숨김(매장 없음). 2026-07-01 통합.
+function applyPersonalNav(){
+  const bn=document.querySelector('.bottom-nav'); if(!bn) return;
+  bn.style.display='flex';
+  bn.querySelectorAll('.nav-item').forEach(el=>{ el.style.display='none'; el.classList.remove('active'); });
+  bn.querySelectorAll('.nav-item.staff-only').forEach(el=>{ el.style.display=''; });
+  const pay=bn.querySelector('.nav-item[data-tab="empPay"]'); if(pay) pay.style.display='none'; // 급여=연결 후
+}
 // 관리 ↔ 내 근무 전환 (화면만 바뀜, 권한 그대로)
 function setMyWorkMode(on){
   _myWorkMode = !!on;

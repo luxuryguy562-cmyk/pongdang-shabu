@@ -274,29 +274,45 @@ function empSchedWeek(delta){
 
 // ─── 새 기능: 직원 홈 요약 (2026-06-09, staff-only) ───
 function renderEmpHome(){
-  // 직원 홈 = 행동 허브. 근태 카드의 서브탭(출퇴근/기록)·제목 숨기고 출퇴근(클락)만. 매니저는 기존 근태관리 그대로.
+  // 직원 홈 = 행동 허브. 연결된 직원(staff) + 연결 전 개인(personal) 둘 다 이 홈을 씀 (2026-07-01 통합).
+  // 매니저는 기존 근태관리 그대로.
+  const connected = isStoreConnected();      // 매장 연결된 직원
+  const personal  = isPersonalMode();        // 매장 연결 전 개인
+  const home = !isManager && (connected || personal);
   const box=document.getElementById('empHomeSummary');
-  const staff = !isManager && !!currentEmp && !!currentStore;
-  if(box) box.style.display = staff ? 'flex' : 'none';
-  if(staff){
-    // 인사말 + 날짜·시간 (사장 홈과 같은 형식)
-    const nm=document.getElementById('empHomeName'); if(nm) nm.innerText=currentEmp.name||'';
+  if(box) box.style.display = home ? 'flex' : 'none';
+  if(home){
+    // 인사말 + 날짜·시간 (연결=직원명 / 개인=사람명)
+    const who = connected ? (currentEmp&&currentEmp.name) : (window._personalPerson&&window._personalPerson.name);
+    const nm=document.getElementById('empHomeName'); if(nm) nm.innerText=who||'';
     const dt=document.getElementById('empHomeDate');
     if(dt){ const t=new Date(); const dow=['일','월','화','수','목','금','토'][t.getDay()];
       const ampm=t.getHours()<12?'오전':'오후'; const h12=t.getHours()%12||12; const mm=String(t.getMinutes()).padStart(2,'0');
       dt.innerText=`${t.getMonth()+1}월 ${t.getDate()}일 (${dow}) · ${ampm} ${h12}:${mm}`; }
   }
+  // 개인 모드 띠 + 개인 전용 영역(일지·연결)은 연결 전만
+  const pmb=document.getElementById('pModeBanner'); if(pmb) pmb.style.display = personal ? 'block' : 'none';
+  const pmArea=document.getElementById('pmPersonalArea'); if(pmArea) pmArea.style.display = personal ? 'block' : 'none';
+  // 할일카드(개시·마감/영수증)는 매장 연결된 직원만 (개인 모드엔 매장 없음)
+  const eha=document.getElementById('empHomeActions'); if(eha) eha.style.display = (connected && !isManager) ? '' : 'none';
   const subtabs=document.querySelector('#attendanceCont .sub-tabs');
-  if(subtabs) subtabs.style.display = staff ? 'none' : '';
+  if(subtabs) subtabs.style.display = home ? 'none' : '';
   const title=document.getElementById('attCardTitle');
-  if(title) title.style.display = staff ? 'none' : '';
-  if(staff){
-    // 직원은 출퇴근 패널만
+  if(title) title.style.display = home ? 'none' : '';
+  if(home){
+    // 홈은 출퇴근 패널만 (캘린더·캡스 숨김)
     ['Caps','All'].forEach(t=>{const d=document.getElementById('att'+t);if(d)d.style.display='none';});
     const m=document.getElementById('attManual'); if(m) m.style.display='block';
   }
-  // 출퇴근 카드 중복 정리: 인사말에 이름·날짜 있으니 클락카드에선 아바타·이름·날짜 숨김(직원만). 매니저는 복원.
-  ['attStatusAvatar','attStatusName','attTodayDate'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.display = staff ? 'none' : '';});
+  // 출퇴근 카드 중복 정리: 인사말에 이름·날짜 있으니 클락카드에선 아바타·이름·날짜 숨김(홈만). 매니저는 복원.
+  ['attStatusAvatar','attStatusName','attTodayDate'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.display = home ? 'none' : '';});
+  // 개인 모드면 오늘 기록·일지·승인대기 로드 (공용 카드/영역에 렌더)
+  if(personal){
+    loadTodayRecord();
+    _pLogMonth=new Date().toISOString().slice(0,7);
+    if(typeof loadPersonalLog==='function') loadPersonalLog();
+    if(typeof loadPersonalPending==='function') loadPersonalPending();
+  }
 }
 let attClockTimer=null;
 function startAttClock(){
@@ -314,6 +330,14 @@ function startAttClock(){
   update();attClockTimer=setInterval(update,60000);
 }
 async function loadTodayRecord(){
+  // 개인 모드(매장 연결 전) = 개인 기록에서 오늘치 읽어 공용 카드에 렌더 (2026-07-01 통합)
+  if(!isStoreConnected()){
+    const today=ymdLocal(new Date());
+    const res=await _pInvoke('list',{work_date:{from:today,to:today}});
+    const row=(res&&res.ok&&res.rows&&res.rows.length)?res.rows[0]:null;
+    updateCheckInOutUI(row);
+    return;
+  }
   if(!currentStore) return;
   const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
   if(!empId&&!isManager) return;
@@ -461,6 +485,7 @@ async function endRest(){
 }
 let _checkInBusy=false; // 출근 버튼 연타 방지 (경쟁조건 중복 저장 차단)
 async function checkIn(){
+  if(!isStoreConnected()) return personalClockIn(); // 개인 모드 = 개인 기록에 저장(기기·IP 검사 없음)
   if(_checkInBusy){toast('출근 처리 중입니다...','warn');return;}
   if(!guardStore()) return;
   const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
@@ -507,6 +532,7 @@ async function checkIn(){
   }finally{_checkInBusy=false;}
 }
 async function checkOut(){
+  if(!isStoreConnected()) return personalClockOut(); // 개인 모드 = 개인 기록에 저장
   if(!guardStore()) return;
   const empId=currentEmp?.id||(isManager&&selectedEmpId?selectedEmpId:null);
   if(!empId) return toast('직원을 선택하거나 로그인하세요.','warn');
@@ -1697,25 +1723,25 @@ function renderPersonalStatus(row){
     if(outBtn) outBtn.style.display='none';
   }
 }
-// 개인 출근 찍기
+// 개인 출근 찍기 (공용 홈에서 checkIn이 위임 — 공용 카드/일지 갱신)
 async function personalClockIn(){
   if(_pBusy) return; _pBusy=true;
-  const btn=document.getElementById('pBtnCheckIn'); if(btn) btn.disabled=true;
+  const btn=document.getElementById('btnCheckIn'); if(btn) btn.disabled=true;
   const res=await _pInvoke('clock_in',{});
   _pBusy=false;
   if(!res.ok){ toast(res.error||'출근 처리 실패','warn'); if(btn) btn.disabled=false; return; }
   toast('출근 찍었어요 🟢','success');
-  await loadPersonalToday(); await loadPersonalLog();
+  await loadTodayRecord(); await loadPersonalLog();
 }
 // 개인 퇴근 찍기
 async function personalClockOut(){
   if(_pBusy) return; _pBusy=true;
-  const btn=document.getElementById('pBtnCheckOut'); if(btn) btn.disabled=true;
+  const btn=document.getElementById('btnCheckOut'); if(btn) btn.disabled=true;
   const res=await _pInvoke('clock_out',{});
   _pBusy=false;
   if(!res.ok){ toast(res.error||'퇴근 처리 실패','warn'); if(btn) btn.disabled=false; return; }
   toast('퇴근 찍었어요 🔴 수고하셨어요','success');
-  await loadPersonalToday(); await loadPersonalLog();
+  await loadTodayRecord(); await loadPersonalLog();
 }
 // 일지 월 이동
 function movePersonalMonth(dir){
@@ -1726,7 +1752,7 @@ function movePersonalMonth(dir){
 }
 // 일지 목록 로드 (해당 월)
 async function loadPersonalLog(){
-  const lbl=document.getElementById('pLogMonth');
+  const lbl=document.getElementById('pmLogMonth');
   if(lbl){ const [y,m]=_pLogMonth.split('-'); lbl.innerText=`${y}.${m}`; }
   const [y,m]=_pLogMonth.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
@@ -1734,8 +1760,10 @@ async function loadPersonalLog(){
   const res=await _pInvoke('list',{work_date:{from,to}});
   renderPersonalLog(res.ok?(res.rows||[]):[]);
 }
+let _pmRows=[]; // 현재 표시 중인 개인 일지 (수정 시 참조)
 function renderPersonalLog(rows){
-  const box=document.getElementById('pLogList'); if(!box) return;
+  _pmRows=rows||[];
+  const box=document.getElementById('pmLogList'); if(!box) return;
   if(!rows.length){
     box.innerHTML=`<div style="text-align:center;padding:24px 0;color:var(--gray-500);font-size:13px;line-height:1.6;">이번 달 기록이 없어요.<br>출근을 찍으면 여기에 쌓여요.</div>`;
     return;
@@ -1746,14 +1774,54 @@ function renderPersonalLog(rows){
     const inT=r.app_in?new Date(r.app_in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'-';
     const outT=r.app_out?new Date(r.app_out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'근무 중';
     const totalStr=r.total_work_min!=null?fmtHourDecimal(r.total_work_min):'-';
-    const merged=r.merged_at?`<span style="font-size:10px;font-weight:800;color:var(--blue);background:var(--gray-100);border-radius:8px;padding:2px 7px;white-space:nowrap;">매장 반영</span>`:'';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--gray-100);">
-      <div style="width:58px;font-size:12px;font-weight:800;color:var(--gray-700);flex-shrink:0;">${dt.getMonth()+1}/${dt.getDate()} (${days[dt.getDay()]})</div>
+    const isMerged=!!r.merged_at;
+    // 편입된 기록 = 매장 반영 배지 + 잠금(수정·삭제 X). 아직 개인 기록이면 수정·삭제 가능.
+    const tail = isMerged
+      ? `<span style="font-size:10px;font-weight:800;color:var(--blue);background:var(--gray-100);border-radius:8px;padding:2px 7px;white-space:nowrap;">매장 반영</span>`
+      : `<button class="btn-icon-sm" data-action="editPersonalRecord|${r.id}" title="수정" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;">✏️</button>`
+       +`<button class="btn-icon-sm" data-action="deletePersonalRecord|${r.id}" title="삭제" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;">🗑️</button>`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:11px 2px;border-bottom:1px solid var(--gray-100);">
+      <div style="width:54px;font-size:12px;font-weight:800;color:var(--gray-700);flex-shrink:0;">${dt.getMonth()+1}/${dt.getDate()} (${days[dt.getDay()]})</div>
       <div style="flex:1;font-size:13px;color:var(--gray-700);">${inT} ~ ${outT}</div>
       <div style="font-size:13px;font-weight:800;color:var(--text);">${totalStr}</div>
-      ${merged}
+      ${tail}
     </div>`;
   }).join('');
+}
+// ─── 개인 기록 수정·삭제 (편입 전만, 2026-07-01) ───
+async function deletePersonalRecord(id){
+  const r=_pmRows.find(x=>x.id===id); if(!r) return;
+  if(!confirm(`${r.work_date} 기록을 삭제할까요?`)) return;
+  const res=await _pInvoke('delete',{id});
+  if(!res.ok){ toast(res.error||'삭제 실패','warn'); return; }
+  toast('삭제했어요','success');
+  await loadTodayRecord(); await loadPersonalLog();
+}
+function editPersonalRecord(id){
+  const r=_pmRows.find(x=>x.id===id); if(!r) return;
+  _pmEditId=id;
+  const set=(eid,v)=>{ const el=document.getElementById(eid); if(el) el.value=v||''; };
+  const hm=iso=>iso?new Date(iso).toTimeString().slice(0,5):'';
+  set('pmEditDate', r.work_date);
+  set('pmEditIn', hm(r.app_in));
+  set('pmEditOut', hm(r.app_out));
+  set('pmEditRest', r.rest_min!=null?r.rest_min:0);
+  const t=document.getElementById('pmEditTitle'); if(t) t.innerText=`${r.work_date} 기록 수정`;
+  openSheet('pmEditSheet');
+}
+let _pmEditId=null;
+async function savePersonalRecord(){
+  if(!_pmEditId) return;
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  const date=g('pmEditDate'), inT=g('pmEditIn'), outT=g('pmEditOut'), rest=g('pmEditRest');
+  if(!date||!inT){ toast('날짜와 출근 시간은 필수예요','warn'); return; }
+  const toIso=(d,t)=> t? new Date(`${d}T${t}:00`).toISOString() : null;
+  const body={ id:_pmEditId, work_date:date, app_in:toIso(date,inT), app_out:toIso(date,outT), rest_min:parseInt(rest||'0',10)||0 };
+  const res=await _pInvoke('save',body);
+  if(!res.ok){ toast(res.error||'저장 실패','warn'); return; }
+  if(typeof closeAllSheets==='function') closeAllSheets();
+  toast('수정했어요','success');
+  await loadTodayRecord(); await loadPersonalLog();
 }
 // ─── 매장에 연결하기 (개인 모드 → 매장 코드 입력 → 연결 신청) 2026-07-01 완성 ───
 function openConnectStore(){
@@ -1779,9 +1847,9 @@ async function submitConnectStore(){
 }
 // 승인 대기 상태 확인 → 배너 표시/숨김 (개인 홈)
 async function loadPersonalPending(){
-  const box=document.getElementById('pPendingBox');
-  const btn=document.getElementById('pConnectBtn');
-  const hint=document.getElementById('pConnectHint');
+  const box=document.getElementById('pmPendingBox');
+  const btn=document.getElementById('pmConnectBtn');
+  const hint=document.getElementById('pmConnectHint');
   if(!box) return;
   const token=localStorage.getItem('pd_token'); if(!token) return;
   let rows=[];
@@ -1791,7 +1859,7 @@ async function loadPersonalPending(){
   }catch(_e){}
   if(rows.length){
     const nm=rows[0]?.stores?.name||'매장';
-    const se=document.getElementById('pPendingStore'); if(se) se.innerText=nm;
+    const se=document.getElementById('pmPendingStore'); if(se) se.innerText=nm;
     box.style.display='block';
     if(btn) btn.style.display='none';
     if(hint) hint.style.display='none';
