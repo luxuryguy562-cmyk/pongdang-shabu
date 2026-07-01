@@ -2892,6 +2892,26 @@ function toggleSideGroup(header){
   body.classList.toggle('show');
 }
 // ══════════════════════════════════════════
+// ─── 새 기능: 엑셀 다운로드 헬퍼 (2026-06-29) ───
+// 아이폰 홈 화면 앱(PWA)은 XLSX.writeFile 시 앱이 리로드되는 iOS 제약이 있음.
+// → iOS 홈 앱이면 blob+새 탭(a.target=_blank) 방식으로 앱 리로드 완화. 그 외엔 기존 방식.
+function downloadWorkbook(wb, filename){
+  const standalone = (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent || '');
+  if(isIOS && standalone){
+    try{
+      const out = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+      const blob = new Blob([out], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.target = '_blank'; a.rel = 'noopener';
+      document.body.appendChild(a); a.click();
+      setTimeout(()=>{ try{ document.body.removeChild(a); }catch(_){} URL.revokeObjectURL(url); }, 20000);
+      return;
+    }catch(_e){ /* 실패 시 아래 기본 방식으로 폴백 */ }
+  }
+  XLSX.writeFile(wb, filename);
+}
 // ─── 새 기능: 노무 제출용 엑셀 다운로드 (3종 양식) ───
 // 근로기준법 §41(근로자명부) §42(출퇴근부) §48(임금대장) 표준 양식
 // ══════════════════════════════════════════
@@ -2970,7 +2990,7 @@ async function downloadLaborExport(){
     const stem=cnt===1?(optAtt?'출퇴근부':optPay?'임금대장':'근로자명부'):'노무제출';
     const safeName=(currentStore?.name||'매장').replace(/[\\/:*?"<>|]/g,'_');
     const filename=`${stem}_${safeName}_${ym}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    downloadWorkbook(wb, filename);
     setLoad(false);
     toast(`📥 ${filename} 다운로드 완료`,'success',3500);
     closeAllSheets();
@@ -3151,7 +3171,7 @@ async function downloadTxExport(){
 
     const safeName=(currentStore.name||'매장').replace(/[\\/:*?"<>|]/g,'_');
     const filename=`거래장부_${safeName}_${ym}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    downloadWorkbook(wb, filename);
     setLoad(false);
     toast(`📥 ${filename} 다운로드 완료`,'success',3500);
     closeAllSheets();
