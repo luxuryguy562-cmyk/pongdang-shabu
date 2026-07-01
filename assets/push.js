@@ -99,6 +99,22 @@ async function disablePushNotifications(){
   }catch(e){ console.error('[push] 끄기 오류', e); return false; }
 }
 
+// 이 폰의 모든 매장 구독 완전 해제 (로그아웃 / 개인모드 전환용) — 2026-07-01
+// 폰이 매장을 떠나면 옛 매장 알림이 계속 오던 문제. 브라우저 구독을 해제하면
+// 이 폰 endpoint가 무효화 → 이후 어느 매장도 이 폰에 발송 안 됨.
+// (개인모드는 store_id가 없어 DB update가 RLS로 막힐 수 있으므로, 브라우저 unsubscribe로 확실히 끊음)
+async function unsubscribeThisDevice(){
+  try{
+    if(!('serviceWorker' in navigator)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub){
+      try{ await sb.from('push_subscriptions').update({ enabled:false, updated_at:new Date().toISOString() }).eq('endpoint', sub.endpoint); }catch(_){}
+      try{ await sub.unsubscribe(); }catch(_){}
+    }
+  }catch(e){ console.error('[push] 기기 구독 해제 오류', e); }
+}
+
 // 서비스 워커 자동 등록 (푸시 수신 준비) — 앱 로드 시 1회
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {

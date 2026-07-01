@@ -5807,6 +5807,8 @@ function completeLogin(loginResult){
   // ── 개인 모드: 매장 연결 전 (급여 계산 없음, 개인 근태만) ──
   if(mode==='personal'){
     _resetUserState();                 // 이전 매장 잔재 청소 (있다면)
+    // 개인모드 = 매장 없음 → 이 폰의 옛 매장 알림 구독 해제 (2026-07-01)
+    if(typeof unsubscribeThisDevice==='function') unsubscribeThisDevice();
     currentEmp=null; currentStore=null; authLevel='personal';
     window._personalPerson=person||null;
     document.getElementById('headerUser').innerText=(person?.name)||'나';
@@ -6081,6 +6083,8 @@ function _resetUserState(){
 function doLogout(){
   if(!confirm('로그아웃?')) return;
   closeAllSheets();
+  // 이 폰 알림 구독 해제 — 다음 사람/개인모드가 옛 매장 알림 안 받게 (2026-07-01)
+  if(typeof unsubscribeThisDevice==='function') unsubscribeThisDevice();
   currentEmp=null;
   authLevel='staff';
   _myWorkMode=false;
