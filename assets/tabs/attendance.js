@@ -309,7 +309,7 @@ function renderEmpHome(){
   // 개인 모드면 오늘 기록·일지·승인대기 로드 (공용 카드/영역에 렌더)
   if(personal){
     loadTodayRecord();
-    _pLogMonth=new Date().toISOString().slice(0,7);
+    _pLogMonth=ymLocal(new Date());
     if(typeof loadPersonalLog==='function') loadPersonalLog();
     if(typeof loadPersonalPending==='function') loadPersonalPending();
   }
