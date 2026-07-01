@@ -938,7 +938,8 @@ async function loadDashboard(force){
     const dailyChildMap={}; // { '02': { '식자재': {'육류':12000,'야채':5000}, '인건비': {'고정급':...,'시급':...} } }
     const _childColorMap={}; // { '육류': '#F00', '고정급': '#3B82F6', ... } — 매트릭스 점 색
     const _addChildDayNamed=(d, parentName, childName, amt, color)=>{
-      if(!d||!parentName||!childName||!amt||amt<=0)return;
+      // amt<=0 제외 폐기 — 보증금 순액(빈병 회수 음수) 반영 위해 음수도 정상 합산 (2026-06-30)
+      if(!d||!parentName||!childName||!amt)return;
       if(!dailyChildMap[d])dailyChildMap[d]={};
       if(!dailyChildMap[d][parentName])dailyChildMap[d][parentName]={};
       dailyChildMap[d][parentName][childName]=(dailyChildMap[d][parentName][childName]||0)+amt;
@@ -952,7 +953,8 @@ async function loadDashboard(force){
       _catIdToChild[c.id]={parentName:parent.name,childName:c.name,childColor:c.color||'#94A3B8'};
     });
     const _addChild=(catId,amt,d)=>{
-      if(!catId||!amt||amt<=0)return;
+      // amt<=0 제외 폐기 — 보증금 순액(빈병 회수 음수) 반영 위해 음수도 정상 합산 (2026-06-30)
+      if(!catId||!amt)return;
       const m=_catIdToChild[catId];if(!m)return;
       if(!monthChildMap[m.parentName])monthChildMap[m.parentName]={};
       if(!monthChildMap[m.parentName][m.childName])monthChildMap[m.parentName][m.childName]={amt:0,color:m.childColor};
@@ -967,7 +969,8 @@ async function loadDashboard(force){
     // isVar=true = 영수증·거래처 표에서 온 변동 지출 (어디에 썼나 표시 대상)
     // isVar=false = 고정비·인건비·로열티 등 자동 고정성 (어디에 썼나 제외)
     const _addVE=(d,name,amt,catName,isVar=false,groupKey=null)=>{
-      if(!amt||amt<=0||!d)return;
+      // amt<=0 제외 폐기 — 보증금 순액(빈병 회수 음수) 반영 위해 음수도 정상 합산 (2026-06-30)
+      if(!amt||!d)return;
       if(!dailyVendorExp[d])dailyVendorExp[d]={};
       const nm=name||'기타', ct=catName||'기타';
       const key=nm+'|'+ct;
@@ -1006,7 +1009,7 @@ async function loadDashboard(force){
     // 옛: dailyChildMap에만 박아서 월상세 "카테고리별 지출" 펼침과 주간 표 자식 줄에 인건비가 안 나왔음
     // 이름은 DB 자식 분류(월급/시급)와 통일 — 홈 월요약 "+상세보기"(calcChildAmounts)와 같은 이름
     const _addLaborChild=(d, childName, amt, color)=>{
-      if(!amt||amt<=0)return;
+      if(!amt)return; // 인건비는 항상 양수라 <=0 조건 있으나 없으나 무관 — 다른 3곳과 일관되게 통일 (2026-06-30)
       if(!monthChildMap[_laborParentName])monthChildMap[_laborParentName]={};
       if(!monthChildMap[_laborParentName][childName])monthChildMap[_laborParentName][childName]={amt:0,color};
       monthChildMap[_laborParentName][childName].amt+=amt;

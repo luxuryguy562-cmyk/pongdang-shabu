@@ -452,6 +452,20 @@ function recalcPermissions(){
 }
 // 실제 관리자 권한 여부 (_myWorkMode 무관 — 역할 전환 토글 표시용)
 function isRealManager(){ return ['owner','franchise_admin','store_manager'].includes(authLevel) || _roleIsManager(); }
+// ─── 단일 연결상태 기준 (2026-07-01 개인↔매장 통합) ───
+// 매장에 연결된 상태인가? = 직원 기록(currentEmp) + 매장(currentStore) 둘 다 있음.
+// 개인 모드(연결 전) = 둘 다 없음 = 반환 false. 흩어진 mode/authLevel/_personalPerson 체크를 이걸로 통일.
+function isStoreConnected(){ return !!(currentEmp && currentStore); }
+// 로그인은 됐으나 매장 연결 전(개인 모드)인가?
+function isPersonalMode(){ return !isStoreConnected() && !!(window._personalPerson || authLevel==='personal'); }
+// 개인 모드 하단 네비 = 직원 네비(staff-only) 그대로 쓰되 '내 급여'만 숨김(매장 없음). 2026-07-01 통합.
+function applyPersonalNav(){
+  const bn=document.querySelector('.bottom-nav'); if(!bn) return;
+  bn.style.display='flex';
+  bn.querySelectorAll('.nav-item').forEach(el=>{ el.style.display='none'; el.classList.remove('active'); });
+  bn.querySelectorAll('.nav-item.staff-only').forEach(el=>{ el.style.display=''; });
+  const pay=bn.querySelector('.nav-item[data-tab="empPay"]'); if(pay) pay.style.display='none'; // 급여=연결 후
+}
 // 관리 ↔ 내 근무 전환 (화면만 바뀜, 권한 그대로)
 function setMyWorkMode(on){
   _myWorkMode = !!on;
@@ -721,7 +735,6 @@ function nav(tab, el) {
     sales: loadSalesDaily,
     opening: loadOpeningPage,
     myinfo: loadMyInfo,
-    personalHome: (typeof loadPersonalHome==='function'?loadPersonalHome:null),
     empPay: loadEmpPay,
     empSched: loadEmpSched,
     busHub: loadBusHubData,
@@ -888,7 +901,6 @@ function applyPermissionUI() {
       else el.style.display = isManager ? '' : 'none';
     }
     else if(el.classList.contains('staff-only')) el.style.display = (!isManager && currentEmp) ? '' : 'none';
-    else if(el.classList.contains('personal-only')) el.style.display = 'none'; // 개인 모드 전용 — 매장 모드선 숨김
     else el.style.display='';
   });
   // 내 정보 배지 업데이트
