@@ -5804,7 +5804,7 @@ function completeLogin(loginResult){
     emp=loginResult; // 레거시: completeLogin(emp) 직접 호출
   }
 
-  // ── 개인 모드: 매장 연결 전 (급여 계산 없음, 개인 근태만) ──
+  // ── 개인 모드: 매장 연결 전 (급여 계산 없음, 개인 근태만) — 통합 홈(attendanceCont) 사용 2026-07-01 ──
   if(mode==='personal'){
     _resetUserState();                 // 이전 매장 잔재 청소 (있다면)
     currentEmp=null; currentStore=null; authLevel='personal';
@@ -5813,18 +5813,13 @@ function completeLogin(loginResult){
     const hStore=document.getElementById('headerStore'); if(hStore) hStore.style.display='none'; // 개인 모드 = 매장 없음
     document.getElementById('loginOverlay').style.display='none';
     document.body.style.overflow='';
-    // 개인 모드 하단 네비 — 홈/커뮤니티/더보기만 노출 (매장 탭은 숨김) 2026-07-01
-    const _bnP=document.querySelector('.bottom-nav');
-    if(_bnP){
-      _bnP.style.display='flex';
-      _bnP.querySelectorAll('.nav-item').forEach(el=>{ el.style.display='none'; el.classList.remove('active'); });
-      _bnP.querySelectorAll('.nav-item.personal-only').forEach((el,i)=>{ el.style.display=''; if(i===0) el.classList.add('active'); });
-    }
     document.querySelector('.header').style.display='flex';
     localStorage.setItem('pd_auth_level','personal');
     localStorage.removeItem('pd_emp');
-    showPersonalHome();
-    hideBootSplash(); // 개인 홈 준비됨 → 가림막 걷기
+    localStorage.removeItem('pd_multi_store'); // 이전 로그인 잔재 방지(위험#14)
+    applyPersonalNav();        // 직원 네비(급여 제외) 노출
+    nav('attendance');         // 통합 홈 = 내 근태 (renderEmpHome이 개인 모드 렌더)
+    hideBootSplash();
     return;
   }
 

@@ -2,6 +2,51 @@
 
 ---
 
+## 🚧 [2026-07-01 진행중 — 개인 모드 ↔ 매장 모드 화면 통합 (대형, 갈아엎기)]
+
+> 사장님 승인 완료("잘 해보자"). 브랜치 `claude/gifted-thompson-3q3fp6`에서 전부 완성 후 한 번에 main. 반쪽은 main 금지.
+
+### 설계 결정 (확정)
+- **화면(UI) 1벌** = 매장 직원 화면(attendanceCont/empPayCont/empSettingsCont) 하나로. `personalHomeCont`는 **완전 삭제**(주석 잔재 금지).
+- **데이터 2벌 유지** = `personal_attendance_logs`(연결 전) / `attendance_logs`(연결 후). 편입(merge-personal) 로직 그대로.
+- **동작 분기** = 같은 화면, `!currentStore`면 개인(personal-attendance)·있으면 매장(attendance_logs)로 자동 갈래.
+- 지난달 개인기록: **당월만 편입** 유지 + 지난달은 "편입 안 됨" 표시.
+- 개인 기록 **수정·삭제 UI 넣음**(편입 전까지, 편입되면 서버가 잠금).
+
+### 위험 20개 (반드시 처리)
+1. 매장 출근=기기인증(checkDeviceForAttendance 483·526) / 개인=안 함 → 갈래
+2. 출퇴근 저장 테이블 분기(personal_attendance_logs vs attendance_logs)
+3. 연결상태 신호 8군데 흩어짐 → 단일 기준 `isStoreConnected()=!!(currentEmp&&currentStore)`
+4. 시계 타이머 2개(_startPClock vs startAttClock) → 하나로
+5. attendanceCont가 매니저도 씀 → 3모드 칸막이
+6. 내 급여 탭 연결 전 숨김
+7. emp-session 자동로그인 경로도 통합 홈으로(completeLogin만 X)
+8. 승인→매장 전환 시 매장 실시간 구독 켜기(subscribeStoreRealtime)
+9. 투잡(매장 0/1/2+) 유지
+10. personalHomeCont/p-함수 참조 9곳 전부 끊고 grep 잔재 0
+11. 지난달 개인기록 편입 안 됨 표시
+12. 할일카드(개시마감/영수증) 표시조건 currentStore도 봐야(attendance.js:15)
+13. applyPermissionUI가 'personal' authLevel 모름(common.js:449)
+14. pd_multi_store 로그인 사이 안 지워짐(스태프 로그인시 리셋)
+15. 개인 기록 수정/삭제 UI 없음(서버 save/delete 있음) → UI 추가
+16. empSettings 사람정보 출처 _personalPerson vs _loginPerson 섞임
+17. 부팅 가림막(hideBootSplash) 걷는 시점 개인/매장 달라 깜빡
+18. 푸시 알림 매장 필수(push.js guardStore) → 개인 곱게 가림
+19. 승인 대기 실시간 배지 없음 → 자동 감지
+20. 옛 loadEmpSched 죽은코드 정리
+
+### 단계 (각 단계 node --check + grep + 커밋)
+- S1: 단일 상태 helper `isStoreConnected()` + 문서 고정 ← **여기부터**
+- S2: 홈 통합(renderEmpHome/loadTodayRecord/clock/log 연결상태 분기, 개인 데이터도 공용 DOM에 렌더)
+- S3: completeLogin/emp-session 라우팅 개인→attendanceCont로 전환
+- S4: personalHomeCont + p-전용 렌더 삭제, 참조 정리, 개인 기록 수정/삭제 UI
+- S5: 승인 자동감지(전환)+실시간구독, 알림/급여탭/부팅 게이팅, 투잡
+- S6: 검증(Playwright 골든패스) → main 반영
+
+### 관련 파일: attendance.js(홈·근태·개인함수) / common.js(nav·권한·설정·실시간) / sidemenu.js(completeLogin·투잡) / index.html(컨테이너·네비) / emp-session(자동로그인)
+
+---
+
 ## 🔔 [2026-06-29 — 푸시 알림 인프라 완성 ✅ + 실제 트리거 연결 남음]
 
 > **인프라 완성·실동작 검증 완료 (사장님 갤럭시 폰 알림 도착 확인 2026-06-29).** 다음: 실제 알림 트리거 연결.
