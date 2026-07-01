@@ -6048,7 +6048,7 @@ function _resetUserState(){
     if(typeof _orderEditingFallbackIds !== 'undefined') _orderEditingFallbackIds = [];
     if(typeof vendorMonthTotals !== 'undefined') vendorMonthTotals = {};
     // 월 상태 = 이번달로 리셋 (옛 사용자가 옛 월 보고 있던 잔재 방지)
-    const _ym = new Date().toISOString().slice(0,7);
+    const _ym = ymLocal(new Date());  // 한국 시간 (toISOString UTC 버그 수정 2026-07-01)
     if(typeof attAllMonth !== 'undefined') attAllMonth = _ym;
     if(typeof wageMonthStr !== 'undefined') wageMonthStr = _ym;
     if(typeof dashMonthStr !== 'undefined') dashMonthStr = _ym;
