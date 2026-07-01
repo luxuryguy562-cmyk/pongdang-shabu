@@ -1750,6 +1750,26 @@ async function savePersonalRecord(){
   toast('수정했어요','success');
   await loadTodayRecord(); await loadPersonalLog();
 }
+// ─── 승인 자동 감지 → 매장 모드 전환 (재로그인 불필요) 2026-07-01 ───
+// 개인 사용자가 연결 신청 후, 사장님이 승인하면 emp-session이 store 모드를 반환 → 즉시 화면 전환.
+let _pmApprovalTimer=null;
+async function _checkApproval(){
+  if(typeof isPersonalMode==='function' && !isPersonalMode()){ _stopApprovalWatch(); return; }
+  const token=localStorage.getItem('pd_token'); if(!token) return;
+  try{
+    const{data}=await sb.functions.invoke('emp-session',{body:{token}});
+    if(data && data.ok && data.mode==='store'){
+      _stopApprovalWatch();
+      toast('🎉 매장에 연결됐어요! 화면을 전환할게요','success');
+      if(typeof completeLogin==='function') completeLogin(data);
+    }
+  }catch(_e){}
+}
+function _startApprovalWatch(){ if(_pmApprovalTimer) return; _pmApprovalTimer=setInterval(_checkApproval, 25000); }
+function _stopApprovalWatch(){ if(_pmApprovalTimer){ clearInterval(_pmApprovalTimer); _pmApprovalTimer=null; } }
+// 앱 다시 볼 때(포커스) 즉시 한 번 확인 — 폴링 25초 기다리지 않게
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && typeof isPersonalMode==='function' && isPersonalMode() && _pmApprovalTimer) _checkApproval(); });
+
 // ─── 매장에 연결하기 (개인 모드 → 매장 코드 입력 → 연결 신청) 2026-07-01 완성 ───
 function openConnectStore(){
   const el=document.getElementById('connectCode'); if(el) el.value='';
@@ -1790,10 +1810,12 @@ async function loadPersonalPending(){
     box.style.display='block';
     if(btn) btn.style.display='none';
     if(hint) hint.style.display='none';
+    _startApprovalWatch(); // 승인되면 자동으로 매장 모드 전환 (재로그인 불필요)
   }else{
     box.style.display='none';
     if(btn) btn.style.display='';
     if(hint) hint.style.display='';
+    _stopApprovalWatch();
   }
 }
 
