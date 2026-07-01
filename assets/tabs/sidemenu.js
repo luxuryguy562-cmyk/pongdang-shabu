@@ -6,7 +6,7 @@ async function loadVendors(){
   const{data}=await sb.from('vendors').select('*').eq('store_id',currentStore.id).order('name');
   vendors=data||[];
   // 이번달 vendor별 주문 합계·건수 캐시 (카드 표시용)
-  const ym=new Date().toISOString().slice(0,7);
+  const ym=ymLocal(new Date());
   const [y,m]=ym.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
   const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
@@ -95,14 +95,14 @@ function initVendorCompare(){
     if(cur) sel.value=cur;
   }
   const mEl=document.getElementById('vcMonth');
-  if(mEl && !mEl.value) mEl.value=new Date().toISOString().slice(0,7);
+  if(mEl && !mEl.value) mEl.value=ymLocal(new Date());
   if(sel?.value) loadVendorCompare();
 }
 
 async function loadVendorCompare(){
   if(!guardStore()) return;
   const vendorId=document.getElementById('vcVendorSel')?.value||'';
-  const ym=document.getElementById('vcMonth')?.value||new Date().toISOString().slice(0,7);
+  const ym=document.getElementById('vcMonth')?.value||ymLocal(new Date());
   const body=document.getElementById('vcBody');
   if(!vendorId){
     body.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--gray-500);font-size:13px;line-height:1.6;">📌 거래처를 선택하세요</div>';
@@ -377,7 +377,7 @@ function renderVendorList(){
   // 이번달 전체 합계 헤더
   const monthTotal=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.total||0),0);
   const monthCount=list.reduce((a,v)=>a+(vendorMonthTotals[v.id]?.count||0),0);
-  const ymStr=new Date().toISOString().slice(0,7);
+  const ymStr=ymLocal(new Date());
   const headerHtml=list.length?`<div style="background:var(--gray-100);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
     <span style="font-size:12px;color:var(--gray-600);">${ymStr} 주문 합계</span>
     <span style="font-size:14px;font-weight:800;color:var(--text);">${fmt(monthTotal)}원 · ${monthCount}건</span>
@@ -1141,10 +1141,10 @@ function moveVendorOrderMonth(dir){
   if(Number(dir)>0){
     const now=new Date();
     const curYm=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const newYm=d.toISOString().slice(0,7);
+    const newYm=ymLocal(d);
     if(newYm>curYm){ toast('아직 오지 않은 달이에요','info'); return; }
   }
-  vOrderCurrentMonth=d.toISOString().slice(0,7);
+  vOrderCurrentMonth=ymLocal(d);
   _renderVOrderMonthNav();
   loadVendorOrders();
 }
@@ -2915,19 +2915,19 @@ function downloadWorkbook(wb, filename){
 // ─── 새 기능: 노무 제출용 엑셀 다운로드 (3종 양식) ───
 // 근로기준법 §41(근로자명부) §42(출퇴근부) §48(임금대장) 표준 양식
 // ══════════════════════════════════════════
-let laborExportYm=new Date().toISOString().slice(0,7);
+let laborExportYm=ymLocal(new Date());
 function openLaborExportSheet(){
   if(!guardStore()) return;
   if(!isManager) return toast('관리자만 다운로드할 수 있습니다.','warn');
   closeSideMenu(); // 사이드메뉴에서 호출됐을 때 자동 닫기
-  laborExportYm=new Date().toISOString().slice(0,7);
+  laborExportYm=ymLocal(new Date());
   document.getElementById('lxMonthLabel').innerText=laborExportYm;
   ['lxOptAtt','lxOptPayroll','lxOptEmp'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true;});
   openSheet('laborExportSheet');
 }
 function moveLaborExportMonth(dir){
   const d=new Date(laborExportYm+'-01');d.setMonth(d.getMonth()+parseInt(dir));
-  laborExportYm=d.toISOString().slice(0,7);
+  laborExportYm=ymLocal(d);
   document.getElementById('lxMonthLabel').innerText=laborExportYm;
 }
 // 주민번호 마스킹 (뒷자리 6자리만)
@@ -3003,19 +3003,19 @@ async function downloadLaborExport(){
 // ══════════════════════════════════════════
 // ─── 새 기능: 거래내역 엑셀 다운로드 (2026-06-29) — 지출(영수증·거래처·통장카드) + 매출(마감 그대로) ───
 // ══════════════════════════════════════════
-let txExportYm=new Date().toISOString().slice(0,7);
+let txExportYm=ymLocal(new Date());
 function openTxExportSheet(){
   if(!guardStore()) return;
   if(!isManager) return toast('관리자만 다운로드할 수 있습니다.','warn');
   closeSideMenu();
-  txExportYm=new Date().toISOString().slice(0,7);
+  txExportYm=ymLocal(new Date());
   const lbl=document.getElementById('txMonthLabel'); if(lbl) lbl.innerText=txExportYm;
   ['txOptPivot','txOptList','txOptVendor','txOptSales'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true;});
   openSheet('txExportSheet');
 }
 function moveTxExportMonth(dir){
   const d=new Date(txExportYm+'-01');d.setMonth(d.getMonth()+parseInt(dir));
-  txExportYm=d.toISOString().slice(0,7);
+  txExportYm=ymLocal(d);
   const lbl=document.getElementById('txMonthLabel'); if(lbl) lbl.innerText=txExportYm;
 }
 // 엑셀 셀 서식 — 천단위 콤마 + 헤더 색 + 테두리 + 열너비 (xlsx-js-style, 2026-06-29)
@@ -3261,8 +3261,8 @@ async function loadWageSummary(){
   if(!currentStore) return;
   await renderWageSummary();
 }
-let wageMonthStr=new Date().toISOString().slice(0,7);
-async function moveWageMonth(dir){const d=new Date(wageMonthStr+'-01');d.setMonth(d.getMonth()+dir);wageMonthStr=d.toISOString().slice(0,7);await renderWageSummary();}
+let wageMonthStr=ymLocal(new Date());
+async function moveWageMonth(dir){const d=new Date(wageMonthStr+'-01');d.setMonth(d.getMonth()+dir);wageMonthStr=ymLocal(d);await renderWageSummary();}
 async function renderWageSummary(){
   if(!currentStore) return;
   const el=document.getElementById('wageMonthLabel');if(el)el.innerText=wageMonthStr;
@@ -4620,7 +4620,7 @@ async function loadFranchiseHome(){
 
     // 월 초기화
     const mEl=document.getElementById('fhMonth');
-    const ym=mEl.value||new Date().toISOString().slice(0,7);
+    const ym=mEl.value||ymLocal(new Date());
     if(!mEl.value) mEl.value=ym;
 
     // 가맹점 목록 + 매출 합계
@@ -5134,7 +5134,7 @@ async function loadRoyaltyPage(){
   const months=[];
   for(let i=0;i<12;i++){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    months.push(d.toISOString().slice(0,7));
+    months.push(ymLocal(d));
   }
   const oldestStart=months[11]+'-01';
   const newest=new Date(now.getFullYear(),now.getMonth()+1,0);
@@ -5165,7 +5165,7 @@ async function loadRoyaltyPage(){
   if(body)body.innerHTML=html||'<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">데이터 없음</td></tr>';
 
   // 5) 상단 요약 (이번달)
-  const curYm=now.toISOString().slice(0,7);
+  const curYm=ymLocal(now);
   const curRev=salesByMonth[curYm]||0;
   const curExp=Math.round(curRev*rate);
   const setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
@@ -5205,7 +5205,7 @@ async function loadCardFeePage(){
   const months=[];
   for(let i=0;i<12;i++){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    months.push(d.toISOString().slice(0,7));
+    months.push(ymLocal(d));
   }
   const oldestStart=months[11]+'-01';
   const newest=new Date(now.getFullYear(),now.getMonth()+1,0);
@@ -5238,7 +5238,7 @@ async function loadCardFeePage(){
   if(body)body.innerHTML=html||'<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--gray-400);">데이터 없음</td></tr>';
 
   // 5) 상단 요약 (이번달)
-  const curYm=now.toISOString().slice(0,7);
+  const curYm=ymLocal(now);
   const curRev=cardByMonth[curYm]||0;
   const curExp=Math.round(curRev*rate);
   const setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
@@ -5402,7 +5402,7 @@ async function renderExpHubVendorView(){
     // 2026-06-21 통합: 옛 거래처 관리 화면(vendorsCont) 진입 경로 소실 → 이 화면 하나로 합침.
     //   · 전체 거래처(영수증 0원 포함) 표시 + 행 클릭=상세(영수증 목록) + ✏️=편집 + 상단 ＋추가
     //   · vendors 배열 + vendorMonthTotals(이번달 합계)는 loadVendors가 채움. (이 함수는 loadVendors 끝에서 자동 호출 — 무한루프 방지 위해 여기선 loadVendors 호출 X)
-    const ym = new Date().toISOString().slice(0,7); // YYYY-MM
+    const ym = ymLocal(new Date()); // YYYY-MM
     const _moLbl=document.getElementById('expHubVendorMonthLbl');
     if(_moLbl) _moLbl.textContent=parseInt(ym.slice(5,7),10)+'월';
     // 선택된 종류 탭(거래처/온라인/마트)만 필터. 활성 거래처 우선, 거래종료는 뒤로.
@@ -5525,7 +5525,7 @@ async function loadExpHubData(force){
     renderExpHubCatSkeleton();
   }
   const sid=currentStore.id;
-  const ym=new Date().toISOString().slice(0,7);
+  const ym=ymLocal(new Date());
   const [y,m]=ym.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
   const start=ym+'-01', end=ym+'-'+String(lastDay).padStart(2,'0');
@@ -6048,7 +6048,7 @@ function _resetUserState(){
     if(typeof _orderEditingFallbackIds !== 'undefined') _orderEditingFallbackIds = [];
     if(typeof vendorMonthTotals !== 'undefined') vendorMonthTotals = {};
     // 월 상태 = 이번달로 리셋 (옛 사용자가 옛 월 보고 있던 잔재 방지)
-    const _ym = new Date().toISOString().slice(0,7);
+    const _ym = ymLocal(new Date());  // 한국 시간 (toISOString UTC 버그 수정 2026-07-01)
     if(typeof attAllMonth !== 'undefined') attAllMonth = _ym;
     if(typeof wageMonthStr !== 'undefined') wageMonthStr = _ym;
     if(typeof dashMonthStr !== 'undefined') dashMonthStr = _ym;
@@ -7211,7 +7211,7 @@ async function saveExcelBatch(){
 // ══════════════════════════════════════════
 // 정산/검수
 // ══════════════════════════════════════════
-let reconMonth=new Date().toISOString().slice(0,7);
+let reconMonth=ymLocal(new Date());
 let reconData=null;
 
 function initRecon(){
@@ -7221,7 +7221,7 @@ function initRecon(){
 }
 function moveReconMonth(dir){
   const d=new Date(reconMonth+'-01');d.setMonth(d.getMonth()+dir);
-  reconMonth=d.toISOString().slice(0,7);
+  reconMonth=ymLocal(d);
   document.getElementById('reconMonthLabel').innerText=reconMonth;
   loadReconciliation();
 }
@@ -9138,7 +9138,7 @@ function prorateByDay(dailyMap, rate, passedDay){
 }
 // accPassedDay: 진행일 = 현재월이면 오늘 날짜, 과거·미래월이면 그달 말일(=전체).
 function accPassedDay(ym){
-  const today=new Date(), curYm=today.toISOString().slice(0,7);
+  const today=new Date(), curYm=ymLocal(today);
   if(ym===curYm) return today.getDate();
   const [y,m]=(ym||curYm).split('-').map(Number);
   return new Date(y,m,0).getDate();
