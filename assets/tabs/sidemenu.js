@@ -3068,7 +3068,7 @@ async function downloadTxExport(){
         const mi=majors[r.mName]=majors[r.mName]||{subTot:{},total:0,hasSub:false};
         mi.total+=amt; mi.subTot[sub]=(mi.subTot[sub]||0)+amt; if(r.sub!==null) mi.hasSub=true;
       };
-      receipts.forEach(r=>{ if(r.note!=='정상'||r.is_deposit) return; addCell(rv(r), r.category_id, r.total_price||0); });
+      receipts.forEach(r=>{ if(r.note!=='정상') return; addCell(rv(r), r.category_id, r.total_price||0); });
       orders.forEach(o=>{ addCell(vName(o), o.vendors&&o.vendors.category_id, o.amount||0); });
       myd.forEach(m=>{ addCell((m.merchant_name||m.description||'-').trim()||'-', m.category_id, Math.abs(m.amount||0)); });
       const majorList=Object.entries(majors).sort((a,b)=>b[1].total-a[1].total);
@@ -3117,7 +3117,7 @@ async function downloadTxExport(){
     if(optVendor){
       const vd={};
       const addV=(vn,date,amt)=>{ if(!amt) return; vd[vn]=vd[vn]||{}; vd[vn][date]=vd[vn][date]||{amt:0,cnt:0}; vd[vn][date].amt+=amt; vd[vn][date].cnt++; };
-      receipts.forEach(r=>{ if(r.note!=='정상'||r.is_deposit) return; addV(rv(r), r.receipt_date, r.total_price||0); });
+      receipts.forEach(r=>{ if(r.note!=='정상') return; addV(rv(r), r.receipt_date, r.total_price||0); });
       orders.forEach(o=>{ addV(vName(o), o.order_date, o.amount||0); });
       myd.forEach(m=>{ addV((m.merchant_name||m.description||'-').trim()||'-', m.tx_date, Math.abs(m.amount||0)); });
       const vTot={}; Object.keys(vd).forEach(v=>{ vTot[v]=Object.values(vd[v]).reduce((a,d)=>a+d.amt,0); });
@@ -3891,7 +3891,7 @@ async function calcExpenseByCategories(ym, mode, prefetched){
         ? (pf.vendor_orders||sb.from('vendor_orders').select('amount,vendors(category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end))
         : Promise.resolve({data:[]}),
       needRc
-        ? (pf.receipts||sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end))
+        ? (pf.receipts||sb.from('receipts').select('total_price,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end))
         : Promise.resolve({data:[]}),
       needFc
         ? (pf.fixed_costs||sb.from('fixed_costs').select('id,estimated_monthly,is_active,category').eq('store_id',sid))
@@ -5549,7 +5549,7 @@ async function loadExpHubData(force){
     ({rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes, wsRes} = _expPack);
   } else {
     [rcRes, fcRes, sdRes, ssRes, ecaRes, alRes, mdRes, recCntRes, setRes, voRes, wsRes] = await Promise.all([
-      sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
+      sb.from('receipts').select('total_price,vendor_id,category_id').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
       sb.from('fixed_costs').select('id,estimated_monthly,is_active,category').eq('store_id',sid),
       sb.from('sales_daily').select('*').eq('store_id',sid).gte('date',start).lte('date',end),
       sb.from('store_settings').select('royalty_rate,card_fee_rate').eq('store_id',sid).maybeSingle(),
@@ -7228,7 +7228,7 @@ async function loadReconciliation(){
     const [catRes,voRes,rcpRes,attRes,swRes,fcRes,txRes,salesRes,settingsRes,matchRes,salesDailyRes]=await Promise.all([
       sb.from('expense_categories').select('*').eq('store_id',sid).order('sort_order'),
       sb.from('vendor_orders').select('amount,vendor_id,vendors(name,category,category_id)').eq('store_id',sid).gte('order_date',start).lte('order_date',end),
-      sb.from('receipts').select('id,vendor,total_price,category').eq('store_id',sid).eq('note','정상').eq('is_deposit',false).gte('receipt_date',start).lte('receipt_date',end),
+      sb.from('receipts').select('id,vendor,total_price,category').eq('store_id',sid).eq('note','정상').gte('receipt_date',start).lte('receipt_date',end),
       sb.from('attendance_logs').select('employee_id,calculated_wage,employees(name)').eq('store_id',sid).gte('work_date',start).lte('work_date',end),
       sb.from('special_wages').select('extra_amount').eq('store_id',sid).gte('target_date',start).lte('target_date',end),
       sb.from('fixed_costs').select('id,name,estimated_monthly,is_active').eq('store_id',sid),
